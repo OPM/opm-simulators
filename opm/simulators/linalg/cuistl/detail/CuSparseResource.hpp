@@ -23,7 +23,7 @@
 #include <memory>
 #include <type_traits>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /**
@@ -94,6 +94,6 @@ private:
     DeleterType m_deleter;
 };
 
-} // namespace Opm::cuistl::impl
+} // namespace Opm::gpuistl::impl
 #include <opm/simulators/linalg/cuistl/detail/CuSparseResource_impl.hpp>
 #endif // CUSPARSERESOURCE_HPP

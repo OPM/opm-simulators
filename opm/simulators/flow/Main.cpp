@@ -163,7 +163,7 @@ void Main::initMPI()
     }
 
 #if HAVE_CUDA
-    Opm::cuistl::setDevice(FlowGenericVanguard::comm().rank(), FlowGenericVanguard::comm().size());
+    Opm::gpuistl::setDevice(FlowGenericVanguard::comm().rank(), FlowGenericVanguard::comm().size());
 #endif
 
 #endif // HAVE_MPI

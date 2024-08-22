@@ -29,7 +29,7 @@
 #include <string>
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 /**
@@ -276,5 +276,5 @@ private:
 template <class T>
 CuView<const T> make_view(const CuBuffer<T>&);
 
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #endif

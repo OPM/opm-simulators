@@ -47,11 +47,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementWiseMultiplicationOf3By3BlockVectorAndVecto
     std::vector<T> hostBlockVector({1.0, 2.0, 3.0, 5.0, 2.0, 3.0, 2.0, 1.0, 2.0});
     std::vector<T> hostVecVector({3.0, 2.0, 1.0});
     std::vector<T> hostDstVector({0, 0, 0});
-    Opm::cuistl::CuVector<T> deviceBlockVector(hostBlockVector);
-    Opm::cuistl::CuVector<T> deviceVecVector(hostVecVector);
-    Opm::cuistl::CuVector<T> deviceDstVector(hostDstVector);
+    Opm::gpuistl::CuVector<T> deviceBlockVector(hostBlockVector);
+    Opm::gpuistl::CuVector<T> deviceVecVector(hostVecVector);
+    Opm::gpuistl::CuVector<T> deviceDstVector(hostDstVector);
 
-    Opm::cuistl::detail::weightedDiagMV(
+    Opm::gpuistl::detail::weightedDiagMV(
         deviceBlockVector.data(), N, blocksize, weight, deviceVecVector.data(), deviceDstVector.data());
 
     std::vector<T> expectedVec {10.0, 22.0, 10.0};
@@ -81,11 +81,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementWiseMultiplicationOf2By2BlockVectorAndVecto
     std::vector<T> hostBlockVector({1.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0});
     std::vector<T> hostVecVector({1.0, 3.0, 2.0, 4.0});
     std::vector<T> hostDstVector({0, 0, 0, 0});
-    Opm::cuistl::CuVector<T> deviceBlockVector(hostBlockVector);
-    Opm::cuistl::CuVector<T> deviceVecVector(hostVecVector);
-    Opm::cuistl::CuVector<T> deviceDstVector(hostDstVector);
+    Opm::gpuistl::CuVector<T> deviceBlockVector(hostBlockVector);
+    Opm::gpuistl::CuVector<T> deviceVecVector(hostVecVector);
+    Opm::gpuistl::CuVector<T> deviceDstVector(hostDstVector);
 
-    Opm::cuistl::detail::weightedDiagMV(
+    Opm::gpuistl::detail::weightedDiagMV(
         deviceBlockVector.data(), N, blocksize, weight, deviceVecVector.data(), deviceDstVector.data());
 
     std::vector<T> expectedVec {3.5, 7.5, 10.0, 4.0};

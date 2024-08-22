@@ -35,15 +35,15 @@ BOOST_AUTO_TEST_CASE(TestMakeView)
 {
     // test that we can create buffers and make views of the buffers using the pointer constructor
     auto buf = std::vector<int>({1, 2, 3, 4, 5, 6});
-    const auto gpubuf = ::Opm::cuistl::CuBuffer<int>(buf);
-    auto gpuview = ::Opm::cuistl::CuView<int>(buf.data(), buf.size());
-    bool gpuBufCreatedView = std::is_same<::Opm::cuistl::CuView<int>, decltype(gpuview)>::value;
+    const auto gpubuf = ::Opm::gpuistl::CuBuffer<int>(buf);
+    auto gpuview = ::Opm::gpuistl::CuView<int>(buf.data(), buf.size());
+    bool gpuBufCreatedView = std::is_same<::Opm::gpuistl::CuView<int>, decltype(gpuview)>::value;
 
     BOOST_CHECK(gpuBufCreatedView);
 
     // test that we can make views of buffers by using the cubuffer constructor
-    auto gpuview2 = ::Opm::cuistl::make_view(gpubuf);
-    bool gpuBufCreatedView2 = std::is_same<::Opm::cuistl::CuView<const int>, decltype(gpuview2)>::value;
+    auto gpuview2 = ::Opm::gpuistl::make_view(gpubuf);
+    bool gpuBufCreatedView2 = std::is_same<::Opm::gpuistl::CuView<const int>, decltype(gpuview2)>::value;
 
     BOOST_CHECK(gpuBufCreatedView2);
 

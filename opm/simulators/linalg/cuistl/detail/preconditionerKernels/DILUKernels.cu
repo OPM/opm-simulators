@@ -23,7 +23,7 @@
 #include <opm/simulators/linalg/cuistl/detail/preconditionerKernels/DILUKernels.hpp>
 #include <stdexcept>
 
-namespace Opm::cuistl::detail::DILU
+namespace Opm::gpuistl::detail::DILU
 {
 namespace
 {
@@ -282,8 +282,8 @@ solveLowerLevelSet(T* reorderedMat,
                    int thrBlockSize)
 {
     int threadBlockSize
-        = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
@@ -302,9 +302,9 @@ solveLowerLevelSetSplit(T* reorderedMat,
                         T* v,
                         int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveLowerLevelSetSplit<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveLowerLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
@@ -322,8 +322,8 @@ solveUpperLevelSet(T* reorderedMat,
                    int thrBlockSize)
 {
     int threadBlockSize
-        = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
@@ -340,9 +340,9 @@ solveUpperLevelSetSplit(T* reorderedMat,
                         T* v,
                         int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveUpperLevelSetSplit<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveUpperLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
@@ -360,9 +360,9 @@ computeDiluDiagonal(T* reorderedMat,
                     int thrBlockSize)
 {
     if (blocksize <= 3) {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(
+        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
             cuComputeDiluDiagonal<T, blocksize>, thrBlockSize);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+        int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
         cuComputeDiluDiagonal<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(reorderedMat,
                                                                                 rowIndices,
                                                                                 colIndices,
@@ -393,9 +393,9 @@ computeDiluDiagonalSplit(T* reorderedLowerMat,
                          int thrBlockSize)
 {
     if (blocksize <= 3) {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(
+        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
             cuComputeDiluDiagonalSplit<T, blocksize>, thrBlockSize);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+        int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
         cuComputeDiluDiagonalSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(reorderedLowerMat,
                                                                                      lowerRowIndices,
                                                                                      lowerColIndices,
@@ -434,4 +434,4 @@ INSTANTIATE_KERNEL_WRAPPERS(double, 3);
 INSTANTIATE_KERNEL_WRAPPERS(double, 4);
 INSTANTIATE_KERNEL_WRAPPERS(double, 5);
 INSTANTIATE_KERNEL_WRAPPERS(double, 6);
-} // namespace Opm::cuistl::detail::DILU
+} // namespace Opm::gpuistl::detail::DILU

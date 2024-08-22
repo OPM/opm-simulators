@@ -32,8 +32,8 @@
 #include <algorithm>
 #include <type_traits>
 
-using CuViewDouble = ::Opm::cuistl::CuView<double>;
-using CuBufferDouble = ::Opm::cuistl::CuBuffer<double>;
+using CuViewDouble = ::Opm::gpuistl::CuView<double>;
+using CuBufferDouble = ::Opm::gpuistl::CuBuffer<double>;
 
 __global__ void useCuViewOnGPU(CuViewDouble a, CuViewDouble b){
     b[0] = a.front();

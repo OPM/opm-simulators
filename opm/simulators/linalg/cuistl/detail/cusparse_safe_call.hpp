@@ -24,7 +24,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 #define CHECK_CUSPARSE_ERROR_TYPE(code, x)                                                                             \
@@ -161,7 +161,7 @@ cusparseWarnIfError(cusparseStatus_t error,
 
     return error;
 }
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 
 
 
@@ -183,7 +183,7 @@ cusparseWarnIfError(cusparseStatus_t error,
  * @note This should be used for any call to cuSparse unless you have a good reason not to.
  */
 #define OPM_CUSPARSE_SAFE_CALL(expression)                                                                             \
-    ::Opm::cuistl::detail::cusparseSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::cusparseSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
 
 /**
  * @brief OPM_CUSPARSE_WARN_IF_ERROR checks the return type of the cusparse expression (function call) and issues a
@@ -204,5 +204,5 @@ cusparseWarnIfError(cusparseStatus_t error,
  * exception.
  */
 #define OPM_CUSPARSE_WARN_IF_ERROR(expression)                                                                         \
-    ::Opm::cuistl::detail::cusparseWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::cusparseWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
 #endif // OPM_CUSPARSE_SAFE_CALL_HPP

@@ -31,7 +31,7 @@ using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, dim, dim>>;
 using Vector = Dune::BlockVector<Dune::FieldVector<double, dim>>;
 using Moperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
 using PrecondFactory = Opm::PreconditionerFactory<Moperator, Dune::Amg::SequentialInformation>;
-using SolverAdapter = Opm::cuistl::SolverAdapter<Moperator, Dune::BiCGSTABSolver, Vector>;
+using SolverAdapter = Opm::gpuistl::SolverAdapter<Moperator, Dune::BiCGSTABSolver, Vector>;
 
 namespace
 {

@@ -24,7 +24,7 @@
 #include <cuda_runtime.h>
 #include <vector>
 
-namespace Opm::cuistl::detail::DILU
+namespace Opm::gpuistl::detail::DILU
 {
 
 /**
@@ -198,5 +198,5 @@ void computeDiluDiagonalSplit(T* reorderedLowerMat,
                               T* dInv,
                               int threadBlockSize);
 
-} // namespace Opm::cuistl::detail::DILU
+} // namespace Opm::gpuistl::detail::DILU
 #endif

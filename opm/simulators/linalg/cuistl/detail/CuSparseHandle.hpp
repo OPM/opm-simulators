@@ -21,7 +21,7 @@
 #include <cusparse.h>
 #include <memory>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /**
@@ -31,7 +31,7 @@ namespace Opm::cuistl::detail
  * @code{.cpp}
  * #include <opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp>
  * void someFunction() {
- *     auto& cuSparseHandle = ::Opm::cuistl::detail::CuSparseHandle::getInstance();
+ *     auto& cuSparseHandle = ::Opm::gpuistl::detail::CuSparseHandle::getInstance();
  *     int cuSparseVersion = -1;
  *     OPM_CUSPARSE_SAFE_CALL(cusparseGetVersion(cuSparseHandle.get(), &cuSparseVersion));
  * }
@@ -63,5 +63,5 @@ private:
     CuSparseHandle();
     cusparseHandle_t m_handle;
 };
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 #endif // OPM_CUSPARSEHANDLE_HPP

@@ -20,7 +20,7 @@
 #define OPM_CUISTL_CUSPARSE_MATRIX_OPERATIONS_HPP
 #include <cstddef>
 #include <vector>
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 /**
  * @brief Reorders the elements of a matrix by copying them from one matrix to another using a permutation list
@@ -68,5 +68,5 @@ void copyMatDataToReorderedSplit(T* srcMatrix,
                                  size_t numberOfRows,
                                  int threadBlockSize);
 
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 #endif

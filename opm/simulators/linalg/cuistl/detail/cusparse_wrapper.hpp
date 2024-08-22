@@ -27,7 +27,7 @@
 #include <type_traits>
 #ifndef OPM_CUSPARSE_WRAPPER_HPP
 #define OPM_CUSPARSE_WRAPPER_HPP
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 inline cusparseStatus_t
@@ -450,5 +450,5 @@ cusparseBsrmv(cusparseHandle_t handle,
                           beta,
                           y);
 }
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 #endif

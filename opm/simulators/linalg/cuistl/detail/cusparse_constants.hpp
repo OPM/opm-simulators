@@ -19,7 +19,7 @@
 #ifndef CUSPARSE_CONSTANTS_HPP
 #define CUSPARSE_CONSTANTS_HPP
 #include <cusparse.h>
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 const constexpr auto CUSPARSE_MATRIX_ORDER = CUSPARSE_DIRECTION_ROW;
 }

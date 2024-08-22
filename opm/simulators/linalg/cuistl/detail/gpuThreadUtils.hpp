@@ -26,7 +26,7 @@
 /*
     This file provides some logic for handling how to choose the correct thread-block size
 */
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 constexpr inline size_t
 getThreads([[maybe_unused]] size_t numberOfRows)
@@ -61,6 +61,6 @@ getNumberOfBlocks(int wantedThreads, int threadBlockSize)
     return (wantedThreads + threadBlockSize - 1) / threadBlockSize;
 }
 
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 
 #endif

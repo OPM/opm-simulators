@@ -29,7 +29,7 @@
 #include <string>
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 /**
@@ -391,5 +391,5 @@ private:
     void assertHasElements() const;
 };
 
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #endif

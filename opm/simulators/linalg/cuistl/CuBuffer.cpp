@@ -24,7 +24,7 @@
 #include <opm/simulators/linalg/cuistl/CuView.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 template <class T>
@@ -201,4 +201,4 @@ template CuView<const double> make_view<double>(const CuBuffer<double>&);
 template CuView<const float> make_view<float>(const CuBuffer<float>&);
 template CuView<const int> make_view<int>(const CuBuffer<int>&);
 
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl

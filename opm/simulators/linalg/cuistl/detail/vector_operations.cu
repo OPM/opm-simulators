@@ -25,7 +25,7 @@
 #include <opm/simulators/linalg/cuistl/detail/gpuThreadUtils.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
 #include <stdexcept>
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 namespace
@@ -108,8 +108,8 @@ template <class T>
 void
 setVectorValue(T* deviceData, size_t numberOfElements, const T& value)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(setVectorValueKernel<T>);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(setVectorValueKernel<T>);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     setVectorValueKernel<<<nThreadBlocks, threadBlockSize>>>(deviceData, numberOfElements, value);
 }
 
@@ -121,8 +121,8 @@ template <class T>
 void
 setZeroAtIndexSet(T* deviceData, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(setZeroAtIndexSetKernel<T>);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(setZeroAtIndexSetKernel<T>);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     setZeroAtIndexSetKernel<<<nThreadBlocks, threadBlockSize>>>(deviceData, numberOfElements, indices);
 }
 template void setZeroAtIndexSet(double*, size_t, const int*);
@@ -138,8 +138,8 @@ innerProductAtIndices(cublasHandle_t cublasHandle,
                       size_t numberOfElements,
                       const int* indices)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(elementWiseMultiplyKernel<T>);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(elementWiseMultiplyKernel<T>);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     elementWiseMultiplyKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, deviceB, buffer, numberOfElements, indices);
 
     // TODO: [perf] Get rid of the allocation here.
@@ -158,8 +158,8 @@ template <class T>
 void
 prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(prepareSendBufKernel<T>);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(prepareSendBufKernel<T>);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     prepareSendBufKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, buffer, numberOfElements, indices);
     OPM_CUDA_SAFE_CALL(cudaDeviceSynchronize()); // The buffers are prepared for MPI. Wait for them to finish.
 }
@@ -171,8 +171,8 @@ template <class T>
 void
 syncFromRecvBuf(T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(syncFromRecvBufKernel<T>);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(syncFromRecvBufKernel<T>);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     syncFromRecvBufKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, buffer, numberOfElements, indices);
     // cudaDeviceSynchronize(); // Not needed, I guess...
 }
@@ -191,20 +191,20 @@ weightedDiagMV(const T* squareBlockVector,
 {
     switch (blocksize) {
     case 1: {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 1>);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 1>);
+        int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
         weightedDiagMV<T, 1>
             <<<nThreadBlocks, threadBlockSize>>>(squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
     } break;
     case 2: {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 2>);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 2>);
+        int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
         weightedDiagMV<T, 2>
             <<<nThreadBlocks, threadBlockSize>>>(squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
     } break;
     case 3: {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 3>);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 3>);
+        int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
         weightedDiagMV<T, 3>
             <<<nThreadBlocks, threadBlockSize>>>(squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
     } break;
@@ -217,4 +217,4 @@ weightedDiagMV(const T* squareBlockVector,
 template void weightedDiagMV(const double*, const size_t, const size_t, double, const double*, double*);
 template void weightedDiagMV(const float*, const size_t, const size_t, float, const float*, float*);
 
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail

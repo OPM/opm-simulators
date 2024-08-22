@@ -27,7 +27,7 @@
     The LU factorization and apply step is written based on the Dune implementations
 */
 
-namespace Opm::cuistl::detail::ILU0
+namespace Opm::gpuistl::detail::ILU0
 {
 namespace
 {
@@ -341,8 +341,8 @@ solveLowerLevelSet(T* reorderedMat,
                    int thrBlockSize)
 {
     int threadBlockSize
-        = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, d, v);
 }
@@ -359,8 +359,8 @@ solveUpperLevelSet(T* reorderedMat,
                    int thrBlockSize)
 {
     int threadBlockSize
-        = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, v);
 }
@@ -377,9 +377,9 @@ solveLowerLevelSetSplit(T* reorderedMat,
                         T* v,
                         int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveLowerLevelSetSplit<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveLowerLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, d, v);
 }
@@ -396,9 +396,9 @@ solveUpperLevelSetSplit(T* reorderedMat,
                         T* v,
                         int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveUpperLevelSetSplit<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveUpperLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
@@ -415,8 +415,8 @@ LUFactorization(T* srcMatrix,
                 int thrBlockSize)
 {
     int threadBlockSize
-        = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorization<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorization<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuLUFactorization<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         srcMatrix, srcRowIndices, srcColumnIndices, naturalToReordered, reorderedToNatual, rowsInLevelSet, startIdx);
 }
@@ -437,8 +437,8 @@ LUFactorizationSplit(T* reorderedLowerMat,
                      int thrBlockSize)
 {
     int threadBlockSize
-        = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorizationSplit<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorizationSplit<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuLUFactorizationSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(reorderedLowerMat,
                                                                              lowerRowIndices,
                                                                              lowerColIndices,
@@ -473,4 +473,4 @@ INSTANTIATE_KERNEL_WRAPPERS(double, 3);
 INSTANTIATE_KERNEL_WRAPPERS(double, 4);
 INSTANTIATE_KERNEL_WRAPPERS(double, 5);
 INSTANTIATE_KERNEL_WRAPPERS(double, 6);
-} // namespace Opm::cuistl::detail::ILU0
+} // namespace Opm::gpuistl::detail::ILU0

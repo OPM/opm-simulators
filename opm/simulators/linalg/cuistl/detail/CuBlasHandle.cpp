@@ -19,7 +19,7 @@
 #include <cublas_v2.h>
 #include <opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 
@@ -46,4 +46,4 @@ CuBlasHandle::getInstance()
     return instance;
 }
 
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail

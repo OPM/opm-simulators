@@ -29,7 +29,7 @@
 #include <vector>
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! \brief ILU0 preconditioner on the GPU.
 //!
@@ -144,6 +144,6 @@ private:
     int m_moveThreadBlockSize = -1;
     int m_ILU0FactorizationThreadBlockSize = -1;
 };
-} // end namespace Opm::cuistl
+} // end namespace Opm::gpuistl
 
 #endif

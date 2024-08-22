@@ -24,7 +24,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <string_view>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 /**
  * @brief getCudaErrorMessage generates the error message to display for a given error.
@@ -128,7 +128,7 @@ cudaWarnIfError(cudaError_t error,
         OpmLog::warning(getCudaErrorMessage(error, expression, filename, functionName, lineNumber));
     }
 }
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 
 /**
  * @brief OPM_CUDA_SAFE_CALL checks the return type of the CUDA expression (function call) and throws an exception if it
@@ -148,7 +148,7 @@ cudaWarnIfError(cudaError_t error,
  * @note This should be used for any call to the CUDA runtime API unless you have a good reason not to.
  */
 #define OPM_CUDA_SAFE_CALL(expression)                                                                                 \
-    ::Opm::cuistl::detail::cudaSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::cudaSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
 
 
 /**
@@ -169,6 +169,6 @@ cudaWarnIfError(cudaError_t error,
  * @note Prefer the cudaSafeCall/OPM_CUDA_SAFE_CALL counterpart unless you really don't want to throw an exception.
  */
 #define OPM_CUDA_WARN_IF_ERROR(expression)                                                                             \
-    ::Opm::cuistl::detail::cudaWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::cudaWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
 
 #endif

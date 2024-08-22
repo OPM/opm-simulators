@@ -29,7 +29,7 @@
 #include <cublas_v2.h>
 #include <opm/common/ErrorMacros.hpp>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 inline cublasStatus_t
@@ -164,5 +164,5 @@ cublasNrm2([[maybe_unused]] cublasHandle_t handle,
     OPM_THROW(std::runtime_error, "norm2 for integer vectors is not implemented yet.");
 }
 
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 #endif

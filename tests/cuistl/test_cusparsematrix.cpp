@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
         }
     }
 
-    auto cuSparseMatrix = Opm::cuistl::CuSparseMatrix<double>::fromMatrix(B);
+    auto cuSparseMatrix = Opm::gpuistl::CuSparseMatrix<double>::fromMatrix(B);
 
     const auto& nonZeroValuesCuda = cuSparseMatrix.getNonZeroValues();
     std::vector<double> buffer(cuSparseMatrix.nonzeroes(), 0.0);
@@ -143,14 +143,14 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
         }
     }
 
-    auto cuSparseMatrix = Opm::cuistl::CuSparseMatrix<double>::fromMatrix(B);
+    auto cuSparseMatrix = Opm::gpuistl::CuSparseMatrix<double>::fromMatrix(B);
     // check each column
     for (size_t component = 0; component < N; ++component) {
         std::vector<double> inputDataX(N * dim, 0.0);
         inputDataX[component] = 1.0;
         std::vector<double> inputDataY(N * dim, .25);
-        auto inputVectorX = Opm::cuistl::CuVector<double>(inputDataX.data(), inputDataX.size());
-        auto inputVectorY = Opm::cuistl::CuVector<double>(inputDataY.data(), inputDataY.size());
+        auto inputVectorX = Opm::gpuistl::CuVector<double>(inputDataX.data(), inputDataX.size());
+        auto inputVectorY = Opm::gpuistl::CuVector<double>(inputDataY.data(), inputDataY.size());
         Vector xHost(N), yHost(N);
         yHost = inputDataY[0];
         inputVectorX.copyToHost(xHost);

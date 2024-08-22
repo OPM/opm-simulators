@@ -37,7 +37,7 @@
 #define OPM_IS_INSIDE_DEVICE_FUNCTION_TEMPORARY 0
 #endif
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 /**
@@ -410,6 +410,6 @@ private:
     }
 };
 
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 
 #endif

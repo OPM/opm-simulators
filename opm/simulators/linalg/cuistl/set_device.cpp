@@ -21,7 +21,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/set_device.hpp>
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 void
 setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
@@ -46,4 +46,4 @@ setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
     OpmLog::info("Set CUDA device to " + std::to_string(deviceId) + " (out of " + std::to_string(deviceCount)
                  + " devices).");
 }
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl

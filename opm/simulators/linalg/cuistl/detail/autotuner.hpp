@@ -25,7 +25,7 @@
 #include <string>
 #include <utility>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /// @brief Function that tests the best thread block size, assumes the provided function depends on threadblock-size
@@ -88,6 +88,6 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
     return bestBlockSize;
 }
 
-} // end namespace Opm::cuistl::detail
+} // end namespace Opm::gpuistl::detail
 
 #endif

@@ -28,7 +28,7 @@
 
 
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 #define CHECK_CUBLAS_ERROR_TYPE(code, x)                                                                               \
@@ -174,7 +174,7 @@ cublasWarnIfError(cublasStatus_t error,
 
     return error;
 }
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 
 /**
  * @brief OPM_CUBLAS_SAFE_CALL checks the return type of the cublas expression (function call) and throws an exception
@@ -194,7 +194,7 @@ cublasWarnIfError(cublasStatus_t error,
  * @note This should be used for any call to cuBlas unless you have a good reason not to.
  */
 #define OPM_CUBLAS_SAFE_CALL(expression)                                                                               \
-    ::Opm::cuistl::detail::cublasSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::cublasSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
 
 /**
  * @brief OPM_CUBLAS_WARN_IF_ERROR checks the return type of the cublas expression (function call) and issues a warning
@@ -214,6 +214,6 @@ cublasWarnIfError(cublasStatus_t error,
  * @note Prefer the cublasSafeCall/OPM_CUBLAS_SAFE_CALL counterpart unless you really don't want to throw an exception.
  */
 #define OPM_CUBLAS_WARN_IF_ERROR(expression)                                                                           \
-    ::Opm::cuistl::detail::cublasWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::cublasWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
 
 #endif // OPM_CUBLAS_SAFE_CALL_HPP
