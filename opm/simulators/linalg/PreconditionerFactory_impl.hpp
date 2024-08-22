@@ -330,7 +330,7 @@ struct StandardPreconditioners {
             auto cuILU0 = std::make_shared<CuILU0>(op.getmat(), w);
 
             auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, CuILU0>>(cuILU0);
-            auto wrapped = std::make_shared<gpuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 
@@ -342,7 +342,7 @@ struct StandardPreconditioners {
             auto cuJac = std::make_shared<CuJac>(op.getmat(), w);
 
             auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, CuJac>>(cuJac);
-            auto wrapped = std::make_shared<gpuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 
@@ -354,7 +354,7 @@ struct StandardPreconditioners {
             auto cuDILU = std::make_shared<CuDILU>(op.getmat(), split_matrix, tune_gpu_kernels);
 
             auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, CuDILU>>(cuDILU);
-            auto wrapped = std::make_shared<gpuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 
@@ -366,7 +366,7 @@ struct StandardPreconditioners {
             auto cuilu0 = std::make_shared<OpmCuILU0>(op.getmat(), split_matrix, tune_gpu_kernels);
 
             auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, OpmCuILU0>>(cuilu0);
-            auto wrapped = std::make_shared<gpuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 #endif

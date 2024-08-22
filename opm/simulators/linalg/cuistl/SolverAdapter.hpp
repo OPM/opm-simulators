@@ -26,7 +26,7 @@
 #include <dune/istl/schwarz.hh>
 #include <dune/istl/solver.hh>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/cuistl/GpuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/cuistl/CuOwnerOverlapCopy.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
@@ -149,7 +149,7 @@ private:
                 OPM_THROW(std::invalid_argument,
                           "The preconditioner needs to be a CUDA preconditioner (eg. CuILU0) wrapped in a "
                           "Opm::gpuistl::PreconditionerAdapter wrapped in a "
-                          "Opm::gpuistl::CuBlockPreconditioner. If you are unsure what this means, set "
+                          "Opm::gpuistl::GpuBlockPreconditioner. If you are unsure what this means, set "
                           "preconditioner to 'CUILU0'"); // TODO: Suggest a better preconditioner
             }
 
@@ -160,7 +160,7 @@ private:
                 OPM_THROW(std::invalid_argument,
                           "The preconditioner needs to be a CUDA preconditioner (eg. CuILU0) wrapped in a "
                           "Opm::gpuistl::PreconditionerAdapter wrapped in a "
-                          "Opm::gpuistl::CuBlockPreconditioner. If you are unsure what this means, set "
+                          "Opm::gpuistl::GpuBlockPreconditioner. If you are unsure what this means, set "
                           "preconditioner to 'CUILU0'"); // TODO: Suggest a better preconditioner
             }
             // We need to get the underlying preconditioner:
@@ -196,7 +196,7 @@ private:
                 = Dune::OverlappingSchwarzOperator<CuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
             auto cudaCommunication = std::make_shared<CudaCommunication>(gpuComm);
 
-            auto mpiPreconditioner = std::make_shared<CuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
+            auto mpiPreconditioner = std::make_shared<GpuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
                 preconditionerReallyOnGPU, cudaCommunication);
 
             auto scalarProduct = std::make_shared<Dune::ParallelScalarProduct<XGPU, CudaCommunication>>(
@@ -206,8 +206,8 @@ private:
             // NOTE: Ownsership of cudaCommunication is handled by mpiPreconditioner. However, just to make sure we
             // remember
             //       this, we add this check. So remember that we hold one count in this scope, and one in the
-            //       CuBlockPreconditioner instance. We accomedate for the fact that it could be passed around in
-            //       CuBlockPreconditioner, hence we do not test for != 2
+            //       GpuBlockPreconditioner instance. We accomedate for the fact that it could be passed around in
+            //       GpuBlockPreconditioner, hence we do not test for != 2
             OPM_ERROR_IF(cudaCommunication.use_count() < 2, "Internal error. Shared pointer not owned properly.");
             auto overlappingCudaOperator = std::make_shared<SchwarzOperator>(m_matrix, *cudaCommunication);
 

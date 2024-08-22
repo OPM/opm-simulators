@@ -22,7 +22,7 @@
 // both with the normal cuistl path, and the hipistl path
 #if HAVE_CUDA
 #if USE_HIP
-#include <opm/simulators/linalg/hipistl/CuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/hipistl/GpuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/hipistl/CuDILU.hpp>
 #include <opm/simulators/linalg/hipistl/OpmCuILU0.hpp>
 #include <opm/simulators/linalg/hipistl/CuJac.hpp>
@@ -31,7 +31,7 @@
 #include <opm/simulators/linalg/hipistl/PreconditionerConvertFieldTypeAdapter.hpp>
 #include <opm/simulators/linalg/hipistl/detail/cuda_safe_call.hpp>
 #else
-#include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/cuistl/GpuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/cuistl/CuDILU.hpp>
 #include <opm/simulators/linalg/cuistl/OpmCuILU0.hpp>
 #include <opm/simulators/linalg/cuistl/CuJac.hpp>
