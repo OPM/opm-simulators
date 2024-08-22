@@ -20,7 +20,7 @@
 #include <cuda_runtime.h>
 #include <algorithm>
 #include <fmt/core.h>
-#include <opm/simulators/linalg/cuistl/CuBuffer.hpp>
+#include <opm/simulators/linalg/cuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/cuistl/CuView.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 
@@ -28,24 +28,24 @@ namespace Opm::gpuistl
 {
 
 template <class T>
-CuBuffer<T>::CuBuffer(const std::vector<T>& data)
-    : CuBuffer(data.data(), data.size())
+GpuBuffer<T>::GpuBuffer(const std::vector<T>& data)
+    : GpuBuffer(data.data(), data.size())
 {
 }
 
 template <class T>
-CuBuffer<T>::CuBuffer(const size_t numberOfElements)
+GpuBuffer<T>::GpuBuffer(const size_t numberOfElements)
     : m_numberOfElements(numberOfElements)
 {
     if (numberOfElements < 1) {
-        OPM_THROW(std::invalid_argument, "Setting a CuBuffer size to a non-positive number is not allowed");
+        OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
     }
     OPM_CUDA_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * m_numberOfElements));
 }
 
 template <class T>
-CuBuffer<T>::CuBuffer(const T* dataOnHost, const size_t numberOfElements)
-    : CuBuffer(numberOfElements)
+GpuBuffer<T>::GpuBuffer(const T* dataOnHost, const size_t numberOfElements)
+    : GpuBuffer(numberOfElements)
 {
 
     OPM_CUDA_SAFE_CALL(cudaMemcpy(
@@ -53,8 +53,8 @@ CuBuffer<T>::CuBuffer(const T* dataOnHost, const size_t numberOfElements)
 }
 
 template <class T>
-CuBuffer<T>::CuBuffer(const CuBuffer<T>& other)
-    : CuBuffer(other.m_numberOfElements)
+GpuBuffer<T>::GpuBuffer(const GpuBuffer<T>& other)
+    : GpuBuffer(other.m_numberOfElements)
 {
     assertHasElements();
     assertSameSize(other);
@@ -65,24 +65,24 @@ CuBuffer<T>::CuBuffer(const CuBuffer<T>& other)
 }
 
 template <class T>
-CuBuffer<T>::~CuBuffer()
+GpuBuffer<T>::~GpuBuffer()
 {
     OPM_CUDA_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
 }
 
 template <typename T>
-typename CuBuffer<T>::size_type
-CuBuffer<T>::size() const
+typename GpuBuffer<T>::size_type
+GpuBuffer<T>::size() const
 {
     return m_numberOfElements;
 }
 
 template <typename T>
 void
-CuBuffer<T>::resize(size_t newSize)
+GpuBuffer<T>::resize(size_t newSize)
 {
     if (newSize < 1) {
-        OPM_THROW(std::invalid_argument, "Setting a CuBuffer size to a non-positive number is not allowed");
+        OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
     }
     // Allocate memory for the new buffer
     T* tmpBuffer = nullptr;
@@ -107,7 +107,7 @@ CuBuffer<T>::resize(size_t newSize)
 
 template <typename T>
 std::vector<T>
-CuBuffer<T>::asStdVector() const
+GpuBuffer<T>::asStdVector() const
 {
     std::vector<T> temporary(m_numberOfElements);
     copyToHost(temporary);
@@ -116,14 +116,14 @@ CuBuffer<T>::asStdVector() const
 
 template <typename T>
 void
-CuBuffer<T>::assertSameSize(const CuBuffer<T>& x) const
+GpuBuffer<T>::assertSameSize(const GpuBuffer<T>& x) const
 {
     assertSameSize(x.m_numberOfElements);
 }
 
 template <typename T>
 void
-CuBuffer<T>::assertSameSize(size_t size) const
+GpuBuffer<T>::assertSameSize(size_t size) const
 {
     if (size != m_numberOfElements) {
         OPM_THROW(std::invalid_argument,
@@ -133,7 +133,7 @@ CuBuffer<T>::assertSameSize(size_t size) const
 
 template <typename T>
 void
-CuBuffer<T>::assertHasElements() const
+GpuBuffer<T>::assertHasElements() const
 {
     if (m_numberOfElements <= 0) {
         OPM_THROW(std::invalid_argument, "We have 0 elements");
@@ -142,21 +142,21 @@ CuBuffer<T>::assertHasElements() const
 
 template <typename T>
 T*
-CuBuffer<T>::data()
+GpuBuffer<T>::data()
 {
     return m_dataOnDevice;
 }
 
 template <typename T>
 const T*
-CuBuffer<T>::data() const
+GpuBuffer<T>::data() const
 {
     return m_dataOnDevice;
 }
 
 template <class T>
 void
-CuBuffer<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
+GpuBuffer<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 {
     if (numberOfElements > size()) {
         OPM_THROW(std::runtime_error,
@@ -169,7 +169,7 @@ CuBuffer<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 
 template <class T>
 void
-CuBuffer<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
+GpuBuffer<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     assertSameSize(numberOfElements);
     OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
@@ -177,28 +177,28 @@ CuBuffer<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 
 template <class T>
 void
-CuBuffer<T>::copyFromHost(const std::vector<T>& data)
+GpuBuffer<T>::copyFromHost(const std::vector<T>& data)
 {
     copyFromHost(data.data(), data.size());
 }
 template <class T>
 void
-CuBuffer<T>::copyToHost(std::vector<T>& data) const
+GpuBuffer<T>::copyToHost(std::vector<T>& data) const
 {
     copyToHost(data.data(), data.size());
 }
 
-template class CuBuffer<double>;
-template class CuBuffer<float>;
-template class CuBuffer<int>;
+template class GpuBuffer<double>;
+template class GpuBuffer<float>;
+template class GpuBuffer<int>;
 
 template <class T>
-CuView<const T> make_view(const CuBuffer<T>& buf) {
+CuView<const T> make_view(const GpuBuffer<T>& buf) {
     return CuView<const T>(buf.data(), buf.size());
 }
 
-template CuView<const double> make_view<double>(const CuBuffer<double>&);
-template CuView<const float> make_view<float>(const CuBuffer<float>&);
-template CuView<const int> make_view<int>(const CuBuffer<int>&);
+template CuView<const double> make_view<double>(const GpuBuffer<double>&);
+template CuView<const float> make_view<float>(const GpuBuffer<float>&);
+template CuView<const int> make_view<int>(const GpuBuffer<int>&);
 
 } // namespace Opm::gpuistl

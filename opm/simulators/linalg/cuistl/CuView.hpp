@@ -48,7 +48,7 @@ namespace Opm::gpuistl
  *  Implementations are placed in this headerfile for functions that may be called
  *  inside a kernel to avoid expensive RDC (relocatable device code)
  *
- * The view will typically provide a view into a CuBuffer and be able to
+ * The view will typically provide a view into a GpuBuffer and be able to
  * manipulate the data within it
  *
  * @param T Type of the data we store, typically int/float/double w/o const specifier

@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUBUFFER_HEADER_HPP
-#define OPM_CUBUFFER_HEADER_HPP
+#ifndef OPM_GPUBUFFER_HEADER_HPP
+#define OPM_GPUBUFFER_HEADER_HPP
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
 #include <exception>
@@ -33,18 +33,18 @@ namespace Opm::gpuistl
 {
 
 /**
- * @brief The CuBuffer class is a simple container class for the GPU.
+ * @brief The GpuBuffer class is a simple container class for the GPU.
  *
  *
  * Example usage:
  *
  * @code{.cpp}
- * #include <opm/simulators/linalg/cuistl/CuBuffer.hpp>
+ * #include <opm/simulators/linalg/cuistl/GpuBuffer.hpp>
  *
  * void someFunction() {
  *     auto someDataOnCPU = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
  *
- *     auto dataOnGPU = CuBuffer<double>(someDataOnCPU);
+ *     auto dataOnGPU = GpuBuffer<double>(someDataOnCPU);
  *
  *     auto stdVectorOnCPU = dataOnGPU.asStdVector();
  * }
@@ -52,7 +52,7 @@ namespace Opm::gpuistl
  * @tparam T the type to store. Can be either float, double or int.
  */
 template <typename T>
-class CuBuffer
+class GpuBuffer
 {
 public:
     using field_type = T;
@@ -60,17 +60,17 @@ public:
     using value_type = T;
 
     /**
-     * @brief CuBuffer allocates new GPU memory of the same size as other and copies the content of the other buffer to
+     * @brief GpuBuffer allocates new GPU memory of the same size as other and copies the content of the other buffer to
      * this newly allocated memory.
      *
      * @note This does synchronous transfer.
      *
      * @param other the buffer to copy from
      */
-    CuBuffer(const CuBuffer<T>& other);
+    GpuBuffer(const GpuBuffer<T>& other);
 
     /**
-     * @brief CuBuffer allocates new GPU memory of the same size as data and copies the content of the data vector to
+     * @brief GpuBuffer allocates new GPU memory of the same size as data and copies the content of the data vector to
      * this newly allocated memory.
      *
      * @note This does CPU to GPU transfer.
@@ -78,23 +78,23 @@ public:
      *
      * @param data the vector to copy from
      */
-    explicit CuBuffer(const std::vector<T>& data);
+    explicit GpuBuffer(const std::vector<T>& data);
 
     /**
      * @brief Default constructor that will initialize cublas and allocate 0 bytes of memory
      */
-    explicit CuBuffer();
+    explicit GpuBuffer();
 
     /**
-     * @brief CuBuffer allocates new GPU memory of size numberOfElements * sizeof(T)
+     * @brief GpuBuffer allocates new GPU memory of size numberOfElements * sizeof(T)
      *
      * @param numberOfElements number of T elements to allocate
      */
-    explicit CuBuffer(const size_t numberOfElements);
+    explicit GpuBuffer(const size_t numberOfElements);
 
 
     /**
-     * @brief CuBuffer allocates new GPU memory of size numberOfElements * sizeof(T) and copies numberOfElements from
+     * @brief GpuBuffer allocates new GPU memory of size numberOfElements * sizeof(T) and copies numberOfElements from
      * data
      *
      * @note This assumes the data is on the CPU.
@@ -102,12 +102,12 @@ public:
      * @param numberOfElements number of T elements to allocate
      * @param dataOnHost data on host/CPU
      */
-    CuBuffer(const T* dataOnHost, const size_t numberOfElements);
+    GpuBuffer(const T* dataOnHost, const size_t numberOfElements);
 
     /**
-     * @brief ~CuBuffer calls cudaFree
+     * @brief ~GpuBuffer calls cudaFree
      */
-    virtual ~CuBuffer();
+    virtual ~GpuBuffer();
 
     /**
      * @return the raw pointer to the GPU data
@@ -120,7 +120,7 @@ public:
     const T* data() const;
 
     /**
-     * @return fetch the first element in a CuBuffer
+     * @return fetch the first element in a GpuBuffer
      */
     __host__ __device__ T& front()
     {
@@ -131,7 +131,7 @@ public:
     }
 
     /**
-     * @return fetch the last element in a CuBuffer
+     * @return fetch the last element in a GpuBuffer
      */
     __host__ __device__ T& back()
     {
@@ -142,7 +142,7 @@ public:
     }
 
     /**
-     * @return fetch the first element in a CuBuffer
+     * @return fetch the first element in a GpuBuffer
      */
     __host__ __device__ T front() const
     {
@@ -153,7 +153,7 @@ public:
     }
 
     /**
-     * @return fetch the last element in a CuBuffer
+     * @return fetch the last element in a GpuBuffer
      */
     __host__ __device__ T back() const
     {
@@ -176,7 +176,7 @@ public:
         // TODO: [perf] vector.size() can be replaced by bvector.N() * BlockDimension
         if (m_numberOfElements != bvector.size()) {
             OPM_THROW(std::runtime_error,
-                      fmt::format("Given incompatible vector size. CuBuffer has size {}, \n"
+                      fmt::format("Given incompatible vector size. GpuBuffer has size {}, \n"
                                   "however, BlockVector has N() = {}, and size = {}.",
                                   m_numberOfElements,
                                   bvector.N(),
@@ -199,7 +199,7 @@ public:
         // TODO: [perf] vector.size() can be replaced by bvector.N() * BlockDimension
         if (m_numberOfElements != bvector.size()) {
             OPM_THROW(std::runtime_error,
-                      fmt::format("Given incompatible vector size. CuBuffer has size {},\n however, the BlockVector "
+                      fmt::format("Given incompatible vector size. GpuBuffer has size {},\n however, the BlockVector "
                                   "has has N() = {}, and size() = {}.",
                                   m_numberOfElements,
                                   bvector.N(),
@@ -267,14 +267,14 @@ private:
     T* m_dataOnDevice = nullptr;
     size_t m_numberOfElements;
 
-    void assertSameSize(const CuBuffer<T>& other) const;
+    void assertSameSize(const GpuBuffer<T>& other) const;
     void assertSameSize(size_t size) const;
 
     void assertHasElements() const;
 };
 
 template <class T>
-CuView<const T> make_view(const CuBuffer<T>&);
+CuView<const T> make_view(const GpuBuffer<T>&);
 
 } // namespace Opm::gpuistl
 #endif

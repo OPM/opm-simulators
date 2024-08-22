@@ -25,7 +25,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
 #include <opm/simulators/linalg/cuistl/CuView.hpp>
-#include <opm/simulators/linalg/cuistl/CuBuffer.hpp>
+#include <opm/simulators/linalg/cuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <random>
 #include <array>
@@ -33,7 +33,7 @@
 #include <type_traits>
 
 using CuViewDouble = ::Opm::gpuistl::CuView<double>;
-using CuBufferDouble = ::Opm::gpuistl::CuBuffer<double>;
+using GpuBufferDouble = ::Opm::gpuistl::GpuBuffer<double>;
 
 __global__ void useCuViewOnGPU(CuViewDouble a, CuViewDouble b){
     b[0] = a.front();
@@ -48,9 +48,9 @@ BOOST_AUTO_TEST_CASE(TestCreationAndIndexing)
 {
     // A simple test to check that we can move data to and from the GPU
     auto cpubuffer = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
-    auto cubuffer = CuBufferDouble(cpubuffer);
-    auto cuview = CuViewDouble(cubuffer.data(), cubuffer.size());
-    const auto const_cuview = CuViewDouble(cubuffer.data(), cubuffer.size());
+    auto GpuBuffer = GpuBufferDouble(cpubuffer);
+    auto cuview = CuViewDouble(GpuBuffer.data(), GpuBuffer.size());
+    const auto const_cuview = CuViewDouble(GpuBuffer.data(), GpuBuffer.size());
 
     auto stdVecOfCuView = cuview.asStdVector();
     auto const_stdVecOfCuView = cuview.asStdVector();
@@ -94,9 +94,9 @@ BOOST_AUTO_TEST_CASE(TestCuViewOnCPUWithSTLIteratorAlgorithm)
 BOOST_AUTO_TEST_CASE(TestCuViewOnGPU)
 {
     auto buf = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
-    auto cubufA = CuBufferDouble(buf);
+    auto cubufA = GpuBufferDouble(buf);
     auto cuviewA = CuViewDouble(cubufA.data(), cubufA.size());
-    auto cubufB = CuBufferDouble(4);
+    auto cubufB = GpuBufferDouble(4);
     auto cuviewB = CuViewDouble(cubufB.data(), cubufB.size());
 
     useCuViewOnGPU<<<1,1>>>(cuviewA, cuviewB);
