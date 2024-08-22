@@ -21,22 +21,22 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <fmt/core.h>
+#include <functional>
 #include <limits>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>
-#include <opm/simulators/linalg/cuistl/detail/autotuner.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/OpmCuILU0.hpp>
+#include <opm/simulators/linalg/cuistl/detail/autotuner.hpp>
 #include <opm/simulators/linalg/cuistl/detail/coloringAndReorderingUtils.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/cuistl/detail/preconditionerKernels/ILU0Kernels.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
-#include <tuple>
-#include <functional>
-#include <utility>
 #include <string>
+#include <tuple>
+#include <utility>
 namespace Opm::cuistl
 {
 
@@ -123,14 +123,14 @@ OpmCuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, in
                 lowerSolveThreadBlockSize);
         } else {
             detail::ILU0::solveLowerLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
-                                                                        m_gpuReorderedLU->getRowIndices().data(),
-                                                                        m_gpuReorderedLU->getColumnIndices().data(),
-                                                                        m_gpuReorderToNatural.data(),
-                                                                        levelStartIdx,
-                                                                        numOfRowsInLevel,
-                                                                        d.data(),
-                                                                        v.data(),
-                                                                        lowerSolveThreadBlockSize);
+                                                                     m_gpuReorderedLU->getRowIndices().data(),
+                                                                     m_gpuReorderedLU->getColumnIndices().data(),
+                                                                     m_gpuReorderToNatural.data(),
+                                                                     levelStartIdx,
+                                                                     numOfRowsInLevel,
+                                                                     d.data(),
+                                                                     v.data(),
+                                                                     lowerSolveThreadBlockSize);
         }
         levelStartIdx += numOfRowsInLevel;
     }
@@ -152,13 +152,13 @@ OpmCuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, in
                 upperSolveThreadBlockSize);
         } else {
             detail::ILU0::solveUpperLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
-                                                                        m_gpuReorderedLU->getRowIndices().data(),
-                                                                        m_gpuReorderedLU->getColumnIndices().data(),
-                                                                        m_gpuReorderToNatural.data(),
-                                                                        levelStartIdx,
-                                                                        numOfRowsInLevel,
-                                                                        v.data(),
-                                                                        upperSolveThreadBlockSize);
+                                                                     m_gpuReorderedLU->getRowIndices().data(),
+                                                                     m_gpuReorderedLU->getColumnIndices().data(),
+                                                                     m_gpuReorderToNatural.data(),
+                                                                     levelStartIdx,
+                                                                     numOfRowsInLevel,
+                                                                     v.data(),
+                                                                     upperSolveThreadBlockSize);
         }
     }
 }
@@ -215,12 +215,12 @@ OpmCuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int facto
             moveThreadBlockSize);
     } else {
         detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
-                                                                m_gpuMatrix.getRowIndices().data(),
-                                                                m_gpuReorderedLU->getNonZeroValues().data(),
-                                                                m_gpuReorderedLU->getRowIndices().data(),
-                                                                m_gpuNaturalToReorder.data(),
-                                                                m_gpuReorderedLU->N(),
-                                                                moveThreadBlockSize);
+                                                               m_gpuMatrix.getRowIndices().data(),
+                                                               m_gpuReorderedLU->getNonZeroValues().data(),
+                                                               m_gpuReorderedLU->getRowIndices().data(),
+                                                               m_gpuNaturalToReorder.data(),
+                                                               m_gpuReorderedLU->N(),
+                                                               moveThreadBlockSize);
     }
     int levelStartIdx = 0;
     for (int level = 0; level < m_levelSets.size(); ++level) {
@@ -243,13 +243,13 @@ OpmCuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int facto
 
         } else {
             detail::ILU0::LUFactorization<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
-                                                                    m_gpuReorderedLU->getRowIndices().data(),
-                                                                    m_gpuReorderedLU->getColumnIndices().data(),
-                                                                    m_gpuNaturalToReorder.data(),
-                                                                    m_gpuReorderToNatural.data(),
-                                                                    numOfRowsInLevel,
-                                                                    levelStartIdx,
-                                                                    factorizationThreadBlockSize);
+                                                                  m_gpuReorderedLU->getRowIndices().data(),
+                                                                  m_gpuReorderedLU->getColumnIndices().data(),
+                                                                  m_gpuNaturalToReorder.data(),
+                                                                  m_gpuReorderToNatural.data(),
+                                                                  numOfRowsInLevel,
+                                                                  levelStartIdx,
+                                                                  factorizationThreadBlockSize);
         }
         levelStartIdx += numOfRowsInLevel;
     }
@@ -260,30 +260,33 @@ void
 OpmCuILU0<M, X, Y, l>::tuneThreadBlockSizes()
 {
     // tune the thread-block size of the update function
-    auto tuneMoveThreadBlockSizeInUpdate = [this](int moveThreadBlockSize){
-        this->update(moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
-    };
-    m_moveThreadBlockSize = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate, "Kernel moving data to reordered matrix");
+    auto tuneMoveThreadBlockSizeInUpdate
+        = [this](int moveThreadBlockSize) { this->update(moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize); };
+    m_moveThreadBlockSize
+        = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate, "Kernel moving data to reordered matrix");
 
-    auto tuneFactorizationThreadBlockSizeInUpdate = [this](int factorizationThreadBlockSize){
+    auto tuneFactorizationThreadBlockSizeInUpdate = [this](int factorizationThreadBlockSize) {
         this->update(m_moveThreadBlockSize, factorizationThreadBlockSize);
     };
-    m_ILU0FactorizationThreadBlockSize = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "Kernel computing ILU0 factorization");
+    m_ILU0FactorizationThreadBlockSize
+        = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "Kernel computing ILU0 factorization");
 
     // tune the thread-block size of the apply
     CuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     CuVector<field_type> tmpD(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     tmpD = 1;
 
-    auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize){
+    auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize) {
         this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
     };
-    m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply, "Kernel computing a lower triangular solve for a level set");
+    m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(
+        tuneLowerSolveThreadBlockSizeInApply, "Kernel computing a lower triangular solve for a level set");
 
-    auto tuneUpperSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int upperSolveThreadBlockSize){
+    auto tuneUpperSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int upperSolveThreadBlockSize) {
         this->apply(tmpV, tmpD, m_moveThreadBlockSize, upperSolveThreadBlockSize);
     };
-    m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneUpperSolveThreadBlockSizeInApply, "Kernel computing an upper triangular solve for a level set");
+    m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(
+        tuneUpperSolveThreadBlockSizeInApply, "Kernel computing an upper triangular solve for a level set");
 }
 
 } // namespace Opm::cuistl
