@@ -224,4 +224,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
 
 template struct BlackoilModelParameters<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template struct BlackoilModelParameters<float>;
+#endif
+
 } // namespace Opm
