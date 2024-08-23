@@ -585,10 +585,10 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         F::addCreator("GPUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using GpuuILU0 = typename gpuistl::
+            using GpuILU0 = typename gpuistl::
                 GpuSeqILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuuILU0>>(
-                std::make_shared<GpuuILU0>(op.getmat(), w));
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuILU0>>(
+                std::make_shared<GpuILU0>(op.getmat(), w));
         });
 
         F::addCreator("GPUILU0Float", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
@@ -597,12 +597,12 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
             using matrix_type_to =
                 typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
-            using GpuuILU0 = typename gpuistl::
+            using GpuILU0 = typename gpuistl::
                 GpuSeqILU0<matrix_type_to, gpuistl::GpuVector<float>, gpuistl::GpuVector<float>>;
-            using Adapter = typename gpuistl::PreconditionerAdapter<VTo, VTo, GpuuILU0>;
+            using Adapter = typename gpuistl::PreconditionerAdapter<VTo, VTo, GpuILU0>;
             using Converter = typename gpuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
             auto converted = std::make_shared<Converter>(op.getmat());
-            auto adapted = std::make_shared<Adapter>(std::make_shared<GpuuILU0>(converted->getConvertedMatrix(), w));
+            auto adapted = std::make_shared<Adapter>(std::make_shared<GpuILU0>(converted->getConvertedMatrix(), w));
             converted->setUnderlyingPreconditioner(adapted);
             return converted;
         });
