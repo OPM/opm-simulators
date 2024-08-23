@@ -30,7 +30,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 #include <limits>
 #include <memory>

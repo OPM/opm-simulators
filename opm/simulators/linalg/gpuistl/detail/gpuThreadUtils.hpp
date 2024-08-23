@@ -21,7 +21,7 @@
 #include <cstddef>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 /*
     This file provides some logic for handling how to choose the correct thread-block size
@@ -51,7 +51,7 @@ getCudaRecomendedThreadBlockSize(Kernel k, int suggestedThrBlockSize = -1)
     }
     int blockSize;
     int tmpGridSize;
-    OPM_CUDA_SAFE_CALL(cudaOccupancyMaxPotentialBlockSize(&tmpGridSize, &blockSize, k, 0, 0));
+    OPM_GPU_SAFE_CALL(cudaOccupancyMaxPotentialBlockSize(&tmpGridSize, &blockSize, k, 0, 0));
     return blockSize;
 }
 

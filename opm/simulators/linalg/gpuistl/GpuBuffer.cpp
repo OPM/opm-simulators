@@ -22,7 +22,7 @@
 #include <fmt/core.h>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 namespace Opm::gpuistl
 {
@@ -40,7 +40,7 @@ GpuBuffer<T>::GpuBuffer(const size_t numberOfElements)
     if (numberOfElements < 1) {
         OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
     }
-    OPM_CUDA_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * m_numberOfElements));
+    OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * m_numberOfElements));
 }
 
 template <class T>
@@ -48,7 +48,7 @@ GpuBuffer<T>::GpuBuffer(const T* dataOnHost, const size_t numberOfElements)
     : GpuBuffer(numberOfElements)
 {
 
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(
+    OPM_GPU_SAFE_CALL(cudaMemcpy(
         m_dataOnDevice, dataOnHost, m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
 }
 
@@ -58,7 +58,7 @@ GpuBuffer<T>::GpuBuffer(const GpuBuffer<T>& other)
 {
     assertHasElements();
     assertSameSize(other);
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
                                   other.m_dataOnDevice,
                                   m_numberOfElements * sizeof(T),
                                   cudaMemcpyDeviceToDevice));
@@ -67,7 +67,7 @@ GpuBuffer<T>::GpuBuffer(const GpuBuffer<T>& other)
 template <class T>
 GpuBuffer<T>::~GpuBuffer()
 {
-    OPM_CUDA_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
+    OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
 }
 
 template <typename T>
@@ -86,17 +86,17 @@ GpuBuffer<T>::resize(size_t newSize)
     }
     // Allocate memory for the new buffer
     T* tmpBuffer = nullptr;
-    OPM_CUDA_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * newSize));
+    OPM_GPU_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * newSize));
 
     // Move the data from the old to the new buffer with truncation
     size_t sizeOfMove = std::min({m_numberOfElements, newSize});
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(tmpBuffer,
+    OPM_GPU_SAFE_CALL(cudaMemcpy(tmpBuffer,
                                   m_dataOnDevice,
                                   sizeOfMove * sizeof(T),
                                   cudaMemcpyDeviceToDevice));
 
     // free the old buffer
-    OPM_CUDA_SAFE_CALL(cudaFree(m_dataOnDevice));
+    OPM_GPU_SAFE_CALL(cudaFree(m_dataOnDevice));
 
     // swap the buffers
     m_dataOnDevice = tmpBuffer;
@@ -164,7 +164,7 @@ GpuBuffer<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
                               size(),
                               numberOfElements));
     }
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
 }
 
 template <class T>
@@ -172,7 +172,7 @@ void
 GpuBuffer<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     assertSameSize(numberOfElements);
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
 
 template <class T>

@@ -21,7 +21,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cublas_wrapper.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpuThreadUtils.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
 #include <stdexcept>
@@ -161,7 +161,7 @@ prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* 
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(prepareSendBufKernel<T>);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     prepareSendBufKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, buffer, numberOfElements, indices);
-    OPM_CUDA_SAFE_CALL(cudaDeviceSynchronize()); // The buffers are prepared for MPI. Wait for them to finish.
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize()); // The buffers are prepared for MPI. Wait for them to finish.
 }
 template void prepareSendBuf(const double* deviceA, double* buffer, size_t numberOfElements, const int* indices);
 template void prepareSendBuf(const float* deviceA, float* buffer, size_t numberOfElements, const int* indices);

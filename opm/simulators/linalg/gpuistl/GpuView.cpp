@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <fmt/core.h>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 namespace Opm::gpuistl
 {
@@ -51,7 +51,7 @@ GpuView<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
                               size(),
                               numberOfElements));
     }
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
 }
 
 template <class T>
@@ -59,7 +59,7 @@ void
 GpuView<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     assertSameSize(numberOfElements);
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
 
 template <class T>

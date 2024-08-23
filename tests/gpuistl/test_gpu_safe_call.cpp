@@ -18,15 +18,15 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestCudaSafeCall
+#define BOOST_TEST_MODULE TestGpuSafeCall
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
-BOOST_AUTO_TEST_CASE(TestCudaMalloc)
+BOOST_AUTO_TEST_CASE(TestGpuMalloc)
 {
     void* pointer;
-    BOOST_CHECK_NO_THROW(OPM_CUDA_SAFE_CALL(cudaMalloc(&pointer, 1)););
+    BOOST_CHECK_NO_THROW(OPM_GPU_SAFE_CALL(cudaMalloc(&pointer, 1)););
 }
 
 
@@ -41,6 +41,6 @@ BOOST_AUTO_TEST_CASE(TestThrows)
      errorCodes = {{cudaErrorAddressOfConstant, cudaErrorAlreadyAcquired}};
 #endif
     for (auto code : errorCodes) {
-        BOOST_CHECK_THROW(OPM_CUDA_SAFE_CALL(code), std::exception);
+        BOOST_CHECK_THROW(OPM_GPU_SAFE_CALL(code), std::exception);
     }
 }

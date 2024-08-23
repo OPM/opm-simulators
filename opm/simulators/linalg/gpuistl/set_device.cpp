@@ -19,7 +19,7 @@
 #include <config.h>
 #include <cuda_runtime.h>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/set_device.hpp>
 namespace Opm::gpuistl
 {
@@ -41,8 +41,8 @@ setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
     // Now do a round robin kind of assignment
     // TODO: We need to be more sophistacted here. We have no guarantee this will pick the correct device.
     const auto deviceId = mpiRank % deviceCount;
-    OPM_CUDA_SAFE_CALL(cudaDeviceReset());
-    OPM_CUDA_SAFE_CALL(cudaSetDevice(deviceId));
+    OPM_GPU_SAFE_CALL(cudaDeviceReset());
+    OPM_GPU_SAFE_CALL(cudaSetDevice(deviceId));
     OpmLog::info("Set CUDA device to " + std::to_string(deviceId) + " (out of " + std::to_string(deviceCount)
                  + " devices).");
 }

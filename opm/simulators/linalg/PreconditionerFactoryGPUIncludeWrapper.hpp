@@ -29,7 +29,7 @@
 #include <opm/simulators/linalg/gpuistl_hip/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/PreconditionerConvertFieldTypeAdapter.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/detail/gpu_safe_call.hpp>
 #else
 #include <opm/simulators/linalg/gpuistl/GpuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuDILU.hpp>
@@ -38,6 +38,6 @@
 #include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerConvertFieldTypeAdapter.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #endif
 #endif

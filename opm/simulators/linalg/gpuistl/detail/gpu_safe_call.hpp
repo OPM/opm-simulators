@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUDA_SAFE_CALL_HPP
-#define OPM_CUDA_SAFE_CALL_HPP
+#ifndef OPM_GPU_SAFE_CALL_HPP
+#define OPM_GPU_SAFE_CALL_HPP
 #include <cuda_runtime.h>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
@@ -48,9 +48,9 @@ getCudaErrorMessage(cudaError_t error,
                     const std::string_view& functionName,
                     size_t lineNumber)
 {
-    return fmt::format("CUDA expression did not execute correctly. Expression was: \n"
+    return fmt::format("GPU expression did not execute correctly. Expression was: \n"
                        "    {}\n"
-                       "CUDA error was {}\n"
+                       "GPU error was {}\n"
                        "in function {}, in {}, at line {}\n",
                        expression,
                        cudaGetErrorString(error),
@@ -60,12 +60,12 @@ getCudaErrorMessage(cudaError_t error,
 }
 
 /**
- * @brief cudaSafeCall checks the return type of the CUDA expression (function call) and throws an exception if it
+ * @brief cudaSafeCall checks the return type of the GPU expression (function call) and throws an exception if it
  * does not equal cudaSuccess.
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
  * #include <cuda_runtime.h>
  *
  * void some_function() {
@@ -74,7 +74,7 @@ getCudaErrorMessage(cudaError_t error,
  * }
  * @endcode
  *
- * @note It is probably easier to use the macro OPM_CUDA_SAFE_CALL
+ * @note It is probably easier to use the macro OPM_GPU_SAFE_CALL
  *
  * @todo Refactor to use std::source_location once we shift to C++20
  */
@@ -91,7 +91,7 @@ cudaSafeCall(cudaError_t error,
 }
 
 /**
- * @brief cudaWarnIfError checks the return type of the CUDA expression (function call) and issues a warning if it
+ * @brief cudaWarnIfError checks the return type of the GPU expression (function call) and issues a warning if it
  * does not equal cudaSuccess.
  *
  * @param error the error code from cublas
@@ -102,7 +102,7 @@ cudaSafeCall(cudaError_t error,
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
  * #include <cuda_runtime.h>
  *
  * void some_function() {
@@ -111,9 +111,9 @@ cudaSafeCall(cudaError_t error,
  * }
  * @endcode
  *
- * @note It is probably easier to use the macro OPM_CUDA_WARN_IF_ERROR
+ * @note It is probably easier to use the macro OPM_GPU_WARN_IF_ERROR
  *
- * @note Prefer the cudaSafeCall/OPM_CUDA_SAFE_CALL counterpart unless you really don't want to throw an exception.
+ * @note Prefer the cudaSafeCall/OPM_GPU_SAFE_CALL counterpart unless you really don't want to throw an exception.
  *
  * @todo Refactor to use std::source_location once we shift to C++20
  */
@@ -131,44 +131,44 @@ cudaWarnIfError(cudaError_t error,
 } // namespace Opm::gpuistl::detail
 
 /**
- * @brief OPM_CUDA_SAFE_CALL checks the return type of the CUDA expression (function call) and throws an exception if it
+ * @brief OPM_GPU_SAFE_CALL checks the return type of the GPU expression (function call) and throws an exception if it
  * does not equal cudaSuccess.
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
  * #include <cuda_runtime.h>
  *
  * void some_function() {
  *     void* somePointer;
- *     OPM_CUDA_SAFE_CALL(cudaMalloc(&somePointer, 1));
+ *     OPM_GPU_SAFE_CALL(cudaMalloc(&somePointer, 1));
  * }
  * @endcode
  *
- * @note This should be used for any call to the CUDA runtime API unless you have a good reason not to.
+ * @note This should be used for any call to the GPU runtime API unless you have a good reason not to.
  */
-#define OPM_CUDA_SAFE_CALL(expression)                                                                                 \
+#define OPM_GPU_SAFE_CALL(expression)                                                                                 \
     ::Opm::gpuistl::detail::cudaSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
 
 
 /**
- * @brief OPM_CUDA_WARN_IF_ERROR checks the return type of the CUDA expression (function call) and issues a warning if
+ * @brief OPM_GPU_WARN_IF_ERROR checks the return type of the GPU expression (function call) and issues a warning if
  * it does not equal cudaSuccess.
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
  * #include <cuda_runtime.h>
  *
  * void some_function() {
  *     void* somePointer;
- *     OPM_CUDA_WARN_IF_ERROR(cudaMalloc(&somePointer, 1));
+ *     OPM_GPU_WARN_IF_ERROR(cudaMalloc(&somePointer, 1));
  * }
  * @endcode
  *
- * @note Prefer the cudaSafeCall/OPM_CUDA_SAFE_CALL counterpart unless you really don't want to throw an exception.
+ * @note Prefer the cudaSafeCall/OPM_GPU_SAFE_CALL counterpart unless you really don't want to throw an exception.
  */
-#define OPM_CUDA_WARN_IF_ERROR(expression)                                                                             \
+#define OPM_GPU_WARN_IF_ERROR(expression)                                                                             \
     ::Opm::gpuistl::detail::cudaWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
 
 #endif

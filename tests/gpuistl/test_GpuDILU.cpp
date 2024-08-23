@@ -28,7 +28,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuDILU.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_matrix_operations.hpp>
 #include <random>
 #include <vector>

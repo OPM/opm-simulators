@@ -20,7 +20,7 @@
 #define OPM_CUDA_CHECK_LAST_ERROR_HPP
 #include <cuda_runtime.h>
 #include <fmt/core.h>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 /**
  * @brief OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE checks the return type of cudaDeviceSynchronize(),
@@ -38,7 +38,7 @@
  * @note This can be used to debug the code, or simply make sure that no error has occured.
  * @note This is a rather heavy operation, so prefer to use only in Debug mode (see OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE_IF_DEBUG)
  */
-#define OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE OPM_CUDA_SAFE_CALL(cudaDeviceSynchronize())
+#define OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE OPM_GPU_SAFE_CALL(cudaDeviceSynchronize())
 
 #ifdef NDEBUG
 #define OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE_IF_DEBUG
@@ -50,7 +50,7 @@
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
  *
  * void some_function() {
  *     OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE_IF_DEBUG;
@@ -78,7 +78,7 @@
  *
  * @note This can be used to debug the code, or simply make sure that no error has occured.
  */
-#define OPM_CUDA_CHECK_LAST_ERROR OPM_CUDA_SAFE_CALL(cudaGetLastError())
+#define OPM_CUDA_CHECK_LAST_ERROR OPM_GPU_SAFE_CALL(cudaGetLastError())
 
 #ifdef NDEBUG
 #define OPM_CUDA_CHECK_LAST_ERROR_IF_DEBUG

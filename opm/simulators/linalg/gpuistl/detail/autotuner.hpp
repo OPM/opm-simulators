@@ -21,7 +21,7 @@
 #include <limits>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <string>
 #include <utility>
 
@@ -47,7 +47,7 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
 
     // create the events
     for (int i = 0; i < runs + 1; ++i) {
-        OPM_CUDA_SAFE_CALL(cudaEventCreate(&events[i]));
+        OPM_GPU_SAFE_CALL(cudaEventCreate(&events[i]));
     }
 
     // Initialize helper variables
@@ -59,21 +59,21 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
     for (int thrBlockSize = interval; thrBlockSize <= 1024; thrBlockSize += interval) {
 
         // record a first event, and then an event after each kernel
-        OPM_CUDA_SAFE_CALL(cudaEventRecord(events[0]));
+        OPM_GPU_SAFE_CALL(cudaEventRecord(events[0]));
         for (int i = 0; i < runs; ++i) {
             f(thrBlockSize); // runs an arbitrary function with the provided arguments
-            OPM_CUDA_SAFE_CALL(cudaEventRecord(events[i + 1]));
+            OPM_GPU_SAFE_CALL(cudaEventRecord(events[i + 1]));
         }
 
         // make suret he runs are over
-        OPM_CUDA_SAFE_CALL(cudaEventSynchronize(events[runs]));
+        OPM_GPU_SAFE_CALL(cudaEventSynchronize(events[runs]));
 
         // kernel launch was valid
         if (cudaSuccess == cudaGetLastError()) {
             // check if we beat the record for the fastest kernel
             for (int i = 0; i < runs; ++i) {
                 float candidateBlockSizeTime;
-                OPM_CUDA_SAFE_CALL(cudaEventElapsedTime(&candidateBlockSizeTime, events[i], events[i + 1]));
+                OPM_GPU_SAFE_CALL(cudaEventElapsedTime(&candidateBlockSizeTime, events[i], events[i + 1]));
                 if (candidateBlockSizeTime < bestTime) { // checks if this configuration beat the current best
                     bestTime = candidateBlockSizeTime;
                     bestBlockSize = thrBlockSize;
