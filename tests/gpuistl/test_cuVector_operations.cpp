@@ -26,7 +26,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_matrix_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
 
 using NumericTypes = boost::mpl::list<double, float>;

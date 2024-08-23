@@ -30,7 +30,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/coloringAndReorderingUtils.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_matrix_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/DILUKernels.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <tuple>

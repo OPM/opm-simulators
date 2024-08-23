@@ -31,7 +31,7 @@
 #include <opm/simulators/linalg/gpuistl/OpmCuILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/autotuner.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/coloringAndReorderingUtils.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_matrix_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/preconditionerKernels/ILU0Kernels.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <string>

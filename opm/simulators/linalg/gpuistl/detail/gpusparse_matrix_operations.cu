@@ -18,7 +18,7 @@
 */
 #include <config.h>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_matrix_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/deviceBlockOperations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpuThreadUtils.hpp>
 #include <stdexcept>
