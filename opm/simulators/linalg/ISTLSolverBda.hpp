@@ -124,7 +124,7 @@ protected:
 #if HAVE_MPI
     using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
-    using CommunicationType = Dune::CollectiveCommunication<int>;
+    using CommunicationType = Dune::Communication<int>;
 #endif
 
 public:
