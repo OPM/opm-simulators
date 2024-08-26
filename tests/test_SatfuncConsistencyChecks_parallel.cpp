@@ -902,7 +902,7 @@ BOOST_AUTO_TEST_CASE(Standard_Multiple_Failing_Points)
 
     const auto rankMultiplier = 100'000;
 
-    checker.setPointIDFormatCallback([rankMultiplier](const std::size_t pointID)
+    checker.setPointIDFormatCallback([](const std::size_t pointID)
     {
         const auto rank = pointID / rankMultiplier;
         const auto pt   = pointID % rankMultiplier;
@@ -1026,7 +1026,7 @@ BOOST_AUTO_TEST_CASE(Standard_Multiple_Failing_Points)
 
     const auto rankMultiplier = 100'000;
 
-    checker.setPointIDFormatCallback([rankMultiplier](const std::size_t pointID)
+    checker.setPointIDFormatCallback([](const std::size_t pointID)
     {
         const auto rank = pointID / rankMultiplier;
         const auto pt   = pointID % rankMultiplier;
@@ -1155,7 +1155,7 @@ BOOST_AUTO_TEST_CASE(Standard_Multiple_Failing_Points)
 
     const auto rankMultiplier = 100'000;
 
-    checker.setPointIDFormatCallback([rankMultiplier](const std::size_t pointID)
+    checker.setPointIDFormatCallback([](const std::size_t pointID)
     {
         const auto rank = pointID / rankMultiplier;
         const auto pt   = pointID % rankMultiplier;
@@ -1472,7 +1472,7 @@ BOOST_AUTO_TEST_CASE(Standard_Multiple_Failing_Points)
 
     const auto rankMultiplier = 100'000;
 
-    checker.setPointIDFormatCallback([rankMultiplier](const std::size_t pointID)
+    checker.setPointIDFormatCallback([](const std::size_t pointID)
     {
         const auto rank = pointID / rankMultiplier;
         const auto pt   = pointID % rankMultiplier;
@@ -1707,7 +1707,7 @@ BOOST_AUTO_TEST_CASE(Standard_Multiple_Failing_Points)
 
     const auto rankMultiplier = 100'000;
 
-    checker.setPointIDFormatCallback([rankMultiplier](const std::size_t pointID)
+    checker.setPointIDFormatCallback([](const std::size_t pointID)
     {
         const auto rank = pointID / rankMultiplier;
         const auto pt   = pointID % rankMultiplier;
@@ -1962,7 +1962,7 @@ BOOST_AUTO_TEST_CASE(Standard_Multiple_Failing_Points)
 
     const auto rankMultiplier = 100'000;
 
-    checker.setPointIDFormatCallback([rankMultiplier](const std::size_t pointID)
+    checker.setPointIDFormatCallback([](const std::size_t pointID)
     {
         const auto rank = pointID / rankMultiplier;
         const auto pt   = pointID % rankMultiplier;
