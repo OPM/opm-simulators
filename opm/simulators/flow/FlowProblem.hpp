@@ -2211,9 +2211,8 @@ protected:
         const auto& schedule = simulator.vanguard().schedule();
         const auto& eclState = simulator.vanguard().eclState();
         const auto& initconfig = eclState.getInitConfig();
+        const int restart_step = initconfig.getRestartStep();
         {
-            int restart_step = initconfig.getRestartStep();
-
             simulator.setTime(schedule.seconds(restart_step));
 
             simulator.startNextEpisode(simulator.startTime() + simulator.time(),
@@ -2246,6 +2245,9 @@ protected:
         if constexpr (enableMICP) {
             this->micp_.resize(numElems);
         }
+
+        // Initialize mixing controls before trying to set any lastRx valuesx
+        this->mixControls_.init(numElems, restart_step, eclState.runspec().tabdims().getNumPVTTables());
 
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
