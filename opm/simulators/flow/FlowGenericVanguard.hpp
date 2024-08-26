@@ -67,6 +67,7 @@ struct NumJacobiBlocks { static constexpr int value = 0; };
 
 struct OwnerCellsFirst { static constexpr bool value = true; };
 struct ParsingStrictness { static constexpr auto value = "normal"; };
+struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 
  // 0: simple, 1: Zoltan, 2: METIS, see GridEnums.hpp
 struct PartitionMethod { static constexpr int value = 1; };

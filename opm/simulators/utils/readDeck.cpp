@@ -104,6 +104,7 @@ namespace {
                                 const Opm::ParseContext&             parseContext,
                                 const bool                           initFromRestart,
                                 const std::optional<int>&            outputInterval,
+                                const bool                           lowActionParsingStrictness,
                                 Opm::EclipseState&                   eclipseState,
                                 std::shared_ptr<Opm::Python>         python,
                                 std::shared_ptr<Opm::Schedule>&      schedule,
@@ -151,7 +152,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), outputInterval, init_state);
+                 std::move(python), lowActionParsingStrictness, outputInterval, init_state);
         }
 
         // Read network pressures from restart
@@ -172,6 +173,7 @@ namespace {
     void createNonRestartDynamicObjects(const Opm::Deck&                     deck,
                                         const Opm::EclipseState&             eclipseState,
                                         const Opm::ParseContext&             parseContext,
+                                        const bool                           lowActionParsingStrictness,
                                         std::shared_ptr<Opm::Python>         python,
                                         std::shared_ptr<Opm::Schedule>&      schedule,
                                         std::unique_ptr<Opm::UDQState>&      udqState,
@@ -182,7 +184,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext,
-                 errorGuard, std::move(python));
+                 errorGuard, std::move(python), lowActionParsingStrictness);
         }
 
         udqState = std::make_unique<Opm::UDQState>
@@ -243,6 +245,7 @@ namespace {
                       const bool                           initFromRestart,
                       const bool                           checkDeck,
                       const bool                           treatCriticalAsNonCritical,
+                      const bool                           lowActionParsingStrictness,
                       const std::optional<int>&            outputInterval,
                       Opm::ErrorGuard&                     errorGuard)
     {
@@ -267,13 +270,14 @@ namespace {
         if (eclipseState->getInitConfig().restartRequested()) {
             loadObjectsFromRestart(deck, parser, *parseContext,
                                    initFromRestart, outputInterval,
+                                   lowActionParsingStrictness,
                                    *eclipseState, std::move(python),
                                    schedule, udqState, actionState, wtestState,
                                    errorGuard);
         }
         else {
-            createNonRestartDynamicObjects(deck, *eclipseState,
-                                           *parseContext, std::move(python),
+            createNonRestartDynamicObjects(deck, *eclipseState, *parseContext,
+                                           lowActionParsingStrictness, std::move(python),
                                            schedule, udqState, actionState, wtestState,
                                            errorGuard);
         }
@@ -535,6 +539,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    std::shared_ptr<SummaryConfig>& summaryConfig,
                    std::shared_ptr<Python>         python,
                    const std::string&              parsingStrictness,
+                   const std::string&              actionParsingStrictness,
                    const std::string&              inputSkipMode,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
@@ -549,7 +554,10 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
         OPM_THROW(std::runtime_error,
                   fmt::format("Incorrect value {} for parameter ParsingStrictness, must be 'high', 'normal', or 'low'", parsingStrictness));
     }
-
+    if (actionParsingStrictness != "normal" && actionParsingStrictness != "low") {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Incorrect value {} for parameter ActionParsingStrictness, must be 'normal', or 'low'", actionParsingStrictness));
+    }
     if (inputSkipMode != "100" && inputSkipMode != "300" && inputSkipMode != "all") {
         OPM_THROW(std::runtime_error,
                   fmt::format("Incorrect value {} for parameter InputSkipMode, must be '100', '300', or 'all'", inputSkipMode));
@@ -558,6 +566,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         const bool exitOnAllErrors = (parsingStrictness == "high");
         const bool treatCriticalAsNonCritical = (parsingStrictness == "low");
+        const bool lowActionParsingStrictness = (actionParsingStrictness == "low");
         try {
             auto parseContext = setupParseContext(exitOnAllErrors);
             if (treatCriticalAsNonCritical) { // Continue with invalid names if parsing strictness is set to low
@@ -567,7 +576,8 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
-                         checkDeck, treatCriticalAsNonCritical, outputInterval, *errorGuard);
+                         checkDeck, treatCriticalAsNonCritical, lowActionParsingStrictness,
+                         outputInterval, *errorGuard);
 
             // Update schedule so that re-parsing after actions use same strictness
             assert(schedule);

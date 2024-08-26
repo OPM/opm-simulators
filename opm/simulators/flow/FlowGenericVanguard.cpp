@@ -149,7 +149,7 @@ void FlowGenericVanguard::readDeck(const std::string& filename)
                   modelParams_.actionState_,
                   modelParams_.wtestState_,
                   modelParams_.eclSummaryConfig_,
-                  nullptr, "normal", "100", false, false, {});
+                  nullptr, "normal", "normal", "100", false, false, {});
     modelParams_.setupTime_ = setupTimer.stop();
 }
 
@@ -401,6 +401,10 @@ void FlowGenericVanguard::registerParameters_()
          "high (stop for all errors) and "
          "low (as normal, except do not stop due to unsupported "
          "keywords even if marked critical");
+    Parameters::Register<Parameters::ActionParsingStrictness>
+        ("Set strictness of parsing process for ActionX and PyAction. Available options are "
+         "normal (do not apply keywords that have not been tested for ActionX or PyAction) and "
+         "low (try to apply all keywords, beware: the simulation outcome might be incorrect).");
     Parameters::Register<Parameters::InputSkipMode>
         ("Set compatibility mode for the SKIP100/SKIP300 keywords. Options are "
          "100 (skip SKIP100..ENDSKIP, keep SKIP300..ENDSKIP) [default], "
