@@ -39,9 +39,9 @@
 
 #if HAVE_CUDA
 #if USE_HIP
-#include <opm/simulators/linalg/hipistl/SolverAdapter.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/SolverAdapter.hpp>
 #else
-#include <opm/simulators/linalg/cuistl/SolverAdapter.hpp>
+#include <opm/simulators/linalg/gpuistl/SolverAdapter.hpp>
 #endif
 #endif
 
@@ -205,7 +205,7 @@ namespace Dune
 #endif
 #if HAVE_CUDA
         } else if (solver_type == "cubicgstab") {
-            linsolver_.reset(new Opm::cuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
+            linsolver_.reset(new Opm::gpuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
                 *linearoperator_for_solver_,
                 *scalarproduct_,
                 preconditioner_,

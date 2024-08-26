@@ -22,22 +22,22 @@
 // both with the normal cuistl path, and the hipistl path
 #if HAVE_CUDA
 #if USE_HIP
-#include <opm/simulators/linalg/hipistl/CuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/hipistl/CuDILU.hpp>
-#include <opm/simulators/linalg/hipistl/OpmCuILU0.hpp>
-#include <opm/simulators/linalg/hipistl/CuJac.hpp>
-#include <opm/simulators/linalg/hipistl/CuSeqILU0.hpp>
-#include <opm/simulators/linalg/hipistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/hipistl/PreconditionerConvertFieldTypeAdapter.hpp>
-#include <opm/simulators/linalg/hipistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuDILU.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/OpmCuILU0.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuJac.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuSeqILU0.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/PreconditionerAdapter.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/PreconditionerConvertFieldTypeAdapter.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/detail/gpu_safe_call.hpp>
 #else
-#include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/cuistl/CuDILU.hpp>
-#include <opm/simulators/linalg/cuistl/OpmCuILU0.hpp>
-#include <opm/simulators/linalg/cuistl/CuJac.hpp>
-#include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuDILU.hpp>
+#include <opm/simulators/linalg/gpuistl/OpmCuILU0.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
+#include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
+#include <opm/simulators/linalg/gpuistl/PreconditionerConvertFieldTypeAdapter.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #endif
 #endif
