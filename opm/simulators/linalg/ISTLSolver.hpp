@@ -35,6 +35,7 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
+#include <opm/simulators/flow/FlowProblemProperties.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
@@ -159,6 +160,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
+        enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
+        enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
+        constexpr static bool isIncompatibleWithCprw = enableMICP || enablePolymerMolarWeight;
+
 #if HAVE_MPI
         using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
@@ -210,6 +215,21 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void initialize()
         {
             OPM_TIMEBLOCK(IstlSolver);
+
+            if (isIncompatibleWithCprw) {
+                // Some model variants are incompatible with the CPRW linear solver.
+                if (parameters_[0].linsolver_ == "cprw" || parameters_[0].linsolver_ == "hybrid") {
+                    std::string incompatible_model = "Unknown";
+                    if (enableMICP) {
+                        incompatible_model = "MICP";
+                    } else if (enablePolymerMolarWeight) {
+                        incompatible_model = "Polymer injectivity";
+                    }
+                    OPM_THROW(std::runtime_error,
+                              incompatible_model + " model is incompatible with the CPRW linear solver.\n"
+                              "Choose a different option, for example --linear-solver=ilu0");
+                }
+            }
 
             if (parameters_[0].linsolver_ == "hybrid") {
                 // Experimental hybrid configuration.
