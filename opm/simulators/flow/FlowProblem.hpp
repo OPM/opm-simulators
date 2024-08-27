@@ -601,9 +601,7 @@ public:
 
         // update maximum water saturation and minimum pressure
         // used when ROCKCOMP is activated
-        // Do not update max RS first step after a restart
-        asImp_().updateExplicitQuantities_(episodeIdx, timeStepSize, first_step_ && (episodeIdx > 0));
-        first_step_ = false;
+        asImp_().updateExplicitQuantities_(episodeIdx, timeStepSize);
 
         if (nonTrivialBoundaryConditions()) {
             this->model().linearizer().updateBoundaryConditionData();
@@ -1873,7 +1871,7 @@ private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
 protected:
-    void updateExplicitQuantities_(int episodeIdx, int timeStepSize, const bool first_step_after_restart = false)
+    void updateExplicitQuantities_(int episodeIdx, int timeStepSize)
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
@@ -1884,8 +1882,8 @@ protected:
         const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
 
 
-        // deal with DRSDT and DRVDT (do not update first step after a restart)
-        const bool invalidateDRDT = !first_step_after_restart && this->asImp_().updateCompositionChangeLimits_();
+        // deal with DRSDT and DRVDT
+        const bool invalidateDRDT = this->asImp_().updateCompositionChangeLimits_();
 
         // the derivatives may have change
         bool invalidateIntensiveQuantities
@@ -2890,8 +2888,9 @@ private:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool explicitRockCompaction_ = false;
-    bool first_step_ = true;
+
     ModuleParams moduleParams_;
+
 
 };
 

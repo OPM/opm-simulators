@@ -195,6 +195,8 @@ public:
     {
         init(timer);
         // Make cache up to date. No need for updating it in elementCtx.
+        // NB! Need to be at the correct step in case of restart
+        simulator_.setEpisodeIndex(timer.currentStepNum());
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         // Main simulation loop.
         while (!timer.done()) {
