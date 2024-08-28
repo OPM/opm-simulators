@@ -689,35 +689,40 @@ add_test_compareECLFiles(CASENAME h2store
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 add_test_compareECLFiles(CASENAME h2store_gw
                          FILENAME H2STORE_GW
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 add_test_compareECLFiles(CASENAME h2store_gaswat
                          FILENAME H2STORE_GASWAT
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 add_test_compareECLFiles(CASENAME h2store_diffusive
                          FILENAME H2STORE_DIFFUSIVE
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 add_test_compareECLFiles(CASENAME h2store_energy
                          FILENAME H2STORE_ENERGY
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
