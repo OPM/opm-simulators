@@ -561,7 +561,8 @@ add_test_compareECLFiles(CASENAME udq_uadd
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR udq_actionx)
+                         DIR udq_actionx
+                         TEST_ARGS --tolerance-wells=1.e-8)
 
 add_test_compareECLFiles(CASENAME udq_undefined
                          FILENAME UDQ_M2
@@ -1075,7 +1076,8 @@ add_test_compareECLFiles(CASENAME norne_reperf
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR norne)
+                         DIR norne
+                         TEST_ARGS --tolerance-wells=1.e-8)
 
 add_test_compareECLFiles(CASENAME compl_smry
                          FILENAME COMPL_SMRY
