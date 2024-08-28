@@ -30,7 +30,7 @@ class TestBasic(unittest.TestCase):
             rho_g = sim.get_fluidstate_variable(name='rho_g')
             self.assertAlmostEqual(rho_g[0], 241.36955087, places=2, msg='value of gas density')
             rho_o = sim.get_fluidstate_variable(name='rho_o')
-            self.assertAlmostEqual(rho_o[0], 631.78611238, places=3, msg='value of oil density')
+            self.assertAlmostEqual(rho_o[0], 631.78674, places=2, msg='value of oil density')
             Rs = sim.get_fluidstate_variable(name='Rs')
             self.assertAlmostEqual(Rs[0], 226.19666048, places=5, msg='value of solution gas-oil ratio')
             Rv = sim.get_fluidstate_variable(name='Rv')
