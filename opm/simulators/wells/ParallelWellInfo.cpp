@@ -120,6 +120,26 @@ GlobalPerfContainerFactory(const IndexSet& local_indices,
 }
 
 template<class Scalar>
+int GlobalPerfContainerFactory<Scalar>::localToGlobal(std::size_t localIndex) const {
+    if (local_indices_.begin() == local_indices_.end())
+        return localIndex;
+    auto it = std::find_if(local_indices_.begin(), local_indices_.end(), [localIndex](const auto& index) {return index.local() == localIndex;});
+    if (it == local_indices_.end())
+        OPM_THROW(std::logic_error, "There is no global index for the localIndex " + std::to_string(localIndex) + ".");
+    return it->global();
+}
+
+template<class Scalar>
+int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) const {
+    if (local_indices_.begin() == local_indices_.end())
+        return globalIndex;
+    auto it = std::find_if(local_indices_.begin(), local_indices_.end(), [globalIndex](const auto& index) {return index.global() == globalIndex;});
+    if (it == local_indices_.end())
+        return -1;
+    return it->local().local();
+}
+
+template<class Scalar>
 std::vector<Scalar> GlobalPerfContainerFactory<Scalar>::
 createGlobal(const std::vector<Scalar>& local_perf_container,
              std::size_t num_components) const
@@ -475,6 +495,22 @@ ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& w
 #endif
     commAboveBelow_.reset(new CommunicateAboveBelow<Scalar>(*comm_));
     isOwner_ = (comm_->rank() == 0);
+}
+
+template<class Scalar>
+int ParallelWellInfo<Scalar>::localToGlobal(std::size_t localIndex) const {
+    if(globalPerfCont_)
+        return globalPerfCont_->localToGlobal(localIndex);
+    else // If there is not globalPerfCont_ set up, then this is a sequential run and local and global indices are the same
+        return localIndex;
+}
+
+template<class Scalar>
+int ParallelWellInfo<Scalar>::globalToLocal(const int globalIndex) const {
+    if(globalPerfCont_)
+        return globalPerfCont_->globalToLocal(globalIndex);
+    else // If there is not globalPerfCont_ set up, then this is a sequential run and local and global indices are the same
+        return globalIndex;
 }
 
 template<class Scalar>
