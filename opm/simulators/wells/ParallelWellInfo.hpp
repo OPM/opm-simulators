@@ -161,6 +161,8 @@ public:
                            std::size_t num_components) const;
 
     int numGlobalPerfs() const;
+    int globalToLocal(const int globalIndex) const;
+    int localToGlobal(std::size_t localIndex) const;
 
 private:
     const IndexSet& local_indices_;
@@ -208,6 +210,8 @@ public:
     /// \brief Collectively decide which rank has first perforation.
     void communicateFirstPerforation(bool hasFirst);
 
+    int globalToLocal(const int globalIndex) const;
+    int localToGlobal(std::size_t localIndex) const;
 
     /// If the well does not have any open connections the member rankWithFirstPerf
     /// is not initialized, and no broadcast is performed. In this case the argument
