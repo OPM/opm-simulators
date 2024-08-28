@@ -161,6 +161,8 @@ public:
                            std::size_t num_components) const;
 
     int numGlobalPerfs() const;
+    int globalToLocal(const int globalIndex) const;
+    int localToGlobal(std::size_t localIndex) const;
 
 private:
     const IndexSet& local_indices_;
