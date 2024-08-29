@@ -103,7 +103,7 @@ init(std::size_t numDof, int episodeIdx, const unsigned ntpvt)
         dRsDtOnlyFreeGas_.resize(ntpvt, false);
         lastRs_.resize(numDof, 0.0);
     }
-    if (this->drvdtActive(episodeIdx && maxDRv_.empty())) {
+    if (this->drvdtActive(episodeIdx) && maxDRv_.empty()) {
         lastRv_.resize(numDof, 0.0);
         maxDRv_.resize(ntpvt, 1e30);
     }
