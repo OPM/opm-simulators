@@ -574,6 +574,8 @@ public:
                 thpres.setFromRestart(thpresValues);
             }
             restartTimeStepSize_ = restartValues.getExtra("OPMEXTRA")[0];
+            if (restartTimeStepSize_ <= 0)
+                restartTimeStepSize_ = std::numeric_limits<double>::max();
 
             // initialize the well model from restart values
             simulator_.problem().wellModel().initFromRestartFile(restartValues);

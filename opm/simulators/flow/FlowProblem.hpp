@@ -601,7 +601,9 @@ public:
 
         // update maximum water saturation and minimum pressure
         // used when ROCKCOMP is activated
-        asImp_().updateExplicitQuantities_(episodeIdx, timeStepSize);
+        // Do not update max RS first step after a restart
+        asImp_().updateExplicitQuantities_(episodeIdx, timeStepSize, first_step_ && (episodeIdx > 0));
+        first_step_ = false;
 
         if (nonTrivialBoundaryConditions()) {
             this->model().linearizer().updateBoundaryConditionData();
@@ -1871,7 +1873,7 @@ private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
 protected:
-    void updateExplicitQuantities_(int episodeIdx, int timeStepSize)
+    void updateExplicitQuantities_(int episodeIdx, int timeStepSize, const bool first_step_after_restart = false)
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
@@ -1883,7 +1885,7 @@ protected:
 
 
         // deal with DRSDT and DRVDT
-        const bool invalidateDRDT = this->asImp_().updateCompositionChangeLimits_();
+        const bool invalidateDRDT = !first_step_after_restart && this->asImp_().updateCompositionChangeLimits_();
 
         // the derivatives may have change
         bool invalidateIntensiveQuantities
@@ -2209,9 +2211,8 @@ protected:
         const auto& schedule = simulator.vanguard().schedule();
         const auto& eclState = simulator.vanguard().eclState();
         const auto& initconfig = eclState.getInitConfig();
+        const int restart_step = initconfig.getRestartStep();
         {
-            int restart_step = initconfig.getRestartStep();
-
             simulator.setTime(schedule.seconds(restart_step));
 
             simulator.startNextEpisode(simulator.startTime() + simulator.time(),
@@ -2244,6 +2245,9 @@ protected:
         if constexpr (enableMICP) {
             this->micp_.resize(numElems);
         }
+
+        // Initialize mixing controls before trying to set any lastRx valuesx
+        this->mixControls_.init(numElems, restart_step, eclState.runspec().tabdims().getNumPVTTables());
 
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
@@ -2886,7 +2890,7 @@ private:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool explicitRockCompaction_ = false;
-
+    bool first_step_ = true;
     ModuleParams moduleParams_;
 
 
