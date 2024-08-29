@@ -285,10 +285,6 @@ public:
                                         distZ*g,
                                         thpres,
                                         problem.moduleParams());
-            if (pressureDifferences[phaseIdx] == 0) {
-                volumeFlux[phaseIdx] = 0.0;
-                continue;
-            }
 
             const bool upwindIsInterior = (static_cast<unsigned>(upIdx[phaseIdx]) == interiorDofIdx);
             const IntensiveQuantities& up = upwindIsInterior ? intQuantsIn : intQuantsEx;

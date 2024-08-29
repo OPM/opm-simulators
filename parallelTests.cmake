@@ -137,7 +137,7 @@ add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      FILENAME AQUFLUX-01
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
-                                     REL_TOL 0.04
+                                     REL_TOL 0.06
                                      DIR aquifers
                                      TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1.0e-3)
 
@@ -150,12 +150,12 @@ add_test_compare_parallel_simulation(CASENAME aquflux_02
                                      TEST_ARGS --enable-tuning=true)
 
 add_test_compare_parallel_simulation(CASENAME network_balance_01
-	                             FILENAME NETWORK-01
-	                             SIMULATOR flow
-	                             ABS_TOL ${abs_tol}
-	                             REL_TOL ${coarse_rel_tol_parallel}
-	                             DIR network
-	                             TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0 --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1e-3)
+                                     FILENAME NETWORK-01
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol}
+                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     DIR network
+                                     TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0 --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1e-3)
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      FILENAME 3D_1AQU_3CELLS
@@ -202,7 +202,7 @@ add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
-      			       DIR model2
+                               DIR model2
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
 
 add_test_compare_parallel_simulation(CASENAME rxft
