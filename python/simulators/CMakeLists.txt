@@ -91,6 +91,18 @@ add_custom_target(copy_python ALL
         ${PROJECT_SOURCE_DIR}/python/test_data ${PROJECT_BINARY_DIR}/python 0
 )
 
+file(COPY ${PROJECT_SOURCE_DIR}/python/opm/CMakeLists.txt DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(COPY ${PROJECT_SOURCE_DIR}/python/requirements.txt DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(COPY ${PROJECT_SOURCE_DIR}/python/README.md DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(COPY ${PROJECT_SOURCE_DIR}/python/MANIFEST.in DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(COPY ${PROJECT_SOURCE_DIR}/python/pyproject.toml DESTINATION ${PROJECT_BINARY_DIR}/python)
+
+# Generate versioned setup.py
+configure_file(${PROJECT_SOURCE_DIR}/python/setup.py.in
+                ${PROJECT_BINARY_DIR}/python/setup.py.tmp @ONLY)
+file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/python/setup.py
+               INPUT ${PROJECT_BINARY_DIR}/python/setup.py.tmp)
+
 # Since the installation of Python code is nonstandard it is protected by an
 # extra cmake switch, OPM_INSTALL_PYTHON. If you prefer you can still invoke
 # setup.py install manually - optionally with the generated script

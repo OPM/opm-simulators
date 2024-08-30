@@ -1,0 +1,39 @@
+from skbuild import setup
+
+import os
+
+setupdir = os.path.dirname(__file__)
+if setupdir != '':
+  os.chdir( setupdir )
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+with open("requirements.txt", "r") as fh:
+    requires = [line.rstrip() for line in fh]
+
+setup(
+    name='opm-simulators',
+    version = '@opm-simulators_VERSION@' + '@opm-simulators_PYTHON_PACKAGE_VERSION@',
+    url='http://www.opm-project.org',
+    author='The Open Porous Media Project',
+    author_email='opmuser@gmail.com',
+    description='OPM-Simulators Python bindings',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    packages=[
+                'opm',
+                'opm.simulators'
+            ],
+    package_data={'opm' : ['$<TARGET_FILE_NAME:simulators>']},
+    include_package_data=True,
+    license='Open Source',
+    test_suite='tests',
+    setup_requires=["pytest-runner", 'setuptools_scm'],
+    install_requires=requires,
+    python_requires='>=3.6',
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    ],
+)
