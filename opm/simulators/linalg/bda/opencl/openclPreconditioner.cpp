@@ -61,7 +61,7 @@ setOpencl(std::shared_ptr<cl::Context>& context_,
     queue = queue_;
 }
 
-#define INSTANCE_TYPE(T)                \
+#define INSTANTIATE_TYPE(T)                   \
     template class openclPreconditioner<T,1>; \
     template class openclPreconditioner<T,2>; \
     template class openclPreconditioner<T,3>; \
@@ -69,6 +69,10 @@ setOpencl(std::shared_ptr<cl::Context>& context_,
     template class openclPreconditioner<T,5>; \
     template class openclPreconditioner<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::Accelerator

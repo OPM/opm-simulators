@@ -1351,7 +1351,7 @@ namespace Opm {
                     WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
                     // Narrow down the bracket
                     Scalar low1, high1;
-                    std::array<Scalar, 2> range = {0.9*min_thp, 1.1*max_thp};
+                    std::array<Scalar, 2> range = {Scalar{0.9}*min_thp, Scalar{1.1}*max_thp};
                     std::optional<Scalar> appr_sol;
                     WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
                     min_thp = low1;
@@ -1362,7 +1362,8 @@ namespace Opm {
                 if (!autochoke_thp.has_value() || autochoke_thp.value() > nodal_pressure) {
                     // The bracket is based on the initial bracket or on a range based on a previous calculated group thp
                     std::array<Scalar, 2> range = autochoke_thp.has_value() ?
-                        std::array<Scalar, 2>{0.9 * autochoke_thp.value(), 1.1 * autochoke_thp.value()} : range_initial;
+                        std::array<Scalar, 2>{Scalar{0.9} * autochoke_thp.value(),
+                                              Scalar{1.1} * autochoke_thp.value()} : range_initial;
                     Scalar low, high;
                     std::optional<Scalar> approximate_solution;
                     const Scalar tolerance1 = thp_tolerance;

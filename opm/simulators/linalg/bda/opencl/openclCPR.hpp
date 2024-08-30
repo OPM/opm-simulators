@@ -20,8 +20,6 @@
 #ifndef OPM_OPENCLCPR_HPP
 #define OPM_OPENCLCPR_HPP
 
-#include <mutex>
-
 #include <dune/istl/paamg/matrixhierarchy.hh>
 #include <dune/istl/umfpack.hh>
 
@@ -33,6 +31,8 @@
 #include <opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
+
+#include <type_traits>
 
 namespace Opm::Accelerator {
 

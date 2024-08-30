@@ -190,7 +190,11 @@ analyzeHierarchy()
     const typename DuneAmg::ParallelMatrixHierarchy& matrixHierarchy = dune_amg->matrices();
 
     // store coarsest AMG level in umfpack format, also performs LU decomposition
-    umfpack.setMatrix((*matrixHierarchy.coarsest()).getmat());
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use CPR with float Scalar due to UMFPACK");
+    } else {
+        umfpack.setMatrix((*matrixHierarchy.coarsest()).getmat());
+    }
 
     num_levels = dune_amg->levels();
     level_sizes.resize(num_levels);
@@ -280,7 +284,7 @@ analyzeAggregateMaps()
     }
 }
 
-#define INSTANCE_TYPE(T)                \
+#define INSTANTIATE_TYPE(T)          \
     template class CprCreation<T,1>; \
     template class CprCreation<T,2>; \
     template class CprCreation<T,3>; \
@@ -288,7 +292,11 @@ analyzeAggregateMaps()
     template class CprCreation<T,5>; \
     template class CprCreation<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm
 

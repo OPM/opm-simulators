@@ -490,4 +490,8 @@ spmv([[maybe_unused]] Scalar* vals,
 
 template class HipKernels<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class HipKernels<float>;
+#endif
+
 } // namespace Opm

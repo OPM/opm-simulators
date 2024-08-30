@@ -353,7 +353,7 @@ void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
                                 d_invL_x, y, Nb, bs); // application of isaiU is a simple spmv
 }
 
-#define INSTANCE_TYPE(T)       \
+#define INSTANTIATE_TYPE(T)          \
     template class openclBISAI<T,1>; \
     template class openclBISAI<T,2>; \
     template class openclBISAI<T,3>; \
@@ -361,6 +361,10 @@ void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
     template class openclBISAI<T,5>; \
     template class openclBISAI<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::Accelerator

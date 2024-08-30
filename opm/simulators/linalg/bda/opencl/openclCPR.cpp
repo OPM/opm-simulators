@@ -36,6 +36,8 @@
 
 #include <opm/simulators/linalg/bda/Misc.hpp>
 
+#include <type_traits>
+
 namespace Opm::Accelerator {
 
 using Dune::Timer;
@@ -220,7 +222,11 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
         }
 
         // solve coarsest level using umfpack
-        this->umfpack.apply(h_x.data(), h_y.data());
+        if constexpr (std::is_same_v<Scalar,float>) {
+            OPM_THROW(std::runtime_error, "Cannot use CPR with floats due to UMFPACK usage");
+        } else {
+            this->umfpack.apply(h_x.data(), h_y.data());
+        }
 
         events.resize(1);
         err = queue->enqueueWriteBuffer(x, CL_FALSE, 0,
@@ -308,7 +314,7 @@ void openclCPR<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     }
 }
 
-#define INSTANCE_TYPE(T)     \
+#define INSTANTIATE_TYPE(T)        \
     template class openclCPR<T,1>; \
     template class openclCPR<T,2>; \
     template class openclCPR<T,3>; \
@@ -316,6 +322,10 @@ void openclCPR<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     template class openclCPR<T,5>; \
     template class openclCPR<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::Accelerator

@@ -464,4 +464,8 @@ void FlowGenericVanguard::registerParameters_()
 
 template void FlowGenericVanguard::registerParameters_<double>();
 
+#if FLOW_INSTANTIATE_FLOAT
+template void FlowGenericVanguard::registerParameters_<float>();
+#endif
+
 } // namespace Opm

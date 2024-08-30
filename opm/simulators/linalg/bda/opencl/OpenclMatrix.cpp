@@ -75,5 +75,9 @@ void OpenclMatrix<Scalar>::upload(cl::CommandQueue* queue, BlockedMatrix<Scalar>
 
 template class OpenclMatrix<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class OpenclMatrix<float>;
+#endif
+
 } // namespace Accelerator
 } // namespace Opm

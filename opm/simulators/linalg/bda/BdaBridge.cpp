@@ -50,7 +50,9 @@
 #include <opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp>
 #endif
 
-typedef Dune::InverseOperatorResult InverseOperatorResult;
+#include <type_traits>
+
+using InverseOperatorResult = Dune::InverseOperatorResult;
 
 namespace Opm {
 
@@ -95,10 +97,14 @@ BdaBridge(std::string accelerator_mode_,
 #endif
     } else if (accelerator_mode.compare("amgcl") == 0) {
 #if HAVE_AMGCL
-        use_gpu = true; // should be replaced by a 'use_bridge' boolean
-        using AMGCL = Accelerator::amgclSolverBackend<Scalar,block_size>;
-        backend = std::make_unique<AMGCL>(linear_solver_verbosity, maxit,
-                                          tolerance, platformID, deviceID);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            OPM_THROW(std::logic_error, "Error amgclSolver disabled with float Scalar");
+        } else {
+            use_gpu = true; // should be replaced by a 'use_bridge' boolean
+            using AMGCL = Accelerator::amgclSolverBackend<Scalar,block_size>;
+            backend = std::make_unique<AMGCL>(linear_solver_verbosity, maxit,
+                                              tolerance, platformID, deviceID);
+        }
 #else
         OPM_THROW(std::logic_error, "Error amgclSolver was chosen, but amgcl was not found by CMake");
 #endif
@@ -365,5 +371,9 @@ initWellContributions([[maybe_unused]] WellContributions<Scalar>& wellContribs,
     INSTANTIATE_BDA_FUNCTIONS(T,6)
 
 INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm
