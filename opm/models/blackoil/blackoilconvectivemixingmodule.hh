@@ -28,15 +28,16 @@
 #ifndef EWOMS_CONVECTIVEMIXING_MODULE_HH
 #define EWOMS_CONVECTIVEMIXING_MODULE_HH
 
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-#include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/material/common/Valgrind.hpp>
-
+#include "opm/material/common/MathToolbox.hpp"
 #include <dune/common/fvector.hh>
 
-#include <stdexcept>
-#include <iostream>
+#include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+
+#include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
@@ -119,8 +120,8 @@ public:
                                         const Scalar,
                                         const ConvectiveMixingModuleParam&)
     {}
-
 };
+
 template <class TypeTag>
 class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
 {
@@ -150,7 +151,10 @@ public:
     };
 
     #if HAVE_ECL_INPUT
-    static void beginEpisode(const EclipseState& eclState, const Schedule& schedule, const int episodeIdx, ConvectiveMixingModuleParam& info)
+    static void beginEpisode(const EclipseState& eclState,
+                             const Schedule& schedule,
+                             const int episodeIdx,
+                             ConvectiveMixingModuleParam& info)
     {
         // check that Xhi and Psi didn't change
         std::size_t numRegions = eclState.runspec().tabdims().getNumPVTTables();
@@ -211,8 +215,10 @@ public:
         const auto salt_ex = Toolbox::value(intQuantsEx.fluidState().saltConcentration());
 
         const auto bLiquidEx = (FluidSystem::phaseIsActive(waterPhaseIdx)) ?
-        FluidSystem::waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(), t_ex, p_ex, 0.0, salt_ex) :
-        FluidSystem::oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(), t_ex, p_ex, 0.0);
+        FluidSystem::waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
+                                                             t_ex, p_ex, Scalar{0.0}, salt_ex) :
+        FluidSystem::oilPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(),
+                                                           t_ex, p_ex, Scalar{0.0});
 
         const auto& refDensityLiquidEx = (FluidSystem::phaseIsActive(waterPhaseIdx)) ?
         FluidSystem::waterPvt().waterReferenceDensity(intQuantsEx.pvtRegionIndex()) :
@@ -373,12 +379,9 @@ public:
                 }
             }
         }
-    };
-
+    }
 };
 
 }
+
 #endif
-
-
-

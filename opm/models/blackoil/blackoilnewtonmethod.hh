@@ -324,13 +324,13 @@ protected:
             else if (enableExtbo && pvIdx == Indices::zFractionIdx) {
                 // z fraction updates are also subject to the Appleyard chop
                 const auto& curr = currentValue[Indices::zFractionIdx]; // or currentValue[pvIdx] given the block condition
-                delta = std::clamp(delta, curr - 1.0, curr);
+                delta = std::clamp(delta, curr - Scalar{1.0}, curr);
             }
             else if (enablePolymerWeight && pvIdx == Indices::polymerMoleWeightIdx) {
                 const double sign = delta >= 0. ? 1. : -1.;
                 // maximum change of polymer molecular weight, the unit is MDa.
                 // applying this limit to stabilize the simulation. The value itself is still experimental.
-                const double maxMolarWeightChange = 100.0;
+                const Scalar maxMolarWeightChange = 100.0;
                 delta = sign * std::min(std::abs(delta), maxMolarWeightChange);
                 delta *= satAlpha;
             }
@@ -341,8 +341,8 @@ protected:
             else if (enableBrine && pvIdx == Indices::saltConcentrationIdx &&
                      enableSaltPrecipitation &&
                      currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-                const double maxSaltSaturationChange = 0.1;
-                const double sign = delta >= 0. ? 1. : -1.;
+                const Scalar maxSaltSaturationChange = 0.1;
+                const Scalar sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), maxSaltSaturationChange);
             }
 
@@ -352,19 +352,19 @@ protected:
             // keep the solvent saturation between 0 and 1
             if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
                 if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss )
-                    nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], 0.0), 1.0);
+                    nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], Scalar{0.0}), Scalar{1.0});
             }
 
             // keep the z fraction between 0 and 1
             if (enableExtbo && pvIdx == Indices::zFractionIdx)
-                nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], 0.0), 1.0);
+                nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], Scalar{0.0}), Scalar{1.0});
 
             // keep the polymer concentration above 0
             if (enablePolymer && pvIdx == Indices::polymerConcentrationIdx)
-                nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
+                nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
 
             if (enablePolymerWeight && pvIdx == Indices::polymerMoleWeightIdx) {
-                nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
+                nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                 const double polymerConcentration = nextValue[Indices::polymerConcentrationIdx];
                 if (polymerConcentration < 1.e-10)
                     nextValue[pvIdx] = 0.0;
@@ -372,15 +372,15 @@ protected:
 
             // keep the foam concentration above 0
             if (enableFoam && pvIdx == Indices::foamConcentrationIdx)
-                nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
+                nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
 
             if (enableBrine && pvIdx == Indices::saltConcentrationIdx) {
                // keep the salt concentration above 0
                if (!enableSaltPrecipitation || (enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Cs))
-                   nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
+                   nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                // keep the salt saturation below upperlimit
                if ((enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp))
-                   nextValue[pvIdx] = std::min(nextValue[pvIdx], 1.0-1.e-8);
+                   nextValue[pvIdx] = std::min(nextValue[pvIdx], Scalar{1.0-1.e-8});
             }
 
             // keep the temperature within given values
@@ -398,15 +398,15 @@ protected:
             // concentration (the urea concentration has been scaled by 10). For
             // the biofilm and calcite, we set this value equal to the porosity minus the clogging tolerance.
             if (enableMICP && pvIdx == Indices::microbialConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::densityBiofilm());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::densityBiofilm());
             if (enableMICP && pvIdx == Indices::oxygenConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::maximumOxygenConcentration());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::maximumOxygenConcentration());
             if (enableMICP && pvIdx == Indices::ureaConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::maximumUreaConcentration());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::maximumUreaConcentration());
             if (enableMICP && pvIdx == Indices::biofilmConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::phi()[globalDofIdx] - MICPModule::toleranceBeforeClogging());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::phi()[globalDofIdx] - MICPModule::toleranceBeforeClogging());
             if (enableMICP && pvIdx == Indices::calciteConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::phi()[globalDofIdx] - MICPModule::toleranceBeforeClogging());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::phi()[globalDofIdx] - MICPModule::toleranceBeforeClogging());
         }
 
         // switch the new primary variables to something which is physically meaningful.
