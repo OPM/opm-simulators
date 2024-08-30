@@ -975,14 +975,14 @@ namespace Opm {
             // semicolon.  This is an immediately invoked function
             // expression which calculates a single boolean value.
             const auto relax_pv_fraction_cnv =
-                [&report, pvSum, numAquiferPvSum, this]()
+                [&report, this, eligible = pvSum - numAquiferPvSum]()
             {
                 const auto& cnvPvSplit = report.cnvPvSplit().first;
 
                 // [1]: tol < cnv <= relaxed
                 // [2]: relaxed < cnv
                 return static_cast<Scalar>(cnvPvSplit[1] + cnvPvSplit[2]) <
-                    this->param_.relaxed_max_pv_fraction_ * (pvSum - numAquiferPvSum);
+                    this->param_.relaxed_max_pv_fraction_ * eligible;
             }();
 
             const bool use_relaxed_cnv = relax_final_iteration_cnv
