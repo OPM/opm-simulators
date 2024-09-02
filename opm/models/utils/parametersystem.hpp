@@ -84,6 +84,9 @@ auto getParamName()
     }
 }
 
+//! \brief Private implementation.
+void Hide_(const std::string& paramName);
+
 }
 
 struct ParamInfo
@@ -489,7 +492,6 @@ void Register(const char* usageString)
     MetaData::mutableRegistry()[paramName] = paramInfo;
 }
 
-
 /*!
  * \brief Indicate that a given parameter should not be mentioned in the help message
  *
@@ -498,20 +500,7 @@ void Register(const char* usageString)
 template <class Param>
 void Hide()
 {
-    const std::string paramName = detail::getParamName<Param>();
-    if (!MetaData::registrationOpen()) {
-        throw std::logic_error("Parameter '" +paramName + "' declared as hidden"
-                               " when parameter registration was already closed.");
-    }
-
-    auto paramInfoIt = MetaData::mutableRegistry().find(paramName);
-    if (paramInfoIt == MetaData::mutableRegistry().end()) {
-        throw std::logic_error("Tried to declare unknown parameter '"
-                               + paramName + "' hidden.");
-    }
-
-    auto& paramInfo = paramInfoIt->second;
-    paramInfo.isHidden = true;
+    detail::Hide_(detail::getParamName<Param>());
 }
 
 /*!

@@ -137,10 +137,30 @@ std::string transformKey(const std::string& s,
     return result;
 }
 
-
 } // anonymous namespace
 
 namespace Opm::Parameters {
+
+namespace detail {
+
+void Hide_(const std::string& paramName)
+{
+    if (!MetaData::registrationOpen()) {
+        throw std::logic_error("Parameter '" + paramName + "' declared as hidden"
+                               " when parameter registration was already closed.");
+    }
+
+    auto paramInfoIt = MetaData::mutableRegistry().find(paramName);
+    if (paramInfoIt == MetaData::mutableRegistry().end()) {
+        throw std::logic_error("Tried to declare unknown parameter '"
+                               + paramName + "' hidden.");
+    }
+
+    auto& paramInfo = paramInfoIt->second;
+    paramInfo.isHidden = true;
+}
+
+}
 
 bool ParamInfo::operator==(const ParamInfo& other) const
 {
