@@ -178,10 +178,6 @@ std::string breakLines(const std::string& msg,
 
 int getTtyWidth();
 
-void getFlattenedKeyList(std::list<std::string>& dest,
-                         const Dune::ParameterTree& tree,
-                         const std::string& prefix = "");
-
 // print the values of a list of parameters
 void printParamList(std::ostream& os,
                     const std::list<std::string>& keyList,

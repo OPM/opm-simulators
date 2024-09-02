@@ -38,6 +38,24 @@
 
 namespace {
 
+void getFlattenedKeyList(std::list<std::string>& dest,
+                         const Dune::ParameterTree& tree,
+                         const std::string& prefix = "")
+{
+    // add the keys of the current sub-structure
+    for (const auto& valueKey : tree.getValueKeys()) {
+        std::string newKey(prefix + valueKey);
+        dest.push_back(newKey);
+    }
+
+    // recursively add all substructure keys
+    for (const auto& subKey : tree.getSubKeys()) {
+        std::string newPrefix(prefix + subKey + '.');
+        getFlattenedKeyList(dest, tree.sub(subKey), newPrefix);
+    }
+}
+
+
 std::string parseKey(std::string& s)
 {
     unsigned i;
@@ -454,24 +472,6 @@ void getLists(std::vector<Parameter>& usedParams,
     }
 }
 
-void getFlattenedKeyList(std::list<std::string>& dest,
-                         const Dune::ParameterTree& tree,
-                         const std::string& prefix)
-{
-    // add the keys of the current sub-structure
-    for (const auto& valueKey : tree.getValueKeys()) {
-        std::string newKey(prefix + valueKey);
-        dest.push_back(newKey);
-    }
-
-    // recursively add all substructure keys
-    for (const auto& subKey : tree.getSubKeys()) {
-        std::string newPrefix(prefix + subKey + '.');
-        getFlattenedKeyList(dest, tree.sub(subKey), newPrefix);
-    }
-}
-
-// print the values of a list of parameters
 void printParamList(std::ostream& os,
                     const std::list<std::string>& keyList,
                     bool printDefaults)
