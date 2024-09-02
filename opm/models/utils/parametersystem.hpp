@@ -149,26 +149,6 @@ auto Get(bool errorIfNotRegistered = true);
 template <class Param>
 void SetDefault(decltype(Param::value) new_value);
 
-class ParamRegFinalizerBase_
-{
-public:
-    virtual ~ParamRegFinalizerBase_()
-    {}
-    virtual void retrieve() = 0;
-};
-
-template <class Param>
-class ParamRegFinalizer_ : public ParamRegFinalizerBase_
-{
-public:
-    void retrieve() override
-    {
-        // retrieve the parameter once to make sure that its value does
-        // not contain a syntax error.
-        std::ignore = Get<Param>(/*errorIfNotRegistered=*/true);
-    }
-};
-
 struct MetaData
 {
     using type = Dune::ParameterTree;
@@ -182,16 +162,12 @@ struct MetaData
     static const std::map<std::string, ParamInfo>& registry()
     { return storage_().registry; }
 
-    static std::list<std::unique_ptr<ParamRegFinalizerBase_>> &registrationFinalizers()
-    { return storage_().finalizers; }
-
     static bool& registrationOpen()
     { return storage_().registrationOpen; }
 
     static void clear()
     {
         storage_().tree = std::make_unique<Dune::ParameterTree>();
-        storage_().finalizers.clear();
         storage_().registrationOpen = true;
         storage_().registry.clear();
     }
@@ -211,7 +187,6 @@ private:
 
         std::unique_ptr<Dune::ParameterTree> tree;
         std::map<std::string, ParamInfo> registry;
-        std::list<std::unique_ptr<ParamRegFinalizerBase_>> finalizers;
         bool registrationOpen;
     };
 
@@ -458,8 +433,6 @@ void Register(const char* usageString)
     using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(defaultValue)>>;
-    MetaData::registrationFinalizers().push_back(
-        std::make_unique<ParamRegFinalizer_<Param>>());
 
     std::ostringstream oss;
     oss << defaultValue;

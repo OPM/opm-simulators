@@ -289,13 +289,6 @@ void endRegistration()
     }
 
     MetaData::registrationOpen() = false;
-
-    // loop over all parameters and retrieve their values to make sure
-    // that there is no syntax error
-    for (const auto& param : MetaData::registrationFinalizers()) {
-        param->retrieve();
-    }
-    MetaData::registrationFinalizers().clear();
 }
 
 void printParamUsage(std::ostream& os, const ParamInfo& paramInfo)
