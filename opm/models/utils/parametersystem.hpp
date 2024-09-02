@@ -96,6 +96,10 @@ void Register_(const std::string& paramName,
                const std::string& defaultValue,
                const char* usageString);
 
+//! \brief Private implementation.
+void SetDefault_(const std::string& paramName,
+                 const std::string& paramValue);
+
 }
 
 struct ParamInfo
@@ -143,7 +147,7 @@ auto Get(bool errorIfNotRegistered = true);
  * \endcode
  */
 template <class Param>
-auto SetDefault(decltype(Param::value) new_value);
+void SetDefault(decltype(Param::value) new_value);
 
 class ParamRegFinalizerBase_
 {
@@ -372,16 +376,12 @@ auto Get(bool errorIfNotRegistered)
 }
 
 template <class Param>
-auto SetDefault(decltype(Param::value) new_value)
+void SetDefault(decltype(Param::value) new_value)
 {
     const std::string paramName = detail::getParamName<Param>();
-    if (MetaData::registry().find(paramName) == MetaData::registry().end()) {
-        throw std::runtime_error("Accessing parameter " + paramName +
-                                 " without prior registration is not allowed.");
-    }
     std::ostringstream oss;
     oss << new_value;
-    MetaData::mutableRegistry()[paramName].defaultValue = oss.str();
+    detail::SetDefault_(paramName, oss.str());
 }
 
 /*!

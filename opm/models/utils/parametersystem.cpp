@@ -207,6 +207,16 @@ void Register_(const std::string& paramName,
     MetaData::mutableRegistry()[paramName] = paramInfo;
 }
 
+void SetDefault_(const std::string& paramName,
+                 const std::string& paramValue)
+{
+    if (MetaData::registry().find(paramName) == MetaData::registry().end()) {
+        throw std::runtime_error("Accessing parameter " + paramName +
+                                 " without prior registration is not allowed.");
+    }
+    MetaData::mutableRegistry()[paramName].defaultValue = paramValue;
+}
+
 }
 
 bool ParamInfo::operator==(const ParamInfo& other) const
