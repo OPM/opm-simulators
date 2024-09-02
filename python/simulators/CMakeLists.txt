@@ -103,6 +103,8 @@ configure_file(${PROJECT_SOURCE_DIR}/python/setup.py.in
 file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/python/setup.py
                INPUT ${PROJECT_BINARY_DIR}/python/setup.py.tmp)
 
+add_dependencies(simulators copy_python)
+
 # Since the installation of Python code is nonstandard it is protected by an
 # extra cmake switch, OPM_INSTALL_PYTHON. If you prefer you can still invoke
 # setup.py install manually - optionally with the generated script
