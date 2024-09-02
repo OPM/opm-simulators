@@ -64,6 +64,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
+  opm/models/utils/parametersystem.cpp
   opm/models/utils/timer.cpp
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp

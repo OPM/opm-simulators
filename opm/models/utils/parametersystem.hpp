@@ -95,13 +95,7 @@ struct ParamInfo
     std::string defaultValue;
     bool isHidden;
 
-    bool operator==(const ParamInfo& other) const
-    {
-        return other.paramName == paramName
-               && other.paramTypeName == paramTypeName
-               && other.typeTagName == typeTagName
-               && other.usageString == usageString;
-    }
+    bool operator==(const ParamInfo& other) const;
 };
 
 /*!
@@ -213,200 +207,28 @@ private:
 };
 
 // function prototype declarations
-void printParamUsage_(std::ostream& os, const ParamInfo& paramInfo);
-void getFlattenedKeyList_(std::list<std::string>& dest,
-                          const Dune::ParameterTree& tree,
-                          const std::string& prefix = "");
+void printParamUsage(std::ostream& os, const ParamInfo& paramInfo);
 
-inline std::string breakLines_(const std::string& msg,
-                               int indentWidth,
-                               int maxWidth)
-{
-    std::string result;
-    int startInPos = 0;
-    int inPos = 0;
-    int lastBreakPos = 0;
-    int ttyPos = 0;
-    for (; inPos < int(msg.size()); ++ inPos, ++ ttyPos) {
-        if (msg[inPos] == '\n') {
-            result += msg.substr(startInPos, inPos - startInPos + 1);
-            startInPos = inPos + 1;
-            lastBreakPos = startInPos + 1;
+std::string breakLines(const std::string& msg,
+                       int indentWidth,
+                       int maxWidth);
 
-            // we need to use -1 here because ttyPos is incremented after the loop body
-            ttyPos = -1;
-            continue;
-        }
+int getTtyWidth();
 
-        if (std::isspace(msg[inPos]))
-            lastBreakPos = inPos;
+std::string parseKey(std::string& s);
 
-        if (ttyPos >= maxWidth) {
-            if (lastBreakPos > startInPos) {
-                result += msg.substr(startInPos, lastBreakPos - startInPos);
-                startInPos = lastBreakPos + 1;
-                lastBreakPos = startInPos;
-                inPos = startInPos;
-            }
-            else {
-                result += msg.substr(startInPos, inPos - startInPos);
-                startInPos = inPos;
-                lastBreakPos = startInPos;
-                inPos = startInPos;
-            }
+std::string transformKey(const std::string& s,
+                         bool capitalizeFirstLetter,
+                         const std::string& errorPrefix = "");
 
-            result += "\n";
-            for (int i = 0; i < indentWidth; ++i)
-                result += " ";
-            ttyPos = indentWidth;
-        }
-    }
-
-    result += msg.substr(startInPos);
-
-    return result;
-}
-
-inline int getTtyWidth_()
-{
-    int ttyWidth = 10*1000; // effectively do not break lines at all.
-    if (isatty(STDOUT_FILENO)) {
-#if defined TIOCGWINSZ
-        // This is a bit too linux specific, IMO. let's do it anyway
-        struct winsize ttySize;
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &ttySize);
-        ttyWidth = std::max<int>(80, ttySize.ws_col);
-#else
-        // default for systems that do not implement the TIOCGWINSZ ioctl
-        ttyWidth = 100;
-#endif
-    }
-
-    return ttyWidth;
-}
-
-inline void printParamUsage_(std::ostream& os, const ParamInfo& paramInfo)
-{
-    std::string paramMessage, paramType, paramDescription;
-
-    int ttyWidth = getTtyWidth_();
-
-    // convert the CamelCase name to a command line --parameter-name.
-    std::string cmdLineName = "-";
-    const std::string camelCaseName = paramInfo.paramName;
-    for (unsigned i = 0; i < camelCaseName.size(); ++i) {
-        if (isupper(camelCaseName[i]))
-            cmdLineName += "-";
-        cmdLineName += static_cast<char>(std::tolower(camelCaseName[i]));
-    }
-
-    // assemble the printed output
-    paramMessage = "    ";
-    paramMessage += cmdLineName;
-
-    // add the =VALUE_TYPE part
-    bool isString = false;
-    if (paramInfo.paramTypeName == Dune::className<std::string>()
-        || paramInfo.paramTypeName == "const char *")
-    {
-        paramMessage += "=STRING";
-        isString = true;
-    }
-    else if (paramInfo.paramTypeName == Dune::className<float>()
-             || paramInfo.paramTypeName == Dune::className<double>()
-             || paramInfo.paramTypeName == Dune::className<long double>()
-#if HAVE_QUAD
-             || paramInfo.paramTypeName == Dune::className<quad>()
-#endif // HAVE_QUAD
-        )
-        paramMessage += "=SCALAR";
-    else if (paramInfo.paramTypeName == Dune::className<int>()
-             || paramInfo.paramTypeName == Dune::className<unsigned int>()
-             || paramInfo.paramTypeName == Dune::className<short>()
-             || paramInfo.paramTypeName == Dune::className<unsigned short>())
-        paramMessage += "=INTEGER";
-    else if (paramInfo.paramTypeName == Dune::className<bool>())
-        paramMessage += "=BOOLEAN";
-    else if (paramInfo.paramTypeName.empty()) {
-        // the parameter is a flag. Do nothing!
-    }
-    else {
-        // unknown type
-        paramMessage += "=VALUE";
-    }
-
-    // fill up the up help string to the 50th character
-    paramMessage += "  ";
-    while (paramMessage.size() < 50)
-        paramMessage += " ";
-
-
-    // append the parameter usage string.
-    paramMessage += paramInfo.usageString;
-
-    // add the default value
-    if (!paramInfo.paramTypeName.empty()) {
-        if (paramMessage.back() != '.')
-            paramMessage += '.';
-        paramMessage += " Default: ";
-        if (paramInfo.paramTypeName == "bool") {
-            if (paramInfo.defaultValue == "0")
-                paramMessage += "false";
-            else
-                paramMessage += "true";
-        }
-        else if (isString) {
-            paramMessage += "\"";
-            paramMessage += paramInfo.defaultValue;
-            paramMessage += "\"";
-        }
-        else
-            paramMessage += paramInfo.defaultValue;
-    }
-
-    paramMessage = breakLines_(paramMessage, /*indent=*/52, ttyWidth);
-    paramMessage += "\n";
-
-    // print everything
-    os << paramMessage;
-}
-
-inline void getFlattenedKeyList_(std::list<std::string>& dest,
-                                 const Dune::ParameterTree& tree,
-                                 const std::string& prefix)
-{
-    // add the keys of the current sub-structure
-    for (const auto& valueKey : tree.getValueKeys()) {
-        std::string newKey(prefix + valueKey);
-        dest.push_back(newKey);
-    }
-
-    // recursively add all substructure keys
-    for (const auto& subKey : tree.getSubKeys()) {
-        std::string newPrefix(prefix + subKey + '.');
-        getFlattenedKeyList_(dest, tree.sub(subKey), newPrefix);
-    }
-}
+void getFlattenedKeyList(std::list<std::string>& dest,
+                         const Dune::ParameterTree& tree,
+                         const std::string& prefix = "");
 
 // print the values of a list of parameters
-inline void printParamList_(std::ostream& os,
-                            const std::list<std::string>& keyList,
-                            bool printDefaults = false)
-{
-    const Dune::ParameterTree& tree = MetaData::tree();
-
-    for (const auto& key : keyList) {
-        const auto& paramInfo = MetaData::registry().at(key);
-        const std::string& defaultValue = paramInfo.defaultValue;
-        std::string value = defaultValue;
-        if (tree.hasKey(key))
-            value = tree.get(key, "");
-        os << key << "=\"" << value << "\"";
-        if (printDefaults)
-            os << " # default: \"" << defaultValue << "\"";
-        os << "\n";
-    }
-}
+void printParamList(std::ostream& os,
+                    const std::list<std::string>& keyList,
+                    bool printDefaults = false);
 
 //! \endcond
 
@@ -419,155 +241,21 @@ inline void printParamList_(std::ostream& os,
  * \param errorMsg The error message to be printed, if any
  * \param os The \c std::ostream which should be used.
  */
-inline void printUsage(const std::string& helpPreamble,
-                       const std::string& errorMsg = "",
-                       std::ostream& os = std::cerr,
-                       const bool showAll = false)
-{
-    if (!errorMsg.empty()) {
-        os << errorMsg << "\n\n";
-    }
-
-    os << breakLines_(helpPreamble, /*indent=*/2, /*maxWidth=*/getTtyWidth_());
-    os << "\n";
-
-    os << "Recognized options:\n";
-
-    if (!helpPreamble.empty()) {
-        ParamInfo pInfo;
-        pInfo.paramName = "h,--help";
-        pInfo.usageString = "Print this help message and exit";
-        printParamUsage_(os, pInfo);
-        pInfo.paramName = "-help-all";
-        pInfo.usageString = "Print all parameters, including obsolete, hidden and deprecated ones.";
-        printParamUsage_(os, pInfo);
-    }
-
-    for (const auto& param : MetaData::registry()) {
-        if (showAll || !param.second.isHidden)
-            printParamUsage_(os, param.second);
-    }
-}
+void printUsage(const std::string& helpPreamble,
+                const std::string& errorMsg = "",
+                std::ostream& os = std::cerr,
+                const bool showAll = false);
 
 /// \cond 0
-inline int noPositionalParameters_(std::function<void(const std::string&, const std::string&)>,
-                                   std::set<std::string>&,
-                                   std::string& errorMsg,
-                                   int,
-                                   const char** argv,
-                                   int paramIdx,
-                                   int)
-{
-    errorMsg = std::string("Illegal parameter \"")+argv[paramIdx]+"\".";
-    return 0;
-}
+int noPositionalParameters_(std::function<void(const std::string&, const std::string&)>,
+                            std::set<std::string>&,
+                            std::string& errorMsg,
+                            int,
+                            const char** argv,
+                            int paramIdx,
+                            int);
 
 /// \endcond
-
-
-inline void removeLeadingSpace_(std::string& s)
-{
-    unsigned i;
-    for (i = 0; i < s.size(); ++ i)
-        if (!std::isspace(s[i]))
-            break;
-    s = s.substr(i);
-}
-
-inline std::string transformKey_(const std::string& s,
-                                 bool capitalizeFirstLetter = true,
-                                 const std::string& errorPrefix = "")
-{
-    std::string result;
-
-    if (s.empty())
-        throw std::runtime_error(errorPrefix+"Empty parameter names are invalid");
-
-    if (!std::isalpha(s[0]))
-        throw std::runtime_error(errorPrefix+"Parameter name '" + s + "' is invalid: First character must be a letter");
-
-    if (capitalizeFirstLetter)
-        result += static_cast<char>(std::toupper(s[0]));
-    else
-        result += s[0];
-
-    for (unsigned i = 1; i < s.size(); ++i) {
-        if (s[i] == '-') {
-            ++ i;
-            if (s.size() <= i || !std::isalpha(s[i]))
-                throw std::runtime_error(errorPrefix+"Invalid parameter name '" + s + "'");
-            result += static_cast<char>(std::toupper(s[i]));
-        }
-        else if (!std::isalnum(s[i]))
-            throw std::runtime_error(errorPrefix+"Invalid parameter name '" + s + "'");
-        else
-            result += s[i];
-    }
-
-    return result;
-}
-
-inline std::string parseKey_(std::string& s)
-{
-    unsigned i;
-    for (i = 0; i < s.size(); ++ i)
-        if (std::isspace(s[i]) || s[i] == '=')
-            break;
-
-    std::string ret = s.substr(0, i);
-    s = s.substr(i);
-    return ret;
-}
-
-// parse a quoted string
-inline std::string parseQuotedValue_(std::string& s, const std::string& errorPrefix)
-{
-    if (s.empty() || s[0] != '"')
-        throw std::runtime_error(errorPrefix+"Expected quoted string");
-
-    std::string result;
-    unsigned i = 1;
-    for (; i < s.size(); ++i) {
-        // handle escape characters
-        if (s[i] == '\\') {
-            ++ i;
-            if (s.size() <= i)
-                throw std::runtime_error(errorPrefix+"Unexpected end of quoted string");
-
-            if (s[i] == 'n')
-                result += '\n';
-            else if (s[i] == 'r')
-                result += '\r';
-            else if (s[i] == 't')
-                result += '\t';
-            else if (s[i] == '"')
-                result += '"';
-            else if (s[i] == '\\')
-                result += '\\';
-            else
-                throw std::runtime_error(errorPrefix+"Unknown escape character '\\" + s[i] + "'");
-        }
-        else if (s[i] == '"')
-            break;
-        else
-            result += s[i];
-    }
-
-    s = s.substr(i+1);
-    return result;
-}
-
-inline std::string parseUnquotedValue_(std::string& s, const std::string&)
-{
-    unsigned i;
-    for (i = 0; i < s.size(); ++ i)
-        if (std::isspace(s[i]))
-            break;
-
-    std::string ret = s.substr(0, i);
-    s = s.substr(i);
-    return ret;
-}
 
 /*!
  * \ingroup Parameter
@@ -659,7 +347,7 @@ std::string parseCommandLineOptions(int argc,
         std::string s(argv[i] + 2);
 
         // parse argument
-        paramName = transformKey_(parseKey_(s), /*capitalizeFirst=*/true);
+        paramName = transformKey(parseKey(s), /*capitalizeFirst=*/true);
         if (seenKeys.count(paramName) > 0) {
             std::string msg =
                 std::string("Parameter '")+paramName+"' specified multiple times as a "
@@ -695,64 +383,7 @@ std::string parseCommandLineOptions(int argc,
  *
  * This function does some basic syntax checks.
  */
-inline void parseParameterFile(const std::string& fileName, bool overwrite = true)
-{
-    std::set<std::string> seenKeys;
-    std::ifstream ifs(fileName);
-    unsigned curLineNum = 0;
-    while (ifs) {
-        // string and file processing in c++ is quite blunt!
-        std::string curLine;
-        std::getline(ifs, curLine);
-        curLineNum += 1;
-        std::string errorPrefix = fileName+":"+std::to_string(curLineNum)+": ";
-
-        // strip leading white space
-        removeLeadingSpace_(curLine);
-
-        // ignore empty and comment lines
-        if (curLine.empty() || curLine[0] == '#' || curLine[0] == ';')
-            continue;
-
-        // TODO (?): support for parameter groups.
-
-        // find the "key" of the key=value pair
-        std::string key = parseKey_(curLine);
-        std::string canonicalKey = transformKey_(key, /*capitalizeFirst=*/true, errorPrefix);
-
-        if (seenKeys.count(canonicalKey) > 0)
-            throw std::runtime_error(errorPrefix+"Parameter '"+canonicalKey+"' seen multiple times in the same file");
-        seenKeys.insert(canonicalKey);
-
-        // deal with the equals sign
-        removeLeadingSpace_(curLine);
-        if (curLine.empty() || curLine[0] != '=')
-            std::runtime_error(errorPrefix+"Syntax error, expecting 'key=value'");
-
-        curLine = curLine.substr(1);
-        removeLeadingSpace_(curLine);
-
-        if (curLine.empty() || curLine[0] == '#' || curLine[0] == ';')
-            std::runtime_error(errorPrefix+"Syntax error, expecting 'key=value'");
-
-        // get the value
-        std::string value;
-        if (curLine[0] == '"')
-            value = parseQuotedValue_(curLine, errorPrefix);
-        else
-            value = parseUnquotedValue_(curLine, errorPrefix);
-
-        // ignore trailing comments
-        removeLeadingSpace_(curLine);
-        if (!curLine.empty() && curLine[0] != '#' && curLine[0] != ';')
-            std::runtime_error(errorPrefix+"Syntax error, expecting 'key=value'");
-
-        // all went well, add the parameter to the database object
-        if (overwrite || !MetaData::tree().hasKey(canonicalKey)) {
-            MetaData::tree()[canonicalKey] = value;
-        }
-    }
-}
+void parseParameterFile(const std::string& fileName, bool overwrite = true);
 
 /*!
  * \ingroup Parameter
@@ -760,54 +391,7 @@ inline void parseParameterFile(const std::string& fileName, bool overwrite = tru
  *
  * \param os The \c std::ostream on which the message should be printed
  */
-inline void printValues(std::ostream& os = std::cout)
-{
-    std::list<std::string> runTimeAllKeyList;
-    std::list<std::string> runTimeKeyList;
-    std::list<std::string> unknownKeyList;
-
-    getFlattenedKeyList_(runTimeAllKeyList, MetaData::tree());
-    for (const auto& key : runTimeAllKeyList) {
-        if (MetaData::registry().find(key) == MetaData::registry().end()) {
-            // key was not registered by the program!
-            unknownKeyList.push_back(key);
-        }
-        else {
-            // the key was specified at run-time
-            runTimeKeyList.push_back(key);
-        }
-    }
-
-    // loop over all registered parameters
-    std::list<std::string> compileTimeKeyList;
-    for (const auto& reg : MetaData::registry()) {
-        // check whether the key was specified at run-time
-        if (MetaData::tree().hasKey(reg.first)) {
-            continue;
-        } else  {
-            compileTimeKeyList.push_back(reg.first);
-        }
-    }
-
-    // report the values of all registered (and unregistered)
-    // parameters
-    if (runTimeKeyList.size() > 0) {
-        os << "# [known parameters which were specified at run-time]\n";
-        printParamList_(os, runTimeKeyList, /*printDefaults=*/true);
-    }
-
-    if (compileTimeKeyList.size() > 0) {
-        os << "# [parameters which were specified at compile-time]\n";
-        printParamList_(os, compileTimeKeyList, /*printDefaults=*/false);
-    }
-
-    if (unknownKeyList.size() > 0) {
-        os << "# [unused run-time specified parameters]\n";
-        for (const auto& unused : unknownKeyList) {
-            os << unused << "=\"" << MetaData::tree().get(unused, "") << "\"\n" << std::flush;
-        }
-    }
-}
+void printValues(std::ostream& os = std::cout);
 
 /*!
  * \ingroup Parameter
@@ -817,29 +401,7 @@ inline void printValues(std::ostream& os = std::cout)
  *
  * \return true if something was printed
  */
-inline bool printUnused(std::ostream& os = std::cout)
-{
-    std::list<std::string> runTimeAllKeyList;
-    std::list<std::string> unknownKeyList;
-
-    getFlattenedKeyList_(runTimeAllKeyList, MetaData::tree());
-    for (const auto& key : runTimeAllKeyList) {
-        if (MetaData::registry().find(key) == MetaData::registry().end()) {
-            // key was not registered by the program!
-            unknownKeyList.push_back(key);
-        }
-    }
-
-    if (unknownKeyList.size() > 0) {
-        os << "# [unused run-time specified parameters]\n";
-        for (const auto& unused : unknownKeyList) {
-            os << unused << "=\""
-               << MetaData::tree().get(unused, "") << "\"\n" << std::flush;
-        }
-        return true;
-    }
-    return false;
-}
+bool printUnused(std::ostream& os = std::cout);
 
 template <class Param>
 auto Get(bool errorIfNotRegistered)
@@ -924,7 +486,7 @@ void getLists(Container& usedParams, Container& unusedParams)
 
     // get all parameter keys
     std::list<std::string> allKeysList;
-    getFlattenedKeyList_(allKeysList, MetaData::tree());
+    getFlattenedKeyList(allKeysList, MetaData::tree());
 
     for (const auto& key : allKeysList) {
         if (MetaData::registry().find(key) == MetaData::registry().end()) {
@@ -938,10 +500,10 @@ void getLists(Container& usedParams, Container& unusedParams)
     }
 }
 
-inline void reset()
-{
-    MetaData::clear();
-}
+/*!
+ *  \brief Reset parameter system.
+ */
+void reset();
 
 /*!
  * \brief Returns true if a parameter has been specified at runtime, false
@@ -1054,22 +616,7 @@ void Hide()
  * \c endParamRegistration, a <tt>std::logic_error</tt> exception
  * will be thrown.
  */
-inline void endRegistration()
-{
-    if (!MetaData::registrationOpen()) {
-        throw std::logic_error("Parameter registration was already closed. It is only possible "
-                               "to close it once.");
-    }
-
-    MetaData::registrationOpen() = false;
-
-    // loop over all parameters and retrieve their values to make sure
-    // that there is no syntax error
-    for (const auto& param : MetaData::registrationFinalizers()) {
-        param->retrieve();
-    }
-    MetaData::registrationFinalizers().clear();
-}
+void endRegistration();
 //! \endcond
 
 } // namespace Opm::Parameters

@@ -340,9 +340,9 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #endif
             const std::string briefDescription = Problem::briefDescription();
             if (!briefDescription.empty()) {
-                std::string tmp = Parameters::breakLines_(briefDescription,
-                                                          /*indentWidth=*/0,
-                                                          Parameters::getTtyWidth_());
+                std::string tmp = Parameters::breakLines(briefDescription,
+                                                         /*indentWidth=*/0,
+                                                         Parameters::getTtyWidth());
                 std::cout << tmp << std::endl << std::endl;
             }
             else
