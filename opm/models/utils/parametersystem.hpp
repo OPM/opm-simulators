@@ -87,6 +87,12 @@ auto getParamName()
 //! \brief Private implementation.
 void Hide_(const std::string& paramName);
 
+//! \brief Private implementation.
+void Register_(const std::string& paramName,
+               const std::string& paramTypeName,
+               const std::string& defaultValue,
+               const char* usageString);
+
 }
 
 struct ParamInfo
@@ -459,11 +465,6 @@ template <class Param>
 void Register(const char* usageString)
 {
     const std::string paramName = detail::getParamName<Param>();
-    if (!MetaData::registrationOpen()) {
-        throw std::logic_error("Parameter registration was already closed before "
-                               "the parameter '" + paramName + "' was registered.");
-    }
-
     const auto defaultValue = Param::value;
     using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
                                                         const char* const>, std::string,
@@ -471,25 +472,9 @@ void Register(const char* usageString)
     MetaData::registrationFinalizers().push_back(
         std::make_unique<ParamRegFinalizer_<Param>>());
 
-    ParamInfo paramInfo;
-    paramInfo.paramName = paramName;
-    paramInfo.paramTypeName = Dune::className<ParamType>();
-    paramInfo.usageString = usageString;
     std::ostringstream oss;
     oss << defaultValue;
-    paramInfo.defaultValue = oss.str();
-    paramInfo.isHidden = false;
-    if (MetaData::registry().find(paramName) != MetaData::registry().end()) {
-        // allow to register a parameter twice, but only if the
-        // parameter name, type and usage string are exactly the same.
-        if (MetaData::registry().at(paramName) == paramInfo) {
-            return;
-        }
-        throw std::logic_error("Parameter " + paramName
-                               +" registered twice with non-matching characteristics.");
-    }
-
-    MetaData::mutableRegistry()[paramName] = paramInfo;
+    detail::Register_(paramName, Dune::className<ParamType>(), oss.str(), usageString);
 }
 
 /*!

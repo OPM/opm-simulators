@@ -160,6 +160,35 @@ void Hide_(const std::string& paramName)
     paramInfo.isHidden = true;
 }
 
+void Register_(const std::string& paramName,
+               const std::string& paramTypeName,
+               const std::string& defaultValue,
+               const char* usageString)
+{
+    if (!MetaData::registrationOpen()) {
+        throw std::logic_error("Parameter registration was already closed before "
+                               "the parameter '" + paramName + "' was registered.");
+    }
+
+    ParamInfo paramInfo;
+    paramInfo.paramName = paramName;
+    paramInfo.paramTypeName = paramTypeName;
+    paramInfo.usageString = usageString;
+    paramInfo.defaultValue = defaultValue;
+    paramInfo.isHidden = false;
+    if (MetaData::registry().find(paramName) != MetaData::registry().end()) {
+        // allow to register a parameter twice, but only if the
+        // parameter name, type and usage string are exactly the same.
+        if (MetaData::registry().at(paramName) == paramInfo) {
+            return;
+        }
+        throw std::logic_error("Parameter " + paramName
+                               +" registered twice with non-matching characteristics.");
+    }
+
+    MetaData::mutableRegistry()[paramName] = paramInfo;
+}
+
 }
 
 bool ParamInfo::operator==(const ParamInfo& other) const
