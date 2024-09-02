@@ -88,6 +88,9 @@ auto getParamName()
 void Hide_(const std::string& paramName);
 
 //! \brief Private implementation.
+bool IsSet_(const std::string& paramName, bool errorIfNotRegistered);
+
+//! \brief Private implementation.
 void Register_(const std::string& paramName,
                const std::string& paramTypeName,
                const std::string& defaultValue,
@@ -428,21 +431,7 @@ void reset();
 template <class Param>
 bool IsSet(bool errorIfNotRegistered = true)
 {
-    const std::string paramName = detail::getParamName<Param>();
-
-    if (errorIfNotRegistered) {
-        if (MetaData::registrationOpen()) {
-            throw std::runtime_error("Parameters can only checked after _all_ of them have "
-                                     "been registered.");
-        }
-
-        if (MetaData::registry().find(paramName) == MetaData::registry().end())
-            throw std::runtime_error("Accessing parameter " + std::string(paramName) +
-                                     " without prior registration is not allowed.");
-    }
-
-    // check whether the parameter is in the parameter tree
-    return MetaData::tree().hasKey(paramName);
+    return detail::IsSet_(detail::getParamName<Param>(), errorIfNotRegistered);
 }
 
 /*!

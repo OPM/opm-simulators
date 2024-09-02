@@ -160,6 +160,24 @@ void Hide_(const std::string& paramName)
     paramInfo.isHidden = true;
 }
 
+bool IsSet_(const std::string& paramName, bool errorIfNotRegistered)
+{
+    if (errorIfNotRegistered) {
+        if (MetaData::registrationOpen()) {
+            throw std::runtime_error("Parameters can only checked after _all_ of them have "
+                                     "been registered.");
+        }
+
+        if (MetaData::registry().find(paramName) == MetaData::registry().end())
+            throw std::runtime_error("Accessing parameter " + std::string(paramName) +
+                                     " without prior registration is not allowed.");
+    }
+
+    // check whether the parameter is in the parameter tree
+    return MetaData::tree().hasKey(paramName);
+
+}
+
 void Register_(const std::string& paramName,
                const std::string& paramTypeName,
                const std::string& defaultValue,
