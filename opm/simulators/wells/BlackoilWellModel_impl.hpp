@@ -42,6 +42,7 @@
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
@@ -1327,7 +1328,8 @@ namespace Opm {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
                 const auto ctrl = group.productionControls(summary_state);
-                const auto cmode = ctrl.cmode;
+                // const auto cmode = ctrl.cmode;
+                const Group::ProductionCMode& cmode = Opm::Group::ProductionCMode::ORAT;
                 const auto pu = this->phase_usage_;
                 //TODO: Auto choke combined with RESV control is not supported
                 std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
@@ -1338,7 +1340,22 @@ namespace Opm {
                 WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
                                                   gratTargetFromSales, nodeName, group_state,
                                                   group.has_gpmaint_control(cmode));
-                const Scalar orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
+                // const Scalar orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
+                const Scalar efficiencyFactor = 1.0;
+                const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
+                const Scalar orig_target = WellGroupControls<Scalar>::getAutoChokeGroupProductionTargetRate(
+                                                         group.name(),
+                                                         parentGroup,
+                                                         well_state,
+                                                         group_state,
+                                                         this->schedule(),
+                                                         summary_state,
+                                                         resv_coeff,
+                                                         efficiencyFactor,
+                                                         reportStepIdx,
+                                                         pu,
+                                                         &this->guideRate_,
+                                                         local_deferredLogger);
 
                 auto mismatch = [&] (auto group_thp) {
                     Scalar group_rate(0.0);
