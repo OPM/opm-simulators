@@ -1,0 +1,19 @@
+DGF
+
+Interval
+0 0   % first corner
+40 40 % second corner
+8 8 % cells in x and y direction
+#
+
+GridParameter
+overlap 1
+periodic
+closure green
+#
+
+BOUNDARYDOMAIN
+default 1    % all boundaries have id 1
+#
+
+#
