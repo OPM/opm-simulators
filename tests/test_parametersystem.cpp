@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #define BOOST_TEST_MODULE ParameterSystemTest
 #include <boost/test/unit_test.hpp>

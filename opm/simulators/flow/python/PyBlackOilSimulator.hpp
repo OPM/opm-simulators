@@ -23,7 +23,7 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/simulators/flow/python/Pybind11Exporter.hpp>
 #include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
@@ -32,6 +32,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 namespace Opm::Pybind {
+
 class PyBlackOilSimulator
 {
 private:

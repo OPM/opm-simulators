@@ -32,7 +32,7 @@
 // dune/common/densematrix.hh because of some c++ ideosyncrasies
 #include <opm/material/densead/Evaluation.hpp>
 
-#include "parametersystem.hh"
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/models/utils/simulator.hh>
 #include <opm/models/utils/timer.hpp>

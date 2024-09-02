@@ -26,7 +26,7 @@
 
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/nonlinear/newtonmethodparameters.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/flow/EclWriter.hpp>
 

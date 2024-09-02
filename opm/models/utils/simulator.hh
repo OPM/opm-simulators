@@ -29,7 +29,7 @@
 #define EWOMS_SIMULATOR_HH
 
 #include <opm/models/io/restart.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>

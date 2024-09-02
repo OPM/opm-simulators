@@ -20,7 +20,7 @@
 #ifndef OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 #define OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/flow/DamarisParameters.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>

@@ -39,7 +39,7 @@
 #include <opm/models/io/vtktemperaturemodule.hh>
 #include <opm/models/nonlinear/newtonmethodparameters.hh>
 #include <opm/models/utils/basicparameters.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>

@@ -29,7 +29,7 @@
 #define EWOMS_FV_BASE_FD_LOCAL_LINEARIZER_HH
 
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/MathToolbox.hpp>

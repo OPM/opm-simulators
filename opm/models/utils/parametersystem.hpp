@@ -29,8 +29,8 @@
  * Dune::ParameterTree with the default value taken from the parameter
  * definition.
  */
-#ifndef OPM_PARAMETER_SYSTEM_HH
-#define OPM_PARAMETER_SYSTEM_HH
+#ifndef OPM_PARAMETER_SYSTEM_HPP
+#define OPM_PARAMETER_SYSTEM_HPP
 
 #if HAVE_QUAD
 #include <opm/material/common/quad.hpp>
@@ -1074,4 +1074,4 @@ inline void endRegistration()
 
 } // namespace Opm::Parameters
 
-#endif // OPM_PARAMETER_SYSTEM_HH
+#endif // OPM_PARAMETER_SYSTEM_HPP

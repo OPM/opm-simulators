@@ -711,7 +711,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/utils/basicparameters.hh
   opm/models/utils/basicproperties.hh
   opm/models/utils/genericguard.hh
-  opm/models/utils/parametersystem.hh
+  opm/models/utils/parametersystem.hpp
   opm/models/utils/pffgridvector.hh
   opm/models/utils/prefetch.hh
   opm/models/utils/propertysystem.hh

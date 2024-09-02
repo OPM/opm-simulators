@@ -21,7 +21,7 @@
 #include "flowexp.hpp"
 
 #include <opm/models/discretization/common/tpfalinearizer.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 

@@ -25,7 +25,7 @@
 
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 namespace Opm {
 

@@ -31,7 +31,7 @@
 
 #include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/basicproperties.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <dune/grid/yaspgrid.hh>

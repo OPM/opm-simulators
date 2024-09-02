@@ -81,7 +81,7 @@
 
 #include <opm/input/eclipse/Parser/InputErrorAction.hpp>
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/utils/readDeck.hpp>
