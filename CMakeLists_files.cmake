@@ -188,6 +188,8 @@ list (APPEND MAIN_SOURCE_FILES
 
 if (HAVE_ECL_INPUT)
   list (APPEND MAIN_SOURCE_FILES
+    opm/simulators/utils/satfunc/OilPhaseConsistencyChecks.cpp
+    opm/simulators/utils/satfunc/PhaseCheckBase.cpp
     opm/simulators/utils/satfunc/SatfuncConsistencyChecks.cpp
   )
 endif()
@@ -372,6 +374,7 @@ list (APPEND TEST_SOURCE_FILES
 if (HAVE_ECL_INPUT)
   list(APPEND TEST_SOURCE_FILES
     tests/test_nonnc.cpp
+    tests/test_OilSatfuncConsistencyChecks.cpp
     tests/test_SatfuncConsistencyChecks.cpp
     tests/test_SatfuncConsistencyChecks_parallel.cpp
   )
@@ -977,6 +980,8 @@ endif()
 
 if (HAVE_ECL_INPUT)
   list (APPEND PUBLIC_HEADER_FILES
+    opm/simulators/utils/satfunc/OilPhaseConsistencyChecks.hpp
+    opm/simulators/utils/satfunc/PhaseCheckBase.hpp
     opm/simulators/utils/satfunc/SatfuncConsistencyChecks.hpp
   )
 endif()
