@@ -169,9 +169,6 @@ private:
     }
 };
 
-// function prototype declarations
-void printParamUsage(std::ostream& os, const ParamInfo& paramInfo);
-
 std::string breakLines(const std::string& msg,
                        int indentWidth,
                        int maxWidth);

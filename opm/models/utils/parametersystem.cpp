@@ -55,7 +55,6 @@ void getFlattenedKeyList(std::list<std::string>& dest,
     }
 }
 
-
 std::string parseKey(std::string& s)
 {
     unsigned i;
@@ -115,6 +114,93 @@ std::string parseUnquotedValue(std::string& s, const std::string&)
     std::string ret = s.substr(0, i);
     s = s.substr(i);
     return ret;
+}
+
+void printParamUsage(std::ostream& os,
+                     const Opm::Parameters::ParamInfo& paramInfo)
+{
+    std::string paramMessage, paramType, paramDescription;
+
+    int ttyWidth = Opm::Parameters::getTtyWidth();
+
+    // convert the CamelCase name to a command line --parameter-name.
+    std::string cmdLineName = "-";
+    const std::string camelCaseName = paramInfo.paramName;
+    for (unsigned i = 0; i < camelCaseName.size(); ++i) {
+        if (isupper(camelCaseName[i]))
+            cmdLineName += "-";
+        cmdLineName += static_cast<char>(std::tolower(camelCaseName[i]));
+    }
+
+    // assemble the printed output
+    paramMessage = "    ";
+    paramMessage += cmdLineName;
+
+    // add the =VALUE_TYPE part
+    bool isString = false;
+    if (paramInfo.paramTypeName == Dune::className<std::string>()
+        || paramInfo.paramTypeName == "const char *")
+    {
+        paramMessage += "=STRING";
+        isString = true;
+    }
+    else if (paramInfo.paramTypeName == Dune::className<float>()
+             || paramInfo.paramTypeName == Dune::className<double>()
+             || paramInfo.paramTypeName == Dune::className<long double>()
+#if HAVE_QUAD
+             || paramInfo.paramTypeName == Dune::className<quad>()
+#endif // HAVE_QUAD
+        )
+        paramMessage += "=SCALAR";
+    else if (paramInfo.paramTypeName == Dune::className<int>()
+             || paramInfo.paramTypeName == Dune::className<unsigned int>()
+             || paramInfo.paramTypeName == Dune::className<short>()
+             || paramInfo.paramTypeName == Dune::className<unsigned short>())
+        paramMessage += "=INTEGER";
+    else if (paramInfo.paramTypeName == Dune::className<bool>())
+        paramMessage += "=BOOLEAN";
+    else if (paramInfo.paramTypeName.empty()) {
+        // the parameter is a flag. Do nothing!
+    }
+    else {
+        // unknown type
+        paramMessage += "=VALUE";
+    }
+
+    // fill up the up help string to the 50th character
+    paramMessage += "  ";
+    while (paramMessage.size() < 50)
+        paramMessage += " ";
+
+
+    // append the parameter usage string.
+    paramMessage += paramInfo.usageString;
+
+    // add the default value
+    if (!paramInfo.paramTypeName.empty()) {
+        if (paramMessage.back() != '.')
+            paramMessage += '.';
+        paramMessage += " Default: ";
+        if (paramInfo.paramTypeName == "bool") {
+            if (paramInfo.defaultValue == "0")
+                paramMessage += "false";
+            else
+                paramMessage += "true";
+        }
+        else if (isString) {
+            paramMessage += "\"";
+            paramMessage += paramInfo.defaultValue;
+            paramMessage += "\"";
+        }
+        else
+            paramMessage += paramInfo.defaultValue;
+    }
+
+    paramMessage = Opm::Parameters::breakLines(paramMessage, /*indent=*/52, ttyWidth);
+    paramMessage += "\n";
+
+    // print everything
+    os << paramMessage;
 }
 
 void removeLeadingSpace(std::string& s)
@@ -357,92 +443,6 @@ void endRegistration()
     }
 
     MetaData::registrationOpen() = false;
-}
-
-void printParamUsage(std::ostream& os, const ParamInfo& paramInfo)
-{
-    std::string paramMessage, paramType, paramDescription;
-
-    int ttyWidth = getTtyWidth();
-
-    // convert the CamelCase name to a command line --parameter-name.
-    std::string cmdLineName = "-";
-    const std::string camelCaseName = paramInfo.paramName;
-    for (unsigned i = 0; i < camelCaseName.size(); ++i) {
-        if (isupper(camelCaseName[i]))
-            cmdLineName += "-";
-        cmdLineName += static_cast<char>(std::tolower(camelCaseName[i]));
-    }
-
-    // assemble the printed output
-    paramMessage = "    ";
-    paramMessage += cmdLineName;
-
-    // add the =VALUE_TYPE part
-    bool isString = false;
-    if (paramInfo.paramTypeName == Dune::className<std::string>()
-        || paramInfo.paramTypeName == "const char *")
-    {
-        paramMessage += "=STRING";
-        isString = true;
-    }
-    else if (paramInfo.paramTypeName == Dune::className<float>()
-             || paramInfo.paramTypeName == Dune::className<double>()
-             || paramInfo.paramTypeName == Dune::className<long double>()
-#if HAVE_QUAD
-             || paramInfo.paramTypeName == Dune::className<quad>()
-#endif // HAVE_QUAD
-        )
-        paramMessage += "=SCALAR";
-    else if (paramInfo.paramTypeName == Dune::className<int>()
-             || paramInfo.paramTypeName == Dune::className<unsigned int>()
-             || paramInfo.paramTypeName == Dune::className<short>()
-             || paramInfo.paramTypeName == Dune::className<unsigned short>())
-        paramMessage += "=INTEGER";
-    else if (paramInfo.paramTypeName == Dune::className<bool>())
-        paramMessage += "=BOOLEAN";
-    else if (paramInfo.paramTypeName.empty()) {
-        // the parameter is a flag. Do nothing!
-    }
-    else {
-        // unknown type
-        paramMessage += "=VALUE";
-    }
-
-    // fill up the up help string to the 50th character
-    paramMessage += "  ";
-    while (paramMessage.size() < 50)
-        paramMessage += " ";
-
-
-    // append the parameter usage string.
-    paramMessage += paramInfo.usageString;
-
-    // add the default value
-    if (!paramInfo.paramTypeName.empty()) {
-        if (paramMessage.back() != '.')
-            paramMessage += '.';
-        paramMessage += " Default: ";
-        if (paramInfo.paramTypeName == "bool") {
-            if (paramInfo.defaultValue == "0")
-                paramMessage += "false";
-            else
-                paramMessage += "true";
-        }
-        else if (isString) {
-            paramMessage += "\"";
-            paramMessage += paramInfo.defaultValue;
-            paramMessage += "\"";
-        }
-        else
-            paramMessage += paramInfo.defaultValue;
-    }
-
-    paramMessage = breakLines(paramMessage, /*indent=*/52, ttyWidth);
-    paramMessage += "\n";
-
-    // print everything
-    os << paramMessage;
 }
 
 void getLists(std::vector<Parameter>& usedParams,
