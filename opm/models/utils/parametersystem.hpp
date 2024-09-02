@@ -215,12 +215,6 @@ std::string breakLines(const std::string& msg,
 
 int getTtyWidth();
 
-std::string parseKey(std::string& s);
-
-std::string transformKey(const std::string& s,
-                         bool capitalizeFirstLetter,
-                         const std::string& errorPrefix = "");
-
 void getFlattenedKeyList(std::list<std::string>& dest,
                          const Dune::ParameterTree& tree,
                          const std::string& prefix = "");

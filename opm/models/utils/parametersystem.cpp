@@ -34,6 +34,18 @@
 
 namespace {
 
+std::string parseKey(std::string& s)
+{
+    unsigned i;
+    for (i = 0; i < s.size(); ++ i)
+        if (std::isspace(s[i]) || s[i] == '=')
+            break;
+
+    std::string ret = s.substr(0, i);
+    s = s.substr(i);
+    return ret;
+}
+
 std::string parseQuotedValue(std::string& s, const std::string& errorPrefix)
 {
     if (s.empty() || s[0] != '"')
@@ -91,6 +103,40 @@ void removeLeadingSpace(std::string& s)
             break;
     s = s.substr(i);
 }
+
+std::string transformKey(const std::string& s,
+                         bool capitalizeFirstLetter,
+                         const std::string& errorPrefix = "")
+{
+    std::string result;
+
+    if (s.empty())
+        throw std::runtime_error(errorPrefix+"Empty parameter names are invalid");
+
+    if (!std::isalpha(s[0]))
+        throw std::runtime_error(errorPrefix+"Parameter name '" + s + "' is invalid: First character must be a letter");
+
+    if (capitalizeFirstLetter)
+        result += static_cast<char>(std::toupper(s[0]));
+    else
+        result += s[0];
+
+    for (unsigned i = 1; i < s.size(); ++i) {
+        if (s[i] == '-') {
+            ++ i;
+            if (s.size() <= i || !std::isalpha(s[i]))
+                throw std::runtime_error(errorPrefix+"Invalid parameter name '" + s + "'");
+            result += static_cast<char>(std::toupper(s[i]));
+        }
+        else if (!std::isalnum(s[i]))
+            throw std::runtime_error(errorPrefix+"Invalid parameter name '" + s + "'");
+        else
+            result += s[i];
+    }
+
+    return result;
+}
+
 
 } // anonymous namespace
 
@@ -591,51 +637,6 @@ int getTtyWidth()
     }
 
     return ttyWidth;
-}
-
-std::string parseKey(std::string& s)
-{
-    unsigned i;
-    for (i = 0; i < s.size(); ++ i)
-        if (std::isspace(s[i]) || s[i] == '=')
-            break;
-
-    std::string ret = s.substr(0, i);
-    s = s.substr(i);
-    return ret;
-}
-
-std::string transformKey(const std::string& s,
-                         bool capitalizeFirstLetter,
-                         const std::string& errorPrefix)
-{
-    std::string result;
-
-    if (s.empty())
-        throw std::runtime_error(errorPrefix+"Empty parameter names are invalid");
-
-    if (!std::isalpha(s[0]))
-        throw std::runtime_error(errorPrefix+"Parameter name '" + s + "' is invalid: First character must be a letter");
-
-    if (capitalizeFirstLetter)
-        result += static_cast<char>(std::toupper(s[0]));
-    else
-        result += s[0];
-
-    for (unsigned i = 1; i < s.size(); ++i) {
-        if (s[i] == '-') {
-            ++ i;
-            if (s.size() <= i || !std::isalpha(s[i]))
-                throw std::runtime_error(errorPrefix+"Invalid parameter name '" + s + "'");
-            result += static_cast<char>(std::toupper(s[i]));
-        }
-        else if (!std::isalnum(s[i]))
-            throw std::runtime_error(errorPrefix+"Invalid parameter name '" + s + "'");
-        else
-            result += s[i];
-    }
-
-    return result;
 }
 
 } // namespace Opm::Parameters
