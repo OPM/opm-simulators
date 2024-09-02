@@ -257,6 +257,15 @@ int noPositionalParameters_(std::function<void(const std::string&, const std::st
 
 /// \endcond
 
+//! \brief Callback function for command line parsing.
+using PositionalArgumentCallback = std::function<int(std::function<void(const std::string&,
+                                                                        const std::string&)>,
+                                                     std::set<std::string>&,
+                                                     std::string&,
+                                                     int,
+                                                     const char**,
+                                                     int,
+                                                     int)>;
 /*!
  * \ingroup Parameter
  * \brief Parse the parameters provided on the command line.
@@ -273,109 +282,11 @@ int noPositionalParameters_(std::function<void(const std::string&, const std::st
  * \return Empty string if everything worked out. Otherwise the thing that could
  *         not be read.
  */
-template <class PositionalArgumentCallback>
-std::string parseCommandLineOptions(int argc,
-                                    const char **argv,
-                                    const std::string& helpPreamble = "",
-                                    const PositionalArgumentCallback& posArgCallback = noPositionalParameters_)
-{
-    // handle the "--help" parameter
-    if (!helpPreamble.empty()) {
-        for (int i = 1; i < argc; ++i) {
-            if (std::string("-h") == argv[i]
-                || std::string("--help") == argv[i]) {
-                printUsage(helpPreamble, /*errorMsg=*/"", std::cout);
-                return "Help called";
-            }
-            if (std::string("--help-all") == argv[i]) {
-                printUsage(helpPreamble, /*errorMsg=*/"", std::cout, true);
-                return "Help called";
-            }
-        }
-    }
-
-    std::set<std::string> seenKeys;
-    int numPositionalParams = 0;
-    for (int i = 1; i < argc; ++i) {
-        // All non-positional command line options need to start with '-'
-        if (strlen(argv[i]) < 4
-            || argv[i][0] != '-'
-            || argv[i][1] != '-')
-        {
-            std::string errorMsg;
-            int numHandled = posArgCallback([](const std::string& k, const std::string& v)
-                                            {
-                                                MetaData::tree()[k] = v;
-                                            }, seenKeys, errorMsg,
-                                            argc, argv, i, numPositionalParams);
-
-            if (numHandled < 1) {
-                std::ostringstream oss;
-
-                if (!helpPreamble.empty())
-                    printUsage(helpPreamble, errorMsg, std::cerr);
-
-                return errorMsg;
-            }
-            else {
-                ++ numPositionalParams;
-                i += numHandled - 1;
-                continue;
-            }
-        }
-
-        std::string paramName, paramValue;
-
-        // read a --my-opt=abc option. This gets transformed
-        // into the parameter "MyOpt" with the value being
-        // "abc"
-
-        // There is nothing after the '-'
-        if (argv[i][2] == 0 || !std::isalpha(argv[i][2])) {
-            std::ostringstream oss;
-            oss << "Parameter name of argument " << i
-                << " ('" << argv[i] << "') "
-                << "is invalid because it does not start with a letter.";
-
-            if (!helpPreamble.empty())
-                printUsage(helpPreamble, oss.str(), std::cerr);
-
-            return oss.str();
-        }
-
-        // copy everything after the "--" into a separate string
-        std::string s(argv[i] + 2);
-
-        // parse argument
-        paramName = transformKey(parseKey(s), /*capitalizeFirst=*/true);
-        if (seenKeys.count(paramName) > 0) {
-            std::string msg =
-                std::string("Parameter '")+paramName+"' specified multiple times as a "
-                "command line parameter";
-
-            if (!helpPreamble.empty())
-                printUsage(helpPreamble, msg, std::cerr);
-            return msg;
-        }
-        seenKeys.insert(paramName);
-
-        if (s.empty() || s[0] != '=') {
-            std::string msg =
-                std::string("Parameter '")+paramName+"' is missing a value. "
-                +" Please use "+argv[i]+"=value.";
-
-            if (!helpPreamble.empty())
-                printUsage(helpPreamble, msg, std::cerr);
-            return msg;
-        }
-
-        paramValue = s.substr(1);
-
-        // Put the key=value pair into the parameter tree
-        MetaData::tree()[paramName] = paramValue;
-    }
-    return "";
-}
+std::string
+parseCommandLineOptions(int argc,
+                        const char **argv,
+                        const std::string& helpPreamble = "",
+                        const PositionalArgumentCallback& posArgCallback = noPositionalParameters_);
 
 /*!
  * \ingroup Parameter
