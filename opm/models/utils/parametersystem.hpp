@@ -85,6 +85,11 @@ auto getParamName()
 }
 
 //! \brief Private implementation.
+template<class ParamType>
+ParamType Get_(const std::string& paramName, ParamType defaultValue,
+               bool errorIfNotRegistered);
+
+//! \brief Private implementation.
 void Hide_(const std::string& paramName);
 
 //! \brief Private implementation.
@@ -113,41 +118,6 @@ struct ParamInfo
 
     bool operator==(const ParamInfo& other) const;
 };
-
-/*!
- * \ingroup Parameter
- *
- * \brief Retrieve a runtime parameter.
- *
- * The default value is specified in the parameter struct.
- *
- * Example:
- *
- * \code
- * // Retrieves value UpwindWeight, default
- * // is taken from the property UpwindWeight
- * ::Opm::Parameters::get<::Opm::Parameters::UpwindWeight>();
- * \endcode
- */
-template <class Param>
-auto Get(bool errorIfNotRegistered = true);
-
-/*!
- * \ingroup Parameter
- *
- * \brief Set a runtime parameter.
- *
- * Override the default value specified.
- *
- * Example:
- *
- * \code
- * // Set the value UpwindWeight
- * ::Opm::Parameters::Set<::Opm::Parameters::UpwindWeight>(3.0);
- * \endcode
- */
-template <class Param>
-void SetDefault(decltype(Param::value) new_value);
 
 struct MetaData
 {
@@ -299,57 +269,46 @@ void printValues(std::ostream& os = std::cout);
  */
 bool printUnused(std::ostream& os = std::cout);
 
+/*!
+ * \ingroup Parameter
+ *
+ * \brief Retrieve a runtime parameter.
+ *
+ * The default value is specified in the parameter struct.
+ *
+ * Example:
+ *
+ * \code
+ * // Retrieves value UpwindWeight, default
+ * // is taken from the property UpwindWeight
+ * ::Opm::Parameters::get<::Opm::Parameters::UpwindWeight>();
+ * \endcode
+ */
 template <class Param>
-auto Get(bool errorIfNotRegistered)
+auto Get(bool errorIfNotRegistered = true)
 {
-    const std::string paramName = detail::getParamName<Param>();
-    if (errorIfNotRegistered) {
-        if (MetaData::registrationOpen())
-            throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
-                                     "been registered.");
-
-        if (MetaData::registry().find(paramName) == MetaData::registry().end()) {
-            throw std::runtime_error("Accessing parameter " + paramName
-                                     +" without prior registration is not allowed.");
-        }
-    }
-
     using ParamType = std::conditional_t<std::is_same_v<decltype(Param::value),
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(Param::value)>>;
     ParamType defaultValue = Param::value;
-
-    const std::string& defVal = MetaData::mutableRegistry()[paramName].defaultValue;
-    if constexpr (std::is_same_v<ParamType, std::string>) {
-        defaultValue = defVal;
-    }
-    else if constexpr (std::is_same_v<ParamType, bool>) {
-        defaultValue = defVal == "1";
-    }
-#if HAVE_QUAD
-    else if constexpr (std::is_same_v<ParamType, quad>) {
-        defaultValue = std::strtold(defVal.data(), nullptr);
-    }
-#endif
-#if !HAVE_FLOATING_POINT_FROM_CHARS
-    else if constexpr (std::is_floating_point_v<ParamType>) {
-        defaultValue = std::strtod(defVal.c_str(), nullptr);
-    }
-#endif // !HAVE_FLOATING_POINT_FROM_CHARS
-    else {
-        std::from_chars(defVal.data(), defVal.data() + defVal.size(), defaultValue);
-    }
-
-    // prefix the parameter name by the model's GroupName. E.g. If
-    // the model specifies its group name to be 'Stokes', in an
-    // INI file this would result in something like:
-    //
-    // [Stokes]
-    // NewtonWriteConvergence = true
-    // retrieve actual parameter from the parameter tree
-    return MetaData::tree().template get<ParamType>(paramName, defaultValue);
+    return detail::Get_(detail::getParamName<Param>(),
+                        defaultValue, errorIfNotRegistered);
 }
 
+/*!
+ * \ingroup Parameter
+ *
+ * \brief Set a runtime parameter.
+ *
+ * Override the default value specified.
+ *
+ * Example:
+ *
+ * \code
+ * // Set the value UpwindWeight
+ * ::Opm::Parameters::Set<::Opm::Parameters::UpwindWeight>(3.0);
+ * \endcode
+ */
 template <class Param>
 void SetDefault(decltype(Param::value) new_value)
 {

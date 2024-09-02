@@ -317,6 +317,14 @@ macro (sources_hook)
     include(opencl-source-provider)
     list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
   endif()
+  if(QuadMath_FOUND)
+    get_target_property(qm_defs QuadMath::QuadMath INTERFACE_COMPILE_DEFINITIONS)
+    list(APPEND qm_defs HAVE_QUAD=1)
+    get_target_property(qm_options QuadMath::QuadMath INTERFACE_COMPILE_OPTIONS)
+    set_source_files_properties(opm/models/utils/parametersystem.cpp
+                                PROPERTIES COMPILE_DEFINITIONS "${qm_defs}"
+                                COMPILE_OPTIONS "${qm_options}")
+  endif()
 endmacro (sources_hook)
 
 macro (fortran_hook)

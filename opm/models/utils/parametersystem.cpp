@@ -32,6 +32,10 @@
 #include <config.h>
 #include <opm/models/utils/parametersystem.hpp>
 
+#if HAVE_QUAD
+#include <opm/material/common/quad.hpp>
+#endif
+
 namespace {
 
 std::string parseKey(std::string& s)
@@ -142,6 +146,52 @@ std::string transformKey(const std::string& s,
 namespace Opm::Parameters {
 
 namespace detail {
+
+template<class ParamType>
+ParamType Get_(const std::string& paramName, ParamType defaultValue,
+               bool errorIfNotRegistered)
+{
+    if (errorIfNotRegistered) {
+        if (MetaData::registrationOpen())
+            throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
+                                     "been registered.");
+
+        if (MetaData::registry().find(paramName) == MetaData::registry().end()) {
+            throw std::runtime_error("Accessing parameter " + paramName
+                                     +" without prior registration is not allowed.");
+        }
+    }
+
+    const std::string& defVal = MetaData::mutableRegistry()[paramName].defaultValue;
+    if constexpr (std::is_same_v<ParamType, std::string>) {
+        defaultValue = defVal;
+    }
+    else if constexpr (std::is_same_v<ParamType, bool>) {
+        defaultValue = defVal == "1";
+    }
+#if HAVE_QUAD
+    else if constexpr (std::is_same_v<ParamType, quad>) {
+        defaultValue = std::strtold(defVal.data(), nullptr);
+    }
+#endif
+#if !HAVE_FLOATING_POINT_FROM_CHARS
+    else if constexpr (std::is_floating_point_v<ParamType>) {
+        defaultValue = std::strtod(defVal.c_str(), nullptr);
+    }
+#endif // !HAVE_FLOATING_POINT_FROM_CHARS
+    else {
+        std::from_chars(defVal.data(), defVal.data() + defVal.size(), defaultValue);
+    }
+
+    // prefix the parameter name by the model's GroupName. E.g. If
+    // the model specifies its group name to be 'Stokes', in an
+    // INI file this would result in something like:
+    //
+    // [Stokes]
+    // NewtonWriteConvergence = true
+    // retrieve actual parameter from the parameter tree
+    return MetaData::tree().template get<ParamType>(paramName, defaultValue);
+}
 
 void Hide_(const std::string& paramName)
 {
@@ -707,6 +757,22 @@ int getTtyWidth()
     }
 
     return ttyWidth;
+}
+
+namespace detail {
+
+template bool Get_(const std::string&, bool, bool);
+template double Get_(const std::string&, double, bool);
+template float Get_(const std::string&, float, bool);
+template int Get_(const std::string&, int, bool);
+template long Get_(const std::string&, long, bool);
+template std::string Get_(const std::string&, std::string, bool);
+template unsigned Get_(const std::string&, unsigned, bool);
+
+#if HAVE_QUAD
+template quad Get_(const std::string&, quad, bool);
+#endif
+
 }
 
 } // namespace Opm::Parameters
