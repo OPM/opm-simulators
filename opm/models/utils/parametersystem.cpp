@@ -116,6 +116,25 @@ std::string parseUnquotedValue(std::string& s, const std::string&)
     return ret;
 }
 
+void printParamList(std::ostream& os,
+                    const std::list<std::string>& keyList,
+                    bool printDefaults = false)
+{
+    const Dune::ParameterTree& tree = Opm::Parameters::MetaData::tree();
+
+    for (const auto& key : keyList) {
+        const auto& paramInfo = Opm::Parameters::MetaData::registry().at(key);
+        const std::string& defaultValue = paramInfo.defaultValue;
+        std::string value = defaultValue;
+        if (tree.hasKey(key))
+            value = tree.get(key, "");
+        os << key << "=\"" << value << "\"";
+        if (printDefaults)
+            os << " # default: \"" << defaultValue << "\"";
+        os << "\n";
+    }
+}
+
 void printParamUsage(std::ostream& os,
                      const Opm::Parameters::ParamInfo& paramInfo)
 {
@@ -469,25 +488,6 @@ void getLists(std::vector<Parameter>& usedParams,
             // key was registered
             usedParams.emplace_back(key, MetaData::tree()[key]);
         }
-    }
-}
-
-void printParamList(std::ostream& os,
-                    const std::list<std::string>& keyList,
-                    bool printDefaults)
-{
-    const Dune::ParameterTree& tree = MetaData::tree();
-
-    for (const auto& key : keyList) {
-        const auto& paramInfo = MetaData::registry().at(key);
-        const std::string& defaultValue = paramInfo.defaultValue;
-        std::string value = defaultValue;
-        if (tree.hasKey(key))
-            value = tree.get(key, "");
-        os << key << "=\"" << value << "\"";
-        if (printDefaults)
-            os << " # default: \"" << defaultValue << "\"";
-        os << "\n";
     }
 }
 

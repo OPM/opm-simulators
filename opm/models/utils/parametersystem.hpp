@@ -175,11 +175,6 @@ std::string breakLines(const std::string& msg,
 
 int getTtyWidth();
 
-// print the values of a list of parameters
-void printParamList(std::ostream& os,
-                    const std::list<std::string>& keyList,
-                    bool printDefaults = false);
-
 //! \endcond
 
 /*!
