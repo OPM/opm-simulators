@@ -28,17 +28,17 @@
 #ifndef EWOMS_BLACK_OIL_MICP_MODULE_HH
 #define EWOMS_BLACK_OIL_MICP_MODULE_HH
 
-#include "blackoilproperties.hh"
+#include <dune/common/fvector.hh>
 
-#include <opm/models/blackoil/blackoilmicpparams.hh>
+#include <opm/models/blackoil/blackoilmicpparams.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
+
 #include <opm/models/io/vtkblackoilmicpmodule.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/MICPpara.hpp>
 #endif
-
-#include <dune/common/fvector.hh>
 
 #include <cmath>
 #include <cstddef>
