@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::MpiBuffer
  */
-#ifndef OPM_MATERIAL_MPIUTIL_HH
-#define OPM_MATERIAL_MPIUTIL_HH
+#ifndef OPM_MPIUTIL_HPP
+#define OPM_MPIUTIL_HPP
 
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -36,10 +36,7 @@
 
 
 #if HAVE_MPI
-
 #include <mpi.h>
-
-
 
 namespace mpiutil_details
 {
@@ -207,5 +204,5 @@ namespace Opm
 
 #endif // HAVE_MPI
 
-#endif // OPM_MATERIAL_MPIUTIL_HH
+#endif // OPM_MPIUTIL_HPP
 

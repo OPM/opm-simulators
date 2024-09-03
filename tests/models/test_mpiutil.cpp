@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#include <opm/models/parallel/mpiutil.hh>
+#include <opm/models/parallel/mpiutil.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <cassert>
