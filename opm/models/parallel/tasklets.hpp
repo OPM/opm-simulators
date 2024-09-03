@@ -24,8 +24,8 @@
  * \file
  * \brief Provides a mechanism to dispatch work to separate threads
  */
-#ifndef EWOMS_TASKLETS_HH
-#define EWOMS_TASKLETS_HH
+#ifndef OPM_TASKLETS_HPP
+#define OPM_TASKLETS_HPP
 
 #include <atomic>
 #include <stdexcept>
@@ -366,4 +366,5 @@ protected:
 };
 
 } // end namespace Opm
-#endif
+
+#endif // OPM_TASKLETS_HPP

@@ -671,7 +671,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/parallel/gridcommhandles.hh
   opm/models/parallel/mpibuffer.hh
   opm/models/parallel/mpiutil.hpp
-  opm/models/parallel/tasklets.hh
+  opm/models/parallel/tasklets.hpp
   opm/models/parallel/threadedentityiterator.hh
   opm/models/parallel/threadmanager.hpp
   opm/models/ptflash/flashindices.hh

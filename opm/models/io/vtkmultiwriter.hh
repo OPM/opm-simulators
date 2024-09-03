@@ -33,7 +33,7 @@
 #include "vtktensorfunction.hh"
 
 #include <opm/models/io/baseoutputwriter.hh>
-#include <opm/models/parallel/tasklets.hh>
+#include <opm/models/parallel/tasklets.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 
