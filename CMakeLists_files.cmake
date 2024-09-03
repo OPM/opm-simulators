@@ -62,6 +62,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
   opm/models/parallel/mpiutil.cpp
+  opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp

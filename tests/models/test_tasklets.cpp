@@ -30,6 +30,7 @@
 
 #include <opm/models/parallel/tasklets.hpp>
 
+#include <cassert>
 #include <chrono>
 #include <iostream>
 
