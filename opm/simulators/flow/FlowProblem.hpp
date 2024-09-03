@@ -275,12 +275,14 @@ public:
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
         SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
-        PolymerModule::initFromState(vanguard.eclState());
 
         BlackOilBrineParams<Scalar> brineParams;
         brineParams.template initFromState<enableBrine,
                                            enableSaltPrecipitation>(vanguard.eclState());
         BrineModule::setParams(std::move(brineParams));
+
+        DiffusionModule::initFromState(vanguard.eclState());
+        DispersionModule::initFromState(vanguard.eclState());
 
         BlackOilExtboParams<Scalar> extboParams;
         extboParams.template initFromState<enableExtbo>(vanguard.eclState());
@@ -294,8 +296,9 @@ public:
         micpParams.template initFromState<enableMICP>(vanguard.eclState());
         MICPModule::setParams(std::move(micpParams));
 
-        DispersionModule::initFromState(vanguard.eclState());
-        DiffusionModule::initFromState(vanguard.eclState());
+        BlackOilPolymerParams<Scalar> polymerParams;
+        polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
+        PolymerModule::setParams(std::move(polymerParams));
 
         // create the ECL writer
         eclWriter_ = std::make_unique<EclWriterType>(simulator);

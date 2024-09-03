@@ -59,6 +59,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilextboparams.cpp
   opm/models/blackoil/blackoilfoamparams.cpp
   opm/models/blackoil/blackoilmicpparams.cpp
+  opm/models/blackoil/blackoilpolymerparams.cpp
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/BlackoilModelParameters.cpp
