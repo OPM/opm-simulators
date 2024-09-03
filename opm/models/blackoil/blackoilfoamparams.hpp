@@ -25,8 +25,8 @@
  *
  * \brief Contains the parameters to extend the black-oil model to include the effects of foam.
  */
-#ifndef EWOMS_BLACK_OIL_FOAM_PARAMS_HH
-#define EWOMS_BLACK_OIL_FOAM_PARAMS_HH
+#ifndef OPM_BLACK_OIL_FOAM_PARAMS_HPP
+#define OPM_BLACK_OIL_FOAM_PARAMS_HPP
 
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
@@ -84,4 +84,4 @@ struct BlackOilFoamParams {
 
 } // namespace Opm
 
-#endif
+#endif // OPM_BLACK_OIL_FOAM_PARAMS_HPP

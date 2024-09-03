@@ -28,22 +28,21 @@
 #ifndef EWOMS_BLACK_OIL_FOAM_MODULE_HH
 #define EWOMS_BLACK_OIL_FOAM_MODULE_HH
 
-#include "blackoilproperties.hh"
-
 #include <dune/common/fvector.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/models/blackoil/blackoilfoamparams.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoamadsTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoammobTable.hpp>
 #endif
-
-#include <opm/models/blackoil/blackoilfoamparams.hh>
-
-#include <opm/models/discretization/common/fvbaseparameters.hh>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <string>
 
