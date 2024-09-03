@@ -55,7 +55,8 @@
 #include <opm/simulators/flow/CpGridVanguard.hpp>
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 // TODO: hopefully, we can use FlowBaseProblemProperties.hpp here
-#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
+#include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
+// #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
 
 #include <opm/simulators/flow/TracerModel.hpp> // TODO: will check whether to keep it
