@@ -274,7 +274,6 @@ public:
         this->model().addOutputModule(new VtkTracerModule<TypeTag>(simulator));
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
-        SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
 
         BlackOilBrineParams<Scalar> brineParams;
         brineParams.template initFromState<enableBrine,
@@ -299,6 +298,10 @@ public:
         BlackOilPolymerParams<Scalar> polymerParams;
         polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
         PolymerModule::setParams(std::move(polymerParams));
+
+        BlackOilSolventParams<Scalar> solventParams;
+        solventParams.template initFromState<enableSolvent>(vanguard.eclState(), vanguard.schedule());
+        SolventModule::setParams(std::move(solventParams));
 
         // create the ECL writer
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
