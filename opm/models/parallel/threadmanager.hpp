@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::ThreadManager
  */
-#ifndef EWOMS_THREAD_MANAGER_HH
-#define EWOMS_THREAD_MANAGER_HH
+#ifndef OPM_THREAD_MANAGER_HPP
+#define OPM_THREAD_MANAGER_HPP
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -136,6 +136,7 @@ private:
 
 template <class TypeTag>
 int ThreadManager<TypeTag>::numThreads_ = 1;
+
 } // namespace Opm
 
-#endif
+#endif // OPM_THREAD_MANAGER_HPP

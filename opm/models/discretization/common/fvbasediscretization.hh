@@ -56,7 +56,7 @@
 #include <opm/models/io/vtkprimaryvarsmodule.hh>
 
 #include <opm/models/parallel/gridcommhandles.hh>
-#include <opm/models/parallel/threadmanager.hh>
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <opm/models/utils/alignedallocator.hh>
 #include <opm/models/utils/simulator.hh>
