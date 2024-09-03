@@ -27,22 +27,11 @@
 #ifndef OPM_THREAD_MANAGER_HPP
 #define OPM_THREAD_MANAGER_HPP
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
-#include <opm/models/discretization/common/fvbaseparameters.hh>
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/models/utils/propertysystem.hh>
-
-#include <dune/common/version.hh>
-
 namespace Opm {
 
 /*!
  * \brief Simplifies multi-threaded capabilities.
  */
-template <class TypeTag>
 class ThreadManager
 {
 public:
@@ -58,12 +47,7 @@ public:
     /*!
      * \brief Register all run-time parameters of the thread manager.
      */
-    static void registerParameters()
-    {
-        Parameters::Register<Parameters::ThreadsPerProcess>
-            ("The maximum number of threads to be instantiated per process "
-             "('-1' means 'automatic')");
-    }
+    static void registerParameters();
 
     /*!
      * \brief Initialize number of threads used thread manager.
@@ -74,43 +58,7 @@ public:
      *        outside of this function (e.g. by OPM_NUM_THREADS or in the simulator by
      *        the ThreadsPerProcess parameter).
      */
-    static void init(bool queryCommandLineParameter = true)
-    {
-        if (queryCommandLineParameter)
-        {
-            numThreads_ = Parameters::Get<Parameters::ThreadsPerProcess>();
-
-            // some safety checks. This is pretty ugly macro-magic, but so what?
-#if !defined(_OPENMP)
-            if (numThreads_ != 1 && numThreads_ != -1)
-                throw std::invalid_argument("OpenMP is not available. The only valid values for "
-                                            "threads-per-process is 1 and -1 but it is "+std::to_string(numThreads_)+"!");
-            numThreads_ = 1;
-#elif !defined NDEBUG && defined DUNE_INTERFACECHECK
-            if (numThreads_ != 1)
-                throw std::invalid_argument("You explicitly enabled Barton-Nackman interface checking in Dune. "
-                                            "The Dune implementation of this is currently incompatible with "
-                                            "thread parallelism!");
-            numThreads_ = 1;
-#else
-
-            if (numThreads_ == 0)
-                throw std::invalid_argument("Zero threads per process are not possible: It must be at least 1, "
-                                            "(or -1 for 'automatic')!");
-#endif
-
-#ifdef _OPENMP
-            // actually limit the number of threads
-            if (numThreads_ > 0)
-                omp_set_num_threads(numThreads_);
-#endif
-        }
-
-#ifdef _OPENMP
-        // get the number of threads which are used in the end.
-        numThreads_ = omp_get_max_threads();
-#endif
-    }
+    static void init(bool queryCommandLineParameter = true);
 
     /*!
      * \brief Return the maximum number of threads of the current process.
@@ -121,21 +69,11 @@ public:
     /*!
      * \brief Return the index of the current OpenMP thread
      */
-    static unsigned threadId()
-    {
-#ifdef _OPENMP
-        return static_cast<unsigned>(omp_get_thread_num());
-#else
-        return 0;
-#endif
-    }
+    static unsigned threadId();
 
 private:
     static int numThreads_;
 };
-
-template <class TypeTag>
-int ThreadManager<TypeTag>::numThreads_ = 1;
 
 } // namespace Opm
 

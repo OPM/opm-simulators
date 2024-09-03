@@ -232,7 +232,7 @@ struct EquilFixture {
 #endif
         using namespace Opm;
         FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
-        Opm::ThreadManager<TypeTag>::registerParameters();
+        Opm::ThreadManager::registerParameters();
         BlackoilModelParameters<double>::registerParameters();
         AdaptiveTimeStepping<TypeTag>::registerParameters();
         Parameters::Register<Parameters::EnableTerminalOutput>("Dummy added for the well model to compile.");

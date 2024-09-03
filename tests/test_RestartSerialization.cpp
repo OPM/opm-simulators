@@ -527,7 +527,7 @@ struct AquiferFixture {
             "test_RestartSerialization",
             "--ecl-deck-file-name=GLIFT1.DATA"
         };
-        Opm::ThreadManager<TT>::registerParameters();
+        Opm::ThreadManager::registerParameters();
         AdaptiveTimeStepping<TT>::registerParameters();
         BlackoilModelParameters<double>::registerParameters();
         Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
