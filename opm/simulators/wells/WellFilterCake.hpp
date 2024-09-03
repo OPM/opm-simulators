@@ -55,6 +55,10 @@ public:
 private:
     std::vector<Scalar> filtration_particle_volume_; //!<// Volume of filtration particles during water injection
     std::vector<Scalar> inj_fc_multiplier_; //!< Multiplier due to injection filtration cake
+    std::vector<Scalar> skin_factor_;
+    std::vector<Scalar> prev_skin_factor_;
+    std::vector<Scalar> thickness_;
+    std::vector<Scalar> prev_thickness_;
 };
 
 }
