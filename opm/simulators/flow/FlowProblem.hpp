@@ -286,7 +286,9 @@ public:
         extboParams.template initFromState<enableExtbo>(vanguard.eclState());
         ExtboModule::setParams(std::move(extboParams));
 
-        FoamModule::initFromState(vanguard.eclState());
+        BlackOilFoamParams<Scalar> foamParams;
+        foamParams.template initFromState<enableFoam>(vanguard.eclState());
+        FoamModule::setParams(std::move(foamParams));
 
         MICPModule::initFromState(vanguard.eclState());
         DispersionModule::initFromState(vanguard.eclState());
