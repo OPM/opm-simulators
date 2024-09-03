@@ -282,8 +282,12 @@ public:
                                            enableSaltPrecipitation>(vanguard.eclState());
         BrineModule::setParams(std::move(brineParams));
 
+        BlackOilExtboParams<Scalar> extboParams;
+        extboParams.template initFromState<enableExtbo>(vanguard.eclState());
+        ExtboModule::setParams(std::move(extboParams));
+
         FoamModule::initFromState(vanguard.eclState());
-        ExtboModule::initFromState(vanguard.eclState());
+
         MICPModule::initFromState(vanguard.eclState());
         DispersionModule::initFromState(vanguard.eclState());
         DiffusionModule::initFromState(vanguard.eclState());

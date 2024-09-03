@@ -39,11 +39,22 @@
 
 namespace Opm {
 
+#if HAVE_ECL_INPUT
+class EclipseState;
+#endif
+
 //! \brief Struct holding the parameters for the BlackoilExtboModule class.
 template<class Scalar>
-struct BlackOilExtboParams {
+struct BlackOilExtboParams
+{
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
     using Tabulated2DFunction = UniformXTabulated2DFunction<Scalar>;
+
+#if HAVE_ECL_INPUT
+    template<bool enableExtbo>
+    void initFromState(const EclipseState& eclState);
+#endif
+
 
     std::vector<Tabulated2DFunction> X_;
     std::vector<Tabulated2DFunction> Y_;
