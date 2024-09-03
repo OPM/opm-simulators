@@ -276,8 +276,13 @@ public:
         const auto& vanguard = simulator.vanguard();
         SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
         PolymerModule::initFromState(vanguard.eclState());
+
+        BlackOilBrineParams<Scalar> brineParams;
+        brineParams.template initFromState<enableBrine,
+                                           enableSaltPrecipitation>(vanguard.eclState());
+        BrineModule::setParams(std::move(brineParams));
+
         FoamModule::initFromState(vanguard.eclState());
-        BrineModule::initFromState(vanguard.eclState());
         ExtboModule::initFromState(vanguard.eclState());
         MICPModule::initFromState(vanguard.eclState());
         DispersionModule::initFromState(vanguard.eclState());
