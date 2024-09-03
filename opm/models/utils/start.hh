@@ -35,7 +35,7 @@
 #include "parametersystem.hh"
 
 #include <opm/models/utils/simulator.hh>
-#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timer.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 

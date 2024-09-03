@@ -28,7 +28,7 @@
 #ifndef EWOMS_TIMER_GUARD_HH
 #define EWOMS_TIMER_GUARD_HH
 
-#include "timer.hh"
+#include <opm/models/utils/timer.hpp>
 
 namespace Opm {
 /*!

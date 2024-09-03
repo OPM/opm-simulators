@@ -714,7 +714,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/utils/signum.hh
   opm/models/utils/simulator.hh
   opm/models/utils/start.hh
-  opm/models/utils/timer.hh
+  opm/models/utils/timer.hpp
   opm/models/utils/timerguard.hh
   opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/AluGridCartesianIndexMapper.hpp

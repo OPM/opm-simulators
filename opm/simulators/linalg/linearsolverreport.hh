@@ -29,7 +29,7 @@
 
 #include "convergencecriterion.hh"
 
-#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timer.hpp>
 #include <opm/models/utils/timerguard.hh>
 
 namespace Opm {

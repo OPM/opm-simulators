@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::Timer
  */
-#ifndef EWOMS_TIMER_HH
-#define EWOMS_TIMER_HH
+#ifndef OPM_TIMER_HPP
+#define OPM_TIMER_HPP
 
 #include <chrono>
 
@@ -35,6 +35,7 @@
 #endif
 
 namespace Opm {
+
 /*!
  * \ingroup Common
  *
@@ -52,6 +53,7 @@ class Timer
         std::chrono::high_resolution_clock::time_point realtimeData;
         std::clock_t cputimeData;
     };
+
 public:
     Timer()
     { halt(); }
@@ -212,6 +214,7 @@ private:
     double realTimeElapsed_;
     TimeData startTime_;
 };
+
 } // namespace Opm
 
-#endif
+#endif // OPM_TIMER_HPP

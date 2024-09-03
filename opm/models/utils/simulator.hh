@@ -33,7 +33,7 @@
 
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timer.hpp>
 #include <opm/models/utils/timerguard.hh>
 #include <opm/models/parallel/mpiutil.hpp>
 #include <opm/models/discretization/common/fvbaseproperties.hh>

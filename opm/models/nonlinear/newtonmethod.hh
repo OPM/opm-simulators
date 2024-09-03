@@ -41,7 +41,7 @@
 #include <opm/models/nonlinear/newtonmethodproperties.hh>
 #include <opm/models/nonlinear/nullconvergencewriter.hh>
 
-#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timer.hpp>
 #include <opm/models/utils/timerguard.hh>
 
 #include <opm/simulators/linalg/linalgproperties.hh>
