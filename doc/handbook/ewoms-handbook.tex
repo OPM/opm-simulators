@@ -1,0 +1,217 @@
+\documentclass[11pt,a4paper,headinclude,footinclude,DIV16]{scrreprt}
+\usepackage[automark]{scrpage2}
+\usepackage[ansinew]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{theorem}
+\usepackage{color}
+\usepackage{listings}
+
+\definecolor{bashgray}{gray}{0.92}
+\definecolor{cppgray}{gray}{0.95}
+
+\lstset{language=C++, basicstyle=\ttfamily, 
+  keywordstyle=\color{black}\bfseries, tabsize=4, stringstyle=\ttfamily,
+  extendedchars=true, escapeinside={/*@}{@*/}}
+
+% for listings of bash code in install.tex
+\lstdefinestyle{Bash}
+ {language=Bash,
+ backgroundcolor=\color{bashgray},
+ basicstyle=\ttfamily\small,
+ numbers=none,
+ captionpos=b,
+ tabsize=4,
+ breaklines=true,
+ frame=single,
+ rulecolor=\color{bashgray},
+ framerule=1pt,
+ framesep=1pt,
+ rulesep=0pt,
+ aboveskip=\bigskipamount,
+ belowskip=\bigskipamount
+}
+% for listings of eWoms code
+\lstdefinestyle{eWomsCode}
+ {language=C++,
+ basicstyle=\ttfamily\scriptsize,
+ backgroundcolor=\color{bashgray},
+ rulecolor=\color{bashgray},
+ numbers=left,
+ numberstyle=\tiny,
+ numbersep=5pt,
+ breaklines=true
+}
+\lstset{showstringspaces=false,
+ breaklines=true}
+
+\usepackage[
+            pdfpagelabels=true,
+            %draft,
+            final,
+            bookmarks=true,
+            bookmarksnumbered=true,
+            bookmarksopen=true,
+            bookmarksopenlevel=1,
+            breaklinks=true,
+            colorlinks=true,
+            hyperindex=true,
+            linkcolor=black,
+            citecolor=black,
+            urlcolor=black,
+            pdfpagelayout=SinglePage,
+            %ps2pdf
+            %dvips
+            %dvipdf
+            %pdftex
+            ]{hyperref}
+\usepackage{psfrag}
+\usepackage{makeidx}
+\usepackage{graphicx}
+\usepackage{xspace}
+\usepackage{relsize}
+\usepackage[htt]{hyphenat}
+\usepackage{lscape}
+\usepackage{enumerate}
+\usepackage{rotating}
+\usepackage{subfig}
+\usepackage{units}
+\usepackage{url}
+\usepackage{breakurl}
+
+\ifpdf
+\usepackage{auto-pst-pdf}
+\fi
+\usepackage{pstricks}
+
+\usepackage[normalem]{ulem}
+\usepackage{tabularx}
+\newcommand{\snakeline}{%
+% {\uwave{\makebox[\linewidth]{\mbox{}}}}
+\uwave{\mbox{}}
+}
+\usepackage{layout}
+
+\usepackage[english]{babel}
+
+\DeclareGraphicsExtensions{.eps, .jpg}
+
+% Dune occuring in text
+\newcommand{\Dune}{{DUNE}\xspace}
+% ewoms occuring in text
+\newcommand{\Dumux}{\texorpdfstring{Du\-Mu$^\text{x}$\xspace}{DuMuX}}
+% eWoms occuring in text
+\newcommand{\eWoms}{eWoms\xspace}
+% beautify C++
+\DeclareRobustCommand\Cplusplus{\texorpdfstring{C\raisebox{2pt}{{\relsize{-3}++}}\xspace}{C++}}
+
+\newcommand{\porosity}{\phi}
+\newcommand{\saturation}{S}
+
+\newcommand{\doxyref}[3]{\textnormal{#1}}
+\newenvironment{CompactList}
+{\begin{list}{}{
+  \setlength{\leftmargin}{0.5cm}
+  \setlength{\itemsep}{0pt}
+  \setlength{\parsep}{0pt}
+  \setlength{\topsep}{0pt}
+  \renewcommand{\makelabel}{\hfill}}}
+{\end{list}}
+\newenvironment{CompactItemize}
+{
+  \begin{itemize}
+  \setlength{\itemsep}{-3pt}
+  \setlength{\parsep}{0pt}
+  \setlength{\topsep}{0pt}
+  \setlength{\partopsep}{0pt}
+}
+{\end{itemize}}
+
+\newcommand*\justifyNoHyphen{%
+  \fontdimen2\font=0.4em% interword space
+  \fontdimen3\font=0.2em% interword stretch
+  \fontdimen4\font=0.1em% interword shrink
+  \fontdimen7\font=0.1em% extra space
+  \hyphenchar\font=`\-% allowing hyphenation
+}
+% a new counter
+% you can give a label to it and thus reference it
+% syntax: \numberThis{printedTextToBeLabeled}{label} 
+% if you wanted a \newline after a numbered thing, you could just add a empty line after ``\label{#2}''
+\newcounter{thingCounter}
+\renewcommand{\thethingCounter}{\arabic{thingCounter}}
+\newcommand{\numberThis}[2]{%
+        \refstepcounter{thingCounter}%
+        \thethingCounter.\ #1 \label{#2}
+}
+
+%The theorems
+\theorembodyfont{\upshape}
+\theoremheaderfont{\sffamily\bfseries}
+\newtheorem{exc}{Exercise}[chapter]
+\newtheorem{example}[exc]{Example}
+\newtheorem{rem}[exc]{Remark}
+\newtheorem{lst}{Listing}
+\newtheorem{warn}[exc]{Warning}
+\newtheorem{justCounting}{}
+
+\DeclareMathOperator{\grad}{grad}
+\DeclareMathOperator{\curl}{curl}
+\DeclareMathOperator{\Div}{div}
+
+\pagestyle{scrheadings}
+
+\title{
+\begin{center}
+%\includegraphics[width=0.7\textwidth]{../logo/ewoms_logo_hires_whitebg.eps}
+%\\[3cm]
+{\Huge The \eWoms Handbook}
+\end{center}
+}
+
+\author{}
+
+\date{\today}
+
+\publishers{%
+{\normalsize \texttt{\url{http://opm-project.org/ewoms}}}\\
+}
+
+\makeindex
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+\end{abstract}
+
+\tableofcontents
+
+\part{Getting Familiar}
+
+\input{intro}
+\input{getting-started}
+\input{tutorial}
+
+\part{Concepts and Software Architecture}
+
+\input{designpatterns}
+\input{propertysystem}
+\input{fluidframework}
+
+\part{Guides}
+
+\input{install}
+\input{structure}
+\input{guidelines}
+\input{models}
+\input{newton-in-a-nutshell}
+
+\bibliographystyle{plain}
+\bibliography{ewoms-handbook}
+\printindex
+\end{document}

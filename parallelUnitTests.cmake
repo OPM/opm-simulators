@@ -182,3 +182,15 @@ opm_add_test(test_rstconv_parallel
   PROCESSORS
     4
 )
+
+opm_add_test(test_mpiutil
+  CONDITION
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  SOURCES
+    tests/models/test_mpiutil.cpp
+  DRIVER_ARGS
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
+  PROCESSORS
+    4
+)
