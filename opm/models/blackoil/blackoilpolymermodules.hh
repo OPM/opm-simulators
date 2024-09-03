@@ -28,12 +28,16 @@
 #ifndef EWOMS_BLACK_OIL_POLYMER_MODULE_HH
 #define EWOMS_BLACK_OIL_POLYMER_MODULE_HH
 
-#include "blackoilproperties.hh"
-
-#include <opm/models/blackoil/blackoilpolymerparams.hh>
-#include <opm/models/io/vtkblackoilpolymermodule.hh>
+#include <dune/common/fvector.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/models/blackoil/blackoilpolymerparams.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/models/io/vtkblackoilpolymermodule.hh>
+
+#include <opm/models/utils/propertysystem.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -43,8 +47,6 @@
 #include <opm/input/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PlyviscTable.hpp>
 #endif
-
-#include <dune/common/fvector.hh>
 
 #include <cmath>
 #include <stdexcept>
@@ -1132,7 +1134,6 @@ public:
     const Evaluation& waterShearFactor() const
     { throw std::runtime_error("waterShearFactor() called but polymers are disabled"); }
 };
-
 
 } // namespace Opm
 

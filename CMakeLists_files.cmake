@@ -541,7 +541,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilnewtonmethodparameters.hh
   opm/models/blackoil/blackoilonephaseindices.hh
   opm/models/blackoil/blackoilpolymermodules.hh
-  opm/models/blackoil/blackoilpolymerparams.hh
+  opm/models/blackoil/blackoilpolymerparams.hpp
   opm/models/blackoil/blackoilprimaryvariables.hh
   opm/models/blackoil/blackoilproblem.hh
   opm/models/blackoil/blackoilproperties.hh
