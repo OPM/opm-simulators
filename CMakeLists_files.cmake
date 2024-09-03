@@ -548,7 +548,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilproperties.hh
   opm/models/blackoil/blackoilratevector.hh
   opm/models/blackoil/blackoilsolventmodules.hh
-  opm/models/blackoil/blackoilsolventparams.hh
+  opm/models/blackoil/blackoilsolventparams.hpp
   opm/models/blackoil/blackoiltwophaseindices.hh
   opm/models/common/darcyfluxmodule.hh
   opm/models/common/diffusionmodule.hh

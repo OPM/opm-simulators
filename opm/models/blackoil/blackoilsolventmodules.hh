@@ -28,16 +28,17 @@
 #ifndef EWOMS_BLACK_OIL_SOLVENT_MODULE_HH
 #define EWOMS_BLACK_OIL_SOLVENT_MODULE_HH
 
-#include "blackoilproperties.hh"
-
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/blackoil/blackoilsolventparams.hh>
-#include <opm/models/io/vtkblackoilsolventmodule.hh>
+#include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
+
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilsolventparams.hpp>
+
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
-#include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
+#include <opm/models/io/vtkblackoilsolventmodule.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>

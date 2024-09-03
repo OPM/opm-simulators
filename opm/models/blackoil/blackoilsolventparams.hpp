@@ -25,8 +25,8 @@
  *
  * \brief Contains the parameters required to extend the black-oil model by solvents.
  */
-#ifndef EWOMS_BLACK_OIL_SOLVENT_PARAMS_HH
-#define EWOMS_BLACK_OIL_SOLVENT_PARAMS_HH
+#ifndef OPM_BLACK_OIL_SOLVENT_PARAMS_HPP
+#define OPM_BLACK_OIL_SOLVENT_PARAMS_HPP
 
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/Co2GasPvt.hpp>
@@ -104,4 +104,4 @@ struct BlackOilSolventParams {
 
 } // namespace Opm
 
-#endif
+#endif // OPM_BLACK_OIL_SOLVENT_PARAMS_HPP
