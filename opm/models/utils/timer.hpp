@@ -30,10 +30,6 @@
 
 #include <chrono>
 
-#if HAVE_MPI
-#include <mpi.h>
-#endif
-
 namespace Opm {
 
 /*!
@@ -52,90 +48,41 @@ class Timer
     {
         std::chrono::high_resolution_clock::time_point realtimeData;
         std::clock_t cputimeData;
+
+        // measure the current time and put it into the object.
+        void measure();
     };
 
 public:
-    Timer()
-    { halt(); }
+    Timer();
 
     /*!
      * \brief Start counting the time resources used by the simulation.
      */
-    void start()
-    {
-        isStopped_ = false;
-        measure_(startTime_);
-    }
+    void start();
 
     /*!
      * \brief Stop counting the time resources.
      *
      * Returns the wall clock time the timer was active.
      */
-    double stop()
-    {
-        if (!isStopped_) {
-            TimeData stopTime;
-
-            measure_(stopTime);
-
-            const auto& t1 = startTime_.realtimeData;
-            const auto& t2 = stopTime.realtimeData;
-            std::chrono::duration<double> dt =
-                std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1);
-
-            realTimeElapsed_ += dt.count();
-            cpuTimeElapsed_ +=
-                static_cast<double>(stopTime.cputimeData
-                                    - startTime_.cputimeData)/CLOCKS_PER_SEC;
-        }
-
-        isStopped_ = true;
-
-        return realTimeElapsed_;
-    }
+    double stop();
 
     /*!
      * \brief Stop the measurement reset all timing values
      */
-    void halt()
-    {
-        isStopped_ = true;
-        cpuTimeElapsed_ = 0.0;
-        realTimeElapsed_ = 0.0;
-    }
+    void halt();
 
     /*!
      * \brief Make the current point in time t=0 but do not change the status of the timer.
      */
-    void reset()
-    {
-        cpuTimeElapsed_ = 0.0;
-        realTimeElapsed_ = 0.0;
-
-        measure_(startTime_);
-    }
+    void reset();
 
     /*!
      * \brief Return the  real time [s] elapsed  during the periods the  timer was active
      *        since the last reset.
      */
-    double realTimeElapsed() const
-    {
-        if (isStopped_)
-            return realTimeElapsed_;
-
-        TimeData stopTime;
-
-        measure_(stopTime);
-
-        const auto& t1 = startTime_.realtimeData;
-        const auto& t2 = stopTime.realtimeData;
-        std::chrono::duration<double> dt =
-            std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1);
-
-        return realTimeElapsed_ + dt.count();
-    }
+    double realTimeElapsed() const;
 
     /*!
      * \brief This is an alias for realTimeElapsed()
@@ -149,66 +96,21 @@ public:
      * \brief Return the CPU time [s] used by all threads of the local process for the
      *        periods the timer was active
      */
-    double cpuTimeElapsed() const
-    {
-        if (isStopped_)
-            return cpuTimeElapsed_;
-
-        TimeData stopTime;
-
-        measure_(stopTime);
-
-        const auto& t1 = startTime_.cputimeData;
-        const auto& t2 = stopTime.cputimeData;
-
-        return cpuTimeElapsed_ + static_cast<double>(t2 - t1)/CLOCKS_PER_SEC;
-    }
+    double cpuTimeElapsed() const;
 
     /*!
      * \brief Return the CPU time [s] used by all threads of the all processes of program
      *
      * The value returned only differs from cpuTimeElapsed() if MPI is used.
      */
-    double globalCpuTimeElapsed() const
-    {
-        double val = cpuTimeElapsed();
-        double globalVal = val;
-
-#if HAVE_MPI
-        MPI_Reduce(&val,
-                   &globalVal,
-                   /*count=*/1,
-                   MPI_DOUBLE,
-                   MPI_SUM,
-                   /*rootRank=*/0,
-                   MPI_COMM_WORLD);
-#endif
-
-        return globalVal;
-    }
+    double globalCpuTimeElapsed() const;
 
     /*!
      * \brief Adds the time of another timer to the current one
      */
-    Timer& operator+=(const Timer& other)
-    {
-        realTimeElapsed_ += other.realTimeElapsed();
-        cpuTimeElapsed_ += other.cpuTimeElapsed();
-
-        return *this;
-    }
+    Timer& operator+=(const Timer& other);
 
 private:
-    // measure the current time and put it into the object passed via
-    // the argument.
-    static void measure_(TimeData& timeData)
-    {
-        // Note: On Linux -- or rather fully POSIX compliant systems -- using
-        // clock_gettime() would be more accurate for the CPU time.
-        timeData.realtimeData = std::chrono::high_resolution_clock::now();
-        timeData.cputimeData = std::clock();
-    }
-
     bool isStopped_;
     double cpuTimeElapsed_;
     double realTimeElapsed_;
