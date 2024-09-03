@@ -290,7 +290,10 @@ public:
         foamParams.template initFromState<enableFoam>(vanguard.eclState());
         FoamModule::setParams(std::move(foamParams));
 
-        MICPModule::initFromState(vanguard.eclState());
+        BlackOilMICPParams<Scalar> micpParams;
+        micpParams.template initFromState<enableMICP>(vanguard.eclState());
+        MICPModule::setParams(std::move(micpParams));
+
         DispersionModule::initFromState(vanguard.eclState());
         DiffusionModule::initFromState(vanguard.eclState());
 
