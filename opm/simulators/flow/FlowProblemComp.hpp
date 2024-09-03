@@ -180,14 +180,16 @@ public:
     /*!
      * \copydoc FvBaseProblem::handlePositionalParameter
      */
-    static int handlePositionalParameter(std::set<std::string>& seenParams,
+    static int handlePositionalParameter(std::function<void(const std::string&,
+                                                            const std::string&)> addKey,
+                                         std::set<std::string>& seenParams,
                                          std::string& errorMsg,
                                          int,
                                          const char** argv,
                                          int paramIdx,
                                          int)
     {
-        return eclPositionalParameter(Parameters::MetaData::tree(),
+        return eclPositionalParameter(addKey,
                                       seenParams,
                                       errorMsg,
                                       argv,
