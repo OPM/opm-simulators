@@ -523,7 +523,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoildispersionmodule.hh
   opm/models/blackoil/blackoilenergymodules.hh
   opm/models/blackoil/blackoilextbomodules.hh
-  opm/models/blackoil/blackoilextboparams.hh
+  opm/models/blackoil/blackoilextboparams.hpp
   opm/models/blackoil/blackoilextensivequantities.hh
   opm/models/blackoil/blackoilfoammodules.hh
   opm/models/blackoil/blackoilfoamparams.hh
