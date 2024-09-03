@@ -28,9 +28,12 @@
 #ifndef EWOMS_BLACK_OIL_BRINE_MODULE_HH
 #define EWOMS_BLACK_OIL_BRINE_MODULE_HH
 
-#include "blackoilproperties.hh"
+#include <opm/models/blackoil/blackoilbrineparams.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
 
-#include <opm/models/blackoil/blackoilbrineparams.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <opm/models/utils/basicproperties.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -45,7 +48,6 @@
 #include <dune/common/fvector.hh>
 
 #include <string>
-#include <math.h>
 
 namespace Opm {
 /*!

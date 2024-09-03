@@ -25,8 +25,8 @@
  *
  * \brief Contains the parameters required to extend the black-oil model by brine.
  */
-#ifndef EWOMS_BLACK_OIL_BRINE_PARAMS_HH
-#define EWOMS_BLACK_OIL_BRINE_PARAMS_HH
+#ifndef OPM_BLACK_OIL_BRINE_PARAMS_HPP
+#define OPM_BLACK_OIL_BRINE_PARAMS_HPP
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
@@ -49,4 +49,4 @@ struct BlackOilBrineParams {
 
 } // namespace Opm
 
-#endif
+#endif //  OPM_BLACK_OIL_BRINE_PARAMS_HPP

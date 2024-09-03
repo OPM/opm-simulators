@@ -516,7 +516,7 @@ list (APPEND TEST_DATA_FILES
 list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilboundaryratevector.hh
   opm/models/blackoil/blackoilbrinemodules.hh
-  opm/models/blackoil/blackoilbrineparams.hh
+  opm/models/blackoil/blackoilbrineparams.hpp
   opm/models/blackoil/blackoildarcyfluxmodule.hh
   opm/models/blackoil/blackoildiffusionmodule.hh
   opm/models/blackoil/blackoildispersionmodule.hh
