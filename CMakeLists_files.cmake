@@ -202,6 +202,7 @@ if (HAVE_ECL_INPUT)
     opm/simulators/utils/satfunc/OilPhaseConsistencyChecks.cpp
     opm/simulators/utils/satfunc/PhaseCheckBase.cpp
     opm/simulators/utils/satfunc/SatfuncConsistencyChecks.cpp
+    opm/simulators/utils/satfunc/WaterPhaseConsistencyChecks.cpp
   )
 endif()
 
@@ -389,6 +390,7 @@ if (HAVE_ECL_INPUT)
     tests/test_OilSatfuncConsistencyChecks.cpp
     tests/test_SatfuncConsistencyChecks.cpp
     tests/test_SatfuncConsistencyChecks_parallel.cpp
+    tests/test_WaterSatfuncConsistencyChecks.cpp
   )
 endif()
 
@@ -996,6 +998,7 @@ if (HAVE_ECL_INPUT)
     opm/simulators/utils/satfunc/OilPhaseConsistencyChecks.hpp
     opm/simulators/utils/satfunc/PhaseCheckBase.hpp
     opm/simulators/utils/satfunc/SatfuncConsistencyChecks.hpp
+    opm/simulators/utils/satfunc/WaterPhaseConsistencyChecks.hpp
   )
 endif()
 
