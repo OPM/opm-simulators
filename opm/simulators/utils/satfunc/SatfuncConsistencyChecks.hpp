@@ -75,7 +75,7 @@ namespace Opm {
             /// Number of \c Scalar values involved in the check.
             virtual std::size_t numExportedCheckValues() const = 0;
 
-            /// Get a linearised copy of the \c Sclar values involved in the check.
+            /// Get a linearised copy of the \c Scalar values involved in the check.
             ///
             /// \param[in,out] exportedCheckValues Pointer to contiguous
             ///    sequence of at least numExportedCheckValues() \c Scalars.
