@@ -41,6 +41,7 @@
 
 #include <charconv>
 #include <cstdlib>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -449,7 +450,8 @@ inline void printUsage(const std::string& helpPreamble,
 }
 
 /// \cond 0
-inline int noPositionalParameters_(std::set<std::string>&,
+inline int noPositionalParameters_(std::function<void(const std::string&, const std::string&)>,
+                                   std::set<std::string>&,
                                    std::string& errorMsg,
                                    int,
                                    const char** argv,
@@ -613,8 +615,11 @@ std::string parseCommandLineOptions(int argc,
             || argv[i][1] != '-')
         {
             std::string errorMsg;
-            int numHandled = posArgCallback(seenKeys, errorMsg, argc, argv,
-                                            i, numPositionalParams);
+            int numHandled = posArgCallback([](const std::string& k, const std::string& v)
+                                            {
+                                                MetaData::tree()[k] = v;
+                                            }, seenKeys, errorMsg,
+                                            argc, argv, i, numPositionalParams);
 
             if (numHandled < 1) {
                 std::ostringstream oss;
