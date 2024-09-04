@@ -390,7 +390,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 #endif
 
     // Note: removed_cells is guaranteed to be empty on ranks other than 0.
-    auto removed_cells =
+    auto [removed_cells, pinchedNncData] =
         this->grid_->processEclipseFormat(input_grid,
                                           &eclState,
                                           /*isPeriodic=*/false,
@@ -440,7 +440,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         // when there is numerical aquifers, new NNC are generated during
         // grid processing we need to pass the NNC from root process to
         // other processes
-        if (has_numerical_aquifer && mpiSize > 1) {
+        if ((has_numerical_aquifer || !pinchedNncData.empty()) && mpiSize > 1) {
             auto nnc_input = eclState.getInputNNC();
             Parallel::MpiSerializer ser(grid_->comm());
             ser.broadcast(nnc_input);

@@ -221,9 +221,12 @@ protected:
      *
      * \param cartesianToCompressed Vector containing the compressed index (or -1 for inactive
      *                              cells) as the element at the cartesian index.
+     * \param pinchOption4ALL Whether option 4 of PINCH is set to ALL. In this cases transmissibilities
+     *                        from the NNCs created by PINCH will overwrite.
      * \return Nothing.
      */
-    void applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed);
+    void applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed,
+                              bool pinchOption4ALL);
 
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
     void applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal);

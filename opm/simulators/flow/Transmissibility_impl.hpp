@@ -217,14 +217,22 @@ update(bool global, const TransUpdateQuantities update_quantities,
     // Then the smallest multiplier is applied.
     // Default is to apply the top and bottom multiplier
     bool useSmallestMultiplier;
+    bool pinchOption4ALL;
     bool pinchActive;
     if (comm.rank() == 0) {
         const auto& eclGrid = eclState_.getInputGrid();
         pinchActive = eclGrid.isPinchActive();
+        auto pinchTransCalcMode = eclGrid.getPinchOption();
         useSmallestMultiplier = eclGrid.getMultzOption() == PinchMode::ALL;
+        pinchOption4ALL = (pinchTransCalcMode == PinchMode::ALL);
+        if (pinchOption4ALL)
+        {
+            useSmallestMultiplier = false;
+        }
     }
     if (global && comm.size() > 1) {
         comm.broadcast(&useSmallestMultiplier, 1, 0);
+        comm.broadcast(&pinchOption4ALL, 1, 0);
         comm.broadcast(&pinchActive, 1, 0);
     }
 
@@ -541,7 +549,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
         // be seen in a parallel. Unfortunately, when we do not use transmissibilities
         // we will only see warnings for the partition of process 0 and also false positives.
         this->applyEditNncToGridTrans_(globalToLocal);
-        this->applyNncToGridTrans_(globalToLocal);
+        this->applyNncToGridTrans_(globalToLocal, pinchOption4ALL);
         this->applyEditNncrToGridTrans_(globalToLocal);
         if (applyNncMultregT) {
             this->applyNncMultreg_(globalToLocal);
@@ -1023,7 +1031,8 @@ computeFaceProperties(const Intersection& intersection,
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
+applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed,
+                     bool pinchOption4ALL)
 {
     // First scale NNCs with EDITNNC.
     const auto& nnc_input = eclState_.getInputNNC().input();
@@ -1055,10 +1064,19 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         {
             auto candidate = trans_.find(details::isId(low, high));
             if (candidate != trans_.end()) {
-                // NNC is represented by the grid and might be a neighboring connection
-                // In this case the transmissibilty is added to the value already
-                // set or computed.
-                candidate->second += nncEntry.trans;
+                if (!pinchOption4ALL || nncEntry.notFromPinch)
+                    // NNC is represented by the grid and might be a neighboring connection
+                    // In this case the transmissibilty is added to the value already
+                    // set or computed.
+                    candidate->second += nncEntry.trans;
+                else
+                    // Overwrite transmissibility in this special case.
+                    // Note that the NNC is represented by a normal vertical intersectionin CpGrid
+                    // that has a normal and an area (but maybe two different centers?).
+                    //. Hence we have calculated a transmissibilty for it.
+                    // That one might be correct if the option is TOPBOT but should be overwitten if
+                    // it is ALL
+                    candidate->second = nncEntry.trans;
             }
         }
         // if (enableEnergy_) {
