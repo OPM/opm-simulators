@@ -401,11 +401,11 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             if (useSmallestMultiplier)
             {
-                // Currently PINCH(4) is never queries and hence  PINCH(4) == TOPBOT is assumed
-                // and in this branch PINCH(5) == ALL holds
+                //  PINCH(4) == TOPBOT is assumed here as we set useSmallestMultipliers
+                // to false if  PINCH(4) == ALL holds
+                // In contrast to the name this will also apply
                 applyAllZMultipliers_(trans, insideFaceIdx, outsideFaceIdx, insideCartElemIdx,
-                                      outsideCartElemIdx, transMult, cartDims,
-                                      /* pinchTop= */ false);
+                                      outsideCartElemIdx, transMult, cartDims);
             }
             else
             {
@@ -720,8 +720,7 @@ applyAllZMultipliers_(Scalar& trans,
                       unsigned insideCartElemIdx,
                       unsigned outsideCartElemIdx,
                       const TransMult& transMult,
-                      const std::array<int, dimWorld>& cartDims,
-                      bool pinchTop)
+                      const std::array<int, dimWorld>& cartDims)
 {
     if(grid_.maxLevel()> 0) {
                 OPM_THROW(std::invalid_argument, "MULTZ not support with LGRS, yet.");
@@ -741,17 +740,14 @@ applyAllZMultipliers_(Scalar& trans,
         Scalar mult = transMult.getMultiplier(lastCartElemIdx , FaceDir::ZPlus) *
             transMult.getMultiplier(outsideCartElemIdx , FaceDir::ZMinus);
 
-        if ( !pinchTop )
+        // pick the smallest multiplier using (Z+)*(Z-) while looking down
+        // the pillar until reaching the other end of the connection
+        for(auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;)
         {
-            // pick the smallest multiplier using (Z+)*(Z-) while looking down
-            // the pillar until reaching the other end of the connection
-            for(auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;)
-            {
-                auto multiplier = transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus);
-                cartElemIdx += cartDims[0]*cartDims[1];
-                multiplier *= transMult.getMultiplier(cartElemIdx, FaceDir::ZMinus);
-                mult = std::min(mult, static_cast<Scalar>(multiplier));
-            }
+            auto multiplier = transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus);
+            cartElemIdx += cartDims[0]*cartDims[1];
+            multiplier *= transMult.getMultiplier(cartElemIdx, FaceDir::ZMinus);
+            mult = std::min(mult, static_cast<Scalar>(multiplier));
         }
 
         trans *= mult;

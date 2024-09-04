@@ -172,8 +172,7 @@ protected:
                                unsigned insideCartElemIdx,
                                unsigned outsideCartElemIdx,
                                const TransMult& transMult,
-                               const std::array<int, dimWorld>& cartDims,
-                               bool pinchTop);
+                               const std::array<int, dimWorld>& cartDims);
 
     /// \brief Creates TRANS{XYZ} arrays for modification by FieldProps data
     ///
