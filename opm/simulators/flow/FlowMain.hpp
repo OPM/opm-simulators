@@ -150,7 +150,7 @@ namespace Opm {
                 // deal with --print-parameters and unknown parameters.
                 if (Parameters::Get<Parameters::PrintParameters>() == 1) {
                     if (mpiRank == 0) {
-                        Parameters::printValues();
+                        Parameters::printValues(std::cout);
                     }
                     return -1;
                 }

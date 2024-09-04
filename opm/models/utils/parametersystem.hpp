@@ -176,7 +176,7 @@ void parseParameterFile(const std::string& fileName, bool overwrite = true);
  *
  * \param os The \c std::ostream on which the message should be printed
  */
-void printValues(std::ostream& os = std::cout);
+void printValues(std::ostream& os);
 
 /*!
  * \ingroup Parameter
