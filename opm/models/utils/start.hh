@@ -161,7 +161,7 @@ static inline int setupParameters_(int argc,
             if (myRank == 0) {
                 oss << "Parameter file \"" << paramFileName
                     << "\" does not exist or is not readable.";
-                Parameters::printUsage(argv[0], oss.str());
+                Parameters::printUsage(argv[0], std::cerr, oss.str());
             }
             return /*status=*/1;
         }
@@ -316,18 +316,20 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         // read the initial time step and the end time
         Scalar endTime = Parameters::Get<Parameters::EndTime<Scalar>>();
         if (endTime < -1e50) {
-            if (myRank == 0)
-                Parameters::printUsage(argv[0],
+            if (myRank == 0) {
+                Parameters::printUsage(argv[0], std::cerr,
                                        "Mandatory parameter '--end-time' not specified!");
+            }
             return 1;
         }
 
         Scalar initialTimeStepSize = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
         if (initialTimeStepSize < -1e50) {
-            if (myRank == 0)
-                Parameters::printUsage(argv[0],
+            if (myRank == 0) {
+                Parameters::printUsage(argv[0], std::cerr,
                                        "Mandatory parameter '--initial-time-step-size' "
                                        "not specified!");
+            }
             return 1;
         }
 

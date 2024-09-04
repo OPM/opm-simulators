@@ -127,8 +127,8 @@ int getTtyWidth();
  * \param os The \c std::ostream which should be used.
  */
 void printUsage(const std::string& helpPreamble,
+                std::ostream& os,
                 const std::string& errorMsg = "",
-                std::ostream& os = std::cerr,
                 const bool showAll = false);
 
 //! \brief Callback function for command line parsing.

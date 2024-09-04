@@ -137,7 +137,7 @@ BOOST_FIXTURE_TEST_CASE(ParseParameterFile, Fixture)
 BOOST_FIXTURE_TEST_CASE(PrintUsage, Fixture)
 {
   std::stringstream usage;
-  Opm::Parameters::printUsage("", "", usage);
+  Opm::Parameters::printUsage("", usage);
   BOOST_CHECK_EQUAL(trimString(usage.str()),
 trimString(R"(
 Recognized options:
@@ -152,7 +152,7 @@ Recognized options:
 BOOST_FIXTURE_TEST_CASE(PrintUsageAll, Fixture)
 {
   std::stringstream usage;
-  Opm::Parameters::printUsage("===foobar===", "", usage, true);
+  Opm::Parameters::printUsage("===foobar===", usage, "", true);
   BOOST_CHECK_EQUAL(trimString(usage.str()),
 trimString(R"(===foobar===
 Recognized options:
