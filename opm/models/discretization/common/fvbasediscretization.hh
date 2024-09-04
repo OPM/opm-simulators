@@ -56,11 +56,11 @@
 #include <opm/models/io/vtkprimaryvarsmodule.hh>
 
 #include <opm/models/parallel/gridcommhandles.hh>
-#include <opm/models/parallel/threadmanager.hh>
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <opm/models/utils/alignedallocator.hh>
 #include <opm/models/utils/simulator.hh>
-#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timer.hpp>
 #include <opm/models/utils/timerguard.hh>
 
 #include <opm/simulators/linalg/linalgparameters.hh>
@@ -219,7 +219,7 @@ struct ConstraintsContext<TypeTag, TTag::FvBaseDiscretization>
  */
 template<class TypeTag>
 struct ThreadManager<TypeTag, TTag::FvBaseDiscretization>
-{ using type = ::Opm::ThreadManager<TypeTag>; };
+{ using type = ::Opm::ThreadManager; };
 
 template<class TypeTag>
 struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization>

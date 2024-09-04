@@ -35,7 +35,7 @@
 #include "parametersystem.hh"
 
 #include <opm/models/utils/simulator.hh>
-#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timer.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 
@@ -76,7 +76,7 @@ template <class TypeTag>
 static inline void registerAllParameters_(bool finalizeRegistration = true)
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
+    using TM = GetPropType<TypeTag, Properties::ThreadManager>;
 
     Parameters::Register<Parameters::ParameterFile>
         ("An .ini file which contains a set of run-time parameters");
@@ -84,7 +84,7 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
         ("Print the values of the run-time parameters at the "
          "start of the simulation");
 
-    ThreadManager::registerParameters();
+    TM::registerParameters();
     Simulator::registerParameters();
 
     if (finalizeRegistration) {
@@ -279,7 +279,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
-    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
+    using TM = GetPropType<TypeTag, Properties::ThreadManager>;
 
     // set the signal handlers to reset the TTY to a well defined state on unexpected
     // program aborts
@@ -304,7 +304,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         if (paramStatus == 2)
             return 0;
 
-        ThreadManager::init();
+        TM::init();
 
         // initialize MPI, finalize is done automatically on exit
 #if HAVE_DUNE_FEM

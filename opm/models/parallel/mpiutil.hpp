@@ -22,37 +22,19 @@
 */
 /*!
  * \file
- *
- * \copydoc Opm::TimerGuard
+ * \copydoc Opm::MpiBuffer
  */
-#ifndef EWOMS_TIMER_GUARD_HH
-#define EWOMS_TIMER_GUARD_HH
+#ifndef OPM_MPIUTIL_HPP
+#define OPM_MPIUTIL_HPP
 
-#include <opm/models/utils/timer.hpp>
+#include <string>
+#include <vector>
 
 namespace Opm {
-/*!
- * \ingroup Common
- *
- * \brief A simple class which makes sure that a timer gets stopped if an exception is
- *        thrown.
- */
-class TimerGuard
-{
-public:
-    TimerGuard(Timer& timer)
-        : timer_(timer)
-    { }
 
-    ~TimerGuard()
-    {
-        timer_.stop();
-    }
-
-private:
-    Timer& timer_;
-};
+std::vector<std::string> gatherStrings(const std::string& local_string);
 
 } // namespace Opm
 
-#endif
+#endif // OPM_MPIUTIL_HPP
+

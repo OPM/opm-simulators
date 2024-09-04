@@ -39,7 +39,7 @@
 #include <cassert>
 
 #include "config.h"
-#include <opm/models/parallel/tasklets.hh>
+#include <opm/models/parallel/tasklets.hpp>
 
 std::mutex outputMutex;
 

@@ -184,6 +184,8 @@ opm_add_test(test_rstconv_parallel
 )
 
 opm_add_test(test_mpiutil
+  DEPENDS "opmsimulators"
+  LIBRARIES opmsimulators
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   SOURCES

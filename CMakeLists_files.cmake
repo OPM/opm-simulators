@@ -61,6 +61,10 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilmicpparams.cpp
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
+  opm/models/parallel/mpiutil.cpp
+  opm/models/parallel/tasklets.cpp
+  opm/models/parallel/threadmanager.cpp
+  opm/models/utils/timer.cpp
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/BlackoilModelParameters.cpp
@@ -668,10 +672,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/nonlinear/nullconvergencewriter.hh
   opm/models/parallel/gridcommhandles.hh
   opm/models/parallel/mpibuffer.hh
-  opm/models/parallel/mpiutil.hh
-  opm/models/parallel/tasklets.hh
+  opm/models/parallel/mpiutil.hpp
+  opm/models/parallel/tasklets.hpp
   opm/models/parallel/threadedentityiterator.hh
-  opm/models/parallel/threadmanager.hh
+  opm/models/parallel/threadmanager.hpp
   opm/models/ptflash/flashindices.hh
   opm/models/ptflash/flashintensivequantities.hh
   opm/models/ptflash/flashlocalresidual.hh
@@ -711,7 +715,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/utils/signum.hh
   opm/models/utils/simulator.hh
   opm/models/utils/start.hh
-  opm/models/utils/timer.hh
+  opm/models/utils/timer.hpp
   opm/models/utils/timerguard.hh
   opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/AluGridCartesianIndexMapper.hpp

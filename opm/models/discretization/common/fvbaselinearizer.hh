@@ -36,7 +36,7 @@
 #include <opm/grid/utility/SparseTable.hpp>
 
 #include <opm/models/parallel/gridcommhandles.hh>
-#include <opm/models/parallel/threadmanager.hh>
+#include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/parallel/threadedentityiterator.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 

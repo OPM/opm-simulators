@@ -38,6 +38,10 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include <charconv>
 #include <cstddef>
 #include <memory>
@@ -97,7 +101,7 @@ namespace Opm {
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
-            ThreadManager<TypeTag>::registerParameters();
+            ThreadManager::registerParameters();
             Simulator::registerParameters();
 
             // register the base parameters
@@ -305,8 +309,8 @@ namespace Opm {
             omp_set_num_threads(threads);
 #endif
 
-            using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
-            ThreadManager::init(false);
+            using TM = GetPropType<TypeTag, Properties::ThreadManager>;
+            TM::init(false);
         }
 
         void mergeParallelLogFiles()

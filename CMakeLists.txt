@@ -407,6 +407,7 @@ if(QuadMath_FOUND)
                co2injection_flash_ecfv
                co2injection_flash_vcfv)
     opm_add_test(${tapp}_quad
+                 LIBRARIES opmsimulators opmcommon
                  EXE_NAME ${tapp}_quad
                  SOURCES
                  examples/${tapp}.cpp

@@ -28,7 +28,7 @@
 #ifndef OPM_ECL_GENERIC_WRITER_HPP
 #define OPM_ECL_GENERIC_WRITER_HPP
 
-#include <opm/models/parallel/tasklets.hh>
+#include <opm/models/parallel/tasklets.hpp>
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
