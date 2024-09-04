@@ -40,11 +40,11 @@ copyright holders.
 
 namespace {
 
-#if FLOW_INSTANTIATE_FLOAT && HAVE_ECL_INPUT
-std::vector<std::vector<float>>
-doubleVecsToFloat(const std::vector<std::vector<double>>& input)
+template<class To, class From>
+std::vector<std::vector<To>>
+convertVecToVec(const std::vector<std::vector<From>>& input)
 {
-    std::vector<std::vector<float>> output;
+    std::vector<std::vector<To>> output;
     output.reserve(input.size());
     for (std::size_t i = 0; i < input.size(); ++i) {
         output.emplace_back(input[i].begin(), input[i].end());
@@ -52,7 +52,6 @@ doubleVecsToFloat(const std::vector<std::vector<double>>& input)
 
     return output;
 }
-#endif
 
 }
 
@@ -289,7 +288,7 @@ initFromState(const EclipseState& eclState)
             if constexpr (std::is_same_v<Scalar, float>) {
                 const std::vector<Scalar> tp(throughput.begin(), throughput.end());
                 const std::vector<Scalar> wv(watervelocity.begin(), watervelocity.end());
-                const auto mw = doubleVecsToFloat(molecularweight);
+                const auto mw = convertVecToVec<float>(molecularweight);
                 TabulatedTwoDFunction tablefunc(tp, wv, mw, true, false);
                 plymwinjTables_[tableNumber] = std::move(tablefunc);
             } else {
@@ -309,7 +308,7 @@ initFromState(const EclipseState& eclState)
             if constexpr (std::is_same_v<Scalar, float>) {
                 const std::vector<Scalar> tp(throughput.begin(), throughput.end());
                 const std::vector<Scalar> wv(watervelocity.begin(), watervelocity.end());
-                const auto sp = doubleVecsToFloat(skinpressure);
+                const auto sp = convertVecToVec<float>(skinpressure);
                 TabulatedTwoDFunction tablefunc(tp, wv, sp, true, false);
                 skprwatTables_[tableNumber] = std::move(tablefunc);
             } else {
@@ -330,7 +329,7 @@ initFromState(const EclipseState& eclState)
             if constexpr (std::is_same_v<Scalar, float>) {
                 const std::vector<Scalar> tp(throughput.begin(), throughput.end());
                 const std::vector<Scalar> wv(watervelocity.begin(), watervelocity.end());
-                const auto sp = doubleVecsToFloat(skinpressure);
+                const auto sp = convertVecToVec<float>(skinpressure);
                 SkprpolyTable tablefunc {
                     refPolymerConcentration,
                     TabulatedTwoDFunction(tp, wv, sp, true, false)
