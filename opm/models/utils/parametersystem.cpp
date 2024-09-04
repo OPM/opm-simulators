@@ -521,18 +521,6 @@ void printUsage(const std::string& helpPreamble,
     }
 }
 
-int noPositionalParameters_(std::function<void(const std::string&, const std::string&)>,
-                            std::set<std::string>&,
-                            std::string& errorMsg,
-                            int,
-                            const char** argv,
-                            int paramIdx,
-                            int)
-{
-    errorMsg = std::string("Illegal parameter \"")+argv[paramIdx]+"\".";
-    return 0;
-}
-
 void parseParameterFile(const std::string& fileName, bool overwrite)
 {
     std::set<std::string> seenKeys;
@@ -594,8 +582,8 @@ void parseParameterFile(const std::string& fileName, bool overwrite)
 
 std::string parseCommandLineOptions(int argc,
                                     const char **argv,
-                                    const std::string& helpPreamble,
-                                    const PositionalArgumentCallback& posArgCallback)
+                                    const PositionalArgumentCallback& posArgCallback,
+                                    const std::string& helpPreamble)
 {
     // handle the "--help" parameter
     if (!helpPreamble.empty()) {

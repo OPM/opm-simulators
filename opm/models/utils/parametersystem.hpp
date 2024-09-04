@@ -191,17 +191,6 @@ void printUsage(const std::string& helpPreamble,
                 std::ostream& os = std::cerr,
                 const bool showAll = false);
 
-/// \cond 0
-int noPositionalParameters_(std::function<void(const std::string&, const std::string&)>,
-                            std::set<std::string>&,
-                            std::string& errorMsg,
-                            int,
-                            const char** argv,
-                            int paramIdx,
-                            int);
-
-/// \endcond
-
 //! \brief Callback function for command line parsing.
 using PositionalArgumentCallback = std::function<int(std::function<void(const std::string&,
                                                                         const std::string&)>,
@@ -230,8 +219,8 @@ using PositionalArgumentCallback = std::function<int(std::function<void(const st
 std::string
 parseCommandLineOptions(int argc,
                         const char **argv,
-                        const std::string& helpPreamble = "",
-                        const PositionalArgumentCallback& posArgCallback = noPositionalParameters_);
+                        const PositionalArgumentCallback& posArgCallback,
+                        const std::string& helpPreamble = "");
 
 /*!
  * \ingroup Parameter

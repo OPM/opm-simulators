@@ -131,8 +131,8 @@ static inline int setupParameters_(int argc,
     std::string s =
         Parameters::parseCommandLineOptions(argc,
                                             argv,
-                                            helpPreamble,
-                                            positionalParamCallback);
+                                            positionalParamCallback,
+                                            helpPreamble);
     if (!s.empty())
     {
         int status = 1;

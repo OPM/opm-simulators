@@ -78,8 +78,21 @@ BOOST_FIXTURE_TEST_CASE(GetLists, Fixture)
       "--unused-param=foo",
   };
 
-  Opm::Parameters::parseCommandLineOptions(5, argv, "",
-                                           Opm::Parameters::noPositionalParameters_);
+    auto noPositional = [](std::function<void(const std::string&,
+                                              const std::string&)>,
+                           std::set<std::string>&,
+                           std::string&,
+                           int,
+                           const char**,
+                           int,
+                           int) -> int
+                        {
+                            assert("Should not be here!");
+                            return 0;
+                        };
+
+
+  Opm::Parameters::parseCommandLineOptions(5, argv, noPositional);
 
   BOOST_CHECK_EQUAL(Opm::Parameters::IsSet<Opm::Parameters::SimpleParamBool>(), true);
   BOOST_CHECK_EQUAL(Opm::Parameters::IsSet<Opm::Parameters::SimpleParamFloat>(), true);
