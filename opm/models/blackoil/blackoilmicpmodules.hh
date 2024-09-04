@@ -28,22 +28,15 @@
 #ifndef EWOMS_BLACK_OIL_MICP_MODULE_HH
 #define EWOMS_BLACK_OIL_MICP_MODULE_HH
 
-#include "blackoilproperties.hh"
-
-#include <opm/models/blackoil/blackoilmicpparams.hh>
-#include <opm/models/io/vtkblackoilmicpmodule.hh>
-
-#if HAVE_ECL_INPUT
-#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/EclipseState/MICPpara.hpp>
-#endif
-
 #include <dune/common/fvector.hh>
 
-#include <cmath>
+#include <opm/models/blackoil/blackoilmicpparams.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/models/io/vtkblackoilmicpmodule.hh>
+
 #include <cstddef>
 #include <stdexcept>
-#include <string>
 
 namespace Opm {
 /*!
@@ -86,56 +79,11 @@ class BlackOilMICPModule
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
 public:
-
-#if HAVE_ECL_INPUT
-    //
-     //* \brief Initialize all internal data structures needed by the MICP module
-     //
-    static void initFromState(const EclipseState& eclState)
+    //! \brief Set parameters.
+    static void setParams(BlackOilMICPParams<Scalar>&& params)
     {
-        // some sanity checks: if MICP is enabled, the MICP keyword must be
-        // present, if MICP is disabled the keyword must not be present.
-        if (enableMICP && !eclState.runspec().micp()) {
-            throw std::runtime_error("Non-trivial MICP treatment requested at compile time, but "
-                                     "the deck does not contain the MICP keyword");
-        }
-        else if (!enableMICP && eclState.runspec().micp()) {
-            throw std::runtime_error("MICP treatment disabled at compile time, but the deck "
-                                     "contains the MICP keyword");
-        }
-
-        if (!eclState.runspec().micp())
-            return; // MICP treatment is supposed to be disabled*/
-
-        // initialize the objects which deal with the MICPpara keyword
-        const auto& MICPpara = eclState.getMICPpara();
-                setMICPpara(MICPpara.getDensityBiofilm(),
-                           MICPpara.getDensityCalcite(),
-                           MICPpara.getDetachmentRate(),
-                           MICPpara.getCriticalPorosity(),
-                           MICPpara.getFittingFactor(),
-                           MICPpara.getHalfVelocityOxygen(),
-                           MICPpara.getHalfVelocityUrea(),
-                           MICPpara.getMaximumGrowthRate(),
-                           MICPpara.getMaximumUreaUtilization(),
-                           MICPpara.getMicrobialAttachmentRate(),
-                           MICPpara.getMicrobialDeathRate(),
-                           MICPpara.getMinimumPermeability(),
-                           MICPpara.getOxygenConsumptionFactor(),
-                           MICPpara.getYieldGrowthCoefficient(),
-                           MICPpara.getMaximumOxygenConcentration(),
-                           MICPpara.getMaximumUreaConcentration(),
-                           MICPpara.getToleranceBeforeClogging());
-        // obtain the porosity for the clamp in the blackoilnewtonmethod
-        if constexpr (std::is_same_v<Scalar, float>) {
-            const auto phi = eclState.fieldProps().get_double("PORO");
-            params_.phi_.resize(phi.size());
-            std::copy(phi.begin(), phi.end(), params_.phi_.begin());
-        } else {
-            params_.phi_ = eclState.fieldProps().get_double("PORO");
-        }
+        params_ = params;
     }
-#endif
 
     /*!
      * \brief The simulator stops if "clogging" has been (almost) reached in any of the cells.
@@ -149,48 +97,6 @@ public:
         const PrimaryVariables& priVars = model.solution(/*timeIdx=*/1)[dofIdx];
         if (phi - priVars[biofilmConcentrationIdx] - priVars[calciteConcentrationIdx] < toleranceBeforeClogging())
             throw std::logic_error("Clogging has been (almost) reached in at least one cell\n");
-    }
-
-    /*!
-     * \brief Specify the MICP properties a single region.
-     *
-     * The index of specified here must be in range [0, numSatRegions)
-     */
-    static void setMICPpara(const Scalar& densityBiofilm,
-                            const Scalar& densityCalcite,
-                            const Scalar& detachmentRate,
-                            const Scalar& criticalPorosity,
-                            const Scalar& fittingFactor,
-                            const Scalar& halfVelocityOxygen,
-                            const Scalar& halfVelocityUrea,
-                            const Scalar& maximumGrowthRate,
-                            const Scalar& maximumUreaUtilization,
-                            const Scalar& microbialAttachmentRate,
-                            const Scalar& microbialDeathRate,
-                            const Scalar& minimumPermeability,
-                            const Scalar& oxygenConsumptionFactor,
-                            const Scalar& yieldGrowthCoefficient,
-                            const Scalar& maximumOxygenConcentration,
-                            const Scalar& maximumUreaConcentration,
-                            const Scalar& toleranceBeforeClogging)
-    {
-        params_.densityBiofilm_ = densityBiofilm;
-        params_.densityCalcite_ = densityCalcite;
-        params_.detachmentRate_ = detachmentRate;
-        params_.criticalPorosity_ = criticalPorosity;
-        params_.fittingFactor_ = fittingFactor;
-        params_.halfVelocityOxygen_ = halfVelocityOxygen;
-        params_.halfVelocityUrea_ = halfVelocityUrea;
-        params_.maximumGrowthRate_ = maximumGrowthRate;
-        params_.maximumUreaUtilization_ = maximumUreaUtilization;
-        params_.microbialAttachmentRate_ = microbialAttachmentRate;
-        params_.microbialDeathRate_ = microbialDeathRate;
-        params_.minimumPermeability_ = minimumPermeability;
-        params_.oxygenConsumptionFactor_ = oxygenConsumptionFactor;
-        params_.yieldGrowthCoefficient_ = yieldGrowthCoefficient;
-        params_.maximumOxygenConcentration_ = maximumOxygenConcentration;
-        params_.maximumUreaConcentration_ = maximumUreaConcentration;
-        params_.toleranceBeforeClogging_ = toleranceBeforeClogging;
     }
 
     /*!

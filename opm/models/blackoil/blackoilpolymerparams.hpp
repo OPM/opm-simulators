@@ -25,8 +25,8 @@
  *
  * \brief Contains the parameters required to extend the black-oil model by polymer.
  */
-#ifndef EWOMS_BLACK_OIL_POLYMER_PARAMS_HH
-#define EWOMS_BLACK_OIL_POLYMER_PARAMS_HH
+#ifndef OPM_BLACK_OIL_POLYMER_PARAMS_HPP
+#define OPM_BLACK_OIL_POLYMER_PARAMS_HPP
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
@@ -36,6 +36,10 @@
 
 namespace Opm {
 
+#if HAVE_ECL_INPUT
+class EclipseState;
+#endif
+
 //! \brief Struct holding the parameters for the BlackOilPolymerModule class.
 template<class Scalar>
 struct BlackOilPolymerParams {
@@ -44,35 +48,24 @@ struct BlackOilPolymerParams {
 
     enum AdsorptionBehaviour { Desorption = 1, NoDesorption = 2 };
 
+#if HAVE_ECL_INPUT
+    template<bool enablePolymer, bool enablePolymerMolarWeight>
+    void initFromState(const EclipseState& eclState);
+#endif
+
     /*!
      * \brief Specify the number of satuation regions.
      *
      * This must be called before setting the PLYROCK and PLYADS of any region.
      */
-    void setNumSatRegions(unsigned numRegions)
-    {
-        plyrockDeadPoreVolume_.resize(numRegions);
-        plyrockResidualResistanceFactor_.resize(numRegions);
-        plyrockRockDensityFactor_.resize(numRegions);
-        plyrockAdsorbtionIndex_.resize(numRegions);
-        plyrockMaxAdsorbtion_.resize(numRegions);
-        plyadsAdsorbedPolymer_.resize(numRegions);
-    }
+    void setNumSatRegions(unsigned numRegions);
 
     /*!
      * \brief Specify the number of mix regions.
      *
      * This must be called before setting the PLYMAC and PLMIXPAR of any region.
      */
-    void setNumMixRegions(unsigned numRegions, bool enablePolymerMolarWeight)
-    {
-        plymaxMaxConcentration_.resize(numRegions);
-        plymixparToddLongstaff_.resize(numRegions);
-
-        if (enablePolymerMolarWeight) {
-            plyvmhCoefficients_.resize(numRegions);
-        }
-    }
+    void setNumMixRegions(unsigned numRegions, bool enablePolymerMolarWeight);
 
     /*!
      * \brief Specify the polymer rock properties a single region.
@@ -84,14 +77,7 @@ struct BlackOilPolymerParams {
                     const Scalar& plyrockResidualResistanceFactor,
                     const Scalar& plyrockRockDensityFactor,
                     const Scalar& plyrockAdsorbtionIndex,
-                    const Scalar& plyrockMaxAdsorbtion)
-    {
-        plyrockDeadPoreVolume_[satRegionIdx] = plyrockDeadPoreVolume;
-        plyrockResidualResistanceFactor_[satRegionIdx] = plyrockResidualResistanceFactor;
-        plyrockRockDensityFactor_[satRegionIdx] = plyrockRockDensityFactor;
-        plyrockAdsorbtionIndex_[satRegionIdx] = plyrockAdsorbtionIndex;
-        plyrockMaxAdsorbtion_[satRegionIdx] = plyrockMaxAdsorbtion;
-    }
+                    const Scalar& plyrockMaxAdsorbtion);
 
     // a struct containing the constants to calculate polymer viscosity
     // based on Mark-Houwink equation and Huggins equation, the constants are provided
@@ -132,4 +118,4 @@ struct BlackOilPolymerParams {
 
 } // namespace Opm
 
-#endif
+#endif // OPM_BLACK_OIL_POLYMER_PARAMS_HPP

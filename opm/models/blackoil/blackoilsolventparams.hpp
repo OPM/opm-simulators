@@ -25,8 +25,8 @@
  *
  * \brief Contains the parameters required to extend the black-oil model by solvents.
  */
-#ifndef EWOMS_BLACK_OIL_SOLVENT_PARAMS_HH
-#define EWOMS_BLACK_OIL_SOLVENT_PARAMS_HH
+#ifndef OPM_BLACK_OIL_SOLVENT_PARAMS_HPP
+#define OPM_BLACK_OIL_SOLVENT_PARAMS_HPP
 
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/Co2GasPvt.hpp>
@@ -38,25 +38,32 @@
 
 namespace Opm {
 
+#if HAVE_ECL_INPUT
+class EclipseState;
+class Schedule;
+#endif
+
 //! \brief Struct holding the parameters for the BlackOilSolventModule class.
 template<class Scalar>
-struct BlackOilSolventParams {
+struct BlackOilSolventParams
+{
+    using BrineCo2Pvt = ::Opm::BrineCo2Pvt<Scalar>;
+    using BrineH2Pvt = ::Opm::BrineH2Pvt<Scalar>;
+    using Co2GasPvt = ::Opm::Co2GasPvt<Scalar>;
+    using H2GasPvt = ::Opm::H2GasPvt<Scalar>;
+    using SolventPvt = ::Opm::SolventPvt<Scalar>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
-    using SolventPvt = ::Opm::SolventPvt<Scalar>;
-    SolventPvt solventPvt_;
+#if HAVE_ECL_INPUT
+    template<bool enableSolvent>
+    void initFromState(const EclipseState& eclState, const Schedule& schedule);
+#endif
 
-    using Co2GasPvt = ::Opm::Co2GasPvt<Scalar>;
-    Co2GasPvt co2GasPvt_;
-
-    using H2GasPvt = ::Opm::H2GasPvt<Scalar>;
-    H2GasPvt h2GasPvt_;
-    
-    using BrineCo2Pvt = ::Opm::BrineCo2Pvt<Scalar>;
     BrineCo2Pvt brineCo2Pvt_;
-    
-    using BrineH2Pvt = ::Opm::BrineH2Pvt<Scalar>;
     BrineH2Pvt brineH2Pvt_;
+    Co2GasPvt co2GasPvt_;
+    H2GasPvt h2GasPvt_;
+    SolventPvt solventPvt_;
 
     std::vector<TabulatedFunction> ssfnKrg_; // the krg(Fs) column of the SSFN table
     std::vector<TabulatedFunction> ssfnKrs_; // the krs(Fs) column of the SSFN table
@@ -82,11 +89,7 @@ struct BlackOilSolventParams {
      *
      * This must be called before setting the SSFN of any region.
      */
-    void setNumSatRegions(unsigned numRegions)
-    {
-        ssfnKrg_.resize(numRegions);
-        ssfnKrs_.resize(numRegions);
-    }
+    void setNumSatRegions(unsigned numRegions);
 
     /*!
      * \brief Specify miscible relative permeability multipliers of a single region.
@@ -95,13 +98,9 @@ struct BlackOilSolventParams {
      */
     void setMsfn(unsigned satRegionIdx,
                  const TabulatedFunction& msfnKrsg,
-                 const TabulatedFunction& msfnKro)
-    {
-        msfnKrsg_[satRegionIdx] = msfnKrsg;
-        msfnKro_[satRegionIdx] = msfnKro;
-    }
+                 const TabulatedFunction& msfnKro);
 };
 
 } // namespace Opm
 
-#endif
+#endif // OPM_BLACK_OIL_SOLVENT_PARAMS_HPP

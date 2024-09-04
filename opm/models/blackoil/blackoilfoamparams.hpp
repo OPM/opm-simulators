@@ -25,31 +25,36 @@
  *
  * \brief Contains the parameters to extend the black-oil model to include the effects of foam.
  */
-#ifndef EWOMS_BLACK_OIL_FOAM_PARAMS_HH
-#define EWOMS_BLACK_OIL_FOAM_PARAMS_HH
+#ifndef OPM_BLACK_OIL_FOAM_PARAMS_HPP
+#define OPM_BLACK_OIL_FOAM_PARAMS_HPP
 
-#include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #include <vector>
 
 namespace Opm {
 
+enum class Phase;
+
+#if HAVE_ECL_INPUT
+class EclipseState;
+#endif
+
 //! \brief Struct holding the parameters for the BlackoilFoamModule class.
 template<class Scalar>
-struct BlackOilFoamParams {
+struct BlackOilFoamParams
+{
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
+
+#if HAVE_ECL_INPUT
+    template<bool enableFoam>
+    void initFromState(const EclipseState& eclState);
+#endif
 
     /*!
      * \brief Specify the number of saturation regions.
      */
-    void setNumSatRegions(unsigned numRegions)
-    {
-        foamCoefficients_.resize(numRegions);
-        foamRockDensity_.resize(numRegions);
-        foamAllowDesorption_.resize(numRegions);
-        adsorbedFoamTable_.resize(numRegions);
-    }
+    void setNumSatRegions(unsigned numRegions);
 
     // a struct containing constants to calculate change to relative permeability,
     // based on model (1-9) in Table 1 of
@@ -84,4 +89,4 @@ struct BlackOilFoamParams {
 
 } // namespace Opm
 
-#endif
+#endif // OPM_BLACK_OIL_FOAM_PARAMS_HPP

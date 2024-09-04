@@ -274,14 +274,34 @@ public:
         this->model().addOutputModule(new VtkTracerModule<TypeTag>(simulator));
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
-        SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
-        PolymerModule::initFromState(vanguard.eclState());
-        FoamModule::initFromState(vanguard.eclState());
-        BrineModule::initFromState(vanguard.eclState());
-        ExtboModule::initFromState(vanguard.eclState());
-        MICPModule::initFromState(vanguard.eclState());
-        DispersionModule::initFromState(vanguard.eclState());
+
+        BlackOilBrineParams<Scalar> brineParams;
+        brineParams.template initFromState<enableBrine,
+                                           enableSaltPrecipitation>(vanguard.eclState());
+        BrineModule::setParams(std::move(brineParams));
+
         DiffusionModule::initFromState(vanguard.eclState());
+        DispersionModule::initFromState(vanguard.eclState());
+
+        BlackOilExtboParams<Scalar> extboParams;
+        extboParams.template initFromState<enableExtbo>(vanguard.eclState());
+        ExtboModule::setParams(std::move(extboParams));
+
+        BlackOilFoamParams<Scalar> foamParams;
+        foamParams.template initFromState<enableFoam>(vanguard.eclState());
+        FoamModule::setParams(std::move(foamParams));
+
+        BlackOilMICPParams<Scalar> micpParams;
+        micpParams.template initFromState<enableMICP>(vanguard.eclState());
+        MICPModule::setParams(std::move(micpParams));
+
+        BlackOilPolymerParams<Scalar> polymerParams;
+        polymerParams.template initFromState<enablePolymer, enablePolymerMolarWeight>(vanguard.eclState());
+        PolymerModule::setParams(std::move(polymerParams));
+
+        BlackOilSolventParams<Scalar> solventParams;
+        solventParams.template initFromState<enableSolvent>(vanguard.eclState(), vanguard.schedule());
+        SolventModule::setParams(std::move(solventParams));
 
         // create the ECL writer
         eclWriter_ = std::make_unique<EclWriterType>(simulator);

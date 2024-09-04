@@ -25,16 +25,26 @@
  *
  * \brief Contains the parameters required to extend the black-oil model by MICP.
  */
-#ifndef EWOMS_BLACK_OIL_MICP_PARAMS_HH
-#define EWOMS_BLACK_OIL_MICP_PARAMS_HH
+#ifndef OPM_BLACK_OIL_MICP_PARAMS_HPP
+#define OPM_BLACK_OIL_MICP_PARAMS_HPP
 
 #include <vector>
 
 namespace Opm {
 
+#if HAVE_ECL_INPUT
+class EclipseState;
+#endif
+
 //! \brief Struct holding the parameters for the BlackOilMICPModule class.
 template<class Scalar>
-struct BlackOilMICPParams {
+struct BlackOilMICPParams
+{
+#if HAVE_ECL_INPUT
+    template<bool enableMICP>
+    void initFromState(const EclipseState& eclState);
+#endif
+
     Scalar densityBiofilm_;
     Scalar densityCalcite_;
     Scalar detachmentRate_;
@@ -57,4 +67,4 @@ struct BlackOilMICPParams {
 
 } // namespace Opm
 
-#endif
+#endif // OPM_BLACK_OIL_MICP_PARAMS_HPP

@@ -28,22 +28,23 @@
 #ifndef EWOMS_BLACK_OIL_FOAM_MODULE_HH
 #define EWOMS_BLACK_OIL_FOAM_MODULE_HH
 
-#include "blackoilproperties.hh"
-
 #include <dune/common/fvector.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+
+#include <opm/models/blackoil/blackoilfoamparams.hpp>
+#include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoamadsTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoammobTable.hpp>
 #endif
-
-#include <opm/models/blackoil/blackoilfoamparams.hh>
-
-#include <opm/models/discretization/common/fvbaseparameters.hh>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <string>
 
@@ -87,93 +88,11 @@ class BlackOilFoamModule
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
 public:
-#if HAVE_ECL_INPUT
-    /*!
-     * \brief Initialize all internal data structures needed by the foam module
-     */
-    static void initFromState(const EclipseState& eclState)
+    //! \brief Set parameters.
+    static void setParams(BlackOilFoamParams<Scalar>&& params)
     {
-        // some sanity checks: if foam is enabled, the FOAM keyword must be
-        // present, if foam is disabled the keyword must not be present.
-        if (enableFoam && !eclState.runspec().phases().active(Phase::FOAM)) {
-            throw std::runtime_error("Non-trivial foam treatment requested at compile time, but "
-                                     "the deck does not contain the FOAM keyword");
-        }
-        else if (!enableFoam && eclState.runspec().phases().active(Phase::FOAM)) {
-            throw std::runtime_error("Foam treatment disabled at compile time, but the deck "
-                                     "contains the FOAM keyword");
-        }
-
-        if (!eclState.runspec().phases().active(Phase::FOAM)) {
-            return; // foam treatment is supposed to be disabled
-        }
-
-        params_.transport_phase_ = eclState.getInitConfig().getFoamConfig().getTransportPhase();
-
-        if (eclState.getInitConfig().getFoamConfig().getMobilityModel() != FoamConfig::MobilityModel::TAB) {
-            throw std::runtime_error("In FOAMOPTS, only TAB is allowed for the gas mobility factor reduction model.");
-        }
-
-        const auto& tableManager = eclState.getTableManager();
-        const unsigned int numSatRegions = tableManager.getTabdims().getNumSatTables();
-        params_.setNumSatRegions(numSatRegions);
-        const unsigned int numPvtRegions = tableManager.getTabdims().getNumPVTTables();
-        params_.gasMobilityMultiplierTable_.resize(numPvtRegions);
-
-        // Get and check FOAMROCK data.
-        const FoamConfig& foamConf = eclState.getInitConfig().getFoamConfig();
-        if (numSatRegions != foamConf.size()) {
-            throw std::runtime_error("Inconsistent sizes, number of saturation regions differ from the number of elements "
-                                     "in FoamConfig, which typically corresponds to the number of records in FOAMROCK.");
-        }
-
-        // Get and check FOAMADS data.
-        const auto& foamadsTables = tableManager.getFoamadsTables();
-        if (foamadsTables.empty()) {
-            throw std::runtime_error("FOAMADS must be specified in FOAM runs");
-        }
-        if (numSatRegions != foamadsTables.size()) {
-            throw std::runtime_error("Inconsistent sizes, number of saturation regions differ from the "
-                                     "number of FOAMADS tables.");
-        }
-
-        // Set data that vary with saturation region.
-        for (std::size_t satReg = 0; satReg < numSatRegions; ++satReg) {
-            const auto& rec = foamConf.getRecord(satReg);
-            params_.foamCoefficients_[satReg] = typename BlackOilFoamParams<Scalar>::FoamCoefficients();
-            params_.foamCoefficients_[satReg].fm_min = rec.minimumSurfactantConcentration();
-            params_.foamCoefficients_[satReg].fm_surf = rec.referenceSurfactantConcentration();
-            params_.foamCoefficients_[satReg].ep_surf = rec.exponent();
-            params_.foamRockDensity_[satReg] = rec.rockDensity();
-            params_.foamAllowDesorption_[satReg] = rec.allowDesorption();
-            const auto& foamadsTable = foamadsTables.template getTable<FoamadsTable>(satReg);
-            const auto& conc = foamadsTable.getFoamConcentrationColumn();
-            const auto& ads = foamadsTable.getAdsorbedFoamColumn();
-            params_.adsorbedFoamTable_[satReg].setXYContainers(conc, ads);
-        }
-
-        // Get and check FOAMMOB data.
-        const auto& foammobTables = tableManager.getFoammobTables();
-        if (foammobTables.empty()) {
-            // When in the future adding support for the functional
-            // model, FOAMMOB will not be required anymore (functional
-            // family of keywords can be used instead, FOAMFSC etc.).
-            throw std::runtime_error("FOAMMOB must be specified in FOAM runs");
-        }
-        if (numPvtRegions != foammobTables.size()) {
-            throw std::runtime_error("Inconsistent sizes, number of PVT regions differ from the "
-                                     "number of FOAMMOB tables.");
-        }
-
-        // Set data that vary with PVT region.
-        for (std::size_t pvtReg = 0; pvtReg < numPvtRegions; ++pvtReg) {
-            const auto& foammobTable = foammobTables.template getTable<FoammobTable>(pvtReg);
-            const auto& conc = foammobTable.getFoamConcentrationColumn();
-            const auto& mobMult = foammobTable.getMobilityMultiplierColumn();
-            params_.gasMobilityMultiplierTable_[pvtReg].setXYContainers(conc, mobMult);
-        }
+        params_ = params;
     }
-#endif
 
     /*!
      * \brief Register all run-time parameters for the black-oil foam module.

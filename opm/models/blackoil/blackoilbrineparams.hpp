@@ -25,8 +25,8 @@
  *
  * \brief Contains the parameters required to extend the black-oil model by brine.
  */
-#ifndef EWOMS_BLACK_OIL_BRINE_PARAMS_HH
-#define EWOMS_BLACK_OIL_BRINE_PARAMS_HH
+#ifndef OPM_BLACK_OIL_BRINE_PARAMS_HPP
+#define OPM_BLACK_OIL_BRINE_PARAMS_HPP
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
@@ -34,9 +34,19 @@
 
 namespace Opm {
 
+#if HAVE_ECL_INPUT
+class EclipseState;
+#endif
+
 //! \brief Struct holding the parameters for the BlackoilBrineModule class.
 template<class Scalar>
-struct BlackOilBrineParams {
+struct BlackOilBrineParams
+{
+#if HAVE_ECL_INPUT
+    template<bool enableBrine, bool enableSaltPrecipitation>
+    void initFromState(const EclipseState& eclState);
+#endif
+
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     std::vector<TabulatedFunction> bdensityTable_;
@@ -49,4 +59,4 @@ struct BlackOilBrineParams {
 
 } // namespace Opm
 
-#endif
+#endif //  OPM_BLACK_OIL_BRINE_PARAMS_HPP

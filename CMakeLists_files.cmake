@@ -55,6 +55,12 @@ endmacro()
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
+  opm/models/blackoil/blackoilbrineparams.cpp
+  opm/models/blackoil/blackoilextboparams.cpp
+  opm/models/blackoil/blackoilfoamparams.cpp
+  opm/models/blackoil/blackoilmicpparams.cpp
+  opm/models/blackoil/blackoilpolymerparams.cpp
+  opm/models/blackoil/blackoilsolventparams.cpp
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/BlackoilModelParameters.cpp
@@ -516,34 +522,34 @@ list (APPEND TEST_DATA_FILES
 list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilboundaryratevector.hh
   opm/models/blackoil/blackoilbrinemodules.hh
-  opm/models/blackoil/blackoilbrineparams.hh
+  opm/models/blackoil/blackoilbrineparams.hpp
   opm/models/blackoil/blackoildarcyfluxmodule.hh
   opm/models/blackoil/blackoildiffusionmodule.hh
   opm/models/blackoil/blackoildispersionmodule.hh
   opm/models/blackoil/blackoilenergymodules.hh
   opm/models/blackoil/blackoilextbomodules.hh
-  opm/models/blackoil/blackoilextboparams.hh
+  opm/models/blackoil/blackoilextboparams.hpp
   opm/models/blackoil/blackoilextensivequantities.hh
   opm/models/blackoil/blackoilfoammodules.hh
-  opm/models/blackoil/blackoilfoamparams.hh
+  opm/models/blackoil/blackoilfoamparams.hpp
   opm/models/blackoil/blackoilindices.hh
   opm/models/blackoil/blackoilintensivequantities.hh
   opm/models/blackoil/blackoillocalresidual.hh
   opm/models/blackoil/blackoillocalresidualtpfa.hh
   opm/models/blackoil/blackoilmicpmodules.hh
-  opm/models/blackoil/blackoilmicpparams.hh
+  opm/models/blackoil/blackoilmicpparams.hpp
   opm/models/blackoil/blackoilmodel.hh
   opm/models/blackoil/blackoilnewtonmethod.hh
   opm/models/blackoil/blackoilnewtonmethodparameters.hh
   opm/models/blackoil/blackoilonephaseindices.hh
   opm/models/blackoil/blackoilpolymermodules.hh
-  opm/models/blackoil/blackoilpolymerparams.hh
+  opm/models/blackoil/blackoilpolymerparams.hpp
   opm/models/blackoil/blackoilprimaryvariables.hh
   opm/models/blackoil/blackoilproblem.hh
   opm/models/blackoil/blackoilproperties.hh
   opm/models/blackoil/blackoilratevector.hh
   opm/models/blackoil/blackoilsolventmodules.hh
-  opm/models/blackoil/blackoilsolventparams.hh
+  opm/models/blackoil/blackoilsolventparams.hpp
   opm/models/blackoil/blackoiltwophaseindices.hh
   opm/models/common/darcyfluxmodule.hh
   opm/models/common/diffusionmodule.hh
