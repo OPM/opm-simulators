@@ -454,6 +454,11 @@ void reset()
     MetaData::clear();
 }
 
+bool IsRegistrationOpen()
+{
+    return MetaData::registrationOpen();
+}
+
 void endRegistration()
 {
     if (!MetaData::registrationOpen()) {

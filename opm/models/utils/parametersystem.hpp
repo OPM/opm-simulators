@@ -394,6 +394,12 @@ void Hide()
 }
 
 /*!
+ * \brief Query whether parameter registration is open or not.
+ * \return True if registration is open, false otherwise
+ */
+bool IsRegistrationOpen();
+
+/*!
  * \brief Indicate that all parameters are registered for a given type tag.
  *
  * If registerParam is called after the invocation of
