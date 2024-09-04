@@ -186,7 +186,7 @@ void printValues(std::ostream& os);
  *
  * \return true if something was printed
  */
-bool printUnused(std::ostream& os = std::cout);
+bool printUnused(std::ostream& os);
 
 /*!
  * \ingroup Parameter
