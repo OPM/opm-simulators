@@ -427,6 +427,33 @@ void printParamUsage(std::ostream& os, const ParamInfo& paramInfo)
     os << paramMessage;
 }
 
+void getLists(std::vector<Parameter>& usedParams,
+              std::vector<Parameter>& unusedParams)
+{
+    usedParams.clear();
+    unusedParams.clear();
+
+    if (MetaData::registrationOpen()) {
+        throw std::runtime_error("Parameter lists can only retrieved after _all_ of them have "
+                                 "been registered.");
+    }
+
+    // get all parameter keys
+    std::list<std::string> allKeysList;
+    getFlattenedKeyList(allKeysList, MetaData::tree());
+
+    for (const auto& key : allKeysList) {
+        if (MetaData::registry().find(key) == MetaData::registry().end()) {
+            // key was not registered
+            unusedParams.emplace_back(key, MetaData::tree()[key]);
+        }
+        else {
+            // key was registered
+            usedParams.emplace_back(key, MetaData::tree()[key]);
+        }
+    }
+}
+
 void getFlattenedKeyList(std::list<std::string>& dest,
                          const Dune::ParameterTree& tree,
                          const std::string& prefix)

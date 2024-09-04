@@ -50,8 +50,10 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <tuple>
 #include <type_traits>
+#include <vector>
 
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -319,37 +321,42 @@ void SetDefault(decltype(Param::value) new_value)
 }
 
 /*!
+ * \brief A struct holding the key-value pair for a parameter.
+ */
+struct Parameter
+{
+    Parameter(const std::string& k, const std::string& v)
+        : key(k), value(v)
+    {}
+
+    friend std::ostream& operator<<(std::ostream& os, const Parameter& param)
+    {
+        os << param.key << "=\"" << param.value << '"';
+        return os;
+    }
+
+    bool operator==(const Parameter& setting) const
+    {
+        return setting.key == key
+            && setting.value == value;
+    }
+
+    bool operator !=(const Parameter& setting) const
+    {
+        return !(*this == setting);
+    }
+
+    std::string key, value;
+};
+
+/*!
  * \brief Retrieves the lists of parameters specified at runtime and their values.
  *
  * The two arguments besides the TypeTag are assumed to be STL containers which store
  * std::pair<std::string, std::string>.
  */
-template <class Container>
-void getLists(Container& usedParams, Container& unusedParams)
-{
-    usedParams.clear();
-    unusedParams.clear();
-
-    if (MetaData::registrationOpen()) {
-        throw std::runtime_error("Parameter lists can only retrieved after _all_ of them have "
-                                 "been registered.");
-    }
-
-    // get all parameter keys
-    std::list<std::string> allKeysList;
-    getFlattenedKeyList(allKeysList, MetaData::tree());
-
-    for (const auto& key : allKeysList) {
-        if (MetaData::registry().find(key) == MetaData::registry().end()) {
-            // key was not registered
-            unusedParams.emplace_back(key, MetaData::tree()[key]);
-        }
-        else {
-            // key was registered
-            usedParams.emplace_back(key, MetaData::tree()[key]);
-        }
-    }
-}
+void getLists(std::vector<Parameter>& usedParams,
+              std::vector<Parameter>& unusedParams);
 
 /*!
  *  \brief Reset parameter system.

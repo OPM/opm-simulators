@@ -171,8 +171,7 @@ static inline int setupParameters_(int argc,
     }
 
     // make sure that no unknown parameters are encountered
-    using KeyValuePair = std::pair<std::string, std::string>;
-    using ParamList = std::list<KeyValuePair>;
+    using ParamList = std::vector<Parameters::Parameter>;
 
     ParamList usedParams;
     ParamList unusedParams;
@@ -188,7 +187,7 @@ static inline int setupParameters_(int argc,
 
             std::cerr << "\n";
             for (const auto& keyValue : unusedParams)
-                std::cerr << "   " << keyValue.first << "=\"" << keyValue.second << "\"\n";
+                std::cerr << "   " << keyValue << "\n";
             std::cerr << "\n";
 
             std::cerr << "Use\n"

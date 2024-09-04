@@ -41,35 +41,6 @@ struct SimpleParamBoolN2
 
 namespace {
 
-class Setting
-{
-public:
-    Setting(const std::string& k, const std::string& v)
-        : key(k), value(v)
-    {}
-
-    friend std::ostream& operator<<(std::ostream& os, const Setting& setting)
-    {
-        os << setting.key << "=" << setting.value << '\n';
-        return os;
-    }
-
-    bool operator==(const Setting& setting) const
-    {
-        return setting.key == key
-            && setting.value == value;
-    }
-
-    bool operator !=(const Setting& setting) const
-    {
-        return !(*this == setting);
-    }
-
-private:
-    std::string key;
-    std::string value;
-};
-
 struct Fixture
 {
     Fixture()
@@ -117,7 +88,7 @@ BOOST_FIXTURE_TEST_CASE(GetLists, Fixture)
   BOOST_CHECK_EQUAL(Opm::Parameters::IsSet<Opm::Parameters::SimpleParamDouble>(), false);
   BOOST_CHECK_EQUAL(Opm::Parameters::IsSet<Opm::Parameters::SimpleParamInt>(), false);
 
-  using SettingMap = std::vector<Setting>;
+  using SettingMap = std::vector<Opm::Parameters::Parameter>;
 
   const SettingMap set_ref = {
       {"SimpleParamBool", "true"},
