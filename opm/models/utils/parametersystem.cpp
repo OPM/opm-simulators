@@ -38,6 +38,73 @@
 
 namespace {
 
+struct ParamInfo
+{
+    std::string paramName;
+    std::string paramTypeName;
+    std::string typeTagName;
+    std::string usageString;
+    std::string defaultValue;
+    bool isHidden;
+
+    bool operator==(const ParamInfo& other) const
+    {
+        return other.paramName == paramName
+            && other.paramTypeName == paramTypeName
+            && other.typeTagName == typeTagName
+            && other.usageString == usageString;
+    }
+};
+
+struct MetaData
+{
+    using type = Dune::ParameterTree;
+
+    static Dune::ParameterTree& tree()
+    { return *storage_().tree; }
+
+    static std::map<std::string, ParamInfo>& mutableRegistry()
+    { return storage_().registry; }
+
+    static const std::map<std::string, ParamInfo>& registry()
+    { return storage_().registry; }
+
+    static bool& registrationOpen()
+    { return storage_().registrationOpen; }
+
+    static void clear()
+    {
+        storage_().tree = std::make_unique<Dune::ParameterTree>();
+        storage_().registrationOpen = true;
+        storage_().registry.clear();
+    }
+
+private:
+    // this is not pretty, but handling these attributes as static variables inside
+    // member functions of the ParameterMetaData property class triggers a bug in clang
+    // 3.5's address sanitizer which causes these variables to be initialized multiple
+    // times...
+    struct Storage_
+    {
+        Storage_()
+        {
+            tree = std::make_unique<Dune::ParameterTree>();
+            registrationOpen = true;
+        }
+
+        std::unique_ptr<Dune::ParameterTree> tree;
+        std::map<std::string, ParamInfo> registry;
+        bool registrationOpen;
+    };
+
+    static Storage_& storage_()
+    {
+        static Storage_ obj;
+        return obj;
+    }
+};
+
+
 void getFlattenedKeyList(std::list<std::string>& dest,
                          const Dune::ParameterTree& tree,
                          const std::string& prefix = "")
@@ -120,10 +187,10 @@ void printParamList(std::ostream& os,
                     const std::list<std::string>& keyList,
                     bool printDefaults = false)
 {
-    const Dune::ParameterTree& tree = Opm::Parameters::MetaData::tree();
+    const Dune::ParameterTree& tree = MetaData::tree();
 
     for (const auto& key : keyList) {
-        const auto& paramInfo = Opm::Parameters::MetaData::registry().at(key);
+        const auto& paramInfo = MetaData::registry().at(key);
         const std::string& defaultValue = paramInfo.defaultValue;
         std::string value = defaultValue;
         if (tree.hasKey(key))
@@ -136,7 +203,7 @@ void printParamList(std::ostream& os,
 }
 
 void printParamUsage(std::ostream& os,
-                     const Opm::Parameters::ParamInfo& paramInfo)
+                     const ParamInfo& paramInfo)
 {
     std::string paramMessage, paramType, paramDescription;
 
@@ -390,14 +457,6 @@ void SetDefault_(const std::string& paramName,
     MetaData::mutableRegistry()[paramName].defaultValue = paramValue;
 }
 
-}
-
-bool ParamInfo::operator==(const ParamInfo& other) const
-{
-    return other.paramName == paramName
-        && other.paramTypeName == paramTypeName
-        && other.typeTagName == typeTagName
-        && other.usageString == usageString;
 }
 
 std::string breakLines(const std::string& msg,

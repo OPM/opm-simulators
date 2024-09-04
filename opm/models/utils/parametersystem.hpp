@@ -109,66 +109,6 @@ void SetDefault_(const std::string& paramName,
 
 }
 
-struct ParamInfo
-{
-    std::string paramName;
-    std::string paramTypeName;
-    std::string typeTagName;
-    std::string usageString;
-    std::string defaultValue;
-    bool isHidden;
-
-    bool operator==(const ParamInfo& other) const;
-};
-
-struct MetaData
-{
-    using type = Dune::ParameterTree;
-
-    static Dune::ParameterTree& tree()
-    { return *storage_().tree; }
-
-    static std::map<std::string, ParamInfo>& mutableRegistry()
-    { return storage_().registry; }
-
-    static const std::map<std::string, ParamInfo>& registry()
-    { return storage_().registry; }
-
-    static bool& registrationOpen()
-    { return storage_().registrationOpen; }
-
-    static void clear()
-    {
-        storage_().tree = std::make_unique<Dune::ParameterTree>();
-        storage_().registrationOpen = true;
-        storage_().registry.clear();
-    }
-
-private:
-    // this is not pretty, but handling these attributes as static variables inside
-    // member functions of the ParameterMetaData property class triggers a bug in clang
-    // 3.5's address sanitizer which causes these variables to be initialized multiple
-    // times...
-    struct Storage_
-    {
-        Storage_()
-        {
-            tree = std::make_unique<Dune::ParameterTree>();
-            registrationOpen = true;
-        }
-
-        std::unique_ptr<Dune::ParameterTree> tree;
-        std::map<std::string, ParamInfo> registry;
-        bool registrationOpen;
-    };
-
-    static Storage_& storage_()
-    {
-        static Storage_ obj;
-        return obj;
-    }
-};
-
 std::string breakLines(const std::string& msg,
                        int indentWidth,
                        int maxWidth);
