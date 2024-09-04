@@ -31,7 +31,6 @@
 #if HAVE_MPI
 #include <mpi.h>
 #include <dune/common/parallel/mpitraits.hh>
-#endif
 
 namespace {
 
@@ -134,6 +133,7 @@ struct Packer<std::vector<T>>
 };
 
 } // anonymous namespace
+#endif
 
 namespace Opm {
 
