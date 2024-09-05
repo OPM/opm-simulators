@@ -47,20 +47,9 @@
 #include <string>
 #include <memory>
 
-namespace Opm
-{
-namespace detail
-{
-inline auto getMPIHelperCommunication()
-{
-    return Dune::MPIHelper::getCommunication();
-}
-} // end namespace detail
-} // end namespace Opm
-
 #define EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(code)                     \
     {                                                                   \
-        const auto& comm = ::Opm::detail::getMPIHelperCommunication();  \
+        const auto& comm = Dune::MPIHelper::getCommunication();         \
         bool exceptionThrown = false;                                   \
         try { code; }                                                   \
         catch (const Dune::Exception& e) {                              \
