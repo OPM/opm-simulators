@@ -37,6 +37,9 @@
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/BlackoilModelNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+// TODO: not sure about this one
+#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
+
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>

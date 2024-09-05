@@ -39,13 +39,15 @@
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/EclWriter.hpp>
 #include <opm/simulators/flow/FlowProblemParameters.hpp>
+// TODO: not sure about the following two header files
+#include <opm/simulators/flow/TracerModel.hpp>
+#include <opm/simulators/flow/VtkTracerModule.hpp>
 
 #if HAVE_DAMARIS
 #include <opm/simulators/flow/DamarisWriter.hpp>
 #endif
 
 #include <tuple>
-
 
 namespace Opm::Properties {
 
@@ -80,6 +82,15 @@ struct EnableThermalFluxBoundaries { using type = UndefinedProperty; };
 // The class which deals with wells
 template<class TypeTag, class MyTypeTag>
 struct WellModel { using type = UndefinedProperty; };
+
+// Tracer might be moved to the blackoil side
+// The class that deals with the tracer
+template<class TypeTag, class MyTypeTag>
+struct TracerModel {  using type = UndefinedProperty; };
+
+template <class TypeTag>
+struct TracerModel<TypeTag, TTag::FlowBaseProblem>
+{ using type =  ::Opm::TracerModel<TypeTag>; };
 
 // Select the element centered finite volume method as spatial discretization
 template<class TypeTag>
