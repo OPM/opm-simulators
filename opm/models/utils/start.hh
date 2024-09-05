@@ -44,7 +44,6 @@
 #include <dune/fem/misc/mpimanager.hh>
 #endif
 
-#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -145,9 +144,7 @@ static inline int setupParameters_(int argc,
         ////////////////////////////////////////////////////////////
 
         // check whether the parameter file is readable.
-        std::ifstream tmp;
-        tmp.open(paramFileName.c_str());
-        if (!tmp.is_open()) {
+        if (!Parameters::parseParameterFile(paramFileName, /*overwrite=*/false)) {
             std::ostringstream oss;
             if (myRank == 0) {
                 oss << "Parameter file \"" << paramFileName
@@ -156,9 +153,6 @@ static inline int setupParameters_(int argc,
             }
             return /*status=*/1;
         }
-
-        // read the parameter file.
-        Parameters::parseParameterFile(paramFileName, /*overwrite=*/false);
     }
 
     // make sure that no unknown parameters are encountered

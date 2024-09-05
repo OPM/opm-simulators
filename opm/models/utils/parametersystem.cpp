@@ -559,10 +559,14 @@ void printUsage(const std::string& helpPreamble,
     }
 }
 
-void parseParameterFile(const std::string& fileName, bool overwrite)
+bool parseParameterFile(const std::string& fileName, bool overwrite)
 {
     std::set<std::string> seenKeys;
     std::ifstream ifs(fileName);
+    if (!ifs.is_open()) {
+        return false;
+    }
+
     unsigned curLineNum = 0;
     while (ifs) {
         // string and file processing in c++ is quite blunt!
@@ -624,6 +628,8 @@ void parseParameterFile(const std::string& fileName, bool overwrite)
             MetaData::tree()[canonicalKey] = value;
         }
     }
+
+    return true;
 }
 
 std::string parseCommandLineOptions(int argc,
