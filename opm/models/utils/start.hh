@@ -48,9 +48,7 @@
 #include <sstream>
 #include <string>
 
-#include <stdio.h>
 #include <unistd.h>
-#include <signal.h>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -206,17 +204,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     using TM = GetPropType<TypeTag, Properties::ThreadManager>;
 
-    // set the signal handlers to reset the TTY to a well defined state on unexpected
-    // program aborts
-    if (isatty(STDIN_FILENO)) {
-        signal(SIGINT, resetTerminal);
-        signal(SIGHUP, resetTerminal);
-        signal(SIGABRT, resetTerminal);
-        signal(SIGFPE, resetTerminal);
-        signal(SIGSEGV, resetTerminal);
-        signal(SIGPIPE, resetTerminal);
-        signal(SIGTERM, resetTerminal);
-    }
+    assignResetTerminalSignalHandlers();
 
     resetLocale();
 

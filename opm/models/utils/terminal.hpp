@@ -45,6 +45,11 @@ std::string breakLines(const std::string& msg,
 int getTtyWidth();
 
 /*!
+ * \brief Assign signal handlers that reset the terminal on errors.
+ */
+void assignResetTerminalSignalHandlers();
+
+/*!
  * \brief Resets the current TTY to a usable state if the program was aborted.
  *
  * This is intended to be called as part of a generic exception handler
