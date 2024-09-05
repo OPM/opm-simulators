@@ -30,6 +30,7 @@
 
 #include <csignal>
 #include <iostream>
+#include <string.h>             // strsignal()
 #include <sys/ioctl.h>
 #include <unistd.h>
 
