@@ -65,6 +65,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
   opm/models/utils/parametersystem.cpp
+  opm/models/utils/simulatorutils.cpp
   opm/models/utils/terminal.cpp
   opm/models/utils/timer.cpp
   opm/simulators/flow/ActionHandler.cpp
@@ -722,6 +723,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/utils/quadraturegeometries.hh
   opm/models/utils/signum.hh
   opm/models/utils/simulator.hh
+  opm/models/utils/simulatorutils.hpp
   opm/models/utils/start.hh
   opm/models/utils/terminal.hpp
   opm/models/utils/timer.hpp

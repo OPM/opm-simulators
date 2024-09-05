@@ -28,14 +28,16 @@
 #ifndef EWOMS_FV_BASE_PROBLEM_HH
 #define EWOMS_FV_BASE_PROBLEM_HH
 
+#include <dune/common/fvector.hh>
+
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/restrictprolong.hh>
 
 #include <opm/models/io/vtkmultiwriter.hh>
 #include <opm/models/io/restart.hh>
-#include <opm/models/discretization/common/restrictprolong.hh>
 
-#include <dune/common/fvector.hh>
+#include <opm/models/utils/simulatorutils.hpp>
 
 #include <functional>
 #include <iostream>
@@ -485,24 +487,33 @@ public:
                       << "Simulation of problem '" << asImp_().name() << "' finished.\n"
                       << "\n"
                       << "------------------------ Timing ------------------------\n"
-                      << "Setup time: " << setupTime << " seconds" << Simulator::humanReadableTime(setupTime)
+                      << "Setup time: " << setupTime << " seconds"
+                      << humanReadableTime(setupTime)
                       << ", " << setupTime/(executionTime + setupTime)*100 << "%\n"
-                      << "Simulation time: " << executionTime << " seconds" << Simulator::humanReadableTime(executionTime)
+                      << "Simulation time: " << executionTime << " seconds"
+                      << humanReadableTime(executionTime)
                       << ", " << executionTime/(executionTime + setupTime)*100 << "%\n"
-                      << "    Linearization time: " << linearizeTime << " seconds" << Simulator::humanReadableTime(linearizeTime)
+                      << "    Linearization time: " << linearizeTime << " seconds"
+                      << humanReadableTime(linearizeTime)
                       << ", " << linearizeTime/executionTime*100 << "%\n"
-                      << "    Linear solve time: "  << solveTime << " seconds" << Simulator::humanReadableTime(solveTime)
+                      << "    Linear solve time: "  << solveTime << " seconds"
+                      << humanReadableTime(solveTime)
                       << ", " << solveTime/executionTime*100 << "%\n"
-                      << "    Newton update time: "  << updateTime << " seconds" << Simulator::humanReadableTime(updateTime)
+                      << "    Newton update time: "  << updateTime << " seconds"
+                      << humanReadableTime(updateTime)
                       << ", " << updateTime/executionTime*100 << "%\n"
-                      << "    Pre/postprocess time: "  << prePostProcessTime << " seconds" << Simulator::humanReadableTime(prePostProcessTime)
+                      << "    Pre/postprocess time: "  << prePostProcessTime << " seconds"
+                      << humanReadableTime(prePostProcessTime)
                       << ", " << prePostProcessTime/executionTime*100 << "%\n"
-                      << "    Output write time: "  << writeTime << " seconds" << Simulator::humanReadableTime(writeTime)
+                      << "    Output write time: "  << writeTime << " seconds"
+                      << humanReadableTime(writeTime)
                       << ", " << writeTime/executionTime*100 << "%\n"
-                      << "First process' simulation CPU time: "  << localCpuTime << " seconds" <<  Simulator::humanReadableTime(localCpuTime) << "\n"
+                      << "First process' simulation CPU time: "  << localCpuTime << " seconds"
+                      <<  humanReadableTime(localCpuTime) << "\n"
                       << "Number of processes: " << numProcesses << "\n"
                       << "Threads per processes: " << threadsPerProcess << "\n"
-                      << "Total CPU time: " << globalCpuTime << " seconds" << Simulator::humanReadableTime(globalCpuTime) << "\n"
+                      << "Total CPU time: " << globalCpuTime << " seconds"
+                      << humanReadableTime(globalCpuTime) << "\n"
                       << "\n"
                       << "----------------------------------------------------------------\n"
                       << std::endl;
