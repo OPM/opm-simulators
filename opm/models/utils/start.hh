@@ -35,15 +35,9 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/terminal.hpp>
 #include <opm/models/utils/simulator.hh>
-#include <opm/models/utils/timer.hpp>
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 
-#include <dune/grid/io/file/dgfparser/dgfparser.hh>
-#include <dune/common/version.hh>
-#include <dune/common/parametertreeparser.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
 #if HAVE_DUNE_FEM
