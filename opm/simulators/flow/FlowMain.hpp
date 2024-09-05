@@ -84,7 +84,7 @@ namespace Opm {
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv, Parallel::Communication comm)
         {
-            if (!Parameters::MetaData::registrationOpen()) {
+            if (!Parameters::IsRegistrationOpen()) {
                 // We have already successfully run setupParameters_().
                 // For the dynamically chosen runs (as from the main flow
                 // executable) we must run this function again with the
@@ -150,7 +150,7 @@ namespace Opm {
                 // deal with --print-parameters and unknown parameters.
                 if (Parameters::Get<Parameters::PrintParameters>() == 1) {
                     if (mpiRank == 0) {
-                        Parameters::printValues();
+                        Parameters::printValues(std::cout);
                     }
                     return -1;
                 }

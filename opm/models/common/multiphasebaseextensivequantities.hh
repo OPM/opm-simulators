@@ -32,7 +32,7 @@
 
 #include <opm/models/common/quantitycallbacks.hh>
 #include <opm/models/discretization/common/fvbaseextensivequantities.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 

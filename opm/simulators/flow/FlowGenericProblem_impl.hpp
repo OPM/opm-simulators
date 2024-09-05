@@ -45,7 +45,7 @@
 
 namespace Opm {
 
-int eclPositionalParameter(Dune::ParameterTree& tree,
+int eclPositionalParameter(std::function<void(const std::string&, const std::string&)> addKey,
                            std::set<std::string>& seenParams,
                            std::string& errorMsg,
                            const char** argv,
@@ -73,7 +73,7 @@ int eclPositionalParameter(Dune::ParameterTree& tree,
         return 0;
     }
 
-    tree["EclDeckFileName"] = argv[paramIdx];
+    addKey("EclDeckFileName", argv[paramIdx]);
     seenParams.insert("EclDeckFileName");
     return 1;
 }

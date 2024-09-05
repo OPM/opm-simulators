@@ -37,11 +37,13 @@
 
 #include <dune/common/fvector.hh>
 
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <string>
 
 #include <sys/stat.h>
+#include <unistd.h>
 
 namespace Opm::Properties {
 
@@ -268,7 +270,9 @@ public:
      *         the next regular parameter. If this is less than 1, it indicated that the
      *         positional parameter was invalid.
      */
-    static int handlePositionalParameter(std::set<std::string>&,
+    static int handlePositionalParameter(std::function<void(const std::string&,
+                                                            const std::string&)>,
+                                         std::set<std::string>&,
                                          std::string& errorMsg,
                                          int,
                                          const char** argv,

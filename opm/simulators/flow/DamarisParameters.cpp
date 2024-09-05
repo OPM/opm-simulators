@@ -28,7 +28,7 @@
 
 #include <opm/simulators/flow/DamarisParameters.hpp>
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 namespace Opm {
 

@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #define BOOST_TEST_MODULE ParameterSystemTest
 #include <boost/test/unit_test.hpp>
@@ -40,35 +40,6 @@ struct SimpleParamBoolN2
 }
 
 namespace {
-
-class Setting
-{
-public:
-    Setting(const std::string& k, const std::string& v)
-        : key(k), value(v)
-    {}
-
-    friend std::ostream& operator<<(std::ostream& os, const Setting& setting)
-    {
-        os << setting.key << "=" << setting.value << '\n';
-        return os;
-    }
-
-    bool operator==(const Setting& setting) const
-    {
-        return setting.key == key
-            && setting.value == value;
-    }
-
-    bool operator !=(const Setting& setting) const
-    {
-        return !(*this == setting);
-    }
-
-private:
-    std::string key;
-    std::string value;
-};
 
 struct Fixture
 {
@@ -107,8 +78,21 @@ BOOST_FIXTURE_TEST_CASE(GetLists, Fixture)
       "--unused-param=foo",
   };
 
-  Opm::Parameters::parseCommandLineOptions(5, argv, "",
-                                           Opm::Parameters::noPositionalParameters_);
+    auto noPositional = [](std::function<void(const std::string&,
+                                              const std::string&)>,
+                           std::set<std::string>&,
+                           std::string&,
+                           int,
+                           const char**,
+                           int,
+                           int) -> int
+                        {
+                            assert("Should not be here!");
+                            return 0;
+                        };
+
+
+  Opm::Parameters::parseCommandLineOptions(5, argv, noPositional);
 
   BOOST_CHECK_EQUAL(Opm::Parameters::IsSet<Opm::Parameters::SimpleParamBool>(), true);
   BOOST_CHECK_EQUAL(Opm::Parameters::IsSet<Opm::Parameters::SimpleParamFloat>(), true);
@@ -117,7 +101,7 @@ BOOST_FIXTURE_TEST_CASE(GetLists, Fixture)
   BOOST_CHECK_EQUAL(Opm::Parameters::IsSet<Opm::Parameters::SimpleParamDouble>(), false);
   BOOST_CHECK_EQUAL(Opm::Parameters::IsSet<Opm::Parameters::SimpleParamInt>(), false);
 
-  using SettingMap = std::vector<Setting>;
+  using SettingMap = std::vector<Opm::Parameters::Parameter>;
 
   const SettingMap set_ref = {
       {"SimpleParamBool", "true"},
@@ -153,7 +137,7 @@ BOOST_FIXTURE_TEST_CASE(ParseParameterFile, Fixture)
 BOOST_FIXTURE_TEST_CASE(PrintUsage, Fixture)
 {
   std::stringstream usage;
-  Opm::Parameters::printUsage("", "", usage);
+  Opm::Parameters::printUsage("", usage);
   BOOST_CHECK_EQUAL(trimString(usage.str()),
 trimString(R"(
 Recognized options:
@@ -168,7 +152,7 @@ Recognized options:
 BOOST_FIXTURE_TEST_CASE(PrintUsageAll, Fixture)
 {
   std::stringstream usage;
-  Opm::Parameters::printUsage("===foobar===", "", usage, true);
+  Opm::Parameters::printUsage("===foobar===", usage, "", true);
   BOOST_CHECK_EQUAL(trimString(usage.str()),
 trimString(R"(===foobar===
 Recognized options:

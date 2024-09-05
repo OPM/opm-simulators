@@ -64,6 +64,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
+  opm/models/utils/parametersystem.cpp
   opm/models/utils/timer.cpp
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
@@ -711,7 +712,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/utils/basicparameters.hh
   opm/models/utils/basicproperties.hh
   opm/models/utils/genericguard.hh
-  opm/models/utils/parametersystem.hh
+  opm/models/utils/parametersystem.hpp
   opm/models/utils/pffgridvector.hh
   opm/models/utils/prefetch.hh
   opm/models/utils/propertysystem.hh

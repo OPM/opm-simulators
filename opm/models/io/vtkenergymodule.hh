@@ -34,7 +34,7 @@
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 namespace Opm::Parameters {

@@ -22,7 +22,7 @@
 #include <opm/input/eclipse/Schedule/Tuning.hpp>
 
 #include <opm/models/utils/basicproperties.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>

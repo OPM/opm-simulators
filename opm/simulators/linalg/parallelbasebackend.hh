@@ -36,7 +36,7 @@
 
 #include <opm/models/utils/genericguard.hh>
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/linalg/istlpreconditionerwrappers.hh>
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>

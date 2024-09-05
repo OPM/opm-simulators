@@ -33,7 +33,7 @@
 
 #include <opm/models/io/basevanguard.hh>
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 
 #include <type_traits>

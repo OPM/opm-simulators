@@ -52,7 +52,8 @@ class EclipseState;
 class Schedule;
 template<typename Grid, typename GridView> class LookUpData;
 
-int eclPositionalParameter(Dune::ParameterTree& tree,
+int eclPositionalParameter(std::function<void(const std::string&,
+                                              const std::string&)> addKey,
                            std::set<std::string>& seenParams,
                            std::string& errorMsg,
                            const char** argv,

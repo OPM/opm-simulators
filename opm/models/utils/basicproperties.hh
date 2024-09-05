@@ -31,7 +31,7 @@
 #include <dune/common/parametertree.hh>
 
 #include <opm/models/utils/basicparameters.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #if HAVE_DUNE_FEM

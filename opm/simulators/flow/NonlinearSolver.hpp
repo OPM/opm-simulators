@@ -30,7 +30,7 @@
 #include <opm/models/nonlinear/newtonmethodparameters.hh>
 #include <opm/models/nonlinear/newtonmethodproperties.hh>
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/basicproperties.hh>
 

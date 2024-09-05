@@ -32,7 +32,7 @@
 // dune/common/densematrix.hh because of some c++ ideosyncrasies
 #include <opm/material/densead/Evaluation.hpp>
 
-#include "parametersystem.hh"
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/models/utils/simulator.hh>
 #include <opm/models/utils/timer.hpp>
@@ -131,8 +131,8 @@ static inline int setupParameters_(int argc,
     std::string s =
         Parameters::parseCommandLineOptions(argc,
                                             argv,
-                                            helpPreamble,
-                                            positionalParamCallback);
+                                            positionalParamCallback,
+                                            helpPreamble);
     if (!s.empty())
     {
         int status = 1;
@@ -161,7 +161,7 @@ static inline int setupParameters_(int argc,
             if (myRank == 0) {
                 oss << "Parameter file \"" << paramFileName
                     << "\" does not exist or is not readable.";
-                Parameters::printUsage(argv[0], oss.str());
+                Parameters::printUsage(argv[0], std::cerr, oss.str());
             }
             return /*status=*/1;
         }
@@ -171,8 +171,7 @@ static inline int setupParameters_(int argc,
     }
 
     // make sure that no unknown parameters are encountered
-    using KeyValuePair = std::pair<std::string, std::string>;
-    using ParamList = std::list<KeyValuePair>;
+    using ParamList = std::vector<Parameters::Parameter>;
 
     ParamList usedParams;
     ParamList unusedParams;
@@ -188,7 +187,7 @@ static inline int setupParameters_(int argc,
 
             std::cerr << "\n";
             for (const auto& keyValue : unusedParams)
-                std::cerr << "   " << keyValue.first << "=\"" << keyValue.second << "\"\n";
+                std::cerr << "   " << keyValue << "\n";
             std::cerr << "\n";
 
             std::cerr << "Use\n"
@@ -317,18 +316,20 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         // read the initial time step and the end time
         Scalar endTime = Parameters::Get<Parameters::EndTime<Scalar>>();
         if (endTime < -1e50) {
-            if (myRank == 0)
-                Parameters::printUsage(argv[0],
+            if (myRank == 0) {
+                Parameters::printUsage(argv[0], std::cerr,
                                        "Mandatory parameter '--end-time' not specified!");
+            }
             return 1;
         }
 
         Scalar initialTimeStepSize = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
         if (initialTimeStepSize < -1e50) {
-            if (myRank == 0)
-                Parameters::printUsage(argv[0],
+            if (myRank == 0) {
+                Parameters::printUsage(argv[0], std::cerr,
                                        "Mandatory parameter '--initial-time-step-size' "
                                        "not specified!");
+            }
             return 1;
         }
 
@@ -340,9 +341,9 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #endif
             const std::string briefDescription = Problem::briefDescription();
             if (!briefDescription.empty()) {
-                std::string tmp = Parameters::breakLines_(briefDescription,
-                                                          /*indentWidth=*/0,
-                                                          Parameters::getTtyWidth_());
+                std::string tmp = Parameters::breakLines(briefDescription,
+                                                         /*indentWidth=*/0,
+                                                         Parameters::getTtyWidth());
                 std::cout << tmp << std::endl << std::endl;
             }
             else
@@ -357,20 +358,20 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             if (printParams) {
                 bool printSeparator = false;
                 if (printParams == 1 || !isatty(fileno(stdout))) {
-                    Parameters::printValues();
+                    Parameters::printValues(std::cout);
                     printSeparator = true;
                 }
                 else
                     // always print the list of specified but unused parameters
                     printSeparator =
                         printSeparator ||
-                        Parameters::printUnused();
+                        Parameters::printUnused(std::cout);
                 if (printSeparator)
                     std::cout << endParametersSeparator;
             }
             else
                 // always print the list of specified but unused parameters
-                if (Parameters::printUnused())
+                if (Parameters::printUnused(std::cout))
                     std::cout << endParametersSeparator;
         }
 

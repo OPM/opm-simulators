@@ -30,7 +30,7 @@
 
 #include "fvbaseproperties.hh"
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/alignedallocator.hh>
 
 #include <opm/material/common/Valgrind.hpp>
