@@ -29,12 +29,23 @@
  * Dune::ParameterTree with the default value taken from the parameter
  * definition.
  */
+
 #include <config.h>
 #include <opm/models/utils/parametersystem.hpp>
+
+#include <dune/common/parametertree.hh>
 
 #if HAVE_QUAD
 #include <opm/material/common/quad.hpp>
 #endif
+
+#include <charconv>
+#include <fstream>
+#include <list>
+#include <memory>
+#include <stdexcept>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 namespace {
 

@@ -43,6 +43,7 @@
 #include <string>
 
 #include <sys/stat.h>
+#include <unistd.h>
 
 namespace Opm::Properties {
 

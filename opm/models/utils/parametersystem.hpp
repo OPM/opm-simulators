@@ -32,31 +32,15 @@
 #ifndef OPM_PARAMETER_SYSTEM_HPP
 #define OPM_PARAMETER_SYSTEM_HPP
 
-#if HAVE_QUAD
-#include <opm/material/common/quad.hpp>
-#endif // HAVE_QUAD
-
 #include <dune/common/classname.hh>
-#include <dune/common/parametertree.hh>
 
-#include <charconv>
-#include <cstdlib>
+#include <cstring>
 #include <functional>
-#include <fstream>
-#include <iostream>
-#include <list>
-#include <map>
 #include <set>
 #include <sstream>
-#include <stdexcept>
 #include <string>
-#include <utility>
-#include <tuple>
 #include <type_traits>
 #include <vector>
-
-#include <unistd.h>
-#include <sys/ioctl.h>
 
 namespace Opm::Parameters {
 
