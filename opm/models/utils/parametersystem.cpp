@@ -154,22 +154,19 @@ std::string parseQuotedValue(std::string& s, const std::string& errorPrefix)
     for (; i < s.size(); ++i) {
         // handle escape characters
         if (s[i] == '\\') {
-            ++ i;
+            ++i;
             if (s.size() <= i)
                 throw std::runtime_error(errorPrefix+"Unexpected end of quoted string");
 
-            if (s[i] == 'n')
-                result += '\n';
-            else if (s[i] == 'r')
-                result += '\r';
-            else if (s[i] == 't')
-                result += '\t';
-            else if (s[i] == '"')
-                result += '"';
-            else if (s[i] == '\\')
-                result += '\\';
-            else
-                throw std::runtime_error(errorPrefix+"Unknown escape character '\\" + s[i] + "'");
+            switch (s[i]) {
+            case 'n':  result += '\n'; break;
+            case 'r':  result += '\r'; break;
+            case 't':  result += '\t'; break;
+            case '"':  result += '"';  break;
+            case '\\': result += '\\'; break;
+            default:   throw std::runtime_error(errorPrefix +
+                                                "Unknown escape character '\\" + s[i] + "'");
+            }
         }
         else if (s[i] == '"')
             break;
