@@ -257,14 +257,6 @@ public:
         relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
     }
 
-    /*!
-     * \copydoc FvBaseProblem::finishInit
-     */
-    virtual void finishInit()
-    {
-        ParentType::finishInit();
-    }
-
     void prefetch(const Element& elem) const
     { pffDofData_.prefetch(elem); }
 
@@ -283,7 +275,7 @@ public:
     void deserialize(Restarter& res)
     {
         // reload the current episode/report step from the deck
-        beginEpisode();
+        this->beginEpisode();
 
         // deserialize the wells
         wellModel_.deserialize(res);
@@ -397,7 +389,7 @@ public:
         // update maximum water saturation and minimum pressure
         // used when ROCKCOMP is activated
         // Do not update max RS first step after a restart
-        asImp_().updateExplicitQuantities_(episodeIdx, timeStepSize, first_step_ && (episodeIdx > 0));
+        this->updateExplicitQuantities_(episodeIdx, timeStepSize, first_step_ && (episodeIdx > 0));
         first_step_ = false;
 
         if (nonTrivialBoundaryConditions()) {
@@ -507,7 +499,7 @@ public:
      * \brief Write the requested quantities of the current solution into the output
      *        files.
      */
-    virtual void writeOutput(bool verbose = true)
+    void writeOutput(bool verbose = true)
     {
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
@@ -892,7 +884,7 @@ public:
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return asImp_().initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+        return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
 
@@ -900,7 +892,7 @@ public:
     {
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
-         return asImp_().initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+         return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
     const SolidEnergyLawParams&
@@ -941,7 +933,7 @@ public:
             // flow due to a temerature gradient while assuming no-flow for mass
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            values.setThermalFlow(context, spaceIdx, timeIdx, asImp_().initialFluidStates_[globalDofIdx]);
+            values.setThermalFlow(context, spaceIdx, timeIdx, asImp_().initialFluidStates()[globalDofIdx] );
         }
 
         if (nonTrivialBoundaryConditions()) {
@@ -1237,7 +1229,7 @@ public:
         // water compaction
         assert(!this->rockCompPoroMultWc_.empty());
         LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - asImp_().initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        LhsEval SwDeltaMax = SwMax - asImp_().initialFluidStates()[elementIdx].saturation(waterPhaseIdx);
 
         return this->rockCompPoroMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
     }
@@ -1326,9 +1318,7 @@ public:
         serializer(wellModel_);
         serializer(aquiferModel_);
         serializer(tracerModel_);
-        // serializer(mixControls_);
         serializer(*materialLawManager_);
-        // serializer(*eclWriter_);
     }
 
 private:
@@ -1350,7 +1340,7 @@ protected:
         const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
 
         // deal with DRSDT and DRVDT
-        const bool invalidateDRDT = !first_step_after_restart && this->asImp_().updateCompositionChangeLimits_();
+        const bool invalidateDRDT = !first_step_after_restart && this->updateCompositionChangeLimits_();
 
         // the derivatives may have change
         bool invalidateIntensiveQuantities
@@ -1592,7 +1582,7 @@ protected:
         //initialize min/max values
         std::size_t numElems = this->model().numGridDof();
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            const auto& fs = asImp_().initialFluidStates_[elemIdx];
+            const auto& fs = asImp_().initialFluidStates()[elemIdx];
             if (!this->maxWaterSaturation_.empty())
                 this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
             if (!this->maxOilSaturation_.empty())
@@ -1610,14 +1600,12 @@ protected:
         EquilInitializer<TypeTag> equilInitializer(simulator, *materialLawManager_);
 
         std::size_t numElems = this->model().numGridDof();
-        asImp_().initialFluidStates_.resize(numElems);
+        asImp_().initialFluidStates().resize(numElems);
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = asImp_().initialFluidStates_[elemIdx];
+            auto& elemFluidState = asImp_().initialFluidStates()[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
     }
-
-    virtual void readEclRestartSolution_() = 0;
 
     virtual void readExplicitInitialCondition_() = 0;
 
@@ -1693,6 +1681,9 @@ protected:
 
         pffDofData_.update(distFn);
     }
+
+    virtual void updateExplicitQuantities_(int episodeIdx, int timeStepSize, bool first_step_after_restart) = 0;
+    virtual bool updateCompositionChangeLimits_() = 0;
 
     void readBoundaryConditions_()
     {
@@ -1841,7 +1832,7 @@ protected:
         // water compaction
         assert(!this->rockCompTransMultWc_.empty());
         LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - asImp_().initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        LhsEval SwDeltaMax = SwMax - asImp_().initialFluidStates()[elementIdx].saturation(waterPhaseIdx);
 
         return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
     }
