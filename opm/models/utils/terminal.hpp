@@ -44,6 +44,19 @@ std::string breakLines(const std::string& msg,
  */
 int getTtyWidth();
 
+/*!
+ * \brief Resets the current TTY to a usable state if the program was aborted.
+ *
+ * This is intended to be called as part of a generic exception handler
+ */
+void resetTerminal();
+
+/*!
+ * \brief Resets the current TTY to a usable state if the program was interrupted by
+ *        SIGABRT or SIGINT.
+ */
+void resetTerminal(int signum);
+
 } // namespace Opm
 
 #endif // OPM_TERMINAL_HPP

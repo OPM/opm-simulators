@@ -24,6 +24,12 @@
 #include <config.h>
 #include <opm/models/utils/terminal.hpp>
 
+#if HAVE_MPI
+#include <mpi.h>
+#endif
+
+#include <csignal>
+#include <iostream>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
@@ -96,6 +102,56 @@ int getTtyWidth()
     }
 
     return ttyWidth;
+}
+
+void resetTerminal()
+{
+    // make sure stderr and stderr do not contain any unwritten data and make sure that
+    // the TTY does not see any unfinished ANSI escape sequence.
+    std::cerr << "    \r\n";
+    std::cerr.flush();
+    std::cout << "    \r\n";
+    std::cout.flush();
+
+    // it seems like some terminals sometimes takes their time to react, so let's
+    // accommodate them.
+    usleep(/*usec=*/500*1000);
+
+    // this requires the 'stty' command to be available in the command search path. on
+    // most linux systems, is the case. (but even if the system() function fails, the
+    // worst thing which can happen is that the TTY stays potentially choked up...)
+    if (system("stty sane") != 0) {
+        std::cout << "Executing the 'stty' command failed."
+                  << " Terminal might be left in an undefined state!\n";
+    }
+}
+
+void resetTerminal(int signum)
+{
+    // first thing to do when a nuke hits: restore the default signal handler
+    signal(signum, SIG_DFL);
+
+#if HAVE_MPI
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank != 0) {
+        // re-raise the signal
+        raise(signum);
+
+        return;
+    }
+#endif
+
+    if (isatty(fileno(stdout)) && isatty(fileno(stdin))) {
+        std::cout << "\n\nReceived signal " << signum
+                  << " (\"" << strsignal(signum) << "\")."
+                  << " Trying to reset the terminal.\n";
+
+        resetTerminal();
+    }
+
+    // after we did our best to clean the pedestrian way, re-raise the signal
+    raise(signum);
 }
 
 } // namespace Opm
