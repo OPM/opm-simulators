@@ -24,10 +24,16 @@
 #include <config.h>
 #include <opm/models/utils/simulatorutils.hpp>
 
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+
+#include <opm/models/utils/parametersystem.hpp>
+
 #include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <vector>
 
 #if HAVE_QUAD
@@ -108,6 +114,32 @@ std::string humanReadableTime(double timeInSeconds, bool isAmendment)
     }
 
     return oss.str();
+}
+
+std::string simulatorOutputDir()
+{
+    std::string outputDir = Parameters::Get<Parameters::OutputDir>();
+
+    if (outputDir.empty()) {
+        outputDir = ".";
+    }
+
+    // TODO: replace this by std::filesystem once we require c++-2017
+    struct stat st;
+    if (::stat(outputDir.c_str(), &st) != 0)
+        throw std::runtime_error("Could not access output directory '" + outputDir + "':" +
+                                 strerror(errno));
+    if (!S_ISDIR(st.st_mode)) {
+        throw std::runtime_error("Path to output directory '" +outputDir +
+                                 "' exists but is not a directory");
+    }
+
+    if (access(outputDir.c_str(), W_OK) != 0) {
+        throw std::runtime_error("Output directory '" + outputDir +
+                                 "' exists but is not writeable");
+    }
+
+    return outputDir;
 }
 
 template<class Scalar>

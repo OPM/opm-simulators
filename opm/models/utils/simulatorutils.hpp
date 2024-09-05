@@ -38,6 +38,11 @@ namespace Opm {
 std::string humanReadableTime(double timeInSeconds, bool isAmendment = true);
 
 /*!
+ * \brief Determine and check the configured directory for simulation output.
+ */
+std::string simulatorOutputDir();
+
+/*!
  * \brief Read explicitly defined time steps from file.
  * \param file File to read
  */
