@@ -643,7 +643,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/basevanguard.hh
   opm/models/io/cubegridvanguard.hh
   opm/models/io/dgfvanguard.hh
-  opm/models/io/restart.hh
+  opm/models/io/restart.hpp
   opm/models/io/simplexvanguard.hh
   opm/models/io/structuredgridvanguard.hh
   opm/models/io/unstructuredgridvanguard.hh

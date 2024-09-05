@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::Restart
  */
-#ifndef EWOMS_RESTART_HH
-#define EWOMS_RESTART_HH
+#ifndef OPM_RESTART_HPP
+#define OPM_RESTART_HPP
 
 #include <string>
 #include <fstream>
@@ -270,6 +270,7 @@ private:
     std::ifstream inStream_;
     std::ofstream outStream_;
 };
+
 } // namespace Opm
 
-#endif
+#endif // OPM_RESTART_HPP

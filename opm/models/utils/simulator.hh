@@ -32,7 +32,7 @@
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/models/io/restart.hh>
+#include <opm/models/io/restart.hpp>
 
 #include <opm/models/parallel/mpiutil.hpp>
 

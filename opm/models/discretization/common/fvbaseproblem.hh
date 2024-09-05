@@ -35,7 +35,7 @@
 #include <opm/models/discretization/common/restrictprolong.hh>
 
 #include <opm/models/io/vtkmultiwriter.hh>
-#include <opm/models/io/restart.hh>
+#include <opm/models/io/restart.hpp>
 
 #include <opm/models/utils/simulatorutils.hpp>
 
