@@ -33,17 +33,11 @@
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
-
+#include <opm/models/utils/terminal.hpp>
 #include <opm/models/utils/simulator.hh>
-#include <opm/models/utils/timer.hpp>
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 
-#include <dune/grid/io/file/dgfparser/dgfparser.hh>
-#include <dune/common/version.hh>
-#include <dune/common/parametertreeparser.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
 #if HAVE_DUNE_FEM
@@ -54,13 +48,10 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <locale>
 
 #include <stdio.h>
 #include <unistd.h>
-#include <time.h>
 #include <signal.h>
-#include <string.h>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -203,65 +194,6 @@ static inline int setupParameters_(int argc,
 }
 
 /*!
- * \brief Resets the current TTY to a usable state if the program was aborted.
- *
- * This is intended to be called as part of a generic exception handler
- */
-static inline void resetTerminal_()
-{
-    // make sure stderr and stderr do not contain any unwritten data and make sure that
-    // the TTY does not see any unfinished ANSI escape sequence.
-    std::cerr << "    \r\n";
-    std::cerr.flush();
-    std::cout << "    \r\n";
-    std::cout.flush();
-
-    // it seems like some terminals sometimes takes their time to react, so let's
-    // accommodate them.
-    usleep(/*usec=*/500*1000);
-
-    // this requires the 'stty' command to be available in the command search path. on
-    // most linux systems, is the case. (but even if the system() function fails, the
-    // worst thing which can happen is that the TTY stays potentially choked up...)
-    if (system("stty sane") != 0)
-        std::cout << "Executing the 'stty' command failed."
-                  << " Terminal might be left in an undefined state!\n";
-}
-
-/*!
- * \brief Resets the current TTY to a usable state if the program was interrupted by
- *        SIGABRT or SIGINT.
- */
-static inline void resetTerminal_(int signum)
-{
-    // first thing to do when a nuke hits: restore the default signal handler
-    signal(signum, SIG_DFL);
-
-#if HAVE_MPI
-    int rank = 0;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank != 0) {
-        // re-raise the signal
-        raise(signum);
-
-        return;
-    }
-#endif
-
-    if (isatty(fileno(stdout)) && isatty(fileno(stdin))) {
-        std::cout << "\n\nReceived signal " << signum
-                  << " (\"" << strsignal(signum) << "\")."
-                  << " Trying to reset the terminal.\n";
-
-        resetTerminal_();
-    }
-
-    // after we did our best to clean the pedestrian way, re-raise the signal
-    raise(signum);
-}
-//! \endcond
-
-/*!
  * \ingroup Common
  *
  * \brief Provides a main function which reads in parameters from the
@@ -283,13 +215,13 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
     // set the signal handlers to reset the TTY to a well defined state on unexpected
     // program aborts
     if (isatty(STDIN_FILENO)) {
-        signal(SIGINT, resetTerminal_);
-        signal(SIGHUP, resetTerminal_);
-        signal(SIGABRT, resetTerminal_);
-        signal(SIGFPE, resetTerminal_);
-        signal(SIGSEGV, resetTerminal_);
-        signal(SIGPIPE, resetTerminal_);
-        signal(SIGTERM, resetTerminal_);
+        signal(SIGINT, resetTerminal);
+        signal(SIGHUP, resetTerminal);
+        signal(SIGABRT, resetTerminal);
+        signal(SIGFPE, resetTerminal);
+        signal(SIGSEGV, resetTerminal);
+        signal(SIGPIPE, resetTerminal);
+        signal(SIGTERM, resetTerminal);
     }
 
     resetLocale();
@@ -341,9 +273,9 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #endif
             const std::string briefDescription = Problem::briefDescription();
             if (!briefDescription.empty()) {
-                std::string tmp = Parameters::breakLines(briefDescription,
-                                                         /*indentWidth=*/0,
-                                                         Parameters::getTtyWidth());
+                std::string tmp = breakLines(briefDescription,
+                                             /*indentWidth=*/0,
+                                             getTtyWidth());
                 std::cout << tmp << std::endl << std::endl;
             }
             else
@@ -392,7 +324,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             std::cout << e.what() << ". Abort!\n" << std::flush;
 
             std::cout << "Trying to reset TTY.\n";
-            resetTerminal_();
+            resetTerminal();
         }
 
         return 1;
@@ -403,7 +335,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             std::cout << "Unknown exception thrown!\n" << std::flush;
 
             std::cout << "Trying to reset TTY.\n";
-            resetTerminal_();
+            resetTerminal();
         }
 
         return 3;
