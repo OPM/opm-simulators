@@ -41,7 +41,6 @@
 
 #include <charconv>
 #include <fstream>
-#include <list>
 #include <memory>
 #include <stdexcept>
 #include <sys/ioctl.h>
@@ -116,7 +115,7 @@ private:
 };
 
 
-void getFlattenedKeyList(std::list<std::string>& dest,
+void getFlattenedKeyList(std::vector<std::string>& dest,
                          const Dune::ParameterTree& tree,
                          const std::string& prefix = "")
 {
@@ -195,7 +194,7 @@ std::string parseUnquotedValue(std::string& s, const std::string&)
 }
 
 void printParamList(std::ostream& os,
-                    const std::list<std::string>& keyList,
+                    const std::vector<std::string>& keyList,
                     bool printDefaults = false)
 {
     const Dune::ParameterTree& tree = MetaData::tree();
@@ -551,7 +550,7 @@ void getLists(std::vector<Parameter>& usedParams,
     }
 
     // get all parameter keys
-    std::list<std::string> allKeysList;
+    std::vector<std::string> allKeysList;
     getFlattenedKeyList(allKeysList, MetaData::tree());
 
     for (const auto& key : allKeysList) {
@@ -764,9 +763,9 @@ std::string parseCommandLineOptions(int argc,
 
 void printValues(std::ostream& os)
 {
-    std::list<std::string> runTimeAllKeyList;
-    std::list<std::string> runTimeKeyList;
-    std::list<std::string> unknownKeyList;
+    std::vector<std::string> runTimeAllKeyList;
+    std::vector<std::string> runTimeKeyList;
+    std::vector<std::string> unknownKeyList;
 
     getFlattenedKeyList(runTimeAllKeyList, MetaData::tree());
     for (const auto& key : runTimeAllKeyList) {
@@ -781,7 +780,7 @@ void printValues(std::ostream& os)
     }
 
     // loop over all registered parameters
-    std::list<std::string> compileTimeKeyList;
+    std::vector<std::string> compileTimeKeyList;
     for (const auto& reg : MetaData::registry()) {
         // check whether the key was specified at run-time
         if (MetaData::tree().hasKey(reg.first)) {
@@ -813,8 +812,8 @@ void printValues(std::ostream& os)
 
 bool printUnused(std::ostream& os)
 {
-    std::list<std::string> runTimeAllKeyList;
-    std::list<std::string> unknownKeyList;
+    std::vector<std::string> runTimeAllKeyList;
+    std::vector<std::string> unknownKeyList;
 
     getFlattenedKeyList(runTimeAllKeyList, MetaData::tree());
     for (const auto& key : runTimeAllKeyList) {
