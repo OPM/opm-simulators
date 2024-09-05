@@ -25,8 +25,14 @@
 #include <opm/models/utils/simulatorutils.hpp>
 
 #include <cmath>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <vector>
+
+#if HAVE_QUAD
+#include <opm/material/common/quad.hpp>
+#endif
 
 namespace Opm {
 
@@ -103,5 +109,27 @@ std::string humanReadableTime(double timeInSeconds, bool isAmendment)
 
     return oss.str();
 }
+
+template<class Scalar>
+std::vector<Scalar> readTimeStepFile(const std::string& file)
+{
+    std::ifstream is(file);
+    std::vector<Scalar> result;
+    while (!is.eof()) {
+        Scalar dt;
+        is >> dt;
+        result.push_back(dt);
+    }
+
+    return result;
+}
+
+template std::vector<double> readTimeStepFile(const std::string&);
+template std::vector<float> readTimeStepFile(const std::string&);
+
+#if HAVE_QUAD
+template std::vector<quad> readTimeStepFile(const std::string&);
+#endif
+
 
 } // end namespace Opm

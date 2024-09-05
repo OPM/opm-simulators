@@ -25,6 +25,7 @@
 #define OPM_SIMULATOR_UTILS_HPP
 
 #include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -35,6 +36,13 @@ namespace Opm {
 * e.g. 874000.0 will become "10.12 days"
 */
 std::string humanReadableTime(double timeInSeconds, bool isAmendment = true);
+
+/*!
+ * \brief Read explicitly defined time steps from file.
+ * \param file File to read
+ */
+template<class Scalar>
+std::vector<Scalar> readTimeStepFile(const std::string& file);
 
 } // namespace Opm
 

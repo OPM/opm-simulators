@@ -44,10 +44,9 @@
 #include <opm/models/utils/timerguard.hh>
 
 #include <iostream>
-#include <fstream>
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
 #define EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(code)                     \
     {                                                                   \
@@ -126,12 +125,7 @@ public:
         const std::string& predetTimeStepFile =
             Parameters::Get<Parameters::PredeterminedTimeStepsFile>();
         if (!predetTimeStepFile.empty()) {
-            std::ifstream is(predetTimeStepFile);
-            while (!is.eof()) {
-                Scalar dt;
-                is >> dt;
-                forcedTimeSteps_.push_back(dt);
-            }
+            forcedTimeSteps_ = readTimeStepFile<Scalar>(predetTimeStepFile);
         }
 
         episodeIdx_ = 0;
