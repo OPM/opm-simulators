@@ -61,10 +61,12 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilmicpparams.cpp
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
+  opm/models/io/restart.cpp
   opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
   opm/models/utils/parametersystem.cpp
+  opm/models/utils/simulatorutils.cpp
   opm/models/utils/terminal.cpp
   opm/models/utils/timer.cpp
   opm/simulators/flow/ActionHandler.cpp
@@ -642,7 +644,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/basevanguard.hh
   opm/models/io/cubegridvanguard.hh
   opm/models/io/dgfvanguard.hh
-  opm/models/io/restart.hh
+  opm/models/io/restart.hpp
   opm/models/io/simplexvanguard.hh
   opm/models/io/structuredgridvanguard.hh
   opm/models/io/unstructuredgridvanguard.hh
@@ -722,6 +724,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/utils/quadraturegeometries.hh
   opm/models/utils/signum.hh
   opm/models/utils/simulator.hh
+  opm/models/utils/simulatorutils.hpp
   opm/models/utils/start.hh
   opm/models/utils/terminal.hpp
   opm/models/utils/timer.hpp

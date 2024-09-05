@@ -44,14 +44,11 @@
 #include <dune/fem/misc/mpimanager.hh>
 #endif
 
-#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 
-#include <stdio.h>
 #include <unistd.h>
-#include <signal.h>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -145,9 +142,7 @@ static inline int setupParameters_(int argc,
         ////////////////////////////////////////////////////////////
 
         // check whether the parameter file is readable.
-        std::ifstream tmp;
-        tmp.open(paramFileName.c_str());
-        if (!tmp.is_open()) {
+        if (!Parameters::parseParameterFile(paramFileName, /*overwrite=*/false)) {
             std::ostringstream oss;
             if (myRank == 0) {
                 oss << "Parameter file \"" << paramFileName
@@ -156,9 +151,6 @@ static inline int setupParameters_(int argc,
             }
             return /*status=*/1;
         }
-
-        // read the parameter file.
-        Parameters::parseParameterFile(paramFileName, /*overwrite=*/false);
     }
 
     // make sure that no unknown parameters are encountered
@@ -212,17 +204,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     using TM = GetPropType<TypeTag, Properties::ThreadManager>;
 
-    // set the signal handlers to reset the TTY to a well defined state on unexpected
-    // program aborts
-    if (isatty(STDIN_FILENO)) {
-        signal(SIGINT, resetTerminal);
-        signal(SIGHUP, resetTerminal);
-        signal(SIGABRT, resetTerminal);
-        signal(SIGFPE, resetTerminal);
-        signal(SIGSEGV, resetTerminal);
-        signal(SIGPIPE, resetTerminal);
-        signal(SIGTERM, resetTerminal);
-    }
+    assignResetTerminalSignalHandlers();
 
     resetLocale();
 

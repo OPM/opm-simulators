@@ -20,48 +20,35 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef OPM_TERMINAL_HPP
-#define OPM_TERMINAL_HPP
+
+#ifndef OPM_SIMULATOR_UTILS_HPP
+#define OPM_SIMULATOR_UTILS_HPP
 
 #include <string>
+#include <vector>
 
 namespace Opm {
 
 /*!
- * \brief Break up a string in lines suitable for terminal output.
- * \param msg String to print
- * \param indentWidth Size of indent
- * \param maxWidth Maximum with of terminal
- * \return
- */
-std::string breakLines(const std::string& msg,
-                       int indentWidth,
-                       int maxWidth);
+* \brief Given a time step size in seconds, return it in a format which is more
+*        easily parsable by humans.
+*
+* e.g. 874000.0 will become "10.12 days"
+*/
+std::string humanReadableTime(double timeInSeconds, bool isAmendment = true);
 
 /*!
- * \brief Get the width of the tty we are attached to.
- * \return Width of tty
+ * \brief Determine and check the configured directory for simulation output.
  */
-int getTtyWidth();
+std::string simulatorOutputDir();
 
 /*!
- * \brief Assign signal handlers that reset the terminal on errors.
+ * \brief Read explicitly defined time steps from file.
+ * \param file File to read
  */
-void assignResetTerminalSignalHandlers();
-
-/*!
- * \brief Resets the current TTY to a usable state if the program was aborted.
- *
- * This is intended to be called as part of a generic exception handler
- */
-void resetTerminal();
-
-/*!
- * \brief Resets the current TTY to a usable state if the program was interrupted by
- *        SIGABRT or SIGINT.
- */
-void resetTerminal(int signum);
+template<class Scalar>
+std::vector<Scalar> readTimeStepFile(const std::string& file);
 
 } // namespace Opm
 
-#endif // OPM_TERMINAL_HPP
+#endif
