@@ -71,7 +71,6 @@ class FlowProblemBlackoil : public FlowProblem<TypeTag>
 {
     // TODO: the naming of the Types will be adjusted
     using FlowProblemType = FlowProblem<TypeTag>;
-    friend FlowProblemType;
 
     using typename FlowProblemType::Scalar;
     using typename FlowProblemType::Simulator;
@@ -207,7 +206,7 @@ public:
     /*!
      * \brief Called by the simulator before an episode begins.
      */
-    void beginEpisode()
+    void beginEpisode() override
     {
         FlowProblemType::beginEpisode();
 
@@ -381,7 +380,7 @@ public:
     /*!
      * \brief Called by the simulator after each time integration.
      */
-    void endTimeStep()
+    void endTimeStep () override
     {
         FlowProblemType::endTimeStep();
 
@@ -432,7 +431,7 @@ public:
     /*!
      * \brief Called by the simulator after the end of an episode.
      */
-    void endEpisode()
+    void endEpisode() override
     {
         OPM_TIMEBLOCK(endEpisode);
         const int episodeIdx = this->episodeIndex();
@@ -475,7 +474,8 @@ public:
         }
     }
 
-    void finalizeOutput() {
+    void finalizeOutput()
+    {
         OPM_TIMEBLOCK(finalizeOutput);
         // this will write all pending output to disk
         // to avoid corruption of output files
@@ -486,7 +486,8 @@ public:
     /*!
      * \copydoc FvBaseProblem::initialSolutionApplied()
      */
-    void initialSolutionApplied() {
+    void initialSolutionApplied() override
+    {
         FlowProblemType::initialSolutionApplied();
 
         if (this->simulator().episodeIndex() == 0) {
@@ -496,7 +497,7 @@ public:
 
     void addToSourceDense(RateVector& rate,
                           unsigned globalDofIdx,
-                          unsigned timeIdx) const
+                          unsigned timeIdx) const override
     {
         FlowProblemType::addToSourceDense(rate, globalDofIdx, timeIdx);
 
@@ -545,6 +546,12 @@ public:
     // temporary solution to facilitate output of initial state from flow
     const InitialFluidState& initialFluidState(unsigned globalDofIdx) const
     { return initialFluidStates_[globalDofIdx]; }
+
+    std::vector<InitialFluidState>& initialFluidStates()
+    { return initialFluidStates_; }
+
+    const std::vector<InitialFluidState>& initialFluidStates() const
+    { return initialFluidStates_; }
 
     const EclipseIO& eclIO() const
     { return eclWriter_->eclIO(); }
@@ -774,7 +781,8 @@ public:
     }
 
 protected:
-    void updateExplicitQuantities_(int episodeIdx, int timeStepSize, const bool first_step_after_restart = false) {
+    void updateExplicitQuantities_(int episodeIdx, int timeStepSize, const bool first_step_after_restart) override
+    {
         FlowProblemType::updateExplicitQuantities_(first_step_after_restart);
 
         if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>())
@@ -839,7 +847,7 @@ protected:
     }
 
     // update the parameters needed for DRSDT and DRVDT
-    bool updateCompositionChangeLimits_()
+    bool updateCompositionChangeLimits_() override
     {
         OPM_TIMEBLOCK(updateCompositionChangeLimits);
         // update the "last Rs" values for all elements, including the ones in the ghost
@@ -995,7 +1003,7 @@ protected:
         this->eclWriter_->endRestart();
     }
 
-    void readExplicitInitialCondition_()
+    void readExplicitInitialCondition_() override
     {
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
@@ -1223,7 +1231,7 @@ protected:
         }
     }
 
-    void readInitialCondition_()
+    void readInitialCondition_() override
     {
         FlowProblemType::readInitialCondition_();
 
@@ -1236,14 +1244,16 @@ protected:
 
     }
 
-    virtual void handleSolventBC(const BCProp::BCFace& bc, RateVector& rate) const {
+    void handleSolventBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    {
         if constexpr (!enableSolvent)
             throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
 
         rate[Indices::solventSaturationIdx] = bc.rate;
     }
 
-    virtual void handlePolymerBC(const BCProp::BCFace& bc, RateVector& rate) const {
+    void handlePolymerBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    {
         if constexpr (!enablePolymer)
             throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
 
