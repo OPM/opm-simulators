@@ -44,7 +44,7 @@ class Restart
      *        unlikely to load a restart file for an incorrectly.
      */
     template <class GridView>
-    static const std::string magicRestartCookie_(const GridView& gridView)
+    static std::string magicRestartCookie_(const GridView& gridView)
     {
         static const std::string gridName = "blubb"; // gridView.grid().name();
         static const int dim = GridView::dimension;
@@ -69,23 +69,10 @@ class Restart
     /*!
      * \brief Return the restart file name.
      */
-    template <class GridView, class Scalar>
-    static const std::string restartFileName_(const GridView& gridView,
-                                              const std::string& outputDir,
-                                              const std::string& simName,
-                                              Scalar t)
-    {
-        std::string dir = outputDir;
-        if (dir == ".")
-            dir = "";
-        else if (!dir.empty() && dir.back() != '/')
-            dir += "/";
-
-        int rank = gridView.comm().rank();
-        std::ostringstream oss;
-        oss << dir << simName << "_time=" << t << "_rank=" << rank << ".ers";
-        return oss.str();
-    }
+    static std::string restartFileName_(int rank,
+                                        const std::string& outputDir,
+                                        const std::string& simName,
+                                        double t);
 
 public:
     /*!
@@ -100,18 +87,13 @@ public:
     template <class Simulator>
     void serializeBegin(Simulator& simulator)
     {
-        const std::string magicCookie = magicRestartCookie_(simulator.gridView());
-        fileName_ = restartFileName_(simulator.gridView(),
+        fileName_ = restartFileName_(simulator.gridView().comm().rank(),
                                      simulator.problem().outputDir(),
                                      simulator.problem().name(),
                                      simulator.time());
 
         // open output file and write magic cookie
-        outStream_.open(fileName_.c_str());
-        outStream_.precision(20);
-
-        serializeSectionBegin(magicCookie);
-        serializeSectionEnd();
+        openOutputStream(magicRestartCookie_(simulator.gridView()));
     }
 
     /*!
@@ -123,14 +105,12 @@ public:
     /*!
      * \brief Start a new section in the serialized output.
      */
-    void serializeSectionBegin(const std::string& cookie)
-    { outStream_ << cookie << "\n"; }
+    void serializeSectionBegin(const std::string& cookie);
 
     /*!
      * \brief End of a section in the serialized output.
      */
-    void serializeSectionEnd()
-    { outStream_ << "\n"; }
+    void serializeSectionEnd();
 
     /*!
      * \brief Serialize all leaf entities of a codim in a gridView.
@@ -161,8 +141,7 @@ public:
     /*!
      * \brief Finish the restart file.
      */
-    void serializeEnd()
-    { outStream_.close(); }
+    void serializeEnd();
 
     /*!
      * \brief Start reading a restart file at a certain simulated
@@ -171,26 +150,10 @@ public:
     template <class Simulator, class Scalar>
     void deserializeBegin(Simulator& simulator, Scalar t)
     {
-        fileName_ = restartFileName_(simulator.gridView(), simulator.problem().outputDir(), simulator.problem().name(), t);
-
-        // open input file and read magic cookie
-        inStream_.open(fileName_.c_str());
-        if (!inStream_.good()) {
-            throw std::runtime_error("Restart file '"+fileName_+"' could not be opened properly");
-        }
-
-        // make sure that we don't open an empty file
-        inStream_.seekg(0, std::ios::end);
-        auto pos = inStream_.tellg();
-        if (pos == 0) {
-            throw std::runtime_error("Restart file '"+fileName_+"' is empty");
-        }
-        inStream_.seekg(0, std::ios::beg);
-
-        const std::string magicCookie = magicRestartCookie_(simulator.gridView());
-
-        deserializeSectionBegin(magicCookie);
-        deserializeSectionEnd();
+        fileName_ = restartFileName_(simulator.gridView().comm().rank(),
+                                     simulator.problem().outputDir(),
+                                     simulator.problem().name(), t);
+        openInputStream(magicRestartCookie_(simulator.gridView()));
     }
 
     /*!
@@ -203,29 +166,12 @@ public:
     /*!
      * \brief Start reading a new section of the restart file.
      */
-    void deserializeSectionBegin(const std::string& cookie)
-    {
-        if (!inStream_.good())
-            throw std::runtime_error("Encountered unexpected EOF in restart file.");
-        std::string buf;
-        std::getline(inStream_, buf);
-        if (buf != cookie)
-            throw std::runtime_error("Could not start section '"+cookie+"'");
-    }
+    void deserializeSectionBegin(const std::string& cookie);
 
     /*!
      * \brief End of a section in the serialized output.
      */
-    void deserializeSectionEnd()
-    {
-        std::string dummy;
-        std::getline(inStream_, dummy);
-        for (unsigned i = 0; i < dummy.length(); ++i) {
-            if (!std::isspace(dummy[i])) {
-                throw std::logic_error("Encountered unread values while deserializing");
-            }
-        }
-    }
+    void deserializeSectionEnd();
 
     /*!
      * \brief Deserialize all leaf entities of a codim in a grid.
@@ -262,10 +208,21 @@ public:
     /*!
      * \brief Stop reading the restart file.
      */
-    void deserializeEnd()
-    { inStream_.close(); }
+    void deserializeEnd();
 
 private:
+    /*!
+     * \brief Open input stream and check for magic cookie.
+     * \param cookie Magic cookie to check for
+     */
+    void openInputStream(const std::string& cookie);
+
+    /*!
+     * \brief Open output stream and write magic cookie.
+     * \param cookie Magic cookie to write
+     */
+    void openOutputStream(const std::string& cookie);
+
     std::string fileName_;
     std::ifstream inStream_;
     std::ofstream outStream_;

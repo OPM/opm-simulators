@@ -61,6 +61,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilmicpparams.cpp
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
+  opm/models/io/restart.cpp
   opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
