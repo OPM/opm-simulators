@@ -134,13 +134,10 @@ void getFlattenedKeyList(std::vector<std::string>& dest,
 
 std::string parseKey(std::string& s)
 {
-    unsigned i;
-    for (i = 0; i < s.size(); ++ i)
-        if (std::isspace(s[i]) || s[i] == '=')
-            break;
-
-    std::string ret = s.substr(0, i);
-    s = s.substr(i);
+    auto it = std::find_if(s.begin(), s.end(),
+                           [](const char ch) { return std::isspace(ch) || ch == '='; });
+    std::string ret {s.begin(), it};
+    s.erase(s.begin(), it);
     return ret;
 }
 
@@ -180,13 +177,9 @@ std::string parseQuotedValue(std::string& s, const std::string& errorPrefix)
 
 std::string parseUnquotedValue(std::string& s, const std::string&)
 {
-    unsigned i;
-    for (i = 0; i < s.size(); ++ i)
-        if (std::isspace(s[i]))
-            break;
-
-    std::string ret = s.substr(0, i);
-    s = s.substr(i);
+    auto it = std::find_if(s.begin(), s.end(), ::isspace);
+    std::string ret{s.begin(), it};
+    s.erase(s.begin(), it);
     return ret;
 }
 
@@ -298,11 +291,9 @@ void printParamUsage(std::ostream& os,
 
 void removeLeadingSpace(std::string& s)
 {
-    unsigned i;
-    for (i = 0; i < s.size(); ++ i)
-        if (!std::isspace(s[i]))
-            break;
-    s = s.substr(i);
+    s.erase(s.begin(),
+            std::find_if(s.begin(), s.end(),
+                         [](const char ch) { return !std::isspace(ch); }));
 }
 
 std::string transformKey(const std::string& s,
