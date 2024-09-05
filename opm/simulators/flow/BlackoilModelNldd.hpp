@@ -918,19 +918,25 @@ private:
     {
         const auto& grid = this->model_.simulator().vanguard().grid();
 
-        using GridView = std::remove_cv_t<std::remove_reference_t<decltype(grid.leafGridView())>>;
-        using Element = std::remove_cv_t<std::remove_reference_t<typename GridView::template Codim<0>::Entity>>;
+        using GridView = std::remove_cv_t<std::remove_reference_t<
+            decltype(grid.leafGridView())>>;
+
+        using Element = std::remove_cv_t<std::remove_reference_t<
+            typename GridView::template Codim<0>::Entity>>;
 
         const auto& param = this->model_.param();
 
         auto zoltan_ctrl = ZoltanPartitioningControl<Element>{};
+
         zoltan_ctrl.domain_imbalance = param.local_domain_partition_imbalance_;
+
         zoltan_ctrl.index =
             [elementMapper = &this->model_.simulator().model().elementMapper()]
             (const Element& element)
         {
             return elementMapper->index(element);
         };
+
         zoltan_ctrl.local_to_global =
             [cartMapper = &this->model_.simulator().vanguard().cartesianIndexMapper()]
             (const int elemIdx)
@@ -940,23 +946,24 @@ private:
 
         // Forming the list of wells is expensive, so do this only if needed.
         const auto need_wells = param.local_domain_partition_method_ == "zoltan";
+
         const auto wells = need_wells
             ? this->model_.simulator().vanguard().schedule().getWellsatEnd()
             : std::vector<Well>{};
+
         const auto& possibleFutureConnectionSet = need_wells
             ? this->model_.simulator().vanguard().schedule().getPossibleFutureConnections()
             : std::unordered_map<std::string, std::set<int>> {};
 
         // If defaulted parameter for number of domains, choose a reasonable default.
         constexpr int default_cells_per_domain = 1000;
-        const int num_cells = Opm::detail::countGlobalCells(grid);
-        const int num_domains = param.num_local_domains_ > 0
+        const int num_domains = (param.num_local_domains_ > 0)
             ? param.num_local_domains_
-            : num_cells / default_cells_per_domain;
+            : detail::countGlobalCells(grid) / default_cells_per_domain;
 
         return ::Opm::partitionCells(param.local_domain_partition_method_,
-                                     num_domains,
-                                     grid.leafGridView(), wells, possibleFutureConnectionSet, zoltan_ctrl);
+                                     num_domains, grid.leafGridView(), wells,
+                                     possibleFutureConnectionSet, zoltan_ctrl);
     }
 
     std::vector<int> reconstitutePartitionVector() const
