@@ -35,6 +35,8 @@
 
 #include <dune/common/parametertree.hh>
 
+#include <opm/models/utils/terminal.hpp>
+
 #if HAVE_QUAD
 #include <opm/material/common/quad.hpp>
 #endif
@@ -212,7 +214,7 @@ void printParamUsage(std::ostream& os,
 {
     std::string paramMessage, paramType, paramDescription;
 
-    int ttyWidth = Opm::Parameters::getTtyWidth();
+    int ttyWidth = Opm::getTtyWidth();
 
     // convert the CamelCase name to a command line --parameter-name.
     std::string cmdLineName = "-";
@@ -295,7 +297,7 @@ void printParamUsage(std::ostream& os,
         }
     }
 
-    paramMessage = Opm::Parameters::breakLines(paramMessage, /*indent=*/52, ttyWidth);
+    paramMessage = Opm::breakLines(paramMessage, /*indent=*/52, ttyWidth);
     paramMessage += "\n";
 
     // print everything
@@ -478,57 +480,6 @@ void SetDefault_(const std::string& paramName,
 }
 
 } // namespace detail
-
-std::string breakLines(const std::string& msg,
-                       int indentWidth,
-                       int maxWidth)
-{
-    std::string result;
-    int startInPos = 0;
-    int inPos = 0;
-    int lastBreakPos = 0;
-    int ttyPos = 0;
-    for (; inPos < int(msg.size()); ++ inPos, ++ ttyPos) {
-        if (msg[inPos] == '\n') {
-            result += msg.substr(startInPos, inPos - startInPos + 1);
-            startInPos = inPos + 1;
-            lastBreakPos = startInPos + 1;
-
-            // we need to use -1 here because ttyPos is incremented after the loop body
-            ttyPos = -1;
-            continue;
-        }
-
-        if (std::isspace(msg[inPos])) {
-            lastBreakPos = inPos;
-        }
-
-        if (ttyPos >= maxWidth) {
-            if (lastBreakPos > startInPos) {
-                result += msg.substr(startInPos, lastBreakPos - startInPos);
-                startInPos = lastBreakPos + 1;
-                lastBreakPos = startInPos;
-                inPos = startInPos;
-            }
-            else {
-                result += msg.substr(startInPos, inPos - startInPos);
-                startInPos = inPos;
-                lastBreakPos = startInPos;
-                inPos = startInPos;
-            }
-
-            result += "\n";
-            for (int i = 0; i < indentWidth; ++i) {
-                result += " ";
-            }
-            ttyPos = indentWidth;
-        }
-    }
-
-    result += msg.substr(startInPos);
-
-    return result;
-}
 
 void reset()
 {
@@ -853,24 +804,6 @@ bool printUnused(std::ostream& os)
         return true;
     }
     return false;
-}
-
-int getTtyWidth()
-{
-    int ttyWidth = 10*1000; // effectively do not break lines at all.
-    if (isatty(STDOUT_FILENO)) {
-#if defined TIOCGWINSZ
-        // This is a bit too linux specific, IMO. let's do it anyway
-        struct winsize ttySize;
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &ttySize);
-        ttyWidth = std::max<int>(80, ttySize.ws_col);
-#else
-        // default for systems that do not implement the TIOCGWINSZ ioctl
-        ttyWidth = 100;
-#endif
-    }
-
-    return ttyWidth;
 }
 
 namespace detail {

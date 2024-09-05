@@ -33,7 +33,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
-
+#include <opm/models/utils/terminal.hpp>
 #include <opm/models/utils/simulator.hh>
 #include <opm/models/utils/timer.hpp>
 
@@ -341,9 +341,9 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #endif
             const std::string briefDescription = Problem::briefDescription();
             if (!briefDescription.empty()) {
-                std::string tmp = Parameters::breakLines(briefDescription,
-                                                         /*indentWidth=*/0,
-                                                         Parameters::getTtyWidth());
+                std::string tmp = breakLines(briefDescription,
+                                             /*indentWidth=*/0,
+                                             getTtyWidth());
                 std::cout << tmp << std::endl << std::endl;
             }
             else

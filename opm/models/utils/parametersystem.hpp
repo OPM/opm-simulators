@@ -93,12 +93,6 @@ void SetDefault_(const std::string& paramName,
 
 }
 
-std::string breakLines(const std::string& msg,
-                       int indentWidth,
-                       int maxWidth);
-
-int getTtyWidth();
-
 //! \endcond
 
 /*!
