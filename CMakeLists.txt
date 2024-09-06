@@ -322,6 +322,7 @@ macro (sources_hook)
     list(APPEND qm_defs HAVE_QUAD=1)
     get_target_property(qm_options QuadMath::QuadMath INTERFACE_COMPILE_OPTIONS)
     set_source_files_properties(opm/models/utils/parametersystem.cpp
+                                opm/models/utils/simulatorutils.cpp
                                 PROPERTIES COMPILE_DEFINITIONS "${qm_defs}"
                                 COMPILE_OPTIONS "${qm_options}")
   endif()

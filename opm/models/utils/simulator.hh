@@ -28,39 +28,29 @@
 #ifndef EWOMS_SIMULATOR_HH
 #define EWOMS_SIMULATOR_HH
 
-#include <opm/models/io/restart.hh>
-#include <opm/models/utils/parametersystem.hpp>
-
-#include <opm/models/utils/basicproperties.hh>
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/timer.hpp>
-#include <opm/models/utils/timerguard.hh>
-#include <opm/models/parallel/mpiutil.hpp>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-
 #include <dune/common/parallel/mpihelper.hh>
 
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <vector>
-#include <string>
-#include <memory>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
-namespace Opm
-{
-namespace detail
-{
-inline auto getMPIHelperCommunication()
-{
-    return Dune::MPIHelper::getCommunication();
-}
-} // end namespace detail
-} // end namespace Opm
+#include <opm/models/io/restart.hpp>
+
+#include <opm/models/parallel/mpiutil.hpp>
+
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/simulatorutils.hpp>
+#include <opm/models/utils/timer.hpp>
+#include <opm/models/utils/timerguard.hh>
+
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 #define EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(code)                     \
     {                                                                   \
-        const auto& comm = ::Opm::detail::getMPIHelperCommunication();  \
+        const auto& comm = Dune::MPIHelper::getCommunication();         \
         bool exceptionThrown = false;                                   \
         try { code; }                                                   \
         catch (const Dune::Exception& e) {                              \
@@ -135,12 +125,7 @@ public:
         const std::string& predetTimeStepFile =
             Parameters::Get<Parameters::PredeterminedTimeStepsFile>();
         if (!predetTimeStepFile.empty()) {
-            std::ifstream is(predetTimeStepFile);
-            while (!is.eof()) {
-                Scalar dt;
-                is >> dt;
-                forcedTimeSteps_.push_back(dt);
-            }
+            forcedTimeSteps_ = readTimeStepFile<Scalar>(predetTimeStepFile);
         }
 
         episodeIdx_ = 0;
@@ -811,82 +796,6 @@ public:
         executionTimer_.stop();
 
         EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(problem_->finalize());
-    }
-
-    /*!
-     * \brief Given a time step size in seconds, return it in a format which is more
-     *        easily parsable by humans.
-     *
-     * e.g. 874000.0 will become "10.12 days"
-     */
-    static std::string humanReadableTime(Scalar timeInSeconds, bool isAmendment=true)
-    {
-        std::ostringstream oss;
-        oss << std::setprecision(4);
-        if (isAmendment)
-            oss << " (";
-        if (timeInSeconds >= 365.25*24*60*60) {
-            int years = static_cast<int>(timeInSeconds/(365.25*24*60*60));
-            int days = static_cast<int>((timeInSeconds - years*(365.25*24*60*60))/(24*60*60));
-
-            double accuracy = 1e-2;
-            double hours =
-                std::round(1.0/accuracy*
-                           (timeInSeconds
-                            - years*(365.25*24*60*60)
-                            - days*(24*60*60))/(60*60))
-                *accuracy;
-
-            oss << years << " years, " << days << " days, "  << hours << " hours";
-        }
-        else if (timeInSeconds >= 24.0*60*60) {
-            int days = static_cast<int>(timeInSeconds/(24*60*60));
-            int hours = static_cast<int>((timeInSeconds - days*(24*60*60))/(60*60));
-
-            double accuracy = 1e-2;
-            double minutes =
-                std::round(1.0/accuracy*
-                           (timeInSeconds
-                            - days*(24*60*60)
-                            - hours*(60*60))/60)
-                *accuracy;
-
-            oss << days << " days, " << hours << " hours, " << minutes << " minutes";
-        }
-        else if (timeInSeconds >= 60.0*60) {
-            int hours = static_cast<int>(timeInSeconds/(60*60));
-            int minutes = static_cast<int>((timeInSeconds - hours*(60*60))/60);
-
-            double accuracy = 1e-2;
-            double seconds =
-                std::round(1.0/accuracy*
-                           (timeInSeconds
-                            - hours*(60*60)
-                            - minutes*60))
-                *accuracy;
-
-            oss << hours << " hours, " << minutes << " minutes, "  << seconds << " seconds";
-        }
-        else if (timeInSeconds >= 60.0) {
-            int minutes = static_cast<int>(timeInSeconds/60);
-
-            double accuracy = 1e-3;
-            double seconds =
-                std::round(1.0/accuracy*
-                           (timeInSeconds
-                            - minutes*60))
-                *accuracy;
-
-            oss << minutes << " minutes, "  << seconds << " seconds";
-        }
-        else if (!isAmendment)
-            oss << timeInSeconds << " seconds";
-        else
-            return "";
-        if (isAmendment)
-            oss << ")";
-
-        return oss.str();
     }
 
     /*!

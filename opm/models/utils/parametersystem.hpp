@@ -146,7 +146,7 @@ parseCommandLineOptions(int argc,
  *
  * This function does some basic syntax checks.
  */
-void parseParameterFile(const std::string& fileName, bool overwrite = true);
+bool parseParameterFile(const std::string& fileName, bool overwrite = true);
 
 /*!
  * \ingroup Parameter

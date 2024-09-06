@@ -105,6 +105,21 @@ int getTtyWidth()
     return ttyWidth;
 }
 
+void assignResetTerminalSignalHandlers()
+{
+    // set the signal handlers to reset the TTY to a well defined state on unexpected
+    // program aborts
+    if (isatty(STDIN_FILENO)) {
+        signal(SIGINT, resetTerminal);
+        signal(SIGHUP, resetTerminal);
+        signal(SIGABRT, resetTerminal);
+        signal(SIGFPE, resetTerminal);
+        signal(SIGSEGV, resetTerminal);
+        signal(SIGPIPE, resetTerminal);
+        signal(SIGTERM, resetTerminal);
+    }
+}
+
 void resetTerminal()
 {
     // make sure stderr and stderr do not contain any unwritten data and make sure that
