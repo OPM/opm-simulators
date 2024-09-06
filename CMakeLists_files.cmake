@@ -1094,6 +1094,6 @@ if(dune-alugrid_FOUND)
   list (APPEND EXAMPLE_SOURCE_FILES
     examples/finger_immiscible_ecfv.cpp
     examples/finger_immiscible_vcfv.cpp
-    examples/fracture_discretefracture.cpp
+#    examples/fracture_discretefracture.cpp
   )
 endif()

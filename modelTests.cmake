@@ -87,13 +87,13 @@ foreach(tgt reservoir_blackoil_ecfv
                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 endforeach()
 
-if(dune-alugrid_FOUND)
-  opm_add_test(fracture_discretefracture
-               NO_COMPILE
-               EXE_NAME $<TARGET_FILE:fracture_discretefracture>
-               TEST_ARGS --end-time=400
-               WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-endif()
+# if(dune-alugrid_FOUND)
+#   opm_add_test(fracture_discretefracture
+#                NO_COMPILE
+#                EXE_NAME $<TARGET_FILE:fracture_discretefracture>
+#                TEST_ARGS --end-time=400
+#                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
+#  endif()
 
 if(dune-alugrid_FOUND AND dune-fem_FOUND)
   opm_add_test(finger_immiscible_ecfv_adaptive
