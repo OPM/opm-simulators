@@ -42,7 +42,7 @@ namespace TTag {
 
 struct TestTypeTag
 {
-    using InheritsFrom = std::tuple<FlowBaseProblem,
+    using InheritsFrom = std::tuple<FlowBaseProblemBlackoil,
                                     BlackOilModel>;
 };
 
