@@ -20,7 +20,6 @@ namespace Amg
         static inline std::shared_ptr<MultithreadDILU<M, X, Y>> construct(Arguments& args) {
             return std::make_shared<MultithreadDILU<M, X, Y>>(args.getMatrix());
         }
-
     };
 
 } // namespace Amg
