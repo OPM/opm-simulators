@@ -60,9 +60,9 @@
 // TODO: maybe we can name it FlowProblemProperties.hpp
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
-#include <opm/simulators/flow/TracerModel.hpp>
+// #include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
-#include <opm/simulators/flow/VtkTracerModule.hpp>
+// #include <opm/simulators/flow/VtkTracerModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
@@ -182,7 +182,7 @@ public:
     {
         ParentType::registerParameters();
 
-        VtkTracerModule<TypeTag>::registerParameters();
+        //VtkTracerModule<TypeTag>::registerParameters();
         registerFlowProblemParameters<Scalar>();
     }
 
@@ -228,7 +228,7 @@ public:
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
     {
-        this->model().addOutputModule(new VtkTracerModule<TypeTag>(simulator));
+        // this->model().addOutputModule(new VtkTracerModule<TypeTag>(simulator));
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
 
@@ -931,7 +931,7 @@ public:
         }
 
         // TODO: the folllowing go to Blackoil
-        if (nonTrivialBoundaryConditions()) {
+        /* if (nonTrivialBoundaryConditions()) {
             unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
@@ -943,7 +943,7 @@ public:
                 values.setFreeFlow(context, spaceIdx, timeIdx, asImp_().boundaryFluidState(globalDofIdx, indexInInside));
             else if (type == BCType::RATE)
                 values.setMassRate(massrate, pvtRegionIdx);
-        }
+        } */
     }
 
     /*!
@@ -1004,7 +1004,7 @@ public:
         // let the object for threshold pressures initialize itself. this is done only at
         // this point, because determining the threshold pressures may require to access
         // the initial solution.
-        thresholdPressures_.finishInit();
+        // thresholdPressures_.finishInit();
 
         aquiferModel_.initialSolutionApplied();
 
@@ -1079,10 +1079,10 @@ public:
                     continue;
                 } 
                 Scalar mass_rate = source.rate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
-                if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+                /* if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
                     mass_rate /= FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
-                }
-                rate[Indices::canonicalToActiveComponentIndex(compIdx)] += mass_rate;
+                } */
+                // rate[Indices::canonicalToActiveComponentIndex(compIdx)] += mass_rate;
             }
 
             if constexpr (enableEnergy) {
@@ -1589,7 +1589,7 @@ protected:
 
     void readEquilInitialCondition_()
     {
-        const auto& simulator = this->simulator();
+        /* const auto& simulator = this->simulator();
 
         // initial condition corresponds to hydrostatic conditions.
         EquilInitializer<TypeTag> equilInitializer(simulator, *materialLawManager_);
@@ -1599,7 +1599,7 @@ protected:
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = asImp_().initialFluidStates()[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
-        }
+        } */
     }
 
     virtual void readExplicitInitialCondition_() = 0;

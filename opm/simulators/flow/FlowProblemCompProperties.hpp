@@ -58,13 +58,13 @@ struct Problem<TypeTag, TTag::FlowBaseProblemComp>
 { using type = FlowProblemComp<TypeTag>; };
 
 // TODO: for the purpose of the compositional model
-template<class TypeTag, class MyTypeTag>
+/* template<class TypeTag, class MyTypeTag>
 struct TracerModelDef {
     using type = UndefinedProperty;
-};
+}; */
 
 template<class TypeTag>
-struct TracerModelDef<TypeTag, TTag::FlowBaseProblemComp> {
+struct TracerModel<TypeTag, TTag::FlowBaseProblemComp> {
     using type = ::Opm::TracerModel<TypeTag>;
 };
 

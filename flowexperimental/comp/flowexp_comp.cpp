@@ -205,7 +205,7 @@ struct WellModel<TypeTag, TTag::FlowExpCompProblem> {
 };
 
 template<class TypeTag>
-struct TracerModelDef<TypeTag, TTag::FlowExpCompProblem> {
+struct TracerModel<TypeTag, TTag::FlowExpCompProblem> {
     using type = EmptyModel<TypeTag>;
 };
 

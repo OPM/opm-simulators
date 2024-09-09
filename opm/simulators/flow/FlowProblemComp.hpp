@@ -180,8 +180,8 @@ public:
         // TODO: maybe we should have empty functions for them
         /* if (initconfig.restartRequested())
             readEclRestartSolution_();
-        else
-            readInitialCondition_(); */
+        else */
+            this->readInitialCondition_();
 
         FlowProblemType::updatePffDofData_();
 
@@ -301,6 +301,15 @@ public:
     void addToSourceDense(RateVector& rate, unsigned globalDofIdx, unsigned timeIdx) const
     {
     }
+
+    const InitialFluidState& initialFluidState(unsigned globalDofIdx) const
+    { return initialFluidStates_[globalDofIdx]; }
+
+    std::vector<InitialFluidState>& initialFluidStates()
+    { return initialFluidStates_; }
+
+    const std::vector<InitialFluidState>& initialFluidStates() const
+    { return initialFluidStates_; }
 
     // TODO: this one need to be emptied means that it should move to blackoil?
     InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
