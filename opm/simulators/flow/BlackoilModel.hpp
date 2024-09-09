@@ -1127,6 +1127,10 @@ namespace Opm {
             }
         }
 
+        if (report.wellFailures().size() > 0) {
+            report.addLargeWellResidualsPenalty();
+        }
+
         total_penaltyCard_ += report.getPenaltyCard();
 
     }
