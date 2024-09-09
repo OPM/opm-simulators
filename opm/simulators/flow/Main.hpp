@@ -289,6 +289,7 @@ private:
         return flowMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
     }
 
+protected:
     /// \brief Initialize
     /// \param exitCode The exitCode of the program.
     ///
@@ -447,6 +448,9 @@ private:
         return true;
     }
 
+    void setupVanguard();
+
+private:
     // This function is an extreme special case, if the program has been invoked
     // *exactly* as:
     //
@@ -705,8 +709,6 @@ private:
                   std::string_view moduleVersion,
                   std::string_view compileTimestamp);
 
-    void setupVanguard();
-
     static int getNumThreads()
     {
 
@@ -751,11 +753,14 @@ private:
     void setupDamaris(const std::string& outputDir);
 #endif
 
+protected:
     int argc_{0};
     char** argv_{nullptr};
-    bool ownMPI_{true}; //!< True if we "own" MPI and should init / finalize
     bool outputCout_{false};
     bool outputFiles_{false};
+
+private:
+    bool ownMPI_{true}; //!< True if we "own" MPI and should init / finalize
     double setupTime_{0.0};
     std::string deckFilename_{};
     std::string flowProgName_{};
