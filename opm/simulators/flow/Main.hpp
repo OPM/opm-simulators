@@ -174,26 +174,6 @@ public:
         return exitCode;
     }
 
-    using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
-    // To be called from the Python interface code. Only do the
-    // initialization and then return a pointer to the FlowMain
-    // object that can later be accessed directly from the Python interface
-    // to e.g. advance the simulator one report step
-    std::unique_ptr<FlowMainType> initFlowBlackoil(int& exitCode)
-    {
-        exitCode = EXIT_SUCCESS;
-        if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
-            // TODO: check that this deck really represents a blackoil
-            // case. E.g. check that number of phases == 3
-            this->setupVanguard();
-            return flowBlackoilTpfaMainInit(
-                argc_, argv_, outputCout_, outputFiles_);
-        } else {
-            //NOTE: exitCode was set by initialize_() above;
-            return std::unique_ptr<FlowMainType>(); // nullptr
-        }
-    }
-
     //! \brief Used for test_outputdir.
     int justInitialize()
     {
