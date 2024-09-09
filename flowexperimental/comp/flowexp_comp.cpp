@@ -31,9 +31,12 @@
 // #include "BlackOilModelFvNoCache.hpp"
 // #include "co2ptflowproblem.hh"
 // #include <tests/problems/co2ptflashproblem.hh>
+#include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
+
+#include <opm/simulators/flow/FlowProblemCompProperties.hpp>
 
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 

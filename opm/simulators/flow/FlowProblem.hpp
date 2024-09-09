@@ -359,15 +359,6 @@ public:
             // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
             dt = std::min(dt, this->initialTimeStepSize_);
         simulator.setTimeStepSize(dt);
-
-        if (episodeIdx >= 0) {
-            const auto& oilVap = schedule[episodeIdx].oilvap();
-            if (oilVap.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
-                FluidSystem::setVapPars(oilVap.vap1(), oilVap.vap2());
-            } else {
-                FluidSystem::setVapPars(0.0, 0.0);
-            }
-        }
     }
 
     /*!
@@ -862,6 +853,7 @@ public:
     unsigned plmixnumRegionIndex(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     { return this->plmixnumRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
 
+    // TODO: polymer related might need to go to the blackoil side
     using BaseType::maxPolymerAdsorption;
     /*!
      * \brief Returns the max polymer adsorption value
@@ -909,6 +901,7 @@ public:
         return this->thermalLawManager_->thermalConductionLawParams(globalSpaceIdx);
     }
 
+    // TODO: this one might need to go to Blackoil
     /*!
      * \copydoc FvBaseProblem::boundary
      *
@@ -937,6 +930,7 @@ public:
             values.setThermalFlow(context, spaceIdx, timeIdx, asImp_().initialFluidStates()[globalDofIdx] );
         }
 
+        // TODO: the folllowing go to Blackoil
         if (nonTrivialBoundaryConditions()) {
             unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
