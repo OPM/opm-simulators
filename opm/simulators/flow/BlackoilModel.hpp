@@ -1172,6 +1172,15 @@ namespace Opm {
             }
             // check card penalty, and add to report
             checkCardPenalty(report, iteration);
+
+            int cut_off_limit = 30;
+            if (total_penaltyCard_.total() > cut_off_limit) {
+                report.setReservoirFailed({ConvergenceReport::ReservoirFailure::Type::ConvergenceMonitorFailure,
+                                            ConvergenceReport::Severity::TooLarge,
+                                            -1}); // -1 indicates it's not specific to any component
+                throw ConvergenceMonitorFailure("Total penalty count exceeded cut-off-limit of " + std::to_string(cut_off_limit) + ". Cutting timestep.");
+            }
+
             return report;
         }
 
