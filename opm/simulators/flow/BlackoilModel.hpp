@@ -393,6 +393,7 @@ namespace Opm {
                 // the mass balance for each active phase, the well flux and the well equations.
                 residual_norms_history_.clear();
                 total_penaltyCard_.reset();
+                prev_distance_ = std::numeric_limits<double>::infinity();
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
                 convergence_reports_.push_back({timer.reportStepNum(), timer.currentStepNum(), {}});
@@ -1117,7 +1118,12 @@ namespace Opm {
             const auto& prev_metrics = prev_report.reservoirConvergence();
             const auto& current_metrics = report.reservoirConvergence();
 
+            auto distances = std::vector<double>(current_metrics.size(), 0.0);
+            const double sigma = 0.75;
+
             for (size_t i = 0; i < current_metrics.size(); ++i) {
+
+                distances[i] = std::max(std::log(current_metrics[i].value()), 0.0);
 
                 if (current_metrics[i].type() == prev_metrics[i].type() && current_metrics[i].phase() == prev_metrics[i].phase()) {
                     if (current_metrics[i].value() > prev_metrics[i].value()) {
@@ -1126,6 +1132,13 @@ namespace Opm {
                     }
                 }
             }
+            // use L1 norm of the distances vector
+            double current_distance =  std::accumulate(distances.begin(), distances.end(), 0.0);
+
+            if (current_distance > sigma * prev_distance_) {
+                report.addDistanceDecayPenalty();
+            }
+            prev_distance_ = current_distance;
         }
 
         if (report.wellFailures().size() > 0) {
@@ -1426,6 +1439,7 @@ namespace Opm {
         Scalar maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
         ConvergenceReport::PenaltyCard total_penaltyCard_;
+        double prev_distance_ = std::numeric_limits<double>::infinity();
 
     public:
         std::vector<bool> wasSwitched_;
