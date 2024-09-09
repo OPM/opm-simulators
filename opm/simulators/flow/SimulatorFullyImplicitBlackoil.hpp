@@ -24,9 +24,14 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#if HAVE_MPI
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
+#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
+#endif
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/grid/utility/StopWatch.hpp>
@@ -37,8 +42,6 @@
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
-#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
 #include <opm/simulators/flow/SimulatorReportBanners.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
@@ -222,6 +225,7 @@ public:
     // NOTE: The argc and argv will be used when launching a slave process
     void init(SimulatorTimer &timer, int argc, char** argv)
     {
+#if HAVE_MPI
         auto slave_mode = Parameters::Get<Parameters::Slave>();
         if (slave_mode) {
             this->reservoirCouplingSlave_ =
@@ -245,6 +249,7 @@ public:
                 this->reservoirCouplingMaster_->spawnSlaveProcesses(argc, argv);
             }
         }
+#endif
         simulator_.setEpisodeIndex(-1);
 
         // Create timers and file for writing timing info.
@@ -642,9 +647,11 @@ protected:
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
 
 
+#if HAVE_MPI
     bool slaveMode_{false};
     std::unique_ptr<ReservoirCouplingMaster> reservoirCouplingMaster_{nullptr};
     std::unique_ptr<ReservoirCouplingSlave> reservoirCouplingSlave_{nullptr};
+#endif
 
     std::optional<ConvergenceReportQueue> convergenceOutputQueue_{};
     std::optional<ConvergenceOutputThread> convergenceOutputObject_{};
