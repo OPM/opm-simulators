@@ -392,6 +392,7 @@ namespace Opm {
                 // For each iteration we store in a vector the norms of the residual of
                 // the mass balance for each active phase, the well flux and the well equations.
                 residual_norms_history_.clear();
+                total_penaltyCard_.reset();
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
                 convergence_reports_.push_back({timer.reportStepNum(), timer.currentStepNum(), {}});

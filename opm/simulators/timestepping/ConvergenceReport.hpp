@@ -62,6 +62,13 @@ namespace Opm
                 return nonConverged + distanceDecay + largeWellResiduals;
             }
 
+            void reset()
+            {
+                nonConverged = 0;
+                distanceDecay = 0;
+                largeWellResiduals = 0;
+            }
+
             PenaltyCard& operator+=(const PenaltyCard& other) {
                 nonConverged += other.nonConverged;
                 distanceDecay += other.distanceDecay;
