@@ -1108,6 +1108,29 @@ namespace Opm {
             return report;
         }
 
+    void checkCardPenalty(ConvergenceReport& report, int iteration)
+    {
+        if (iteration > 0) {
+
+            const auto& prev_report = convergence_reports_.back().report.back();
+            const auto& prev_metrics = prev_report.reservoirConvergence();
+            const auto& current_metrics = report.reservoirConvergence();
+
+            for (size_t i = 0; i < current_metrics.size(); ++i) {
+
+                if (current_metrics[i].type() == prev_metrics[i].type() && current_metrics[i].phase() == prev_metrics[i].phase()) {
+                    if (current_metrics[i].value() > prev_metrics[i].value()) {
+                        // Metric value has increased, add a penalty card
+                        report.addNonConvergedPenalty();
+                    }
+                }
+            }
+        }
+
+        total_penaltyCard_ += report.getPenaltyCard();
+
+    }
+
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
         /// \param[in]   timer       simulation timer
@@ -1129,6 +1152,8 @@ namespace Opm {
                 OPM_TIMEBLOCK(getWellConvergence);
                 report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
             }
+            // check card penalty, and add to report
+            checkCardPenalty(report, iteration);
             return report;
         }
 
@@ -1395,6 +1420,7 @@ namespace Opm {
         Scalar drMaxRel() const { return param_.dr_max_rel_; }
         Scalar maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
+        ConvergenceReport::PenaltyCard total_penaltyCard_;
 
     public:
         std::vector<bool> wasSwitched_;
