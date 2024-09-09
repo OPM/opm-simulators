@@ -97,4 +97,10 @@ namespace Opm
     }
 
 
+    std::string to_string(const ConvergenceReport::PenaltyCard& pc)
+    {
+        return fmt::format("PenaltyCard {{ NonConverged: {}, DistanceDecay: {}, LargeWellResiduals: {}, Total: {} }}",
+                           pc.nonConverged, pc.distanceDecay, pc.largeWellResiduals, pc.total());
+    }
+
 } // namespace Opm

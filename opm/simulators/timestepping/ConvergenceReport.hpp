@@ -53,6 +53,31 @@ namespace Opm
             NotANumber = 3,
         };
 
+        struct PenaltyCard {
+            int nonConverged{0};
+            int distanceDecay{0};
+            int largeWellResiduals{0};
+
+            int total() const {
+                return nonConverged + distanceDecay + largeWellResiduals;
+            }
+
+            PenaltyCard& operator+=(const PenaltyCard& other) {
+                nonConverged += other.nonConverged;
+                distanceDecay += other.distanceDecay;
+                largeWellResiduals += other.largeWellResiduals;
+                return *this;
+            }
+
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(nonConverged);
+                serializer(distanceDecay);
+                serializer(largeWellResiduals);
+            }
+        };
+
         using CnvPvSplit = std::pair<
             std::vector<double>,
             std::vector<int>>;
@@ -291,6 +316,26 @@ namespace Opm
             return well_failures_;
         }
 
+        const PenaltyCard& getPenaltyCard() const
+        {
+            return penaltyCard_;
+        }
+
+        void addNonConvergedPenalty()
+        {
+            penaltyCard_.nonConverged++;
+        }
+
+        void addDistanceDecayPenalty()
+        {
+            penaltyCard_.distanceDecay++;
+        }
+
+        void addLargeWellResidualsPenalty()
+        {
+            penaltyCard_.largeWellResiduals++;
+        }
+
         Severity severityOfWorstFailure() const
         {
             // A function to get the worst of two severities.
@@ -318,6 +363,7 @@ namespace Opm
             serializer(this->wellGroupTargetsViolated_);
             serializer(this->cnvPvSplit_);
             serializer(this->eligiblePoreVolume_);
+            serializer(this->penaltyCard_);
         }
 
     private:
@@ -332,6 +378,7 @@ namespace Opm
         bool wellGroupTargetsViolated_;
         CnvPvSplit cnvPvSplit_{};
         double eligiblePoreVolume_{};
+        PenaltyCard penaltyCard_;
     };
 
     struct StepReport
@@ -348,6 +395,9 @@ namespace Opm
     std::string to_string(const ConvergenceReport::WellFailure::Type t);
 
     std::string to_string(const ConvergenceReport::WellFailure& wf);
+
+    std::string to_string(const ConvergenceReport::PenaltyCard& pc);
+
 
 
 } // namespace Opm
