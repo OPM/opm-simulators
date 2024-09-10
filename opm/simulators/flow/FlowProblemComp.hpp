@@ -297,9 +297,9 @@ public:
         values.assignNaive(fs);
     }
 
-    // TODO: this one need to be emptied it means it should be moved to blackoil
-    void addToSourceDense(RateVector& rate, unsigned globalDofIdx, unsigned timeIdx) const
+    void addToSourceDense(RateVector&, unsigned, unsigned) const
     {
+        // we do nothing for now
     }
 
     const InitialFluidState& initialFluidState(unsigned globalDofIdx) const
@@ -432,15 +432,9 @@ public:
     }
 protected:
 
-    // TODO: do I need this function?
-    void updateExplicitQuantities_(int episodeIdx, int timeStepSize, bool first_step_after_restart) override
+    void updateExplicitQuantities_(int /* episodeIdx*/, int /* timeStepSize */, bool /* first_step_after_restart */) override
     {
-    }
-
-    // TODO: whether it is correct to do so? update the parameters needed for DRSDT and DRVDT
-    bool updateCompositionChangeLimits_()
-    {
-            return true;
+        // we do nothing here for now
     }
 
     // TODO: we should decide whther we need to have this fucntion differently for the compositional implementation
@@ -585,12 +579,12 @@ private:
     {
     } */
 
-    void handleSolventBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    void handleSolventBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("solvent is disabled for compositional modeling and you're trying to add solvent to BC");
     }
 
-    void handlePolymerBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    void handlePolymerBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("polymer is disabled for compositional modeling and you're trying to add polymer to BC");
     }

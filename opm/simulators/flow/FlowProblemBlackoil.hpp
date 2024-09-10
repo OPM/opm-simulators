@@ -77,7 +77,8 @@ class FlowProblemBlackoil : public FlowProblem<TypeTag>
     using typename FlowProblemType::GridView;
     using typename FlowProblemType::FluidSystem;
     using typename FlowProblemType::Vanguard;
-
+    using typename FlowProblemType::GlobalEqVector;
+    using typename FlowProblemType::EqVector;
     using FlowProblemType::dim;
     using FlowProblemType::dimWorld;
     using FlowProblemType::numEq;
@@ -104,6 +105,10 @@ class FlowProblemBlackoil : public FlowProblem<TypeTag>
     using FlowProblemType::gasPhaseIdx;
     using FlowProblemType::oilPhaseIdx;
     using FlowProblemType::waterPhaseIdx;
+
+    using FlowProblemType::waterCompIdx;
+    using FlowProblemType::oilCompIdx;
+    using FlowProblemType::gasCompIdx;
 
     using typename FlowProblemType::RateVector;
     using typename FlowProblemType::PrimaryVariables;
@@ -499,17 +504,35 @@ public:
                           unsigned globalDofIdx,
                           unsigned timeIdx) const override
     {
-        FlowProblemType::addToSourceDense(rate, globalDofIdx, timeIdx);
+        this->aquiferModel_.addToSource(rate, globalDofIdx, timeIdx);
 
+        // Add source term from deck
         const auto& source = this->simulator().vanguard().schedule()[this->episodeIndex()].source();
         std::array<int,3> ijk;
         this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
 
         if (source.hasSource(ijk)) {
+            const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
+            static std::array<SourceComponent, 3> sc_map = {SourceComponent::WATER, SourceComponent::OIL, SourceComponent::GAS};
+            static std::array<int, 3> phidx_map = {FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx};
+            static std::array<int, 3> cidx_map = {waterCompIdx, oilCompIdx, gasCompIdx};
+
+            for (unsigned i = 0; i < phidx_map.size(); ++i) {
+                const auto phaseIdx = phidx_map[i];
+                const auto sourceComp = sc_map[i];
+                const auto compIdx = cidx_map[i];
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                Scalar mass_rate = source.rate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
+                if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+                    mass_rate /= FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
+                }
+                rate[Indices::canonicalToActiveComponentIndex(compIdx)] += mass_rate;
+            }
+
             if constexpr (enableSolvent) {
-                const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
-                Scalar mass_rate =
-                        source.rate({ijk, SourceComponent::SOLVENT}) / this->model().dofTotalVolume(globalDofIdx);
+                Scalar mass_rate = source.rate({ijk, SourceComponent::SOLVENT}) / this->model().dofTotalVolume(globalDofIdx);
                 if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
                     const auto& solventPvt = SolventModule::solventPvt();
                     mass_rate /= solventPvt.referenceDensity(pvtRegionIdx);
@@ -517,9 +540,59 @@ public:
                 rate[Indices::contiSolventEqIdx] += mass_rate;
             }
             if constexpr (enablePolymer) {
-                rate[Indices::polymerConcentrationIdx] +=
-                        source.rate({ijk, SourceComponent::POLYMER}) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::polymerConcentrationIdx] += source.rate({ijk, SourceComponent::POLYMER}) / this->model().dofTotalVolume(globalDofIdx);
             }
+            if constexpr (enableEnergy) {
+                for (unsigned i = 0; i < phidx_map.size(); ++i) {
+                    const auto phaseIdx = phidx_map[i];
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+                    const auto sourceComp = sc_map[i];
+                    if (source.hasHrate({ijk, sourceComp})) {
+                        rate[Indices::contiEnergyEqIdx] += source.hrate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
+                    } else {
+                        const auto& intQuants = this->simulator().model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0);
+                        auto fs = intQuants.fluidState();
+                        // if temperature is not set, use cell temperature as default
+                        if (source.hasTemperature({ijk, sourceComp})) {
+                            Scalar temperature = source.temperature({ijk, sourceComp});
+                            fs.setTemperature(temperature);
+                        }
+                        const auto& h = FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx);
+                        Scalar mass_rate = source.rate({ijk, sourceComp})/ this->model().dofTotalVolume(globalDofIdx);
+                        Scalar energy_rate = getValue(h)*mass_rate;
+                        rate[Indices::contiEnergyEqIdx] += energy_rate;
+                    }
+                }
+            }
+        }
+
+        // if requested, compensate systematic mass loss for cells which were "well
+        // behaved" in the last time step
+        if (this->enableDriftCompensation_) {
+            const auto& simulator = this->simulator();
+            const auto& model = this->model();
+
+            // we use a lower tolerance for the compensation too
+            // assure the added drift from the last step does not
+            // cause convergence issues on the current step
+            Scalar maxCompensation = model.newtonMethod().tolerance()/10;
+            Scalar poro = this->porosity(globalDofIdx, timeIdx);
+            Scalar dt = simulator.timeStepSize();
+            EqVector dofDriftRate = this->drift_[globalDofIdx];
+            dofDriftRate /= dt*model.dofTotalVolume(globalDofIdx);
+
+            // restrict drift compensation to the CNV tolerance
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
+                Scalar cnv = std::abs(dofDriftRate[eqIdx])*dt*model.eqWeight(globalDofIdx, eqIdx)/poro;
+                if (cnv > maxCompensation) {
+                    dofDriftRate[eqIdx] *= maxCompensation/cnv;
+                }
+            }
+
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                rate[eqIdx] -= dofDriftRate[eqIdx];
         }
     }
 
@@ -783,7 +856,7 @@ public:
 protected:
     void updateExplicitQuantities_(int episodeIdx, int timeStepSize, const bool first_step_after_restart) override
     {
-        FlowProblemType::updateExplicitQuantities_(first_step_after_restart);
+        this->updateExplicitQuantities_(first_step_after_restart);
 
         if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>())
             updateMaxPolymerAdsorption_();
@@ -847,7 +920,7 @@ protected:
     }
 
     // update the parameters needed for DRSDT and DRVDT
-    bool updateCompositionChangeLimits_() override
+    bool updateCompositionChangeLimits_()
     {
         OPM_TIMEBLOCK(updateCompositionChangeLimits);
         // update the "last Rs" values for all elements, including the ones in the ghost
@@ -1259,6 +1332,31 @@ protected:
 
         rate[Indices::polymerConcentrationIdx] = bc.rate;
     }
+
+    void updateExplicitQuantities_(const bool first_step_after_restart)
+    {
+        OPM_TIMEBLOCK(updateExplicitQuantities);
+        const bool invalidateFromMaxWaterSat = this->updateMaxWaterSaturation_();
+        const bool invalidateFromMinPressure = this->updateMinPressure_();
+
+        // update hysteresis and max oil saturation used in vappars
+        const bool invalidateFromHyst = this->updateHysteresis_();
+        const bool invalidateFromMaxOilSat = this->updateMaxOilSaturation_();
+
+        // deal with DRSDT and DRVDT
+        const bool invalidateDRDT = !first_step_after_restart && this->updateCompositionChangeLimits_();
+
+        // the derivatives may have changed
+        const bool invalidateIntensiveQuantities
+            = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat || invalidateDRDT;
+        if (invalidateIntensiveQuantities) {
+            OPM_TIMEBLOCK(beginTimeStepInvalidateIntensiveQuantities);
+            this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        }
+
+        this->updateRockCompTransMultVal_();
+    }
+
 
     std::vector<InitialFluidState> initialFluidStates_;
 
