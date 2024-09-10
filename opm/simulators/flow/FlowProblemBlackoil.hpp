@@ -44,6 +44,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowThresholdPressure.hpp>
 
 #include <opm/simulators/flow/MixingRateControls.hpp>
 
@@ -159,6 +160,7 @@ public:
      */
     explicit FlowProblemBlackoil(Simulator& simulator)
         : FlowProblemType(simulator)
+        , thresholdPressures_(simulator)
         , mixControls_(simulator.vanguard().schedule())
         , actionHandler_(simulator.vanguard().eclState(),
                          simulator.vanguard().schedule(),
@@ -494,6 +496,11 @@ public:
     void initialSolutionApplied() override
     {
         FlowProblemType::initialSolutionApplied();
+
+        // let the object for threshold pressures initialize itself. this is done only at
+        // this point, because determining the threshold pressures may require to access
+        // the initial solution.
+        this->thresholdPressures_.finishInit();
 
         if (this->simulator().episodeIndex() == 0) {
             eclWriter_->writeInitialFIPReport();
@@ -839,6 +846,18 @@ public:
         return this->mixControls_.drsdtcon(elemIdx, episodeIdx,
                                            this->pvtRegionIndex(elemIdx));
     }
+
+    /*!
+     * \copydoc BlackOilBaseProblem::thresholdPressure
+     */
+    Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
+    { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
+
+    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
+    { return thresholdPressures_; }
+
+    FlowThresholdPressure<TypeTag>& thresholdPressure()
+    { return thresholdPressures_; }
 
     const ModuleParams& moduleParams() const
     {
@@ -1357,6 +1376,7 @@ protected:
         this->updateRockCompTransMultVal_();
     }
 
+    FlowThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<InitialFluidState> initialFluidStates_;
 

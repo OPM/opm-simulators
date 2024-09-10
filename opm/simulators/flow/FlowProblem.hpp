@@ -59,7 +59,6 @@
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 // TODO: maybe we can name it FlowProblemProperties.hpp
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
-#include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 // #include <opm/simulators/flow/VtkTracerModule.hpp>
@@ -222,7 +221,6 @@ public:
                               enableEnergy,
                               enableDiffusion,
                               enableDispersion)
-        , thresholdPressures_(simulator)
         , wellModel_(simulator)
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
@@ -654,17 +652,6 @@ public:
     const typename Vanguard::TransmissibilityType& eclTransmissibilities() const
     { return transmissibilities_; }
 
-    /*!
-     * \copydoc BlackOilBaseProblem::thresholdPressure
-     */
-    Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
-    { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
-
-    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
-    { return thresholdPressures_; }
-
-    FlowThresholdPressure<TypeTag>& thresholdPressure()
-    { return thresholdPressures_; }
 
     const TracerModel& tracerModel() const
     { return tracerModel_; }
@@ -1000,11 +987,6 @@ public:
         // intrinsic permeabilities and the after applying the initial solution because
         // the well model uses these...
         wellModel_.init();
-
-        // let the object for threshold pressures initialize itself. this is done only at
-        // this point, because determining the threshold pressures may require to access
-        // the initial solution.
-        // thresholdPressures_.finishInit();
 
         aquiferModel_.initialSolutionApplied();
 
@@ -1729,8 +1711,6 @@ protected:
 
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;
-
-    FlowThresholdPressure<TypeTag> thresholdPressures_;
 
     bool enableDriftCompensation_;
     GlobalEqVector drift_;
