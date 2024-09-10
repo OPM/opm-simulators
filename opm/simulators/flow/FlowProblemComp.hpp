@@ -178,9 +178,9 @@ public:
 
         const auto& initconfig = eclState.getInitConfig();
         // TODO: maybe we should have empty functions for them
-        /* if (initconfig.restartRequested())
+        if (initconfig.restartRequested())
             readEclRestartSolution_();
-        else */
+        else
             this->readInitialCondition_();
 
         FlowProblemType::updatePffDofData_();
@@ -454,13 +454,15 @@ protected:
     } */
 
     // TODO: also check the following two
-    /* void readEquilInitialCondition_()
+    void readEquilInitialCondition_()
     {
+        throw std::logic_error("Equilibration is not supported by compositional modeling yet");
     }
 
     void readEclRestartSolution_()
     {
-    } */
+        throw std::logic_error("Restarting is not supported by compositional modeling yet");
+    }
 
     void readExplicitInitialCondition_()
     {

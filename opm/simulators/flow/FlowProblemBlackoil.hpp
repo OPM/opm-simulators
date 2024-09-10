@@ -45,6 +45,7 @@
 
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
+#include <opm/simulators/flow/VtkTracerModule.hpp>
 
 #include <opm/simulators/flow/MixingRateControls.hpp>
 
@@ -153,6 +154,7 @@ public:
 #if HAVE_DAMARIS
         DamarisWriterType::registerParameters();
 #endif
+        VtkTracerModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -169,6 +171,8 @@ public:
                          this->wellModel_,
                          simulator.vanguard().grid().comm())
     {
+        this->model().addOutputModule(new VtkTracerModule<TypeTag>(simulator));
+
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
 
@@ -1093,6 +1097,21 @@ protected:
         this->model().syncOverlap();
 
         this->eclWriter_->endRestart();
+    }
+
+    void readEquilInitialCondition_()
+    {
+        const auto& simulator = this->simulator();
+
+        // initial condition corresponds to hydrostatic conditions.
+        EquilInitializer<TypeTag> equilInitializer(simulator, *(this->materialLawManager_));
+
+        std::size_t numElems = this->model().numGridDof();
+        this->initialFluidStates_.resize(numElems);
+        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            auto& elemFluidState = this->initialFluidStates_[elemIdx];
+            elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
+        }
     }
 
     void readExplicitInitialCondition_() override
