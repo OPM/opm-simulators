@@ -138,7 +138,7 @@ struct LocalDomainsPartitioningMethod { static constexpr auto value = "zoltan"; 
 struct LocalDomainsOrderingMeasure { static constexpr auto value = "maxpressure"; };
 
 struct ConvergenceMonitoring { static constexpr bool value = false; };
-struct ConvergenceMonitoringCutOff { static constexpr int value = 30; };
+struct ConvergenceMonitoringCutOff { static constexpr int value = 6; };
 template<class Scalar>
 struct ConvergenceMonitoringDecayFactor { static constexpr Scalar value = 0.75; };
 

@@ -1064,7 +1064,7 @@ namespace Opm {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                     }
 
-                    report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
+                    report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii], tol[ii]);
                 }
             }
 
@@ -1113,22 +1113,23 @@ namespace Opm {
     void checkCardPenalty(ConvergenceReport& report, int iteration)
     {
         if (iteration > 0) {
-            const auto& prev_report = convergence_reports_.back().report.back();
-            const auto& prev_metrics = prev_report.reservoirConvergence();
             const auto& current_metrics = report.reservoirConvergence();
-
             auto distances = std::vector<double>(current_metrics.size(), 0.0);
+            int current_above_tolerance = 0;
 
             for (size_t i = 0; i < current_metrics.size(); ++i) {
                 distances[i] = std::max(std::log(current_metrics[i].value()), 0.0);
-
-                if (current_metrics[i].type() == prev_metrics[i].type() && current_metrics[i].phase() == prev_metrics[i].phase()) {
-                    if (current_metrics[i].value() > prev_metrics[i].value()) {
-                        // Metric value has increased, add a penalty card
-                        report.addNonConvergedPenalty();
+                    // Count number of metrics above tolerance
+                    if (current_metrics[i].value() > current_metrics[i].tolerance()) {
+                        current_above_tolerance++;
                     }
                 }
+
+            // Add penalty if number of metrics above tolerance has increased
+            if (current_above_tolerance > prev_above_tolerance_) {
+                report.addNonConvergedPenalty();
             }
+
             // use L1 norm of the distances vector
             double current_distance = std::accumulate(distances.begin(), distances.end(), 0.0);
 
@@ -1136,6 +1137,7 @@ namespace Opm {
                 report.addDistanceDecayPenalty();
             }
             prev_distance_ = current_distance;
+            prev_above_tolerance_ = current_above_tolerance;
         }
 
         if (report.wellFailures().size() > 0) {
@@ -1445,7 +1447,7 @@ namespace Opm {
         double linear_solve_setup_time_;
         ConvergenceReport::PenaltyCard total_penaltyCard_;
         double prev_distance_ = std::numeric_limits<double>::infinity();
-
+        int prev_above_tolerance_ = 0;
     public:
         std::vector<bool> wasSwitched_;
     };

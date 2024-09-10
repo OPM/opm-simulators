@@ -678,7 +678,7 @@ private:
                     report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                 }
 
-                report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
+                report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii], tol[ii]);
             }
         }
 

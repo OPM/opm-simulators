@@ -129,13 +129,14 @@ namespace Opm
             // use this for anything else.
             ReservoirConvergenceMetric() = default;
 
-            ReservoirConvergenceMetric(ReservoirFailure::Type t, int phase, double value)
-                : type_(t), phase_(phase), value_(value)
+            ReservoirConvergenceMetric(ReservoirFailure::Type t, int phase, double value, double tolerance)
+                : type_(t), phase_(phase), value_(value), tolerance_(tolerance)
             {}
 
             ReservoirFailure::Type type() const { return type_; }
             int phase() const { return phase_; }
             double value() const { return value_; }
+            double tolerance() const { return tolerance_; }
 
             template <typename Serializer>
             void serializeOp(Serializer& serializer)
@@ -143,6 +144,7 @@ namespace Opm
                 serializer(this->type_);
                 serializer(this->phase_);
                 serializer(this->value_);
+                serializer(this->tolerance_);
             }
 
         private:
@@ -151,6 +153,7 @@ namespace Opm
             ReservoirFailure::Type type_ { ReservoirFailure::Type::Invalid };
             int phase_ { -1 };
             double value_ { 0.0 };
+            double tolerance_ { 0.0 };
         };
 
         class WellFailure
