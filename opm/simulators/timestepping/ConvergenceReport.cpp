@@ -59,6 +59,8 @@ namespace Opm
             return "TooLarge";
         case S::NotANumber:
             return "NotANumber";
+        case S::ConvergenceMonitorFailure:
+            return "ConvergenceMonitorFailure";
         }
         throw std::logic_error("Unknown ConvergenceReport::Severity");
     }

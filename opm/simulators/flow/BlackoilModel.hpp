@@ -369,6 +369,8 @@ namespace Opm {
                     OPM_THROW_PROBLEM(NumericalProblem, "NaN residual found!");
                 } else if (severity == ConvergenceReport::Severity::TooLarge) {
                     OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
+                } else if (severity == ConvergenceReport::Severity::ConvergenceMonitorFailure) {
+                    OPM_THROW_PROBLEM(ConvergenceMonitorFailure, "Total penalty count exceeded cut-off-limit of " + std::to_string(param_.convergence_monitoring_cutoff_));
                 }
             }
             report.update_time += perfTimer.stop();
@@ -1148,9 +1150,8 @@ namespace Opm {
 
         if (total_penaltyCard_.total() > param_.convergence_monitoring_cutoff_) {
             report.setReservoirFailed({ConvergenceReport::ReservoirFailure::Type::ConvergenceMonitorFailure,
-                                        ConvergenceReport::Severity::TooLarge,
+                                        ConvergenceReport::Severity::ConvergenceMonitorFailure,
                                         -1}); // -1 indicates it's not specific to any component
-            throw ConvergenceMonitorFailure("Total penalty count exceeded cut-off-limit of " + std::to_string(param_.convergence_monitoring_cutoff_) + ". Cutting timestep.");
         }
     }
 

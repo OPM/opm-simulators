@@ -51,6 +51,7 @@ namespace Opm
             Normal     = 1,
             TooLarge   = 2,
             NotANumber = 3,
+            ConvergenceMonitorFailure = 4,
         };
 
         struct PenaltyCard {
