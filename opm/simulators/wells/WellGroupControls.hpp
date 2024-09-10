@@ -101,7 +101,7 @@ public:
                                         Scalar efficiencyFactor,
                                         DeferredLogger& deferred_logger) const;
 
-    static Scalar getAutoChokeGroupProductionTargetRate(const std::string& name,
+    static std::pair<Scalar, Group::ProductionCMode> getAutoChokeGroupProductionTargetRate(const std::string& name,
                                                         const Group& parent,
                                                         const WellState<Scalar>& well_state,
                                                         const GroupState<Scalar>& group_state,

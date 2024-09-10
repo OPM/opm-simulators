@@ -51,6 +51,7 @@ public:
 
     void update_well_group_thp(const std::string& gname, const double& thp);
     Scalar well_group_thp(const std::string& gname) const;
+    bool is_autochoke_group(const std::string& gname) const;
 
     bool has_production_reduction_rates(const std::string& gname) const;
     void update_production_reduction_rates(const std::string& gname,

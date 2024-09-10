@@ -552,35 +552,8 @@ getGroupProductionTargetRate(const Group& group,
     return scale;
 }
 
-#define INSTANTIATE(T,...)                                               \
-    template void WellGroupControls<T>::                                 \
-        getGroupInjectionControl(const Group&,                           \
-                                 const WellState<T>&,                    \
-                                 const GroupState<T>&,                   \
-                                 const Schedule&,                        \
-                                 const SummaryState&,                    \
-                                 const InjectorType&,                    \
-                                 const __VA_ARGS__& bhp,                 \
-                                 const __VA_ARGS__& injection_rate,      \
-                                 const RateConvFunc& rateConverter,      \
-                                 T efficiencyFactor,                     \
-                                 __VA_ARGS__& control_eq,                \
-                                 DeferredLogger& deferred_logger) const; \
-    template void WellGroupControls<T>::                                 \
-        getGroupProductionControl(const Group&,                          \
-                                  const WellState<T>&,                   \
-                                  const GroupState<T>&,                  \
-                                  const Schedule&,                       \
-                                  const SummaryState&,                   \
-                                  const __VA_ARGS__& bhp,                \
-                                  const std::vector<__VA_ARGS__>&,       \
-                                  const RateConvFunc& rateConverter,     \
-                                  T efficiencyFactor,                    \
-                                  __VA_ARGS__& control_eq,               \
-                                  DeferredLogger& deferred_logger) const;
-double WellGroupControls::
 template<class Scalar>
-Scalar WellGroupControls<Scalar>::
+std::pair<Scalar, Group::ProductionCMode> WellGroupControls<Scalar>::
 getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const Group& group,
                                       const WellState<Scalar>& well_state,
@@ -598,7 +571,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     if (currentGroupControl == Group::ProductionCMode::FLD ||
         currentGroupControl == Group::ProductionCMode::NONE) {
         if (!group.productionGroupControlAvailable()) {
-            return 1.0;
+            return std::make_pair(1.0, currentGroupControl);
         } else {
             // Produce share of parents control
             const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
@@ -613,7 +586,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     // const auto pu = well_.phaseUsage();
 
     if (!group.isProductionGroup()) {
-        return 1.0;
+        return std::make_pair(1.0, currentGroupControl);
     }
 
     // If we are here, we are at the topmost group to be visited in the recursion.
@@ -692,10 +665,35 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     // if (current_rate > 1e-14)
     //     scale = target_rate/current_rate;
     // return scale;
-    return target_rate;
+    return std::make_pair(target_rate, currentGroupControl);
 }
 
-template class WellGroupControls<double>;
+#define INSTANTIATE(T,...)                                               \
+    template void WellGroupControls<T>::                                 \
+        getGroupInjectionControl(const Group&,                           \
+                                 const WellState<T>&,                    \
+                                 const GroupState<T>&,                   \
+                                 const Schedule&,                        \
+                                 const SummaryState&,                    \
+                                 const InjectorType&,                    \
+                                 const __VA_ARGS__& bhp,                 \
+                                 const __VA_ARGS__& injection_rate,      \
+                                 const RateConvFunc& rateConverter,      \
+                                 T efficiencyFactor,                     \
+                                 __VA_ARGS__& control_eq,                \
+                                 DeferredLogger& deferred_logger) const; \
+    template void WellGroupControls<T>::                                 \
+        getGroupProductionControl(const Group&,                          \
+                                  const WellState<T>&,                   \
+                                  const GroupState<T>&,                  \
+                                  const Schedule&,                       \
+                                  const SummaryState&,                   \
+                                  const __VA_ARGS__& bhp,                \
+                                  const std::vector<__VA_ARGS__>&,       \
+                                  const RateConvFunc& rateConverter,     \
+                                  T efficiencyFactor,                    \
+                                  __VA_ARGS__& control_eq,               \
+                                  DeferredLogger& deferred_logger) const;
 
 #define INSTANTIATE_TYPE(T)                      \
     template class WellGroupControls<T>;         \

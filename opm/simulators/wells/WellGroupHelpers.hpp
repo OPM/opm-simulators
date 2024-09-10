@@ -267,19 +267,6 @@ public:
                      const Schedule& schedule,
                      const int report_step);
 
-    static Scalar getGroupProductionTarget(const std::string& name,
-                                           const Group& group,
-                                           const WellState<Scalar>& well_state,
-                                           const GroupState<Scalar>& group_state,
-                                           const Schedule& schedule,
-                                           const SummaryState& summaryState,
-                                           double efficiencyFactor,
-                                           const int reportStepIdx,
-                                           const PhaseUsage& pu,
-                                           const GuideRate* guideRate,
-                                           const std::vector<Scalar>& resv_coeff,
-                                           DeferredLogger& deferred_logger);
-
     static std::pair<bool, Scalar>
     checkGroupConstraintsProd(const std::string& name,
                               const std::string& parent,
