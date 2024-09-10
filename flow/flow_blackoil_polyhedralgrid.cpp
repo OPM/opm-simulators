@@ -19,8 +19,6 @@
 #include <config.h>
 
 #include <opm/grid/polyhedralgrid.hh>
-// TODO: temporarily fixing the compilation of flow_blackoil_polyhedralgrid
-#include <opm/grid/cpgrid/GridHelpers.hpp>
 
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
