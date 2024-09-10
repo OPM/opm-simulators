@@ -1113,16 +1113,13 @@ namespace Opm {
     void checkCardPenalty(ConvergenceReport& report, int iteration)
     {
         if (iteration > 0) {
-
             const auto& prev_report = convergence_reports_.back().report.back();
             const auto& prev_metrics = prev_report.reservoirConvergence();
             const auto& current_metrics = report.reservoirConvergence();
 
             auto distances = std::vector<double>(current_metrics.size(), 0.0);
-            const double sigma = 0.75;
 
             for (size_t i = 0; i < current_metrics.size(); ++i) {
-
                 distances[i] = std::max(std::log(current_metrics[i].value()), 0.0);
 
                 if (current_metrics[i].type() == prev_metrics[i].type() && current_metrics[i].phase() == prev_metrics[i].phase()) {
@@ -1133,9 +1130,9 @@ namespace Opm {
                 }
             }
             // use L1 norm of the distances vector
-            double current_distance =  std::accumulate(distances.begin(), distances.end(), 0.0);
+            double current_distance = std::accumulate(distances.begin(), distances.end(), 0.0);
 
-            if (current_distance > sigma * prev_distance_) {
+            if (current_distance > param_.convergence_monitoring_decay_factor_ * prev_distance_) {
                 report.addDistanceDecayPenalty();
             }
             prev_distance_ = current_distance;
@@ -1147,6 +1144,12 @@ namespace Opm {
 
         total_penaltyCard_ += report.getPenaltyCard();
 
+        if (total_penaltyCard_.total() > param_.convergence_monitoring_cutoff_) {
+            report.setReservoirFailed({ConvergenceReport::ReservoirFailure::Type::ConvergenceMonitorFailure,
+                                        ConvergenceReport::Severity::TooLarge,
+                                        -1}); // -1 indicates it's not specific to any component
+            throw ConvergenceMonitorFailure("Total penalty count exceeded cut-off-limit of " + std::to_string(param_.convergence_monitoring_cutoff_) + ". Cutting timestep.");
+        }
     }
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
@@ -1170,15 +1173,8 @@ namespace Opm {
                 OPM_TIMEBLOCK(getWellConvergence);
                 report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
             }
-            // check card penalty, and add to report
-            checkCardPenalty(report, iteration);
-
-            int cut_off_limit = 30;
-            if (total_penaltyCard_.total() > cut_off_limit) {
-                report.setReservoirFailed({ConvergenceReport::ReservoirFailure::Type::ConvergenceMonitorFailure,
-                                            ConvergenceReport::Severity::TooLarge,
-                                            -1}); // -1 indicates it's not specific to any component
-                throw ConvergenceMonitorFailure("Total penalty count exceeded cut-off-limit of " + std::to_string(cut_off_limit) + ". Cutting timestep.");
+            if (param_.convergence_monitoring_) {
+                checkCardPenalty(report, iteration);
             }
 
             return report;
