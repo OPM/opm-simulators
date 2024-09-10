@@ -112,6 +112,7 @@ class FlowProblemBlackoil : public FlowProblem<TypeTag>
     using FlowProblemType::oilCompIdx;
     using FlowProblemType::gasCompIdx;
 
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
     using typename FlowProblemType::RateVector;
     using typename FlowProblemType::PrimaryVariables;
     using typename FlowProblemType::Indices;
@@ -850,6 +851,50 @@ public:
         return this->mixControls_.drsdtcon(elemIdx, episodeIdx,
                                            this->pvtRegionIndex(elemIdx));
     }
+
+    /*!
+     * \copydoc FvBaseProblem::boundary
+     *
+     * Reservoir simulation uses no-flow conditions as default for all boundaries.
+     */
+    template <class Context>
+    void boundary(BoundaryRateVector& values,
+                  const Context& context,
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
+    {
+        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
+        if (!context.intersection(spaceIdx).boundary())
+            return;
+
+        if constexpr (!enableEnergy || !enableThermalFluxBoundaries)
+            values.setNoFlow();
+        else {
+            // in the energy case we need to specify a non-trivial boundary condition
+            // because the geothermal gradient needs to be maintained. for this, we
+            // simply assume the initial temperature at the boundary and specify the
+            // thermal flow accordingly. in this context, "thermal flow" means energy
+            // flow due to a temerature gradient while assuming no-flow for mass
+            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
+            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+            values.setThermalFlow(context, spaceIdx, timeIdx, this->initialFluidStates_[globalDofIdx] );
+        }
+
+        if (this->nonTrivialBoundaryConditions()) {
+            unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
+            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
+            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+            unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
+            const auto [type, massrate] = this->boundaryCondition(globalDofIdx, indexInInside);
+            if (type == BCType::THERMAL)
+                values.setThermalFlow(context, spaceIdx, timeIdx, this->boundaryFluidState(globalDofIdx, indexInInside));
+            else if (type == BCType::FREE || type == BCType::DIRICHLET)
+                values.setFreeFlow(context, spaceIdx, timeIdx, this->boundaryFluidState(globalDofIdx, indexInInside));
+            else if (type == BCType::RATE)
+                values.setMassRate(massrate, pvtRegionIdx);
+        }
+    }
+
 
     /*!
      * \copydoc BlackOilBaseProblem::thresholdPressure

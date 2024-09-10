@@ -75,7 +75,7 @@ class FlowProblemComp : public FlowProblem<TypeTag>
 
     using typename FlowProblemType::Indices;
     using typename FlowProblemType::PrimaryVariables;
-    // using typename FlowProblemType::BoundaryRateVector;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
     using typename FlowProblemType::Evaluation;
     using typename FlowProblemType::RateVector;
 
@@ -177,7 +177,6 @@ public:
         FlowProblemType::readThermalParameters_();
 
         const auto& initconfig = eclState.getInitConfig();
-        // TODO: maybe we should have empty functions for them
         if (initconfig.restartRequested())
             readEclRestartSolution_();
         else
@@ -227,14 +226,22 @@ public:
      *
      * Reservoir simulation uses no-flow conditions as default for all boundaries.
      */
-    // TODO: the boundary function might need to be emptied for compositional
-    /* template <class Context>
+    template <class Context>
     void boundary(BoundaryRateVector& values,
                   const Context& context,
                   unsigned spaceIdx,
-                  unsigned timeIdx) const
+                  unsigned /* timeIdx */) const
     {
-    } */
+        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
+        if (!context.intersection(spaceIdx).boundary())
+            return;
+
+        values.setNoFlow();
+
+        if (this->nonTrivialBoundaryConditions()) {
+            throw std::logic_error("boundary condition is not supported by compostional modeling yet");
+        }
+    }
 
     /*!
      * \copydoc FvBaseProblem::initial
@@ -422,7 +429,6 @@ public:
     //    {
     //        // TODO: we might need to empty this function for compositional
     //    }
-
 
     // TODO: do we need this one?
     template<class Serializer>

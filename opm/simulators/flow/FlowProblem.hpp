@@ -140,7 +140,6 @@ protected:
 
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
-    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
@@ -885,50 +884,6 @@ public:
     }
 
     /*!
-     * \copydoc FvBaseProblem::boundary
-     *
-     * Reservoir simulation uses no-flow conditions as default for all boundaries.
-     */
-    template <class Context>
-    void boundary(BoundaryRateVector& values,
-                  const Context& context,
-                  unsigned spaceIdx,
-                  unsigned timeIdx) const
-    {
-        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
-        if (!context.intersection(spaceIdx).boundary())
-            return;
-
-        if constexpr (!enableEnergy || !enableThermalFluxBoundaries)
-            values.setNoFlow();
-        else {
-            // in the energy case we need to specify a non-trivial boundary condition
-            // because the geothermal gradient needs to be maintained. for this, we
-            // simply assume the initial temperature at the boundary and specify the
-            // thermal flow accordingly. in this context, "thermal flow" means energy
-            // flow due to a temerature gradient while assuming no-flow for mass
-            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
-            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            values.setThermalFlow(context, spaceIdx, timeIdx, asImp_().initialFluidStates()[globalDofIdx] );
-        }
-
-        // TODO: the folllowing go to Blackoil
-        /* if (nonTrivialBoundaryConditions()) {
-            unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
-            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
-            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
-            const auto [type, massrate] = boundaryCondition(globalDofIdx, indexInInside);
-            if (type == BCType::THERMAL)
-                values.setThermalFlow(context, spaceIdx, timeIdx, asImp_().boundaryFluidState(globalDofIdx, indexInInside));
-            else if (type == BCType::FREE || type == BCType::DIRICHLET)
-                values.setFreeFlow(context, spaceIdx, timeIdx, asImp_().boundaryFluidState(globalDofIdx, indexInInside));
-            else if (type == BCType::RATE)
-                values.setMassRate(massrate, pvtRegionIdx);
-        } */
-    }
-
-    /*!
      * \brief Returns an element's historic maximum oil phase saturation that was
      *        observed during the simulation.
      *
@@ -1054,9 +1009,6 @@ public:
     bool nonTrivialBoundaryConditions() const
     { return nonTrivialBoundaryConditions_; }
 
-//    const InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
-//    { }
-
     /*!
      * \brief Propose the size of the next time step to the simulator.
      *
@@ -1156,7 +1108,6 @@ public:
 
     std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
     {
-        // TODO: this might need to go to FlowProblemBlackoil as whole before we can do it for compositional
         OPM_TIMEBLOCK_LOCAL(boundaryCondition);
         if (!nonTrivialBoundaryConditions_) {
             return { BCType::NONE, RateVector(0.0) };
