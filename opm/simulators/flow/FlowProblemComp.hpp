@@ -77,6 +77,7 @@ class FlowProblemComp : public FlowProblem<TypeTag>
     using typename FlowProblemType::PrimaryVariables;
     using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
     using typename FlowProblemType::Evaluation;
+    using typename FlowProblemType::MaterialLaw;
     using typename FlowProblemType::RateVector;
 
     using InitialFluidState = CompositionalFluidState<Scalar, FluidSystem>;
@@ -107,9 +108,6 @@ public:
      */
     void finishInit()
     {
-        // TODO: we need to do differently from the black oil version
-        // because the way we handle the transmissiblity
-        // TODO: we come back to refine this function
         FlowProblemType::finishInit();
 
         auto& simulator = this->simulator();
@@ -217,10 +215,6 @@ public:
         }
     }
 
-    /* void finalizeOutput() {
-        OPM_TIMEBLOCK(finalizeOutput);
-    } */
-
     /*!
      * \copydoc FvBaseProblem::boundary
      *
@@ -252,7 +246,6 @@ public:
     template <class Context>
     void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        // TODO: checking why we need the following one
         const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         const auto& initial_fs = initialFluidStates_[globalDofIdx];
         Opm::CompositionalFluidState<Evaluation, FluidSystem> fs;
@@ -318,118 +311,6 @@ public:
     const std::vector<InitialFluidState>& initialFluidStates() const
     { return initialFluidStates_; }
 
-    // TODO: this one need to be emptied means that it should move to blackoil?
-    InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
-    {
-        // TODO: we might need to make this function empty for compositional (except the last line)
-        /* OPM_TIMEBLOCK_LOCAL(boundaryFluidState);
-        const auto& bcprop = this->simulator().vanguard().schedule()[this->episodeIndex()].bcprop;
-        if (bcprop.size() > 0) {
-            FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
-
-            // index == 0: no boundary conditions for this
-            // global cell and direction
-            if (bcindex_(dir)[globalDofIdx] == 0)
-                return initialFluidStates_[globalDofIdx];
-
-            const auto& bc = bcprop[bcindex_(dir)[globalDofIdx]];
-            if (bc.bctype == BCType::DIRICHLET )
-            {
-                InitialFluidState fluidState;
-                const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
-                fluidState.setPvtRegionIndex(pvtRegionIdx);
-
-                switch (bc.component) {
-                    case BCComponent::OIL:
-                        if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
-                            throw std::logic_error("oil is not active and you're trying to add oil BC");
-
-                        fluidState.setSaturation(FluidSystem::oilPhaseIdx, 1.0);
-                        break;
-                    case BCComponent::GAS:
-                        if (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
-                            throw std::logic_error("gas is not active and you're trying to add gas BC");
-
-                        fluidState.setSaturation(FluidSystem::gasPhaseIdx, 1.0);
-                        break;
-                        case BCComponent::WATER:
-                        if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
-                            throw std::logic_error("water is not active and you're trying to add water BC");
-
-                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 1.0);
-                        break;
-                    case BCComponent::SOLVENT:
-                    case BCComponent::POLYMER:
-                    case BCComponent::NONE:
-                        throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET
-        type is set in BC"); break;
-                }
-                fluidState.setTotalSaturation(1.0);
-                double pressure = initialFluidStates_[globalDofIdx].pressure(refPressurePhaseIdx_());
-                const auto pressure_input = bc.pressure;
-                if (pressure_input) {
-                    pressure = *pressure_input;
-                }
-
-                std::array<Scalar, numPhases> pc = {0};
-                const auto& matParams = materialLawParams(globalDofIdx);
-                MaterialLaw::capillaryPressures(pc, matParams, fluidState);
-                Valgrind::CheckDefined(pressure);
-                Valgrind::CheckDefined(pc);
-                for (unsigned activePhaseIdx = 0; activePhaseIdx < FluidSystem::numActivePhases(); ++activePhaseIdx) {
-                    const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
-
-                    fluidState.setPc(phaseIdx, pc[phaseIdx]);
-                    if (Indices::oilEnabled)
-                        fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-                    else if (Indices::gasEnabled)
-                        fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-                    else if (Indices::waterEnabled)
-                        //single (water) phase
-                        fluidState.setPressure(phaseIdx, pressure);
-                }
-
-                double temperature = initialFluidStates_[globalDofIdx].temperature(0); // we only have one temperature
-                const auto temperature_input = bc.temperature;
-                if(temperature_input)
-                    temperature = *temperature_input;
-                fluidState.setTemperature(temperature);
-
-                if (FluidSystem::enableDissolvedGas()) {
-                    fluidState.setRs(0.0);
-                    fluidState.setRv(0.0);
-                }
-                if (FluidSystem::enableDissolvedGasInWater()) {
-                    fluidState.setRsw(0.0);
-                }
-                if (FluidSystem::enableVaporizedWater())
-                    fluidState.setRvw(0.0);
-
-                for (unsigned activePhaseIdx = 0; activePhaseIdx < FluidSystem::numActivePhases(); ++activePhaseIdx) {
-                    const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
-
-                    const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, pvtRegionIdx);
-                    fluidState.setInvB(phaseIdx, b);
-
-                    const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
-                    fluidState.setDensity(phaseIdx, rho);
-                    if (enableEnergy) {
-                        const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, pvtRegionIdx);
-                        fluidState.setEnthalpy(phaseIdx, h);
-                    }
-                }
-                fluidState.checkDefined();
-                return fluidState;
-            }
-        } */
-        return initialFluidStates_[globalDofIdx];
-    }
-
-    //    std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
-    //    {
-    //        // TODO: we might need to empty this function for compositional
-    //    }
-
     // TODO: do we need this one?
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -443,23 +324,6 @@ protected:
         // we do nothing here for now
     }
 
-    // TODO: we should decide whther we need to have this fucntion differently for the compositional implementation
-    /* void readInitialCondition_()
-    {
-        // TODO: empty this funcition and use the following two lines for this function for compositional
-	// this->readExplicitInitialCondition_();
-        // this->model().applyInitialSolution();
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& eclState = vanguard.eclState();
-
-        if (eclState.getInitConfig().hasEquil())
-            readEquilInitialCondition_();
-        else
-            readExplicitInitialCondition_();
-    } */
-
-    // TODO: also check the following two
     void readEquilInitialCondition_()
     {
         throw std::logic_error("Equilibration is not supported by compositional modeling yet");
@@ -581,11 +445,6 @@ protected:
     }
 
 private:
-
-    // TODO: do we need this?
-    /* void computeAndSetEqWeights_()
-    {
-    } */
 
     void handleSolventBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
     {
