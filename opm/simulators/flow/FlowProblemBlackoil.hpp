@@ -44,6 +44,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 

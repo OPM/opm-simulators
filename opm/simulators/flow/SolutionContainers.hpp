@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowProblemBlackoil
+ * \copydoc Opm::FlowProblem
  */
 #ifndef OPM_SOLUTION_CONTAINERS_HPP
 #define OPM_SOLUTION_CONTAINERS_HPP

@@ -39,7 +39,6 @@
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/EclWriter.hpp>
 #include <opm/simulators/flow/FlowProblemParameters.hpp>
-// TODO: not sure about the following two header files
 #include <opm/simulators/flow/TracerModel.hpp>
 
 #if HAVE_DAMARIS

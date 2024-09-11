@@ -108,13 +108,6 @@ public:
                      unsigned) const
     { }
 
-
-    void addToSource(RateVector&,
-                     unsigned,
-                     unsigned) const
-    { }
-
-
     /*!
      * \brief This method is called after each Newton-Raphson successful iteration.
      *
