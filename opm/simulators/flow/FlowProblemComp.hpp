@@ -2,6 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright 2024 SINTEF Digital
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -108,6 +109,9 @@ public:
      */
     void finishInit()
     {
+        // TODO: there should be room to remove duplication for this function,
+        // but there is relatively complicated logic in the function calls in this function
+        // some refactoring is needed for this function
         FlowProblemType::finishInit();
 
         auto& simulator = this->simulator();
@@ -121,10 +125,8 @@ public:
             updated = true;
         };
 
-        // TODO: we call this for compostional
         finishTransmissibilities();
 
-        // TODO: test whether we need to remove the following
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
 

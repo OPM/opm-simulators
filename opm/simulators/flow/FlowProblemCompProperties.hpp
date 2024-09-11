@@ -34,7 +34,6 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
-#include <opm/simulators/flow/TracerModel.hpp> // we have an empty TracerModel later
 
 #include <tuple>
 
@@ -57,12 +56,6 @@ template<class TypeTag>
 struct Problem<TypeTag, TTag::FlowBaseProblemComp>
 { using type = FlowProblemComp<TypeTag>; };
 
-// TODO: for the purpose of the compositional model
-/* template<class TypeTag, class MyTypeTag>
-struct TracerModelDef {
-    using type = UndefinedProperty;
-}; */
-
 template<class TypeTag>
 struct TracerModel<TypeTag, TTag::FlowBaseProblemComp> {
     using type = ::Opm::TracerModel<TypeTag>;
@@ -81,8 +74,9 @@ private:
     //                                         /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
     //                                         /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
-    // TODO: We should be able to use FluidSystem here and using Indices to handle the active phases    
-        using Traits = ThreePhaseMaterialTraits<Scalar,
+    // TODO: We should be able to use FluidSystem here and using Indices to handle the active phases
+    // some more development is needed
+    using Traits = ThreePhaseMaterialTraits<Scalar,
                                             /*wettingPhaseIdx=*/ 0,
                                             /*nonWettingPhaseIdx=*/ 1,
                                             /*gasPhaseIdx=*/ 2>;

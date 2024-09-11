@@ -71,7 +71,7 @@ namespace Opm {
 template <class TypeTag>
 class FlowProblemBlackoil : public FlowProblem<TypeTag>
 {
-    // TODO: the naming of the Types will be adjusted
+    // TODO: the naming of the Types might be able to be adjusted
     using FlowProblemType = FlowProblem<TypeTag>;
 
     using typename FlowProblemType::Scalar;
@@ -247,7 +247,9 @@ public:
      */
     void finishInit()
     {
-        // TODO: some might be able to move back to the base class
+        // TODO: there should be room to remove duplication for this function,
+        // but there is relatively complicated logic in the function calls in this function
+        // some refactoring is needed for this function
         FlowProblemType::finishInit();
         auto& simulator = this->simulator();
 
@@ -313,6 +315,8 @@ public:
 
         this->initFluidSystem_();
 
+
+
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
@@ -341,9 +345,9 @@ public:
         const auto& initconfig = eclState.getInitConfig();
         this->tracerModel_.init(initconfig.restartRequested());
         if (initconfig.restartRequested())
-            this->readEclRestartSolution_();
+            readEclRestartSolution_();
         else
-            this->readInitialCondition_();
+            readInitialCondition_();
 
         this->tracerModel_.prepareTracerBatches();
 
@@ -359,7 +363,7 @@ public:
         this->readBoundaryConditions_();
 
         // compute and set eq weights based on initial b values
-        this->computeAndSetEqWeights_();
+        computeAndSetEqWeights_();
 
         if (this->enableDriftCompensation_) {
             this->drift_.resize(this->model().numGridDof());
@@ -368,8 +372,7 @@ public:
 
         if (this->enableVtkOutput_ && eclState.getIOConfig().initOnly()) {
             simulator.setTimeStepSize(0.0);
-            // TODO: this might need to move back to the base class depending how we use it
-            FlowProblemType::ParentType::writeOutput(true);
+            FlowProblemType::writeOutput(true);
         }
 
         // after finishing the initialization and writing the initial solution, we move
@@ -380,13 +383,12 @@ public:
             simulator.setEpisodeIndex(0);
             simulator.setTimeStepIndex(0);
         }
-        // const auto& eclState = this->simulator().vanguard().eclState();
+
+        // TODO: move to the end for later refactoring of the function finishInit()
+	// deal with DRSDT
         this->mixControls_.init(this->model().numGridDof(),
                                 this->episodeIndex(),
-                                eclState.runspec().tabdims().getNumPVTTables());
-
-
-
+                                eclState.runspec().tabdims().getNumPVTTables());   
     }
 
     /*!

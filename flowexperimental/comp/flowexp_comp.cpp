@@ -18,26 +18,17 @@
 */
 #include "config.h"
 #include <opm/models/utils/start.hh>
-#include <opm/simulators/flow/FlowProblemComp.hpp>
 #include <opm/material/constraintsolvers/PTFlash.hpp>
 #include "../FlowExpNewtonMethod.hpp"
-#include <opm/simulators/flow/FlowProblemComp.hpp>
 #include <opm/models/ptflash/flashmodel.hh>
 #include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
-// #include <opm/simulators/flow/Main.hpp>
-// #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
-#include <opm/models/discretization/common/tpfalinearizer.hh>
-// #include <flowexperimental/blackoilintensivequantitiessimple.hh>
-// #include "BlackOilModelFvNoCache.hpp"
-// #include "co2ptflowproblem.hh"
-// #include <tests/problems/co2ptflashproblem.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
+#include <opm/simulators/flow/FlowProblemComp.hpp>
+#include <opm/simulators/flow/FlowProblemCompProperties.hpp>
+// TODO: not understanding why we need FlowGenericProblem here
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
-
-#include <opm/simulators/flow/FlowProblemCompProperties.hpp>
-
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 // // the current code use eclnewtonmethod adding other conditions to proceed_ should do the trick for KA
@@ -95,44 +86,12 @@ namespace Opm{
 
 namespace Opm::Properties {
 
-    template<class TypeTag, class MyTypeTag>
-    struct EnableTerminalOutput {
-        using type = UndefinedProperty;
-    };
-
    namespace TTag {
    struct FlowExpCompProblem {
        using InheritsFrom = std::tuple<FlowBaseProblemComp, FlashModel>;
    };
    }
-#if 0
-    template<class TypeTag, class MyTypeTag>
-    struct ExpliciteRockCompaction{
-        using type = UndefinedProperty;
-    };
-#endif
 
-#if 0
-    template<class TypeTag>
-    struct MaterialLaw<TypeTag, TTag::FlowExpCompProblem>
-    {
-    private:
-        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-        using Indices = GetPropType<TypeTag, Properties::Indices>;
-
-        using Traits = ThreePhaseMaterialTraits<Scalar,
-                                                /*wettingPhaseIdx=*/0,
-                                                /*nonWettingPhaseIdx=*/1,
-                                                /*gasPhaseIdx=*/2>;
-
-    public:
-        using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;
-        //using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;
-
-        using type = typename EclMaterialLawManager::MaterialLaw;
-    };
-#endif
     template<class TypeTag>
     struct SparseMatrixAdapter<TypeTag, TTag::FlowExpCompProblem>
     {
@@ -145,7 +104,7 @@ namespace Opm::Properties {
         using type = typename Linear::IstlSparseMatrixAdapter<Block>;
     };
 
-#if 1
+#if 0
 template<class TypeTag>
 struct SolidEnergyLaw<TypeTag, TTag::FlowExpCompProblem>
 {
@@ -158,7 +117,6 @@ public:
 
     using type = typename EclThermalLawManager::SolidEnergyLaw;
 };
-#endif
 
 // Set the material law for thermal conduction
 template<class TypeTag>
@@ -174,6 +132,7 @@ public:
     using type = typename EclThermalLawManager::ThermalConductionLaw;
 };
 
+
 template <class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::FlowExpCompProblem>
 {
@@ -185,12 +144,12 @@ struct LocalLinearizerSplice<TypeTag, TTag::FlowExpCompProblem>
 {
     using type = TTag::AutoDiffLocalLinearizer;
 };
+#endif
 
 // Set the problem property
 template <class TypeTag>
 struct Problem<TypeTag, TTag::FlowExpCompProblem>
 {
-    // using type = EbosProblemComp<TypeTag>;
     using type = FlowProblemComp<TypeTag>;
 };
 
@@ -230,23 +189,15 @@ template <class TypeTag>
 struct NumComp<TypeTag, TTag::FlowExpCompProblem> {
     static constexpr int value = 3;
 };
-
-// set the defaults for the problem specific properties
-// TODO: should it be here?
-template<class TypeTag, class MyTypeTag>
+#if 0
 struct Temperature { using type = UndefinedProperty; };
 
  template <class TypeTag>
  struct Temperature<TypeTag, TTag::FlowExpCompProblem> {
      using type = GetPropType<TypeTag, Scalar>;
-     static constexpr type value = 423.25;//TODO
+     static constexpr type value = 423.25;
  };
-
-/* template <class TypeTag>
-struct SimulationName<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr auto value = "co2_ptflash";
-}; */
-
+#endif
 
 template <class TypeTag>
 struct FluidSystem<TypeTag, TTag::FlowExpCompProblem>
@@ -277,7 +228,6 @@ public:
     using type = EcfvStencil<Scalar, GridView>;
 };
 
-
 template<class TypeTag>
 struct EnableApiTracking<TypeTag, TTag::FlowExpCompProblem> {
     static constexpr bool value = false;
@@ -297,13 +247,10 @@ struct EnablePolymerMW<TypeTag, TTag::FlowExpCompProblem> {
     static constexpr bool value = false;
 };
 
-
-
 template<class TypeTag>
 struct EnablePolymer<TypeTag, TTag::FlowExpCompProblem> {
     static constexpr bool value = false;
 };
-
 
 template<class TypeTag>
 struct EnableDispersion<TypeTag, TTag::FlowExpCompProblem> {
@@ -353,7 +300,6 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowExpCompProblem> {
 
 int main(int argc, char** argv)
 {
-    //using TypeTag = Opm::Properties::TTag::EclFlowProblemEbos;
     using TypeTag = Opm::Properties::TTag::FlowExpCompProblem;
     Opm::registerEclTimeSteppingParameters<double>();
     return Opm::start<TypeTag>(argc, argv);

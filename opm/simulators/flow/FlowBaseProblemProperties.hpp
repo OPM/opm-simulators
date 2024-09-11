@@ -41,7 +41,6 @@
 #include <opm/simulators/flow/FlowProblemParameters.hpp>
 // TODO: not sure about the following two header files
 #include <opm/simulators/flow/TracerModel.hpp>
-// #include <opm/simulators/flow/VtkTracerModule.hpp>
 
 #if HAVE_DAMARIS
 #include <opm/simulators/flow/DamarisWriter.hpp>
