@@ -38,7 +38,7 @@ struct Packing<false,boost::gregorian::date>
                      std::vector<char>& buffer, std::size_t& position);
 
     static void unpack(boost::gregorian::date& data,
-                       std::vector<char>& buffer, std::size_t& position);
+                       const std::vector<char>& buffer, std::size_t& position);
 };
 
 }
