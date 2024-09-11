@@ -63,7 +63,7 @@ pack(const std::bitset<Size>& data,
 template<std::size_t Size>
 void Packing<false,std::bitset<Size>>::
 unpack(std::bitset<Size>& data,
-       std::vector<char>& buffer,
+       const std::vector<char>& buffer,
        std::size_t& position,
        Parallel::MPIComm comm)
 {
@@ -99,7 +99,7 @@ pack(const std::string& data,
 
 void Packing<false,std::string>::
 unpack(std::string& data,
-       std::vector<char>& buffer,
+       const std::vector<char>& buffer,
        std::size_t& position,
        Opm::Parallel::MPIComm comm)
 {
@@ -133,7 +133,7 @@ pack(const time_point& data,
 
 void Packing<false,time_point>::
 unpack(time_point& data,
-       std::vector<char>& buffer,
+       const std::vector<char>& buffer,
        std::size_t& position,
        Parallel::MPIComm comm)
 {
