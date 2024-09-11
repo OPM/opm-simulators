@@ -653,6 +653,8 @@ if(CUDA_FOUND)
                        solver_adapter
                        GpuBuffer
                        GpuView
+                       gpu_ad
+                       gpu_linear_two_phase_material
                        PROPERTIES LABELS ${gpu_label})
 endif()
 
