@@ -38,7 +38,7 @@
 #include <opm/simulators/flow/BlackoilModelNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
@@ -77,7 +77,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 
-struct FlowProblem { using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel>; };
+struct FlowProblem { using InheritsFrom = std::tuple<FlowBaseProblemBlackoil, BlackOilModel>; };
 
 }
 

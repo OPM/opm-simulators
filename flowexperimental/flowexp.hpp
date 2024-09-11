@@ -37,8 +37,8 @@
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 
-#include <opm/simulators/flow/FlowProblem.hpp>
-#include <opm/simulators/flow/FlowProblemProperties.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
@@ -57,7 +57,7 @@ namespace TTag {
 
 struct FlowExpTypeTag
 {
-    using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowBaseProblemBlackoil, BlackOilModel>;
 };
 
 }
@@ -126,9 +126,9 @@ struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
 namespace Opm {
 
 template <class TypeTag>
-class FlowExpProblem : public FlowProblem<TypeTag> //, public FvBaseProblem<TypeTag>
+class FlowExpProblem : public FlowProblemBlackoil<TypeTag> //, public FvBaseProblem<TypeTag>
 {
-    typedef FlowProblem<TypeTag> ParentType;
+    typedef FlowProblemBlackoil<TypeTag> ParentType;
     using BaseType = ParentType; // GetPropType<TypeTag, Properties::BaseProblem>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
@@ -203,7 +203,7 @@ public:
     }
 
     // inherit the constructors
-    using ParentType::FlowProblem;
+    using ParentType::FlowProblemBlackoil;
 };
 
 }
