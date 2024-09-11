@@ -31,7 +31,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/flow/FlowProblemProperties.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -42,7 +42,7 @@ namespace TTag {
 
 struct TestTypeTag
 {
-    using InheritsFrom = std::tuple<FlowBaseProblem,
+    using InheritsFrom = std::tuple<FlowBaseProblemBlackoil,
                                     BlackOilModel>;
 };
 
@@ -51,7 +51,7 @@ struct TestTypeTag
 // Set the problem class
 template<class TypeTag>
 struct Problem<TypeTag, TTag::TestTypeTag> {
-    using type = FlowProblem<TypeTag>;
+    using type = FlowProblemBlackoil<TypeTag>;
 };
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM

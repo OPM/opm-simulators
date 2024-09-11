@@ -35,7 +35,7 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/FlowProblemProperties.hpp>
+#include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
