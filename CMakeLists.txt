@@ -435,6 +435,19 @@ include (${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
 
 if (HAVE_OPM_TESTS)
   include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
+
+  if(OPM_ENABLE_PYTHON)
+    if(${CMAKE_BINARY_DIR} STREQUAL ${PROJECT_BINARY_DIR})
+      set(sim_dir ${CMAKE_BINARY_DIR})
+    else()
+      set(sim_dir ${CMAKE_BINARY_DIR}/opm-simulators)
+    endif()
+    add_custom_target(failure_report
+                      USES_TERMINAL
+                      COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${opm-common_DIR}/python"
+                      ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
+                      ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
+  endif()
 endif()
 
 if(MPI_FOUND)

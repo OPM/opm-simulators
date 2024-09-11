@@ -104,13 +104,13 @@ namespace Opm::Satfunc::PhaseChecks::Gas {
         /// Descriptive textual summary of this check.
         std::string description() const override
         {
-            return { "Non-negative maximum gas saturation strictly less than one" };
+            return { "Positive maximum gas saturation must not exceed one" };
         }
 
         /// Textual representation of the consistency condition.
         std::string condition() const override
         {
-            return { "0 <= SGU < 1" };
+            return { "0 < SGU <= 1" };
         }
 
         /// Retrieve names of the exported check values.

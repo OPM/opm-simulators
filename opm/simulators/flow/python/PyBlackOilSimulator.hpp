@@ -20,7 +20,7 @@
 #ifndef OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
 #define OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
 
-#include <opm/simulators/flow/Main.hpp>
+#include <python/simulators/PyMain.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
@@ -82,7 +82,7 @@ private:
     // This *must* be declared before other pointers
     // to simulator objects. This in order to deinitialize
     // MPI at the correct time (ie after the other objects).
-    std::unique_ptr<Opm::Main> main_;
+    std::unique_ptr<Opm::PyMain> main_;
 
     std::unique_ptr<Opm::FlowMain<TypeTag>> flow_main_;
     Simulator* simulator_;

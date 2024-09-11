@@ -174,26 +174,6 @@ public:
         return exitCode;
     }
 
-    using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
-    // To be called from the Python interface code. Only do the
-    // initialization and then return a pointer to the FlowMain
-    // object that can later be accessed directly from the Python interface
-    // to e.g. advance the simulator one report step
-    std::unique_ptr<FlowMainType> initFlowBlackoil(int& exitCode)
-    {
-        exitCode = EXIT_SUCCESS;
-        if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
-            // TODO: check that this deck really represents a blackoil
-            // case. E.g. check that number of phases == 3
-            this->setupVanguard();
-            return flowBlackoilTpfaMainInit(
-                argc_, argv_, outputCout_, outputFiles_);
-        } else {
-            //NOTE: exitCode was set by initialize_() above;
-            return std::unique_ptr<FlowMainType>(); // nullptr
-        }
-    }
-
     //! \brief Used for test_outputdir.
     int justInitialize()
     {
@@ -289,6 +269,7 @@ private:
         return flowMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
     }
 
+protected:
     /// \brief Initialize
     /// \param exitCode The exitCode of the program.
     ///
@@ -447,6 +428,9 @@ private:
         return true;
     }
 
+    void setupVanguard();
+
+private:
     // This function is an extreme special case, if the program has been invoked
     // *exactly* as:
     //
@@ -705,8 +689,6 @@ private:
                   std::string_view moduleVersion,
                   std::string_view compileTimestamp);
 
-    void setupVanguard();
-
     static int getNumThreads()
     {
 
@@ -751,11 +733,14 @@ private:
     void setupDamaris(const std::string& outputDir);
 #endif
 
+protected:
     int argc_{0};
     char** argv_{nullptr};
-    bool ownMPI_{true}; //!< True if we "own" MPI and should init / finalize
     bool outputCout_{false};
     bool outputFiles_{false};
+
+private:
+    bool ownMPI_{true}; //!< True if we "own" MPI and should init / finalize
     double setupTime_{0.0};
     std::string deckFilename_{};
     std::string flowProgName_{};

@@ -97,6 +97,9 @@ file(COPY ${PROJECT_SOURCE_DIR}/python/README.md DESTINATION ${PROJECT_BINARY_DI
 file(COPY ${PROJECT_SOURCE_DIR}/python/MANIFEST.in DESTINATION ${PROJECT_BINARY_DIR}/python)
 file(COPY ${PROJECT_SOURCE_DIR}/python/pyproject.toml DESTINATION ${PROJECT_BINARY_DIR}/python)
 
+
+set(opm-simulators_PYTHON_PACKAGE_VERSION ${OPM_PYTHON_PACKAGE_VERSION_TAG})
+
 # Generate versioned setup.py
 configure_file(${PROJECT_SOURCE_DIR}/python/setup.py.in
                 ${PROJECT_BINARY_DIR}/python/setup.py.tmp @ONLY)

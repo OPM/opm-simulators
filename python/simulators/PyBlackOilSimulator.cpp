@@ -22,7 +22,6 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 //#include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
@@ -216,7 +215,7 @@ int PyBlackOilSimulator::stepInit()
         }
     }
     if (this->deck_) {
-        this->main_ = std::make_unique<Opm::Main>(
+        this->main_ = std::make_unique<Opm::PyMain>(
             this->deck_->getDataFile(),
             this->eclipse_state_,
             this->schedule_,
@@ -226,7 +225,7 @@ int PyBlackOilSimulator::stepInit()
         );
     }
     else {
-        this->main_ = std::make_unique<Opm::Main>(
+        this->main_ = std::make_unique<Opm::PyMain>(
             this->deck_filename_,
             this->mpi_init_,
             this->mpi_finalize_
