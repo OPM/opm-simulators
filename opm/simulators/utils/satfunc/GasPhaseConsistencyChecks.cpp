@@ -55,6 +55,8 @@ template <typename Scalar>
 void Opm::Satfunc::PhaseChecks::Gas::SGmax<Scalar>::
 testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
 {
+    // 0 < SGU <= 1
+
     this->sgu_ = endPoints.Sgu;
 
     if (! std::isfinite(this->sgu_)) {
@@ -64,8 +66,8 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
         return;
     }
 
-    const auto low = this->sgu_ < Scalar{0};
-    const auto high = ! (this->sgu_ < Scalar{1});
+    const auto low = ! (this->sgu_ > Scalar{0});
+    const auto high = this->sgu_ > Scalar{1};
 
     if (low || high) {
         this->setViolated();

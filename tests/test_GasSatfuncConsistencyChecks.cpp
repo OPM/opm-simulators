@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(All_Good)
 
     {
         auto endPoints = Opm::EclEpsScalingPointsInfo<float>{};
-        endPoints.Sgu = 0.125f; // >= 0 && < 1
+        endPoints.Sgu = 0.125f; // > 0 && <= 1
 
         check.test(endPoints);
     }
@@ -266,7 +266,7 @@ BOOST_AUTO_TEST_CASE(Is_One)
 {
     auto check = Checks::SGmax<double>{};
     auto endPoints = Opm::EclEpsScalingPointsInfo<double>{};
-    endPoints.Sgu = 1.0; // >= 1
+    endPoints.Sgu = 1.0; // <= 1
 
     check.test(endPoints);
 
@@ -277,8 +277,8 @@ BOOST_AUTO_TEST_CASE(Is_One)
         BOOST_CHECK_CLOSE(value, 1.0, 1.0e-8);
     }
 
-    BOOST_CHECK_MESSAGE(check.isViolated(), "Test must be violated");
-    BOOST_CHECK_MESSAGE(check.isCritical(), "Test must be violated at critical level");
+    BOOST_CHECK_MESSAGE(! check.isViolated(), "Test must not be violated");
+    BOOST_CHECK_MESSAGE(! check.isCritical(), "Test must not be violated at critical level");
 }
 
 BOOST_AUTO_TEST_CASE(Exceeds_One)
