@@ -128,8 +128,7 @@ namespace Opm {
 template <class TypeTag>
 class FlowExpProblem : public FlowProblemBlackoil<TypeTag> //, public FvBaseProblem<TypeTag>
 {
-    typedef FlowProblemBlackoil<TypeTag> ParentType;
-    using BaseType = ParentType; // GetPropType<TypeTag, Properties::BaseProblem>;
+    using ParentType = FlowProblemBlackoil<TypeTag>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
@@ -143,7 +142,7 @@ public:
         {
             // \Note: the SimulatorTimer does not carry any useful information, so PRT file (if it gets output) will contain wrong
             // timing information.
-            BaseType::writeOutput(SimulatorTimer{}, verbose);
+            ParentType::writeOutput(SimulatorTimer{}, verbose);
         }
     }
 
