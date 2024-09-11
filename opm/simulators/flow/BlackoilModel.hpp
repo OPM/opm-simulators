@@ -366,10 +366,13 @@ namespace Opm {
 
                 // Throw if any NaN or too large residual found.
                 if (severity == ConvergenceReport::Severity::NotANumber) {
+                    failureReport_ += report;
                     OPM_THROW_PROBLEM(NumericalProblem, "NaN residual found!");
                 } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                    failureReport_ += report;
                     OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
                 } else if (severity == ConvergenceReport::Severity::ConvergenceMonitorFailure) {
+                    failureReport_ += report;
                     OPM_THROW_PROBLEM(ConvergenceMonitorFailure, "Total penalty count exceeded cut-off-limit of " + std::to_string(param_.convergence_monitoring_cutoff_));
                 }
             }

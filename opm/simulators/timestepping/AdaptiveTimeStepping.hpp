@@ -249,6 +249,7 @@ void registerAdaptiveParameters();
                 }
                 catch (const ConvergenceMonitorFailure& e) {
                     causeOfFailure = "Convergence monitor failure";
+                    substepReport = solver.failureReport();
                 }
                 catch (const LinearSolverProblem& e) {
                     substepReport = solver.failureReport();
