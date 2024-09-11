@@ -41,7 +41,7 @@ pack(const boost::gregorian::date& data,
 
 void Packing<false,boost::gregorian::date>::
 unpack(boost::gregorian::date& data,
-       std::vector<char>& buffer, std::size_t& position)
+       const std::vector<char>& buffer, std::size_t& position)
 {
     std::string date;
     Packing<false,std::string>::unpack(date, buffer, position);
