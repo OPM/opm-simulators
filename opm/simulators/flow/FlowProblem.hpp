@@ -1400,11 +1400,11 @@ protected:
         std::size_t numElems = this->model().numGridDof();
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             const auto& fs = asImp_().initialFluidStates()[elemIdx];
-            if (!this->maxWaterSaturation_.empty())
+            if (!this->maxWaterSaturation_.empty() && waterPhaseIdx > -1)
                 this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
-            if (!this->maxOilSaturation_.empty())
+            if (!this->maxOilSaturation_.empty() && oilPhaseIdx > -1)
                 this->maxOilSaturation_[elemIdx] = std::max(this->maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
-            if (!this->minRefPressure_.empty())
+            if (!this->minRefPressure_.empty() && refPressurePhaseIdx_() > -1)
                 this->minRefPressure_[elemIdx] = std::min(this->minRefPressure_[elemIdx], fs.pressure(refPressurePhaseIdx_()));
         }
     }
