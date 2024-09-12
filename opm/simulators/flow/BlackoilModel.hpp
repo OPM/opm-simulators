@@ -1151,7 +1151,9 @@ namespace Opm {
 
         total_penaltyCard_ += report.getPenaltyCard();
 
-        if (total_penaltyCard_.total() > param_.convergence_monitoring_cutoff_) {
+
+
+        if (param_.convergence_monitoring_ && (total_penaltyCard_.total() > param_.convergence_monitoring_cutoff_)) {
             report.setReservoirFailed({ConvergenceReport::ReservoirFailure::Type::ConvergenceMonitorFailure,
                                         ConvergenceReport::Severity::ConvergenceMonitorFailure,
                                         -1}); // -1 indicates it's not specific to any component
@@ -1179,9 +1181,8 @@ namespace Opm {
                 OPM_TIMEBLOCK(getWellConvergence);
                 report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
             }
-            if (param_.convergence_monitoring_) {
-                checkCardPenalty(report, iteration);
-            }
+
+            checkCardPenalty(report, iteration);
 
             return report;
         }
