@@ -59,30 +59,30 @@ struct BlackOilSolventParams
     void initFromState(const EclipseState& eclState, const Schedule& schedule);
 #endif
 
-    BrineCo2Pvt brineCo2Pvt_;
-    BrineH2Pvt brineH2Pvt_;
-    Co2GasPvt co2GasPvt_;
-    H2GasPvt h2GasPvt_;
-    SolventPvt solventPvt_;
+    BrineCo2Pvt brineCo2Pvt_{};
+    BrineH2Pvt brineH2Pvt_{};
+    Co2GasPvt co2GasPvt_{};
+    H2GasPvt h2GasPvt_{};
+    SolventPvt solventPvt_{};
 
-    std::vector<TabulatedFunction> ssfnKrg_; // the krg(Fs) column of the SSFN table
-    std::vector<TabulatedFunction> ssfnKrs_; // the krs(Fs) column of the SSFN table
-    std::vector<TabulatedFunction> sof2Krn_; // the krn(Sn) column of the SOF2 table
-    std::vector<TabulatedFunction> misc_;    // the misc(Ss) column of the MISC table
-    std::vector<TabulatedFunction> pmisc_;   // the pmisc(pg) column of the PMISC table
-    std::vector<TabulatedFunction> msfnKrsg_; // the krsg(Ssg) column of the MSFN table
-    std::vector<TabulatedFunction> msfnKro_; // the kro(Ssg) column of the MSFN table
-    std::vector<TabulatedFunction> sorwmis_; // the sorwmis(Sw) column of the SORWMIS table
-    std::vector<TabulatedFunction> sgcwmis_; // the sgcwmis(Sw) column of the SGCWMIS table
+    std::vector<TabulatedFunction> ssfnKrg_{}; // the krg(Fs) column of the SSFN table
+    std::vector<TabulatedFunction> ssfnKrs_{}; // the krs(Fs) column of the SSFN table
+    std::vector<TabulatedFunction> sof2Krn_{}; // the krn(Sn) column of the SOF2 table
+    std::vector<TabulatedFunction> misc_{};    // the misc(Ss) column of the MISC table
+    std::vector<TabulatedFunction> pmisc_{};   // the pmisc(pg) column of the PMISC table
+    std::vector<TabulatedFunction> msfnKrsg_{}; // the krsg(Ssg) column of the MSFN table
+    std::vector<TabulatedFunction> msfnKro_{}; // the kro(Ssg) column of the MSFN table
+    std::vector<TabulatedFunction> sorwmis_{}; // the sorwmis(Sw) column of the SORWMIS table
+    std::vector<TabulatedFunction> sgcwmis_{}; // the sgcwmis(Sw) column of the SGCWMIS table
 
-    std::vector<Scalar> tlMixParamViscosity_; // Todd-Longstaff mixing parameter for viscosity
-    std::vector<Scalar> tlMixParamDensity_;   //  Todd-Longstaff mixing parameter for density
-    std::vector<TabulatedFunction> tlPMixTable_; // the tlpmixpa(Po) column of the TLPMIXPA table
+    std::vector<Scalar> tlMixParamViscosity_{}; // Todd-Longstaff mixing parameter for viscosity
+    std::vector<Scalar> tlMixParamDensity_{};   //  Todd-Longstaff mixing parameter for density
+    std::vector<TabulatedFunction> tlPMixTable_{}; // the tlpmixpa(Po) column of the TLPMIXPA table
 
-    bool isMiscible_;
+    bool isMiscible_ = false;
     bool rsSolw_active_ = false;
-    bool co2sol_;
-    bool h2sol_;
+    bool co2sol_ = false;
+    bool h2sol_ = false;
 
     /*!
      * \brief Specify the number of satuation regions.
