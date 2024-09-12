@@ -279,33 +279,39 @@ namespace Opm
 
             // compute volume ratio between connection at standard conditions
             Value volumeRatio = bhp * 0.0; // initialize it with the correct type
-;
+
             if (FluidSystem::enableVaporizedWater() && FluidSystem::enableDissolvedGasInWater()) {
                 disOilVapWatVolumeRatio(volumeRatio, rvw, rsw, pressure,
                                         cmix_s, b_perfcells_dense, deferred_logger);
+                // DISGASW only supported for gas-water CO2STORE/H2STORE case
+                // and the simulator will throw long before it reach to this point in the code
+                // For blackoil support of DISGASW we need to add the oil component here
+                assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+                assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+                assert(!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
             } else {
+
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
                     volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
                 }
-            }
 
-            if constexpr (Indices::enableSolvent) {
-                volumeRatio += cmix_s[Indices::contiSolventEqIdx] / b_perfcells_dense[Indices::contiSolventEqIdx];
-            }
-
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                gasOilVolumeRatio(volumeRatio, rv, rs, pressure,
-                                  cmix_s, b_perfcells_dense, deferred_logger);
-            }
-            else {
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                    const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                    volumeRatio += cmix_s[oilCompIdx] / b_perfcells_dense[oilCompIdx];
+                if constexpr (Indices::enableSolvent) {
+                    volumeRatio += cmix_s[Indices::contiSolventEqIdx] / b_perfcells_dense[Indices::contiSolventEqIdx];
                 }
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    volumeRatio += cmix_s[gasCompIdx] / b_perfcells_dense[gasCompIdx];
+
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    gasOilVolumeRatio(volumeRatio, rv, rs, pressure,
+                                      cmix_s, b_perfcells_dense, deferred_logger);
+                } else {
+                    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                        volumeRatio += cmix_s[oilCompIdx] / b_perfcells_dense[oilCompIdx];
+                    }
+                    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                        volumeRatio += cmix_s[gasCompIdx] / b_perfcells_dense[gasCompIdx];
+                    }
                 }
             }
 
@@ -2797,7 +2803,7 @@ namespace Opm
         volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
 
         const Value tmp_gas =  d > 0.0 ? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d
-                                       : cmix_s[waterCompIdx];
+                                       : cmix_s[gasCompIdx];
         volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
     }
 
