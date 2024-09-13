@@ -140,13 +140,11 @@ int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) con
 }
 
 template<class Scalar>
-std::vector<Scalar> GlobalPerfContainerFactory<Scalar>::
-createGlobal(const std::vector<Scalar>& local_perf_container,
+template<class Value>
+std::vector<Value> GlobalPerfContainerFactory<Scalar>::
+createGlobal(const std::vector<Value>& local_perf_container,
              std::size_t num_components) const
 {
-    // Could be become templated later.
-    using Value = Scalar;
-
     if (comm_.size() > 1)
     {
         std::vector<Value> global_recv(perf_ecl_index_.size() * num_components);
@@ -189,6 +187,10 @@ createGlobal(const std::vector<Scalar>& local_perf_container,
         return local_perf_container;
     }
 }
+// Explicit instantiation of the template class and member function for specific types
+template std::vector<int> Opm::GlobalPerfContainerFactory<double>::createGlobal<int>(const std::vector<int>&, std::size_t) const;
+template std::vector<double> Opm::GlobalPerfContainerFactory<double>::createGlobal<double>(const std::vector<double>&, std::size_t) const;
+template std::vector<float> Opm::GlobalPerfContainerFactory<float>::createGlobal<float>(const std::vector<float>&, std::size_t) const;
 
 template<class Scalar>
 void GlobalPerfContainerFactory<Scalar>::
