@@ -1,5 +1,5 @@
 /*
-  Copyright 2022-2023 SINTEF AS
+  Copyright 2024 SINTEF AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUILU0_OPM_Impl_HPP
-#define OPM_CUILU0_OPM_Impl_HPP
+#ifndef OPM_GPUILU0_OPM_Impl_HPP
+#define OPM_GPUILU0_OPM_Impl_HPP
 
 #include <memory>
 #include <opm/grid/utility/SparseTable.hpp>
@@ -42,7 +42,7 @@ namespace Opm::gpuistl
 //! \note We assume X and Y are both GpuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
-class OpmCuILU0 : public Dune::PreconditionerWithUpdate<X, Y>
+class OpmGpuILU0 : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -62,7 +62,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit OpmCuILU0(const M& A, bool splitMatrix, bool tuneKernels);
+    explicit OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernels);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
