@@ -398,6 +398,7 @@ namespace Opm {
                 // the mass balance for each active phase, the well flux and the well equations.
                 residual_norms_history_.clear();
                 total_penaltyCard_.reset();
+                prev_above_tolerance_ = 0;
                 prev_distance_ = std::numeric_limits<double>::infinity();
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
@@ -1117,33 +1118,35 @@ namespace Opm {
 
     void checkCardPenalty(ConvergenceReport& report, int iteration)
     {
-        if (iteration > 0) {
-            const auto& current_metrics = report.reservoirConvergence();
-            auto distances = std::vector<double>(current_metrics.size(), 0.0);
-            int current_above_tolerance = 0;
 
-            for (size_t i = 0; i < current_metrics.size(); ++i) {
-                distances[i] = std::max(std::log(current_metrics[i].value()), 0.0);
-                    // Count number of metrics above tolerance
-                    if (current_metrics[i].value() > current_metrics[i].tolerance()) {
-                        current_above_tolerance++;
-                    }
+        const auto& current_metrics = report.reservoirConvergence();
+        auto distances = std::vector<double>(current_metrics.size(), 0.0);
+        int current_above_tolerance = 0;
+
+        for (size_t i = 0; i < current_metrics.size(); ++i) {
+            distances[i] = std::max(std::log10(current_metrics[i].value()/current_metrics[i].tolerance()), 0.0);
+                // Count number of metrics above tolerance
+                if (current_metrics[i].value() > current_metrics[i].tolerance()) {
+                    current_above_tolerance++;
                 }
+            }
 
+        // use L1 norm of the distances vector
+        double current_distance = std::accumulate(distances.begin(), distances.end(), 0.0);
+
+        if (iteration > 0) {
             // Add penalty if number of metrics above tolerance has increased
             if (current_above_tolerance > prev_above_tolerance_) {
                 report.addNonConvergedPenalty();
             }
 
-            // use L1 norm of the distances vector
-            double current_distance = std::accumulate(distances.begin(), distances.end(), 0.0);
-
             if (current_distance > param_.convergence_monitoring_decay_factor_ * prev_distance_) {
                 report.addDistanceDecayPenalty();
             }
-            prev_distance_ = current_distance;
-            prev_above_tolerance_ = current_above_tolerance;
         }
+
+        prev_distance_ = current_distance;
+        prev_above_tolerance_ = current_above_tolerance;
 
         if (report.wellFailures().size() > 0) {
             report.addLargeWellResidualsPenalty();
