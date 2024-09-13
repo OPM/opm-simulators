@@ -2602,7 +2602,7 @@ namespace Opm
             }
 
             // change temperature for injecting fluids
-            if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
+            if (this->isInjector() && !this->wellIsStopped() && cq_s[activeCompIdx] > 0.0){
                 // only handles single phase injection now
                 assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
                 fs.setTemperature(this->well_ecl_.inj_temperature());
