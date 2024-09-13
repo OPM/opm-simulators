@@ -28,7 +28,7 @@
 #include <opm/simulators/linalg/GraphColoring.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
-#include <opm/simulators/linalg/gpuistl/OpmCuILU0.hpp>
+#include <opm/simulators/linalg/gpuistl/OpmGpuILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/autotuner.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/coloringAndReorderingUtils.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
@@ -41,7 +41,7 @@ namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-OpmCuILU0<M, X, Y, l>::OpmCuILU0(const M& A, bool splitMatrix, bool tuneKernels)
+OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernels)
     : m_cpuMatrix(A)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
@@ -89,13 +89,13 @@ OpmCuILU0<M, X, Y, l>::OpmCuILU0(const M& A, bool splitMatrix, bool tuneKernels)
 
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
+OpmGpuILU0<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
 {
 }
 
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::apply(X& v, const Y& d)
+OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d)
 {
     OPM_TIMEBLOCK(prec_apply);
     {
@@ -105,7 +105,7 @@ OpmCuILU0<M, X, Y, l>::apply(X& v, const Y& d)
 
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int upperSolveThreadBlockSize)
+OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int upperSolveThreadBlockSize)
 {
     int levelStartIdx = 0;
     for (int level = 0; level < m_levelSets.size(); ++level) {
@@ -165,20 +165,20 @@ OpmCuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, in
 
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::post([[maybe_unused]] X& x)
+OpmGpuILU0<M, X, Y, l>::post([[maybe_unused]] X& x)
 {
 }
 
 template <class M, class X, class Y, int l>
 Dune::SolverCategory::Category
-OpmCuILU0<M, X, Y, l>::category() const
+OpmGpuILU0<M, X, Y, l>::category() const
 {
     return Dune::SolverCategory::sequential;
 }
 
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::update()
+OpmGpuILU0<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
     {
@@ -188,7 +188,7 @@ OpmCuILU0<M, X, Y, l>::update()
 
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationThreadBlockSize)
+OpmGpuILU0<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationThreadBlockSize)
 {
     OPM_TIMEBLOCK(prec_update);
     {
@@ -198,7 +198,7 @@ OpmCuILU0<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationThreadBl
 }
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int factorizationThreadBlockSize)
+OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int factorizationThreadBlockSize)
 {
     if (m_splitMatrix) {
         detail::copyMatDataToReorderedSplit<field_type, blocksize_>(
@@ -257,7 +257,7 @@ OpmCuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int facto
 
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::tuneThreadBlockSizes()
+OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
 {
     // tune the thread-block size of the update function
     auto tuneMoveThreadBlockSizeInUpdate
@@ -291,10 +291,10 @@ OpmCuILU0<M, X, Y, l>::tuneThreadBlockSizes()
 
 } // namespace Opm::gpuistl
 #define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                    \
-    template class ::Opm::gpuistl::OpmCuILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
+    template class ::Opm::gpuistl::OpmGpuILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>;                                        \
-    template class ::Opm::gpuistl::OpmCuILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
+    template class ::Opm::gpuistl::OpmGpuILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>
 
