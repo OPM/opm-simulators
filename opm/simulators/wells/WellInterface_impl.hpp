@@ -218,15 +218,25 @@ namespace Opm
             // only output frist time
             bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == param_.max_number_of_well_switches_;
             if (output) {
-                std::ostringstream ss;
-                ss << "    The control mode for well " << this->name()
-                   << " is oscillating\n"
-                   << "    We don't allow for more than "
-                   << param_.max_number_of_well_switches_
-                   << " switches. The control is kept at " << from;
-                deferred_logger.info(ss.str());
-                // add one more to avoid outputting the same info again
-                this->well_control_log_.push_back(from);
+                bool changedInd = this->checkIndividualConstraints(ws, summaryState, deferred_logger);
+                if (changedInd) {
+                    std::string to;
+                    if (well.isInjector()) {
+                        to = WellInjectorCMode2String(ws.injection_cmode);
+                    } else {
+                        to = WellProducerCMode2String(ws.production_cmode);
+                    }
+                    std::ostringstream ss;
+                    ss << "    The control mode for well " << this->name()
+                    << " is oscillating.\n"
+                    << " We keep it at its individual control after  "
+                    << param_.max_number_of_well_switches_
+                    << " switches. The control is kept at " << to;
+                    deferred_logger.info(ss.str());
+                    // add one more to avoid outputting the same info again
+                    this->well_control_log_.push_back(to);
+                    return true;
+                }
             }
             return false;
         }
