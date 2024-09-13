@@ -301,13 +301,14 @@ namespace Opm
             } else {
                 bool changed = false;
                 if (!fixed_control) {
-                    const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
-                                                                      prod_controls.hasControl(Well::ProducerCMode::GRUP);
+                    // *** Comment out checking group constraints (subject to change) ***
+                    // const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
+                    //                                                   prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                     changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                    if (hasGroupControl) {
-                        changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
-                    }
+                    // if (hasGroupControl) {
+                    //     changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
+                    // }
 
                     if (changed) {
                         const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
