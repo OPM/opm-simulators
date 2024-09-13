@@ -1934,56 +1934,62 @@ namespace Opm {
             more_network_update = more_network_sub_update || well_group_thp_updated;
         }
 
+
         bool changed_well_group = false;
-        // Check group individual constraints.
-        const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
-        changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
 
-        // Check wells' group constraints and communicate.
-        bool changed_well_to_group = false;
-        {
-            OPM_TIMEBLOCK(UpdateWellControls);
-            // For MS Wells a linear solve is performed below and the matrix might be singular.
-            // We need to communicate the exception thrown to the others and rethrow.
-            OPM_BEGIN_PARALLEL_TRY_CATCH()
-                for (const auto& well : well_container_) {
-                    const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
-                    const bool changed_well = well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-                    if (changed_well) {
-                        changed_well_to_group = changed_well || changed_well_to_group;
+        int iter = 0;
+        // iterate a few times to make sure all constrains are kept
+        while(!changed_well_group && iter < 5) {
+            // Check group individual constraints.
+            const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
+            changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
+            
+            // Check wells' group constraints and communicate.
+            bool changed_well_to_group = false;
+            {
+                // For MS Wells a linear solve is performed below and the matrix might be singular.
+                // We need to communicate the exception thrown to the others and rethrow.
+                OPM_BEGIN_PARALLEL_TRY_CATCH()
+                    for (const auto& well : well_container_) {
+                        const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
+                        const bool changed_well = well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+                        if (changed_well) {
+                            changed_well_to_group = changed_well || changed_well_to_group;
+                        }
                     }
-                }
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
-                                       simulator_.gridView().comm());
-        }
+                OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
+                                        simulator_.gridView().comm());
+            }
 
-        changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
-        if (changed_well_to_group) {
-            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-            changed_well_group = true;
-        }
+            changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
+            if (changed_well_to_group) {
+                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
+                changed_well_group = true;
+            }
 
-        // Check individual well constraints and communicate.
-        bool changed_well_individual = false;
-        {
-            // For MS Wells a linear solve is performed below and the matrix might be singular.
-            // We need to communicate the exception thrown to the others and rethrow.
-            OPM_BEGIN_PARALLEL_TRY_CATCH()
-                for (const auto& well : well_container_) {
-                    const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
-                    const bool changed_well = well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-                    if (changed_well) {
-                        changed_well_individual = changed_well || changed_well_individual;
+            // Check individual well constraints and communicate.
+            bool changed_well_individual = false;
+            {
+                // For MS Wells a linear solve is performed below and the matrix might be singular.
+                // We need to communicate the exception thrown to the others and rethrow.
+                OPM_BEGIN_PARALLEL_TRY_CATCH()
+                    for (const auto& well : well_container_) {
+                        const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
+                        const bool changed_well = well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+                        if (changed_well) {
+                            changed_well_individual = changed_well || changed_well_individual;
+                        }
                     }
-                }
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
-                                       simulator_.gridView().comm());
-        }
+                OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
+                                        simulator_.gridView().comm());
+            }
 
-        changed_well_individual = comm.sum(static_cast<int>(changed_well_individual));
-        if (changed_well_individual) {
-            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-            changed_well_group = true;
+            changed_well_individual = comm.sum(static_cast<int>(changed_well_individual));
+            if (changed_well_individual) {
+                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
+                changed_well_group = true;
+            }
+            iter++;
         }
 
         // update wsolvent fraction for REIN wells
