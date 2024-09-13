@@ -150,7 +150,8 @@ public:
     /// \param num_components the number of components per perforation.
     /// \return A container with values attached to all perforations of a well.
     ///         Values are ordered by the index of the perforation in the ECL schedule.
-    std::vector<Scalar> createGlobal(const std::vector<Scalar>& local_perf_container,
+    template<class Value>
+    std::vector<Value> createGlobal(const std::vector<Value>& local_perf_container,
                                      std::size_t num_components) const;
 
     /// \brief Copies the values of the global perforation to the local representation
