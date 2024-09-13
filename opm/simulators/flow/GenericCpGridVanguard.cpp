@@ -194,7 +194,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         }
 
         const auto wells = ((mpiSize > 1) || partitionJacobiBlocks)
-            ? schedule.getWellsatEnd()
+            ? schedule.getActiveWellsatEnd()
             : std::vector<Well>{};
         const auto& possibleFutureConnections = schedule.getPossibleFutureConnections();
         // Distribute the grid and switch to the distributed view.
