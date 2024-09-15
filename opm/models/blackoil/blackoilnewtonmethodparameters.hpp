@@ -64,4 +64,34 @@ struct WaterOnlyThreshold { static constexpr Scalar value = 1.0; };
 
 } // namespace Opm::Parameters
 
+namespace Opm {
+
+/*!
+ * \brief Struct holding the parameters for BlackoilNewtonMethod.
+ */
+template<class Scalar>
+struct BlackoilNewtonParams
+{
+    //! \brief Registers the parameters in parameter system.
+    static void registerParameters();
+
+    //! \brief Reads the parameter values from the parameter system.
+    void read();
+
+    Scalar priVarOscilationThreshold_;
+    Scalar waterSaturationMax_;
+    Scalar waterOnlyThreshold_;
+
+    Scalar dpMaxRel_;
+    Scalar dsMax_;
+    bool projectSaturations_;
+    Scalar maxTempChange_;
+    Scalar tempMax_;
+    Scalar tempMin_;
+    Scalar pressMax_;
+    Scalar pressMin_;
+};
+
+} // namespace Opm
+
 #endif

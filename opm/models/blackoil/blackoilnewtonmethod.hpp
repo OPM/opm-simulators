@@ -73,17 +73,7 @@ class BlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
 public:
     BlackOilNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
-        priVarOscilationThreshold_ = Parameters::Get<Parameters::PriVarOscilationThreshold<Scalar>>();
-        dpMaxRel_ = Parameters::Get<Parameters::DpMaxRel<Scalar>>();
-        dsMax_ = Parameters::Get<Parameters::DsMax<Scalar>>();
-        projectSaturations_ = Parameters::Get<Parameters::ProjectSaturations>();
-        maxTempChange_ = Parameters::Get<Parameters::MaxTemperatureChange<Scalar>>();
-        tempMax_ = Parameters::Get<Parameters::TemperatureMax<Scalar>>();
-        tempMin_ = Parameters::Get<Parameters::TemperatureMin<Scalar>>();
-        pressMax_ = Parameters::Get<Parameters::PressureMax<Scalar>>();
-        pressMin_ = Parameters::Get<Parameters::PressureMin<Scalar>>();
-        waterSaturationMax_ = Parameters::Get<Parameters::MaximumWaterSaturation<Scalar>>();
-        waterOnlyThreshold_ = Parameters::Get<Parameters::WaterOnlyThreshold<Scalar>>();
+        bparams_.read();
     }
 
     /*!
@@ -102,30 +92,7 @@ public:
     static void registerParameters()
     {
         ParentType::registerParameters();
-
-        Parameters::Register<Parameters::DpMaxRel<Scalar>>
-            ("Maximum relative change of pressure in a single iteration");
-        Parameters::Register<Parameters::DsMax<Scalar>>
-            ("Maximum absolute change of any saturation in a single iteration");
-        Parameters::Register<Parameters::PriVarOscilationThreshold<Scalar>>
-            ("The threshold value for the primary variable switching conditions "
-             "after its meaning has switched to hinder oscilations");
-        Parameters::Register<Parameters::ProjectSaturations>
-            ("Option for doing saturation projection");
-        Parameters::Register<Parameters::MaxTemperatureChange<Scalar>>
-            ("Maximum absolute change of temperature in a single iteration");
-        Parameters::Register<Parameters::TemperatureMax<Scalar>>
-            ("Maximum absolute temperature");
-        Parameters::Register<Parameters::TemperatureMin<Scalar>>
-            ("Minimum absolute temperature");
-        Parameters::Register<Parameters::PressureMax<Scalar>>
-            ("Maximum absolute pressure");
-        Parameters::Register<Parameters::PressureMin<Scalar>>
-            ("Minimum absolute pressure");
-        Parameters::Register<Parameters::MaximumWaterSaturation<Scalar>>
-            ("Maximum water saturation");
-        Parameters::Register<Parameters::WaterOnlyThreshold<Scalar>>
-            ("Cells with water saturation above or equal is considered one-phase water only");
+        BlackoilNewtonParams<Scalar>::registerParameters();
     }
 
     /*!
@@ -272,8 +239,9 @@ protected:
         // scaling factor for saturation deltas to make sure that none of them exceeds
         // the specified threshold value.
         Scalar satAlpha = 1.0;
-        if (maxSatDelta > dsMax_)
-            satAlpha = dsMax_/maxSatDelta;
+        if (maxSatDelta > bparams_.dsMax_) {
+            satAlpha = bparams_.dsMax_ / maxSatDelta;
+        }
 
         for (int pvIdx = 0; pvIdx < int(numEq); ++pvIdx) {
             // calculate the update of the current primary variable. For the black-oil
@@ -286,8 +254,8 @@ protected:
 
             // limit pressure delta
             if (pvIdx == Indices::pressureSwitchIdx) {
-                if (std::abs(delta) > params_.dpMaxRel_ * currentValue[pvIdx]) {
-                    delta = signum(delta) * params_.dpMaxRel_ * currentValue[pvIdx];
+                if (std::abs(delta) > bparams_.dpMaxRel_ * currentValue[pvIdx]) {
+                    delta = signum(delta) * bparams_.dpMaxRel_ * currentValue[pvIdx];
                 }
             }
             // water saturation delta
@@ -341,7 +309,7 @@ protected:
             }
             else if (enableEnergy && pvIdx == Indices::temperatureIdx) {
                 const double sign = delta >= 0. ? 1. : -1.;
-                delta = sign * std::min(std::abs(delta), maxTempChange_);
+                delta = sign * std::min(std::abs(delta), bparams_.maxTempChange_);
             }
             else if (enableBrine && pvIdx == Indices::saltConcentrationIdx &&
                      enableSaltPrecipitation &&
@@ -396,11 +364,12 @@ protected:
             }
 
             // keep the temperature within given values
-            if (enableEnergy && pvIdx == Indices::temperatureIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], tempMin_, tempMax_);
+            if (enableEnergy && pvIdx == Indices::temperatureIdx) {
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.tempMin_, bparams_.tempMax_);
+            }
 
             if (pvIdx == Indices::pressureSwitchIdx) {
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], pressMin_, pressMax_);
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.pressMin_, bparams_.pressMax_);
             }
 
 
@@ -429,14 +398,24 @@ protected:
         // switch the new primary variables to something which is physically meaningful.
         // use a threshold value after a switch to make it harder to switch back
         // immediately.
-        if (wasSwitched_[globalDofIdx])
-            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(), globalDofIdx, waterSaturationMax_, waterOnlyThreshold_, priVarOscilationThreshold_);
-        else
-            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(), globalDofIdx, waterSaturationMax_, waterOnlyThreshold_);
+        if (wasSwitched_[globalDofIdx]) {
+            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(),
+                                                                         globalDofIdx,
+                                                                         bparams_.waterSaturationMax_,
+                                                                         bparams_.waterOnlyThreshold_,
+                                                                         bparams_.priVarOscilationThreshold_);
+        }
+        else {
+            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(),
+                                                                         globalDofIdx,
+                                                                         bparams_.waterSaturationMax_,
+                                                                         bparams_.waterOnlyThreshold_);
+        }
 
-        if (wasSwitched_[globalDofIdx])
-            ++ numPriVarsSwitched_;
-        if(projectSaturations_){
+        if (wasSwitched_[globalDofIdx]) {
+            ++numPriVarsSwitched_;
+        }
+        if (bparams_.projectSaturations_) {
             nextValue.chopAndNormalizeSaturations();
         }
 
@@ -444,24 +423,13 @@ protected:
     }
 
 private:
-    int numPriVarsSwitched_;
+    int numPriVarsSwitched_{};
 
-    Scalar priVarOscilationThreshold_;
-    Scalar waterSaturationMax_;
-    Scalar waterOnlyThreshold_;
-
-    Scalar dpMaxRel_;
-    Scalar dsMax_;
-    bool projectSaturations_;
-    Scalar maxTempChange_;
-    Scalar tempMax_;
-    Scalar tempMin_;
-    Scalar pressMax_;
-    Scalar pressMin_;
+    BlackoilNewtonParams<Scalar> bparams_{};
 
     // keep track of cells where the primary variable meaning has changed
     // to detect and hinder oscillations
-    std::vector<bool> wasSwitched_;
+    std::vector<bool> wasSwitched_{};
 };
 
 } // namespace Opm

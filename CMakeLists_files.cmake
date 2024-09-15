@@ -59,6 +59,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilextboparams.cpp
   opm/models/blackoil/blackoilfoamparams.cpp
   opm/models/blackoil/blackoilmicpparams.cpp
+  opm/models/blackoil/blackoilnewtonmethodparameters.cpp
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
   opm/models/io/restart.cpp
