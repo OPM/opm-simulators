@@ -31,7 +31,7 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/models/blackoil/blackoilnewtonmethod.hh>
+#include <opm/models/blackoil/blackoilnewtonmethod.hpp>
 #include <opm/models/utils/signum.hh>
 
 namespace Opm::Parameters {

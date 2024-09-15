@@ -553,8 +553,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilmicpmodules.hh
   opm/models/blackoil/blackoilmicpparams.hpp
   opm/models/blackoil/blackoilmodel.hh
-  opm/models/blackoil/blackoilnewtonmethod.hh
-  opm/models/blackoil/blackoilnewtonmethodparameters.hh
+  opm/models/blackoil/blackoilnewtonmethod.hpp
+  opm/models/blackoil/blackoilnewtonmethodparameters.hpp
   opm/models/blackoil/blackoilonephaseindices.hh
   opm/models/blackoil/blackoilpolymermodules.hh
   opm/models/blackoil/blackoilpolymerparams.hpp
