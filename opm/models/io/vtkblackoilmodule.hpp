@@ -24,11 +24,8 @@
  * \file
  * \copydoc Opm::VtkBlackOilModule
  */
-#ifndef EWOMS_VTK_BLACK_OIL_MODULE_HH
-#define EWOMS_VTK_BLACK_OIL_MODULE_HH
-
-#include "vtkmultiwriter.hh"
-#include "baseoutputmodule.hh"
+#ifndef OPM_VTK_BLACK_OIL_MODULE_HPP
+#define OPM_VTK_BLACK_OIL_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -37,6 +34,9 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
+
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
@@ -389,4 +389,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_BLACK_OIL_MODULE_HPP

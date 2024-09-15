@@ -651,7 +651,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/unstructuredgridvanguard.hh
   opm/models/io/vtkblackoilenergymodule.hh
   opm/models/io/vtkblackoilmicpmodule.hh
-  opm/models/io/vtkblackoilmodule.hh
+  opm/models/io/vtkblackoilmodule.hpp
   opm/models/io/vtkblackoilpolymermodule.hh
   opm/models/io/vtkblackoilsolventmodule.hh
   opm/models/io/vtkcompositionmodule.hh

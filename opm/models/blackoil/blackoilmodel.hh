@@ -55,7 +55,7 @@
 
 #include <opm/models/common/multiphasebasemodel.hh>
 
-#include <opm/models/io/vtkblackoilmodule.hh>
+#include <opm/models/io/vtkblackoilmodule.hpp>
 #include <opm/models/io/vtkcompositionmodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
