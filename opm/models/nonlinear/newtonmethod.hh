@@ -37,7 +37,7 @@
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/models/nonlinear/newtonmethodparameters.hh>
+#include <opm/models/nonlinear/newtonmethodparams.hpp>
 #include <opm/models/nonlinear/newtonmethodproperties.hh>
 #include <opm/models/nonlinear/nullconvergencewriter.hh>
 

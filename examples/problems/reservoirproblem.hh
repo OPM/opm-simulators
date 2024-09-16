@@ -51,7 +51,7 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/models/nonlinear/newtonmethodparameters.hh>
+#include <opm/models/nonlinear/newtonmethodparams.hpp>
 
 #include <opm/models/utils/basicproperties.hh>
 

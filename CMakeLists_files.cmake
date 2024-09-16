@@ -706,7 +706,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/ncp/ncpproperties.hh
   opm/models/ncp/ncpratevector.hh
   opm/models/nonlinear/newtonmethod.hh
-  opm/models/nonlinear/newtonmethodparameters.hh
+  opm/models/nonlinear/newtonmethodparams.hpp
   opm/models/nonlinear/newtonmethodproperties.hh
   opm/models/nonlinear/nullconvergencewriter.hh
   opm/models/parallel/gridcommhandles.hh

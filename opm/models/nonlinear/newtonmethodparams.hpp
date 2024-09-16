@@ -20,8 +20,8 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_NEWTON_METHOD_PARAMETERS_HH
-#define EWOMS_NEWTON_METHOD_PARAMETERS_HH
+#ifndef OPM_NEWTON_METHOD_PARAMS_HPP
+#define OPM_NEWTON_METHOD_PARAMS_HPP
 
 namespace Opm::Parameters {
 
@@ -61,4 +61,4 @@ struct NewtonWriteConvergence { static constexpr bool value = false; };
 
 } // end namespace Opm::Parameters
 
-#endif
+#endif // OPM_NEWTON_METHOD_PARAMS_HPP
