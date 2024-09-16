@@ -676,7 +676,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkdiscretefractureparams.hpp
   opm/models/io/vtkenergymodule.hpp
   opm/models/io/vtkenergyparams.hpp
-  opm/models/io/vtkmultiphasemodule.hh
+  opm/models/io/vtkmultiphasemodule.hpp
   opm/models/io/vtkmultiwriter.hh
   opm/models/io/vtkphasepresencemodule.hh
   opm/models/io/vtkprimaryvarsmodule.hh

@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkMultiPhaseModule
  */
-#ifndef EWOMS_VTK_MULTI_PHASE_MODULE_HH
-#define EWOMS_VTK_MULTI_PHASE_MODULE_HH
+#ifndef OPM_VTK_MULTI_PHASE_MODULE_HPP
+#define OPM_VTK_MULTI_PHASE_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -466,4 +466,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_MULTI_PHASE_MODULE_HPP

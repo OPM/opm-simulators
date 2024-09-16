@@ -44,7 +44,7 @@
 
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 
-#include <opm/models/io/vtkmultiphasemodule.hh>
+#include <opm/models/io/vtkmultiphasemodule.hpp>
 #include <opm/models/io/vtktemperaturemodule.hh>
 
 namespace Opm {
