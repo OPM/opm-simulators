@@ -2739,7 +2739,7 @@ namespace Opm {
             auto& ws = this->wellState().well(wellID);
             if (well.isInjector()){
                 if( !(ws.status == WellStatus::STOP)){
-                    this->wellState().well(wellID).temperature = well.temperature();
+                    this->wellState().well(wellID).temperature = well.inj_temperature();
                     continue;
                 }
             }
@@ -2772,8 +2772,7 @@ namespace Opm {
                     perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];
                     weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
                 }
-                //NB hack better method in progress
-                weight_factor = std::abs(weightfactor)+1e-13;
+                weight_factor = std::abs(weight_factor)+1e-13;
                 total_weight += weight_factor;
                 weighted_temperature += weight_factor * cellTemperatures;
             }
