@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkCompositionModule
  */
-#ifndef EWOMS_VTK_COMPOSITION_MODULE_HH
-#define EWOMS_VTK_COMPOSITION_MODULE_HH
+#ifndef OPM_VTK_COMPOSITION_MODULE_HPP
+#define OPM_VTK_COMPOSITION_MODULE_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
 
@@ -281,4 +281,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_COMPOSITION_MODULE_HPP

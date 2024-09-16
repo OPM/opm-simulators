@@ -45,7 +45,7 @@
 #include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/common/diffusionmodule.hh>
-#include <opm/models/io/vtkcompositionmodule.hh>
+#include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
@@ -56,7 +56,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <array>
 
 namespace Opm {
 template <class TypeTag>

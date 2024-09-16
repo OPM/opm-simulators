@@ -32,7 +32,7 @@
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/io/vtkblackoilmodule.hpp>
-#include <opm/models/io/vtkcompositionmodule.hh>
+#include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkdiffusionmodule.hh>
 #include <opm/models/io/vtkmultiphasemodule.hh>
 #include <opm/models/io/vtkprimaryvarsmodule.hh>
