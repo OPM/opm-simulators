@@ -31,13 +31,13 @@
 
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseparameters.hh>
-#include <opm/models/io/vtkblackoilmodule.hh>
-#include <opm/models/io/vtkcompositionmodule.hh>
-#include <opm/models/io/vtkdiffusionmodule.hh>
-#include <opm/models/io/vtkmultiphasemodule.hh>
-#include <opm/models/io/vtkprimaryvarsmodule.hh>
-#include <opm/models/io/vtktemperaturemodule.hh>
-#include <opm/models/nonlinear/newtonmethodparameters.hh>
+#include <opm/models/io/vtkblackoilmodule.hpp>
+#include <opm/models/io/vtkcompositionmodule.hpp>
+#include <opm/models/io/vtkdiffusionmodule.hpp>
+#include <opm/models/io/vtkmultiphasemodule.hpp>
+#include <opm/models/io/vtkprimaryvarsmodule.hpp>
+#include <opm/models/io/vtktemperaturemodule.hpp>
+#include <opm/models/nonlinear/newtonmethodparams.hpp>
 #include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/parametersystem.hpp>
 

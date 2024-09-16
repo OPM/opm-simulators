@@ -20,8 +20,8 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_NEWTON_METHOD_PARAMETERS_HH
-#define EWOMS_NEWTON_METHOD_PARAMETERS_HH
+#ifndef OPM_NEWTON_METHOD_PARAMS_HPP
+#define OPM_NEWTON_METHOD_PARAMS_HPP
 
 namespace Opm::Parameters {
 
@@ -61,4 +61,28 @@ struct NewtonWriteConvergence { static constexpr bool value = false; };
 
 } // end namespace Opm::Parameters
 
-#endif
+namespace Opm {
+
+/*!
+ * \brief Struct holding the parameters for NewtonMethod.
+ */
+template<class Scalar>
+struct NewtonMethodParams
+{
+    //! \brief Registers the parameters in parameter system.
+    static void registerParameters();
+
+    //! \brief Reads the parameter values from the parameter system.
+    void read();
+
+    bool verbose_;
+    bool writeConvergence_;
+    int targetIterations_; //!< Optimal number of iterations we want to achieve
+    int maxIterations_; //!< Maximum number of iterations we do before giving up
+    Scalar tolerance_;
+    Scalar maxError_;
+};
+
+} // namespace Opm
+
+#endif // OPM_NEWTON_METHOD_PARAMS_HPP

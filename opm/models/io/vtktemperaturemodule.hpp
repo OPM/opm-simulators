@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::VtkPTFlashModule
+ * \copydoc Opm::VtkTemperatureModule
  */
-#ifndef OPM_VTK_PTFLASH_MODULE_HH
-#define OPM_VTK_PTFLASH_MODULE_HH
+#ifndef OPM_VTK_TEMPERATURE_MODULE_HPP
+#define OPM_VTK_TEMPERATURE_MODULE_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
 
@@ -33,63 +33,48 @@
 
 #include <opm/models/io/baseoutputmodule.hh>
 #include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/vtktemperatureparams.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteLiquidMoleFractions { static constexpr bool value = false; };
-struct VtkWriteEquilibriumConstants { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
 /*!
  * \ingroup Vtk
  *
- * \brief VTK output module for the PT Flash calculation
- * This module deals with the following quantities:
- * K, equilibrium ratio for all the components
- * L, liquid fraction in the two-phase system
+ * \brief VTK output module for the temperature in which assume
+ *        thermal equilibrium
  */
-template <class TypeTag>
-class VtkPTFlashModule: public BaseOutputModule<TypeTag>
+template<class TypeTag>
+class VtkTemperatureModule : public BaseOutputModule<TypeTag>
 {
     using ParentType = BaseOutputModule<TypeTag>;
 
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
-    using ComponentBuffer = typename ParentType::ComponentBuffer;
-    using ScalarBuffer = typename ParentType::ScalarBuffer;
-
 public:
-    explicit VtkPTFlashModule(const Simulator& simulator)
+    VtkTemperatureModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteLiquidMoleFractions>
-            ("Include liquid mole fractions (L) in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteEquilibriumConstants>
-            ("Include equilibrium constants (K) in the VTK output files");
+        VtkTemperatureParams::registerParameters();
     }
 
     /*!
@@ -98,10 +83,9 @@ public:
      */
     void allocBuffers()
     {
-        if (LOutput_())
-            this->resizeScalarBuffer_(L_);
-        if (equilConstOutput_())
-            this->resizeComponentBuffer_(K_);
+        if (params_.temperatureOutput_) {
+            this->resizeScalarBuffer_(temperature_);
+        }
     }
 
     /*!
@@ -121,12 +105,8 @@ public:
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            if (LOutput_())
-                L_[I] = Toolbox::value(fs.L());
-
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (equilConstOutput_())
-                    K_[compIdx][I] = Toolbox::value(fs.K(compIdx));
+            if (params_.temperatureOutput_) {
+                temperature_[I] = Toolbox::value(fs.temperature(/*phaseIdx=*/0));
             }
         }
     }
@@ -136,34 +116,21 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        auto *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (equilConstOutput_())
-            this->commitComponentBuffer_(baseWriter, "K^%s", K_);
-        if (LOutput_())
-            this->commitScalarBuffer_(baseWriter, "L", L_);
+        if (params_.temperatureOutput_) {
+            this->commitScalarBuffer_(baseWriter, "temperature", temperature_);
+        }
     }
 
 private:
-    static bool LOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteLiquidMoleFractions>();
-        return val;
-    }
-
-    static bool equilConstOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteEquilibriumConstants>();
-        return val;
-    }
-
-    ComponentBuffer K_;
-    ScalarBuffer L_;
+    VtkTemperatureParams params_{};
+    ScalarBuffer temperature_{};
 };
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_TEMPERATURE_MODULE_HPP

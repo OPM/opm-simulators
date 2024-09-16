@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::BlackOilModel
  */
-#ifndef EWOMS_BLACK_OIL_MODEL_HH
-#define EWOMS_BLACK_OIL_MODEL_HH
+#ifndef OPM_BLACK_OIL_MODEL_HPP
+#define OPM_BLACK_OIL_MODEL_HPP
 
 #include <opm/material/densead/Math.hpp>
 
@@ -44,7 +44,7 @@
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
 #include <opm/models/blackoil/blackoillocalresidual.hh>
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
-#include <opm/models/blackoil/blackoilnewtonmethod.hh>
+#include <opm/models/blackoil/blackoilnewtonmethod.hpp>
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 #include <opm/models/blackoil/blackoilproblem.hh>
@@ -55,9 +55,9 @@
 
 #include <opm/models/common/multiphasebasemodel.hh>
 
-#include <opm/models/io/vtkblackoilmodule.hh>
-#include <opm/models/io/vtkcompositionmodule.hh>
-#include <opm/models/io/vtkdiffusionmodule.hh>
+#include <opm/models/io/vtkblackoilmodule.hpp>
+#include <opm/models/io/vtkcompositionmodule.hpp>
+#include <opm/models/io/vtkdiffusionmodule.hpp>
 
 #include <sstream>
 #include <string>
@@ -606,7 +606,6 @@ protected:
     }
 
 private:
-
     std::vector<Scalar> eqWeights_;
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
@@ -623,6 +622,7 @@ private:
         priVars.setPvtRegionIndex(regionIdx);
     }
 };
+
 } // namespace Opm
 
-#endif
+#endif // OPM_BLACK_OIL_MODEL_HPP

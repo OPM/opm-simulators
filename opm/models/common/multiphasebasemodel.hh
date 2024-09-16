@@ -44,8 +44,8 @@
 
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 
-#include <opm/models/io/vtkmultiphasemodule.hh>
-#include <opm/models/io/vtktemperaturemodule.hh>
+#include <opm/models/io/vtkmultiphasemodule.hpp>
+#include <opm/models/io/vtktemperaturemodule.hpp>
 
 namespace Opm {
 template <class TypeTag>

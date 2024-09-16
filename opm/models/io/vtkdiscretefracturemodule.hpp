@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkDiscreteFractureModule
  */
-#ifndef EWOMS_VTK_DISCRETE_FRACTURE_MODULE_HH
-#define EWOMS_VTK_DISCRETE_FRACTURE_MODULE_HH
+#ifndef OPM_VTK_DISCRETE_FRACTURE_MODULE_HPP
+#define OPM_VTK_DISCRETE_FRACTURE_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -34,6 +34,7 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkdiscretefractureparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/propertysystem.hh>
@@ -41,20 +42,8 @@
 
 #include <cstdio>
 
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteFractureSaturations { static constexpr bool value = true; };
-struct VtkWriteFractureMobilities { static constexpr bool value = false; };
-struct VtkWriteFractureRelativePermeabilities { static constexpr bool value = true; };
-struct VtkWriteFracturePorosity { static constexpr bool value = true; };
-struct VtkWriteFractureIntrinsicPermeabilities { static constexpr bool value = false; };
-struct VtkWriteFractureFilterVelocities { static constexpr bool value = false; };
-struct VtkWriteFractureVolumeFraction { static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -97,29 +86,16 @@ class VtkDiscreteFractureModule : public BaseOutputModule<TypeTag>
 public:
     VtkDiscreteFractureModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the multi-phase VTK output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteFractureSaturations>
-            ("Include the phase saturations in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFractureMobilities>
-            ("Include the phase mobilities in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFractureRelativePermeabilities>
-            ("Include the phase relative permeabilities in the "
-             "VTK output files");
-        Parameters::Register<Parameters::VtkWriteFracturePorosity>
-            ("Include the porosity in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFractureIntrinsicPermeabilities>
-            ("Include the intrinsic permeability in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFractureFilterVelocities>
-            ("Include in the filter velocities of the phases in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFractureVolumeFraction>
-            ("Add the fraction of the total volume which is "
-             "occupied by fractures in the VTK output");
+        VtkDiscreteFractureParams::registerParameters();
     }
 
     /*!
@@ -128,21 +104,27 @@ public:
      */
     void allocBuffers()
     {
-        if (saturationOutput_())
+        if (params_.saturationOutput_) {
             this->resizePhaseBuffer_(fractureSaturation_);
-        if (mobilityOutput_())
+        }
+        if (params_.mobilityOutput_) {
             this->resizePhaseBuffer_(fractureMobility_);
-        if (relativePermeabilityOutput_())
+        }
+        if (params_.relativePermeabilityOutput_) {
             this->resizePhaseBuffer_(fractureRelativePermeability_);
+        }
 
-        if (porosityOutput_())
+        if (params_.porosityOutput_) {
             this->resizeScalarBuffer_(fracturePorosity_);
-        if (intrinsicPermeabilityOutput_())
+        }
+        if (params_.intrinsicPermeabilityOutput_) {
             this->resizeScalarBuffer_(fractureIntrinsicPermeability_);
-        if (volumeFractionOutput_())
+        }
+        if (params_.volumeFractionOutput_) {
             this->resizeScalarBuffer_(fractureVolumeFraction_);
+        }
 
-        if (velocityOutput_()) {
+        if (params_.velocityOutput_) {
             size_t nDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 fractureVelocity_[phaseIdx].resize(nDof);
@@ -169,43 +151,44 @@ public:
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
             unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
-            if (!fractureMapper.isFractureVertex(I))
+            if (!fractureMapper.isFractureVertex(I)) {
                 continue;
+            }
 
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fractureFluidState();
 
-            if (porosityOutput_()) {
+            if (params_.porosityOutput_) {
                 Opm::Valgrind::CheckDefined(intQuants.fracturePorosity());
                 fracturePorosity_[I] = intQuants.fracturePorosity();
             }
-            if (intrinsicPermeabilityOutput_()) {
+            if (params_.intrinsicPermeabilityOutput_) {
                 const auto& K = intQuants.fractureIntrinsicPermeability();
                 fractureIntrinsicPermeability_[I] = K[0][0];
             }
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (saturationOutput_()) {
+                if (params_.saturationOutput_) {
                     Opm::Valgrind::CheckDefined(fs.saturation(phaseIdx));
                     fractureSaturation_[phaseIdx][I] = fs.saturation(phaseIdx);
                 }
-                if (mobilityOutput_()) {
+                if (params_.mobilityOutput_) {
                     Opm::Valgrind::CheckDefined(intQuants.fractureMobility(phaseIdx));
                     fractureMobility_[phaseIdx][I] = intQuants.fractureMobility(phaseIdx);
                 }
-                if (relativePermeabilityOutput_()) {
+                if (params_.relativePermeabilityOutput_) {
                     Opm::Valgrind::CheckDefined(intQuants.fractureRelativePermeability(phaseIdx));
                     fractureRelativePermeability_[phaseIdx][I] =
                         intQuants.fractureRelativePermeability(phaseIdx);
                 }
-                if (volumeFractionOutput_()) {
+                if (params_.volumeFractionOutput_) {
                     Opm::Valgrind::CheckDefined(intQuants.fractureVolume());
                     fractureVolumeFraction_[I] += intQuants.fractureVolume();
                 }
             }
         }
 
-        if (velocityOutput_()) {
+        if (params_.velocityOutput_) {
             // calculate velocities if requested by the simulator
             for (unsigned scvfIdx = 0; scvfIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ scvfIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
@@ -216,8 +199,9 @@ public:
                 unsigned j = extQuants.exteriorIndex();
                 unsigned J = elemCtx.globalSpaceIndex(j, /*timeIdx=*/0);
 
-                if (!fractureMapper.isFractureEdge(I, J))
+                if (!fractureMapper.isFractureEdge(I, J)) {
                     continue;
+                }
 
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                     Scalar weight =
@@ -246,38 +230,45 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (saturationOutput_())
+        if (params_.saturationOutput_) {
             this->commitPhaseBuffer_(baseWriter, "fractureSaturation_%s", fractureSaturation_);
-        if (mobilityOutput_())
+        }
+        if (params_.mobilityOutput_) {
             this->commitPhaseBuffer_(baseWriter, "fractureMobility_%s", fractureMobility_);
-        if (relativePermeabilityOutput_())
+        }
+        if (params_.relativePermeabilityOutput_) {
             this->commitPhaseBuffer_(baseWriter, "fractureRelativePerm_%s", fractureRelativePermeability_);
+        }
 
-        if (porosityOutput_())
+        if (params_.porosityOutput_) {
             this->commitScalarBuffer_(baseWriter, "fracturePorosity", fracturePorosity_);
-        if (intrinsicPermeabilityOutput_())
+        }
+        if (params_.intrinsicPermeabilityOutput_) {
             this->commitScalarBuffer_(baseWriter, "fractureIntrinsicPerm", fractureIntrinsicPermeability_);
-        if (volumeFractionOutput_()) {
+        }
+        if (params_.volumeFractionOutput_) {
             // divide the fracture volume by the total volume of the finite volumes
-            for (unsigned I = 0; I < fractureVolumeFraction_.size(); ++I)
+            for (unsigned I = 0; I < fractureVolumeFraction_.size(); ++I) {
                 fractureVolumeFraction_[I] /= this->simulator_.model().dofTotalVolume(I);
+            }
             this->commitScalarBuffer_(baseWriter, "fractureVolumeFraction", fractureVolumeFraction_);
         }
 
-        if (velocityOutput_()) {
+        if (params_.velocityOutput_) {
             size_t nDof = this->simulator_.model().numGridDof();
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 // first, divide the velocity field by the
                 // respective finite volume's surface area
-                for (unsigned dofIdx = 0; dofIdx < nDof; ++dofIdx)
+                for (unsigned dofIdx = 0; dofIdx < nDof; ++dofIdx) {
                     fractureVelocity_[phaseIdx][dofIdx] /=
                         std::max<Scalar>(1e-20, fractureVelocityWeight_[phaseIdx][dofIdx]);
+                }
                 // commit the phase velocity
                 char name[512];
                 snprintf(name, 512, "fractureFilterVelocity_%s", FluidSystem::phaseName(phaseIdx).data());
@@ -288,63 +279,22 @@ public:
     }
 
 private:
-    static bool saturationOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFractureSaturations>();
-        return val;
-    }
+    VtkDiscreteFractureParams params_{};
+    PhaseBuffer fractureSaturation_{};
+    PhaseBuffer fractureMobility_{};
+    PhaseBuffer fractureRelativePermeability_{};
 
-    static bool mobilityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFractureMobilities>();
-        return val;
-    }
+    ScalarBuffer fracturePorosity_{};
+    ScalarBuffer fractureVolumeFraction_{};
+    ScalarBuffer fractureIntrinsicPermeability_{};
 
-    static bool relativePermeabilityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFractureRelativePermeabilities>();
-        return val;
-    }
+    PhaseVectorBuffer fractureVelocity_{};
+    PhaseBuffer fractureVelocityWeight_{};
 
-    static bool porosityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFracturePorosity>();
-        return val;
-    }
-
-    static bool intrinsicPermeabilityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFractureIntrinsicPermeabilities>();
-        return val;
-    }
-
-    static bool volumeFractionOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFractureVolumeFraction>();
-        return val;
-    }
-
-    static bool velocityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFractureFilterVelocities>();
-        return val;
-    }
-
-    PhaseBuffer fractureSaturation_;
-    PhaseBuffer fractureMobility_;
-    PhaseBuffer fractureRelativePermeability_;
-
-    ScalarBuffer fracturePorosity_;
-    ScalarBuffer fractureVolumeFraction_;
-    ScalarBuffer fractureIntrinsicPermeability_;
-
-    PhaseVectorBuffer fractureVelocity_;
-    PhaseBuffer fractureVelocityWeight_;
-
-    PhaseVectorBuffer potentialGradient_;
-    PhaseBuffer potentialWeight_;
+    PhaseVectorBuffer potentialGradient_{};
+    PhaseBuffer potentialWeight_{};
 };
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_DISCRETE_FRACTURE_MODULE_HPP

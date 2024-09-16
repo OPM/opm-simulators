@@ -50,7 +50,7 @@
 #include <opm/models/immiscible/immiscibleproperties.hh>
 
 #include <opm/models/io/structuredgridvanguard.hh>
-#include <opm/models/io/vtkmultiphasemodule.hh>
+#include <opm/models/io/vtkmultiphasemodule.hpp>
 
 #include <iostream>
 #include <sstream>

@@ -22,60 +22,66 @@
 */
 /*!
  * \file
- * \copydoc Opm::VtkPhasePresenceModule
+ * \copydoc Opm::VtkPTFlashModule
  */
-#ifndef EWOMS_VTK_PHASE_PRESENCE_MODULE_HH
-#define EWOMS_VTK_PHASE_PRESENCE_MODULE_HH
+#ifndef OPM_VTK_PTFLASH_MODULE_HPP
+#define OPM_VTK_PTFLASH_MODULE_HPP
+
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
 #include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/vtkptflashparams.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Parameters {
-
-struct VtkWritePhasePresence { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
- * \brief VTK output module for the fluid composition
+ * \brief VTK output module for the PT Flash calculation
+ * This module deals with the following quantities:
+ * K, equilibrium ratio for all the components
+ * L, liquid fraction in the two-phase system
  */
-template<class TypeTag>
-class VtkPhasePresenceModule : public BaseOutputModule<TypeTag>
+template <class TypeTag>
+class VtkPTFlashModule: public BaseOutputModule<TypeTag>
 {
     using ParentType = BaseOutputModule<TypeTag>;
 
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
+
+    using ComponentBuffer = typename ParentType::ComponentBuffer;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
-
 public:
-    VtkPhasePresenceModule(const Simulator& simulator)
+    explicit VtkPTFlashModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWritePhasePresence>
-            ("Include the phase presence pseudo primary "
-             "variable in the VTK output files");
+        VtkPtFlashParams::registerParameters();
     }
 
     /*!
@@ -84,53 +90,67 @@ public:
      */
     void allocBuffers()
     {
-        if (phasePresenceOutput_()) this->resizeScalarBuffer_(phasePresence_);
+        if (params_.LOutput_) {
+            this->resizeScalarBuffer_(L_);
+        }
+        if (params_.equilConstOutput_) {
+            this->resizeComponentBuffer_(K_);
+        }
     }
 
     /*!
-     * \brief Modify the internal buffers according to the intensive quanties relevant
+     * \brief Modify the internal buffers according to the intensive quantities relevant
      *        for an element
      */
     void processElement(const ElementContext& elemCtx)
     {
+        using Toolbox = MathToolbox<Evaluation>;
+
         if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            // calculate the phase presence
-            int phasePresence = elemCtx.primaryVars(i, /*timeIdx=*/0).phasePresence();
             unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
 
-            if (phasePresenceOutput_())
-                phasePresence_[I] = phasePresence;
+            if (params_.LOutput_) {
+                L_[I] = Toolbox::value(fs.L());
+            }
+
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                if (params_.equilConstOutput_) {
+                    K_[compIdx][I] = Toolbox::value(fs.K(compIdx));
+                }
+            }
         }
     }
 
     /*!
-     * \brief Add all buffers to the output writer.
+     * \brief Add all buffers to the VTK output writer.
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        auto* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (phasePresenceOutput_())
-            this->commitScalarBuffer_(baseWriter, "phase presence", phasePresence_);
+        if (params_.equilConstOutput_) {
+            this->commitComponentBuffer_(baseWriter, "K^%s", K_);
+        }
+        if (params_.LOutput_) {
+            this->commitScalarBuffer_(baseWriter, "L", L_);
+        }
     }
 
 private:
-    static bool phasePresenceOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWritePhasePresence>();
-        return val;
-    }
-
-    ScalarBuffer phasePresence_;
+    VtkPtFlashParams params_{};
+    ComponentBuffer K_{};
+    ScalarBuffer L_{};
 };
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_PTFLASH_MODULE_HPP

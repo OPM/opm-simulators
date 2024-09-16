@@ -38,7 +38,7 @@
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
-#include <opm/models/io/vtkblackoilsolventmodule.hh>
+#include <opm/models/io/vtkblackoilsolventmodule.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 

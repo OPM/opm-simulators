@@ -35,7 +35,7 @@
 #include <opm/models/blackoil/blackoilpolymerparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
-#include <opm/models/io/vtkblackoilpolymermodule.hh>
+#include <opm/models/io/vtkblackoilpolymermodule.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 

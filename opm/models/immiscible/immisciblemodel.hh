@@ -40,7 +40,7 @@
 
 #include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/common/energymodule.hh>
-#include <opm/models/io/vtkenergymodule.hh>
+#include <opm/models/io/vtkenergymodule.hpp>
 #include <opm/material/components/NullComponent.hpp>
 #include <opm/material/fluidsystems/GasPhase.hpp>
 #include <opm/material/fluidsystems/LiquidPhase.hpp>

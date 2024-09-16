@@ -22,64 +22,56 @@
 */
 /*!
  * \file
- * \copydoc Opm::VtkTemperatureModule
+ * \copydoc Opm::VtkPhasePresenceModule
  */
-#ifndef EWOMS_VTK_TEMPERATURE_MODULE_HH
-#define EWOMS_VTK_TEMPERATURE_MODULE_HH
-
-#include <opm/material/common/MathToolbox.hpp>
+#ifndef OPM_VTK_PHASE_PRESENCE_MODULE_HPP
+#define OPM_VTK_PHASE_PRESENCE_MODULE_HPP
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkphasepresenceparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteTemperature { static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
 /*!
  * \ingroup Vtk
  *
- * \brief VTK output module for the temperature in which assume
- *        thermal equilibrium
+ * \brief VTK output module for the fluid composition
  */
 template<class TypeTag>
-class VtkTemperatureModule : public BaseOutputModule<TypeTag>
+class VtkPhasePresenceModule : public BaseOutputModule<TypeTag>
 {
     using ParentType = BaseOutputModule<TypeTag>;
 
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-
     using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
-    VtkTemperatureModule(const Simulator& simulator)
+    VtkPhasePresenceModule(const Simulator& simulator)
         : ParentType(simulator)
-    {}
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteTemperature>
-            ("Include the temperature in the VTK output files");
+        VtkPhasePresenceParams::registerParameters();
     }
 
     /*!
@@ -88,55 +80,52 @@ public:
      */
     void allocBuffers()
     {
-        if (temperatureOutput_()) this->resizeScalarBuffer_(temperature_);
+        if (params_.phasePresenceOutput_) {
+            this->resizeScalarBuffer_(phasePresence_);
+        }
     }
 
     /*!
-     * \brief Modify the internal buffers according to the intensive quantities relevant
+     * \brief Modify the internal buffers according to the intensive quanties relevant
      *        for an element
      */
     void processElement(const ElementContext& elemCtx)
     {
-        using Toolbox = MathToolbox<Evaluation>;
-
         if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
+            // calculate the phase presence
+            int phasePresence = elemCtx.primaryVars(i, /*timeIdx=*/0).phasePresence();
             unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
-            const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
 
-            if (temperatureOutput_())
-                temperature_[I] = Toolbox::value(fs.temperature(/*phaseIdx=*/0));
+            if (params_.phasePresenceOutput_) {
+                phasePresence_[I] = phasePresence;
+            }
         }
     }
 
     /*!
-     * \brief Add all buffers to the VTK output writer.
+     * \brief Add all buffers to the output writer.
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (temperatureOutput_())
-            this->commitScalarBuffer_(baseWriter, "temperature", temperature_);
+        if (params_.phasePresenceOutput_) {
+            this->commitScalarBuffer_(baseWriter, "phase presence", phasePresence_);
+        }
     }
 
 private:
-    static bool temperatureOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteTemperature>();
-        return val;
-    }
-
-    ScalarBuffer temperature_;
+    VtkPhasePresenceParams params_{};
+    ScalarBuffer phasePresence_{};
 };
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_PHASE_PRESENCE_MODULE_HPP

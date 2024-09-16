@@ -20,25 +20,29 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-/*!
- * \file
- * \ingroup DiscreteFractureModel
- *
- * \brief Defines the properties required for the immiscible
- *        multi-phase model which considers discrete fractures.
- */
-#ifndef EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
-#define EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
 
-#include <opm/models/immiscible/immiscibleproperties.hh>
+#include <config.h>
+#include <opm/models/io/vtkprimaryvarsparams.hpp>
 
-#include <opm/models/io/vtkdiscretefracturemodule.hpp>
+#include <opm/models/utils/parametersystem.hpp>
 
-namespace Opm::Properties {
+namespace Opm {
 
-template<class TypeTag, class MyTypeTag>
-struct UseTwoPointGradients { using type = UndefinedProperty; };
+void VtkPrimaryVarsParams::registerParameters()
+{
+    Parameters::Register<Parameters::VtkWritePrimaryVars>
+        ("Include the primary variables into the VTK output files");
+    Parameters::Register<Parameters::VtkWriteProcessRank>
+        ("Include the MPI process rank into the VTK output files");
+    Parameters::Register<Parameters::VtkWriteDofIndex>
+        ("Include the index of the degrees of freedom into the VTK output files");
+}
 
-} // namespace Opm::Properties
+void VtkPrimaryVarsParams::read()
+{
+    primaryVarsOutput_ = Parameters::Get<Parameters::VtkWritePrimaryVars>();
+    processRankOutput_ = Parameters::Get<Parameters::VtkWriteProcessRank>();
+    dofIndexOutput_ = Parameters::Get<Parameters::VtkWriteDofIndex>();
+}
 
-#endif
+} // namespace Opm

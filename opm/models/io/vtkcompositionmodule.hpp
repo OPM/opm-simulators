@@ -24,31 +24,19 @@
  * \file
  * \copydoc Opm::VtkCompositionModule
  */
-#ifndef EWOMS_VTK_COMPOSITION_MODULE_HH
-#define EWOMS_VTK_COMPOSITION_MODULE_HH
+#ifndef OPM_VTK_COMPOSITION_MODULE_HPP
+#define OPM_VTK_COMPOSITION_MODULE_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkcompositionparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteMassFractions { static constexpr bool value = false; };
-struct VtkWriteMoleFractions { static constexpr bool value = true; };
-struct VtkWriteTotalMassFractions { static constexpr bool value = false; };
-struct VtkWriteTotalMoleFractions { static constexpr bool value = false; };
-struct VtkWriteMolarities { static constexpr bool value = false; };
-struct VtkWriteFugacities { static constexpr bool value = false; };
-struct VtkWriteFugacityCoeffs { static constexpr bool value = false; };
-
-} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -88,27 +76,16 @@ class VtkCompositionModule : public BaseOutputModule<TypeTag>
 public:
     VtkCompositionModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteMassFractions>
-            ("Include mass fractions in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteMoleFractions>
-            ("Include mole fractions in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteTotalMassFractions>
-            ("Include total mass fractions in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteTotalMoleFractions>
-            ("Include total mole fractions in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteMolarities>
-            ("Include component molarities in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFugacities>
-            ("Include component fugacities in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFugacityCoeffs>
-            ("Include component fugacity coefficients in the VTK output files");
+        VtkCompositionParams::registerParameters();
     }
 
     /*!
@@ -117,21 +94,28 @@ public:
      */
     void allocBuffers()
     {
-        if (moleFracOutput_())
+        if (params_.moleFracOutput_) {
             this->resizePhaseComponentBuffer_(moleFrac_);
-        if (massFracOutput_())
+        }
+        if (params_.massFracOutput_) {
             this->resizePhaseComponentBuffer_(massFrac_);
-        if (totalMassFracOutput_())
+        }
+        if (params_.totalMassFracOutput_) {
             this->resizeComponentBuffer_(totalMassFrac_);
-        if (totalMoleFracOutput_())
+        }
+        if (params_.totalMoleFracOutput_) {
             this->resizeComponentBuffer_(totalMoleFrac_);
-        if (molarityOutput_())
+        }
+        if (params_.molarityOutput_) {
             this->resizePhaseComponentBuffer_(molarity_);
+        }
 
-        if (fugacityOutput_())
+        if (params_.fugacityOutput_) {
             this->resizeComponentBuffer_(fugacity_);
-        if (fugacityCoeffOutput_())
+        }
+        if (params_.fugacityCoeffOutput_) {
             this->resizePhaseComponentBuffer_(fugacityCoeff_);
+        }
     }
 
     /*!
@@ -153,21 +137,25 @@ public:
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                    if (moleFracOutput_())
+                    if (params_.moleFracOutput_) {
                         moleFrac_[phaseIdx][compIdx][I] = Toolbox::value(fs.moleFraction(phaseIdx, compIdx));
-                    if (massFracOutput_())
+                    }
+                    if (params_.massFracOutput_) {
                         massFrac_[phaseIdx][compIdx][I] = Toolbox::value(fs.massFraction(phaseIdx, compIdx));
-                    if (molarityOutput_())
+                    }
+                    if (params_.molarityOutput_) {
                         molarity_[phaseIdx][compIdx][I] = Toolbox::value(fs.molarity(phaseIdx, compIdx));
+                    }
 
-                    if (fugacityCoeffOutput_())
+                    if (params_.fugacityCoeffOutput_) {
                         fugacityCoeff_[phaseIdx][compIdx][I] =
                             Toolbox::value(fs.fugacityCoefficient(phaseIdx, compIdx));
+                    }
                 }
             }
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (totalMassFracOutput_()) {
+                if (params_.totalMassFracOutput_) {
                     Scalar compMass = 0;
                     Scalar totalMass = 0;
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -179,7 +167,7 @@ public:
                     }
                     totalMassFrac_[compIdx][I] = compMass / totalMass;
                 }
-                if (totalMoleFracOutput_()) {
+                if (params_.totalMoleFracOutput_) {
                     Scalar compMoles = 0;
                     Scalar totalMoles = 0;
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -193,8 +181,9 @@ public:
                     }
                     totalMoleFrac_[compIdx][I] = compMoles / totalMoles;
                 }
-                if (fugacityOutput_())
+                if (params_.fugacityOutput_) {
                     fugacity_[compIdx][I] = Toolbox::value(intQuants.fluidState().fugacity(/*phaseIdx=*/0, compIdx));
+                }
             }
         }
     }
@@ -204,81 +193,47 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (moleFracOutput_())
+        if (params_.moleFracOutput_) {
             this->commitPhaseComponentBuffer_(baseWriter, "moleFrac_%s^%s", moleFrac_);
-        if (massFracOutput_())
+        }
+        if (params_.massFracOutput_) {
             this->commitPhaseComponentBuffer_(baseWriter, "massFrac_%s^%s", massFrac_);
-        if (molarityOutput_())
+        }
+        if (params_.molarityOutput_) {
             this->commitPhaseComponentBuffer_(baseWriter, "molarity_%s^%s", molarity_);
-        if (totalMassFracOutput_())
+        }
+        if (params_.totalMassFracOutput_) {
             this->commitComponentBuffer_(baseWriter, "totalMassFrac^%s", totalMassFrac_);
-        if (totalMoleFracOutput_())
+        }
+        if (params_.totalMoleFracOutput_) {
             this->commitComponentBuffer_(baseWriter, "totalMoleFrac^%s", totalMoleFrac_);
+        }
 
-        if (fugacityOutput_())
+        if (params_.fugacityOutput_) {
             this->commitComponentBuffer_(baseWriter, "fugacity^%s", fugacity_);
-        if (fugacityCoeffOutput_())
+        }
+        if (params_.fugacityCoeffOutput_) {
             this->commitPhaseComponentBuffer_(baseWriter, "fugacityCoeff_%s^%s", fugacityCoeff_);
+        }
     }
 
 private:
-    static bool massFracOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteMassFractions>();
-        return val;
-    }
+    VtkCompositionParams params_{};
+    PhaseComponentBuffer moleFrac_{};
+    PhaseComponentBuffer massFrac_{};
+    PhaseComponentBuffer molarity_{};
+    ComponentBuffer totalMassFrac_{};
+    ComponentBuffer totalMoleFrac_{};
 
-    static bool moleFracOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteMoleFractions>();
-        return val;
-    }
-
-    static bool totalMassFracOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteTotalMassFractions>();
-        return val;
-    }
-
-    static bool totalMoleFracOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteTotalMoleFractions>();
-        return val;
-    }
-
-    static bool molarityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteMolarities>();
-        return val;
-    }
-
-    static bool fugacityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFugacities>();
-        return val;
-    }
-
-    static bool fugacityCoeffOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFugacityCoeffs>();
-        return val;
-    }
-
-    PhaseComponentBuffer moleFrac_;
-    PhaseComponentBuffer massFrac_;
-    PhaseComponentBuffer molarity_;
-    ComponentBuffer totalMassFrac_;
-    ComponentBuffer totalMoleFrac_;
-
-    ComponentBuffer fugacity_;
-    PhaseComponentBuffer fugacityCoeff_;
+    ComponentBuffer fugacity_{};
+    PhaseComponentBuffer fugacityCoeff_{};
 };
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_COMPOSITION_MODULE_HPP

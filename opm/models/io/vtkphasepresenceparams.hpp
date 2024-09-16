@@ -22,23 +22,33 @@
 */
 /*!
  * \file
- * \ingroup DiscreteFractureModel
- *
- * \brief Defines the properties required for the immiscible
- *        multi-phase model which considers discrete fractures.
+ * \copydoc Opm::VtkPhasePresenceModule
  */
-#ifndef EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
-#define EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
+#ifndef OPM_VTK_PHASE_PRESENCE_PARAMS_HPP
+#define OPM_VTK_PHASE_PRESENCE_PARAMS_HPP
 
-#include <opm/models/immiscible/immiscibleproperties.hh>
+namespace Opm::Parameters {
 
-#include <opm/models/io/vtkdiscretefracturemodule.hpp>
+struct VtkWritePhasePresence { static constexpr bool value = false; };
 
-namespace Opm::Properties {
+} // namespace Opm::Parameters
 
-template<class TypeTag, class MyTypeTag>
-struct UseTwoPointGradients { using type = UndefinedProperty; };
+namespace Opm {
 
-} // namespace Opm::Properties
+/*!
+ * \brief Struct holding the parameters for VtkPhasePresenceModule.
+ */
+struct VtkPhasePresenceParams
+{
+    //! \brief Registers the parameters in parameter system.
+    static void registerParameters();
 
-#endif
+    //! \brief Reads the parameter values from the parameter system.
+    void read();
+
+    bool phasePresenceOutput_;
+};
+
+} // namespace Opm
+
+#endif // OPM_VTK_PHASE_PRESENCE_PARAMS_HPP

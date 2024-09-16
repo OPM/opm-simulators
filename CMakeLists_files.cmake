@@ -59,9 +59,25 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilextboparams.cpp
   opm/models/blackoil/blackoilfoamparams.cpp
   opm/models/blackoil/blackoilmicpparams.cpp
+  opm/models/blackoil/blackoilnewtonmethodparams.cpp
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
+  opm/models/io/vtkblackoilenergyparams.cpp
+  opm/models/io/vtkblackoilmicpparams.cpp
+  opm/models/io/vtkblackoilpolymerparams.cpp
+  opm/models/io/vtkblackoilparams.cpp
+  opm/models/io/vtkblackoilsolventparams.cpp
+  opm/models/io/vtkcompositionparams.cpp
+  opm/models/io/vtkdiffusionparams.cpp
+  opm/models/io/vtkdiscretefractureparams.cpp
+  opm/models/io/vtkenergyparams.cpp
+  opm/models/io/vtkmultiphaseparams.cpp
+  opm/models/io/vtkphasepresenceparams.cpp
+  opm/models/io/vtkprimaryvarsparams.cpp
+  opm/models/io/vtkptflashparams.cpp
+  opm/models/io/vtktemperatureparams.cpp
   opm/models/io/restart.cpp
+  opm/models/nonlinear/newtonmethodparams.cpp
   opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
@@ -553,8 +569,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilmicpmodules.hh
   opm/models/blackoil/blackoilmicpparams.hpp
   opm/models/blackoil/blackoilmodel.hh
-  opm/models/blackoil/blackoilnewtonmethod.hh
-  opm/models/blackoil/blackoilnewtonmethodparameters.hh
+  opm/models/blackoil/blackoilnewtonmethod.hpp
+  opm/models/blackoil/blackoilnewtonmethodparams.hpp
   opm/models/blackoil/blackoilonephaseindices.hh
   opm/models/blackoil/blackoilpolymermodules.hh
   opm/models/blackoil/blackoilpolymerparams.hpp
@@ -648,22 +664,36 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/simplexvanguard.hh
   opm/models/io/structuredgridvanguard.hh
   opm/models/io/unstructuredgridvanguard.hh
-  opm/models/io/vtkblackoilenergymodule.hh
-  opm/models/io/vtkblackoilmicpmodule.hh
-  opm/models/io/vtkblackoilmodule.hh
-  opm/models/io/vtkblackoilpolymermodule.hh
-  opm/models/io/vtkblackoilsolventmodule.hh
-  opm/models/io/vtkcompositionmodule.hh
-  opm/models/io/vtkdiffusionmodule.hh
-  opm/models/io/vtkdiscretefracturemodule.hh
-  opm/models/io/vtkenergymodule.hh
-  opm/models/io/vtkmultiphasemodule.hh
+  opm/models/io/vtkblackoilenergymodule.hpp
+  opm/models/io/vtkblackoilenergyparams.hpp
+  opm/models/io/vtkblackoilmicpmodule.hpp
+  opm/models/io/vtkblackoilmicpparams.hpp
+  opm/models/io/vtkblackoilmodule.hpp
+  opm/models/io/vtkblackoilparams.hpp
+  opm/models/io/vtkblackoilpolymermodule.hpp
+  opm/models/io/vtkblackoilpolymerparams.hpp
+  opm/models/io/vtkblackoilsolventmodule.hpp
+  opm/models/io/vtkblackoilsolventparams.hpp
+  opm/models/io/vtkcompositionmodule.hpp
+  opm/models/io/vtkcompositionparams.hpp
+  opm/models/io/vtkdiffusionmodule.hpp
+  opm/models/io/vtkdiffusionparams.hpp
+  opm/models/io/vtkdiscretefracturemodule.hpp
+  opm/models/io/vtkdiscretefractureparams.hpp
+  opm/models/io/vtkenergymodule.hpp
+  opm/models/io/vtkenergyparams.hpp
+  opm/models/io/vtkmultiphasemodule.hpp
+  opm/models/io/vtkmultiphaseparams.hpp
   opm/models/io/vtkmultiwriter.hh
-  opm/models/io/vtkphasepresencemodule.hh
-  opm/models/io/vtkprimaryvarsmodule.hh
-  opm/models/io/vtkptflashmodule.hh
+  opm/models/io/vtkphasepresencemodule.hpp
+  opm/models/io/vtkphasepresenceparams.hpp
+  opm/models/io/vtkprimaryvarsmodule.hpp
+  opm/models/io/vtkprimaryvarsparams.hpp
+  opm/models/io/vtkptflashmodule.hpp
+  opm/models/io/vtkptflashparams.hpp
   opm/models/io/vtkscalarfunction.hh
-  opm/models/io/vtktemperaturemodule.hh
+  opm/models/io/vtktemperaturemodule.hpp
+  opm/models/io/vtktemperatureparams.hpp
   opm/models/io/vtktensorfunction.hh
   opm/models/io/vtkvectorfunction.hh
   opm/models/ncp/ncpboundaryratevector.hh
@@ -677,7 +707,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/ncp/ncpproperties.hh
   opm/models/ncp/ncpratevector.hh
   opm/models/nonlinear/newtonmethod.hh
-  opm/models/nonlinear/newtonmethodparameters.hh
+  opm/models/nonlinear/newtonmethodparams.hpp
   opm/models/nonlinear/newtonmethodproperties.hh
   opm/models/nonlinear/nullconvergencewriter.hh
   opm/models/parallel/gridcommhandles.hh

@@ -33,10 +33,10 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
-#include <opm/models/io/vtkcompositionmodule.hh>
-#include <opm/models/io/vtkphasepresencemodule.hh>
-#include <opm/models/io/vtkdiffusionmodule.hh>
-#include <opm/models/io/vtkenergymodule.hh>
+#include <opm/models/io/vtkcompositionmodule.hpp>
+#include <opm/models/io/vtkphasepresencemodule.hpp>
+#include <opm/models/io/vtkdiffusionmodule.hpp>
+#include <opm/models/io/vtkenergymodule.hpp>
 
 namespace Opm::Properties {
 

@@ -27,7 +27,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/nonlinear/newtonmethodparameters.hh>
+#include <opm/models/nonlinear/newtonmethodparams.hpp>
 #include <opm/models/nonlinear/newtonmethodproperties.hh>
 
 #include <opm/models/utils/parametersystem.hpp>

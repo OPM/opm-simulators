@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkMultiPhaseModule
  */
-#ifndef EWOMS_VTK_MULTI_PHASE_MODULE_HH
-#define EWOMS_VTK_MULTI_PHASE_MODULE_HH
+#ifndef OPM_VTK_MULTI_PHASE_MODULE_HPP
+#define OPM_VTK_MULTI_PHASE_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -35,30 +35,13 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiphaseparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <cstdio>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteExtrusionFactor { static constexpr bool value = false; };
-struct VtkWritePressures { static constexpr bool value = true; };
-struct VtkWriteDensities { static constexpr bool value = true; };
-struct VtkWriteSaturations { static constexpr bool value = true; };
-struct VtkWriteMobilities { static constexpr bool value = false; };
-struct VtkWriteRelativePermeabilities { static constexpr bool value = true; };
-struct VtkWriteViscosities { static constexpr bool value = false; };
-struct VtkWriteAverageMolarMasses { static constexpr bool value = false; };
-struct VtkWritePorosity { static constexpr bool value = true; };
-struct VtkWriteIntrinsicPermeabilities { static constexpr bool value = false; };
-struct VtkWritePotentialGradients { static constexpr bool value = false; };
-struct VtkWriteFilterVelocities { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -111,37 +94,16 @@ class VtkMultiPhaseModule : public BaseOutputModule<TypeTag>
 public:
     VtkMultiPhaseModule(const Simulator& simulator)
         : ParentType(simulator)
-    {}
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the multi-phase VTK output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteExtrusionFactor>
-            ("Include the extrusion factor of the degrees of freedom into the VTK output files");
-        Parameters::Register<Parameters::VtkWritePressures>
-            ("Include the phase pressures in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteDensities>
-            ("Include the phase densities in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteSaturations>
-            ("Include the phase saturations in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteMobilities>
-            ("Include the phase mobilities in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteRelativePermeabilities>
-            ("Include the phase relative permeabilities in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteViscosities>
-            ("Include component phase viscosities in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteAverageMolarMasses>
-            ("Include the average phase mass in the VTK output files");
-        Parameters::Register<Parameters::VtkWritePorosity>
-            ("Include the porosity in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteIntrinsicPermeabilities>
-            ("Include the intrinsic permeability in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFilterVelocities>
-            ("Include in the filter velocities of the phases the VTK output files");
-        Parameters::Register<Parameters::VtkWritePotentialGradients>
-            ("Include the phase pressure potential gradients in the VTK output files");
+        VtkMultiPhaseParams::registerParameters();
     }
 
     /*!
@@ -150,19 +112,39 @@ public:
      */
     void allocBuffers()
     {
-        if (extrusionFactorOutput_()) this->resizeScalarBuffer_(extrusionFactor_);
-        if (pressureOutput_()) this->resizePhaseBuffer_(pressure_);
-        if (densityOutput_()) this->resizePhaseBuffer_(density_);
-        if (saturationOutput_()) this->resizePhaseBuffer_(saturation_);
-        if (mobilityOutput_()) this->resizePhaseBuffer_(mobility_);
-        if (relativePermeabilityOutput_()) this->resizePhaseBuffer_(relativePermeability_);
-        if (viscosityOutput_()) this->resizePhaseBuffer_(viscosity_);
-        if (averageMolarMassOutput_()) this->resizePhaseBuffer_(averageMolarMass_);
+        if (params_.extrusionFactorOutput_) {
+            this->resizeScalarBuffer_(extrusionFactor_);
+        }
+        if (params_.pressureOutput_) {
+            this->resizePhaseBuffer_(pressure_);
+        }
+        if (params_.densityOutput_) {
+            this->resizePhaseBuffer_(density_);
+        }
+        if (params_.saturationOutput_) {
+            this->resizePhaseBuffer_(saturation_);
+        }
+        if (params_.mobilityOutput_) {
+            this->resizePhaseBuffer_(mobility_);
+        }
+        if (params_.relativePermeabilityOutput_) {
+            this->resizePhaseBuffer_(relativePermeability_);
+        }
+        if (params_.viscosityOutput_) {
+            this->resizePhaseBuffer_(viscosity_);
+        }
+        if (params_.averageMolarMassOutput_) {
+            this->resizePhaseBuffer_(averageMolarMass_);
+        }
 
-        if (porosityOutput_()) this->resizeScalarBuffer_(porosity_);
-        if (intrinsicPermeabilityOutput_()) this->resizeTensorBuffer_(intrinsicPermeability_);
+        if (params_.porosityOutput_) {
+            this->resizeScalarBuffer_(porosity_);
+        }
+        if (params_.intrinsicPermeabilityOutput_) {
+            this->resizeTensorBuffer_(intrinsicPermeability_);
+        }
 
-        if (velocityOutput_()) {
+        if (params_.velocityOutput_) {
             size_t nDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 velocity_[phaseIdx].resize(nDof);
@@ -174,7 +156,7 @@ public:
             this->resizePhaseBuffer_(velocityWeight_);
         }
 
-        if (potentialGradientOutput_()) {
+        if (params_.potentialGradientOutput_) {
             size_t nDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 potentialGradient_[phaseIdx].resize(nDof);
@@ -204,38 +186,51 @@ public:
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            if (extrusionFactorOutput_()) extrusionFactor_[I] = intQuants.extrusionFactor();
-            if (porosityOutput_()) porosity_[I] = getValue(intQuants.porosity());
+            if (params_.extrusionFactorOutput_) {
+                extrusionFactor_[I] = intQuants.extrusionFactor();
+            }
+            if (params_.porosityOutput_) {
+                porosity_[I] = getValue(intQuants.porosity());
+            }
 
-            if (intrinsicPermeabilityOutput_()) {
+            if (params_.intrinsicPermeabilityOutput_) {
                 const auto& K = problem.intrinsicPermeability(elemCtx, i, /*timeIdx=*/0);
-                for (unsigned rowIdx = 0; rowIdx < K.rows; ++rowIdx)
-                    for (unsigned colIdx = 0; colIdx < K.cols; ++colIdx)
+                for (unsigned rowIdx = 0; rowIdx < K.rows; ++rowIdx) {
+                    for (unsigned colIdx = 0; colIdx < K.cols; ++colIdx) {
                         intrinsicPermeability_[I][rowIdx][colIdx] = K[rowIdx][colIdx];
+                    }
+                }
             }
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
                 }
-                if (pressureOutput_())
+                if (params_.pressureOutput_) {
                     pressure_[phaseIdx][I] = getValue(fs.pressure(phaseIdx));
-                if (densityOutput_())
+                }
+                if (params_.densityOutput_) {
                     density_[phaseIdx][I] = getValue(fs.density(phaseIdx));
-                if (saturationOutput_())
+                }
+                if (params_.saturationOutput_) {
                     saturation_[phaseIdx][I] = getValue(fs.saturation(phaseIdx));
-                if (mobilityOutput_())
+                }
+                if (params_.mobilityOutput_) {
                     mobility_[phaseIdx][I] = getValue(intQuants.mobility(phaseIdx));
-                if (relativePermeabilityOutput_())
+                }
+                if (params_.relativePermeabilityOutput_) {
                     relativePermeability_[phaseIdx][I] = getValue(intQuants.relativePermeability(phaseIdx));
-                if (viscosityOutput_())
+                }
+                if (params_.viscosityOutput_) {
                     viscosity_[phaseIdx][I] = getValue(fs.viscosity(phaseIdx));
-                if (averageMolarMassOutput_())
+                }
+                if (params_.averageMolarMassOutput_) {
                     averageMolarMass_[phaseIdx][I] = getValue(fs.averageMolarMass(phaseIdx));
+                }
             }
         }
 
-        if (potentialGradientOutput_()) {
+        if (params_.potentialGradientOutput_) {
             // calculate velocities if requested
             for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ faceIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, /*timeIdx=*/0);
@@ -250,14 +245,15 @@ public:
 
                     const auto& inputPGrad = extQuants.potentialGrad(phaseIdx);
                     DimVector pGrad;
-                    for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+                    for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                         pGrad[dimIdx] = getValue(inputPGrad[dimIdx])*weight;
+                    }
                     potentialGradient_[phaseIdx][I] += pGrad;
                 } // end for all phases
             } // end for all faces
         }
 
-        if (velocityOutput_()) {
+        if (params_.velocityOutput_) {
             // calculate velocities if requested
             for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ faceIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, /*timeIdx=*/0);
@@ -277,10 +273,12 @@ public:
 
                     const auto& inputV = extQuants.filterVelocity(phaseIdx);
                     DimVector v;
-                    for (unsigned k = 0; k < dimWorld; ++k)
+                    for (unsigned k = 0; k < dimWorld; ++k) {
                         v[k] = getValue(inputV[k]);
-                    if (v.two_norm() > 1e-20)
+                    }
+                    if (v.two_norm() > 1e-20) {
                         weight /= v.two_norm();
+                    }
                     v *= weight;
 
                     velocity_[phaseIdx][I] += v;
@@ -298,40 +296,52 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter)
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        if (!vtkWriter) {
             return;
+        }
 
-        if (extrusionFactorOutput_())
+        if (params_.extrusionFactorOutput_) {
             this->commitScalarBuffer_(baseWriter, "extrusionFactor", extrusionFactor_);
-        if (pressureOutput_())
+        }
+        if (params_.pressureOutput_) {
             this->commitPhaseBuffer_(baseWriter, "pressure_%s", pressure_);
-        if (densityOutput_())
+        }
+        if (params_.densityOutput_) {
             this->commitPhaseBuffer_(baseWriter, "density_%s", density_);
-        if (saturationOutput_())
+        }
+        if (params_.saturationOutput_) {
             this->commitPhaseBuffer_(baseWriter, "saturation_%s", saturation_);
-        if (mobilityOutput_())
+        }
+        if (params_.mobilityOutput_) {
             this->commitPhaseBuffer_(baseWriter, "mobility_%s", mobility_);
-        if (relativePermeabilityOutput_())
+        }
+        if (params_.relativePermeabilityOutput_) {
             this->commitPhaseBuffer_(baseWriter, "relativePerm_%s", relativePermeability_);
-        if (viscosityOutput_())
+        }
+        if (params_.viscosityOutput_) {
             this->commitPhaseBuffer_(baseWriter, "viscosity_%s", viscosity_);
-        if (averageMolarMassOutput_())
+        }
+        if (params_.averageMolarMassOutput_) {
             this->commitPhaseBuffer_(baseWriter, "averageMolarMass_%s", averageMolarMass_);
+        }
 
-        if (porosityOutput_())
+        if (params_.porosityOutput_) {
             this->commitScalarBuffer_(baseWriter, "porosity", porosity_);
-        if (intrinsicPermeabilityOutput_())
+        }
+        if (params_.intrinsicPermeabilityOutput_) {
             this->commitTensorBuffer_(baseWriter, "intrinsicPerm", intrinsicPermeability_);
+        }
 
-        if (velocityOutput_()) {
+        if (params_.velocityOutput_) {
             size_t numDof = this->simulator_.model().numGridDof();
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 // first, divide the velocity field by the
                 // respective finite volume's surface area
-                for (unsigned i = 0; i < numDof; ++i)
+                for (unsigned i = 0; i < numDof; ++i) {
                     velocity_[phaseIdx][i] /= velocityWeight_[phaseIdx][i];
+                }
                 // commit the phase velocity
                 char name[512];
                 snprintf(name, 512, "filterVelocity_%s", FluidSystem::phaseName(phaseIdx).data());
@@ -340,14 +350,15 @@ public:
             }
         }
 
-        if (potentialGradientOutput_()) {
+        if (params_.potentialGradientOutput_) {
             size_t numDof = this->simulator_.model().numGridDof();
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 // first, divide the velocity field by the
                 // respective finite volume's surface area
-                for (unsigned i = 0; i < numDof; ++i)
+                for (unsigned i = 0; i < numDof; ++i) {
                     potentialGradient_[phaseIdx][i] /= potentialWeight_[phaseIdx][i];
+                }
                 // commit the phase velocity
                 char name[512];
                 snprintf(name, 512, "gradP_%s", FluidSystem::phaseName(phaseIdx).data());
@@ -367,103 +378,32 @@ public:
      * returning true here does not do any harm from the correctness perspective, but it
      * slows down writing the output fields.
      */
-    virtual bool needExtensiveQuantities() const final
+    bool needExtensiveQuantities() const final
     {
-        return velocityOutput_() || potentialGradientOutput_();
+        return params_.velocityOutput_ || params_.potentialGradientOutput_;
     }
 
 private:
-    static bool extrusionFactorOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteExtrusionFactor>();
-        return val;
-    }
+    VtkMultiPhaseParams params_{};
+    ScalarBuffer extrusionFactor_{};
+    PhaseBuffer pressure_{};
+    PhaseBuffer density_{};
+    PhaseBuffer saturation_{};
+    PhaseBuffer mobility_{};
+    PhaseBuffer relativePermeability_{};
+    PhaseBuffer viscosity_{};
+    PhaseBuffer averageMolarMass_{};
 
-    static bool pressureOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWritePressures>();
-        return val;
-    }
+    ScalarBuffer porosity_{};
+    TensorBuffer intrinsicPermeability_{};
 
-    static bool densityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteDensities>();
-        return val;
-    }
+    PhaseVectorBuffer velocity_{};
+    PhaseBuffer velocityWeight_{};
 
-    static bool saturationOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSaturations>();
-        return val;
-    }
-
-    static bool mobilityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteMobilities>();
-        return val;
-    }
-
-    static bool relativePermeabilityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteRelativePermeabilities>();
-        return val;
-    }
-
-    static bool viscosityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteViscosities>();
-        return val;
-    }
-
-    static bool averageMolarMassOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteAverageMolarMasses>();
-        return val;
-    }
-
-    static bool porosityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWritePorosity>();
-        return val;
-    }
-
-    static bool intrinsicPermeabilityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteIntrinsicPermeabilities>();
-        return val;
-    }
-
-    static bool velocityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFilterVelocities>();
-        return val;
-    }
-
-    static bool potentialGradientOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWritePotentialGradients>();
-        return val;
-    }
-
-    ScalarBuffer extrusionFactor_;
-    PhaseBuffer pressure_;
-    PhaseBuffer density_;
-    PhaseBuffer saturation_;
-    PhaseBuffer mobility_;
-    PhaseBuffer relativePermeability_;
-    PhaseBuffer viscosity_;
-    PhaseBuffer averageMolarMass_;
-
-    ScalarBuffer porosity_;
-    TensorBuffer intrinsicPermeability_;
-
-    PhaseVectorBuffer velocity_;
-    PhaseBuffer velocityWeight_;
-
-    PhaseVectorBuffer potentialGradient_;
-    PhaseBuffer potentialWeight_;
+    PhaseVectorBuffer potentialGradient_{};
+    PhaseBuffer potentialWeight_{};
 };
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_MULTI_PHASE_MODULE_HPP

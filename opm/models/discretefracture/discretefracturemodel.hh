@@ -38,7 +38,7 @@
 #include "discretefractureproblem.hh"
 
 #include <opm/models/immiscible/immisciblemodel.hh>
-#include <opm/models/io/vtkdiscretefracturemodule.hh>
+#include <opm/models/io/vtkdiscretefracturemodule.hpp>
 
 #include <stdexcept>
 #include <string>

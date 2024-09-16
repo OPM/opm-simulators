@@ -24,24 +24,17 @@
  * \file
  * \copydoc Opm::VtkPrimaryVarsModule
  */
-#ifndef EWOMS_VTK_PRIMARY_VARS_MODULE_HH
-#define EWOMS_VTK_PRIMARY_VARS_MODULE_HH
+#ifndef OPM_VTK_PRIMARY_VARS_MODULE_HPP
+#define OPM_VTK_PRIMARY_VARS_MODULE_HPP
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
 #include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/vtkprimaryvarsparams.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-struct VtkWritePrimaryVars { static constexpr bool value = false; };
-struct VtkWriteProcessRank { static constexpr bool value = false; };
-struct VtkWriteDofIndex { static constexpr bool value = false; };
-
-} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -70,19 +63,16 @@ class VtkPrimaryVarsModule : public BaseOutputModule<TypeTag>
 public:
     VtkPrimaryVarsModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWritePrimaryVars>
-            ("Include the primary variables into the VTK output files");
-        Parameters::Register<Parameters::VtkWriteProcessRank>
-            ("Include the MPI process rank into the VTK output files");
-        Parameters::Register<Parameters::VtkWriteDofIndex>
-            ("Include the index of the degrees of freedom into the VTK output files");
+        VtkPrimaryVarsParams::registerParameters();
     }
 
     /*!
@@ -91,13 +81,16 @@ public:
      */
     void allocBuffers()
     {
-        if (primaryVarsOutput_())
+        if (params_.primaryVarsOutput_) {
             this->resizeEqBuffer_(primaryVars_);
-        if (processRankOutput_())
+        }
+        if (params_.processRankOutput_) {
             this->resizeScalarBuffer_(processRank_,
                                       /*bufferType=*/ParentType::ElementBuffer);
-        if (dofIndexOutput_())
+        }
+        if (params_.dofIndexOutput_) {
             this->resizeScalarBuffer_(dofIndex_);
+        }
     }
 
     /*!
@@ -112,19 +105,22 @@ public:
 
         const auto& elementMapper = elemCtx.model().elementMapper();
         unsigned elemIdx = static_cast<unsigned>(elementMapper.index(elemCtx.element()));
-        if (processRankOutput_() && !processRank_.empty())
+        if (params_.processRankOutput_ && !processRank_.empty()) {
             processRank_[elemIdx] = static_cast<unsigned>(this->simulator_.gridView().comm().rank());
+        }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
             unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& priVars = elemCtx.primaryVars(i, /*timeIdx=*/0);
 
-            if (dofIndexOutput_())
+            if (params_.dofIndexOutput_) {
                 dofIndex_[I] = I;
+            }
 
             for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-                if (primaryVarsOutput_() && !primaryVars_[eqIdx].empty())
+                if (params_.primaryVarsOutput_ && !primaryVars_[eqIdx].empty()) {
                     primaryVars_[eqIdx][I] = priVars[eqIdx];
+                }
             }
         }
     }
@@ -134,44 +130,32 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (primaryVarsOutput_())
+        if (params_.primaryVarsOutput_) {
             this->commitPriVarsBuffer_(baseWriter, "PV_%s", primaryVars_);
-        if (processRankOutput_())
+        }
+        if (params_.processRankOutput_) {
             this->commitScalarBuffer_(baseWriter,
                                       "process rank",
                                       processRank_,
                                       /*bufferType=*/ParentType::ElementBuffer);
-        if (dofIndexOutput_())
+        }
+        if (params_.dofIndexOutput_) {
             this->commitScalarBuffer_(baseWriter, "DOF index", dofIndex_);
+        }
     }
 
 private:
-    static bool primaryVarsOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWritePrimaryVars>();
-        return val;
-    }
-    static bool processRankOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteProcessRank>();
-        return val;
-    }
-    static bool dofIndexOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteDofIndex>();
-        return val;
-    }
-
-    EqBuffer primaryVars_;
-    ScalarBuffer processRank_;
-    ScalarBuffer dofIndex_;
+    VtkPrimaryVarsParams params_{};
+    EqBuffer primaryVars_{};
+    ScalarBuffer processRank_{};
+    ScalarBuffer dofIndex_{};
 };
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_PRIMARY_VARS_MODULE_HPP

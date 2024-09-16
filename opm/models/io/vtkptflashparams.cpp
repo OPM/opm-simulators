@@ -20,25 +20,26 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-/*!
- * \file
- * \ingroup DiscreteFractureModel
- *
- * \brief Defines the properties required for the immiscible
- *        multi-phase model which considers discrete fractures.
- */
-#ifndef EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
-#define EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
 
-#include <opm/models/immiscible/immiscibleproperties.hh>
+#include <config.h>
+#include <opm/models/io/vtkptflashparams.hpp>
 
-#include <opm/models/io/vtkdiscretefracturemodule.hpp>
+#include <opm/models/utils/parametersystem.hpp>
 
-namespace Opm::Properties {
+namespace Opm {
 
-template<class TypeTag, class MyTypeTag>
-struct UseTwoPointGradients { using type = UndefinedProperty; };
+void VtkPtFlashParams::registerParameters()
+{
+    Parameters::Register<Parameters::VtkWriteLiquidMoleFractions>
+        ("Include liquid mole fractions (L) in the VTK output files");
+    Parameters::Register<Parameters::VtkWriteEquilibriumConstants>
+        ("Include equilibrium constants (K) in the VTK output files");
+}
 
-} // namespace Opm::Properties
+void VtkPtFlashParams::read()
+{
+    LOutput_ = Parameters::Get<Parameters::VtkWriteLiquidMoleFractions>();
+    equilConstOutput_ = Parameters::Get<Parameters::VtkWriteEquilibriumConstants>();
+}
 
-#endif
+} // namespace Opm
