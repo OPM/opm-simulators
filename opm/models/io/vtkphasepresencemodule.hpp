@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkPhasePresenceModule
  */
-#ifndef EWOMS_VTK_PHASE_PRESENCE_MODULE_HH
-#define EWOMS_VTK_PHASE_PRESENCE_MODULE_HH
+#ifndef OPM_VTK_PHASE_PRESENCE_MODULE_HPP
+#define OPM_VTK_PHASE_PRESENCE_MODULE_HPP
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
@@ -133,4 +133,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_PHASE_PRESENCE_MODULE_HPP

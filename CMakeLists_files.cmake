@@ -680,7 +680,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkmultiphasemodule.hpp
   opm/models/io/vtkmultiphaseparams.hpp
   opm/models/io/vtkmultiwriter.hh
-  opm/models/io/vtkphasepresencemodule.hh
+  opm/models/io/vtkphasepresencemodule.hpp
   opm/models/io/vtkprimaryvarsmodule.hh
   opm/models/io/vtkptflashmodule.hh
   opm/models/io/vtkscalarfunction.hh
