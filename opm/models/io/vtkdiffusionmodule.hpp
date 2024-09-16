@@ -34,19 +34,11 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkdiffusionparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteTortuosities { static constexpr bool value = false; };
-struct VtkWriteDiffusionCoefficients { static constexpr bool value = false; };
-struct VtkWriteEffectiveDiffusionCoefficients { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -85,21 +77,16 @@ class VtkDiffusionModule : public BaseOutputModule<TypeTag>
 public:
     VtkDiffusionModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteTortuosities>
-            ("Include the tortuosity for each phase in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteDiffusionCoefficients>
-            ("Include the molecular diffusion coefficients in "
-             "the VTK output files");
-        Parameters::Register<Parameters::VtkWriteEffectiveDiffusionCoefficients>
-            ("Include the effective molecular diffusion "
-             "coefficients the medium in the VTK output files");
+        VtkDiffusionParams::registerParameters();
     }
 
     /*!
@@ -108,12 +95,15 @@ public:
      */
     void allocBuffers()
     {
-        if (tortuosityOutput_())
+        if (params_.tortuosityOutput_) {
             this->resizePhaseBuffer_(tortuosity_);
-        if (diffusionCoefficientOutput_())
+        }
+        if (params_.diffusionCoefficientOutput_) {
             this->resizePhaseComponentBuffer_(diffusionCoefficient_);
-        if (effectiveDiffusionCoefficientOutput_())
+        }
+        if (params_.effectiveDiffusionCoefficientOutput_) {
             this->resizePhaseComponentBuffer_(effectiveDiffusionCoefficient_);
+        }
     }
 
     /*!
@@ -131,15 +121,18 @@ public:
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (tortuosityOutput_())
+                if (params_.tortuosityOutput_) {
                     tortuosity_[phaseIdx][I] = Toolbox::value(intQuants.tortuosity(phaseIdx));
+                }
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                    if (diffusionCoefficientOutput_())
+                    if (params_.diffusionCoefficientOutput_) {
                         diffusionCoefficient_[phaseIdx][compIdx][I] =
                             Toolbox::value(intQuants.diffusionCoefficient(phaseIdx, compIdx));
-                    if (effectiveDiffusionCoefficientOutput_())
+                    }
+                    if (params_.effectiveDiffusionCoefficientOutput_) {
                         effectiveDiffusionCoefficient_[phaseIdx][compIdx][I] =
                             Toolbox::value(intQuants.effectiveDiffusionCoefficient(phaseIdx, compIdx));
+                    }
                 }
             }
         }
@@ -150,44 +143,30 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (tortuosityOutput_())
+        if (params_.tortuosityOutput_) {
             this->commitPhaseBuffer_(baseWriter, "tortuosity", tortuosity_);
-        if (diffusionCoefficientOutput_())
+        }
+        if (params_.diffusionCoefficientOutput_) {
             this->commitPhaseComponentBuffer_(baseWriter, "diffusionCoefficient",
                                               diffusionCoefficient_);
-        if (effectiveDiffusionCoefficientOutput_())
+        }
+        if (params_.effectiveDiffusionCoefficientOutput_) {
             this->commitPhaseComponentBuffer_(baseWriter,
                                               "effectiveDiffusionCoefficient",
                                               effectiveDiffusionCoefficient_);
+        }
     }
 
 private:
-    static bool tortuosityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteTortuosities>();
-        return val;
-    }
-
-    static bool diffusionCoefficientOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteDiffusionCoefficients>();
-        return val;
-    }
-
-    static bool effectiveDiffusionCoefficientOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteEffectiveDiffusionCoefficients>();
-        return val;
-    }
-
-    PhaseBuffer tortuosity_;
-    PhaseComponentBuffer diffusionCoefficient_;
-    PhaseComponentBuffer effectiveDiffusionCoefficient_;
+    VtkDiffusionParams params_{};
+    PhaseBuffer tortuosity_{};
+    PhaseComponentBuffer diffusionCoefficient_{};
+    PhaseComponentBuffer effectiveDiffusionCoefficient_{};
 };
 
 } // namespace Opm
