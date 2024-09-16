@@ -22,7 +22,7 @@
 */
 
 #include <config.h>
-#include <opm/models/blackoil/blackoilnewtonmethodparameters.hpp>
+#include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 

@@ -32,7 +32,7 @@
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
-#include <opm/models/blackoil/blackoilnewtonmethodparameters.hpp>
+#include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
 
 #include <opm/models/nonlinear/newtonmethod.hh>
 

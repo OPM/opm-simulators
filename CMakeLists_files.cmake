@@ -59,7 +59,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/blackoil/blackoilextboparams.cpp
   opm/models/blackoil/blackoilfoamparams.cpp
   opm/models/blackoil/blackoilmicpparams.cpp
-  opm/models/blackoil/blackoilnewtonmethodparameters.cpp
+  opm/models/blackoil/blackoilnewtonmethodparams.cpp
   opm/models/blackoil/blackoilpolymerparams.cpp
   opm/models/blackoil/blackoilsolventparams.cpp
   opm/models/io/restart.cpp
@@ -555,7 +555,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilmicpparams.hpp
   opm/models/blackoil/blackoilmodel.hh
   opm/models/blackoil/blackoilnewtonmethod.hpp
-  opm/models/blackoil/blackoilnewtonmethodparameters.hpp
+  opm/models/blackoil/blackoilnewtonmethodparams.hpp
   opm/models/blackoil/blackoilonephaseindices.hh
   opm/models/blackoil/blackoilpolymermodules.hh
   opm/models/blackoil/blackoilpolymerparams.hpp
