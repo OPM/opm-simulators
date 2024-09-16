@@ -36,20 +36,11 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkblackoilenergyparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteRockInternalEnergy { static constexpr bool value = true; };
-struct VtkWriteTotalThermalConductivity { static constexpr bool value = true; };
-struct VtkWriteFluidInternalEnergies { static constexpr bool value = true; };
-struct VtkWriteFluidEnthalpies { static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -82,7 +73,11 @@ class VtkBlackOilEnergyModule : public BaseOutputModule<TypeTag>
 public:
     VtkBlackOilEnergyModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        if constexpr (enableEnergy) {
+            params_.read();
+        }
+    }
 
     /*!
      * \brief Register all run-time parameters for the multi-phase VTK output
@@ -90,19 +85,9 @@ public:
      */
     static void registerParameters()
     {
-        if (!enableEnergy)
-            return;
-
-        Parameters::Register<Parameters::VtkWriteRockInternalEnergy>
-            ("Include the volumetric internal energy of rock "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteTotalThermalConductivity>
-            ("Include the total thermal conductivity of the medium and the fluids "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFluidInternalEnergies>
-            ("Include the internal energies of the fluids in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteFluidEnthalpies>
-            ("Include the enthalpies of the fluids in the VTK output files");
+        if constexpr (enableEnergy) {
+            VtkBlackoilEnergyParams::registerParameters();
+        }
     }
 
     /*!
@@ -111,21 +96,24 @@ public:
      */
     void allocBuffers()
     {
-        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
-            return;
+        if constexpr (enableEnergy) {
+            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
+                return;
+            }
+
+            if (params_.rockInternalEnergyOutput_) {
+                this->resizeScalarBuffer_(rockInternalEnergy_);
+            }
+            if (params_.totalThermalConductivityOutput_) {
+                this->resizeScalarBuffer_(totalThermalConductivity_);
+            }
+            if (params_.fluidInternalEnergiesOutput_) {
+                this->resizePhaseBuffer_(fluidInternalEnergies_);
+            }
+            if (params_.fluidEnthalpiesOutput_) {
+                this->resizePhaseBuffer_(fluidEnthalpies_);
+            }
         }
-
-        if (!enableEnergy)
-            return;
-
-        if (rockInternalEnergyOutput_())
-            this->resizeScalarBuffer_(rockInternalEnergy_);
-        if (totalThermalConductivityOutput_())
-            this->resizeScalarBuffer_(totalThermalConductivity_);
-        if (fluidInternalEnergiesOutput_())
-            this->resizePhaseBuffer_(fluidInternalEnergies_);
-        if (fluidEnthalpiesOutput_())
-            this->resizePhaseBuffer_(fluidEnthalpies_);
     }
 
     /*!
@@ -134,34 +122,37 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
-            return;
-        }
+        if constexpr (enableEnergy) {
+            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
+                return;
+            }
 
-        if (!enableEnergy)
-            return;
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
-        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-            const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                if (params_.rockInternalEnergyOutput_) {
+                    rockInternalEnergy_[globalDofIdx] =
+                        scalarValue(intQuants.rockInternalEnergy());
+                }
 
-            if (rockInternalEnergyOutput_())
-                rockInternalEnergy_[globalDofIdx] =
-                    scalarValue(intQuants.rockInternalEnergy());
+                if (params_.totalThermalConductivityOutput_) {
+                    totalThermalConductivity_[globalDofIdx] =
+                        scalarValue(intQuants.totalThermalConductivity());
+                }
 
-            if (totalThermalConductivityOutput_())
-                totalThermalConductivity_[globalDofIdx] =
-                    scalarValue(intQuants.totalThermalConductivity());
+                for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                    if (FluidSystem::phaseIsActive(phaseIdx)) {
+                        if (params_.fluidInternalEnergiesOutput_) {
+                            fluidInternalEnergies_[phaseIdx][globalDofIdx] =
+                                scalarValue(intQuants.fluidState().internalEnergy(phaseIdx));
+                        }
 
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (FluidSystem::phaseIsActive(phaseIdx)) {
-                    if (fluidInternalEnergiesOutput_())
-                        fluidInternalEnergies_[phaseIdx][globalDofIdx] =
-                            scalarValue(intQuants.fluidState().internalEnergy(phaseIdx));
-
-                    if (fluidEnthalpiesOutput_())
-                        fluidEnthalpies_[phaseIdx][globalDofIdx] =
-                            scalarValue(intQuants.fluidState().enthalpy(phaseIdx));
+                        if (params_.fluidEnthalpiesOutput_) {
+                            fluidEnthalpies_[phaseIdx][globalDofIdx] =
+                                scalarValue(intQuants.fluidState().enthalpy(phaseIdx));
+                        }
+                    }
                 }
             }
         }
@@ -172,55 +163,37 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter)
-            return;
+        if constexpr (enableEnergy) {
+            VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+            if (!vtkWriter) {
+                return;
+            }
 
-        if (!enableEnergy)
-            return;
+            if (params_.rockInternalEnergyOutput_) {
+                this->commitScalarBuffer_(baseWriter, "volumetric internal energy rock", rockInternalEnergy_);
+            }
 
-        if (rockInternalEnergyOutput_())
-            this->commitScalarBuffer_(baseWriter, "volumetric internal energy rock", rockInternalEnergy_);
+            if (params_.totalThermalConductivityOutput_) {
+                this->commitScalarBuffer_(baseWriter, "total thermal conductivity", totalThermalConductivity_);
+            }
 
-        if (totalThermalConductivityOutput_())
-            this->commitScalarBuffer_(baseWriter, "total thermal conductivity", totalThermalConductivity_);
+            if (params_.fluidInternalEnergiesOutput_) {
+                this->commitPhaseBuffer_(baseWriter, "internal energy_%s", fluidInternalEnergies_);
+            }
 
-        if (fluidInternalEnergiesOutput_())
-            this->commitPhaseBuffer_(baseWriter, "internal energy_%s", fluidInternalEnergies_);
-
-        if (fluidEnthalpiesOutput_())
-            this->commitPhaseBuffer_(baseWriter, "enthalpy_%s", fluidEnthalpies_);
+            if (params_.fluidEnthalpiesOutput_) {
+                this->commitPhaseBuffer_(baseWriter, "enthalpy_%s", fluidEnthalpies_);
+            }
+        }
     }
 
 private:
-    static bool rockInternalEnergyOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteRockInternalEnergy>();
-        return val;
-    }
+    VtkBlackoilEnergyParams params_{};
 
-    static bool totalThermalConductivityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteTotalThermalConductivity>();
-        return val;
-    }
-
-    static bool fluidInternalEnergiesOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFluidInternalEnergies>();
-        return val;
-    }
-
-    static bool fluidEnthalpiesOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteFluidEnthalpies>();
-        return val;
-    }
-
-    ScalarBuffer rockInternalEnergy_;
-    ScalarBuffer totalThermalConductivity_;
-    PhaseBuffer fluidInternalEnergies_;
-    PhaseBuffer fluidEnthalpies_;
+    ScalarBuffer rockInternalEnergy_{};
+    ScalarBuffer totalThermalConductivity_{};
+    PhaseBuffer fluidInternalEnergies_{};
+    PhaseBuffer fluidEnthalpies_{};
 };
 
 } // namespace Opm
