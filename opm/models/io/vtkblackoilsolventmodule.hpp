@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkBlackOilSolventModule
  */
-#ifndef EWOMS_VTK_BLACK_OIL_SOLVENT_MODULE_HH
-#define EWOMS_VTK_BLACK_OIL_SOLVENT_MODULE_HH
+#ifndef OPM_VTK_BLACK_OIL_SOLVENT_MODULE_HPP
+#define OPM_VTK_BLACK_OIL_SOLVENT_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -53,6 +53,7 @@ struct VtkWriteSolventMobility { static constexpr bool value = true; };
 } // namespace Opm::Properties
 
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -240,4 +241,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_BLACK_OIL_SOLVENT_MODULE_HPP
