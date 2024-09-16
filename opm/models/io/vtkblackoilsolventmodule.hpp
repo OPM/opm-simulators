@@ -36,21 +36,11 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkblackoilsolventparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteSolventSaturation { static constexpr bool value = true; };
-struct VtkWriteSolventRsw { static constexpr bool value = true; };
-struct VtkWriteSolventDensity { static constexpr bool value = true; };
-struct VtkWriteSolventViscosity { static constexpr bool value = true; };
-struct VtkWriteSolventMobility { static constexpr bool value = true; };
-
-} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -80,7 +70,11 @@ class VtkBlackOilSolventModule : public BaseOutputModule<TypeTag>
 public:
     VtkBlackOilSolventModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        if constexpr (enableSolvent) {
+            params_.read();
+        }
+    }
 
     /*!
      * \brief Register all run-time parameters for the multi-phase VTK output
@@ -88,24 +82,9 @@ public:
      */
     static void registerParameters()
     {
-        if (!enableSolvent)
-            return;
-
-        Parameters::Register<Parameters::VtkWriteSolventSaturation>
-            ("Include the \"saturation\" of the solvent component "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteSolventRsw>
-            ("Include the \"dissolved volume in water\" of the solvent component "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteSolventDensity>
-            ("Include the \"density\" of the solvent component "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteSolventViscosity>
-            ("Include the \"viscosity\" of the solvent component "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteSolventMobility>
-            ("Include the \"mobility\" of the solvent component "
-             "in the VTK output files");
+        if constexpr (enableSolvent) {
+            VtkBlackOilSolventParams::registerParameters();
+        }
     }
 
     /*!
@@ -114,23 +93,27 @@ public:
      */
     void allocBuffers()
     {
-        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
-            return;
+        if constexpr (enableSolvent) {
+            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
+                return;
+            }
+
+            if (params_.solventSaturationOutput_) {
+                this->resizeScalarBuffer_(solventSaturation_);
+            }
+            if (params_.solventRswOutput_) {
+                this->resizeScalarBuffer_(solventRsw_);
+            }
+            if (params_.solventDensityOutput_) {
+                this->resizeScalarBuffer_(solventDensity_);
+            }
+            if (params_.solventViscosityOutput_) {
+                this->resizeScalarBuffer_(solventViscosity_);
+            }
+            if (params_.solventMobilityOutput_) {
+                this->resizeScalarBuffer_(solventMobility_);
+            }
         }
-
-        if (!enableSolvent)
-            return;
-
-        if (solventSaturationOutput_())
-            this->resizeScalarBuffer_(solventSaturation_);
-        if (solventRswOutput_())
-            this->resizeScalarBuffer_(solventRsw_);
-        if (solventDensityOutput_())
-            this->resizeScalarBuffer_(solventDensity_);
-        if (solventViscosityOutput_())
-            this->resizeScalarBuffer_(solventViscosity_);
-        if (solventMobilityOutput_())
-            this->resizeScalarBuffer_(solventMobility_);
     }
 
     /*!
@@ -139,37 +122,41 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
-            return;
-        }
+        if constexpr (enableSolvent) {
+            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
+                return;
+            }
 
-        if (!enableSolvent)
-            return;
+            using Toolbox = MathToolbox<Evaluation>;
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
-        using Toolbox = MathToolbox<Evaluation>;
-        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-            const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                if (params_.solventSaturationOutput_) {
+                    solventSaturation_[globalDofIdx] =
+                        Toolbox::scalarValue(intQuants.solventSaturation());
+                }
 
-            if (solventSaturationOutput_())
-                solventSaturation_[globalDofIdx] =
-                    Toolbox::scalarValue(intQuants.solventSaturation());
+                if (params_.solventRswOutput_) {
+                    solventRsw_[globalDofIdx] =
+                        Toolbox::scalarValue(intQuants.rsSolw());
+                }
 
-            if (solventRswOutput_())
-                solventRsw_[globalDofIdx] =
-                    Toolbox::scalarValue(intQuants.rsSolw());
+                if (params_.solventDensityOutput_) {
+                    solventDensity_[globalDofIdx] =
+                        Toolbox::scalarValue(intQuants.solventDensity());
+                }
 
-            if (solventDensityOutput_())
-                solventDensity_[globalDofIdx] =
-                    Toolbox::scalarValue(intQuants.solventDensity());
+                if (params_.solventViscosityOutput_) {
+                    solventViscosity_[globalDofIdx] =
+                        Toolbox::scalarValue(intQuants.solventViscosity());
+                }
 
-            if (solventViscosityOutput_())
-                solventViscosity_[globalDofIdx] =
-                    Toolbox::scalarValue(intQuants.solventViscosity());
-
-            if (solventMobilityOutput_())
-                solventMobility_[globalDofIdx] =
-                    Toolbox::scalarValue(intQuants.solventMobility());
+                if (params_.solventMobilityOutput_) {
+                    solventMobility_[globalDofIdx] =
+                        Toolbox::scalarValue(intQuants.solventMobility());
+                }
+            }
         }
     }
 
@@ -178,65 +165,41 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter)
-            return;
+        if constexpr (enableSolvent) {
+            VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+            if (!vtkWriter) {
+                return;
+            }
 
-        if (!enableSolvent)
-            return;
+            if (params_.solventSaturationOutput_) {
+                this->commitScalarBuffer_(baseWriter, "saturation_solvent", solventSaturation_);
+            }
 
-        if (solventSaturationOutput_())
-            this->commitScalarBuffer_(baseWriter, "saturation_solvent", solventSaturation_);
+            if (params_.solventRswOutput_) {
+                this->commitScalarBuffer_(baseWriter, "dissolved_solvent", solventRsw_);
+            }
 
-        if (solventRswOutput_())
-            this->commitScalarBuffer_(baseWriter, "dissolved_solvent", solventRsw_);
+            if (params_.solventDensityOutput_) {
+                this->commitScalarBuffer_(baseWriter, "density_solvent", solventDensity_);
+            }
 
-        if (solventDensityOutput_())
-            this->commitScalarBuffer_(baseWriter, "density_solvent", solventDensity_);
+            if (params_.solventViscosityOutput_) {
+                this->commitScalarBuffer_(baseWriter, "viscosity_solvent", solventViscosity_);
+            }
 
-        if (solventViscosityOutput_())
-            this->commitScalarBuffer_(baseWriter, "viscosity_solvent", solventViscosity_);
-
-        if (solventMobilityOutput_())
-            this->commitScalarBuffer_(baseWriter, "mobility_solvent", solventMobility_);
+            if (params_.solventMobilityOutput_) {
+                this->commitScalarBuffer_(baseWriter, "mobility_solvent", solventMobility_);
+            }
+        }
     }
 
 private:
-    static bool solventSaturationOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSolventSaturation>();
-        return val;
-    }
-
-    static bool solventRswOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSolventRsw>();
-        return val;
-    }
-
-    static bool solventDensityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSolventDensity>();
-        return val;
-    }
-
-    static bool solventViscosityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSolventViscosity>();
-        return val;
-    }
-
-    static bool solventMobilityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSolventMobility>();
-        return val;
-    }
-
-    ScalarBuffer solventSaturation_;
-    ScalarBuffer solventRsw_;
-    ScalarBuffer solventDensity_;
-    ScalarBuffer solventViscosity_;
-    ScalarBuffer solventMobility_;
+    VtkBlackOilSolventParams params_{};
+    ScalarBuffer solventSaturation_{};
+    ScalarBuffer solventRsw_{};
+    ScalarBuffer solventDensity_{};
+    ScalarBuffer solventViscosity_{};
+    ScalarBuffer solventMobility_{};
 };
 
 } // namespace Opm

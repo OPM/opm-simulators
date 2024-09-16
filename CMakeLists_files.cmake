@@ -66,6 +66,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/io/vtkblackoilmicpparams.cpp
   opm/models/io/vtkblackoilpolymerparams.cpp
   opm/models/io/vtkblackoilparams.cpp
+  opm/models/io/vtkblackoilsolventparams.cpp
   opm/models/io/restart.cpp
   opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
@@ -662,6 +663,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkblackoilpolymermodule.hpp
   opm/models/io/vtkblackoilpolymerparams.hpp
   opm/models/io/vtkblackoilsolventmodule.hpp
+  opm/models/io/vtkblackoilsolventparams.hpp
   opm/models/io/vtkcompositionmodule.hh
   opm/models/io/vtkdiffusionmodule.hh
   opm/models/io/vtkdiscretefracturemodule.hh
