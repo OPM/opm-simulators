@@ -30,18 +30,14 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkphasepresenceparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Parameters {
-
-struct VtkWritePhasePresence { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -66,16 +62,16 @@ class VtkPhasePresenceModule : public BaseOutputModule<TypeTag>
 public:
     VtkPhasePresenceModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWritePhasePresence>
-            ("Include the phase presence pseudo primary "
-             "variable in the VTK output files");
+        VtkPhasePresenceParams::registerParameters();
     }
 
     /*!
@@ -84,7 +80,9 @@ public:
      */
     void allocBuffers()
     {
-        if (phasePresenceOutput_()) this->resizeScalarBuffer_(phasePresence_);
+        if (params_.phasePresenceOutput_) {
+            this->resizeScalarBuffer_(phasePresence_);
+        }
     }
 
     /*!
@@ -102,8 +100,9 @@ public:
             int phasePresence = elemCtx.primaryVars(i, /*timeIdx=*/0).phasePresence();
             unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
 
-            if (phasePresenceOutput_())
+            if (params_.phasePresenceOutput_) {
                 phasePresence_[I] = phasePresence;
+            }
         }
     }
 
@@ -112,23 +111,19 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (phasePresenceOutput_())
+        if (params_.phasePresenceOutput_) {
             this->commitScalarBuffer_(baseWriter, "phase presence", phasePresence_);
+        }
     }
 
 private:
-    static bool phasePresenceOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWritePhasePresence>();
-        return val;
-    }
-
-    ScalarBuffer phasePresence_;
+    VtkPhasePresenceParams params_{};
+    ScalarBuffer phasePresence_{};
 };
 
 } // namespace Opm

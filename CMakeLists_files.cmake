@@ -72,6 +72,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/io/vtkdiscretefractureparams.cpp
   opm/models/io/vtkenergyparams.cpp
   opm/models/io/vtkmultiphaseparams.cpp
+  opm/models/io/vtkphasepresenceparams.cpp
   opm/models/io/restart.cpp
   opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
@@ -681,6 +682,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkmultiphaseparams.hpp
   opm/models/io/vtkmultiwriter.hh
   opm/models/io/vtkphasepresencemodule.hpp
+  opm/models/io/vtkphasepresenceparams.hpp
   opm/models/io/vtkprimaryvarsmodule.hh
   opm/models/io/vtkptflashmodule.hh
   opm/models/io/vtkscalarfunction.hh
