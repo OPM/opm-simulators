@@ -32,7 +32,7 @@
 
 #include <opm/models/immiscible/immiscibleproperties.hh>
 
-#include <opm/models/io/vtkdiscretefracturemodule.hh>
+#include <opm/models/io/vtkdiscretefracturemodule.hpp>
 
 namespace Opm::Properties {
 

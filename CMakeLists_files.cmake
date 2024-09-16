@@ -670,7 +670,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkcompositionparams.hpp
   opm/models/io/vtkdiffusionmodule.hpp
   opm/models/io/vtkdiffusionparams.hpp
-  opm/models/io/vtkdiscretefracturemodule.hh
+  opm/models/io/vtkdiscretefracturemodule.hpp
   opm/models/io/vtkenergymodule.hh
   opm/models/io/vtkmultiphasemodule.hh
   opm/models/io/vtkmultiwriter.hh

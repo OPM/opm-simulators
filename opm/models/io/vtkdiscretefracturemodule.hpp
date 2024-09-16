@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkDiscreteFractureModule
  */
-#ifndef EWOMS_VTK_DISCRETE_FRACTURE_MODULE_HH
-#define EWOMS_VTK_DISCRETE_FRACTURE_MODULE_HH
+#ifndef OPM_VTK_DISCRETE_FRACTURE_MODULE_HPP
+#define OPM_VTK_DISCRETE_FRACTURE_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -55,6 +55,7 @@ struct VtkWriteFractureVolumeFraction { static constexpr bool value = true; };
 } // namespace Opm::Parameters
 
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -347,4 +348,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_DISCRETE_FRACTURE_MODULE_HPP
