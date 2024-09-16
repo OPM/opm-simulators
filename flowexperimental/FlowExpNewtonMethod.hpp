@@ -149,7 +149,7 @@ public:
     {
         const auto& constraintsMap = this->model().linearizer().constraintsMap();
         this->lastError_ = this->error_;
-        Scalar newtonMaxError = Parameters::Get<Parameters::NewtonMaxError<Scalar>>();
+        Scalar newtonMaxError = this->params_.maxError_;
 
         // calculate the error as the maximum weighted tolerance of
         // the solution's residual
@@ -198,7 +198,7 @@ public:
 
                 this->error_ = max(std::abs(tmpError), this->error_);
 
-                if (std::abs(tmpError) > this->tolerance_) {
+                if (std::abs(tmpError) > this->params_.tolerance_) {
                     cnvViolated = true;
                 }
 
@@ -231,7 +231,7 @@ public:
         Scalar y = Parameters::Get<Parameters::EclNewtonSumToleranceExponent<Scalar>>();
         sumTolerance_ = x*std::pow(sumPv, y);
 
-        this->endIterMsg() << " (max: " << this->tolerance_
+        this->endIterMsg() << " (max: " << this->params_.tolerance_
                            << ", violated for " << errorPvFraction_ * 100
                            << "% of the pore volume), aggegate error: "
                            << errorSum_ << " (max: " << sumTolerance_ << ")";

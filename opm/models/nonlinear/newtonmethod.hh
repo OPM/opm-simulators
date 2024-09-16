@@ -118,9 +118,9 @@ public:
     {
         lastError_ = 1e100;
         error_ = 1e100;
-        tolerance_ = Parameters::Get<Parameters::NewtonTolerance<Scalar>>();
 
         numIterations_ = 0;
+        params_.read();
     }
 
     /*!
@@ -129,23 +129,7 @@ public:
     static void registerParameters()
     {
         LinearSolverBackend::registerParameters();
-
-        Parameters::Register<Parameters::NewtonVerbose>
-            ("Specify whether the Newton method should inform "
-             "the user about its progress or not");
-        Parameters::Register<Parameters::NewtonWriteConvergence>
-            ("Write the convergence behaviour of the Newton "
-             "method to a VTK file");
-        Parameters::Register<Parameters::NewtonTargetIterations>
-            ("The 'optimum' number of Newton iterations per time step");
-        Parameters::Register<Parameters::NewtonMaxIterations>
-            ("The maximum number of Newton iterations per time step");
-        Parameters::Register<Parameters::NewtonTolerance<Scalar>>
-            ("The maximum raw error tolerated by the Newton"
-             "method for considering a solution to be converged");
-        Parameters::Register<Parameters::NewtonMaxError<Scalar>>
-            ("The maximum error tolerated by the Newton "
-             "method to which does not cause an abort");
+        NewtonMethodParams<Scalar>::registerParameters();
     }
 
     /*!
@@ -210,14 +194,14 @@ public:
      *        be converged.
      */
     Scalar tolerance() const
-    { return tolerance_; }
+    { return params_.tolerance_; }
 
     /*!
      * \brief Set the current tolerance at which the Newton method considers itself to
      *        be converged.
      */
     void setTolerance(Scalar value)
-    { tolerance_ = value; }
+    { params_.tolerance_ = value; }
 
     /*!
      * \brief Run the Newton method.
@@ -451,14 +435,14 @@ public:
         // conservative when increasing it. the rationale is
         // that we want to avoid failing in the next time
         // integration which would be quite expensive
-        if (numIterations_ > targetIterations_()) {
-            Scalar percent = Scalar(numIterations_ - targetIterations_())/targetIterations_();
+        if (numIterations_ > params_.targetIterations_) {
+            Scalar percent = Scalar(numIterations_ - params_.targetIterations_) / params_.targetIterations_;
             Scalar nextDt = std::max(problem().minTimeStepSize(),
                                      oldDt / (Scalar{1.0} + percent));
             return nextDt;
         }
 
-        Scalar percent = Scalar(targetIterations_() - numIterations_)/targetIterations_();
+        Scalar percent = Scalar(params_.targetIterations_ - numIterations_) / params_.targetIterations_;
         Scalar nextDt = std::max(problem().minTimeStepSize(),
                                  oldDt*(Scalar{1.0} + percent / Scalar{1.2}));
         return nextDt;
@@ -508,7 +492,7 @@ protected:
      */
     bool verbose_() const
     {
-        return Parameters::Get<Parameters::NewtonVerbose>() && (comm_.rank() == 0);
+        return params_.verbose_ && (comm_.rank() == 0);
     }
 
     /*!
@@ -521,7 +505,7 @@ protected:
     {
         numIterations_ = 0;
 
-        if (Parameters::Get<Parameters::NewtonWriteConvergence>()) {
+        if (params_.writeConvergence_) {
             convergenceWriter_.beginTimeStep();
         }
     }
@@ -574,7 +558,7 @@ protected:
     {
         const auto& constraintsMap = model().linearizer().constraintsMap();
         lastError_ = error_;
-        Scalar newtonMaxError = Parameters::Get<Parameters::NewtonMaxError<Scalar>>();
+        Scalar newtonMaxError = params_.maxError_;
 
         // calculate the error as the maximum weighted tolerance of
         // the solution's residual
@@ -739,7 +723,7 @@ protected:
     void writeConvergence_(const SolutionVector& currentSolution,
                            const GlobalEqVector& solutionUpdate)
     {
-        if (Parameters::Get<Parameters::NewtonWriteConvergence>()) {
+        if (params_.writeConvergence_) {
             convergenceWriter_.beginIteration();
             convergenceWriter_.writeFields(currentSolution, solutionUpdate);
             convergenceWriter_.endIteration();
@@ -794,7 +778,7 @@ protected:
             // do more iterations
             return false;
         }
-        else if (asImp_().numIterations() >= asImp_().maxIterations_()) {
+        else if (asImp_().numIterations() >= params_.maxIterations_) {
             // we have exceeded the allowed number of steps.  If the
             // error was reduced by a factor of at least 4,
             // in the last iterations we proceed even if we are above
@@ -811,7 +795,7 @@ protected:
      */
     void end_()
     {
-        if (Parameters::Get<Parameters::NewtonWriteConvergence>()) {
+        if (params_.writeConvergence_) {
             convergenceWriter_.endTimeStep();
         }
     }
@@ -822,7 +806,7 @@ protected:
      * This method is called _after_ end_()
      */
     void failed_()
-    { numIterations_ = targetIterations_() * 2; }
+    { numIterations_ = params_.targetIterations_ * 2; }
 
     /*!
      * \brief Called if the Newton method was successful.
@@ -831,13 +815,6 @@ protected:
      */
     void succeeded_()
     {}
-
-    // optimal number of iterations we want to achieve
-    int targetIterations_() const
-    { return Parameters::Get<Parameters::NewtonTargetIterations>(); }
-    // maximum number of iterations we do before giving up
-    int maxIterations_() const
-    { return Parameters::Get<Parameters::NewtonMaxIterations>(); }
 
     static bool enableConstraints_()
     { return getPropValue<TypeTag, Properties::EnableConstraints>(); }
@@ -853,7 +830,7 @@ protected:
 
     Scalar error_;
     Scalar lastError_;
-    Scalar tolerance_;
+    NewtonMethodParams<Scalar> params_;
 
     // actual number of iterations done so far
     int numIterations_;
