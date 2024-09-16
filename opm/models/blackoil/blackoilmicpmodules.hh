@@ -33,7 +33,7 @@
 #include <opm/models/blackoil/blackoilmicpparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
-#include <opm/models/io/vtkblackoilmicpmodule.hh>
+#include <opm/models/io/vtkblackoilmicpmodule.hpp>
 
 #include <cstddef>
 #include <stdexcept>
