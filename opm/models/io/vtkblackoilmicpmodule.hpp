@@ -36,21 +36,11 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkblackoilmicpparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteMicrobialConcentration { static constexpr bool value = true; };
-struct VtkWriteOxygenConcentration { static constexpr bool value = true; };
-struct VtkWriteUreaConcentration { static constexpr bool value = true; };
-struct VtkWriteBiofilmConcentration { static constexpr bool value = true; };
-struct VtkWriteCalciteConcentration { static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -79,7 +69,11 @@ class VtkBlackOilMICPModule : public BaseOutputModule<TypeTag>
 public:
     VtkBlackOilMICPModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        if constexpr (enableMICP) {
+            params_.read();
+        }
+    }
 
     /*!
      * \brief Register all run-time parameters for the multi-phase VTK output
@@ -87,22 +81,9 @@ public:
      */
     static void registerParameters()
     {
-        if (!enableMICP)
-            return;
-
-        Parameters::Register<Parameters::VtkWriteMicrobialConcentration>
-            ("Include the concentration of the microbial component in the water phase "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteOxygenConcentration>
-            ("Include the concentration of the oxygen component in the water phase "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteUreaConcentration>
-            ("Include the concentration of the urea component in the water phase "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteBiofilmConcentration>
-            ("Include the biofilm volume fraction in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteCalciteConcentration>
-            ("Include the calcite volume fraction in the VTK output files");
+        if constexpr (enableMICP) {
+            VtkBlackoilMICPParams::registerParameters();
+        }
     }
 
     /*!
@@ -111,23 +92,27 @@ public:
      */
     void allocBuffers()
     {
-        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
-            return;
+        if constexpr (enableMICP) {
+            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
+                return;
+            }
+
+            if (params_.microbialConcentrationOutput_) {
+                this->resizeScalarBuffer_(microbialConcentration_);
+            }
+            if (params_.oxygenConcentrationOutput_) {
+                this->resizeScalarBuffer_(oxygenConcentration_);
+            }
+            if (params_.ureaConcentrationOutput_) {
+                this->resizeScalarBuffer_(ureaConcentration_);
+            }
+            if (params_.biofilmConcentrationOutput_) {
+                this->resizeScalarBuffer_(biofilmConcentration_);
+            }
+            if (params_.calciteConcentrationOutput_) {
+                this->resizeScalarBuffer_(calciteConcentration_);
+            }
         }
-
-        if (!enableMICP)
-            return;
-
-        if (microbialConcentrationOutput_())
-            this->resizeScalarBuffer_(microbialConcentration_);
-        if (oxygenConcentrationOutput_())
-            this->resizeScalarBuffer_(oxygenConcentration_);
-        if (ureaConcentrationOutput_())
-            this->resizeScalarBuffer_(ureaConcentration_);
-        if (biofilmConcentrationOutput_())
-            this->resizeScalarBuffer_(biofilmConcentration_);
-        if (calciteConcentrationOutput_())
-            this->resizeScalarBuffer_(calciteConcentration_);
     }
 
     /*!
@@ -136,37 +121,40 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
-            return;
-        }
+        if constexpr (enableMICP) {
+            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
+                return;
+            }
 
-        if (!enableMICP)
-            return;
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
-        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-            const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                if (params_.microbialConcentrationOutput_) {
+                    microbialConcentration_[globalDofIdx] =
+                        scalarValue(intQuants.microbialConcentration());
+                }
 
-            if (microbialConcentrationOutput_())
-                microbialConcentration_[globalDofIdx] =
-                    scalarValue(intQuants.microbialConcentration());
+                if (params_.oxygenConcentrationOutput_) {
+                    oxygenConcentration_[globalDofIdx] =
+                        scalarValue(intQuants.oxygenConcentration());
+                }
 
-            if (oxygenConcentrationOutput_())
-                oxygenConcentration_[globalDofIdx] =
-                    scalarValue(intQuants.oxygenConcentration());
+                if (params_.ureaConcentrationOutput_) {
+                    ureaConcentration_[globalDofIdx] =
+                        10 * scalarValue(intQuants.ureaConcentration());//Multypliging by scaling factor 10 (see WellInterface_impl.hpp)
+                }
 
-            if (ureaConcentrationOutput_())
-                ureaConcentration_[globalDofIdx] =
-                    10 * scalarValue(intQuants.ureaConcentration());//Multypliging by scaling factor 10 (see WellInterface_impl.hpp)
+                if (params_.biofilmConcentrationOutput_) {
+                    biofilmConcentration_[globalDofIdx] =
+                        scalarValue(intQuants.biofilmConcentration());
+                }
 
-            if (biofilmConcentrationOutput_())
-                biofilmConcentration_[globalDofIdx] =
-                    scalarValue(intQuants.biofilmConcentration());
-
-            if (calciteConcentrationOutput_())
-                calciteConcentration_[globalDofIdx] =
-                    scalarValue(intQuants.calciteConcentration());
-
+                if (params_.calciteConcentrationOutput_) {
+                    calciteConcentration_[globalDofIdx] =
+                        scalarValue(intQuants.calciteConcentration());
+                }
+            }
         }
     }
 
@@ -175,66 +163,41 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter)
-            return;
+        if constexpr (enableMICP) {
+            VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+            if (!vtkWriter) {
+                return;
+            }
 
-        if (!enableMICP)
-            return;
+            if (params_.microbialConcentrationOutput_) {
+                this->commitScalarBuffer_(baseWriter, "microbial concentration", microbialConcentration_);
+            }
 
-        if (microbialConcentrationOutput_())
-            this->commitScalarBuffer_(baseWriter, "microbial concentration", microbialConcentration_);
+            if (params_.oxygenConcentrationOutput_) {
+                this->commitScalarBuffer_(baseWriter, "oxygen concentration", oxygenConcentration_);
+            }
 
-        if (oxygenConcentrationOutput_())
-            this->commitScalarBuffer_(baseWriter, "oxygen concentration", oxygenConcentration_);
+            if (params_.ureaConcentrationOutput_) {
+                this->commitScalarBuffer_(baseWriter, "urea concentration", ureaConcentration_);
+            }
 
-        if (ureaConcentrationOutput_())
-            this->commitScalarBuffer_(baseWriter, "urea concentration", ureaConcentration_);
+            if (params_.biofilmConcentrationOutput_) {
+                this->commitScalarBuffer_(baseWriter, "biofilm fraction", biofilmConcentration_);
+            }
 
-        if (biofilmConcentrationOutput_())
-            this->commitScalarBuffer_(baseWriter, "biofilm fraction", biofilmConcentration_);
-
-        if (calciteConcentrationOutput_())
-            this->commitScalarBuffer_(baseWriter, "calcite fraction", calciteConcentration_);
-
+            if (params_.calciteConcentrationOutput_) {
+                this->commitScalarBuffer_(baseWriter, "calcite fraction", calciteConcentration_);
+            }
+        }
     }
 
 private:
-    static bool microbialConcentrationOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteMicrobialConcentration>();
-        return val;
-    }
-
-    static bool oxygenConcentrationOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteOxygenConcentration>();
-        return val;
-    }
-
-    static bool ureaConcentrationOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteUreaConcentration>();
-        return val;
-    }
-
-    static bool biofilmConcentrationOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteBiofilmConcentration>();
-        return val;
-    }
-
-    static bool calciteConcentrationOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteCalciteConcentration>();
-        return val;
-    }
-
-    ScalarBuffer microbialConcentration_;
-    ScalarBuffer oxygenConcentration_;
-    ScalarBuffer ureaConcentration_;
-    ScalarBuffer biofilmConcentration_;
-    ScalarBuffer calciteConcentration_;
+    VtkBlackoilMICPParams params_{};
+    ScalarBuffer microbialConcentration_{};
+    ScalarBuffer oxygenConcentration_{};
+    ScalarBuffer ureaConcentration_{};
+    ScalarBuffer biofilmConcentration_{};
+    ScalarBuffer calciteConcentration_{};
 };
 
 } // namespace Opm
