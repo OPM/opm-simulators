@@ -33,16 +33,10 @@
 
 #include <opm/models/io/baseoutputmodule.hh>
 #include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/vtktemperatureparams.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteTemperature { static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -71,15 +65,16 @@ class VtkTemperatureModule : public BaseOutputModule<TypeTag>
 public:
     VtkTemperatureModule(const Simulator& simulator)
         : ParentType(simulator)
-    {}
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteTemperature>
-            ("Include the temperature in the VTK output files");
+        VtkTemperatureParams::registerParameters();
     }
 
     /*!
@@ -88,7 +83,9 @@ public:
      */
     void allocBuffers()
     {
-        if (temperatureOutput_()) this->resizeScalarBuffer_(temperature_);
+        if (params_.temperatureOutput_) {
+            this->resizeScalarBuffer_(temperature_);
+        }
     }
 
     /*!
@@ -108,8 +105,9 @@ public:
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            if (temperatureOutput_())
+            if (params_.temperatureOutput_) {
                 temperature_[I] = Toolbox::value(fs.temperature(/*phaseIdx=*/0));
+            }
         }
     }
 
@@ -118,23 +116,19 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (temperatureOutput_())
+        if (params_.temperatureOutput_) {
             this->commitScalarBuffer_(baseWriter, "temperature", temperature_);
+        }
     }
 
 private:
-    static bool temperatureOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteTemperature>();
-        return val;
-    }
-
-    ScalarBuffer temperature_;
+    VtkTemperatureParams params_{};
+    ScalarBuffer temperature_{};
 };
 
 } // namespace Opm

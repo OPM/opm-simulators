@@ -75,6 +75,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/io/vtkphasepresenceparams.cpp
   opm/models/io/vtkprimaryvarsparams.cpp
   opm/models/io/vtkptflashparams.cpp
+  opm/models/io/vtktemperatureparams.cpp
   opm/models/io/restart.cpp
   opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
@@ -691,6 +692,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkptflashparams.hpp
   opm/models/io/vtkscalarfunction.hh
   opm/models/io/vtktemperaturemodule.hpp
+  opm/models/io/vtktemperatureparams.hpp
   opm/models/io/vtktensorfunction.hh
   opm/models/io/vtkvectorfunction.hh
   opm/models/ncp/ncpboundaryratevector.hh
