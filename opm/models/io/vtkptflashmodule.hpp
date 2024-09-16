@@ -33,17 +33,10 @@
 
 #include <opm/models/io/baseoutputmodule.hh>
 #include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/vtkptflashparams.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteLiquidMoleFractions { static constexpr bool value = false; };
-struct VtkWriteEquilibriumConstants { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -79,17 +72,16 @@ class VtkPTFlashModule: public BaseOutputModule<TypeTag>
 public:
     explicit VtkPTFlashModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteLiquidMoleFractions>
-            ("Include liquid mole fractions (L) in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteEquilibriumConstants>
-            ("Include equilibrium constants (K) in the VTK output files");
+        VtkPtFlashParams::registerParameters();
     }
 
     /*!
@@ -98,10 +90,12 @@ public:
      */
     void allocBuffers()
     {
-        if (LOutput_())
+        if (params_.LOutput_) {
             this->resizeScalarBuffer_(L_);
-        if (equilConstOutput_())
+        }
+        if (params_.equilConstOutput_) {
             this->resizeComponentBuffer_(K_);
+        }
     }
 
     /*!
@@ -121,12 +115,14 @@ public:
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            if (LOutput_())
+            if (params_.LOutput_) {
                 L_[I] = Toolbox::value(fs.L());
+            }
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (equilConstOutput_())
+                if (params_.equilConstOutput_) {
                     K_[compIdx][I] = Toolbox::value(fs.K(compIdx));
+                }
             }
         }
     }
@@ -136,32 +132,23 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        auto *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        auto* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (equilConstOutput_())
+        if (params_.equilConstOutput_) {
             this->commitComponentBuffer_(baseWriter, "K^%s", K_);
-        if (LOutput_())
+        }
+        if (params_.LOutput_) {
             this->commitScalarBuffer_(baseWriter, "L", L_);
+        }
     }
 
 private:
-    static bool LOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteLiquidMoleFractions>();
-        return val;
-    }
-
-    static bool equilConstOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteEquilibriumConstants>();
-        return val;
-    }
-
-    ComponentBuffer K_;
-    ScalarBuffer L_;
+    VtkPtFlashParams params_{};
+    ComponentBuffer K_{};
+    ScalarBuffer L_{};
 };
 
 } // namespace Opm
