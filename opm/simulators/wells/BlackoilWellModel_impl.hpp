@@ -2083,7 +2083,7 @@ namespace Opm {
 
         int iter = 0;
         // iterate a few times to make sure all constrains are kept
-        while(!changed_well_group && iter < 5) {
+        while(!changed_well_group && iter < 3) {
             // Check group individual constraints.
             const int nupcol = this->schedule()[episodeIdx].nupcol();
             // don't switch group control when iterationIdx > nupcol
