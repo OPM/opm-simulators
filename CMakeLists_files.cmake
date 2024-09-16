@@ -650,7 +650,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/simplexvanguard.hh
   opm/models/io/structuredgridvanguard.hh
   opm/models/io/unstructuredgridvanguard.hh
-  opm/models/io/vtkblackoilenergymodule.hh
+  opm/models/io/vtkblackoilenergymodule.hpp
   opm/models/io/vtkblackoilmicpmodule.hh
   opm/models/io/vtkblackoilmodule.hpp
   opm/models/io/vtkblackoilparams.hpp

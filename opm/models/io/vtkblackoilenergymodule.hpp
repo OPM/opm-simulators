@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkBlackOilEnergyModule
  */
-#ifndef EWOMS_VTK_BLACK_OIL_ENERGY_MODULE_HH
-#define EWOMS_VTK_BLACK_OIL_ENERGY_MODULE_HH
+#ifndef OPM_VTK_BLACK_OIL_ENERGY_MODULE_HPP
+#define OPM_VTK_BLACK_OIL_ENERGY_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -52,6 +52,7 @@ struct VtkWriteFluidEnthalpies { static constexpr bool value = true; };
 } // namespace Opm::Parameters
 
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -221,6 +222,7 @@ private:
     PhaseBuffer fluidInternalEnergies_;
     PhaseBuffer fluidEnthalpies_;
 };
+
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_BLACKOIL_ENERGY_MODULE_HPP
