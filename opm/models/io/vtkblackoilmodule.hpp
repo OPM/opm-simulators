@@ -36,27 +36,11 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkblackoilparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteGasDissolutionFactor { static constexpr bool value = false; };
-struct VtkWriteOilVaporizationFactor { static constexpr bool value = false; };
-struct VtkWriteOilFormationVolumeFactor { static constexpr bool value = false; };
-struct VtkWriteGasFormationVolumeFactor { static constexpr bool value = false; };
-struct VtkWriteWaterFormationVolumeFactor { static constexpr bool value = false; };
-struct VtkWriteOilSaturationPressure { static constexpr bool value = false; };
-struct VtkWriteGasSaturationPressure { static constexpr bool value = false; };
-struct VtkWriteSaturationRatios { static constexpr bool value = false; };
-struct VtkWriteSaturatedOilGasDissolutionFactor { static constexpr bool value = false; };
-struct VtkWriteSaturatedGasOilVaporizationFactor { static constexpr bool value = false; };
-struct VtkWritePrimaryVarsMeaning { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -93,7 +77,9 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
 public:
     VtkBlackOilModule(const Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {
+        params_.read();
+    }
 
     /*!
      * \brief Register all run-time parameters for the multi-phase VTK output
@@ -101,38 +87,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteGasDissolutionFactor>
-            ("Include the gas dissolution factor (R_s) of the observed oil "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteOilVaporizationFactor>
-            ("Include the oil vaporization factor (R_v) of the observed gas "
-             "in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteOilFormationVolumeFactor>
-            ("Include the oil formation volume factor (B_o) in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteGasFormationVolumeFactor>
-            ("Include the gas formation volume factor (B_g) in the "
-             "VTK output files");
-        Parameters::Register<Parameters::VtkWriteWaterFormationVolumeFactor>
-            ("Include the water formation volume factor (B_w) in the "
-             "VTK output files");
-        Parameters::Register<Parameters::VtkWriteOilSaturationPressure>
-            ("Include the saturation pressure of oil (p_o,sat) in the "
-             "VTK output files");
-        Parameters::Register<Parameters::VtkWriteGasSaturationPressure>
-            ("Include the saturation pressure of gas (p_g,sat) in the "
-             "VTK output files");
-        Parameters::Register<Parameters::VtkWriteSaturatedOilGasDissolutionFactor>
-            ("Include the gas dissolution factor (R_s,sat) of gas saturated "
-             "oil in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteSaturatedGasOilVaporizationFactor>
-            ("Include the oil vaporization factor (R_v,sat) of oil saturated "
-             "gas in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteSaturationRatios>
-            ("Write the ratio of the actually and maximum dissolved component of "
-             "the mixtures");
-        Parameters::Register<Parameters::VtkWritePrimaryVarsMeaning>
-            ("Include how the primary variables should be interpreted to the "
-             "VTK output files");
+        VtkBlackoilParams::registerParameters();
     }
 
     /*!
@@ -141,29 +96,38 @@ public:
      */
     void allocBuffers()
     {
-        if (gasDissolutionFactorOutput_())
+        if (params_.gasDissolutionFactorOutput_) {
             this->resizeScalarBuffer_(gasDissolutionFactor_);
-        if (oilVaporizationFactorOutput_())
+        }
+        if (params_.oilVaporizationFactorOutput_) {
             this->resizeScalarBuffer_(oilVaporizationFactor_);
-        if (oilFormationVolumeFactorOutput_())
+        }
+        if (params_.oilFormationVolumeFactorOutput_) {
             this->resizeScalarBuffer_(oilFormationVolumeFactor_);
-        if (gasFormationVolumeFactorOutput_())
+        }
+        if (params_.gasFormationVolumeFactorOutput_) {
             this->resizeScalarBuffer_(gasFormationVolumeFactor_);
-        if (waterFormationVolumeFactorOutput_())
+        }
+        if (params_.waterFormationVolumeFactorOutput_) {
             this->resizeScalarBuffer_(waterFormationVolumeFactor_);
-        if (oilSaturationPressureOutput_())
+        }
+        if (params_.oilSaturationPressureOutput_) {
             this->resizeScalarBuffer_(oilSaturationPressure_);
-        if (gasSaturationPressureOutput_())
+        }
+        if (params_.gasSaturationPressureOutput_) {
             this->resizeScalarBuffer_(gasSaturationPressure_);
-        if (saturatedOilGasDissolutionFactorOutput_())
+        }
+        if (params_.saturatedOilGasDissolutionFactorOutput_) {
             this->resizeScalarBuffer_(saturatedOilGasDissolutionFactor_);
-        if (saturatedGasOilVaporizationFactorOutput_())
+        }
+        if (params_.saturatedGasOilVaporizationFactorOutput_) {
             this->resizeScalarBuffer_(saturatedGasOilVaporizationFactor_);
-        if (saturationRatiosOutput_()) {
+        }
+        if (params_.saturationRatiosOutput_) {
             this->resizeScalarBuffer_(oilSaturationRatio_);
             this->resizeScalarBuffer_(gasSaturationRatio_);
         }
-        if (primaryVarsMeaningOutput_()) {
+        if (params_.primaryVarsMeaningOutput_) {
             this->resizeScalarBuffer_(primaryVarsMeaningPressure_);
             this->resizeScalarBuffer_(primaryVarsMeaningWater_);
             this->resizeScalarBuffer_(primaryVarsMeaningGas_);
@@ -216,43 +180,56 @@ public:
                                                                                          SoMax);
                 Scalar X_gO_sat = FluidSystem::convertRvToXgO(RvSat, pvtRegionIdx);
                 Scalar x_gO_sat = FluidSystem::convertXgOToxgO(X_gO_sat, pvtRegionIdx);
-                if (gasDissolutionFactorOutput_())
+                if (params_.gasDissolutionFactorOutput_) {
                     gasDissolutionFactor_[globalDofIdx] = Rs;
-                if (oilVaporizationFactorOutput_())
+                }
+                if (params_.oilVaporizationFactorOutput_) {
                     oilVaporizationFactor_[globalDofIdx] = Rv;
-                if (oilSaturationPressureOutput_())
+                }
+                if (params_.oilSaturationPressureOutput_) {
                     oilSaturationPressure_[globalDofIdx] =
                         FluidSystem::template saturationPressure<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
-                if (gasSaturationPressureOutput_())
+                }
+                if (params_.gasSaturationPressureOutput_) {
                     gasSaturationPressure_[globalDofIdx] =
                         FluidSystem::template saturationPressure<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
-                if (saturatedOilGasDissolutionFactorOutput_())
+                }
+                if (params_.saturatedOilGasDissolutionFactorOutput_) {
                     saturatedOilGasDissolutionFactor_[globalDofIdx] = RsSat;
-                if (saturatedGasOilVaporizationFactorOutput_())
+                }
+                if (params_.saturatedGasOilVaporizationFactorOutput_) {
                     saturatedGasOilVaporizationFactor_[globalDofIdx] = RvSat;
-                if (saturationRatiosOutput_()) {
-                    if (x_oG_sat <= 0.0)
+                }
+                if (params_.saturationRatiosOutput_) {
+                    if (x_oG_sat <= 0.0) {
                         oilSaturationRatio_[globalDofIdx] = 1.0;
-                    else
+                    }
+                    else {
                         oilSaturationRatio_[globalDofIdx] = x_oG / x_oG_sat;
+                    }
 
-                    if (x_gO_sat <= 0.0)
+                    if (x_gO_sat <= 0.0) {
                         gasSaturationRatio_[globalDofIdx] = 1.0;
-                    else
+                    }
+                    else {
                         gasSaturationRatio_[globalDofIdx] = x_gO / x_gO_sat;
+                    }
                 }
             }
-            if (oilFormationVolumeFactorOutput_())
+            if (params_.oilFormationVolumeFactorOutput_) {
                 oilFormationVolumeFactor_[globalDofIdx] =
-                    1.0/FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
-            if (gasFormationVolumeFactorOutput_())
+                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
+            }
+            if (params_.gasFormationVolumeFactorOutput_) {
                 gasFormationVolumeFactor_[globalDofIdx] =
-                    1.0/FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
-            if (waterFormationVolumeFactorOutput_())
+                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
+            }
+            if (params_.waterFormationVolumeFactorOutput_) {
                 waterFormationVolumeFactor_[globalDofIdx] =
-                    1.0/FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, waterPhaseIdx, pvtRegionIdx);
+                    1.0 / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, waterPhaseIdx, pvtRegionIdx);
+            }
 
-            if (primaryVarsMeaningOutput_()) {
+            if (params_.primaryVarsMeaningOutput_) {
                 primaryVarsMeaningWater_[globalDofIdx] =
                     static_cast<int>(primaryVars.primaryVarsMeaningWater());
                 primaryVarsMeaningGas_[globalDofIdx] =
@@ -269,33 +246,43 @@ public:
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
         VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter)
+        if (!vtkWriter) {
             return;
+        }
 
-        if (gasDissolutionFactorOutput_())
+        if (params_.gasDissolutionFactorOutput_) {
             this->commitScalarBuffer_(baseWriter, "R_s", gasDissolutionFactor_);
-        if (oilVaporizationFactorOutput_())
+        }
+        if (params_.oilVaporizationFactorOutput_) {
             this->commitScalarBuffer_(baseWriter, "R_v", oilVaporizationFactor_);
-        if (oilFormationVolumeFactorOutput_())
+        }
+        if (params_.oilFormationVolumeFactorOutput_) {
             this->commitScalarBuffer_(baseWriter, "B_o", oilFormationVolumeFactor_);
-        if (gasFormationVolumeFactorOutput_())
+        }
+        if (params_.gasFormationVolumeFactorOutput_) {
             this->commitScalarBuffer_(baseWriter, "B_g", gasFormationVolumeFactor_);
-        if (waterFormationVolumeFactorOutput_())
+        }
+        if (params_.waterFormationVolumeFactorOutput_) {
             this->commitScalarBuffer_(baseWriter, "B_w", waterFormationVolumeFactor_);
-        if (oilSaturationPressureOutput_())
+        }
+        if (params_.oilSaturationPressureOutput_) {
             this->commitScalarBuffer_(baseWriter, "p_o,sat", oilSaturationPressure_);
-        if (gasSaturationPressureOutput_())
+        }
+        if (params_.gasSaturationPressureOutput_) {
             this->commitScalarBuffer_(baseWriter, "p_g,sat", gasSaturationPressure_);
-        if (saturatedOilGasDissolutionFactorOutput_())
+        }
+        if (params_.saturatedOilGasDissolutionFactorOutput_) {
             this->commitScalarBuffer_(baseWriter, "R_s,sat", saturatedOilGasDissolutionFactor_);
-        if (saturatedGasOilVaporizationFactorOutput_())
+        }
+        if (params_.saturatedGasOilVaporizationFactorOutput_) {
             this->commitScalarBuffer_(baseWriter, "R_v,sat", saturatedGasOilVaporizationFactor_);
-        if (saturationRatiosOutput_()) {
+        }
+        if (params_.saturationRatiosOutput_) {
             this->commitScalarBuffer_(baseWriter, "saturation ratio_oil", oilSaturationRatio_);
             this->commitScalarBuffer_(baseWriter, "saturation ratio_gas", gasSaturationRatio_);
         }
 
-        if (primaryVarsMeaningOutput_()) {
+        if (params_.primaryVarsMeaningOutput_) {
             this->commitScalarBuffer_(baseWriter, "primary vars meaning water", primaryVarsMeaningWater_);
             this->commitScalarBuffer_(baseWriter, "primary vars meaning gas", primaryVarsMeaningGas_);
             this->commitScalarBuffer_(baseWriter, "primary vars meaning pressure", primaryVarsMeaningPressure_);
@@ -303,88 +290,23 @@ public:
     }
 
 private:
-    static bool gasDissolutionFactorOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteGasDissolutionFactor>();
-        return val;
-    }
+    VtkBlackoilParams params_{};
+    ScalarBuffer gasDissolutionFactor_{};
+    ScalarBuffer oilVaporizationFactor_{};
+    ScalarBuffer oilFormationVolumeFactor_{};
+    ScalarBuffer gasFormationVolumeFactor_{};
+    ScalarBuffer waterFormationVolumeFactor_{};
+    ScalarBuffer oilSaturationPressure_{};
+    ScalarBuffer gasSaturationPressure_{};
 
-    static bool oilVaporizationFactorOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteOilVaporizationFactor>();
-        return val;
-    }
+    ScalarBuffer saturatedOilGasDissolutionFactor_{};
+    ScalarBuffer saturatedGasOilVaporizationFactor_{};
+    ScalarBuffer oilSaturationRatio_{};
+    ScalarBuffer gasSaturationRatio_{};
 
-    static bool oilFormationVolumeFactorOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteOilFormationVolumeFactor>();
-        return val;
-    }
-
-    static bool gasFormationVolumeFactorOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteGasFormationVolumeFactor>();
-        return val;
-    }
-
-    static bool waterFormationVolumeFactorOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteWaterFormationVolumeFactor>();
-        return val;
-    }
-
-    static bool oilSaturationPressureOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteOilSaturationPressure>();
-        return val;
-    }
-
-    static bool gasSaturationPressureOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteGasSaturationPressure>();
-        return val;
-    }
-
-    static bool saturatedOilGasDissolutionFactorOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
-        return val;
-    }
-
-    static bool saturatedGasOilVaporizationFactorOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSaturatedGasOilVaporizationFactor>();
-        return val;
-    }
-
-    static bool saturationRatiosOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSaturationRatios>();
-        return val;
-    }
-
-    static bool primaryVarsMeaningOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWritePrimaryVarsMeaning>();
-        return val;
-    }
-
-    ScalarBuffer gasDissolutionFactor_;
-    ScalarBuffer oilVaporizationFactor_;
-    ScalarBuffer oilFormationVolumeFactor_;
-    ScalarBuffer gasFormationVolumeFactor_;
-    ScalarBuffer waterFormationVolumeFactor_;
-    ScalarBuffer oilSaturationPressure_;
-    ScalarBuffer gasSaturationPressure_;
-
-    ScalarBuffer saturatedOilGasDissolutionFactor_;
-    ScalarBuffer saturatedGasOilVaporizationFactor_;
-    ScalarBuffer oilSaturationRatio_;
-    ScalarBuffer gasSaturationRatio_;
-
-    ScalarBuffer primaryVarsMeaningPressure_;
-    ScalarBuffer primaryVarsMeaningWater_;
-    ScalarBuffer primaryVarsMeaningGas_;
+    ScalarBuffer primaryVarsMeaningPressure_{};
+    ScalarBuffer primaryVarsMeaningWater_{};
+    ScalarBuffer primaryVarsMeaningGas_{};
 };
 
 } // namespace Opm
