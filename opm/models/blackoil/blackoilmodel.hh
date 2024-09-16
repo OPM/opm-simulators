@@ -57,7 +57,7 @@
 
 #include <opm/models/io/vtkblackoilmodule.hpp>
 #include <opm/models/io/vtkcompositionmodule.hpp>
-#include <opm/models/io/vtkdiffusionmodule.hh>
+#include <opm/models/io/vtkdiffusionmodule.hpp>
 
 #include <sstream>
 #include <string>

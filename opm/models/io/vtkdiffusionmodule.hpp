@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::VtkDiffusionModule
  */
-#ifndef EWOMS_VTK_DIFFUSION_MODULE_HH
-#define EWOMS_VTK_DIFFUSION_MODULE_HH
+#ifndef OPM_VTK_DIFFUSION_MODULE_HPP
+#define OPM_VTK_DIFFUSION_MODULE_HPP
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -49,6 +49,7 @@ struct VtkWriteEffectiveDiffusionCoefficients { static constexpr bool value = fa
 } // namespace Opm::Parameters
 
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -191,4 +192,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_DIFFUSION_MODULE_HPP

@@ -667,7 +667,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkblackoilsolventparams.hpp
   opm/models/io/vtkcompositionmodule.hpp
   opm/models/io/vtkcompositionparams.hpp
-  opm/models/io/vtkdiffusionmodule.hh
+  opm/models/io/vtkdiffusionmodule.hpp
   opm/models/io/vtkdiscretefracturemodule.hh
   opm/models/io/vtkenergymodule.hh
   opm/models/io/vtkmultiphasemodule.hh

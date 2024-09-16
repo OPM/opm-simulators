@@ -40,7 +40,7 @@
 
 #include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkenergymodule.hh>
-#include <opm/models/io/vtkdiffusionmodule.hh>
+#include <opm/models/io/vtkdiffusionmodule.hpp>
 
 #include <opm/models/pvs/pvsboundaryratevector.hh>
 #include <opm/models/pvs/pvsextensivequantities.hh>
