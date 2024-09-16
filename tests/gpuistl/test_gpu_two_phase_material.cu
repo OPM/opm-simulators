@@ -71,31 +71,32 @@ using SatOnlyFluidState = Opm::SimpleModularFluidState<Scalar,
                                                   /*storeViscosity=*/false,
                                                   /*storeEnthalpy=*/false>;
 
-using TraitsT = Opm::TwoPhaseMaterialTraits<Scalar, 1, 2>;
-using CPUParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TraitsT>;
-using constGPUPiecewiseLinearParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TraitsT, const GPUBuffer>;
-// using GPUBufferParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TraitsT, GPUBuffer>;
-using ViewGPUPiecewiseLinearParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TraitsT, GPUView>;
-using CPUTPiecewiseLinearMaterialLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TraitsT, CPUParams>;
-using GPUPLTwoPhaseLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TraitsT, ViewGPUPiecewiseLinearParams>;
+using TwoPhaseTraitsT = Opm::TwoPhaseMaterialTraits<Scalar, 1, 2>; // is this ordering reasonable?
+using ThreePhaseTraitsT = Opm::ThreePhaseMaterialTraits<Scalar, 0, 1, 2>; // is this ordering reasonable?
 
-using GPUTwoPhaseLawParams = Opm::EclTwoPhaseMaterialParams<TraitsT, ViewGPUPiecewiseLinearParams, ViewGPUPiecewiseLinearParams, ViewGPUPiecewiseLinearParams, false>;
-using GPUTwoPhaseLaw = Opm::EclTwoPhaseMaterial<TraitsT, GPUPLTwoPhaseLaw, GPUPLTwoPhaseLaw, GPUPLTwoPhaseLaw, false>;
+using CPUParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT>;
+using constGPUPiecewiseLinearParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT, const GPUBuffer>;
+// using GPUBufferParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT, GPUBuffer>;
+using ViewGPUPiecewiseLinearParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT, GPUView>;
+using CPUTPiecewiseLinearMaterialLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraitsT, CPUParams>;
+using GPUPLTwoPhaseLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraitsT, ViewGPUPiecewiseLinearParams>;
+
+using GPUTwoPhaseLawParams = Opm::EclTwoPhaseMaterialParams<ThreePhaseTraitsT, ViewGPUPiecewiseLinearParams, ViewGPUPiecewiseLinearParams, ViewGPUPiecewiseLinearParams, false>;
+using GPUTwoPhaseLaw = Opm::EclTwoPhaseMaterial<ThreePhaseTraitsT, GPUPLTwoPhaseLaw, GPUPLTwoPhaseLaw, GPUPLTwoPhaseLaw, false>;
 
 
-__global__ void gpuTwoPhaseSatPcnwWrapper(){
+__global__ void gpuTwoPhaseSatPcnwWrapper(GPUTwoPhaseLaw* materialLaw, SPE11CEvaluation* in, SPE11CEvaluation* out){
+    // createa a simplified fluidstate object on the GPU from inside a gpu kernel
     SatOnlyFluidState fluidState;
     fluidState.setSaturation(0, 0.6); // water
-    fluidState.setSaturation(0, 0.0); // oil
-    fluidState.setSaturation(0, 0.4); // gas
+    fluidState.setSaturation(1, 0.0); // oil
+    fluidState.setSaturation(2, 0.4); // gas
 
-    
+    // use the created fluidstate to create a materialLaw query
 }
 
 BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
 {
-
-
     CPUParams cpuParams;
     ViewGPUPiecewiseLinearParams gpuViewParams;
 
@@ -112,7 +113,7 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
     constGPUPiecewiseLinearParams gpuBufferParams(gx, gy, gx, gy, gx, gy);
 
     // make a view of the parameters
-    gpuViewParams = Opm::gpuistl::make_view<TraitsT, const GPUBuffer, GPUView>(gpuBufferParams);
+    gpuViewParams = Opm::gpuistl::make_view<TwoPhaseTraitsT, const GPUBuffer, GPUView>(gpuBufferParams);
 
     // make a twoPhaseLaw with the parameters
     auto gpuTwoPhaseLawParams = GPUTwoPhaseLawParams();
