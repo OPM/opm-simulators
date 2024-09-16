@@ -47,10 +47,22 @@ template<class Scalar>
 struct ToleranceMbRelaxed { static constexpr Scalar value = 1e-6; };
 
 template<class Scalar>
+struct ToleranceEnergyBalance { static constexpr Scalar value = 1e-7; };
+
+template<class Scalar>
+struct ToleranceEnergyBalanceRelaxed { static constexpr Scalar value = 1e-6; };
+
+template<class Scalar>
 struct ToleranceCnv { static constexpr Scalar value = 1e-2; };
 
 template<class Scalar>
 struct ToleranceCnvRelaxed { static constexpr Scalar value = 1.0; };
+
+template<class Scalar>
+struct ToleranceCnvEnergy { static constexpr Scalar value = 1e-2; };
+
+template<class Scalar>
+struct ToleranceCnvEnergyRelaxed { static constexpr Scalar value = 1.0; };
 
 template<class Scalar>
 struct ToleranceWells { static constexpr Scalar value = 1e-4; };
@@ -147,10 +159,18 @@ public:
     Scalar tolerance_mb_;
     /// Relaxed mass balance tolerance (can be used when iter >= min_strict_mb_iter_).
     Scalar tolerance_mb_relaxed_;
+    /// Relative energy balance tolerance (total energy balance error).
+    Scalar tolerance_energy_balance_;
+    /// Relaxed energy balance tolerance (can be used when iter >= min_strict_mb_iter_).
+    Scalar tolerance_energy_balance_relaxed_;
     /// Local convergence tolerance (max of local saturation errors).
     Scalar tolerance_cnv_;
     /// Relaxed local convergence tolerance (can be used when iter >= min_strict_cnv_iter_ && cnvViolatedPV < relaxed_max_pv_fraction_).
     Scalar tolerance_cnv_relaxed_;
+    /// Local energy convergence tolerance (max of local energy errors).
+    Scalar tolerance_cnv_energy_;
+    /// Relaxed local energy convergence tolerance (can be used when iter >= min_strict_cnv_iter_ && cnvViolatedPV < relaxed_max_pv_fraction_).
+    Scalar tolerance_cnv_energy_relaxed_;
     /// Well convergence tolerance.
     Scalar tolerance_wells_;
     /// Tolerance for the well control equations

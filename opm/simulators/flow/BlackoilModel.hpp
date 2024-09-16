@@ -1009,6 +1009,8 @@ namespace Opm {
 
             const auto tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ : param_.tolerance_cnv_;
             const auto tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
+            const auto tol_cnv_energy = use_relaxed_cnv ? param_.tolerance_cnv_energy_relaxed_ : param_.tolerance_cnv_energy_;
+            const auto tol_eb = use_relaxed_mb ? param_.tolerance_energy_balance_relaxed_ : param_.tolerance_energy_balance_;
 
             // Finish computation
             std::vector<Scalar> CNV(numComp);
@@ -1031,7 +1033,11 @@ namespace Opm {
                     CR::ReservoirFailure::Type::Cnv,
                 };
 
-                const Scalar tol[2] = { tol_mb, tol_cnv, };
+                Scalar tol[2] = { tol_mb, tol_cnv, };
+                if (has_energy_ && compIdx == contiEnergyEqIdx) {
+                    tol[0] = tol_eb;
+                    tol[1] = tol_cnv_energy;
+                }
 
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
