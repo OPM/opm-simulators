@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkTemperatureModule
  */
-#ifndef EWOMS_VTK_TEMPERATURE_MODULE_HH
-#define EWOMS_VTK_TEMPERATURE_MODULE_HH
+#ifndef OPM_VTK_TEMPERATURE_MODULE_HPP
+#define OPM_VTK_TEMPERATURE_MODULE_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
 
@@ -139,4 +139,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_TEMPERATURE_MODULE_HPP

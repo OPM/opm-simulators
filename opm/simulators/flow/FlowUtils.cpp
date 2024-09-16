@@ -36,7 +36,7 @@
 #include <opm/models/io/vtkdiffusionmodule.hpp>
 #include <opm/models/io/vtkmultiphasemodule.hpp>
 #include <opm/models/io/vtkprimaryvarsmodule.hpp>
-#include <opm/models/io/vtktemperaturemodule.hh>
+#include <opm/models/io/vtktemperaturemodule.hpp>
 #include <opm/models/nonlinear/newtonmethodparameters.hh>
 #include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/parametersystem.hpp>

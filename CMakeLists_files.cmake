@@ -690,7 +690,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkptflashmodule.hpp
   opm/models/io/vtkptflashparams.hpp
   opm/models/io/vtkscalarfunction.hh
-  opm/models/io/vtktemperaturemodule.hh
+  opm/models/io/vtktemperaturemodule.hpp
   opm/models/io/vtktensorfunction.hh
   opm/models/io/vtkvectorfunction.hh
   opm/models/ncp/ncpboundaryratevector.hh
