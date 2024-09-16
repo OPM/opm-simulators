@@ -639,6 +639,7 @@ if(CUDA_FOUND)
   set_tests_properties(cusparse_safe_call
                        cublas_safe_call
                        gpu_safe_call
+                       gpu_two_phase_material
                        cuda_check_last_error
                        cublas_handle
                        GpuJac
