@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkBlackOilPolymerModule
  */
-#ifndef EWOMS_VTK_BLACK_OIL_POLYMER_MODULE_HH
-#define EWOMS_VTK_BLACK_OIL_POLYMER_MODULE_HH
+#ifndef OPM_VTK_BLACK_OIL_POLYMER_MODULE_HPP
+#define OPM_VTK_BLACK_OIL_POLYMER_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -61,6 +61,7 @@ struct VtkWritePolymerAdsorption { static constexpr bool value = true; };
 } // namespace Opm::Parameters
 
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -263,6 +264,7 @@ private:
     ScalarBuffer polymerViscosityCorrection_;
     ScalarBuffer waterViscosityCorrection_;
 };
+
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_BLACK_OIL_POLYMER_MODULE_HPP
