@@ -30,22 +30,13 @@
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkenergyparams.hpp>
 #include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-namespace Opm::Parameters {
-
-// set default values for what quantities to output
-struct VtkWriteSolidInternalEnergy { static constexpr bool value = false; };
-struct VtkWriteThermalConductivity { static constexpr bool value = false; };
-struct VtkWriteInternalEnergies { static constexpr bool value = false; };
-struct VtkWriteEnthalpies { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -86,6 +77,7 @@ public:
     VtkEnergyModule(const Simulator& simulator)
         : ParentType(simulator)
     {
+        params_.read();
     }
 
     /*!
@@ -93,18 +85,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::VtkWriteSolidInternalEnergy>
-            ("Include the volumetric internal energy of solid"
-             "matrix in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteThermalConductivity>
-            ("Include the total thermal conductivity of the"
-             "medium in the VTK output files");
-        Parameters::Register<Parameters::VtkWriteEnthalpies>
-            ("Include the specific enthalpy of the phases in "
-             "the VTK output files");
-        Parameters::Register<Parameters::VtkWriteInternalEnergies>
-            ("Include the specific internal energy of the "
-             "phases in the VTK output files");
+        VtkEnergyParams::registerParameters();
     }
 
     /*!
@@ -113,15 +94,19 @@ public:
      */
     void allocBuffers()
     {
-        if (enthalpyOutput_())
+        if (params_.enthalpyOutput_) {
             this->resizePhaseBuffer_(enthalpy_);
-        if (internalEnergyOutput_())
+        }
+        if (params_.internalEnergyOutput_) {
             this->resizePhaseBuffer_(internalEnergy_);
+        }
 
-        if (solidInternalEnergyOutput_())
+        if (params_.solidInternalEnergyOutput_) {
             this->resizeScalarBuffer_(solidInternalEnergy_);
-        if (thermalConductivityOutput_())
+        }
+        if (params_.thermalConductivityOutput_) {
             this->resizeScalarBuffer_(thermalConductivity_);
+        }
     }
 
     /*!
@@ -139,16 +124,20 @@ public:
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            if (solidInternalEnergyOutput_())
+            if (params_.solidInternalEnergyOutput_) {
                 solidInternalEnergy_[I] = Toolbox::value(intQuants.solidInternalEnergy());
-            if (thermalConductivityOutput_())
+            }
+            if (params_.thermalConductivityOutput_) {
                 thermalConductivity_[I] = Toolbox::value(intQuants.thermalConductivity());
+            }
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (enthalpyOutput_())
+                if (params_.enthalpyOutput_) {
                     enthalpy_[phaseIdx][I] = Toolbox::value(fs.enthalpy(phaseIdx));
-                if (internalEnergyOutput_())
+                }
+                if (params_.internalEnergyOutput_) {
                     internalEnergy_[phaseIdx][I] = Toolbox::value(fs.internalEnergy(phaseIdx));
+                }
             }
         }
     }
@@ -158,52 +147,33 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter)
     {
-        VtkMultiWriter *vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
+        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {
             return;
         }
 
-        if (solidInternalEnergyOutput_())
+        if (params_.solidInternalEnergyOutput_) {
             this->commitScalarBuffer_(baseWriter, "internalEnergySolid", solidInternalEnergy_);
-        if (thermalConductivityOutput_())
+        }
+        if (params_.thermalConductivityOutput_) {
             this->commitScalarBuffer_(baseWriter, "thermalConductivity", thermalConductivity_);
+        }
 
-        if (enthalpyOutput_())
+        if (params_.enthalpyOutput_) {
             this->commitPhaseBuffer_(baseWriter, "enthalpy_%s", enthalpy_);
-        if (internalEnergyOutput_())
+        }
+        if (params_.internalEnergyOutput_) {
             this->commitPhaseBuffer_(baseWriter, "internalEnergy_%s", internalEnergy_);
+        }
     }
 
 private:
-    static bool solidInternalEnergyOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteSolidInternalEnergy>();
-        return val;
-    }
+    VtkEnergyParams params_{};
+    PhaseBuffer enthalpy_{};
+    PhaseBuffer internalEnergy_{};
 
-    static bool thermalConductivityOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteThermalConductivity>();
-        return val;
-    }
-
-    static bool enthalpyOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteEnthalpies>();
-        return val;
-    }
-
-    static bool internalEnergyOutput_()
-    {
-        static bool val = Parameters::Get<Parameters::VtkWriteInternalEnergies>();
-        return val;
-    }
-
-    PhaseBuffer enthalpy_;
-    PhaseBuffer internalEnergy_;
-
-    ScalarBuffer thermalConductivity_;
-    ScalarBuffer solidInternalEnergy_;
+    ScalarBuffer thermalConductivity_{};
+    ScalarBuffer solidInternalEnergy_{};
 };
 
 } // namespace Opm
