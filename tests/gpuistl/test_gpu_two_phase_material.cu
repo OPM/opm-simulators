@@ -52,7 +52,7 @@ using Scalar = float;
 
 const int staticSize = 0;
 
-using SPE11CEvaluation = Opm::DenseAd::Evaluation<Scalar, numPhases, staticSize>;
+// using SPE11CEvaluation = Opm::DenseAd::Evaluation<Scalar, numPhases, staticSize>;
 
 using ValueVector = std::vector<Scalar>;
 using GPUBuffer = Opm::gpuistl::GpuBuffer<Scalar>;
@@ -72,20 +72,21 @@ using SatOnlyFluidState = Opm::SimpleModularFluidState<Scalar,
                                                   /*storeEnthalpy=*/false>;
 
 using TwoPhaseTraitsT = Opm::TwoPhaseMaterialTraits<Scalar, 1, 2>; // is this ordering reasonable?
-using ThreePhaseTraitsT = Opm::ThreePhaseMaterialTraits<Scalar, 0, 1, 2>; // is this ordering reasonable?
+using ThreePhaseTraitsT = Opm::ThreePhaseMaterialTraits<Scalar, 1, 2, 0>; // is this ordering reasonable? (i have also tried 1, 2, 3)
 
-using CPUParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT>;
+using CPUPLParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT>;
 using constGPUPiecewiseLinearParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT, const GPUBuffer>;
 // using GPUBufferParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT, GPUBuffer>;
 using ViewGPUPiecewiseLinearParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraitsT, GPUView>;
-using CPUTPiecewiseLinearMaterialLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraitsT, CPUParams>;
+using CPUPLMaterialLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraitsT, CPUPLParams>;
 using GPUPLTwoPhaseLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TwoPhaseTraitsT, ViewGPUPiecewiseLinearParams>;
 
+using CPUTwoPhaseLawParams = Opm::EclTwoPhaseMaterialParams<ThreePhaseTraitsT, CPUPLParams, CPUPLParams, CPUPLParams, false>;
+using CPUTwoPhaseLaw = Opm::EclTwoPhaseMaterial<ThreePhaseTraitsT, CPUPLMaterialLaw, CPUPLMaterialLaw, CPUPLMaterialLaw, false>;
 using GPUTwoPhaseLawParams = Opm::EclTwoPhaseMaterialParams<ThreePhaseTraitsT, ViewGPUPiecewiseLinearParams, ViewGPUPiecewiseLinearParams, ViewGPUPiecewiseLinearParams, false>;
 using GPUTwoPhaseLaw = Opm::EclTwoPhaseMaterial<ThreePhaseTraitsT, GPUPLTwoPhaseLaw, GPUPLTwoPhaseLaw, GPUPLTwoPhaseLaw, false>;
 
-
-__global__ void gpuTwoPhaseSatPcnwWrapper(GPUTwoPhaseLawParams params, Scalar* sat){
+__global__ void gpuCapillaryPressure(GPUTwoPhaseLawParams params, Scalar* values){
     // createa a simplified fluidstate object on the GPU from inside a gpu kernel
     SatOnlyFluidState fluidState;
     fluidState.setSaturation(0, 0.6); // water
@@ -93,13 +94,12 @@ __global__ void gpuTwoPhaseSatPcnwWrapper(GPUTwoPhaseLawParams params, Scalar* s
     fluidState.setSaturation(2, 0.4); // gas
 
     // use the created fluidstate to create a materialLaw query
-    GPUTwoPhaseLaw::capillaryPressures(sat, params, fluidState);
+    GPUTwoPhaseLaw::capillaryPressures(values, params, fluidState);
 }
 
 BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
 {
-    CPUParams cpuParams;
-    ViewGPUPiecewiseLinearParams gpuViewParams;
+    CPUPLParams cpuParams;
 
     ValueVector cx = {0.0, 0.5, 1.0};
     ValueVector cy = {0.0, 0.9, 1.0};
@@ -114,9 +114,17 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
     constGPUPiecewiseLinearParams gpuBufferParams(gx, gy, gx, gy, gx, gy);
 
     // make a view of the parameters
-    gpuViewParams = Opm::gpuistl::make_view<TwoPhaseTraitsT, const GPUBuffer, GPUView>(gpuBufferParams);
+    ViewGPUPiecewiseLinearParams gpuViewParams = Opm::gpuistl::make_view<TwoPhaseTraitsT, const GPUBuffer, GPUView>(gpuBufferParams);
 
-    // make a twoPhaseLaw with the parameters
+    // make a twoPhaseLaw with the parameters on the CPU
+    auto cpuTwoPhaseLawParams = CPUTwoPhaseLawParams();
+    cpuTwoPhaseLawParams.setGasOilParams(&cpuParams);
+    cpuTwoPhaseLawParams.setOilWaterParams(&cpuParams);
+    cpuTwoPhaseLawParams.setGasWaterParams(&cpuParams);
+    cpuTwoPhaseLawParams.setApproach(Opm::EclTwoPhaseApproach::GasWater);
+    cpuTwoPhaseLawParams.finalize();
+
+    // make a twoPhaseLaw with the parameters on the GPU
     auto gpuTwoPhaseLawParams = GPUTwoPhaseLawParams();
     gpuTwoPhaseLawParams.setGasOilParams(&gpuViewParams);
     gpuTwoPhaseLawParams.setOilWaterParams(&gpuViewParams);
@@ -125,23 +133,35 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
     gpuTwoPhaseLawParams.finalize();
 
     ValueVector testXs = {-1.0, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 1.0, 1.1};
+    const size_t VEC_BYTES = 3*sizeof(Scalar);
+    Scalar* gpuValues;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuValues, VEC_BYTES));
 
-    // for (Scalar x_i : testXs){
-    //     auto cpuMadeAd = SPE11CEvaluation(x_i, 0);
-    //     SPE11CEvaluation cpuInterpolatedEval = CPUTPiecewiseLinearMaterialLaw::twoPhaseSatPcnw<SPE11CEvaluation>(cpuParams, cpuMadeAd);
+    for (Scalar x_i : testXs){
 
-    //     SPE11CEvaluation* gpuAdInput;
-    //     SPE11CEvaluation* gpuAdResOnGPU;
-    //     SPE11CEvaluation gpuAdResOnCPU[1];
+        // initialize some data for computation
+        Scalar arr[3] = {x_i, x_i, x_i };
+        Scalar cpuArr[3] = {x_i, x_i, x_i };
+        Scalar gpuResult[3];
 
-    //     OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdInput, sizeof(SPE11CEvaluation)));
-    //     OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdResOnGPU, sizeof(SPE11CEvaluation)));
+        // compute capillary pressure on the CPU
+        SatOnlyFluidState fluidState;
+        fluidState.setSaturation(0, 0.6); // water
+        fluidState.setSaturation(1, 0.0); // oil
+        fluidState.setSaturation(2, 0.4); // gas
+        CPUTwoPhaseLaw::capillaryPressures(cpuArr, cpuTwoPhaseLawParams, fluidState);
 
-    //     OPM_GPU_SAFE_CALL(cudaMemcpy(gpuAdInput, &cpuMadeAd, sizeof(SPE11CEvaluation), cudaMemcpyHostToDevice));
-    //     gpuTwoPhaseSatPcnwWrapper<<<1,1>>>(gpuViewParams, *gpuAdInput, gpuAdResOnGPU);
-    //     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    //     OPM_GPU_SAFE_CALL(cudaMemcpy(gpuAdResOnCPU, gpuAdResOnGPU, sizeof(SPE11CEvaluation), cudaMemcpyDeviceToHost));
+        // compute capillary pressure on the GPU
+        OPM_GPU_SAFE_CALL(cudaMemcpy(gpuValues, arr, VEC_BYTES, cudaMemcpyHostToDevice));
+        gpuCapillaryPressure<<<1,1>>>(gpuTwoPhaseLawParams, gpuValues);
+        OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+        OPM_GPU_SAFE_CALL(cudaMemcpy(gpuResult, gpuValues, VEC_BYTES, cudaMemcpyDeviceToHost));
 
-    //     BOOST_CHECK(gpuAdResOnCPU[0] == cpuInterpolatedEval);
-    // }
+        // check for each phase that the state of the input/output vector is the same
+        printf("%f %f %f === %f %f %f\n", gpuResult[0], gpuResult[1], gpuResult[2], cpuArr[0], cpuArr[1], cpuArr[2]);
+        BOOST_CHECK(gpuResult[0] == cpuArr[0]);
+        BOOST_CHECK(gpuResult[1] == cpuArr[1]);
+        BOOST_CHECK(gpuResult[2] == cpuArr[2]);
+    }
+    OPM_GPU_SAFE_CALL(cudaFree(gpuValues));
 }
