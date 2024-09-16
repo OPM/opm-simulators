@@ -85,7 +85,7 @@ using GPUTwoPhaseLawParams = Opm::EclTwoPhaseMaterialParams<ThreePhaseTraitsT, V
 using GPUTwoPhaseLaw = Opm::EclTwoPhaseMaterial<ThreePhaseTraitsT, GPUPLTwoPhaseLaw, GPUPLTwoPhaseLaw, GPUPLTwoPhaseLaw, false>;
 
 
-__global__ void gpuTwoPhaseSatPcnwWrapper(GPUTwoPhaseLaw* materialLaw, SPE11CEvaluation* in, SPE11CEvaluation* out){
+__global__ void gpuTwoPhaseSatPcnwWrapper(GPUTwoPhaseLawParams params, Scalar* sat){
     // createa a simplified fluidstate object on the GPU from inside a gpu kernel
     SatOnlyFluidState fluidState;
     fluidState.setSaturation(0, 0.6); // water
@@ -93,6 +93,7 @@ __global__ void gpuTwoPhaseSatPcnwWrapper(GPUTwoPhaseLaw* materialLaw, SPE11CEva
     fluidState.setSaturation(2, 0.4); // gas
 
     // use the created fluidstate to create a materialLaw query
+    GPUTwoPhaseLaw::capillaryPressures(sat, params, fluidState);
 }
 
 BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
