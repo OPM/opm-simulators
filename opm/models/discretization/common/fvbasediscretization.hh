@@ -53,7 +53,7 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
-#include <opm/models/io/vtkprimaryvarsmodule.hh>
+#include <opm/models/io/vtkprimaryvarsmodule.hpp>
 
 #include <opm/models/parallel/gridcommhandles.hh>
 #include <opm/models/parallel/threadmanager.hpp>
@@ -68,7 +68,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <limits>
 #include <list>
 #include <stdexcept>
 #include <sstream>
