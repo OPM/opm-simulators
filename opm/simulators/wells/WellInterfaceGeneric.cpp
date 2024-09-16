@@ -609,7 +609,7 @@ getALQ(const WellState<Scalar>& well_state) const
 template<class Scalar>
 void WellInterfaceGeneric<Scalar>::
 reportWellSwitching(const SingleWellState<Scalar> &ws,
-                    DeferredLogger& deferred_logger) const
+                    DeferredLogger& deferred_logger)
 {
     if (well_control_log_.empty())
         return;
@@ -626,6 +626,7 @@ reportWellSwitching(const SingleWellState<Scalar> &ws,
         deferred_logger.info(fmt::format("    Well {} control mode changed from {} to {}",
                                          name(), from, to));
     }
+    well_control_log_.clear();
 }
 
 template<class Scalar>
