@@ -686,7 +686,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/io/vtkphasepresenceparams.hpp
   opm/models/io/vtkprimaryvarsmodule.hpp
   opm/models/io/vtkprimaryvarsparams.hpp
-  opm/models/io/vtkptflashmodule.hh
+  opm/models/io/vtkptflashmodule.hpp
   opm/models/io/vtkscalarfunction.hh
   opm/models/io/vtktemperaturemodule.hh
   opm/models/io/vtktensorfunction.hh

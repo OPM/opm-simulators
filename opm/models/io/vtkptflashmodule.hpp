@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkPTFlashModule
  */
-#ifndef OPM_VTK_PTFLASH_MODULE_HH
-#define OPM_VTK_PTFLASH_MODULE_HH
+#ifndef OPM_VTK_PTFLASH_MODULE_HPP
+#define OPM_VTK_PTFLASH_MODULE_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
 
@@ -166,4 +166,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_PTFLASH_MODULE_HPP
