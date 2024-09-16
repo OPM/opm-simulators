@@ -24,8 +24,8 @@
  * \file
  * \copydoc Opm::VtkEnergyModule
  */
-#ifndef EWOMS_VTK_ENERGY_MODULE_HH
-#define EWOMS_VTK_ENERGY_MODULE_HH
+#ifndef OPM_VTK_ENERGY_MODULE_HPP
+#define OPM_VTK_ENERGY_MODULE_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
 
@@ -48,6 +48,7 @@ struct VtkWriteEnthalpies { static constexpr bool value = false; };
 } // namespace Opm::Parameters
 
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -207,4 +208,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_ENERGY_MODULE_HPP

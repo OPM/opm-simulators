@@ -46,7 +46,7 @@
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/io/vtkcompositionmodule.hpp>
-#include <opm/models/io/vtkenergymodule.hh>
+#include <opm/models/io/vtkenergymodule.hpp>
 #include <opm/models/io/vtkdiffusionmodule.hpp>
 
 #include <opm/material/common/Valgrind.hpp>

@@ -36,7 +36,7 @@
 #include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkphasepresencemodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hpp>
-#include <opm/models/io/vtkenergymodule.hh>
+#include <opm/models/io/vtkenergymodule.hpp>
 
 namespace Opm::Properties {
 
