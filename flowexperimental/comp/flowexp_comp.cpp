@@ -70,9 +70,11 @@ namespace Opm{
         void beginIteration(){};
         // add the water rate due to aquifers to the source term.
         template<class RateVector, class Context>
-        void addToSource(RateVector& rates, const Context& context, unsigned spaceIdx, unsigned timeIdx) const{};
+        void addToSource(RateVector& /*rates*/, const Context& /*context*/,
+                         unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const {}
         template<class RateVector>
-        void addToSource(RateVector& rates, unsigned globalSpaceIdx, unsigned timeIdx) const{};
+        void addToSource(RateVector& /*rates*/, unsigned /*globalSpaceIdx*/,
+                         unsigned /*timeIdx*/) const {}
         void endIteration()const{};
         void endTimeStep(){};
         void endEpisode(){};
