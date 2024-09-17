@@ -299,7 +299,7 @@ public:
         values.assignNaive(fs);
     }
 
-    void addToSourceDense(RateVector&, unsigned, unsigned) const
+    void addToSourceDense(RateVector&, unsigned, unsigned) const override
     {
         // we do nothing for now
     }
@@ -326,7 +326,7 @@ protected:
         // we do nothing here for now
     }
 
-    void readEquilInitialCondition_()
+    void readEquilInitialCondition_() override
     {
         throw std::logic_error("Equilibration is not supported by compositional modeling yet");
     }
@@ -336,7 +336,7 @@ protected:
         throw std::logic_error("Restarting is not supported by compositional modeling yet");
     }
 
-    void readExplicitInitialCondition_()
+    void readExplicitInitialCondition_() override
     {
         readExplicitInitialConditionCompositional_();
     }
