@@ -37,13 +37,23 @@ namespace Opm::gpuistl
 template<class ViewType>
 class ViewPointer {
 public:
-    ViewPointer (ViewType view) : view_(view) {}
+    __host__ __device__ ViewPointer (ViewType view) : view_(view) {}
 
-    ViewType& operator*(){
+    __host__ __device__ ViewPointer() : view_() {}
+
+    __host__ __device__ ViewType& operator*(){
         return view_;
     }
 
-    ViewType* operator->(){
+    __host__ __device__ const ViewType& operator*() const {
+        return view_;
+    }
+
+    __host__ __device__ ViewType* operator->(){
+        return &view_;
+    }
+
+    __host__ __device__ const ViewType* operator->() const {
         return &view_;
     }
 
