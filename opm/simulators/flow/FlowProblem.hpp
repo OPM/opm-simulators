@@ -251,6 +251,8 @@ public:
         relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
     }
 
+    virtual ~FlowProblem() = default;
+
     void prefetch(const Element& elem) const
     { pffDofData_.prefetch(elem); }
 

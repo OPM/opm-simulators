@@ -1147,7 +1147,7 @@ protected:
         this->eclWriter_->endRestart();
     }
 
-    void readEquilInitialCondition_()
+    void readEquilInitialCondition_() override
     {
         const auto& simulator = this->simulator();
 
