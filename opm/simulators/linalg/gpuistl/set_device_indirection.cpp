@@ -20,7 +20,9 @@
 #include <config.h>
 
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
+#if HAVE_CUDA
 #include <opm/simulators/linalg/gpuistl/set_device.hpp>
+#endif
 
 namespace Opm::gpuistl {
 
