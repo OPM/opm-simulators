@@ -73,11 +73,7 @@
 #endif
 
 #if HAVE_CUDA
-#if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/set_device.hpp>
-#else
-#include <opm/simulators/linalg/gpuistl/set_device.hpp>
-#endif
+#include <opm/simulators/linalg/gpuistl/set_device_indirection.hpp>
 #endif
 
 #if HAVE_DAMARIS
@@ -433,11 +429,7 @@ protected:
         }
 
 #if HAVE_CUDA
-#if HAVE_MPI
-    Opm::gpuistl::printDevice(FlowGenericVanguard::comm().rank(), FlowGenericVanguard::comm().size());
-#else
-    Opm::gpuistl::printDevice(0, 1);
-#endif
+    Opm::gpuistl::printDevice();
 #endif
 
         exitCode = EXIT_SUCCESS;

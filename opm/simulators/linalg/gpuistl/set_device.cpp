@@ -20,6 +20,7 @@
 #include <sstream>
 #include <cuda_runtime.h>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/set_device.hpp>
 
