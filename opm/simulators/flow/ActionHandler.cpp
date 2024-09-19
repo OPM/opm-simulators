@@ -146,6 +146,12 @@ applyActions(const int reportStep,
     const auto ts  = formatActionDate(now, reportStep);
 
     bool commit_wellstate = false;
+    const auto simTime = asTimeT(now);
+
+    //Only fetch the WellPIMap if we have pending pyactions or actions
+    if (not actions.pending_python(actionState_).empty() or not actions.pending(actionState_, simTime).empty()) {
+        schedule_.setWellPIMap(this->fetchWellPI(reportStep));
+    }
     for (const auto& pyaction : actions.pending_python(actionState_)) {
         auto sim_update = schedule_.runPyAction(reportStep, *pyaction, actionState_,
                                                 ecl_state_, summaryState_);
@@ -153,7 +159,6 @@ applyActions(const int reportStep,
     }
 
     auto non_triggered = 0;
-    const auto simTime = asTimeT(now);
     for (const auto& action : actions.pending(actionState_, simTime)) {
         const auto actionResult = action->eval(context);
         if (! actionResult) {
@@ -166,10 +171,8 @@ applyActions(const int reportStep,
 
         logActiveAction(action->name(), matching_wells, ts);
 
-        const auto wellpi = this->fetchWellPI(reportStep, *action, matching_wells);
-
         const auto sim_update = this->schedule_
-            .applyAction(reportStep, *action, matching_wells, wellpi);
+            .applyAction(reportStep, *action, matching_wells);
 
         this->applySimulatorUpdate(reportStep, sim_update, commit_wellstate, transUp);
         actionState_.add_run(*action, simTime, std::move(actionResult));
@@ -216,20 +219,12 @@ applySimulatorUpdate(const int report_step,
 template<class Scalar>
 std::unordered_map<std::string, Scalar>
 ActionHandler<Scalar>::
-fetchWellPI(const int reportStep,
-            const Action::ActionX& action,
-            const std::vector<std::string>& matching_wells) const
+fetchWellPI(int reportStep) const
 {
-  auto wellpi_wells = action.wellpi_wells(WellMatcher(schedule_[reportStep].well_order(),
-                                                      schedule_[reportStep].wlist_manager()),
-                                          matching_wells);
-
-  if (wellpi_wells.empty())
-      return {};
-
+  auto allWells = schedule_[reportStep].well_order().names();
   const auto num_wells = schedule_[reportStep].well_order().size();
   std::vector<Scalar> wellpi_vector(num_wells);
-  for (const auto& wname : wellpi_wells) {
+  for (const auto& wname : allWells) {
       if (this->wellModel_.hasWell(wname)) {
           const auto& well = schedule_.getWell( wname, reportStep );
           wellpi_vector[well.seqIndex()] = this->wellModel_.wellPI(wname);
@@ -253,7 +248,7 @@ fetchWellPI(const int reportStep,
   }
 
   std::unordered_map<std::string, Scalar> wellpi;
-  for (const auto& wname : wellpi_wells) {
+  for (const auto& wname : allWells) {
       const auto& well = schedule_.getWell( wname, reportStep );
       wellpi[wname] = wellpi_vector[ well.seqIndex() ];
   }
