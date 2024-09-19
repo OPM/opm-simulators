@@ -279,7 +279,6 @@ namespace Opm
                                              const bool fixed_status)
     {
         const auto& summary_state = simulator.vanguard().summaryState();
-        const auto& schedule = simulator.vanguard().schedule();
         auto& ws = well_state.well(this->index_of_well_);
         std::string from;
         if (this->isInjector()) {
