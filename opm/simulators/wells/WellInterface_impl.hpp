@@ -279,7 +279,6 @@ namespace Opm
                                              const bool fixed_status)
     {
         const auto& summary_state = simulator.vanguard().summaryState();
-        const auto& schedule = simulator.vanguard().schedule();
         auto& ws = well_state.well(this->index_of_well_);
         std::string from;
         if (this->isInjector()) {
@@ -301,13 +300,18 @@ namespace Opm
             } else {
                 bool changed = false;
                 if (!fixed_control) {
-                    const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
-                                                                      prod_controls.hasControl(Well::ProducerCMode::GRUP);
+                    // We don't allow changing to group controls here since this may lead to inconsistencies
+                    // in the group handling which in turn may result in excessive back and forth switching.
+                    // If we are to allow this change, one needs to make sure all necessary information propagates  
+                    // properly, but for now, we simply disallow it. The commented code below is kept for future reference  
+                    
+                    // const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
+                    //                                                   prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                     changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                    if (hasGroupControl) {
-                        changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
-                    }
+                    // if (hasGroupControl) {
+                    //     changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
+                    // }
 
                     if (changed) {
                         const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
