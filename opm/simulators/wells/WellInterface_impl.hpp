@@ -301,7 +301,11 @@ namespace Opm
             } else {
                 bool changed = false;
                 if (!fixed_control) {
-                    // *** Comment out checking group constraints (subject to change) ***
+                    // We don't allow changing to group controls here since this may lead to inconsistencies
+                    // in the group handling which in turn may result in excessive back and forth switching.
+                    // If we are to allow this change, one needs to make sure all necessary information propagates  
+                    // properly, but for now, we simply disallow it. The commented code below is kept for future reference  
+                    
                     // const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                     //                                                   prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
