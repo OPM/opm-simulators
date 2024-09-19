@@ -404,8 +404,31 @@ protected:
 
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
-    bool outputFipRestart_{false};
     bool computeFip_{false};
+
+    struct OutputFIPRestart {
+        /// Whether or not run requests (surface condition) fluid-in-place
+        /// restart file output using the 'FIP' mnemonic.
+        bool noPrefix {false};
+
+        /// Whether or not run requests surface condition fluid-in-place
+        /// restart file output using the 'SFIP' mnemonic.
+        bool surface {false};
+
+        /// Whether or not run requests reservoir condition fluid-in-place
+        /// restart file output using the 'RFIP' mnemonic.
+        bool reservoir {false};
+
+        void clearBits()
+        {
+            this->noPrefix = this->surface = this->reservoir = false;
+        }
+
+        explicit operator bool() const
+        {
+            return this->noPrefix || this->surface || this->reservoir;
+        }
+    } outputFipRestart_{};
 
     bool anyFlows_{false};
     bool anyFlores_{false};
