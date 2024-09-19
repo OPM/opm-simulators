@@ -173,6 +173,11 @@ public:
         return this->global_well_info.value().in_producing_group(name);
     }
 
+    bool isOpen(const std::string& name) const
+    {
+        return this->global_well_info.value().is_open(name);
+    }
+
     Scalar getALQ(const std::string& name) const
     {
         return this->alq_state.get(name);
