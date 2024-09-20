@@ -515,15 +515,7 @@ Opm::setupLogging(Parallel::Communication& comm,
     }
 
     if (comm.rank() == 0) {
-        std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
-        Opm::OpmLog::addBackend(stdout_log_id, streamLog);
-        // Set a tag limit of 10 (no category limit). Will later in
-        // the run be replaced by calling setupMessageLimiter(), after
-        // the deck is read and the (possibly user-set) category
-        // limits are known.
-        streamLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10));
-        bool use_color_coding = OpmLog::stdoutIsTerminal();
-        streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
+        setupStreamLogging(stdout_log_id);
     }
 
     return output;
@@ -663,4 +655,17 @@ std::unique_ptr<Opm::ParseContext> Opm::setupParseContext(const bool strictParsi
         parseContext->update(InputErrorAction::DELAYED_EXIT1);
 
     return parseContext;
+}
+
+void Opm::setupStreamLogging(const std::string& stdout_log_id)
+{
+    std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
+    Opm::OpmLog::addBackend(stdout_log_id, streamLog);
+    // Set a tag limit of 10 (no category limit). Will later in
+    // the run be replaced by calling setupMessageLimiter(), after
+    // the deck is read and the (possibly user-set) category
+    // limits are known.
+    streamLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10));
+    const bool use_color_coding = OpmLog::stdoutIsTerminal();
+    streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
 }
