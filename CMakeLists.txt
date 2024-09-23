@@ -655,6 +655,7 @@ if(CUDA_FOUND)
                        GpuView
                        gpu_ad
                        gpu_linear_two_phase_material
+                       co2gaspvt
                        PROPERTIES LABELS ${gpu_label})
 endif()
 
