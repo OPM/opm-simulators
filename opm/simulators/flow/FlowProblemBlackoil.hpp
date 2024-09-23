@@ -466,6 +466,13 @@ public:
         FlowProblemType::endEpisode();
     }
 
+    void writeReports(const SimulatorTimer& timer) {
+        if (enableEclOutput_){
+            eclWriter_->writeReports(timer);
+        }
+    }
+
+
     /*!
      * \brief Write the requested quantities of the current solution into the output
      *        files.

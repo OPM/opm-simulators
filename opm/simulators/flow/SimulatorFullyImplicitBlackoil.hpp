@@ -200,9 +200,11 @@ public:
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         // Main simulation loop.
         while (!timer.done()) {
+            simulator_.problem().writeReports(timer);
             bool continue_looping = runStep(timer);
             if (!continue_looping) break;
         }
+        simulator_.problem().writeReports(timer);
         return finalize();
     }
 

@@ -31,6 +31,7 @@
 #include <dune/grid/common/partitionset.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
@@ -375,6 +376,28 @@ public:
         }
     }
 
+    void writeReports(const SimulatorTimer& timer) {
+        const int reportStepNum = simulator_.episodeIndex() + 1;
+        auto rstep = timer.reportStepNum();
+
+        if ((rstep > 0) && (this->collectOnIORank_.isIORank())){
+
+            const auto& rpt = this->schedule_[rstep-1].rpt_config.get();
+            if (rpt.contains("WELLS") && rpt.at("WELLS") > 0) {
+                outputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime());
+                outputModule_->outputProdLog(reportStepNum);
+                outputModule_->outputInjLog(reportStepNum);
+                outputModule_->outputCumLog(reportStepNum);
+            }
+
+            outputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
+                                               timer.currentDateTime(), false, simulator_.gridView().comm());
+
+
+            OpmLog::note("");   // Blank line after all reports.
+        }
+    }
+
     void writeOutput(data::Solution&& localCellData, const SimulatorTimer& timer, bool isSubStep)
     {
         OPM_TIMEBLOCK(writeOutput);
@@ -399,24 +422,7 @@ public:
 
         // data::Solution localCellData = {};
         if (! isSubStep || Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
-            
-            auto rstep = timer.reportStepNum();
-            
-            if ((rstep > 0) && (this->collectOnIORank_.isIORank())){
 
-                outputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
-                                                   timer.currentDateTime(), false, simulator_.gridView().comm());
-
-
-                outputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime());
-                                                             
-                outputModule_->outputProdLog(reportStepNum);
-                outputModule_->outputInjLog(reportStepNum);
-                outputModule_->outputCumLog(reportStepNum);
-
-                OpmLog::note("");   // Blank line after all reports.
-            }
-            
             if (localCellData.empty()) {
                 this->outputModule_->assignToSolution(localCellData);
             }

@@ -351,8 +351,8 @@ outputFipAndResvLog(const Inplace& inplace,
 
     // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
     std::unique_ptr<FIPConfig> fipSched;
-    if (reportStepNum != 0) {
-        const auto& rpt = this->schedule_[reportStepNum].rpt_config.get();
+    if (reportStepNum > 0) {
+        const auto& rpt = this->schedule_[reportStepNum-1].rpt_config.get();
         fipSched = std::make_unique<FIPConfig>(rpt);
     }
     const FIPConfig& fipc = reportStepNum == 0 ? this->eclState_.getEclipseConfig().fip()
