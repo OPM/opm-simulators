@@ -438,7 +438,7 @@ protected:
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 const std::size_t data_idx = compIdx * numDof + dofIdx;
                 const Scalar xmf = xmfData[data_idx];
-                const Scalar ymf = xmfData[data_idx];
+                const Scalar ymf = ymfData[data_idx];
 
                 dofFluidState.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, xmf);
                 dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, ymf);
