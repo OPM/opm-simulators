@@ -194,7 +194,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         }
 
         const auto wells = ((mpiSize > 1) || partitionJacobiBlocks)
-            ? schedule.getActiveWellsatEnd()
+            ? schedule.getActiveWellsAtEnd()
             : std::vector<Well>{};
         const auto& possibleFutureConnections = schedule.getPossibleFutureConnections();
         // Distribute the grid and switch to the distributed view.
@@ -206,6 +206,14 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                                  possibleFutureConnections,
                                  eclState1, parallelWells);
         }
+
+        // Add inactive wells to RANK0 (possibly needed for RFT file output)
+        const bool hasInactive = this->grid_->comm().rank() == 0;
+        const auto inactive_well_names = schedule.getInactiveWellNamesAtEnd();
+        for (const auto& well_name : inactive_well_names) {
+            parallelWells.emplace_back(well_name, hasInactive);
+        }
+        std::sort(parallelWells.begin(), parallelWells.end());
 
         // Calling Schedule::filterConnections would remove any perforated
         // cells that exist only on other ranks even in the case of

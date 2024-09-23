@@ -949,7 +949,7 @@ private:
         const auto need_wells = param.local_domain_partition_method_ == "zoltan";
 
         const auto wells = need_wells
-            ? this->model_.simulator().vanguard().schedule().getActiveWellsatEnd()
+            ? this->model_.simulator().vanguard().schedule().getWellsatEnd()
             : std::vector<Well>{};
 
         const auto& possibleFutureConnectionSet = need_wells
