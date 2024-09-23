@@ -433,19 +433,26 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 
 #if HAVE_MPI
     {
-        const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
         int mpiSize = 1;
         MPI_Comm_size(grid_->comm(), &mpiSize);
 
-        // when there is numerical aquifers, new NNC are generated during
-        // grid processing we need to pass the NNC from root process to
-        // other processes
-        if (has_numerical_aquifer && mpiSize > 1) {
-            auto nnc_input = eclState.getInputNNC();
-            Parallel::MpiSerializer ser(grid_->comm());
-            ser.broadcast(nnc_input);
-            if (mpiRank > 0) {
-                eclState.setInputNNC(nnc_input);
+        // We need to always broadcast the NNCs as those contain
+        // transmissibility that is otherwise lost. There might by an
+        // intersection resembling the NNC in the grid, but still need
+        // the transmissibility for it.
+        if (mpiSize > 1) {
+            bool hasInputNnc=false;
+            if (mpiRank == 0) {
+                hasInputNnc = eclState.hasInputNNC();
+            }
+            grid_->comm().broadcast(&hasInputNnc, 1, 0);
+            if (hasInputNnc) {
+                auto nnc_input = eclState.getInputNNC();
+                Parallel::MpiSerializer ser(grid_->comm());
+                ser.broadcast(nnc_input);
+                if (mpiRank > 0) {
+                    eclState.setInputNNC(nnc_input);
+                }
             }
         }
     }
