@@ -1,17 +1,3 @@
-/*
-  Copyright 2024 SINTEF AS
-  This file is part of the Open Porous Media project (OPM).
-  OPM is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-  OPM is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-  You shouf have received a copy of the GNU General Public License
-  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-*/
 #include <config.h>
 
 #define BOOST_TEST_MODULE TestGpuAD
@@ -29,55 +15,68 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include <utility>
+#include <cmath> // For tolerance-based floating-point comparison
 
 using Evaluation = Opm::DenseAd::Evaluation<float, 3>;
 using GpuB = const Opm::gpuistl::GpuBuffer<double>;
 using GpuV = Opm::gpuistl::GpuView<const double>;
 using GpuTab = Opm::UniformTabulated2DFunction<double, GpuV>;
 
-namespace{
-__global__ void gpuEvaluateUniformTabulated2DFunction(GpuTab gpuTab, Evaluation* inputX, Evaluation* inputY, double* res){
+namespace {
+
+// Kernel to evaluate a 2D function on the GPU
+__global__ void gpuEvaluateUniformTabulated2DFunction(GpuTab gpuTab, Evaluation* inputX, Evaluation* inputY, double* res) {
     *res = gpuTab.eval(*inputX, *inputY, true).value();
 }
 
 } // END EMPTY NAMESPACE
 
-
-BOOST_AUTO_TEST_CASE(TestInstantiateCO2Object)
-{
-
+// Test case for evaluating a tabulated 2D function on both CPU and GPU
+BOOST_AUTO_TEST_CASE(TestInstantiateCO2Object) {
+    // Example tabulated data (2D)
     std::vector<std::vector<double>> tabData = {{1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0}};
 
+    // CPU-side function definition
     Opm::UniformTabulated2DFunction<double> cpuTab(1.0, 6.0, 3, 1.0, 6.0, 2, tabData);
 
+    // Move data to GPU buffer and create a view for GPU operations
     Opm::UniformTabulated2DFunction<double, GpuB> gpuBufTab = Opm::gpuistl::move_to_gpu<double, GpuB>(cpuTab);
     GpuTab gpuViewTab = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuBufTab);
 
+    // Evaluation points on the CPU
     Evaluation a(2.3);
     Evaluation b(4.5);
 
-    double* resultOnGpu;
-    double resultOnCpu;
+    // Allocate memory for the result on the GPU
+    double* resultOnGpu = nullptr;
     OPM_GPU_SAFE_CALL(cudaMalloc(&resultOnGpu, sizeof(double)));
 
-    Evaluation* gpuA;
-    Evaluation* gpuB;
-
+    // Allocate GPU memory for the Evaluation inputs
+    Evaluation* gpuA = nullptr;
+    Evaluation* gpuB = nullptr;
     OPM_GPU_SAFE_CALL(cudaMalloc(&gpuA, sizeof(Evaluation)));
     OPM_GPU_SAFE_CALL(cudaMemcpy(gpuA, &a, sizeof(Evaluation), cudaMemcpyHostToDevice));
     OPM_GPU_SAFE_CALL(cudaMalloc(&gpuB, sizeof(Evaluation)));
     OPM_GPU_SAFE_CALL(cudaMemcpy(gpuB, &b, sizeof(Evaluation), cudaMemcpyHostToDevice));
 
-    gpuEvaluateUniformTabulated2DFunction<<<1,1>>>(gpuViewTab, gpuA, gpuB, resultOnGpu);
+    // Launch kernel to evaluate the function on the GPU
+    gpuEvaluateUniformTabulated2DFunction<<<1, 1>>>(gpuViewTab, gpuA, gpuB, resultOnGpu);
+
+    // Check for any errors in kernel launch
+    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+
+    // Retrieve the result from the GPU to the CPU
+    double resultOnCpu = 0.0;
     OPM_GPU_SAFE_CALL(cudaMemcpy(&resultOnCpu, resultOnGpu, sizeof(double), cudaMemcpyDeviceToHost));
-    
+
+    // Free allocated GPU memory
     OPM_GPU_SAFE_CALL(cudaFree(resultOnGpu));
     OPM_GPU_SAFE_CALL(cudaFree(gpuA));
     OPM_GPU_SAFE_CALL(cudaFree(gpuB));
 
-
-    printf("%f == %f\n", cpuTab.eval(a, b, true).value(), resultOnCpu);
-
-    BOOST_CHECK(resultOnCpu == cpuTab.eval(a, b, true).value());
+    // Verify that the CPU and GPU results match within a reasonable tolerance
+    const double cpuResult = cpuTab.eval(a, b, true).value();
+    const double tolerance = 1e-6; // Tolerance for floating-point comparison
+    BOOST_CHECK(std::fabs(resultOnCpu - cpuResult) < tolerance);
 }
