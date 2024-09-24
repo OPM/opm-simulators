@@ -331,17 +331,7 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        bool oscillating = false;
-        for (const auto& key : this->well_control_log_) {
-            if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), key) >= param_.max_number_of_well_switches_) {
-                oscillating = true;
-                break;
-            }
-        }
-
-        //const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
-
-        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        if (this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -352,10 +342,18 @@ namespace Opm
                 return true;
             } else {
                 bool changed = false;
-                if (!fixed_control) {
-                    // Changing to group controls here may lead to inconsistencies in the group handling which in turn 
-                    // may result in excessive back and forth switching. However, we currently allow this by default.
-                    // The switch check_group_constraints_inner_well_iterations_ is a temporary solution.
+                bool oscillating = false;
+                for (const auto& key : this->well_control_log_) {
+                    if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), key) >= param_.max_number_of_well_switches_) {
+                        oscillating = true;
+                        break;
+                    }
+                }
+                if (!fixed_control && !oscillating) {
+                    // We don't allow changing to group controls here since this may lead to inconsistencies
+                    // in the group handling which in turn may result in excessive back and forth switching.
+                    // If we are to allow this change, one needs to make sure all necessary information propagates  
+                    // properly, but for now, we simply disallow it. The commented code below is kept for future reference  
                     
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
