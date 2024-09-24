@@ -377,7 +377,6 @@ public:
     }
 
     void writeReports(const SimulatorTimer& timer) {
-        const int reportStepNum = simulator_.episodeIndex() + 1;
         auto rstep = timer.reportStepNum();
 
         if ((rstep > 0) && (this->collectOnIORank_.isIORank())){
@@ -385,9 +384,9 @@ public:
             const auto& rpt = this->schedule_[rstep-1].rpt_config.get();
             if (rpt.contains("WELLS") && rpt.at("WELLS") > 0) {
                 outputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime());
-                outputModule_->outputProdLog(reportStepNum);
-                outputModule_->outputInjLog(reportStepNum);
-                outputModule_->outputCumLog(reportStepNum);
+                outputModule_->outputProdLog(rstep-1);
+                outputModule_->outputInjLog(rstep-1);
+                outputModule_->outputCumLog(rstep-1);
             }
 
             outputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
