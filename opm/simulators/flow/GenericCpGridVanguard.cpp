@@ -390,7 +390,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 #endif
 
     // Note: removed_cells is guaranteed to be empty on ranks other than 0.
-    auto [removed_cells, pinchedNncData] =
+    auto removed_cells =
         this->grid_->processEclipseFormat(input_grid,
                                           &eclState,
                                           /*isPeriodic=*/false,
