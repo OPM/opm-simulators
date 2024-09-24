@@ -440,12 +440,27 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         // when there is numerical aquifers, new NNC are generated during
         // grid processing we need to pass the NNC from root process to
         // other processes
-        if ((has_numerical_aquifer || !pinchedNncData.empty()) && mpiSize > 1) {
-            auto nnc_input = eclState.getInputNNC();
-            Parallel::MpiSerializer ser(grid_->comm());
-            ser.broadcast(nnc_input);
-            if (mpiRank > 0) {
-                eclState.setInputNNC(nnc_input);
+        if ( mpiSize > 1)
+        {
+            if (has_numerical_aquifer) {
+                auto nnc_input = eclState.getInputNNC();
+                Parallel::MpiSerializer ser(grid_->comm());
+                ser.broadcast(nnc_input);
+                if (mpiRank > 0) {
+                    eclState.setInputNNC(nnc_input);
+                }
+            }
+            bool hasPinchNnc = eclState.hasPinchNNC();
+            grid_->comm().broadcast(&hasPinchNnc, 1, 0);
+
+            if(hasPinchNnc)
+            {
+                auto pinch_nnc = eclState.getPinchNNC();
+                Parallel::MpiSerializer ser(grid_->comm());
+                ser.broadcast(pinch_nnc);
+                if (mpiRank > 0) {
+                    eclState.setPinchNNC(std::move(pinch_nnc));
+                }
             }
         }
     }
