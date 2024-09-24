@@ -398,7 +398,7 @@ public:
         }
     }
 
-    void writeOutput(data::Solution&& localCellData, const SimulatorTimer& timer, bool isSubStep)
+    void writeOutput(data::Solution&& localCellData, bool isSubStep)
     {
         OPM_TIMEBLOCK(writeOutput);
 

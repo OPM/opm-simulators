@@ -477,7 +477,7 @@ public:
      * \brief Write the requested quantities of the current solution into the output
      *        files.
      */
-    void writeOutput(const SimulatorTimer& timer, bool verbose = true)
+    void writeOutput(bool verbose = true)
     {
         FlowProblemType::writeOutput(verbose);
 
@@ -492,7 +492,7 @@ public:
         }
 #endif
         if (enableEclOutput_){
-            eclWriter_->writeOutput(std::move(localCellData), timer, isSubStep);
+            eclWriter_->writeOutput(std::move(localCellData), isSubStep);
         }
     }
 
