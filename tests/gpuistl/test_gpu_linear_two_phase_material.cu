@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
 
         NorneEvaluation* gpuAdInput;
         NorneEvaluation* gpuAdResOnGPU;
-        NorneEvaluation gpuAdResOnCPU[1];
+        NorneEvaluation gpuAdResOnCPU;
 
         OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdInput, sizeof(NorneEvaluation)));
         OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdResOnGPU, sizeof(NorneEvaluation)));
@@ -97,6 +97,6 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
         OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
         OPM_GPU_SAFE_CALL(cudaMemcpy(gpuAdResOnCPU, gpuAdResOnGPU, sizeof(NorneEvaluation), cudaMemcpyDeviceToHost));
 
-        BOOST_CHECK(gpuAdResOnCPU[0] == cpuInterpolatedEval);
+        BOOST_CHECK(gpuAdResOnCPU == cpuInterpolatedEval);
     }
 }
