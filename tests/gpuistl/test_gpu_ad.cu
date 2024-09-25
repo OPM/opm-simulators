@@ -31,7 +31,7 @@ __global__ void instantiate_ad_object(Opm::DenseAd::Evaluation<float, 3>* adObj,
 } // END EMPTY NAMESPACE
 
 
-BOOST_AUTO_TEST_CASE(TestInstansiateADObject)
+BOOST_AUTO_TEST_CASE(TestInstantiateADObject)
 {
     using Evaluation = Opm::DenseAd::Evaluation<float, 3>;
     double testValue = 123.456;
