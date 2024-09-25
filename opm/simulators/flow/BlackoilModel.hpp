@@ -527,10 +527,8 @@ namespace Opm {
         // compute the "relative" change of the solution between time steps
         Scalar relativeChange() const
         {
-            Scalar resultDeltaPressure = 0.0;
-            Scalar resultDenomPressure = 0.0;
-            Scalar resultDeltaSaturation = 0.0;
-            Scalar resultDenomSaturation = 0.0;
+            std::array<Scalar,4> r{};
+            auto& [resultDeltaPressure, resultDenomPressure, resultDeltaSaturation, resultDenomSaturation] = r;
 
             const auto& elemMapper = simulator_.model().elementMapper();
             const auto& gridView = simulator_.gridView();
@@ -600,10 +598,7 @@ namespace Opm {
                 }
             }
 
-            resultDeltaPressure = gridView.comm().sum(resultDeltaPressure);
-            resultDenomPressure = gridView.comm().sum(resultDenomPressure);
-            resultDeltaSaturation = gridView.comm().sum(resultDeltaSaturation);
-            resultDeltaSaturation = gridView.comm().sum(resultDeltaSaturation);
+            gridView.comm.sum(r.data(), 4);
 
             if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0)
                 return std::max(resultDeltaPressure/resultDenomPressure, resultDeltaSaturation/resultDenomSaturation);
