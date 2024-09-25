@@ -17,6 +17,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+// The default in dune-ALUGrird is "DISABLE_ALUGRID_SFC_ORDERING is false"
+#undef DISABLE_ALUGRID_SFC_ORDERING
+#undef USE_ALUGRID_SFC_ORDERING
 
 #include <dune/alugrid/grid.hh>
 #include <opm/simulators/flow/Main.hpp>
