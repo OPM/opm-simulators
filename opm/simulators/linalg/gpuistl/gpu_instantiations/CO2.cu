@@ -13,56 +13,52 @@ namespace Opm {
     possible collisions with the existing CO2.cpp in opm/common
 */
 
-using GpuBufD = const gpuistl::GpuBuffer<double>;
-using GpuViewD = gpuistl::GpuView<const double>;
+// using GpuBufD = const gpuistl::GpuBuffer<double>;
+// using GpuViewD = gpuistl::GpuView<const double>;
 
-// instantiate double-precision GpuBuffer CO2
-template<>
-const UniformTabulated2DFunction<double, GpuBufD>&
-CO2<double, GpuBufD>::tabulatedEnthalpy = gpuistl::move_to_gpu<double, GpuBufD>(CO2Tables::tabulatedEnthalpy);
+// // instantiate double-precision GpuBuffer CO2
+// template<>
+// const UniformTabulated2DFunction<double, GpuBufD>&
+// CO2<double, GpuBufD>::tabulatedEnthalpy = gpuistl::move_to_gpu<double, GpuBufD>(CO2Tables::tabulatedEnthalpy);
 
-template<>
-const UniformTabulated2DFunction<double, GpuBufD>&
-CO2<double, GpuBufD>::tabulatedDensity = gpuistl::move_to_gpu<double, GpuBufD>(CO2Tables::tabulatedDensity);
+// template<>
+// const UniformTabulated2DFunction<double, GpuBufD>&
+// CO2<double, GpuBufD>::tabulatedDensity = gpuistl::move_to_gpu<double, GpuBufD>(CO2Tables::tabulatedDensity);
 
-template<>
-const double CO2<double, GpuBufD>::brineSalinity = CO2Tables::brineSalinity;
+// template const double CO2<double, GpuBufD>::brineSalinity;
 
-// instantiate double-precision GpuView CO2
-template<>
-const UniformTabulated2DFunction<double, GpuViewD>&
-CO2<double, GpuViewD>::tabulatedEnthalpy = gpuistl::make_view<double, GpuBufD, GpuViewD>(CO2<double, GpuBufD>::getEnthalpy());
+// // instantiate double-precision GpuView CO2
+// template<>
+// const UniformTabulated2DFunction<double, GpuViewD>&
+// CO2<double, GpuViewD>::tabulatedEnthalpy = gpuistl::make_view<double, GpuBufD, GpuViewD>(CO2<double, GpuBufD>::getEnthalpy());
 
-template<>
-const UniformTabulated2DFunction<double, GpuViewD>&
-CO2<double, GpuViewD>::tabulatedDensity = gpuistl::make_view<double, GpuBufD, GpuViewD>(CO2<double, GpuBufD>::getDensity());
+// template<>
+// const UniformTabulated2DFunction<double, GpuViewD>&
+// CO2<double, GpuViewD>::tabulatedDensity = gpuistl::make_view<double, GpuBufD, GpuViewD>(CO2<double, GpuBufD>::getDensity());
 
-template<>
-const double CO2<double, GpuViewD>::brineSalinity = CO2Tables::brineSalinity;
+// template const double CO2<double, GpuViewD>::brineSalinity;
 
 
-// instantiate single precision CO2
-template<>
-const UniformTabulated2DFunction<double, GpuBufD>&
-CO2<float, GpuBufD>::tabulatedEnthalpy = gpuistl::move_to_gpu<double, GpuBufD>(CO2Tables::tabulatedEnthalpy);
+// // instantiate single precision CO2
+// template<>
+// const UniformTabulated2DFunction<double, GpuBufD>&
+// CO2<float, GpuBufD>::tabulatedEnthalpy = gpuistl::move_to_gpu<double, GpuBufD>(CO2Tables::tabulatedEnthalpy);
 
-template<>
-const UniformTabulated2DFunction<double, GpuBufD>&
-CO2<float, GpuBufD>::tabulatedDensity = gpuistl::move_to_gpu<double, GpuBufD>(CO2Tables::tabulatedDensity);
+// template<>
+// const UniformTabulated2DFunction<double, GpuBufD>&
+// CO2<float, GpuBufD>::tabulatedDensity = gpuistl::move_to_gpu<double, GpuBufD>(CO2Tables::tabulatedDensity);
 
-template<>
-const float CO2<float, GpuBufD>::brineSalinity = CO2Tables::brineSalinity;
+// template const float CO2<float, GpuBufD>::brineSalinity;
 
-// instantiate single-precision GpuView CO2
-template<>
-const UniformTabulated2DFunction<double, GpuViewD>&
-CO2<float, GpuViewD>::tabulatedEnthalpy = gpuistl::make_view<double, GpuBufD, GpuViewD>(CO2<float, GpuBufD>::getEnthalpy());
+// // instantiate single-precision GpuView CO2
+// template<>
+// const UniformTabulated2DFunction<double, GpuViewD>&
+// CO2<float, GpuViewD>::tabulatedEnthalpy = gpuistl::make_view<double, GpuBufD, GpuViewD>(CO2<float, GpuBufD>::getEnthalpy());
 
-template<>
-const UniformTabulated2DFunction<double, GpuViewD>&
-CO2<float, GpuViewD>::tabulatedDensity = gpuistl::make_view<double, GpuBufD, GpuViewD>(CO2<float, GpuBufD>::getDensity());
+// template<>
+// const UniformTabulated2DFunction<double, GpuViewD>&
+// CO2<float, GpuViewD>::tabulatedDensity = gpuistl::make_view<double, GpuBufD, GpuViewD>(CO2<float, GpuBufD>::getDensity());
 
-template<>
-const float CO2<float, GpuViewD>::brineSalinity = CO2Tables::brineSalinity;
+// template const float CO2<float, GpuViewD>::brineSalinity;
 
 } // namespace Opm

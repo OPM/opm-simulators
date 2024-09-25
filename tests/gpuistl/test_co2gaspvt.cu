@@ -7,6 +7,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
+#include <opm/material/components/CO2.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
@@ -32,7 +33,7 @@ __global__ void gpuEvaluateUniformTabulated2DFunction(GpuTab gpuTab, Evaluation*
 } // END EMPTY NAMESPACE
 
 // Test case for evaluating a tabulated 2D function on both CPU and GPU
-BOOST_AUTO_TEST_CASE(TestInstantiateCO2Object) {
+BOOST_AUTO_TEST_CASE(TestEvaluateUniformTabulated2DFunctionOnGpu) {
     // Example tabulated data (2D)
     std::vector<std::vector<double>> tabData = {{1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0}};
 
@@ -79,4 +80,54 @@ BOOST_AUTO_TEST_CASE(TestInstantiateCO2Object) {
     const double cpuResult = cpuTab.eval(a, b, true).value();
     const double tolerance = 1e-6; // Tolerance for floating-point comparison
     BOOST_CHECK(std::fabs(resultOnCpu - cpuResult) < tolerance);
+}
+
+
+namespace {
+
+// Kernel to use a CO2 object on the GPU
+__global__ void gpuCO2(Evaluation* temp, Evaluation* pressure, double* viscosity) {
+    // *viscosity = Opm::CO2<double, GpuV>::gasViscosity<Evaluation>(*temp, *pressure, true).value();
+}
+
+} // END EMPTY NAMESPACE
+
+// Test case for evaluating a tabulated 2D function on both CPU and GPU
+BOOST_AUTO_TEST_CASE(TestUseCO2OnGpu) {
+    Evaluation temp(290.5); // [K]
+    Evaluation pressure(200000.0); // [Pa]
+
+    // use the CO2 tables to aquire the viscosity at 290[K] and 2e5[Pa]
+    double viscosity = Opm::CO2<double>::gasViscosity<Evaluation>(temp, pressure, true).value();
+
+    // Allocate memory for the result on the GPU
+    double* resultOnGpu = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&resultOnGpu, sizeof(double)));
+
+    // Allocate GPU memory for the Evaluation inputs
+    Evaluation* gpuTemp = nullptr;
+    Evaluation* gpuPressure = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuTemp, sizeof(Evaluation)));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuTemp, &temp, sizeof(Evaluation), cudaMemcpyHostToDevice));
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuPressure, sizeof(Evaluation)));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuPressure, &pressure, sizeof(Evaluation), cudaMemcpyHostToDevice));
+
+    gpuCO2<<<1,1>>>(gpuTemp, gpuPressure, resultOnGpu);
+
+    // Check for any errors in kernel launch
+    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+
+    // Retrieve the result from the GPU to the CPU
+    double resultOnCpu = 0.0;
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&resultOnCpu, resultOnGpu, sizeof(double), cudaMemcpyDeviceToHost));
+
+    // Free allocated GPU memory
+    OPM_GPU_SAFE_CALL(cudaFree(resultOnGpu));
+    OPM_GPU_SAFE_CALL(cudaFree(gpuTemp));
+    OPM_GPU_SAFE_CALL(cudaFree(gpuPressure));
+
+    // Verify that the CPU and GPU results match within a reasonable tolerance
+    const double tolerance = 1e-6; // Tolerance for floating-point comparison
+    BOOST_CHECK(std::fabs(resultOnCpu - viscosity) < tolerance);
 }
