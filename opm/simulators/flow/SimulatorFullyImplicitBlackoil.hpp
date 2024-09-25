@@ -200,9 +200,11 @@ public:
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         // Main simulation loop.
         while (!timer.done()) {
+            simulator_.problem().writeReports(timer);
             bool continue_looping = runStep(timer);
             if (!continue_looping) break;
         }
+        simulator_.problem().writeReports(timer);
         return finalize();
     }
 
@@ -281,7 +283,7 @@ public:
             simulator_.setEpisodeLength(0.0);
             simulator_.setTimeStepSize(0.0);
             wellModel_().beginReportStep(timer.currentStepNum());
-            simulator_.problem().writeOutput(timer);
+            simulator_.problem().writeOutput();
 
             report_.success.output_write_time += perfTimer.stop();
         }
@@ -368,7 +370,7 @@ public:
         perfTimer.start();
         const double nextstep = adaptiveTimeStepping_ ? adaptiveTimeStepping_->suggestedNextStep() : -1.0;
         simulator_.problem().setNextTimeStepSize(nextstep);
-        simulator_.problem().writeOutput(timer);
+        simulator_.problem().writeOutput();
         report_.success.output_write_time += perfTimer.stop();
 
         solver_->model().endReportStep();
