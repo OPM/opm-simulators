@@ -598,7 +598,7 @@ namespace Opm {
                 }
             }
 
-            gridView.comm.sum(r.data(), 4);
+            gridView.comm().sum(r.data(), r.size());
 
             if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0)
                 return std::max(resultDeltaPressure/resultDenomPressure, resultDeltaSaturation/resultDenomSaturation);
