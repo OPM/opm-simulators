@@ -22,7 +22,7 @@
 #include <cuda_runtime.h>
 
 namespace{
-__global__ void instansiate_ad_object(Opm::DenseAd::Evaluation<float, 3>* adObj, double value){
+__global__ void instantiate_ad_object(Opm::DenseAd::Evaluation<float, 3>* adObj, double value){
     *adObj = Opm::DenseAd::Evaluation<float, 3>(value, 0);
 }
 
@@ -37,16 +37,16 @@ BOOST_AUTO_TEST_CASE(TestInstansiateADObject)
     double testValue = 123.456;
     Evaluation cpuMadeAd = Evaluation(testValue, 0);
 
-    Evaluation gpuMadeAd[1]; // allocate space for one more AD object on the CPU
+    Evaluation gpuMadeAd; // allocate space for one more AD object on the CPU
     Evaluation *d_ad;
 
     // allocate space on GPU, run kernel, and move results back to the CPU
     OPM_GPU_SAFE_CALL(cudaMalloc(&d_ad, sizeof(Evaluation)));
-    instansiate_ad_object<<<1,1>>>(d_ad, testValue);
+    instantiate_ad_object<<<1,1>>>(d_ad, testValue);
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuMadeAd, d_ad, sizeof(Evaluation), cudaMemcpyDeviceToHost));
     OPM_GPU_SAFE_CALL(cudaFree(d_ad));
 
     // Check that the object made in a GPU kernel is equivalent to that made on the CPU
-    BOOST_CHECK(cpuMadeAd == gpuMadeAd[0]);
+    BOOST_CHECK(cpuMadeAd == gpuMadeAd);
 }
