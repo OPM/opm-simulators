@@ -7,6 +7,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
+#include <opm/material/components/CO2_non_static.hpp>
 #include <opm/material/components/CO2.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
@@ -22,6 +23,7 @@ using Evaluation = Opm::DenseAd::Evaluation<float, 3>;
 using GpuB = const Opm::gpuistl::GpuBuffer<double>;
 using GpuV = Opm::gpuistl::GpuView<const double>;
 using GpuTab = Opm::UniformTabulated2DFunction<double, GpuV>;
+using GpuCO2 = Opm::CO2NonStatic<double, GpuV>;
 
 namespace {
 
@@ -86,8 +88,8 @@ BOOST_AUTO_TEST_CASE(TestEvaluateUniformTabulated2DFunctionOnGpu) {
 namespace {
 
 // Kernel to use a CO2 object on the GPU
-__global__ void gpuCO2(Evaluation* temp, Evaluation* pressure, double* viscosity) {
-    // *viscosity = Opm::CO2<double, GpuV>::gasViscosity<Evaluation>(*temp, *pressure, true).value();
+__global__ void gpuCO2(GpuCO2 gpuCo2, Evaluation* temp, Evaluation* pressure, double* viscosity) {
+    *viscosity = gpuCo2.gasViscosity<Evaluation>(*temp, *pressure, true).value();
 }
 
 } // END EMPTY NAMESPACE
@@ -99,6 +101,17 @@ BOOST_AUTO_TEST_CASE(TestUseCO2OnGpu) {
 
     // use the CO2 tables to aquire the viscosity at 290[K] and 2e5[Pa]
     double viscosity = Opm::CO2<double>::gasViscosity<Evaluation>(temp, pressure, true).value();
+
+    // make a nonstatic version of the CPU CO2
+    Opm::CO2NonStatic<double> CO2(Opm::CO2<double>::getEnthalpy(), Opm::CO2<double>::getDensity());
+
+    const auto gpuEnthalpyBuffer = Opm::gpuistl::move_to_gpu<double, GpuB>(CO2.getEnthalpy());
+    const auto gpuDensityBuffer = Opm::gpuistl::move_to_gpu<double, GpuB>(CO2.getDensity());
+
+    const auto gpuEnthalpyView = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuEnthalpyBuffer);
+    const auto gpuDensityView = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuDensityBuffer);
+
+    GpuCO2 gpuCo2(gpuEnthalpyView, gpuDensityView);
 
     // Allocate memory for the result on the GPU
     double* resultOnGpu = nullptr;
@@ -112,7 +125,7 @@ BOOST_AUTO_TEST_CASE(TestUseCO2OnGpu) {
     OPM_GPU_SAFE_CALL(cudaMalloc(&gpuPressure, sizeof(Evaluation)));
     OPM_GPU_SAFE_CALL(cudaMemcpy(gpuPressure, &pressure, sizeof(Evaluation), cudaMemcpyHostToDevice));
 
-    gpuCO2<<<1,1>>>(gpuTemp, gpuPressure, resultOnGpu);
+    gpuCO2<<<1,1>>>(gpuCo2, gpuTemp, gpuPressure, resultOnGpu);
 
     // Check for any errors in kernel launch
     OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
