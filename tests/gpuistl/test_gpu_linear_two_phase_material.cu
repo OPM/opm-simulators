@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
         OPM_GPU_SAFE_CALL(cudaMemcpy(gpuAdInput, &cpuMadeAd, sizeof(NorneEvaluation), cudaMemcpyHostToDevice));
         gpuTwoPhaseSatPcnwWrapper<<<1,1>>>(gpuViewParams, *gpuAdInput, gpuAdResOnGPU);
         OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-        OPM_GPU_SAFE_CALL(cudaMemcpy(gpuAdResOnCPU, gpuAdResOnGPU, sizeof(NorneEvaluation), cudaMemcpyDeviceToHost));
+        OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuAdResOnCPU, gpuAdResOnGPU, sizeof(NorneEvaluation), cudaMemcpyDeviceToHost));
 
         BOOST_CHECK(gpuAdResOnCPU == cpuInterpolatedEval);
     }

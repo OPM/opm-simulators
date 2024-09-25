@@ -455,11 +455,11 @@ if (HAVE_CUDA)
   if(NOT CONVERT_CUDA_TO_HIP)
     set(CU_FILES_NEEDING_RELAXED_CONSTEXPR
       tests/gpuistl/test_gpu_ad.cu
-      tests/gpuistl/gpu_linear_two_phase_material.cu
+      tests/gpuistl/test_gpu_linear_two_phase_material.cu
     )
 
-    foreach(file ${LIST_OF_FILES})
-      set_source_file_properties(${file} "--expt-relaxed-constexpr")
+    foreach(file ${CU_FILES_NEEDING_RELAXED_CONSTEXPR})
+        set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS "--expt-relaxed-constexpr")
     endforeach()
   endif()
 endif()
