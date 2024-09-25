@@ -26,6 +26,8 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 
+#define DISABLE_ALUGRID_SFC_ORDERING 1
+
 // these are not explicitly instanced in library
 #include <opm/simulators/flow/AluGridVanguard.hpp>
 #include <opm/simulators/flow/CollectDataOnIORank_impl.hpp>
