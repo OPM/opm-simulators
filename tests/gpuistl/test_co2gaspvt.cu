@@ -10,6 +10,7 @@
 #include <opm/material/components/CO2_non_static.hpp>
 #include <opm/material/components/CO2.hpp>
 #include <opm/material/components/SimpleHuDuanH2O.hpp>
+#include <opm/material/components/BrineDynamic.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
@@ -25,8 +26,18 @@ using GpuB = const Opm::gpuistl::GpuBuffer<double>;
 using GpuV = Opm::gpuistl::GpuView<const double>;
 using GpuTab = Opm::UniformTabulated2DFunction<double, GpuV>;
 using GpuCO2 = Opm::CO2NonStatic<double, GpuV>;
+using HuDuan = Opm::SimpleHuDuanH2O<double>;
+using BrineDyn = Opm::BrineDynamic<double, HuDuan>;
 
 namespace {
+
+/*
+    Open question about this file:
+        All of these tests are very simple and constructed in a very similar way
+        The amount of code could be reduced a lot by combining them to only one test
+        Since we have separate asserts, we will not lose any useful information by
+        refactoring it that way?
+*/
 
 // Kernel to evaluate a 2D function on the GPU
 __global__ void gpuEvaluateUniformTabulated2DFunction(GpuTab gpuTab, Evaluation* inputX, Evaluation* inputY, double* res) {
@@ -150,7 +161,7 @@ BOOST_AUTO_TEST_CASE(TestUseCO2OnGpu) {
 namespace {
 
 // Kernel to use a SimpleHuDuanH20 object on a GPU
-__global__ void gpuCO2(Evaluation* temp, Evaluation* pressure, double* resultDensity) {
+__global__ void liquidDensity(Evaluation* temp, Evaluation* pressure, double* resultDensity) {
     *resultDensity = Opm::SimpleHuDuanH2O<double>::liquidDensity<Evaluation>(*temp, *pressure, true).value();
 }
 
@@ -161,8 +172,8 @@ BOOST_AUTO_TEST_CASE(TestUseH2OOnGpu) {
     Evaluation temp(290.5); // [K]
     Evaluation pressure(200000.0); // [Pa]
 
-    // use the CO2 tables to aquire the viscosity at 290[K] and 2e5[Pa]
-    double viscosity = Opm::SimpleHuDuanH2O<double>::liquidDensity<Evaluation>(temp, pressure, true).value();
+    // use the CO2 tables to aquire the densityReference at 290[K] and 2e5[Pa]
+    double densityReference = Opm::SimpleHuDuanH2O<double>::liquidDensity<Evaluation>(temp, pressure, true).value();
 
     // Allocate memory for the result on the GPU
     double* resultOnGpu = nullptr;
@@ -176,7 +187,7 @@ BOOST_AUTO_TEST_CASE(TestUseH2OOnGpu) {
     OPM_GPU_SAFE_CALL(cudaMalloc(&gpuPressure, sizeof(Evaluation)));
     OPM_GPU_SAFE_CALL(cudaMemcpy(gpuPressure, &pressure, sizeof(Evaluation), cudaMemcpyHostToDevice));
 
-    gpuCO2<<<1,1>>>(gpuTemp, gpuPressure, resultOnGpu);
+    liquidDensity<<<1,1>>>(gpuTemp, gpuPressure, resultOnGpu);
 
     // Check for any errors in kernel launch
     OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
@@ -193,5 +204,59 @@ BOOST_AUTO_TEST_CASE(TestUseH2OOnGpu) {
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     const double tolerance = 1e-6; // Tolerance for floating-point comparison
-    BOOST_CHECK(std::fabs(resultOnCpu - viscosity) < tolerance);
+    BOOST_CHECK(std::fabs(resultOnCpu - densityReference) < tolerance);
+}
+
+
+namespace {
+
+// Kernel to use a BrineDynamic object on a GPU
+__global__ void liquidEnthalpy(Evaluation* temp, Evaluation* pressure, Evaluation* salinity, double* resultEnthalpy) {
+    *resultEnthalpy = Opm::BrineDynamic<double, Opm::SimpleHuDuanH2O<double>>::liquidEnthalpy<Evaluation>(*temp, *pressure, *salinity).value();
+}
+
+} // END EMPTY NAMESPACE
+
+// Test case evaluating pvt values for BrineDynamic on a GPU and CPU
+BOOST_AUTO_TEST_CASE(TestUseBrineDynamicOnGpu) {
+    Evaluation temp(290.5); // [K]
+    Evaluation pressure(200000.0); // [Pa]
+    Evaluation salinity(0.1); // [g/Kg]
+
+    // use the CO2 tables to aquire the enthalpyReference at 290[K] and 2e5[Pa]
+    double enthalpyReference = Opm::BrineDynamic<double, Opm::SimpleHuDuanH2O<double>>::liquidEnthalpy<Evaluation>(temp, pressure, salinity).value();
+
+    // Allocate memory for the result on the GPU
+    double* resultOnGpu = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&resultOnGpu, sizeof(double)));
+
+    // Allocate GPU memory for the Evaluation inputs
+    Evaluation* gpuTemp = nullptr;
+    Evaluation* gpuPressure = nullptr;
+    Evaluation* gpuSalinity = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuTemp, sizeof(Evaluation)));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuTemp, &temp, sizeof(Evaluation), cudaMemcpyHostToDevice));
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuPressure, sizeof(Evaluation)));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuPressure, &pressure, sizeof(Evaluation), cudaMemcpyHostToDevice));
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuSalinity, sizeof(Evaluation)));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuSalinity, &salinity, sizeof(Evaluation), cudaMemcpyHostToDevice));
+
+    liquidEnthalpy<<<1,1>>>(gpuTemp, gpuPressure, gpuSalinity, resultOnGpu);
+
+    // Check for any errors in kernel launch
+    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+
+    // Retrieve the result from the GPU to the CPU
+    double resultOnCpu = 0.0;
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&resultOnCpu, resultOnGpu, sizeof(double), cudaMemcpyDeviceToHost));
+
+    // Free allocated GPU memory
+    OPM_GPU_SAFE_CALL(cudaFree(resultOnGpu));
+    OPM_GPU_SAFE_CALL(cudaFree(gpuTemp));
+    OPM_GPU_SAFE_CALL(cudaFree(gpuPressure));
+
+    // Verify that the CPU and GPU results match within a reasonable tolerance
+    const double tolerance = 1e-6; // Tolerance for floating-point comparison
+    BOOST_CHECK(std::fabs(resultOnCpu - enthalpyReference) < tolerance);
 }
