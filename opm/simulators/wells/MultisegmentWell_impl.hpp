@@ -701,7 +701,6 @@ namespace Opm
 
         const auto& summary_state = simulator.vanguard().summaryState();
         this->primary_variables_.copyToWellState(*this, getRefDensity(),
-                                                 stop_or_zero_rate_target,
                                                  well_state,
                                                  summary_state,
                                                  deferred_logger);
