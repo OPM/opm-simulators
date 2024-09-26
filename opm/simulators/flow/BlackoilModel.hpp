@@ -527,8 +527,8 @@ namespace Opm {
         // compute the "relative" change of the solution between time steps
         Scalar relativeChange() const
         {
-            Scalar resultDelta = 0.0;
-            Scalar resultDenom = 0.0;
+            std::array<Scalar,4> r{};
+            auto& [resultDeltaPressure, resultDenomPressure, resultDeltaSaturation, resultDenomSaturation] = r;
 
             const auto& elemMapper = simulator_.model().elementMapper();
             const auto& gridView = simulator_.gridView();
@@ -568,10 +568,9 @@ namespace Opm {
                 Scalar saturationsOld[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationOld = 1.0;
 
-                // NB fix me! adding pressures changes to satutation changes does not make sense
                 Scalar tmp = pressureNew - pressureOld;
-                resultDelta += tmp*tmp;
-                resultDenom += pressureNew*pressureNew;
+                resultDeltaPressure += tmp*tmp;
+                resultDenomPressure += pressureNew*pressureNew;
 
                 if (FluidSystem::numActivePhases() > 1) {
                     if (priVarsOld.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
@@ -591,19 +590,18 @@ namespace Opm {
                     }
                     for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
                         Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-                        resultDelta += tmpSat*tmpSat;
-                        resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
-                        assert(std::isfinite(resultDelta));
-                        assert(std::isfinite(resultDenom));
+                        resultDeltaSaturation += tmpSat*tmpSat;
+                        resultDenomSaturation += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
+                        assert(std::isfinite(resultDeltaSaturation));
+                        assert(std::isfinite(resultDenomSaturation));
                     }
                 }
             }
 
-            resultDelta = gridView.comm().sum(resultDelta);
-            resultDenom = gridView.comm().sum(resultDenom);
+            gridView.comm().sum(r.data(), r.size());
 
-            if (resultDenom > 0.0)
-                return resultDelta/resultDenom;
+            if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0)
+                return std::max(resultDeltaPressure/resultDenomPressure, resultDeltaSaturation/resultDenomSaturation);
             return 0.0;
         }
 
