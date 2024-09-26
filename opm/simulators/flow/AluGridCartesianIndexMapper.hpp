@@ -193,10 +193,6 @@ public:
     int compressedSize() const
     { return cartesianIndex_.size(); }
 
-    /** \brief return number of cells in the active grid. Only for unifying calls with CpGrid and PolyhedralGrid specializations. */
-    int compressedLevelZeroSize() const
-    { return cartesianIndex_.size(); }
-
     /** \brief return index of the cells in the logical Cartesian grid */
     int cartesianIndex(const int compressedElementIndex) const
     {
@@ -237,7 +233,20 @@ public:
             throw std::invalid_argument("cartesianCoordinate not implemented for dimension " + std::to_string(dimension));
     }
 
-    /** \brief Only for unifying calls with CartesianIndexMapper<CpGrid> where levels are relevant */
+    /** \brief Only for unifying calls with CpGrid specializations. */
+    int compressedLevelZeroSize() const
+    { return cartesianIndex_.size(); }
+
+    /** \brief Only for unifying calls with CpGrid specializations. */.
+    int cartesianIndexLevel(const int compressedElementIndex, const int level) const
+    {
+        if (level) {
+            throw std::invalid_argument("Invalid level.\n");
+        }
+        return cartesianIndex(compressedElementIndex);
+    }
+
+    /** \brief Only for unifying calls with CartesianIndexMapper<CpGrid> where levels are relevant. */
     void cartesianCoordinateLevel(const int compressedElementIndex, std::array<int, dimension>& coords, int level) const
     {
         if (level) {
