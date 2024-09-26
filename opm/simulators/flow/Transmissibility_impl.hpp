@@ -1048,12 +1048,9 @@ applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianTo
             continue;
 
         if (low == -1 || high == -1) {
-            // \todo Check why we end up here for some models in parallel
-            // Discard the NNC if it is between active cell and inactive cell
-            std::ostringstream sstr;
-            sstr << "PINCH NNC between active and inactive cells ("
-                 << low << " -> " << high << ") with globalcell is (" << c1 << "->" << c2 <<")";
-            OpmLog::warning(sstr.str());
+            // We can end up here if one of the cells is overlap/ghost, because those
+            // are lacking connections to other cells in the ghost/overlap.
+            // Hence discard the NNC if it is between active cell and inactive cell
             continue;
         }
 
