@@ -304,7 +304,6 @@ computeBhpAtThpLimitInj(const std::function<std::vector<Scalar>(const Scalar)>& 
 template<class Scalar>
 void WellBhpThpCalculator<Scalar>::
 updateThp(const Scalar rho,
-          const bool stop_or_zero_rate_target,
           const std::function<Scalar()>& alq_value,
           const std::array<unsigned,3>& active,
           WellState<Scalar>& well_state,
@@ -317,7 +316,7 @@ updateThp(const Scalar rho,
     auto& ws = well_state.well(well_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
-    if (!well_.isVFPActive(deferred_logger) || stop_or_zero_rate_target) {
+    if (!well_.isVFPActive(deferred_logger)) {
         ws.thp = 0;
         return;
     }
