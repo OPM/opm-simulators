@@ -41,11 +41,34 @@ using CpuCo2Pvt = Opm::Co2GasPvt<double>;
 using GpuBufCo2Pvt = Opm::Co2GasPvt<double, GpuB>;
 using GpuViewCo2Pvt = Opm::Co2GasPvt<double, GpuV>;
 
+// TODO: understand why this particular class seemingly has to be explicitly instantiated
+// template class Opm::Co2GasPvt<double, Opm::gpuistl::GpuBuffer<double> const>;
+// template class Opm::Co2GasPvt<double, Opm::gpuistl::GpuView<double const>>;
+
 namespace {
 
-
+/*
+    This file containts tests using Co2GasPvt on the GPU in addition to helper objects
+*/
 // TODO: Rewrite these tests using a fixture pattern to greatly reduce the code duplication
 
+// struct Fixture {
+//     Fixture(){
+//         double viscosity = Opm::CO2<double>::gasViscosity<Evaluation>(temp, pressure, true).value();
+
+//     // make a nonstatic version of the CPU CO2
+//     Opm::CO2NonStatic<double> CO2(Opm::CO2<double>::getEnthalpy(), Opm::CO2<double>::getDensity());
+
+//     const auto gpuEnthalpyBuffer = Opm::gpuistl::move_to_gpu<double, GpuB>(CO2.getEnthalpy());
+//     const auto gpuDensityBuffer = Opm::gpuistl::move_to_gpu<double, GpuB>(CO2.getDensity());
+
+//     const auto gpuEnthalpyView = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuEnthalpyBuffer);
+//     const auto gpuDensityView = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuDensityBuffer);
+//     }
+//     ~Fixture(){
+
+//     }
+// };
 
 // Kernel to evaluate a 2D function on the GPU
 __global__ void gpuEvaluateUniformTabulated2DFunction(GpuTab gpuTab, Evaluation* inputX, Evaluation* inputY, double* res) {
