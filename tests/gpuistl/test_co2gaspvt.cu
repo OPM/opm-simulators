@@ -12,6 +12,7 @@
 #include <opm/material/components/SimpleHuDuanH2O.hpp>
 #include <opm/material/components/BrineDynamic.hpp>
 #include <opm/material/binarycoefficients/Brine_CO2.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/Co2GasPvt.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
@@ -25,22 +26,26 @@
 using Evaluation = Opm::DenseAd::Evaluation<float, 3>;
 using GpuB = const Opm::gpuistl::GpuBuffer<double>;
 using GpuV = Opm::gpuistl::GpuView<const double>;
+
 using GpuTab = Opm::UniformTabulated2DFunction<double, GpuV>;
+
 using GpuCO2 = Opm::CO2NonStatic<double, GpuV>;
+
 using HuDuan = Opm::SimpleHuDuanH2O<double>;
 using BrineDyn = Opm::BrineDynamic<double, HuDuan>;
+
 using CpuBrine_CO2 = Opm::BinaryCoeff::Brine_CO2<double, HuDuan, Opm::CO2<double>>;
 using GpuBrine_CO2 = Opm::BinaryCoeff::Brine_CO2<double, HuDuan, GpuCO2>;
 
+using CpuCo2Pvt = Opm::Co2GasPvt<double>;
+using GpuBufCo2Pvt = Opm::Co2GasPvt<double, GpuB>;
+using GpuViewCo2Pvt = Opm::Co2GasPvt<double, GpuV>;
+
 namespace {
 
-/*
-    Open question about this file:
-        All of these tests are very simple and constructed in a very similar way
-        The amount of code could be reduced a lot by combining them to only one test
-        Since we have separate asserts, we will not lose any useful information by
-        refactoring it that way?
-*/
+
+// TODO: Rewrite these tests using a fixture pattern to greatly reduce the code duplication
+
 
 // Kernel to evaluate a 2D function on the GPU
 __global__ void gpuEvaluateUniformTabulated2DFunction(GpuTab gpuTab, Evaluation* inputX, Evaluation* inputY, double* res) {
@@ -323,4 +328,68 @@ BOOST_AUTO_TEST_CASE(TestBrine_CO2OnGPU) {
     // Verify that the CPU and GPU results match within a reasonable tolerance
     const double tolerance = 1e-6; // Tolerance for floating-point comparison
     BOOST_CHECK(std::fabs(resultOnCpu - enthalpyReference) < tolerance);
+}
+
+namespace {
+
+// Kernel to use a BrineDynamic object on a GPU
+__global__ void pvtInternalEnergy(GpuViewCo2Pvt gpuViewCo2Pvt, GpuCO2 co2, Evaluation* temp, Evaluation* pressure, double* result) {
+    *result = gpuViewCo2Pvt.internalEnergy<Evaluation>(co2, 1, *temp, *pressure, Evaluation(0.4), Evaluation(0.5)).value();
+}
+
+} // END EMPTY NAMESPACE
+
+// Test case evaluating pvt values for BrineDynamic on a GPU and CPU
+BOOST_AUTO_TEST_CASE(TestCo2GasPvt) {
+    Evaluation temp(290.5); // [K]
+    Evaluation pressure(200000.0); // [Pa]
+    std::vector<double> salinites = {0.2, 0.3, 0.4};
+
+    CpuCo2Pvt cpuCo2Pvt(salinites);
+    double internalEnergyReference = cpuCo2Pvt.internalEnergy<Evaluation>(1, temp, pressure, Evaluation(0.4), Evaluation(0.5)).value();
+
+    const auto gpuBufCo2Pvt = Opm::gpuistl::move_to_gpu<double, GpuB>(cpuCo2Pvt);
+    const auto gpuViewCo2Pvt = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuBufCo2Pvt);
+
+    // make a nonstatic version of the CPU CO2
+    Opm::CO2NonStatic<double> CO2(Opm::CO2<double>::getEnthalpy(), Opm::CO2<double>::getDensity());
+
+    const auto gpuEnthalpyBuffer = Opm::gpuistl::move_to_gpu<double, GpuB>(CO2.getEnthalpy());
+    const auto gpuDensityBuffer = Opm::gpuistl::move_to_gpu<double, GpuB>(CO2.getDensity());
+
+    const auto gpuEnthalpyView = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuEnthalpyBuffer);
+    const auto gpuDensityView = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuDensityBuffer);
+
+    GpuCO2 gpuCo2(gpuEnthalpyView, gpuDensityView);
+
+    // Allocate memory for the result on the GPU
+    double* resultOnGpu = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&resultOnGpu, sizeof(double)));
+
+    // Allocate GPU memory for the Evaluation inputs
+    Evaluation* gpuTemp = nullptr;
+    Evaluation* gpuPressure = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuTemp, sizeof(Evaluation)));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuTemp, &temp, sizeof(Evaluation), cudaMemcpyHostToDevice));
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuPressure, sizeof(Evaluation)));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuPressure, &pressure, sizeof(Evaluation), cudaMemcpyHostToDevice));
+
+    pvtInternalEnergy<<<1,1>>>(gpuViewCo2Pvt, gpuCo2, gpuTemp, gpuPressure, resultOnGpu);
+
+    // Check for any errors in kernel launch
+    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+
+    // Retrieve the result from the GPU to the CPU
+    double resultOnCpu = 0.0;
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&resultOnCpu, resultOnGpu, sizeof(double), cudaMemcpyDeviceToHost));
+
+    // Free allocated GPU memory
+    OPM_GPU_SAFE_CALL(cudaFree(resultOnGpu));
+    OPM_GPU_SAFE_CALL(cudaFree(gpuTemp));
+    OPM_GPU_SAFE_CALL(cudaFree(gpuPressure));
+
+    // Verify that the CPU and GPU results match within a reasonable tolerance
+    const double tolerance = 1e-6; // Tolerance for floating-point comparison
+    BOOST_CHECK(std::fabs(resultOnCpu - internalEnergyReference) < tolerance);
 }
