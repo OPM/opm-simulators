@@ -91,11 +91,14 @@ WellInterfaceGeneric(const Well& well,
     // perforations related
     {
         well_cells_.resize(number_of_perforations_);
+        well_cells_global_.resize(number_of_perforations_);
         well_index_.resize(number_of_perforations_);
         saturation_table_number_.resize(number_of_perforations_);
         int perf = 0;
         for (const auto& pd : perf_data) {
+            //todo: this is the cell index I use for the matrices BCD, is that global or local? I hope it is global! otherwise I have big problems!!
             well_cells_[perf] = pd.cell_index;
+            well_cells_global_[perf] = pd.global_cell_index;
             well_index_[perf] = pd.connection_transmissibility_factor;
             saturation_table_number_[perf] = pd.satnum_id;
             ++perf;
