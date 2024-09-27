@@ -77,6 +77,7 @@ public:
 
     /// Well cells.
     const std::vector<int>& cells() const { return well_cells_; }
+    const std::vector<int>& cells_global() const { return well_cells_global_; }
 
     /// Index of well in the wells struct and wellState
     int indexOfWell() const;
@@ -307,6 +308,8 @@ protected:
 
     // cell index for each well perforation
     std::vector<int> well_cells_;
+    // global cell index for each well perforation
+    std::vector<int> well_cells_global_;
 
     // well index for each perforation
     std::vector<Scalar> well_index_;
