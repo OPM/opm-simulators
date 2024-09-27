@@ -42,7 +42,7 @@ public:
     std::unique_ptr<FlowMainType> initFlowBlackoil(int& exitCode)
     {
         exitCode = EXIT_SUCCESS;
-        if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
+        if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode, true)) {
             // TODO: check that this deck really represents a blackoil
             // case. E.g. check that number of phases == 3
             this->setupVanguard();
