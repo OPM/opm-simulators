@@ -275,7 +275,8 @@ namespace Opm {
             Dune::Timer perfTimer;
             perfTimer.start();
             // update the solution variables in the model
-            if ( timer.lastStepFailed() ) {
+            int lastStepFailed = grid_.comm().min(timer.lastStepFailed());
+            if ( lastStepFailed ) {
                 simulator_.model().updateFailed();
             } else {
                 simulator_.model().advanceTimeLevel();
