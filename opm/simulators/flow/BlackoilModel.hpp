@@ -272,7 +272,11 @@ namespace Opm {
             Dune::Timer perfTimer;
             perfTimer.start();
             // update the solution variables in the model
-            if ( timer.lastStepFailed() ) {
+            int lastStepFailed = timer.lastStepFailed();
+            if (grid_.comm().size() > 1 && lastStepFailed != grid_.comm().min(lastStepFailed)) {
+                OPM_THROW(std::runtime_error, fmt::format("Misalignment of the parallel simulation run in prepareStep - the previous step succeeded on rank {} but failed on the other ranks.", grid_.comm().rank()));
+            }
+            if ( lastStepFailed ) {
                 simulator_.model().updateFailed();
             } else {
                 simulator_.model().advanceTimeLevel();
