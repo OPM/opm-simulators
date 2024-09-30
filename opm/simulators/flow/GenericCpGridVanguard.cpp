@@ -35,6 +35,7 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/LgrCollection.hpp>
 
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
@@ -207,11 +208,31 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                                  eclState1, parallelWells);
         }
 
-        // Add inactive wells to RANK0 (possibly needed for RFT file output)
-        const bool hasInactive = this->grid_->comm().rank() == 0;
+        // Add inactive wells to all ranks with connections (not solved, so OK even without distributed wells)
+        // @NOTE: Approach below is just for testing, there has to be a better way...
+        std::unordered_set<unsigned> cellOnRank;
+        const auto& global_cells = this->grid_->globalCell();
+        for (const auto cell : global_cells) cellOnRank.insert(cell);
+        const auto& comm = this->grid_->comm();
+        const auto nranks = comm.size();
+        const auto rank = comm.rank();
         const auto inactive_well_names = schedule.getInactiveWellNamesAtEnd();
         for (const auto& well_name : inactive_well_names) {
-            parallelWells.emplace_back(well_name, hasInactive);
+            const auto& well = schedule.getWell(well_name, schedule.size()-1);
+            std::vector<int> well_on_rank(nranks, 0);
+            for (const auto& conn: well.getConnections()) {
+                if (cellOnRank.count(conn.global_index()) > 0) {
+                    well_on_rank[rank] = 1;
+                    break;
+                }
+            }
+            std::vector<int> well_on_rank_global(nranks, 0);
+            MPI_Allreduce(&well_on_rank[0], &well_on_rank_global[0], nranks, MPI_INT, MPI_MAX, this->grid_->comm());
+            for (int i=0; i<nranks; ++i) {
+                if (well_on_rank_global[i]) {
+                    parallelWells.emplace_back(well_name, i);
+                }
+            }
         }
         std::sort(parallelWells.begin(), parallelWells.end());
 
