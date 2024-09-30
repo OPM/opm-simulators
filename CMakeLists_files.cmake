@@ -448,6 +448,20 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cuVector_operations.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_safe_conversion.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_solver_adapter.cpp)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ad.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_linear_two_phase_material.cu)
+
+  # for loop providing the flag --expt-relaxed-constexpr to fix some cuda issues with constexpr
+  if(NOT CONVERT_CUDA_TO_HIP)
+    set(CU_FILES_NEEDING_RELAXED_CONSTEXPR
+      tests/gpuistl/test_gpu_ad.cu
+      tests/gpuistl/test_gpu_linear_two_phase_material.cu
+    )
+
+    foreach(file ${CU_FILES_NEEDING_RELAXED_CONSTEXPR})
+        set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS "--expt-relaxed-constexpr")
+    endforeach()
+  endif()
 endif()
 
 if(USE_BDA_BRIDGE)
