@@ -1492,7 +1492,7 @@ if(BUILD_FLOW_POLY_GRID)
                            FILENAME SPE1CASE2
                            SIMULATOR flow_blackoil_polyhedralgrid
                            ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
+                           REL_TOL ${coarse_rel_tol}
                            DIR spe1)
 endif()
 
@@ -1501,7 +1501,7 @@ if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
                            FILENAME SPE1CASE2
                            SIMULATOR flow_blackoil_alugrid
                            ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
+                           REL_TOL ${coarse_rel_tol}
                            DIR spe1)
 endif()
 
