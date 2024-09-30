@@ -41,7 +41,7 @@ namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernels)
+OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernels, bool storeFactorizationAsFloat)
     : m_cpuMatrix(A)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
@@ -49,11 +49,14 @@ OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernel
     , m_gpuMatrix(GpuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
     , m_gpuMatrixReorderedLower(nullptr)
     , m_gpuMatrixReorderedUpper(nullptr)
+    , m_gpuMatrixReorderedLowerFloat(nullptr)
+    , m_gpuMatrixReorderedUpperFloat(nullptr)
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
     , m_splitMatrix(splitMatrix)
     , m_tuneThreadBlockSizes(tuneKernels)
+    , m_storeFactorizationAsFloat(storeFactorizationAsFloat)
 {
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
     // Some sanity check
@@ -71,6 +74,7 @@ OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernel
                  fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
                              m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
+
     if (m_splitMatrix) {
         m_gpuMatrixReorderedDiag.emplace(GpuVector<field_type>(blocksize_ * blocksize_ * m_cpuMatrix.N()));
         std::tie(m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper)
@@ -80,6 +84,15 @@ OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernel
         m_gpuReorderedLU = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural);
     }
+
+    if (m_storeFactorizationAsFloat){
+        assert(m_splitMatrix && "Mixed precision GpuILU0 is currently only supported when using split_matrix=true");
+        // initialize mixed precision datastructures
+        m_gpuMatrixReorderedLowerFloat = std::unique_ptr<FloatMat>(new auto(FloatMat(m_gpuMatrixReorderedLower->getRowIndices(), m_gpuMatrixReorderedLower->getColumnIndices(), blocksize_)));
+        m_gpuMatrixReorderedUpperFloat = std::unique_ptr<FloatMat>(new auto(FloatMat(m_gpuMatrixReorderedUpper->getRowIndices(), m_gpuMatrixReorderedUpper->getColumnIndices(), blocksize_)));
+        m_gpuMatrixReorderedDiagFloat.emplace(GpuVector<float>(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize()));
+    }
+
     LUFactorizeAndMoveData(m_moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
 
     if (m_tuneThreadBlockSizes) {
@@ -107,20 +120,37 @@ template <class M, class X, class Y, int l>
 void
 OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int upperSolveThreadBlockSize)
 {
+    // perform a lower solve and then an upper solve to apply the approximate inverse using ILU factorization
+    // for the lower and upper solve we have some if's that determine which underlying implementation to use
+
     int levelStartIdx = 0;
     for (int level = 0; level < m_levelSets.size(); ++level) {
         const int numOfRowsInLevel = m_levelSets[level].size();
         if (m_splitMatrix) {
-            detail::ILU0::solveLowerLevelSetSplit<field_type, blocksize_>(
-                m_gpuMatrixReorderedLower->getNonZeroValues().data(),
-                m_gpuMatrixReorderedLower->getRowIndices().data(),
-                m_gpuMatrixReorderedLower->getColumnIndices().data(),
-                m_gpuReorderToNatural.data(),
-                levelStartIdx,
-                numOfRowsInLevel,
-                d.data(),
-                v.data(),
-                lowerSolveThreadBlockSize);
+            if (m_storeFactorizationAsFloat){
+                detail::ILU0::solveLowerLevelSetSplit<blocksize_, field_type, float>(
+                    m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedLowerFloat->getRowIndices().data(),
+                    m_gpuMatrixReorderedLowerFloat->getColumnIndices().data(),
+                    m_gpuReorderToNatural.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    d.data(),
+                    v.data(),
+                    lowerSolveThreadBlockSize);
+            }
+            else{
+                detail::ILU0::solveLowerLevelSetSplit<blocksize_, field_type, field_type>(
+                    m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedLower->getRowIndices().data(),
+                    m_gpuMatrixReorderedLower->getColumnIndices().data(),
+                    m_gpuReorderToNatural.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    d.data(),
+                    v.data(),
+                    lowerSolveThreadBlockSize);
+            }
         } else {
             detail::ILU0::solveLowerLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
                                                                      m_gpuReorderedLU->getRowIndices().data(),
@@ -140,16 +170,30 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, i
         const int numOfRowsInLevel = m_levelSets[level].size();
         levelStartIdx -= numOfRowsInLevel;
         if (m_splitMatrix) {
-            detail::ILU0::solveUpperLevelSetSplit<field_type, blocksize_>(
-                m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
-                m_gpuMatrixReorderedUpper->getRowIndices().data(),
-                m_gpuMatrixReorderedUpper->getColumnIndices().data(),
-                m_gpuReorderToNatural.data(),
-                levelStartIdx,
-                numOfRowsInLevel,
-                m_gpuMatrixReorderedDiag.value().data(),
-                v.data(),
-                upperSolveThreadBlockSize);
+            if (m_storeFactorizationAsFloat) {
+                    detail::ILU0::solveUpperLevelSetSplit<blocksize_, field_type, float>(
+                        m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
+                        m_gpuMatrixReorderedUpperFloat->getRowIndices().data(),
+                        m_gpuMatrixReorderedUpperFloat->getColumnIndices().data(),
+                        m_gpuReorderToNatural.data(),
+                        levelStartIdx,
+                        numOfRowsInLevel,
+                        m_gpuMatrixReorderedDiagFloat.value().data(),
+                        v.data(),
+                        upperSolveThreadBlockSize);
+            }
+            else{
+                detail::ILU0::solveUpperLevelSetSplit<blocksize_, field_type, field_type>(
+                    m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                    m_gpuMatrixReorderedUpper->getColumnIndices().data(),
+                    m_gpuReorderToNatural.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    m_gpuMatrixReorderedDiag.value().data(),
+                    v.data(),
+                    upperSolveThreadBlockSize);
+            }
         } else {
             detail::ILU0::solveUpperLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
                                                                      m_gpuReorderedLU->getRowIndices().data(),
@@ -227,7 +271,7 @@ OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int fact
         const int numOfRowsInLevel = m_levelSets[level].size();
 
         if (m_splitMatrix) {
-            detail::ILU0::LUFactorizationSplit<field_type, blocksize_>(
+            detail::ILU0::LUFactorizationSplit<blocksize_, field_type, float>(
                 m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                 m_gpuMatrixReorderedLower->getRowIndices().data(),
                 m_gpuMatrixReorderedLower->getColumnIndices().data(),
@@ -235,10 +279,14 @@ OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int fact
                 m_gpuMatrixReorderedUpper->getRowIndices().data(),
                 m_gpuMatrixReorderedUpper->getColumnIndices().data(),
                 m_gpuMatrixReorderedDiag.value().data(),
+                m_storeFactorizationAsFloat ? m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data() : nullptr,
+                m_storeFactorizationAsFloat ? m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data() : nullptr,
+                m_storeFactorizationAsFloat ? m_gpuMatrixReorderedDiagFloat.value().data() : nullptr,
                 m_gpuReorderToNatural.data(),
                 m_gpuNaturalToReorder.data(),
                 levelStartIdx,
                 numOfRowsInLevel,
+                m_storeFactorizationAsFloat,
                 factorizationThreadBlockSize);
 
         } else {

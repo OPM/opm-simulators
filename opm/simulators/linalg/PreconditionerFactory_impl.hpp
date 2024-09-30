@@ -361,9 +361,10 @@ struct StandardPreconditioners {
         F::addCreator("OPMGPUILU0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
+            const bool store_factorization_as_float = prm.get<bool>("store_factorization_as_float", false);
             using field_type = typename V::field_type;
             using OpmGpuILU0 = typename gpuistl::OpmGpuILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            auto gpuilu0 = std::make_shared<OpmGpuILU0>(op.getmat(), split_matrix, tune_gpu_kernels);
+            auto gpuilu0 = std::make_shared<OpmGpuILU0>(op.getmat(), split_matrix, tune_gpu_kernels, store_factorization_as_float);
 
             auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, OpmGpuILU0>>(gpuilu0);
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
@@ -619,10 +620,12 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         F::addCreator("OPMGPUILU0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
+            const bool store_factorization_as_float = prm.get<bool>("store_factorization_as_float", false);
+
             using field_type = typename V::field_type;
             using GPUILU0 = typename gpuistl::OpmGpuILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
 
-            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUILU0>>(std::make_shared<GPUILU0>(op.getmat(), split_matrix, tune_gpu_kernels));
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUILU0>>(std::make_shared<GPUILU0>(op.getmat(), split_matrix, tune_gpu_kernels, store_factorization_as_float));
         });
 
         F::addCreator("GPUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
@@ -636,6 +639,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         F::addCreator("GPUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
+
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
             using matrix_type_to = typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;

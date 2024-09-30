@@ -67,6 +67,20 @@ public:
                    size_t blockSize,
                    size_t numberOfRows);
 
+    //! Create a sparse matrix by copying the sparsity structure of another matrix, not filling in the values
+    //!
+    //! \note Prefer to use the constructor taking a const reference to a matrix instead.
+    //!
+    //! \param[in] rowIndices      the row indices of the non-zero elements
+    //! \param[in] columnIndices   the column indices of the non-zero elements
+    //! \param[in] blockSize size of each block matrix (typically 3)
+    //!
+    //! \note We assume numberOfNonzeroBlocks, blockSize and numberOfRows all are representable as int due to
+    //!       restrictions in the current version of cusparse. This might change in future versions.
+    GpuSparseMatrix(const GpuVector<int> rowIndices,
+                   const GpuVector<int> columnIndices,
+                   size_t blockSize);
+
     /**
      * We don't want to be able to copy this for now (too much hassle in copying the cusparse resources)
      */

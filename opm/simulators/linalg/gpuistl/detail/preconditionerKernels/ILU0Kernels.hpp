@@ -89,15 +89,15 @@ void solveLowerLevelSet(T* reorderedMat,
  * solve
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
-template <class T, int blocksize>
-void solveUpperLevelSetSplit(T* reorderedMat,
+template <int blocksize, class LinearSolverScalar, class MatrixScalar>
+void solveUpperLevelSetSplit(MatrixScalar* reorderedMat,
                              int* rowIndices,
                              int* colIndices,
                              int* indexConversion,
                              int startIdx,
                              int rowsInLevelSet,
-                             const T* dInv,
-                             T* v,
+                             const MatrixScalar* dInv,
+                             LinearSolverScalar* v,
                              int threadBlockSize);
 
 /**
@@ -117,15 +117,15 @@ void solveUpperLevelSetSplit(T* reorderedMat,
  * solve
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
-template <class T, int blocksize>
-void solveLowerLevelSetSplit(T* reorderedLowerMat,
+template <int blocksize, class LinearSolverScalar, class MatrixScalar>
+void solveLowerLevelSetSplit(MatrixScalar* reorderedLowerMat,
                              int* rowIndices,
                              int* colIndices,
                              int* indexConversion,
                              int startIdx,
                              int rowsInLevelSet,
-                             const T* d,
-                             T* v,
+                             const LinearSolverScalar* d,
+                             LinearSolverScalar* v,
                              int threadBlockSize);
 
 /**
@@ -155,6 +155,7 @@ void LUFactorization(T* reorderedMat,
                      int threadBlockSize);
 
 /**
+ * TODO: update this doucmentation
  * @brief Computes the ILU0 factorization in-place of a bcsr matrix stored in a split format (lower, diagonal and upper
  * triangular part)
  * @param [out] reorderedLowerMat pointer to GPU memory containing nonzerovalues of the strictly lower triangular sparse
@@ -175,18 +176,22 @@ void LUFactorization(T* reorderedMat,
  * function
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
-template <class T, int blocksize>
-void LUFactorizationSplit(T* reorderedLowerMat,
+template <int blocksize, class InputScalar, class OutputScalar>
+void LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                           int* lowerRowIndices,
                           int* lowerColIndices,
-                          T* reorderedUpperMat,
+                          InputScalar* srcReorderedUpperMat,
                           int* upperRowIndices,
                           int* upperColIndices,
-                          T* diagonal,
+                          InputScalar* srcDiagonal,
+                          OutputScalar* dstReorderedLowerMat,
+                          OutputScalar* dstReorderedUpperMat,
+                          OutputScalar* dstDiagonal,
                           int* reorderedToNatural,
                           int* naturalToReordered,
                           int startIdx,
                           int rowsInLevelSet,
+                          bool copyResultToOtherMatrix,
                           int threadBlockSize);
 
 } // namespace Opm::gpuistl::detail::ILU0
