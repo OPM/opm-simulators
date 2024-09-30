@@ -230,8 +230,7 @@ matrixSubtraction(T* A, T* B)
     }
 }
 
-// TODO: possibly place somewhere else in this file
-// TODO: consider merging with existing block operations
+// B = A
 template<int blocksize, class ScalarInputType, class ScalarOutputType>
 __device__ __forceinline__ void
 moveBlock(const ScalarInputType* __restrict__ A, ScalarOutputType* __restrict__ B){
@@ -242,8 +241,8 @@ moveBlock(const ScalarInputType* __restrict__ A, ScalarOutputType* __restrict__ 
     }
 }
 
-// TODO: possibly place somewhere else in this file
 // TODO: consider merging with existing block operations
+// mixed precision general version of c = Ab
 template <int blocksize, class MatrixScalar, class VectorScalar, class ResultScalar, class ComputeScalar>
 __device__ __forceinline__ void
 mvMixedGeneral(const MatrixScalar* A, const VectorScalar* b, ResultScalar* c)
@@ -257,8 +256,8 @@ mvMixedGeneral(const MatrixScalar* A, const VectorScalar* b, ResultScalar* c)
     }
 }
 
-// TODO: possibly place somewhere else in this file
 // TODO: consider merging with existing block operations
+// Mixed precision general version of c -= Ab
 template <int blocksize, class MatrixScalar, class VectorScalar, class ResultScalar, class ComputeScalar>
 __device__ __forceinline__ void
 mmvMixedGeneral(const MatrixScalar* A, const VectorScalar* b, ResultScalar* c)
