@@ -86,6 +86,7 @@ WellInterfaceGeneric(const Well& well,
 
     // We do not want to count SHUT perforations here, so
     // it would be wrong to use wells.getConnections().size().
+    // This is the number_of_perforations_ on this process only!
     number_of_perforations_ = perf_data.size();
 
     // perforations related
