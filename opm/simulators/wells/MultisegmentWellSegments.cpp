@@ -62,7 +62,7 @@ MultisegmentWellSegments<FluidSystem,Indices>::
 MultisegmentWellSegments(const int numSegments,
                          WellInterfaceGeneric<Scalar>& well)
     : perforations_(numSegments)
-    , perforation_depth_diffs_(well.numPerfs(), 0.0)
+    , perforation_depth_diffs_(well.wellEcl().getConnections().size(), 0.0)
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
     , densities_(numSegments, 0.0)
@@ -84,8 +84,8 @@ MultisegmentWellSegments(const int numSegments,
     // well_ecl_ and wells struct different
     // the current implementation is a temporary solution for now, it should be corrected from the parser
     // side
-    int i_perf_wells = 0;
-    well.perfDepth().resize(well_.numPerfs(), 0.);
+    // The perfDepth vector contains all perforations across all processes of this well!
+    well.perfDepth().resize(completion_set.size(), 0.);
     const auto& segment_set = well_.wellEcl().getSegments();
     for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
         const Connection& connection = completion_set.get(perf);
@@ -98,11 +98,10 @@ MultisegmentWellSegments(const int numSegments,
                                       connection.getI() + 1, connection.getJ() + 1,
                                       connection.getK() + 1));
             }
-            perforations_[segment_index].push_back(i_perf_wells);
-            well.perfDepth()[i_perf_wells] = connection.depth();
+            perforations_[segment_index].push_back(perf);
+            well.perfDepth()[perf] = connection.depth();
             const Scalar segment_depth = segment_set[segment_index].depth();
-            perforation_depth_diffs_[i_perf_wells] = well_.perfDepth()[i_perf_wells] - segment_depth;
-            i_perf_wells++;
+            perforation_depth_diffs_[perf] = well_.perfDepth()[perf] - segment_depth;
         }
     }
 
@@ -345,6 +344,7 @@ MultisegmentWellSegments<FluidSystem,Indices>::
 getPressureDiffSegPerf(const int seg,
                        const int perf) const
 {
+    // Attention, perf here has a global numbering!
     return well_.gravity() * densities_[seg].value() * perforation_depth_diffs_[perf];
 }
 
