@@ -37,29 +37,20 @@ namespace Opm {
 
 template<class Scalar>
 void WellFilterCake<Scalar>::
-updateFiltrationParticleVolume(const WellInterfaceGeneric<Scalar>& well,
-                               const double dt,
-                               const Scalar conc,
-                               const std::size_t water_index,
-                               WellState<Scalar>& well_state)
+updatePostStep(const WellInterfaceGeneric<Scalar>& well,
+               WellState<Scalar>& well_state,
+               const double dt,
+               const Scalar conc,
+               const std::size_t water_index,
+               DeferredLogger& deferred_logger)
 {
-    // Reset any filter cake cleaning multipliers (for all wells/perfs)
-    const auto& connections = well.wellEcl().getConnections();
-    for (auto& conn : connections) {
-        if (conn.filterCakeActive()) {
-            conn.getFilterCake().sf_multiplier = 1.0;
-        }
-    }
-
-
-    if (!well.isInjector()) {
+    if (! well.isInjector() || well.wellEcl().injectorType() != InjectorType::WATER)
         return;
-    }
 
+    assert (conc > 0.);
     auto& ws = well_state.well(well.indexOfWell());
     const auto nperf = ws.perf_data.size();
-    if (filtration_particle_volume_.empty()) {
-        filtration_particle_volume_.assign(ws.perf_data.size(), 0.); // initializing to be zero (for each step..)
+    if (prev_skin_factor_.empty()) {
         prev_skin_factor_.assign(nperf, 0.);
         skin_factor_.assign(nperf, 0.);
         thickness_.assign(nperf, 0.);
@@ -68,108 +59,149 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric<Scalar>& well,
 
     prev_skin_factor_ = skin_factor_;
     prev_thickness_ = thickness_;
-
-    const auto injectorType = well.wellEcl().injectorType();
-    if (injectorType != InjectorType::WATER) {
-        return;
-    }
-
     ws.filtrate_conc = conc;
 
-    if (conc == 0.) {
-        return;
-    }
-
-    const auto& connection_rates = ws.perf_data.phase_rates;
-
-    const std::size_t np = well_state.numPhases();
-    for (int perf = 0; perf < well.numPerfs(); ++perf) {
-        // not considering the production water
-        const Scalar water_rates = std::max(Scalar{0.}, connection_rates[perf * np + water_index]);
-        const Scalar filtrate_rate = water_rates * conc;
-        filtration_particle_volume_[perf] = filtrate_rate * dt;
-        ws.perf_data.filtrate_data.rates[perf] = filtrate_rate;
-        ws.perf_data.filtrate_data.total[perf] += filtration_particle_volume_[perf];
-    }
+    updateMultipliers(well, well_state, dt, water_index, deferred_logger);
 }
 
 template<class Scalar>
 void WellFilterCake<Scalar>::
-updateInjFCMult(const WellInterfaceGeneric<Scalar>& well,
-                WellState<Scalar>& well_state,
-                DeferredLogger& deferred_logger)
+updatePreStep(const WellInterfaceGeneric<Scalar>& well, DeferredLogger& deferred_logger)
 {
-    if (inj_fc_multiplier_.empty()) {
-        inj_fc_multiplier_.resize(well.numPerfs(), 1.0);
+    // Apply cleaning and reset any filter cake cleaning multipliers (even if the well is producing at this time)
+    applyCleaning(well, deferred_logger);
+}
+
+template<class Scalar>
+void WellFilterCake<Scalar>::
+applyCleaning(const WellInterfaceGeneric<Scalar>& well,
+              DeferredLogger& deferred_logger)
+{
+    const auto& connections = well.wellEcl().getConnections();
+    const auto nperf = well.numPerfs();
+    for (int perf = 0; perf < nperf; ++perf) {
+        const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
+        const auto& connection = connections[perf_ecl_index];
+        if (!connection.filterCakeActive())
+            continue;
+
+        const auto& filter_cake = connection.getFilterCake();
+        const Scalar factor = filter_cake.sf_multiplier;
+        if (factor == 1.0)
+            continue;
+
+        filter_cake.sf_multiplier = 1.0;
+        skin_factor_[perf] *= factor;
+        const Scalar rw = connection.getFilterCakeRadius();
+        switch (filter_cake.geometry) {
+            case FilterCake::FilterCakeGeometry::LINEAR: {
+                // Previuos thickness adjusted to give correct cleaning multiplier at start of time step
+                thickness_[perf] *= factor;
+                break;
+            }
+            case FilterCake::FilterCakeGeometry::RADIAL: {
+                Scalar rc_prev = std::sqrt(rw * rw + 2. * rw * prev_thickness_[perf]);
+                // Previuos thickness and rc adjusted to give correct cleaning multiplier at start of time step
+                rc_prev = rw*std::exp(factor*std::log(rc_prev/rw));
+                thickness_[perf] = (rc_prev * rc_prev - rw * rw) / (2. * rw);
+                break;
+            }
+            default:
+                const auto geometry =
+                    FilterCake::filterCakeGeometryToString(filter_cake.geometry);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                    fmt::format(" Invalid filtration cake geometry type ({}) for well {}",
+                                                geometry, well.name()),
+                                    deferred_logger);
+        }
     }
+}
+
+
+template<class Scalar>
+void WellFilterCake<Scalar>::
+updateMultipliers(const WellInterfaceGeneric<Scalar>& well,
+                  WellState<Scalar>& well_state,
+                  const double dt,
+                  const std::size_t water_index,
+                  DeferredLogger& deferred_logger)
+{
+    const auto nperf = well.numPerfs();
+    inj_fc_multiplier_.assign(nperf, 1.0);
+
+    assert(well.isInjector());
+
+    const auto& connections = well.wellEcl().getConnections();
     auto& ws = well_state.well(well.indexOfWell());
     auto& perf_data = ws.perf_data;
+    assert (nperf == static_cast<int>(perf_data.size()));
 
-    for (int perf = 0; perf < well.numPerfs(); ++perf) {
+    const auto& connection_rates = perf_data.phase_rates;
+    const auto conc = ws.filtrate_conc;
+    const std::size_t np = well_state.numPhases();
+
+    for (int perf = 0; perf < nperf; ++perf) {
         const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
-        const auto& connections = well.wellEcl().getConnections();
         const auto& connection = connections[perf_ecl_index];
-        if (well.isInjector() && connection.filterCakeActive()) {
-            const auto& filter_cake = connection.getFilterCake();
-            const Scalar area = connection.getFilterCakeArea();
-            const Scalar poro = filter_cake.poro;
-            const Scalar perm = filter_cake.perm;
-            const Scalar rw = connection.getFilterCakeRadius();
-            const Scalar K = connection.Kh() / connection.connectionLength();
-            const Scalar factor = filter_cake.sf_multiplier;
-            // The thickness of the filtration cake due to particle deposition at current time step
-            const Scalar delta_thickness = filtration_particle_volume_[perf] / (area * (1. - poro));
-            auto& filtrate_data = perf_data.filtrate_data;
-            filtrate_data.poro[perf] = poro;
-            filtrate_data.perm[perf] = perm;
-            filtrate_data.radius[perf] = connection.getFilterCakeRadius();
-            filtrate_data.area_of_flow[perf] = connection.getFilterCakeArea();
+        if (!connection.filterCakeActive())
+            continue;
 
-            Scalar skin_factor = 0.;
-            Scalar thickness = 0.;
-            switch (filter_cake.geometry) {
-                case FilterCake::FilterCakeGeometry::LINEAR: {
-                    // Previuos thickness adjusted to give correct cleaning multiplier at start of time step
-                    const auto prev_thickness = prev_thickness_[perf]*factor;
-                    thickness = prev_thickness + delta_thickness;
-                    skin_factor = thickness / rw * K / perm;
-                    filtrate_data.thickness[perf] = thickness;
-                    break;
-                }
-                case FilterCake::FilterCakeGeometry::RADIAL: {
-                    auto prev_thickness = prev_thickness_[perf];
-                    Scalar rc_prev = std::sqrt(rw * rw + 2. * rw * prev_thickness);
-                    // Previuos thickness and rc adjusted to give correct cleaning multiplier at start of time step
-                    if (factor != 1.0) {
-                        rc_prev = rw*std::exp(factor*std::log(rc_prev/rw));
-                        prev_thickness = (rc_prev * rc_prev - rw * rw) / (2. * rw);
-                    }
-                    thickness = prev_thickness + delta_thickness;
+        // not considering the production water
+        const Scalar water_rates = std::max(Scalar{0.}, connection_rates[perf * np + water_index]);
+        const Scalar filtrate_rate = water_rates * conc;
+        const Scalar filtrate_particle_volume = filtrate_rate * dt;
+        auto& filtrate_data = perf_data.filtrate_data;
+        filtrate_data.rates[perf] = filtrate_rate;
+        filtrate_data.total[perf] += filtrate_particle_volume;
 
-                    //const Scalar rc_prev = std::sqrt(rw * rw + 2. * rw * prev_thickness);
-                    const Scalar rc = std::sqrt(rw * rw + 2. * rw * thickness);
-                    filtrate_data.thickness[perf] = rc - rw;
-                    skin_factor = K / perm * std::log(rc / rc_prev);
-                    break;
-                }
-                default:
-                    const auto geometry =
-                        FilterCake::filterCakeGeometryToString(filter_cake.geometry);
-                    OPM_DEFLOG_THROW(std::runtime_error,
-                                     fmt::format(" Invalid filtration cake geometry type ({}) for well {}",
-                                                 geometry, well.name()),
-                                     deferred_logger);
+        const auto& filter_cake = connection.getFilterCake();
+        const Scalar area = connection.getFilterCakeArea();
+        const Scalar poro = filter_cake.poro;
+        const Scalar perm = filter_cake.perm;
+        const Scalar rw = connection.getFilterCakeRadius();
+        const Scalar K = connection.Kh() / connection.connectionLength();
+        // The thickness of the filtration cake due to particle deposition at current time step
+        const Scalar delta_thickness = filtrate_particle_volume / (area * (1. - poro));
+
+        filtrate_data.poro[perf] = poro;
+        filtrate_data.perm[perf] = perm;
+        filtrate_data.radius[perf] = connection.getFilterCakeRadius();
+        filtrate_data.area_of_flow[perf] = connection.getFilterCakeArea();
+
+        Scalar skin_factor = 0.;
+        Scalar thickness = 0.;
+        switch (filter_cake.geometry) {
+            case FilterCake::FilterCakeGeometry::LINEAR: {
+                thickness = prev_thickness_[perf] + delta_thickness;
+                skin_factor = thickness / rw * K / perm;
+                filtrate_data.thickness[perf] = thickness;
+                break;
             }
-            skin_factor_[perf] = prev_skin_factor_[perf]*factor + skin_factor;
-            filtrate_data.skin_factor[perf] = skin_factor_[perf];
-            thickness_[perf] = thickness;
+            case FilterCake::FilterCakeGeometry::RADIAL: {
+                const auto prev_thickness = prev_thickness_[perf];
+                Scalar rc_prev = std::sqrt(rw * rw + 2. * rw * prev_thickness);
+                thickness = prev_thickness + delta_thickness;
 
-            const auto denom = connection.ctfProperties().peaceman_denom;
-            const auto denom2 = denom + skin_factor_[perf];
-            inj_fc_multiplier_[perf] = denom / denom2;
-        } else {
-            inj_fc_multiplier_[perf] = 1.0;
+                const Scalar rc = std::sqrt(rw * rw + 2. * rw * thickness);
+                filtrate_data.thickness[perf] = rc - rw;
+                skin_factor = K / perm * std::log(rc / rc_prev);
+                break;
+            }
+            default:
+                const auto geometry =
+                    FilterCake::filterCakeGeometryToString(filter_cake.geometry);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                    fmt::format(" Invalid filtration cake geometry type ({}) for well {}",
+                                                geometry, well.name()),
+                                    deferred_logger);
         }
+        skin_factor_[perf] = prev_skin_factor_[perf] + skin_factor;
+        filtrate_data.skin_factor[perf] = skin_factor_[perf];
+        thickness_[perf] = thickness;
+
+        const auto denom = connection.ctfProperties().peaceman_denom;
+        const auto denom2 = denom + skin_factor_[perf];
+        inj_fc_multiplier_[perf] = denom / denom2;
     }
 }
 

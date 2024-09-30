@@ -411,8 +411,11 @@ protected:
     void updateInjMult(DeferredLogger& deferred_logger);
     void updateInjFCMult(DeferredLogger& deferred_logger);
 
-    void updateFiltrationParticleVolume(const double dt,
-                                        const std::size_t water_index);
+    void updateFiltrationModelsPostStep(const double dt,
+                                        const std::size_t water_index,
+                                        DeferredLogger& deferred_logger);
+
+    void updateFiltrationModelsPreStep(DeferredLogger& deferred_logger);
 
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;
