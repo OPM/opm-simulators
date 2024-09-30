@@ -808,6 +808,12 @@ namespace Opm
             connPI += np;
         }
 
+        // Sum with communication in case of distributed well.
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1) {
+            comm.sum(wellPI, np);
+        }
+
         assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
                 "Internal logic error in processing connections for PI/II");
     }
@@ -1332,6 +1338,8 @@ namespace Opm
                 }
             }
         }
+        this->parallel_well_info_.communication().sum(this->ipr_a_.data(), this->ipr_a_.size());
+        this->parallel_well_info_.communication().sum(this->ipr_b_.data(), this->ipr_b_.size());
     }
 
     template<typename TypeTag>
@@ -1952,6 +1960,7 @@ namespace Opm
             }
         }
 
+        this->parallel_well_info_.communication().sum(this->ipr_a_.data(), this->ipr_a_.size());
         this->linSys_.createSolver();
     }
 
@@ -2006,6 +2015,12 @@ namespace Opm
                     break;
                 }
             }
+        }
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            all_drawdown_wrong_direction =
+                (comm.min(all_drawdown_wrong_direction ? 1 : 0) == 1);
         }
 
         return all_drawdown_wrong_direction;
@@ -2235,6 +2250,11 @@ namespace Opm
                     well_q_s[comp] += cq_s[comp];
                 }
             }
+        }
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            comm.sum(well_q_s.data(), well_q_s.size());
         }
         return well_q_s;
     }
