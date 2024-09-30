@@ -1702,6 +1702,9 @@ namespace Opm
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             converged = report.converged();
+            //Add communication here, we call assembleWellEqWithoutIteration on all processes involved in the well, we assemble on each process and
+            //then we collect the well system on one process per well, solve there and distribute the solution to the other processes.
+            converged = this->parallel_well_info_.communication().min(converged);
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
                 // in this case, make sure all constraints are satisfied before returning
