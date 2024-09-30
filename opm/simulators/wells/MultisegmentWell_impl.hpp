@@ -1701,6 +1701,9 @@ namespace Opm
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             converged = report.converged();
+            if (this->parallel_well_info_.communication().size() > 1 && converged != this->parallel_well_info_.communication().min(converged)) {
+                OPM_THROW(std::runtime_error, fmt::format("Misalignment of the parallel simulation run in iterateWellEqWithSwitching - the well calculation succeeded on rank {} but failed on other ranks.", this->parallel_well_info_.communication().rank()));
+            }
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
                 // in this case, make sure all constraints are satisfied before returning
