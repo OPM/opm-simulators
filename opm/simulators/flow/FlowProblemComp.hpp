@@ -82,6 +82,7 @@ class FlowProblemComp : public FlowProblem<TypeTag>
     using typename FlowProblemType::RateVector;
 
     using InitialFluidState = CompositionalFluidState<Scalar, FluidSystem>;
+    using EclWriterType = EclWriter<TypeTag>;
 
 public:
     using FlowProblemType::porosity;
@@ -94,6 +95,8 @@ public:
     {
         FlowProblemType::registerParameters();
 
+        EclWriterType::registerParameters();
+
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
     }
@@ -105,6 +108,8 @@ public:
     explicit FlowProblemComp(Simulator& simulator)
         : FlowProblemType(simulator)
     {
+        eclWriter_ = std::make_unique<EclWriterType>(simulator);
+        enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
     }
 
     /*!
@@ -127,8 +132,17 @@ public:
                 [&vg = this->simulator().vanguard()](const unsigned int it) { return vg.gridIdxToEquilGridIdx(it); });
             updated = true;
         };
+        // TODO: we might need to do the same with FlowProblemBlackoil for parallel
 
         finishTransmissibilities();
+
+        if (enableEclOutput_) {
+            eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+            std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
+                return simulator.vanguard().gridEquilIdxToGridIdx(i);
+            };
+            eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
+        }
 
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
@@ -179,6 +193,11 @@ public:
         FlowProblemType::readMaterialParameters_();
         FlowProblemType::readThermalParameters_();
 
+        // write the static output files (EGRID, INIT)
+        if (enableEclOutput_) {
+            eclWriter_->writeInit();
+        }
+
         const auto& initconfig = eclState.getInitConfig();
         if (initconfig.restartRequested())
             readEclRestartSolution_();
@@ -217,6 +236,60 @@ public:
             simulator.startNextEpisode(schedule.seconds(1));
             simulator.setEpisodeIndex(0);
             simulator.setTimeStepIndex(0);
+        }
+    }
+
+    /*!
+     * \brief Called by the simulator after each time integration.
+     */
+    void endTimeStep() override
+    {
+        FlowProblemType::endTimeStep();
+
+        const bool isSubStep = !this->simulator().episodeWillBeOver();
+
+        // after the solution is updated, the values in output module needs also updated
+        this->eclWriter_->mutableOutputModule().invalidateLocalData();
+
+        // For CpGrid with LGRs, ecl/vtk output is not supported yet.
+        const auto& grid = this->simulator().vanguard().gridView().grid();
+
+        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
+        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
+        if (!isCpGrid || (grid.maxLevel() == 0)) {
+            this->eclWriter_->evalSummaryState(isSubStep);
+        }
+
+    }
+
+    void writeReports(const SimulatorTimer& timer) {
+        if (enableEclOutput_){
+            eclWriter_->writeReports(timer);
+        }
+    }
+
+    /*!
+     * \brief Write the requested quantities of the current solution into the output
+     *        files.
+     */
+    void writeOutput(bool verbose) override
+    {
+        FlowProblemType::writeOutput(verbose);
+
+        const bool isSubStep = !this->simulator().episodeWillBeOver();
+
+        data::Solution localCellData = {};
+#if HAVE_DAMARIS
+        // N.B. the Damaris output has to be done before the ECL output as the ECL one
+        // does all kinds of std::move() relocation of data
+        if (enableDamarisOutput_) {
+            damarisWriter_->writeOutput(localCellData, isSubStep) ;
+        }
+#endif
+        if (enableEclOutput_) {
+            if (Parameters::Get<Parameters::EnableWriteAllSolutions>() || !isSubStep) {
+                eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+            }
         }
     }
 
@@ -493,6 +566,9 @@ private:
     }
 
     std::vector<InitialFluidState> initialFluidStates_;
+
+    bool enableEclOutput_;
+    std::unique_ptr<EclWriterType> eclWriter_;
 
     bool enableVtkOutput_;
 };

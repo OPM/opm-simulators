@@ -134,6 +134,13 @@ protected:
                        bool                               isFloresn,
                        std::array<FlowsData<double>, 3>&& floresn);
 
+    void doWriteOutput(const int                      reportStepNum,
+                   const std::optional<int>           timeStepNum,
+                   const bool                         isSubStep,
+                       Scalar                       curTime,
+                       Scalar                       nextStepSize,
+                   data::Solution&&                   localCellData);
+
     void evalSummary(int                                                  reportStepNum,
                      Scalar                                               curTime,
                      const data::Wells&                                   localWellData,

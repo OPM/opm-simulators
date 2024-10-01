@@ -65,13 +65,13 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Parameters {
-
-struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
-struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
+//namespace Opm::Parameters {
+//
+//struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
+//struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
+//
+//} // namespace Opm::Parameters
+//
 namespace Opm
 {
 

@@ -41,7 +41,7 @@
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/EclGenericWriter.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/OutputBlackoilModule.hpp>
+#include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
@@ -132,7 +132,7 @@ public:
 
     static void registerParameters()
     {
-        OutputBlackOilModule<TypeTag>::registerParameters();
+        OutputCompositionalModule<TypeTag>::registerParameters();
 
         Parameters::Register<Parameters::EnableAsyncEclOutput>
             ("Write the ECL-formated results in a non-blocking way "
@@ -169,13 +169,13 @@ public:
 
             eclBroadcast(this->simulator_.vanguard().grid().comm(), smryCfg);
 
-            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+            this->outputModule_ = std::make_unique<OutputCompositionalModule<TypeTag>>
                 (simulator, smryCfg, this->collectOnIORank_);
         }
         else
 #endif
         {
-            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+            this->outputModule_ = std::make_unique<OutputCompositionalModule<TypeTag>>
                 (simulator, this->eclIO_->finalSummaryConfig(), this->collectOnIORank_);
         }
 
@@ -227,49 +227,49 @@ public:
             simulator_.setupTimer().realTimeElapsed() +
             simulator_.vanguard().setupTime();
 
-        const auto localWellData            = simulator_.problem().wellModel().wellData();
-        const auto localWBP                 = simulator_.problem().wellModel().wellBlockAveragePressures();
-        const auto localGroupAndNetworkData = simulator_.problem().wellModel()
-            .groupAndNetworkData(reportStepNum);
-
-        const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
-        const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
+        // const auto localWellData            = simulator_.problem().wellModel().wellData();
+        // const auto localWBP                 = simulator_.problem().wellModel().wellBlockAveragePressures();
+        // const auto localGroupAndNetworkData = simulator_.problem().wellModel()
+        //     .groupAndNetworkData(reportStepNum);
+        //
+        // const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
+        // const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (this->outputModule_->needInterfaceFluxes(isSubStep)) {
             this->captureLocalFluxData();
         }
 
-        if (this->collectOnIORank_.isParallel()) {
-            OPM_BEGIN_PARALLEL_TRY_CATCH()
-
-            this->collectOnIORank_.collect({},
-                                           outputModule_->getBlockData(),
-                                           localWellData,
-                                           localWBP,
-                                           localGroupAndNetworkData,
-                                           localAquiferData,
-                                           localWellTestState,
-                                           this->outputModule_->getInterRegFlows(),
-                                           {},
-                                           {});
-
-            if (this->collectOnIORank_.isIORank()) {
-                auto& iregFlows = this->collectOnIORank_.globalInterRegFlows();
-
-                if (! iregFlows.readIsConsistent()) {
-                    throw std::runtime_error {
-                        "Inconsistent inter-region flow "
-                        "region set names in parallel"
-                    };
-                }
-
-                iregFlows.compress();
-            }
-
-            OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
-                                       this->simulator_.vanguard().grid().comm());
-        }
+        // if (this->collectOnIORank_.isParallel()) {
+        //     OPM_BEGIN_PARALLEL_TRY_CATCH()
+        //
+        //     this->collectOnIORank_.collect({},
+        //                                    outputModule_->getBlockData(),
+        //                                    localWellData,
+        //                                    localWBP,
+        //                                    localGroupAndNetworkData,
+        //                                    localAquiferData,
+        //                                    localWellTestState,
+        //                                    this->outputModule_->getInterRegFlows(),
+        //                                    {},
+        //                                    {});
+        //
+        //     if (this->collectOnIORank_.isIORank()) {
+        //         auto& iregFlows = this->collectOnIORank_.globalInterRegFlows();
+        //
+        //         if (! iregFlows.readIsConsistent()) {
+        //             throw std::runtime_error {
+        //                 "Inconsistent inter-region flow "
+        //                 "region set names in parallel"
+        //             };
+        //         }
+        //
+        //         iregFlows.compress();
+        //     }
+        //
+        //     OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
+        //                                this->simulator_.vanguard().grid().comm());
+        // }
         
 
         std::map<std::string, double> miscSummaryData;
@@ -322,6 +322,11 @@ public:
             const auto& interRegFlows = this->collectOnIORank_.isParallel()
                 ? this->collectOnIORank_.globalInterRegFlows()
                 : this->outputModule_->getInterRegFlows();
+
+            const data::Wells&                                   localWellData {};
+            const data::WellBlockAveragePressures&               localWBP{};
+             const data::GroupAndNetworkValues&                   localGroupAndNetworkData{};
+            const std::map<int,data::AquiferData>&               localAquiferData {};
 
             this->evalSummary(reportStepNum,
                               curTime,
@@ -415,19 +420,19 @@ public:
         this->outputModule_->outputErrorLog(simulator_.gridView().comm());
 
         // output using eclWriter if enabled
-        auto localWellData = simulator_.problem().wellModel().wellData();
-        auto localGroupAndNetworkData = simulator_.problem().wellModel()
-            .groupAndNetworkData(reportStepNum);
+        // auto localWellData = simulator_.problem().wellModel().wellData();
+        // auto localGroupAndNetworkData = simulator_.problem().wellModel()
+        //     .groupAndNetworkData(reportStepNum);
 
-        auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
-        auto localWellTestState = simulator_.problem().wellModel().wellTestState();
-
-        const bool isFlowsn = this->outputModule_->hasFlowsn();
-        auto flowsn = this->outputModule_->getFlowsn();
-
-        const bool isFloresn = this->outputModule_->hasFloresn();
-        auto floresn = this->outputModule_->getFloresn();
-
+        // auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
+        // auto localWellTestState = simulator_.problem().wellModel().wellTestState();
+        //
+        // const bool isFlowsn = this->outputModule_->hasFlowsn();
+        // auto flowsn = this->outputModule_->getFlowsn();
+        //
+        // const bool isFloresn = this->outputModule_->hasFloresn();
+        // auto floresn = this->outputModule_->getFloresn();
+        //
         // data::Solution localCellData = {};
         if (! isSubStep || Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
 
@@ -438,7 +443,7 @@ public:
             // Collect RFT data on rank 0
             this->outputModule_->accumulateRftDataParallel(simulator_.gridView().comm());
             // Add cell data to perforations for RFT output
-            this->outputModule_->addRftDataToWells(localWellData, reportStepNum);
+            // this->outputModule_->addRftDataToWells(localWellData, reportStepNum);
         }
 
         if (this->collectOnIORank_.isParallel() ||
@@ -449,19 +454,19 @@ public:
             // output.  There's consequently no need to collect those
             // properties on the I/O rank.
 
-            this->collectOnIORank_.collect(localCellData,
-                                           this->outputModule_->getBlockData(),
-                                           localWellData,
-                                           /* wbpData = */ {},
-                                           localGroupAndNetworkData,
-                                           localAquiferData,
-                                           localWellTestState,
-                                           /* interRegFlows = */ {},
-                                           flowsn,
-                                           floresn);
-            if (this->collectOnIORank_.isIORank()) {
-                this->outputModule_->assignGlobalFieldsToSolution(this->collectOnIORank_.globalCellData());
-            }
+            // this->collectOnIORank_.collect(localCellData,
+            //                                this->outputModule_->getBlockData(),
+            //                                localWellData,
+            //                                /* wbpData = */ {},
+            //                                localGroupAndNetworkData,
+            //                                localAquiferData,
+            //                                localWellTestState,
+            //                                /* interRegFlows = */ {},
+            //                                flowsn,
+            //                                floresn);
+            // if (this->collectOnIORank_.isIORank()) {
+            //     this->outputModule_->assignGlobalFieldsToSolution(this->collectOnIORank_.globalCellData());
+            // }
         } else {
             this->outputModule_->assignGlobalFieldsToSolution(localCellData);
         }
@@ -473,20 +478,24 @@ public:
             if (Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
                 timeStepIdx = simulator_.timeStepIndex();
             }
-            this->doWriteOutput(reportStepNum, timeStepIdx, isSubStep,
-                                std::move(localCellData),
-                                std::move(localWellData),
-                                std::move(localGroupAndNetworkData),
-                                std::move(localAquiferData),
-                                std::move(localWellTestState),
-                                this->actionState(),
-                                this->udqState(),
-                                this->summaryState(),
-                                this->simulator_.problem().thresholdPressure().getRestartVector(),
-                                curTime, nextStepSize,
-                                Parameters::Get<Parameters::EclOutputDoublePrecision>(),
-                                isFlowsn, std::move(flowsn),
-                                isFloresn, std::move(floresn));
+            this->doWriteOutput(reportStepNum,
+                                timeStepIdx,
+                                isSubStep,
+                                curTime,
+                                nextStepSize,
+                                std::move(localCellData) );
+                                // std::move(localWellData),
+                                // std::move(localGroupAndNetworkData),
+                                // std::move(localAquiferData),
+                                // std::move(localWellTestState),
+                                // this->actionState(),
+                                // this->udqState(),
+                                // this->summaryState(),
+                                // this->simulator_.problem().thresholdPressure().getRestartVector(),
+                                // curTime, nextStepSize,
+                                // Parameters::Get<Parameters::EclOutputDoublePrecision>(),
+                                // isFlowsn, std::move(flowsn),
+                                // isFloresn, std::move(floresn));
         }
     }
 
@@ -650,7 +659,7 @@ public:
         // volumes at the restart time instead of the start of the base run.
         // Nevertheless, this is how Flow has "always" done it.
         //
-        // See GenericOutputBlackoilModule::accumulateRegionSums() for
+        // See GenericOutputCompositionalModule::accumulateRegionSums() for
         // additional comments.
         auto inplace = this->outputModule_
             ->calc_inplace(miscSummaryData, regionData,
@@ -661,10 +670,10 @@ public:
         }
     }
 
-    const OutputBlackOilModule<TypeTag>& outputModule() const
+    const OutputCompositionalModule<TypeTag>& outputModule() const
     { return *outputModule_; }
 
-    OutputBlackOilModule<TypeTag>& mutableOutputModule() const
+    OutputCompositionalModule<TypeTag>& mutableOutputModule() const
     { return *outputModule_; }
 
     Scalar restartTimeStepSize() const
@@ -736,26 +745,26 @@ private:
             this->outputModule_->accumulateDensityParallel();
         }
 
-        if constexpr (enableMech) {
-            if (simulator_.vanguard().eclState().runspec().mech()) {
-                OPM_TIMEBLOCK(prepareMechData);
-                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                    outputModule_->processElementMech(elemCtx);
-                }
-            }
-        }
+//        if constexpr (enableMech) {
+//            if (simulator_.vanguard().eclState().runspec().mech()) {
+//                OPM_TIMEBLOCK(prepareMechData);
+//                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+//                    elemCtx.updatePrimaryStencil(elem);
+//                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+//                    outputModule_->processElementMech(elemCtx);
+//                }
+//            }
+//        }
 
-        if (! this->simulator_.model().linearizer().getFlowsInfo().empty()) {
-            OPM_TIMEBLOCK(prepareFlowsData);
-            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                this->outputModule_->processElementFlows(elemCtx);
-            }
-        }
+//        if (! this->simulator_.model().linearizer().getFlowsInfo().empty()) {
+//            OPM_TIMEBLOCK(prepareFlowsData);
+//            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+//                elemCtx.updatePrimaryStencil(elem);
+//                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+//
+//                this->outputModule_->processElementFlows(elemCtx);
+//            }
+//        }
 
         {
             OPM_TIMEBLOCK(prepareBlockData);
@@ -826,7 +835,8 @@ private:
     }
 
     Simulator& simulator_;
-    std::unique_ptr<OutputBlackOilModule<TypeTag> > outputModule_;
+    // TODO: OutputCompositionalModule needs to be part of the TypeTag
+    std::unique_ptr<OutputCompositionalModule<TypeTag> > outputModule_;
     Scalar restartTimeStepSize_;
     int rank_ ;
     Inplace inplace_;
