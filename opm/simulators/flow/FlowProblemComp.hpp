@@ -93,6 +93,9 @@ public:
     static void registerParameters()
     {
         FlowProblemType::registerParameters();
+
+        // tighter tolerance is needed for compositional modeling here
+        Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
     }
 
 
