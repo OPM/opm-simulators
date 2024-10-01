@@ -82,6 +82,7 @@ class FlowProblemComp : public FlowProblem<TypeTag>
     using typename FlowProblemType::RateVector;
 
     using InitialFluidState = CompositionalFluidState<Scalar, FluidSystem>;
+    using EclWriterType = EclWriter<TypeTag>;
 
 public:
     using FlowProblemType::porosity;
@@ -105,6 +106,7 @@ public:
     explicit FlowProblemComp(Simulator& simulator)
         : FlowProblemType(simulator)
     {
+        eclWriter_ = std::make_unique<EclWriterType>(simulator);
     }
 
     /*!
@@ -493,6 +495,8 @@ private:
     }
 
     std::vector<InitialFluidState> initialFluidStates_;
+
+    std::unique_ptr<EclWriterType> eclWriter_;
 
     bool enableVtkOutput_;
 };

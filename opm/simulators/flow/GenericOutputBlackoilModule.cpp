@@ -60,6 +60,8 @@
 
 #include <fmt/format.h>
 
+#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
+
 namespace {
 
 std::string EclString(const Opm::Inplace::Phase phase)
@@ -660,7 +662,7 @@ assignToSolution(data::Solution& sol)
                    data::TargetType::RESTART_SOLUTION);
     }
 
-    if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
+    /* if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
         auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
 
         std::transform(this->rsw_.begin(), this->rsw_.end(),
@@ -695,7 +697,7 @@ assignToSolution(data::Solution& sol)
                    UnitSystem::measure::identity,
                    std::move(mfrac),
                    data::TargetType::RESTART_OPM_EXTENDED);
-    }
+    } */
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
         ! this->residual_[waterPhaseIdx].empty())
@@ -1153,7 +1155,7 @@ doAllocBuffers(const unsigned bufferSize,
         rstKeywords["SWAT"] = 0;
     }
 
-    if (FluidSystem::enableDissolvedGas()) {
+    /* if (FluidSystem::enableDissolvedGas()) {
         rs_.resize(bufferSize, 0.0);
         rstKeywords["RS"] = 0;
     }
@@ -1168,7 +1170,7 @@ doAllocBuffers(const unsigned bufferSize,
     if (FluidSystem::enableVaporizedWater()) {
         rvw_.resize(bufferSize, 0.0);
         rstKeywords["RVW"] = 0;
-    }
+    } */
 
     if (schedule_[reportStepNum].oilvap().drsdtConvective()) {
         drsdtcon_.resize(bufferSize, 0.0);
@@ -1261,7 +1263,7 @@ doAllocBuffers(const unsigned bufferSize,
         rstKeywords["PPCW"] = 0;
     }
 
-    if (FluidSystem::enableDissolvedGas() && rstKeywords["RSSAT"] > 0) {
+    /* if (FluidSystem::enableDissolvedGas() && rstKeywords["RSSAT"] > 0) {
         rstKeywords["RSSAT"] = 0;
         gasDissolutionFactor_.resize(bufferSize, 0.0);
     }
@@ -1276,7 +1278,7 @@ doAllocBuffers(const unsigned bufferSize,
     if (FluidSystem::enableVaporizedWater() && rstKeywords["RVWSAT"] > 0) {
         rstKeywords["RVWSAT"] = 0;
         waterVaporizationFactor_.resize(bufferSize, 0.0);
-    }
+    } */
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["BW"] > 0) {
         rstKeywords["BW"] = 0;
@@ -1751,5 +1753,8 @@ INSTANTIATE_TYPE(double)
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
 #endif
+
+template<class T> using FS2 = GenericOilGasFluidSystem<T, 3>;
+template class GenericOutputBlackoilModule<FS2<double>>;
 
 } // namespace Opm

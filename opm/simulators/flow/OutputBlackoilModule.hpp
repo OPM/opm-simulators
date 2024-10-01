@@ -144,7 +144,7 @@ public:
             return collectToIORank.isCartIdxOnThisRank(idx);
         };
 
-        this->setupBlockData(isCartIdxOnThisRank);
+       this->setupBlockData(isCartIdxOnThisRank);
 
         this->forceDisableFipOutput_ =
             Parameters::Get<Parameters::ForceDisableFluidInPlaceOutput>();
