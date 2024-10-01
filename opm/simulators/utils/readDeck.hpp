@@ -98,6 +98,7 @@ void readDeck(Parallel::Communication         comm,
               const std::string&              inputSkipMode,
               bool                            initFromRestart,
               bool                            checkDeck,
+              bool                            keepKeywords,
               const std::optional<int>&       outputInterval);
 
 void verifyValidCellGeometry(Parallel::Communication comm,
