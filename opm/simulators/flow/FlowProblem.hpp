@@ -253,7 +253,7 @@ public:
             // temporary measure.
             RelpermDiagnostics relpermDiagnostics{};
             relpermDiagnostics.diagnosis(simulator.vanguard().eclState(),
-                                         simulator.vanguard().cartesianIndexMapper());
+                                         simulator.vanguard().levelCartesianIndexMapper());
         }
     }
 

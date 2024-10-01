@@ -605,6 +605,13 @@ GenericCpGridVanguard<ElementMapper,GridView,Scalar>::cartesianIndexMapper() con
 }
 
 template<class ElementMapper, class GridView, class Scalar>
+const LevelCartesianIndexMapper<Dune::CpGrid>
+GenericCpGridVanguard<ElementMapper,GridView,Scalar>::levelCartesianIndexMapper() const
+{
+    return LevelCartesianIndexMapper(*grid_);
+}
+
+template<class ElementMapper, class GridView, class Scalar>
 const Dune::CartesianIndexMapper<Dune::CpGrid>&
 GenericCpGridVanguard<ElementMapper,GridView,Scalar>::equilCartesianIndexMapper() const
 {
