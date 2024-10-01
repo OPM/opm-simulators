@@ -33,6 +33,14 @@ GpuBuffer<T>::GpuBuffer(const std::vector<T>& data)
 {
 }
 
+// some class need a default constructor...
+// should we reintroduce the default constructor that allocates 0 bytes and initializes the handles?
+template <class T>
+GpuBuffer<T>::GpuBuffer()
+    : GpuBuffer(1)
+{
+}
+
 template <class T>
 GpuBuffer<T>::GpuBuffer(const size_t numberOfElements)
     : m_numberOfElements(numberOfElements)
