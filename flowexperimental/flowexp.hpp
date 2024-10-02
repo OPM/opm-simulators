@@ -142,7 +142,7 @@ public:
         {
             // \Note: the SimulatorTimer does not carry any useful information, so PRT file (if it gets output) will contain wrong
             // timing information.
-            ParentType::writeOutput(SimulatorTimer{}, verbose);
+            ParentType::writeOutput(verbose);
         }
     }
 

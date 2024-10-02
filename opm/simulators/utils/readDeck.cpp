@@ -73,12 +73,10 @@
 #include <cstdlib>
 #include <cstdint>
 #include <filesystem>
-#include <functional>
 #include <memory>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
-#include <unordered_map>
 #include <utility>
 
 namespace {
@@ -105,6 +103,7 @@ namespace {
                                 const bool                           initFromRestart,
                                 const std::optional<int>&            outputInterval,
                                 const bool                           lowActionParsingStrictness,
+                                const bool                           keepKeywords,
                                 Opm::EclipseState&                   eclipseState,
                                 std::shared_ptr<Opm::Python>         python,
                                 std::shared_ptr<Opm::Schedule>&      schedule,
@@ -152,7 +151,8 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), lowActionParsingStrictness, outputInterval, init_state);
+                 std::move(python), lowActionParsingStrictness,
+                 keepKeywords, outputInterval, init_state);
         }
 
         // Read network pressures from restart
@@ -174,6 +174,7 @@ namespace {
                                         const Opm::EclipseState&             eclipseState,
                                         const Opm::ParseContext&             parseContext,
                                         const bool                           lowActionParsingStrictness,
+                                        const bool                           keepKeywords,
                                         std::shared_ptr<Opm::Python>         python,
                                         std::shared_ptr<Opm::Schedule>&      schedule,
                                         std::unique_ptr<Opm::UDQState>&      udqState,
@@ -184,7 +185,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext,
-                 errorGuard, std::move(python), lowActionParsingStrictness);
+                 errorGuard, std::move(python), lowActionParsingStrictness, keepKeywords);
         }
 
         udqState = std::make_unique<Opm::UDQState>
@@ -246,6 +247,7 @@ namespace {
                       const bool                           checkDeck,
                       const bool                           treatCriticalAsNonCritical,
                       const bool                           lowActionParsingStrictness,
+                      const bool                           keepKeywords,
                       const std::optional<int>&            outputInterval,
                       Opm::ErrorGuard&                     errorGuard)
     {
@@ -270,14 +272,15 @@ namespace {
         if (eclipseState->getInitConfig().restartRequested()) {
             loadObjectsFromRestart(deck, parser, *parseContext,
                                    initFromRestart, outputInterval,
-                                   lowActionParsingStrictness,
+                                   lowActionParsingStrictness, keepKeywords,
                                    *eclipseState, std::move(python),
                                    schedule, udqState, actionState, wtestState,
                                    errorGuard);
         }
         else {
             createNonRestartDynamicObjects(deck, *eclipseState, *parseContext,
-                                           lowActionParsingStrictness, std::move(python),
+                                           lowActionParsingStrictness, keepKeywords,
+                                           std::move(python),
                                            schedule, udqState, actionState, wtestState,
                                            errorGuard);
         }
@@ -515,15 +518,7 @@ Opm::setupLogging(Parallel::Communication& comm,
     }
 
     if (comm.rank() == 0) {
-        std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
-        Opm::OpmLog::addBackend(stdout_log_id, streamLog);
-        // Set a tag limit of 10 (no category limit). Will later in
-        // the run be replaced by calling setupMessageLimiter(), after
-        // the deck is read and the (possibly user-set) category
-        // limits are known.
-        streamLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10));
-        bool use_color_coding = OpmLog::stdoutIsTerminal();
-        streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
+        setupStreamLogging(stdout_log_id);
     }
 
     return output;
@@ -543,6 +538,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    const std::string&              inputSkipMode,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
+                   const bool                      keepKeywords,
                    const std::optional<int>&       outputInterval)
 {
     auto errorGuard = std::make_unique<ErrorGuard>();
@@ -577,7 +573,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
                          checkDeck, treatCriticalAsNonCritical, lowActionParsingStrictness,
-                         outputInterval, *errorGuard);
+                         keepKeywords, outputInterval, *errorGuard);
 
             // Update schedule so that re-parsing after actions use same strictness
             assert(schedule);
@@ -663,4 +659,17 @@ std::unique_ptr<Opm::ParseContext> Opm::setupParseContext(const bool strictParsi
         parseContext->update(InputErrorAction::DELAYED_EXIT1);
 
     return parseContext;
+}
+
+void Opm::setupStreamLogging(const std::string& stdout_log_id)
+{
+    std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
+    Opm::OpmLog::addBackend(stdout_log_id, streamLog);
+    // Set a tag limit of 10 (no category limit). Will later in
+    // the run be replaced by calling setupMessageLimiter(), after
+    // the deck is read and the (possibly user-set) category
+    // limits are known.
+    streamLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10));
+    const bool use_color_coding = OpmLog::stdoutIsTerminal();
+    streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
 }

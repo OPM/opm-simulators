@@ -153,10 +153,12 @@ namespace Dune
     }
 
     template <class Operator>
+    template <class Comm>
     void
     FlexibleSolver<Operator>::
-    initSolver(const Opm::PropertyTree& prm, const bool is_iorank)
+    initSolver(const Opm::PropertyTree& prm, const Comm& comm)
     {
+        const bool is_iorank = comm.communicator().rank() == 0;
         const double tol = prm.get<double>("tol", 1e-2);
         const int maxiter = prm.get<int>("maxiter", 200);
         const int verbosity = is_iorank ? prm.get<int>("verbosity", 0) : 0;
@@ -211,7 +213,8 @@ namespace Dune
                 preconditioner_,
                 tol, // desired residual reduction factor
                 maxiter, // maximum number of iterations
-                verbosity));
+                verbosity,
+                comm));
 #endif
         } else {
             OPM_THROW(std::invalid_argument,
@@ -256,7 +259,7 @@ namespace Dune
          std::size_t pressureIndex)
     {
         initOpPrecSp(op, prm, weightsCalculator, comm, pressureIndex);
-        initSolver(prm, comm.communicator().rank() == 0);
+        initSolver(prm, comm);
     }
 
 } // namespace Dune

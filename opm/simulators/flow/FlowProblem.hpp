@@ -451,10 +451,11 @@ public:
             const auto& residual = this->model().linearizer().residual();
 
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
-                this->drift_[globalDofIdx] = residual[globalDofIdx] * simulator.timeStepSize();
+                int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(globalDofIdx);
+                this->drift_[sfcdofIdx] = residual[sfcdofIdx] * simulator.timeStepSize();
 
                 if constexpr (getPropValue<TypeTag, Properties::UseVolumetricResidual>()) {
-                    this->drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
+                    this->drift_[sfcdofIdx] *= this->model().dofTotalVolume(sfcdofIdx);
                 }
             }
         }
@@ -1375,14 +1376,15 @@ protected:
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV");
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+            int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(dofIdx);
             Scalar poreVolume = porvData[dofIdx];
 
             // we define the porosity as the accumulated pore volume divided by the
             // geometric volume of the element. Note that -- in pathetic cases -- it can
             // be larger than 1.0!
-            Scalar dofVolume = simulator.model().dofTotalVolume(dofIdx);
+            Scalar dofVolume = simulator.model().dofTotalVolume(sfcdofIdx);
             assert(dofVolume > 0.0);
-            this->referencePorosity_[/*timeIdx=*/0][dofIdx] = poreVolume/dofVolume;
+            this->referencePorosity_[/*timeIdx=*/0][sfcdofIdx] = poreVolume/dofVolume;
         }
     }
 

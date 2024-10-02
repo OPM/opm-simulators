@@ -859,7 +859,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                 const auto& group = schedule.getGroup(node, report_time_step);
                 for (const std::string& wellname : group.wells()) {
                     const Well& well = schedule.getWell(wellname, report_time_step);
-                    if (well.isInjector()) continue;
+                    if (well.isInjector() || !well_state.isOpen(wellname)) continue;
                     // Here we use the efficiency unconditionally, but if WEFAC item 3
                     // for the well is false (it defaults to true) then we should NOT use
                     // the efficiency factor. Fixing this requires not only changing the
@@ -916,7 +916,12 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     auto rates = node_inflows[node];
                     for (auto& r : rates) { r *= -1.0; }
                     assert(rates.size() == 3);
-                    const Scalar alq = 0.0; // TODO: Do not ignore ALQ
+                    // NB! ALQ in extended network is never implicitly the gas lift rate (GRAT), i.e., the
+                    //     gas lift rates only enters the network pressure calculations through the rates
+                    //     (e.g., in GOR calculations) unless a branch ALQ is set in BRANPROP.
+                    //
+                    // @TODO: Standard network
+                    Scalar alq = (*upbranch).alq_value().value_or(0.0);
                     node_pressures[node] = vfp_prod_props.bhp(*vfp_table,
                                                             rates[BlackoilPhases::Aqua],
                                                             rates[BlackoilPhases::Liquid],

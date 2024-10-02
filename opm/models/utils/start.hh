@@ -36,6 +36,8 @@
 #include <opm/models/utils/terminal.hpp>
 #include <opm/models/utils/simulator.hh>
 
+#include <opm/simulators/utils/readDeck.hpp>
+
 #include <opm/material/common/ResetLocale.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -226,6 +228,10 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #else
         myRank = Dune::MPIHelper::instance(argc, argv).rank();
 #endif
+        // setting up backend for STDCOUT logger
+        if (myRank == 0) {
+            setupStreamLogging("STDOUT_LOGGER");
+        }
 
         // read the initial time step and the end time
         Scalar endTime = Parameters::Get<Parameters::EndTime<Scalar>>();

@@ -272,12 +272,13 @@ private:
 protected:
     /// \brief Initialize
     /// \param exitCode The exitCode of the program.
+    /// \param keepKeywords Keep Schedule keywords even if there are no actions
     ///
     /// \return Whether to actually run the simulator. I.e. true if
     /// parsing of command line was successful and no --help,
     /// --print-properties, or --print-parameters have been found.
     template <class TypeTagEarlyBird>
-    bool initialize_(int& exitCode)
+    bool initialize_(int& exitCode, bool keepKeywords = false)
     {
         Dune::Timer externalSetupTimer;
         externalSetupTimer.start();
@@ -404,6 +405,7 @@ protected:
                            Parameters::Get<Parameters::ParsingStrictness>(),
                            Parameters::Get<Parameters::ActionParsingStrictness>(),
                            Parameters::Get<Parameters::InputSkipMode>(),
+                           keepKeywords,
                            getNumThreads(),
                            Parameters::Get<Parameters::EclOutputInterval>(),
                            cmdline_params,
@@ -683,6 +685,7 @@ private:
                   const std::string& parsingStrictness,
                   const std::string& actionParsingStrictness,
                   const std::string& inputSkipMode,
+                  const bool keepKeywords,
                   const std::size_t numThreads,
                   const int output_param,
                   const std::string& parameters,

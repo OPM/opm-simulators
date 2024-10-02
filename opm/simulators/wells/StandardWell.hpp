@@ -345,8 +345,7 @@ namespace Opm
                                           const bool stop_or_zero_rate_target,
                                           DeferredLogger& deferred_logger);
 
-        void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
-                                                 WellState<Scalar>& well_state,
+        void updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
                                                  const SummaryState& summary_state,
                                                  DeferredLogger& deferred_logger) const;
 

@@ -349,7 +349,7 @@ void registerAdaptiveParameters();
                         time::StopWatch perfTimer;
                         perfTimer.start();
 
-                        problem.writeOutput(simulatorTimer);
+                        problem.writeOutput();
 
                         report.success.output_write_time += perfTimer.secsSinceStart();
                     }

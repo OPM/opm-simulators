@@ -325,7 +325,7 @@ protected:
 
         factory_ = std::make_unique<Factory>();
         grid_ = factory_->convert(*equilGrid_, cartesianCellId_, ordering_);
-        OpmLog::warning("Space Filling Curve Ordering is not yet supported: DISABLE_ALUGRID_SFC_ORDERING is enabled");
+        OpmLog::warning("Space Filling Curve (SFC) ordering is enabled: see flow_blackoil_alugrid for more informations on disabling/enabling SFC reordering");
         equilGridToGrid_.resize(ordering_.size());
         for (std::size_t index = 0; index < ordering_.size(); ++index) {
             equilGridToGrid_[ordering_[index]] = index;

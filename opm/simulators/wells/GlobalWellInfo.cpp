@@ -36,6 +36,7 @@ GlobalWellInfo::GlobalWellInfo(const Schedule& sched, std::size_t report_step, c
     auto num_wells = sched.numWells(report_step);
     this->m_in_injecting_group.resize(num_wells);
     this->m_in_producing_group.resize(num_wells);
+    this->m_is_open.resize(num_wells);
     for (const auto& wname : sched.wellNames(report_step)) {
         const auto& well = sched.getWell(wname, report_step);
         auto global_well_index = well.seqIndex();
@@ -58,20 +59,33 @@ bool GlobalWellInfo::in_producing_group(const std::string& wname) const {
     return this->m_in_producing_group[global_well_index];
 }
 
+bool GlobalWellInfo::is_open(const std::string& wname) const {
+    auto global_well_index = this->name_map.at(wname);
+    return this->m_is_open[global_well_index];
+}
 
 void GlobalWellInfo::update_injector(std::size_t well_index, Well::Status well_status, Well::InjectorCMode injection_cmode) {
-    if (well_status == Well::Status::OPEN && injection_cmode == Well::InjectorCMode::GRUP)
-        this->m_in_injecting_group[this->local_map[well_index]] = 1;
+    if (well_status == Well::Status::OPEN) {
+        this->m_is_open[this->local_map[well_index]] = 1;
+        if (injection_cmode == Well::InjectorCMode::GRUP) {
+            this->m_in_injecting_group[this->local_map[well_index]] = 1;
+        }
+    }
 }
 
 void GlobalWellInfo::update_producer(std::size_t well_index, Well::Status well_status, Well::ProducerCMode production_cmode) {
-    if (well_status == Well::Status::OPEN && production_cmode == Well::ProducerCMode::GRUP)
-        this->m_in_producing_group[this->local_map[well_index]] = 1;
+    if (well_status == Well::Status::OPEN) {
+        this->m_is_open[this->local_map[well_index]] = 1;
+        if (production_cmode == Well::ProducerCMode::GRUP) {
+            this->m_in_producing_group[this->local_map[well_index]] = 1;
+        }
+    }
 }
 
 void GlobalWellInfo::clear() {
     this->m_in_injecting_group.assign(this->name_map.size(), 0);
     this->m_in_producing_group.assign(this->name_map.size(), 0);
+    this->m_is_open.assign(this->name_map.size(), 0);
 }
 
 

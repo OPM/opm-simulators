@@ -711,7 +711,7 @@ namespace Opm
         updatePrimaryVariablesNewton(dwells, stop_or_zero_rate_target, deferred_logger);
 
         const auto& summary_state = simulator.vanguard().summaryState();
-        updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
+        updateWellStateFromPrimaryVariables(well_state, summary_state, deferred_logger);
         Base::calculateReservoirRates(simulator.vanguard().eclState().runspec().co2Storage(), well_state.well(this->index_of_well_));
     }
 
@@ -745,12 +745,11 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
-                                        WellState<Scalar>& well_state,
+    updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
                                         const SummaryState& summary_state,
                                         DeferredLogger& deferred_logger) const
     {
-        this->StdWellEval::updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
+        this->StdWellEval::updateWellStateFromPrimaryVariables(well_state, summary_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
