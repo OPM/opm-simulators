@@ -168,13 +168,13 @@ updateMultipliers(const WellInterfaceGeneric<Scalar>& well,
         filtrate_data.radius[perf] = connection.getFilterCakeRadius();
         filtrate_data.area_of_flow[perf] = connection.getFilterCakeArea();
 
-        Scalar skin_factor = 0.;
+        Scalar delta_skin_factor = 0.;
         Scalar thickness = 0.;
         switch (filter_cake.geometry) {
             case FilterCake::FilterCakeGeometry::LINEAR: {
                 thickness = prev_thickness_[perf] + delta_thickness;
-                skin_factor = thickness / rw * K / perm;
                 filtrate_data.thickness[perf] = thickness;
+                delta_skin_factor = delta_thickness / rw * K / perm;
                 break;
             }
             case FilterCake::FilterCakeGeometry::RADIAL: {
@@ -184,7 +184,7 @@ updateMultipliers(const WellInterfaceGeneric<Scalar>& well,
 
                 const Scalar rc = std::sqrt(rw * rw + 2. * rw * thickness);
                 filtrate_data.thickness[perf] = rc - rw;
-                skin_factor = K / perm * std::log(rc / rc_prev);
+                delta_skin_factor = K / perm * std::log(rc / rc_prev);
                 break;
             }
             default:
@@ -195,7 +195,7 @@ updateMultipliers(const WellInterfaceGeneric<Scalar>& well,
                                                 geometry, well.name()),
                                     deferred_logger);
         }
-        skin_factor_[perf] = prev_skin_factor_[perf] + skin_factor;
+        skin_factor_[perf] = prev_skin_factor_[perf] + delta_skin_factor;
         filtrate_data.skin_factor[perf] = skin_factor_[perf];
         thickness_[perf] = thickness;
 
