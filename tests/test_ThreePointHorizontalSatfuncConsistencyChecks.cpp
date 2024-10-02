@@ -92,6 +92,37 @@ BOOST_AUTO_TEST_CASE(All_Good)
     BOOST_CHECK_MESSAGE(! check.isCritical(), "Test must not be violated at critical level");
 }
 
+BOOST_AUTO_TEST_CASE(All_Good_2)
+{
+    auto check = Checks::DisplacingOil_GO<float>{};
+
+    constexpr auto expectNumExportedCheckValues = std::size_t{5};
+
+    {
+        auto endPoints = Opm::EclEpsScalingPointsInfo<float>{};
+        endPoints.Swl = 0.4f;
+        endPoints.Sgcr = 0.15f;
+        endPoints.Sogcr = 0.2f;
+        endPoints.Sgu = 0.6;
+
+        check.test(endPoints);
+    }
+
+    {
+        auto values = std::vector<float>(expectNumExportedCheckValues);
+        check.exportCheckValues(values.data());
+
+        BOOST_CHECK_CLOSE(values[0], 0.4f, 1.0e-6f);
+        BOOST_CHECK_CLOSE(values[1], 0.2f, 1.0e-6f);
+        BOOST_CHECK_CLOSE(values[2], 0.15f, 1.0e-6f);
+        BOOST_CHECK_CLOSE(values[3], 0.4f, 1.0e-5f);
+        BOOST_CHECK_CLOSE(values[4], 0.6f, 1.0e-6f);
+    }
+
+    BOOST_CHECK_MESSAGE(! check.isViolated(), "Test must not be violated");
+    BOOST_CHECK_MESSAGE(! check.isCritical(), "Test must not be violated at critical level");
+}
+
 BOOST_AUTO_TEST_CASE(Non_Finite)
 {
     // NaN

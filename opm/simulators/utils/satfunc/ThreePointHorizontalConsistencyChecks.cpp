@@ -51,7 +51,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
 
     const auto sr = Scalar{1} - (this->sogcr_ + this->swl_);
 
-    const auto low = ! (this->swl_ < sr);
+    const auto low = ! (this->sgcr_ < sr);
     const auto high = ! (sr < this->sgu_);
 
     if (low || high) {
@@ -86,7 +86,7 @@ testImpl(const EclEpsScalingPointsInfo<Scalar>& endPoints)
 
     const auto sr = Scalar{1} - (this->sowcr_ + this->sgl_);
 
-    const auto low = ! (this->sgl_ < sr);
+    const auto low = ! (this->swcr_ < sr);
     const auto high = ! (sr < this->swu_);
 
     if (low || high) {
