@@ -357,7 +357,7 @@ namespace {
 
 // Kernel to use a BrineDynamic object on a GPU
 __global__ void pvtInternalEnergy(GpuViewCo2Pvt gpuViewCo2Pvt, GpuCO2 co2, Evaluation* temp, Evaluation* pressure, double* result) {
-    *result = gpuViewCo2Pvt.internalEnergy<Evaluation>(co2, 1, *temp, *pressure, Evaluation(0.4), Evaluation(0.5)).value();
+    *result = gpuViewCo2Pvt.internalEnergy<Evaluation>(co2, 1, *temp, *pressure, Evaluation(0.4), Evaluation(0.0)).value();
 }
 
 } // END EMPTY NAMESPACE
@@ -366,10 +366,10 @@ __global__ void pvtInternalEnergy(GpuViewCo2Pvt gpuViewCo2Pvt, GpuCO2 co2, Evalu
 BOOST_AUTO_TEST_CASE(TestCo2GasPvt) {
     Evaluation temp(290.5); // [K]
     Evaluation pressure(200000.0); // [Pa]
-    std::vector<double> salinites = {0.2, 0.3, 0.4};
+    std::vector<double> salinities = {0.2, 0.3, 0.4};
 
-    CpuCo2Pvt cpuCo2Pvt(salinites);
-    double internalEnergyReference = cpuCo2Pvt.internalEnergy<Evaluation>(1, temp, pressure, Evaluation(0.4), Evaluation(0.5)).value();
+    CpuCo2Pvt cpuCo2Pvt(salinities);
+    double internalEnergyReference = cpuCo2Pvt.internalEnergy<Evaluation>(1, temp, pressure, Evaluation(0.4), Evaluation(0.0)).value();
 
     const auto gpuBufCo2Pvt = Opm::gpuistl::move_to_gpu<double, GpuB>(cpuCo2Pvt);
     const auto gpuViewCo2Pvt = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuBufCo2Pvt);
@@ -414,5 +414,6 @@ BOOST_AUTO_TEST_CASE(TestCo2GasPvt) {
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     const double tolerance = 1e-6; // Tolerance for floating-point comparison
+    printf("%lf %lf\n", resultOnCpu, internalEnergyReference);
     BOOST_CHECK(std::fabs(resultOnCpu - internalEnergyReference) < tolerance);
 }
