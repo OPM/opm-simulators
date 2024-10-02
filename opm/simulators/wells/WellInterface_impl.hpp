@@ -363,7 +363,6 @@ namespace Opm
                     // }
 
                     if (changed) {
-                        this->well_control_log_.push_back(from);
                         const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
                                                                         ws.production_cmode == Well::ProducerCMode::THP;
                         if (!thp_controlled){
