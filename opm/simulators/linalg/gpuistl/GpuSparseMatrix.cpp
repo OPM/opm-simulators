@@ -82,8 +82,8 @@ GpuSparseMatrix<T>::GpuSparseMatrix(const T* nonZeroElements,
 }
 
 template <class T>
-GpuSparseMatrix<T>::GpuSparseMatrix(const GpuVector<int> rowIndices,
-                                  const GpuVector<int> columnIndices,
+GpuSparseMatrix<T>::GpuSparseMatrix(const GpuVector<int>& rowIndices,
+                                  const GpuVector<int>& columnIndices,
                                   size_t blockSize)
     : m_nonZeroElements(columnIndices.dim() * blockSize * blockSize)
     , m_columnIndices(columnIndices)

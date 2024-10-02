@@ -93,7 +93,7 @@ invBlockInPlace(T* __restrict__ block)
         T t14 = block[2] * block[6];
 
         T det = (t4 * block[8] - t6 * block[7] - t8 * block[8] + t10 * block[7] + t12 * block[5] - t14 * block[4]);
-        T t17 = T(T(1.0)) / det;
+        T t17 = T(1.0) / det;
 
         T matrix01 = block[1];
         T matrix00 = block[0];

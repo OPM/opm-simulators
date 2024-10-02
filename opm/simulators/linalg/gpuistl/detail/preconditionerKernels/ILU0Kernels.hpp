@@ -176,7 +176,7 @@ void LUFactorization(T* reorderedMat,
  * function
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
-template <int blocksize, class InputScalar, class OutputScalar>
+template <int blocksize, class InputScalar, class OutputScalar, bool copyResultToOtherMatrix>
 void LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                           int* lowerRowIndices,
                           int* lowerColIndices,
@@ -191,7 +191,6 @@ void LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                           int* naturalToReordered,
                           int startIdx,
                           int rowsInLevelSet,
-                          bool copyResultToOtherMatrix,
                           int threadBlockSize);
 
 } // namespace Opm::gpuistl::detail::ILU0

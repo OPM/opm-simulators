@@ -77,8 +77,8 @@ public:
     //!
     //! \note We assume numberOfNonzeroBlocks, blockSize and numberOfRows all are representable as int due to
     //!       restrictions in the current version of cusparse. This might change in future versions.
-    GpuSparseMatrix(const GpuVector<int> rowIndices,
-                   const GpuVector<int> columnIndices,
+    GpuSparseMatrix(const GpuVector<int>& rowIndices,
+                   const GpuVector<int>& columnIndices,
                    size_t blockSize);
 
     /**

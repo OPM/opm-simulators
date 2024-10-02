@@ -120,7 +120,7 @@ namespace
         }
     }
 
-    template <int blocksize, class InputScalar, class OutputScalar>
+    template <int blocksize, class InputScalar, class OutputScalar, bool copyResultToOtherMatrix>
     __global__ void cuLUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                                            int* lowerRowIndices,
                                            int* lowerColIndices,
@@ -134,7 +134,6 @@ namespace
                                            int* reorderedToNatural,
                                            int* naturalToReordered,
                                            const int startIdx,
-                                           const bool copyResultToOtherMatrix,
                                            int rowsInLevelSet)
     {
         auto reorderedIdx = startIdx + blockDim.x * blockIdx.x + threadIdx.x;
@@ -442,7 +441,7 @@ LUFactorization(T* srcMatrix,
         srcMatrix, srcRowIndices, srcColumnIndices, naturalToReordered, reorderedToNatual, rowsInLevelSet, startIdx);
 }
 
-template <int blocksize, class InputScalar, class OutputScalar>
+template <int blocksize, class InputScalar, class OutputScalar, bool copyResultToOtherMatrix>
 void
 LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                      int* lowerRowIndices,
@@ -458,13 +457,12 @@ LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                      int* naturalToReordered,
                      const int startIdx,
                      int rowsInLevelSet,
-                     bool copyResultToOtherMatrix,
                      int thrBlockSize)
 {
     int threadBlockSize
-        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar>, thrBlockSize);
+        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar><<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
+    cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix><<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
                                                                              lowerRowIndices,
                                                                              lowerColIndices,
                                                                              reorderedUpperMat,
@@ -477,7 +475,6 @@ LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                                                                              reorderedToNatural,
                                                                              naturalToReordered,
                                                                              startIdx,
-                                                                             copyResultToOtherMatrix,
                                                                              rowsInLevelSet);
 }
 
@@ -485,12 +482,14 @@ LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
     template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, T*, int);                           \
     template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);                 \
     template void LUFactorization<T, blocksize>(T*, int*, int*, int*, int*, size_t, int, int);                         \
-    template void LUFactorizationSplit<blocksize, T, float>(                                                                  \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, bool, int);                                          \
-    template void LUFactorizationSplit<blocksize, T, double>(                                                                  \
-        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, bool, int);             
-    // template void solveUpperLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);            \
-    // template void solveLowerLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);
+    template void LUFactorizationSplit<blocksize, T, float, true>(                                                                  \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                                          \
+    template void LUFactorizationSplit<blocksize, T, double, true>(                                                                  \
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int); \
+    template void LUFactorizationSplit<blocksize, T, float, false>(                                                                  \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                                          \
+    template void LUFactorizationSplit<blocksize, T, double, false>(                                                                  \
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);
