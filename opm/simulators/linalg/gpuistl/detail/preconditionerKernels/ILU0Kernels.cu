@@ -159,10 +159,11 @@ namespace
                 // the DUNE implementation is inplace, and I need to take care to make sure
                 // this out of place implementation is equivalent
                 mmOverlap<InputScalar, blocksize>(&srcReorderedLowerMat[ij * scalarsInBlock],
-                                        &srcDiagonal[j * scalarsInBlock],
-                                        &srcReorderedLowerMat[ij * scalarsInBlock]);
-                if (copyResultToOtherMatrix){
-                    moveBlock<blocksize, InputScalar, OutputScalar>(&srcReorderedLowerMat[ij * scalarsInBlock], &dstReorderedLowerMat[ij * scalarsInBlock]);
+                                                  &srcDiagonal[j * scalarsInBlock],
+                                                  &srcReorderedLowerMat[ij * scalarsInBlock]);
+                if (copyResultToOtherMatrix) {
+                    moveBlock<blocksize, InputScalar, OutputScalar>(&srcReorderedLowerMat[ij * scalarsInBlock],
+                                                                    &dstReorderedLowerMat[ij * scalarsInBlock]);
                 }
 
                 // we have now accounted for an element under the diagonal and the diagonal element above it
@@ -202,8 +203,9 @@ namespace
                         // A_jk = A_ij * A_jk
                         InputScalar tmp[scalarsInBlock] = {0};
 
-                        mmNoOverlap<InputScalar, blocksize>(
-                            &srcReorderedLowerMat[ij * scalarsInBlock], &srcReorderedUpperMat[jk * scalarsInBlock], tmp);
+                        mmNoOverlap<InputScalar, blocksize>(&srcReorderedLowerMat[ij * scalarsInBlock],
+                                                            &srcReorderedUpperMat[jk * scalarsInBlock],
+                                                            tmp);
                         matrixSubtraction<InputScalar, blocksize>(ikBlockPtr, tmp);
                         incrementAcrossSplitStructure(ik, ikState, endOfRowILower, startOfRowIUpper);
                         ++jk;
@@ -217,12 +219,14 @@ namespace
                 }
             }
             invBlockInPlace<InputScalar, blocksize>(&srcDiagonal[reorderedIdx * scalarsInBlock]);
-            if (copyResultToOtherMatrix){
-                moveBlock<blocksize, InputScalar, OutputScalar>(&srcDiagonal[reorderedIdx * scalarsInBlock], &dstDiagonal[reorderedIdx * scalarsInBlock]);
+            if (copyResultToOtherMatrix) {
+                moveBlock<blocksize, InputScalar, OutputScalar>(&srcDiagonal[reorderedIdx * scalarsInBlock],
+                                                                &dstDiagonal[reorderedIdx * scalarsInBlock]);
 
                 // also move all values above the diagonal on this row
                 for (int block = startOfRowIUpper; block < endOfRowIUpper; ++block) {
-                    moveBlock<blocksize, InputScalar, OutputScalar>(&srcReorderedUpperMat[block * scalarsInBlock], &dstReorderedUpperMat[block * scalarsInBlock]);
+                    moveBlock<blocksize, InputScalar, OutputScalar>(&srcReorderedUpperMat[block * scalarsInBlock],
+                                                                    &dstReorderedUpperMat[block * scalarsInBlock]);
                 }
             }
         }
@@ -340,10 +344,12 @@ namespace
 
             for (int block = nnzIdx; block < nnzIdxLim; ++block) {
                 const int col = colIndices[block];
-                mmvMixedGeneral<blocksize, MatrixScalar, LinearSolverScalar, LinearSolverScalar, LinearSolverScalar>(&mat[block * blocksize * blocksize], &v[col * blocksize], rhs);
+                mmvMixedGeneral<blocksize, MatrixScalar, LinearSolverScalar, LinearSolverScalar, LinearSolverScalar>(
+                    &mat[block * blocksize * blocksize], &v[col * blocksize], rhs);
             }
 
-            mvMixedGeneral<blocksize, MatrixScalar, LinearSolverScalar, LinearSolverScalar, LinearSolverScalar>(&dInv[reorderedIdx * blocksize * blocksize], rhs, &v[naturalRowIdx * blocksize]);
+            mvMixedGeneral<blocksize, MatrixScalar, LinearSolverScalar, LinearSolverScalar, LinearSolverScalar>(
+                &dInv[reorderedIdx * blocksize * blocksize], rhs, &v[naturalRowIdx * blocksize]);
         }
     }
 } // namespace
@@ -459,36 +465,37 @@ LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                      int rowsInLevelSet,
                      int thrBlockSize)
 {
-    int threadBlockSize
-        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
+        cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix><<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
-                                                                             lowerRowIndices,
-                                                                             lowerColIndices,
-                                                                             reorderedUpperMat,
-                                                                             upperRowIndices,
-                                                                             upperColIndices,
-                                                                             srcDiagonal,
-                                                                             dstReorderedLowerMat,
-                                                                             dstReorderedUpperMat,
-                                                                             dstDiagonal,
-                                                                             reorderedToNatural,
-                                                                             naturalToReordered,
-                                                                             startIdx,
-                                                                             rowsInLevelSet);
+    cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix>
+        <<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
+                                             lowerRowIndices,
+                                             lowerColIndices,
+                                             reorderedUpperMat,
+                                             upperRowIndices,
+                                             upperColIndices,
+                                             srcDiagonal,
+                                             dstReorderedLowerMat,
+                                             dstReorderedUpperMat,
+                                             dstDiagonal,
+                                             reorderedToNatural,
+                                             naturalToReordered,
+                                             startIdx,
+                                             rowsInLevelSet);
 }
 
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
     template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, T*, int);                           \
     template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);                 \
     template void LUFactorization<T, blocksize>(T*, int*, int*, int*, int*, size_t, int, int);                         \
-    template void LUFactorizationSplit<blocksize, T, float, true>(                                                                  \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                                          \
-    template void LUFactorizationSplit<blocksize, T, double, true>(                                                                  \
-        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int); \
-    template void LUFactorizationSplit<blocksize, T, float, false>(                                                                  \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                                          \
-    template void LUFactorizationSplit<blocksize, T, double, false>(                                                                  \
+    template void LUFactorizationSplit<blocksize, T, float, true>(                                                     \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                  \
+    template void LUFactorizationSplit<blocksize, T, double, true>(                                                    \
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int);               \
+    template void LUFactorizationSplit<blocksize, T, float, false>(                                                    \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                  \
+    template void LUFactorizationSplit<blocksize, T, double, false>(                                                   \
         T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
@@ -504,20 +511,26 @@ INSTANTIATE_KERNEL_WRAPPERS(double, 4);
 INSTANTIATE_KERNEL_WRAPPERS(double, 5);
 INSTANTIATE_KERNEL_WRAPPERS(double, 6);
 
-#define INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(blocksize) \
-    /* double preconditioner */\
-    template void solveLowerLevelSetSplit<blocksize, double, double>(double*, int*, int*, int*, int, int, const double*, double*, int); \
-    /* float matrix, double compute preconditioner */\
-    template void solveLowerLevelSetSplit<blocksize, double, float>(float*, int*, int*, int*, int, int, const double*, double*, int);   \
-    /* float preconditioner */\
-    template void solveLowerLevelSetSplit<blocksize, float, float>(float*, int*, int*, int*, int, int, const float*, float*, int);       \
-    \
-    /* double preconditioner */\
-    template void solveUpperLevelSetSplit<blocksize, double, double>(double*, int*, int*, int*, int, int, const double*, double*, int);            \
-    /* float matrix, double compute preconditioner */\
-    template void solveUpperLevelSetSplit<blocksize, double, float>(float*, int*, int*, int*, int, int, const float*, double*, int);            \
-    /* float preconditioner */\
-    template void solveUpperLevelSetSplit<blocksize, float, float>(float*, int*, int*, int*, int, int, const float*, float*, int);            \
+#define INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(blocksize)                                                         \
+    /* double preconditioner */                                                                                        \
+    template void solveLowerLevelSetSplit<blocksize, double, double>(                                                  \
+        double*, int*, int*, int*, int, int, const double*, double*, int);                                             \
+    /* float matrix, double compute preconditioner */                                                                  \
+    template void solveLowerLevelSetSplit<blocksize, double, float>(                                                   \
+        float*, int*, int*, int*, int, int, const double*, double*, int);                                              \
+    /* float preconditioner */                                                                                         \
+    template void solveLowerLevelSetSplit<blocksize, float, float>(                                                    \
+        float*, int*, int*, int*, int, int, const float*, float*, int);                                                \
+                                                                                                                       \
+    /* double preconditioner */                                                                                        \
+    template void solveUpperLevelSetSplit<blocksize, double, double>(                                                  \
+        double*, int*, int*, int*, int, int, const double*, double*, int);                                             \
+    /* float matrix, double compute preconditioner */                                                                  \
+    template void solveUpperLevelSetSplit<blocksize, double, float>(                                                   \
+        float*, int*, int*, int*, int, int, const float*, double*, int);                                               \
+    /* float preconditioner */                                                                                         \
+    template void solveUpperLevelSetSplit<blocksize, float, float>(                                                    \
+        float*, int*, int*, int*, int, int, const float*, float*, int);
 
 INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(1);
 INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(2);
