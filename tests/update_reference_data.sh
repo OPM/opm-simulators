@@ -141,7 +141,7 @@ else
 fi
 if [ -n "$CONVERT_ECL" ]
 then
-  for dep in opm-common opm-grid opm-models
+  for dep in opm-common opm-grid
   do
     pushd $WORKSPACE/deps/$dep > /dev/null
     name=`printf "%-14s" $dep`
