@@ -55,7 +55,7 @@ template <class Grid, class EquilGrid, class GridView>
 class CollectDataOnIORank
 {
 public:
-    using CollectiveCommunication = typename Grid::CollectiveCommunication;
+    using CollectiveCommunication = typename Grid::Communication;
     using P2PCommunicatorType = Dune::Point2PointCommunicator<Dune::SimpleMessageBuffer>;
     using IndexMapType = std::vector<int>;
     using IndexMapStorageType = std::vector<IndexMapType>;
