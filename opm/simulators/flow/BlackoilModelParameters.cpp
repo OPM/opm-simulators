@@ -72,6 +72,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     use_average_density_ms_wells_ = Parameters::Get<Parameters::UseAverageDensityMsWells>();
     local_well_solver_control_switching_ = Parameters::Get<Parameters::LocalWellSolveControlSwitching>();
     use_implicit_ipr_ = Parameters::Get<Parameters::UseImplicitIpr>();
+    check_group_constraints_inner_well_iterations_ = Parameters::Get<Parameters::CheckGroupConstraintsInnerWellIterations>();
     nonlinear_solver_ = Parameters::Get<Parameters::NonlinearSolver>();
     const auto approach = Parameters::Get<Parameters::LocalSolveApproach>();
     if (approach == "jacobi") {
@@ -195,6 +196,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Allow control switching during local well solutions");
     Parameters::Register<Parameters::UseImplicitIpr>
         ("Compute implict IPR for stability checks and stable solution search");
+    Parameters::Register<Parameters::CheckGroupConstraintsInnerWellIterations>
+        ("Allow checking of group constraints during inner well iterations");        
     Parameters::Register<Parameters::NetworkMaxStrictIterations>
         ("Maximum iterations in network solver before relaxing tolerance");
     Parameters::Register<Parameters::NetworkMaxIterations>
