@@ -432,7 +432,7 @@ public:
     /*!
      * \brief Called by the simulator after each time integration.
      */
-    void endTimeStep () override
+    void endTimeStep() override
     {
         FlowProblemType::endTimeStep();
 
@@ -517,7 +517,7 @@ public:
      * \brief Write the requested quantities of the current solution into the output
      *        files.
      */
-    void writeOutput(bool verbose = true)
+    void writeOutput(bool verbose) override
     {
         FlowProblemType::writeOutput(verbose);
 

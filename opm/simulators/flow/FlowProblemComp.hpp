@@ -240,6 +240,55 @@ public:
     }
 
     /*!
+     * \brief Called by the simulator after each time integration.
+     */
+    void endTimeStep() override
+    {
+        FlowProblemType::endTimeStep();
+
+        const bool isSubStep = !this->simulator().episodeWillBeOver();
+
+        // For CpGrid with LGRs, ecl/vtk output is not supported yet.
+        const auto& grid = this->simulator().vanguard().gridView().grid();
+
+        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
+        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
+        if (!isCpGrid || (grid.maxLevel() == 0)) {
+            this->eclWriter_->evalSummaryState(isSubStep);
+        }
+
+    }
+
+    void writeReports(const SimulatorTimer& timer) {
+        if (enableEclOutput_){
+            eclWriter_->writeReports(timer);
+        }
+    }
+
+    /*!
+     * \brief Write the requested quantities of the current solution into the output
+     *        files.
+     */
+    void writeOutput(bool verbose) override
+    {
+        FlowProblemType::writeOutput(verbose);
+
+        bool isSubStep = !this->simulator().episodeWillBeOver();
+
+        data::Solution localCellData = {};
+#if HAVE_DAMARIS
+        // N.B. the Damaris output has to be done before the ECL output as the ECL one
+        // does all kinds of std::move() relocation of data
+        if (enableDamarisOutput_) {
+            damarisWriter_->writeOutput(localCellData, isSubStep) ;
+        }
+#endif
+        if (enableEclOutput_){
+            eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+        }
+    }
+
+    /*!
      * \copydoc FvBaseProblem::boundary
      *
      * Reservoir simulation uses no-flow conditions as default for all boundaries.

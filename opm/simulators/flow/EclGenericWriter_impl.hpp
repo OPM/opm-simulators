@@ -621,6 +621,14 @@ doWriteOutput(const int                          reportStepNum,
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
+doWriteOutput(const int                      reportStepNum,
+               const std::optional<int>           timeStepNum,
+               const bool                         isSubStep,
+               data::Solution&&                   localCellData)
+{}
+
+template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
+void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 evalSummary(const int                                            reportStepNum,
             const Scalar                                         curTime,
             const data::Wells&                                   localWellData,
