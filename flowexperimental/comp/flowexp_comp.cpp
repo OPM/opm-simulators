@@ -157,7 +157,7 @@ struct LocalLinearizerSplice<TypeTag, TTag::FlowExpCompProblem>
 
 // Set the problem property
 template <class TypeTag, int NumComp>
-    struct Problem<TypeTag, TTag::FlowExpCompProblem<NumComp>>
+struct Problem<TypeTag, TTag::FlowExpCompProblem<NumComp>>
 {
     using type = FlowProblemComp<TypeTag>;
 };
