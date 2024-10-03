@@ -345,8 +345,7 @@ startSimulationComponents(int numComponentsRuntime, int argc, char** argv)
     return EXIT_FAILURE;
 }
 
-int
-main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<0>;
     Opm::registerEclTimeSteppingParameters<double>();
