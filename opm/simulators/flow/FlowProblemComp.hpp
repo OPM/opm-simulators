@@ -358,7 +358,7 @@ protected:
         const bool has_xmf = fp.has_double("XMF");
         const bool has_ymf = fp.has_double("YMF");
         const bool has_zmf = fp.has_double("ZMF");
-        if (! (has_zmf || (has_xmf && has_ymf))) {
+        if ( !has_zmf && !(has_xmf && has_ymf) ) {
             throw std::runtime_error("The ECL input file requires the presence of ZMF or XMF and YMF "
                                      "keyword if the model is initialized explicitly");
         }
@@ -445,7 +445,7 @@ protected:
                 else if (Indices::gasEnabled)
                     dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
                 else if (Indices::waterEnabled)
-                    //single (water) phase
+                    // single (water) phase
                     dofFluidState.setPressure(phaseIdx, pressure);
             }
 
@@ -467,23 +467,13 @@ protected:
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     const std::size_t data_idx = compIdx * numDof + dofIdx;
                     const Scalar zmf = zmfData[data_idx];
-                    // TODO: I know we do this for co2_ptflash example, but maybe we should not do it this way?
                     if (gas_active) {
-                        const auto& sat_gas = dofFluidState.saturation(gasPhaseIdx);
-                        if (sat_gas > 0.) {
-                            dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, zmf);
-                        } else {
-                            dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, 0.);
-                        }
+                        const auto ymf = (dofFluidState.saturation(FluidSystem::gasPhaseIdx) > 0.) ? zmf : Scalar{0};
+                        dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, ymf);
                     }
                     if (oil_active) {
-                        dofFluidState.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, zmf);
-                        const auto& sat_oil = dofFluidState.saturation(oilPhaseIdx);
-                        if (sat_oil > 0.) {
-                            dofFluidState.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, zmf);
-                        } else {
-                            dofFluidState.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, 0.);
-                        }
+                        const auto xmf = (dofFluidState.saturation(FluidSystem::oilPhaseIdx) > 0.) ? zmf : Scalar{0};
+                        dofFluidState.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, xmf);
                     }
                 }
             }
