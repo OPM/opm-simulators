@@ -19,7 +19,7 @@ python_versions[cp312-cp312]=/opt/python/cp312-cp312/bin/python
 for python_bin in ${python_versions[*]}
 do
   ${python_bin} -m pip install pip --upgrade
-  ${python_bin} -m pip install wheel setuptools twine pytest-runner auditwheel scikit-build cmake
+  ${python_bin} -m pip install wheel setuptools twine pytest-runner auditwheel scikit-build cmake numpy
 done
 
 DIR=`pwd`
@@ -49,8 +49,6 @@ do
 
     # Package opm-common bindings
     cd opm-common/python
-    echo -e "include opm/*\ninclude opm/io/summary/__init__.py" > MANIFEST.in
-    cat MANIFEST.in
     ${python_versions[$tag]} setup.py sdist bdist_wheel --plat-name manylinux_2_28_x86_64 --python-tag $tag
     ${python_versions[$tag]} -m auditwheel repair dist/*$tag*.whl
     cp dist/*$tag*.whl /tmp/opm/wheelhouse
