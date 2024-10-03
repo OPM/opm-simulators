@@ -95,6 +95,8 @@ public:
     {
         FlowProblemType::registerParameters();
 
+        EclWriterType::registerParameters();
+
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
     }
@@ -107,6 +109,7 @@ public:
         : FlowProblemType(simulator)
     {
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
+        enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
     }
 
     /*!
@@ -129,8 +132,17 @@ public:
                 [&vg = this->simulator().vanguard()](const unsigned int it) { return vg.gridIdxToEquilGridIdx(it); });
             updated = true;
         };
+        // TODO: we might need to do the same with FlowProblemBlackoil for parallel
 
         finishTransmissibilities();
+
+        if (enableEclOutput_) {
+            eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+            std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
+                return simulator.vanguard().gridEquilIdxToGridIdx(i);
+            };
+            eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
+        }
 
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
@@ -180,6 +192,11 @@ public:
         });
         FlowProblemType::readMaterialParameters_();
         FlowProblemType::readThermalParameters_();
+
+        // write the static output files (EGRID, INIT)
+        if (enableEclOutput_) {
+            eclWriter_->writeInit();
+        }
 
         const auto& initconfig = eclState.getInitConfig();
         if (initconfig.restartRequested())
@@ -496,6 +513,7 @@ private:
 
     std::vector<InitialFluidState> initialFluidStates_;
 
+    bool enableEclOutput_;
     std::unique_ptr<EclWriterType> eclWriter_;
 
     bool enableVtkOutput_;
