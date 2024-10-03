@@ -45,13 +45,13 @@ namespace Opm
             ReservoirFailed = 1 << 0,
             WellFailed      = 1 << 1,
         };
-
+        // More severe problems should have higher numbers
         enum struct Severity {
             None       = 0,
             Normal     = 1,
-            TooLarge   = 2,
-            NotANumber = 3,
-            ConvergenceMonitorFailure = 4,
+            ConvergenceMonitorFailure = 2,
+            TooLarge   = 3,
+            NotANumber = 4,
         };
 
         struct PenaltyCard {

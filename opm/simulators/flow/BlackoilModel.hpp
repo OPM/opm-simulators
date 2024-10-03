@@ -1154,12 +1154,10 @@ namespace Opm {
 
         total_penaltyCard_ += report.getPenaltyCard();
 
-
-
         if (param_.convergence_monitoring_ && (total_penaltyCard_.total() > param_.convergence_monitoring_cutoff_)) {
             report.setReservoirFailed({ConvergenceReport::ReservoirFailure::Type::ConvergenceMonitorFailure,
-                                        ConvergenceReport::Severity::ConvergenceMonitorFailure,
-                                        -1}); // -1 indicates it's not specific to any component
+                                       ConvergenceReport::Severity::ConvergenceMonitorFailure,
+                                       -1}); // -1 indicates it's not specific to any component
         }
     }
 
