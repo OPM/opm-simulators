@@ -35,7 +35,6 @@
 // TODO: not understanding why we need FlowGenericProblem here
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
-//#include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 // // the current code use eclnewtonmethod adding other conditions to proceed_ should do the trick for KA
