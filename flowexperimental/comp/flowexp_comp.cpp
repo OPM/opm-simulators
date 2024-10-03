@@ -17,6 +17,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
+
+#include <dune/common/parallel/mpihelper.hh>
+
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+
 #include <opm/models/utils/start.hh>
 #include <opm/material/constraintsolvers/PTFlash.hpp>
 #include "../FlowExpNewtonMethod.hpp"
@@ -29,6 +35,7 @@
 // TODO: not understanding why we need FlowGenericProblem here
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
+//#include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 // // the current code use eclnewtonmethod adding other conditions to proceed_ should do the trick for KA
@@ -303,6 +310,33 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowExpCompProblem> {
 int main(int argc, char** argv)
 {
     using TypeTag = Opm::Properties::TTag::FlowExpCompProblem;
+    using PreVanguard = Opm::GetPropType<TypeTag, Opm::Properties::Vanguard>;
+    //using TypeTagTemporary = Opm::Properties::TTag::FlowEarlyBird;
     Opm::registerEclTimeSteppingParameters<double>();
-    return Opm::start<TypeTag>(argc, argv);
+
+    auto comm = Dune::MPIHelper::instance(argc, argv).getCommunication();
+    auto commPtr = std::make_unique<decltype(comm)>(comm);
+    // This is a bit cumbersome, but we need to read the input file
+    // first to figure out the number of components (I think) in order
+    // to select the correct type tag.
+    //
+    // TODO: Do a more dynamic dispatch approach similar to the normal
+    //       flow application
+    Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true);
+
+    auto inputFilename = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
+    Opm::FlowGenericVanguard::setCommunication(std::move(commPtr));
+    Opm::FlowGenericVanguard::readDeck(inputFilename);
+    Opm::FlowGenericVanguard vanguard;
+
+    const auto& eclState = vanguard.eclState();
+    const auto numComps = vanguard.eclState().compositionalConfig().numComps();
+    std::cout << "numComps = " << numComps << std::endl;
+
+    std::cout << inputFilename << std::endl;
+    //Opm::Parser parser;
+
+    // Opm::Deck deck = parser.parseFile(inputFilename);
+
+    return Opm::start<TypeTag>(argc, argv, false);
 }
