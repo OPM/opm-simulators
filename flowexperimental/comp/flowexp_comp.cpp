@@ -307,21 +307,38 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowExpCompProblem> {
 
 } // namespace Opm::Properties
 
-template <int numComponentsCompileTime>
+//! @brief Runs the simulator with the correct number of components
+//!
+//! This function will compile-time recurse from numComponentsCompileTime
+//! down to (inclusive) minimumNumberOfComponents and check if
+//!
+//!     numComponentsCompileTime == numComponentsRuntime
+//!
+//! and if this is the case, it will star the simulator with numComponentsRuntime.
+//!
+//! @tparam minimumNumberOfComponents the minimum number of components supported
+//! @tparam numCompnentsCompileTime the maximum number of components supported
+//! @param numComponentsRuntime the number of components found the in the deck file
+//! @param argc argc argument from CLI
+//! @param argv argv argument from CLI
+//!
+//! @return error code
+template <int minimumNumberOfComponents, int numComponentsCompileTime>
 int
 startSimulationComponents(int numComponentsRuntime, int argc, char** argv)
 {
-    OPM_ERROR_IF(numComponentsCompileTime < numComponentsRuntime || numComponentsRuntime <= 0,
+    OPM_ERROR_IF(numComponentsCompileTime < numComponentsRuntime || numComponentsRuntime < minimumNumberOfComponents,
                  fmt::format("Deck has {} components, not supported. We support a maximum of {} components, "
-                             "and a minimum of 1.",
+                             "and a minimum of {}.",
                              numComponentsRuntime,
-                             numComponentsCompileTime));
+                             numComponentsCompileTime,
+                             minimumNumberOfComponents));
 
     if (numComponentsCompileTime == numComponentsRuntime) {
         return Opm::start<Opm::Properties::TTag::FlowExpCompProblem<numComponentsCompileTime>>(argc, argv, false);
     }
-    if constexpr (numComponentsCompileTime > 1) {
-        return startSimulationComponents<numComponentsCompileTime - 1>(numComponentsRuntime, argc, argv);
+    if constexpr (numComponentsCompileTime > minimumNumberOfComponents) {
+        return startSimulationComponents<minimumNumberOfComponents, numComponentsCompileTime - 1>(numComponentsRuntime, argc, argv);
     }
     // It will never actually reach this, but the compiler does not seem to realize, so keeping
     // this to avoid warnings.
@@ -349,6 +366,6 @@ main(int argc, char** argv)
     Opm::FlowGenericVanguard::readDeck(inputFilename);
     Opm::FlowGenericVanguard vanguard;
     const auto numComps = vanguard.eclState().compositionalConfig().numComps();
-    return startSimulationComponents<10>(numComps, argc, argv);
+    return startSimulationComponents<2, 7>(numComps, argc, argv);
 }
 
