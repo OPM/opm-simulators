@@ -59,6 +59,7 @@
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 // TODO: maybe we can name it FlowProblemProperties.hpp
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
+#include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
@@ -195,11 +196,11 @@ public:
                                          int paramIdx,
                                          int)
     {
-        return eclPositionalParameter(addKey,
-                                      seenParams,
-                                      errorMsg,
-                                      argv,
-                                      paramIdx);
+        return detail::eclPositionalParameter(addKey,
+                                              seenParams,
+                                              errorMsg,
+                                              argv,
+                                              paramIdx);
     }
 
     /*!

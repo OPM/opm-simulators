@@ -568,6 +568,12 @@ opm_add_test(flowexp_comp
   LIBRARIES opmsimulators
   SOURCES
   flowexperimental/comp/flowexp_comp.cpp
+  flowexperimental/comp/flowexp_comp2.cpp
+  flowexperimental/comp/flowexp_comp3.cpp
+  flowexperimental/comp/flowexp_comp4.cpp
+  flowexperimental/comp/flowexp_comp5.cpp
+  flowexperimental/comp/flowexp_comp6.cpp
+  flowexperimental/comp/flowexp_comp7.cpp
   $<TARGET_OBJECTS:moduleVersion>
 )
 

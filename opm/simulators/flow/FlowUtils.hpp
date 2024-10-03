@@ -22,6 +22,8 @@
 #ifndef OPM_FLOW_UTILS_HEADER_INCLUDED
 #define OPM_FLOW_UTILS_HEADER_INCLUDED
 
+#include <functional>
+#include <set>
 #include <string_view>
 
 namespace Opm { struct SimulatorReport; }
@@ -43,6 +45,13 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 //! \brief Hides unused runtime parameters.
 template<class Scalar>
 void hideUnusedParameters();
+
+int eclPositionalParameter(std::function<void(const std::string&,
+                                              const std::string&)> addKey,
+                           std::set<std::string>& seenParams,
+                           std::string& errorMsg,
+                           const char** argv,
+                           int paramIdx);
 
 } // namespace Opm::detail
 
