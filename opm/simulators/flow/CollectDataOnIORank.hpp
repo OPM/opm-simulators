@@ -36,6 +36,8 @@
 #include <opm/simulators/flow/FlowsData.hpp>
 #include <opm/simulators/flow/InterRegFlows.hpp>
 
+#include <dune/common/version.hh>
+
 #include <array>
 #include <cstddef>
 #include <map>
@@ -55,7 +57,11 @@ template <class Grid, class EquilGrid, class GridView>
 class CollectDataOnIORank
 {
 public:
+#if DUNE_VERSION_GTE(DUNE_GRID, 2, 9)
     using CollectiveCommunication = typename Grid::Communication;
+#else
+    using CollectiveCommunication = typename Grid::CollectiveCommunication;
+#endif
     using P2PCommunicatorType = Dune::Point2PointCommunicator<Dune::SimpleMessageBuffer>;
     using IndexMapType = std::vector<int>;
     using IndexMapStorageType = std::vector<IndexMapType>;
