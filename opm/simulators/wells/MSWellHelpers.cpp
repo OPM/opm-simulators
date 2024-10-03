@@ -41,9 +41,9 @@
 #include <dune/istl/preconditioners.hh>
 #include <dune/istl/solvers.hh>
 
-#if HAVE_UMFPACK
+#if HAVE_SUITESPARSE_UMFPACK
 #include <dune/istl/umfpack.hh>
-#endif // HAVE_UMFPACK
+#endif // HAVE_SUITESPARSE_UMFPACK
 
 #include <cmath>
 #include <cstddef>
@@ -148,7 +148,7 @@ VectorType
 applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
              VectorType x)
 {
-#if HAVE_UMFPACK
+#if HAVE_SUITESPARSE_UMFPACK
     // The copy of x seems mandatory for calling UMFPack!
     VectorType y(x.size());
     y = 0.;
@@ -178,7 +178,7 @@ applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
     // this is not thread safe
     OPM_THROW(std::runtime_error, "Cannot use applyUMFPack() without UMFPACK. "
               "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
-#endif // HAVE_UMFPACK
+#endif // HAVE_SUITESPARSE_UMFPACK
 }
 
 template <typename VectorType, typename MatrixType>
@@ -187,7 +187,7 @@ invertWithUMFPack(const int size,
                   const int bsize,
                   Dune::UMFPack<MatrixType>& linsolver)
 {
-#if HAVE_UMFPACK
+#if HAVE_SUITESPARSE_UMFPACK
     VectorType e(size);
     e = 0.0;
 
@@ -217,7 +217,7 @@ invertWithUMFPack(const int size,
     // this is not thread safe
     OPM_THROW(std::runtime_error, "Cannot use invertWithUMFPack() without UMFPACK. "
               "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
-#endif // HAVE_UMFPACK
+#endif // HAVE_SUITESPARSE_UMFPACK
 }
 
 template <typename MatrixType, typename VectorType>

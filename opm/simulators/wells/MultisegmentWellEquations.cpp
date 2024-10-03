@@ -178,7 +178,7 @@ apply(BVector& r) const
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::createSolver()
 {
-#if HAVE_UMFPACK
+#if HAVE_SUITESPARSE_UMFPACK
     if (duneDSolver_) {
         return;
     }
