@@ -22,6 +22,7 @@
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
 
 #include <opm/models/utils/start.hh>
 #include <opm/material/constraintsolvers/PTFlash.hpp>
@@ -343,28 +344,28 @@ startSimulationComponents(int numComponentsRuntime, int argc, char** argv)
     // this to avoid warnings.
     return EXIT_FAILURE;
 }
+
 int
 main(int argc, char** argv)
 {
     using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<0>;
     Opm::registerEclTimeSteppingParameters<double>();
 
-    // This is a bit cumbersome, but we need to read the input file
-    // first to figure out the number of components (I think) in order
-    // to select the correct type tag.
-    //
-    // TODO: Do a more dynamic dispatch approach similar to the normal
-    //       flow application
-    auto comm = Dune::MPIHelper::instance(argc, argv).getCommunication();
-    auto commPtr = std::make_unique<decltype(comm)>(comm);
+    // At the moment, this is probably as optimal as can be.
+    // We only read the RUNSPEC of the Deck file to get the numComp,
+    // and for this we need to first read the CLI arguments.
     Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true);
 
     auto inputFilename
         = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
-    Opm::FlowGenericVanguard::setCommunication(std::move(commPtr));
-    Opm::FlowGenericVanguard::readDeck(inputFilename);
-    Opm::FlowGenericVanguard vanguard;
-    const auto numComps = vanguard.eclState().compositionalConfig().numComps();
+
+    // Only read the RUNSPEC section of the deck
+    const auto deck = Opm::Parser{}.parseFile(inputFilename,
+                                              Opm::ParseContext{},
+                                              std::vector { Opm::Ecl::SectionType::RUNSPEC });
+    const auto runspec = Opm::Runspec(deck);
+    const auto numComps = runspec.numComps();
+
     return startSimulationComponents<2, 7>(numComps, argc, argv);
 }
 
