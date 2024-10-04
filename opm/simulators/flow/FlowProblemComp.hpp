@@ -350,54 +350,65 @@ protected:
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         const auto& fp = eclState.fieldProps();
-        // const bool has_xmf = fp.has_double("XMF");
-        assert(fp.has_double("XMF"));
-        // const bool has_ymf = fp.has_double("YMF");
-        assert(fp.has_double("YMF"));
-        const bool has_temp = fp.has_double("TEMPI");
         const bool has_pressure = fp.has_double("PRESSURE");
+        if (!has_pressure)
+            throw std::runtime_error("The ECL input file requires the presence of the PRESSURE "
+                                     "keyword if the model is initialized explicitly");
+
+        const bool has_xmf = fp.has_double("XMF");
+        const bool has_ymf = fp.has_double("YMF");
+        const bool has_zmf = fp.has_double("ZMF");
+        if ( !has_zmf && !(has_xmf && has_ymf) ) {
+            throw std::runtime_error("The ECL input file requires the presence of ZMF or XMF and YMF "
+                                     "keyword if the model is initialized explicitly");
+        }
+
+        if (has_zmf && (has_xmf || has_ymf)) {
+            throw std::runtime_error("The ECL input file can not handle explicit initialization "
+                                     "with both ZMF and XMF or YMF");
+        }
+
+        if (has_xmf != has_ymf) {
+            throw std::runtime_error("The ECL input file needs XMF and YMF combined to do the explicit "
+                                     "initializtion when using XMF or YMF");
+        }
+
+        const bool has_temp = fp.has_double("TEMPI");
 
         // const bool has_gas = fp.has_double("SGAS");
         assert(fp.has_double("SGAS"));
-        if (!has_pressure)
-            throw std::runtime_error("The ECL input file requires the presence of the PRESSURE "
-                                      "keyword if the model is initialized explicitly");
 
         std::size_t numDof = this->model().numGridDof();
 
         initialFluidStates_.resize(numDof);
 
-        std::vector<double> xmfData;
-        std::vector<double> ymfData;
         std::vector<double> waterSaturationData;
         std::vector<double> gasSaturationData;
         std::vector<double> soilData;
         std::vector<double> pressureData;
         std::vector<double> tempiData;
 
-        if (waterPhaseIdx > 0 && Indices::numPhases > 1)
+        const bool water_active = FluidSystem::phaseIsActive(waterPhaseIdx);
+        const bool gas_active = FluidSystem::phaseIsActive(gasPhaseIdx);
+        const bool oil_active = FluidSystem::phaseIsActive(oilPhaseIdx);
+
+        if (water_active && Indices::numPhases > 1)
             waterSaturationData = fp.get_double("SWAT");
         else
             waterSaturationData.resize(numDof);
 
         pressureData = fp.get_double("PRESSURE");
 
-        assert(waterPhaseIdx < 0);
-
-        xmfData = fp.get_double("XMF");
-        ymfData = fp.get_double("YMF");
         if (has_temp) {
             tempiData = fp.get_double("TEMPI");
         } else {
             ; // TODO: throw?
         }
 
-        if (gasPhaseIdx > 0) // && FluidSystem::phaseIsActive(oilPhaseIdx))
+        if (gas_active) // && FluidSystem::phaseIsActive(oilPhaseIdx))
             gasSaturationData = fp.get_double("SGAS");
         else
             gasSaturationData.resize(numDof);
-
-        // constexpr std::size_t num_comps = 3;
 
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto& dofFluidState = initialFluidStates_[dofIdx];
@@ -407,11 +418,11 @@ protected:
             assert(std::isfinite(temperatureLoc) && temperatureLoc > 0);
             dofFluidState.setTemperature(temperatureLoc);
 
-            if (gasPhaseIdx > 0) {
-                    dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                                gasSaturationData[dofIdx]);
+            if (gas_active) {
+                dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
+                                            gasSaturationData[dofIdx]);
             }
-            if (oilPhaseIdx > 0) {
+            if (oil_active) {
                 dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
                                             1.0
                                             - waterSaturationData[dofIdx]
@@ -434,17 +445,37 @@ protected:
                 else if (Indices::gasEnabled)
                     dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
                 else if (Indices::waterEnabled)
-                    //single (water) phase
+                    // single (water) phase
                     dofFluidState.setPressure(phaseIdx, pressure);
             }
 
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                const std::size_t data_idx = compIdx * numDof + dofIdx;
-                const Scalar xmf = xmfData[data_idx];
-                const Scalar ymf = ymfData[data_idx];
+            if (has_xmf && has_ymf) {
+                const auto& xmfData = fp.get_double("XMF");
+                const auto& ymfData = fp.get_double("YMF");
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                    const std::size_t data_idx = compIdx * numDof + dofIdx;
+                    const Scalar xmf = xmfData[data_idx];
+                    const Scalar ymf = ymfData[data_idx];
 
-                dofFluidState.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, xmf);
-                dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, ymf);
+                    dofFluidState.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, xmf);
+                    dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, ymf);
+                }
+            }
+
+            if (has_zmf) {
+                const auto& zmfData = fp.get_double("ZMF");
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                    const std::size_t data_idx = compIdx * numDof + dofIdx;
+                    const Scalar zmf = zmfData[data_idx];
+                    if (gas_active) {
+                        const auto ymf = (dofFluidState.saturation(FluidSystem::gasPhaseIdx) > 0.) ? zmf : Scalar{0};
+                        dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, ymf);
+                    }
+                    if (oil_active) {
+                        const auto xmf = (dofFluidState.saturation(FluidSystem::oilPhaseIdx) > 0.) ? zmf : Scalar{0};
+                        dofFluidState.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, xmf);
+                    }
+                }
             }
         }
     }
