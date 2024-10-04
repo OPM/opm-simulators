@@ -628,7 +628,81 @@ doWriteOutput(const int                      reportStepNum,
               Scalar                       nextStepSize,
                data::Solution&&                   localCellData)
 {
-    std::cout << " I am here " << std::endl;
+
+    const auto isParallel = this->collectOnIORank_.isParallel();
+    const bool needsReordering = this->collectOnIORank_.doesNeedReordering();
+
+    data::Wells                                   localWellData {};
+    data::WellBlockAveragePressures               localWBP{};
+    data::GroupAndNetworkValues                   localGroupAndNetworkData{};
+    std::map<int,data::AquiferData>               localAquiferData {};
+
+    RestartValue restartValue {
+            (isParallel || needsReordering)
+            ? this->collectOnIORank_.globalCellData()
+            : std::move(localCellData),
+
+            isParallel ? this->collectOnIORank_.globalWellData()
+                       : std::move(localWellData),
+
+            isParallel ? this->collectOnIORank_.globalGroupAndNetworkData()
+                       : std::move(localGroupAndNetworkData),
+
+            isParallel ? this->collectOnIORank_.globalAquiferData()
+                       : std::move(localAquiferData)
+    };
+
+//    if (eclState_.getSimulationConfig().useThresholdPressure()) {
+//        restartValue.addExtra("THRESHPR", UnitSystem::measure::pressure,
+//                              thresholdPressure);
+//    }
+
+    // Add suggested next timestep to extra data.
+    if (! isSubStep) {
+        restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
+    }
+
+    // Add nnc flows and flores.
+//    if (false/*isFlowsn*/) {
+//        const auto flowsn_global = isParallel ? this->collectOnIORank_.globalFlowsn() : std::move(flowsn);
+//        for (const auto& flows : flowsn_global) {
+//            if (flows.name.empty())
+//                continue;
+//            if (flows.name == "FLOGASN+") {
+//                restartValue.addExtra(flows.name, UnitSystem::measure::gas_surface_rate, flows.values);
+//            } else {
+//                restartValue.addExtra(flows.name, UnitSystem::measure::liquid_surface_rate, flows.values);
+//            }
+//        }
+//    }
+//    if (/*isFloresn*/) {
+//        const auto floresn_global = isParallel ? this->collectOnIORank_.globalFloresn() : std::move(floresn);
+//        for (const auto& flores : floresn_global) {
+//            if (flores.name.empty()) {
+//                continue;
+//            }
+//            restartValue.addExtra(flores.name, UnitSystem::measure::rate, flores.values);
+//        }
+//    }
+    // make sure that the previous I/O request has been completed
+    // and the number of incomplete tasklets does not increase between
+    // time steps
+    this->taskletRunner_->barrier();
+
+    // check if there might have been a failure in the TaskletRunner
+    if (this->taskletRunner_->failure()) {
+        throw std::runtime_error("Failure in the TaskletRunner while writing output.");
+    }
+
+    // create a tasklet to write the data for the current time step to disk
+//    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
+//            actionState,
+//            isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
+//            summaryState, udqState, *this->eclIO_,
+//            reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
+//
+//    // finally, start a new output writing job
+//    this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>

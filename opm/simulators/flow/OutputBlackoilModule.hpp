@@ -206,11 +206,13 @@ public:
 
         const auto& problem = this->simulator_.problem();
 
-        // this->doAllocBuffers(bufferSize,
-        //                      reportStepNum,
-        //                      substep,
-        //                      log,
-        //                      isRestart,
+        std::cout << " let us do doAllocBuffers " << std::endl;
+
+        this->doAllocBuffers(bufferSize,
+                              reportStepNum,
+                              substep,
+                              log,
+                              isRestart);
         //                      problem.vapparsActive(std::max(simulator_.episodeIndex(), 0)),
         //                      problem.materialLawManager()->enablePCHysteresis(),
         //                      problem.materialLawManager()->enableNonWettingHysteresis(),

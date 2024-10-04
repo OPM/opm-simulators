@@ -273,7 +273,7 @@ public:
     {
         FlowProblemType::writeOutput(verbose);
 
-        bool isSubStep = !this->simulator().episodeWillBeOver();
+        const bool isSubStep = !this->simulator().episodeWillBeOver();
 
         data::Solution localCellData = {};
 #if HAVE_DAMARIS
@@ -283,8 +283,10 @@ public:
             damarisWriter_->writeOutput(localCellData, isSubStep) ;
         }
 #endif
-        if (enableEclOutput_){
-            eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+        if (enableEclOutput_) {
+            if (Parameters::Get<Parameters::EnableWriteAllSolutions>() || !isSubStep) {
+                eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+            }
         }
     }
 

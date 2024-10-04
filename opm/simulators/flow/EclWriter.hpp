@@ -234,7 +234,7 @@ public:
         //
         // const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
         // const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
-        // this->prepareLocalCellData(isSubStep, reportStepNum);
+        this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (this->outputModule_->needInterfaceFluxes(isSubStep)) {
             this->captureLocalFluxData();
