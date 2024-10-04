@@ -136,10 +136,10 @@ getInterRegFlowsAsMap(const Opm::InterRegFlowMap& map)
 
 struct EclWriteTasklet : public Opm::TaskletInterface
 {
-    Opm::Action::State actionState_;
-    Opm::WellTestState wtestState_;
-    Opm::SummaryState summaryState_;
-    Opm::UDQState udqState_;
+    // Opm::Action::State actionState_;
+    // Opm::WellTestState wtestState_;
+    // Opm::SummaryState summaryState_;
+    // Opm::UDQState udqState_;
     Opm::EclipseIO& eclIO_;
     int reportStepNum_;
     std::optional<int> timeStepNum_;
@@ -148,10 +148,10 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     Opm::RestartValue restartValue_;
     bool writeDoublePrecision_;
 
-    explicit EclWriteTasklet(const Opm::Action::State& actionState,
+    explicit EclWriteTasklet(/* const Opm::Action::State& actionState,
                              const Opm::WellTestState& wtestState,
                              const Opm::SummaryState& summaryState,
-                             const Opm::UDQState& udqState,
+                             const Opm::UDQState& udqState, */
                              Opm::EclipseIO& eclIO,
                              int reportStepNum,
                              std::optional<int> timeStepNum,
@@ -159,11 +159,11 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                              double secondsElapsed,
                              Opm::RestartValue restartValue,
                              bool writeDoublePrecision)
-        : actionState_(actionState)
+        : /* actionState_(actionState)
         , wtestState_(wtestState)
         , summaryState_(summaryState)
         , udqState_(udqState)
-        , eclIO_(eclIO)
+        , */ eclIO_(eclIO)
         , reportStepNum_(reportStepNum)
         , timeStepNum_(timeStepNum)
         , isSubStep_(isSubStep)
@@ -175,10 +175,10 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     // callback to eclIO serial writeTimeStep method
     void run()
     {
-        this->eclIO_.writeTimeStep(this->actionState_,
+        this->eclIO_.writeTimeStep(/* this->actionState_,
                                    this->wtestState_,
                                    this->summaryState_,
-                                   this->udqState_,
+                                   this->udqState_, */
                                    this->reportStepNum_,
                                    this->isSubStep_,
                                    this->secondsElapsed_,
@@ -609,10 +609,10 @@ doWriteOutput(const int                          reportStepNum,
     }
 
     // create a tasklet to write the data for the current time step to disk
-    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
+    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(/*
         actionState,
         isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
-        summaryState, udqState, *this->eclIO_,
+        summaryState, udqState, */*this->eclIO_,
         reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
 
     // finally, start a new output writing job
@@ -695,14 +695,14 @@ doWriteOutput(const int                      reportStepNum,
     }
 
     // create a tasklet to write the data for the current time step to disk
-//    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
-//            actionState,
-//            isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
-//            summaryState, udqState, *this->eclIO_,
-//            reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
-//
-//    // finally, start a new output writing job
-//    this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
+    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
+            /* actionState,
+            isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
+            summaryState, udqState, */ *this->eclIO_,
+            reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), /* doublePrecision*/ false);
+
+    // finally, start a new output writing job
+    this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
