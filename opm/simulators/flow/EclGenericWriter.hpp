@@ -137,6 +137,8 @@ protected:
     void doWriteOutput(const int                      reportStepNum,
                    const std::optional<int>           timeStepNum,
                    const bool                         isSubStep,
+                       Scalar                       curTime,
+                       Scalar                       nextStepSize,
                    data::Solution&&                   localCellData);
 
     void evalSummary(int                                                  reportStepNum,

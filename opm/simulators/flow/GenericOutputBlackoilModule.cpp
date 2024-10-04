@@ -1278,7 +1278,7 @@ doAllocBuffers(const unsigned bufferSize,
     if (FluidSystem::enableVaporizedWater() && rstKeywords["RVWSAT"] > 0) {
         rstKeywords["RVWSAT"] = 0;
         waterVaporizationFactor_.resize(bufferSize, 0.0);
-    } */
+    }
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["BW"] > 0) {
         rstKeywords["BW"] = 0;
@@ -1295,7 +1295,7 @@ doAllocBuffers(const unsigned bufferSize,
     if (rstKeywords["RPORV"] > 0) {
         rstKeywords["RPORV"] = 0;
         rPorV_.resize(bufferSize, 0.0);
-    }
+    } */
 
     enableFlows_ = false;
     enableFlowsn_ = false;

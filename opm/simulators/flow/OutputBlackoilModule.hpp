@@ -220,50 +220,50 @@ public:
         //                      problem.eclWriter()->getOutputNnc().size());
     }
 
-    void processElementMech(const ElementContext& elemCtx)
-    {
-        if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
-            const auto& problem = elemCtx.simulator().problem();
-            const auto& model = problem.geoMechModel();
-            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                if (!this->mechPotentialForce_.empty()) {
-                    // assume all mechanical things should be written
-                    this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
-                    this->mechPotentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
-                    this->mechPotentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
-
-                    this->dispX_[globalDofIdx] = model.disp(globalDofIdx, 0);
-                    this->dispY_[globalDofIdx] = model.disp(globalDofIdx, 1);
-                    this->dispZ_[globalDofIdx] = model.disp(globalDofIdx, 2);
-                    this->stressXX_[globalDofIdx] = model.stress(globalDofIdx, 0);
-                    this->stressYY_[globalDofIdx] = model.stress(globalDofIdx, 1);
-                    this->stressZZ_[globalDofIdx] = model.stress(globalDofIdx, 2);
-                    // voight notation
-                    this->stressXY_[globalDofIdx] = model.stress(globalDofIdx, 5);
-                    this->stressXZ_[globalDofIdx] = model.stress(globalDofIdx, 4);
-                    this->stressYZ_[globalDofIdx] = model.stress(globalDofIdx, 3);
-
-                    this->strainXX_[globalDofIdx] = model.strain(globalDofIdx, 0);
-                    this->strainYY_[globalDofIdx] = model.strain(globalDofIdx, 1);
-                    this->strainZZ_[globalDofIdx] = model.strain(globalDofIdx, 2);
-                    // voight notation
-                    this->strainXY_[globalDofIdx] = model.strain(globalDofIdx, 5);
-                    this->strainXZ_[globalDofIdx] = model.strain(globalDofIdx, 4);
-                    this->strainYZ_[globalDofIdx] = model.strain(globalDofIdx, 3);
-
-
-                    this->delstressXX_[globalDofIdx] = model.delstress(globalDofIdx, 0);
-                    this->delstressYY_[globalDofIdx] = model.delstress(globalDofIdx, 1);
-                    this->delstressZZ_[globalDofIdx] = model.delstress(globalDofIdx, 2);
-                    // voight notation
-                    this->delstressXY_[globalDofIdx] = model.delstress(globalDofIdx, 5);
-                    this->delstressXZ_[globalDofIdx] = model.delstress(globalDofIdx, 4);
-                    this->delstressYZ_[globalDofIdx] = model.delstress(globalDofIdx, 3);
-                }
-            }
-        }
-    }
+//    void processElementMech(const ElementContext& elemCtx)
+//    {
+//        if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+//            const auto& problem = elemCtx.simulator().problem();
+//            const auto& model = problem.geoMechModel();
+//            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+//                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+//                if (!this->mechPotentialForce_.empty()) {
+//                    // assume all mechanical things should be written
+//                    this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
+//                    this->mechPotentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
+//                    this->mechPotentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
+//
+//                    this->dispX_[globalDofIdx] = model.disp(globalDofIdx, 0);
+//                    this->dispY_[globalDofIdx] = model.disp(globalDofIdx, 1);
+//                    this->dispZ_[globalDofIdx] = model.disp(globalDofIdx, 2);
+//                    this->stressXX_[globalDofIdx] = model.stress(globalDofIdx, 0);
+//                    this->stressYY_[globalDofIdx] = model.stress(globalDofIdx, 1);
+//                    this->stressZZ_[globalDofIdx] = model.stress(globalDofIdx, 2);
+//                    // voight notation
+//                    this->stressXY_[globalDofIdx] = model.stress(globalDofIdx, 5);
+//                    this->stressXZ_[globalDofIdx] = model.stress(globalDofIdx, 4);
+//                    this->stressYZ_[globalDofIdx] = model.stress(globalDofIdx, 3);
+//
+//                    this->strainXX_[globalDofIdx] = model.strain(globalDofIdx, 0);
+//                    this->strainYY_[globalDofIdx] = model.strain(globalDofIdx, 1);
+//                    this->strainZZ_[globalDofIdx] = model.strain(globalDofIdx, 2);
+//                    // voight notation
+//                    this->strainXY_[globalDofIdx] = model.strain(globalDofIdx, 5);
+//                    this->strainXZ_[globalDofIdx] = model.strain(globalDofIdx, 4);
+//                    this->strainYZ_[globalDofIdx] = model.strain(globalDofIdx, 3);
+//
+//
+//                    this->delstressXX_[globalDofIdx] = model.delstress(globalDofIdx, 0);
+//                    this->delstressYY_[globalDofIdx] = model.delstress(globalDofIdx, 1);
+//                    this->delstressZZ_[globalDofIdx] = model.delstress(globalDofIdx, 2);
+//                    // voight notation
+//                    this->delstressXY_[globalDofIdx] = model.delstress(globalDofIdx, 5);
+//                    this->delstressXZ_[globalDofIdx] = model.delstress(globalDofIdx, 4);
+//                    this->delstressYZ_[globalDofIdx] = model.delstress(globalDofIdx, 3);
+//                }
+//            }
+//        }
+//    }
 
     /*!
      * \brief Modify the internal buffers according to the intensive
@@ -284,7 +284,7 @@ public:
             using FluidState = std::remove_cv_t<std::remove_reference_t<decltype(fs)>>;
 
             const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            const unsigned pvtRegionIdx = 0; // elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
+            // const unsigned pvtRegionIdx = 0; // elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (this->saturation_[phaseIdx].empty())
@@ -294,15 +294,15 @@ public:
                 Valgrind::CheckDefined(this->saturation_[phaseIdx][globalDofIdx]);
             }
 
-            if (this->regionAvgDensity_.has_value()) {
-                // Note: We intentionally exclude effects of rock
-                // compressibility by using referencePorosity() here.
-                const auto porv = 0; // intQuants.referencePorosity()
-                    // * elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
-
-                this->aggregateAverageDensityContributions_(fs, globalDofIdx,
-                                                            static_cast<double>(porv));
-            }
+//            if (this->regionAvgDensity_.has_value()) {
+//                // Note: We intentionally exclude effects of rock
+//                // compressibility by using referencePorosity() here.
+//                const auto porv = 0; // intQuants.referencePorosity()
+//                    // * elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+//
+//                this->aggregateAverageDensityContributions_(fs, globalDofIdx,
+//                                                            static_cast<double>(porv));
+//            }
 
             if (!this->fluidPressure_.empty()) {
                 if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
@@ -322,20 +322,20 @@ public:
                 this->temperature_[globalDofIdx] = getValue(fs.temperature(oilPhaseIdx));
                 Valgrind::CheckDefined(this->temperature_[globalDofIdx]);
             }
-            if (!this->gasDissolutionFactor_.empty()) {
-                Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
-                this->gasDissolutionFactor_[globalDofIdx]
-                    = 0; //FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(
-                        // fs, oilPhaseIdx, pvtRegionIdx, SoMax);
-                Valgrind::CheckDefined(this->gasDissolutionFactor_[globalDofIdx]);
-            }
-            if (!this->oilVaporizationFactor_.empty()) {
-                Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
-                this->oilVaporizationFactor_[globalDofIdx]
-                    = 0; // FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(
-                        // fs, gasPhaseIdx, pvtRegionIdx, SoMax);
-                Valgrind::CheckDefined(this->oilVaporizationFactor_[globalDofIdx]);
-            }
+//            if (!this->gasDissolutionFactor_.empty()) {
+//                Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
+//                this->gasDissolutionFactor_[globalDofIdx]
+//                    = 0; //FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(
+//                        // fs, oilPhaseIdx, pvtRegionIdx, SoMax);
+//                Valgrind::CheckDefined(this->gasDissolutionFactor_[globalDofIdx]);
+//            }
+//            if (!this->oilVaporizationFactor_.empty()) {
+//                Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
+//                this->oilVaporizationFactor_[globalDofIdx]
+//                    = 0; // FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(
+//                        // fs, gasPhaseIdx, pvtRegionIdx, SoMax);
+//                Valgrind::CheckDefined(this->oilVaporizationFactor_[globalDofIdx]);
+//            }
             // if (!this->gasDissolutionFactorInWater_.empty()) {
             //     Scalar SwMax = elemCtx.problem().maxWaterSaturation(globalDofIdx);
             //     this->gasDissolutionFactorInWater_[globalDofIdx]
