@@ -22,6 +22,10 @@
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 
+#include <opm/models/utils/start.hh>
+
+#include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
+
 #include "flowexp_comp.hpp"
 
 int main(int argc, char** argv)
