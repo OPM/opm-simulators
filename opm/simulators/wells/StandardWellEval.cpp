@@ -134,13 +134,20 @@ getWellConvergence(const WellState<Scalar>& well_state,
 
         if (std::isnan(well_flux_residual[compIdx])) {
             report.setWellFailed({type, CR::Severity::NotANumber, compIdx, baseif_.name()});
+            report.setWellConvergenceMetric(type, CR::Severity::NotANumber, compIdx, well_flux_residual[compIdx], baseif_.name());
         } else if (well_flux_residual[compIdx] > maxResidualAllowed) {
             report.setWellFailed({type, CR::Severity::TooLarge, compIdx, baseif_.name()});
+            report.setWellConvergenceMetric(type, CR::Severity::TooLarge, compIdx, well_flux_residual[compIdx], baseif_.name());
         } else if (!relax_tolerance && well_flux_residual[compIdx] > tol_wells) {
             report.setWellFailed({type, CR::Severity::Normal, compIdx, baseif_.name()});
+            report.setWellConvergenceMetric(type, CR::Severity::Normal, compIdx, well_flux_residual[compIdx], baseif_.name());
         } else if (well_flux_residual[compIdx] > relaxed_tolerance_flow) {
             report.setWellFailed({type, CR::Severity::Normal, compIdx, baseif_.name()});
+            report.setWellConvergenceMetric(type, CR::Severity::Normal, compIdx, well_flux_residual[compIdx], baseif_.name());
+        } else {
+            report.setWellConvergenceMetric(CR::WellFailure::Type::Invalid, CR::Severity::None, compIdx, well_flux_residual[compIdx], baseif_.name());
         }
+
     }
 
     WellConvergence(baseif_).

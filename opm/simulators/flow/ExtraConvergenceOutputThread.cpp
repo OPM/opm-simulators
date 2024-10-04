@@ -65,6 +65,9 @@ namespace {
             "CnvCellCntConv"s,
             "CnvCellCntRelax"s,
             "CnvCellCntUnconv"s,
+            "PenaltyNonConv"s,
+            "PenaltyDecay"s,
+            "PenaltyWellRes"s,
         };
     }
 
@@ -190,6 +193,17 @@ namespace {
         }
     }
 
+    void writePenaltyCount(std::ostream&                 os,
+                           const std::string::size_type  firstColSize,
+                           const Opm::ConvergenceReport& report)
+    {
+        const auto& penaltyCard = report.getPenaltyCard();
+
+        os << ' ' << std::setw(firstColSize) << penaltyCard.nonConverged;
+        os << ' ' << std::setw(firstColSize) << penaltyCard.distanceDecay;
+        os << ' ' << std::setw(firstColSize) << penaltyCard.largeWellResiduals;
+    }
+
     void writeReservoirConvergence(std::ostream&                 os,
                                    const std::string::size_type  colSize,
                                    const Opm::ConvergenceReport& report)
@@ -228,6 +242,8 @@ namespace {
             writeTimeColumns(os, convertTime, firstColSize, iter, report, request);
 
             writeCnvPvSplit(os, expectNumCnvSplit, firstColSize, report);
+
+            writePenaltyCount(os, firstColSize, report);
 
             writeReservoirConvergence(os, colSize, report);
             writeWellConvergence(os, colSize, report);

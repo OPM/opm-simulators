@@ -95,6 +95,10 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_max_iterations_ = Parameters::Get<Parameters::NetworkMaxIterations>();
     local_domain_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
+
+    convergence_monitoring_ = Parameters::Get<Parameters::ConvergenceMonitoring>();
+    convergence_monitoring_cutoff_ = Parameters::Get<Parameters::ConvergenceMonitoringCutOff>();
+    convergence_monitoring_decay_factor_ = Parameters::Get<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>();
 }
 
 template<class Scalar>
@@ -230,6 +234,13 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "and  'residual'.");
     Parameters::Register<Parameters::DebugEmitCellPartition>
         ("Whether or not to emit cell partitions as a debugging aid.");
+
+    Parameters::Register<Parameters::ConvergenceMonitoring>
+        ("Enable convergence monitoring");
+    Parameters::Register<Parameters::ConvergenceMonitoringCutOff>
+        ("Cut off limit for convergence monitoring");
+    Parameters::Register<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>
+        ("Decay factor for convergence monitoring");
 
     Parameters::Hide<Parameters::DebugEmitCellPartition>();
 

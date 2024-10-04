@@ -366,9 +366,14 @@ namespace Opm {
 
                 // Throw if any NaN or too large residual found.
                 if (severity == ConvergenceReport::Severity::NotANumber) {
+                    failureReport_ += report;
                     OPM_THROW_PROBLEM(NumericalProblem, "NaN residual found!");
                 } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                    failureReport_ += report;
                     OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
+                } else if (severity == ConvergenceReport::Severity::ConvergenceMonitorFailure) {
+                    failureReport_ += report;
+                    OPM_THROW_PROBLEM(ConvergenceMonitorFailure, "Total penalty count exceeded cut-off-limit of " + std::to_string(param_.convergence_monitoring_cutoff_));
                 }
             }
             report.update_time += perfTimer.stop();
@@ -392,6 +397,9 @@ namespace Opm {
                 // For each iteration we store in a vector the norms of the residual of
                 // the mass balance for each active phase, the well flux and the well equations.
                 residual_norms_history_.clear();
+                total_penaltyCard_.reset();
+                prev_above_tolerance_ = 0;
+                prev_distance_ = std::numeric_limits<double>::infinity();
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
                 convergence_reports_.push_back({timer.reportStepNum(), timer.currentStepNum(), {}});
@@ -1062,7 +1070,7 @@ namespace Opm {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                     }
 
-                    report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
+                    report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii], tol[ii]);
                 }
             }
 
@@ -1108,6 +1116,51 @@ namespace Opm {
             return report;
         }
 
+    void checkCardPenalty(ConvergenceReport& report, int iteration)
+    {
+
+        const auto& current_metrics = report.reservoirConvergence();
+        auto distances = std::vector<double>(current_metrics.size(), 0.0);
+        int current_above_tolerance = 0;
+
+        for (size_t i = 0; i < current_metrics.size(); ++i) {
+            distances[i] = std::max(std::log10(current_metrics[i].value()/current_metrics[i].tolerance()), 0.0);
+                // Count number of metrics above tolerance
+                if (current_metrics[i].value() > current_metrics[i].tolerance()) {
+                    current_above_tolerance++;
+                }
+            }
+
+        // use L1 norm of the distances vector
+        double current_distance = std::accumulate(distances.begin(), distances.end(), 0.0);
+
+        if (iteration > 0) {
+            // Add penalty if number of metrics above tolerance has increased
+            if (current_above_tolerance > prev_above_tolerance_) {
+                report.addNonConvergedPenalty();
+            }
+
+            if (current_distance > param_.convergence_monitoring_decay_factor_ * prev_distance_) {
+                report.addDistanceDecayPenalty();
+            }
+        }
+
+        prev_distance_ = current_distance;
+        prev_above_tolerance_ = current_above_tolerance;
+
+        if (report.wellFailures().size() > 0) {
+            report.addLargeWellResidualsPenalty();
+        }
+
+        total_penaltyCard_ += report.getPenaltyCard();
+
+        if (param_.convergence_monitoring_ && (total_penaltyCard_.total() > param_.convergence_monitoring_cutoff_)) {
+            report.setReservoirFailed({ConvergenceReport::ReservoirFailure::Type::ConvergenceMonitorFailure,
+                                       ConvergenceReport::Severity::ConvergenceMonitorFailure,
+                                       -1}); // -1 indicates it's not specific to any component
+        }
+    }
+
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
         /// \param[in]   timer       simulation timer
@@ -1129,6 +1182,9 @@ namespace Opm {
                 OPM_TIMEBLOCK(getWellConvergence);
                 report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
             }
+
+            checkCardPenalty(report, iteration);
+
             return report;
         }
 
@@ -1395,7 +1451,9 @@ namespace Opm {
         Scalar drMaxRel() const { return param_.dr_max_rel_; }
         Scalar maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
-
+        ConvergenceReport::PenaltyCard total_penaltyCard_;
+        double prev_distance_ = std::numeric_limits<double>::infinity();
+        int prev_above_tolerance_ = 0;
     public:
         std::vector<bool> wasSwitched_;
     };
