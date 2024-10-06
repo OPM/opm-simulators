@@ -169,7 +169,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"EPSDBGS", {false, std::nullopt}},
         {"EPSDEBUG", {false, std::nullopt}},
         {"EQLZCORN", {true, std::nullopt}},
-        {"EQUALREG", {true, std::nullopt}},
         {"ESSNODE", {true, std::nullopt}},
         {"EXCAVATE", {true, std::nullopt}},
         {"EXCEL", {false, std::nullopt}},
