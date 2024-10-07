@@ -1,6 +1,6 @@
 //===========================================================================
 //
-// File: LevelsCartesianIndexMapper.hh
+// File: AluGridLevelCartesianIndexMapper.hpp
 //
 // Created: Tue October 01  09:44:00 2024
 //
@@ -31,71 +31,65 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_POLYHEDRALGRIDLEVELSCARTESIANINDEXMAPPER_HH
-#define OPM_POLYHEDRALGRIDLEVELSCARTESIANINDEXMAPPER_HH
+#ifndef OPM_ALUGRIDLEVELCARTESIANINDEXMAPPER_HH
+#define OPM_ALUGRIDLEVELCARTESIANINDEXMAPPER_HH
 
-#include <opm/grid/common/LevelsCartesianIndexMapper.hh>
-#include <opm/grid/polyhedralgrid.hh>
+#include <opm/grid/common/LevelCartesianIndexMapper.hh>
+#include <dune/alugrid/grid.hh>
 
 #include <memory>
 
 
-namespace Dune
-{
-template<...>
-class AluGrid;
-}
-
 namespace Opm
 {
 
-template<...>
-class LevelsCartesianIndexMapper<<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
+template<>
+class LevelCartesianIndexMapper<<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
 {
-   
+
 #if HAVE_MPI
-    using Grid = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>; 
-#else    
+    using Grid = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
     using Grid = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
 #endif //HAVE_MPI
-    
-public:
+
+ public:
     static const int dimension = 3 ;
 
-    explicit LevelsCartesianIndexMapper(const Grid& grid) : grid_{ &grid }// std::make_unique<Grid>(grid)}
+    explicit LevelCartesianIndexMapper(const Grid& grid) : grid_{ &grid }// std::make_unique<Grid>(grid)}
     {}
 
-    const std::array<int,3>& levelCartesianDimensions(int level) const
+    const std::array<int,3>& cartesianDimensions(int level) const
     {
         throwIfLevelPositive(level);
         return grid_->logicalCartesianSize();
     }
 
-    int levelCartesianSize(int level) const
+    int cartesianSize(int level) const
     {
         throwIfLevelPositive(level);
         return computeLevelCartesianSize(0);
     }
 
-    int levelCompressedSize(int level) const
+    int compressedSize(int level) const
     {
         throwIfLevelPositive(level);
         return grid_->size(0);
     }
 
 
-    int cartesianIndexLevel( const int compressedElementIndex, const int level) const
+    int cartesianIndex( const int compressedElementIndex, const int level) const
     {
         throwIfLevelPositive(level);
-        assert( compressedElementIndex >= 0 && compressedElementIndex < levelCompressedSize(0) );
+        assert( compressedElementIndex >= 0 && compressedElementIndex < compressedSize(0) );
         return grid_->globalCell()[ compressedElementIndex ];
     }
 
-    void cartesianCoordinateLevel(const int compressedElementIndex, std::array<int,dimension>& coords, int level) const
+    void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords, int level) const
     {
         throwIfLevelPositive(level);
 
-        int gc = cartesianIndexLevel( compressedElementIndex, 0);
+        int gc = cartesianIndex( compressedElementIndex, 0);
         auto cartesianDimensions = grid_->logicalCartesianSize();
         if( dimension >=2 )
         {
@@ -111,14 +105,14 @@ public:
             coords[ 0 ] = gc ;
     }
 
-private:
+ private:
     const Grid* grid_;
 
-    int computeLevelCartesianSize(int level) const
+    int computeCartesianSize(int level) const
     {
-        int size = levelCartesianDimensions(level)[ 0 ];
+        int size = cartesianDimensions(level)[ 0 ];
         for( int d=1; d<dimension; ++d )
-            size *= levelCartesianDimensions(level)[ d ];
+            size *= cartesianDimensions(level)[ d ];
         return size;
     }
 
