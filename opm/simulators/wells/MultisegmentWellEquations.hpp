@@ -145,6 +145,9 @@ public:
     BVectorWell resWell_;
 
     const MultisegmentWellGeneric<Scalar>& well_; //!< Reference to well
+
+    // Store the global index of well perforated cells
+    std::vector<int> cells_;
 };
 
 }

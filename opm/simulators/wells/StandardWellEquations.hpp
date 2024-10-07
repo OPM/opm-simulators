@@ -150,6 +150,9 @@ private:
     // several vector used in the matrix calculation
     mutable BVectorWell Bx_;
     mutable BVectorWell invDrw_;
+
+    // Store the global index of well perforated cells
+    std::vector<int> cells_;
 };
 
 }
