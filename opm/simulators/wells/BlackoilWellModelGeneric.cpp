@@ -1843,27 +1843,26 @@ updateFiltrationModelsPostStep(const double dt,
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
+updateInjMult(DeferredLogger& deferred_logger)
+{
+    for (const auto& well : this->well_container_generic_) {
+        if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
+            well->updateInjMult(this->prev_inj_multipliers_[well->name()], deferred_logger);
+        }
+    }
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
 updateFiltrationModelsPreStep(DeferredLogger& deferred_logger)
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector()) {
             const auto it = filter_cake_.find(well->name());
             if (it != filter_cake_.end()) {
-                well->updateFilterCakeMultipliers(it->second.multipliers());
                 it->second.updatePreStep(*well, deferred_logger);
+                well->updateFilterCakeMultipliers(it->second.multipliers());
             }
-        }
-    }
-}
-
-
-template<class Scalar>
-void BlackoilWellModelGeneric<Scalar>::
-updateInjMult(DeferredLogger& deferred_logger)
-{
-    for (const auto& well : this->well_container_generic_) {
-        if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
-            well->updateInjMult(this->prev_inj_multipliers_[well->name()], deferred_logger);
         }
     }
 }

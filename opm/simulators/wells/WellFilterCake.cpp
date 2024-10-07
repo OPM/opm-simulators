@@ -92,6 +92,8 @@ applyCleaning(const WellInterfaceGeneric<Scalar>& well,
 
         filter_cake.sf_multiplier = 1.0;
         skin_factor_[perf] *= factor;
+        const auto denom = connection.ctfProperties().peaceman_denom;
+        inj_fc_multiplier_[perf] = denom / (denom + skin_factor_[perf]);
         const Scalar rw = connection.getFilterCakeRadius();
         switch (filter_cake.geometry) {
             case FilterCake::FilterCakeGeometry::LINEAR: {
