@@ -28,6 +28,7 @@
 namespace Opm {
 
     class EclipseState;
+    template <typename Grid> class LevelCartesianIndexMapper;
     class MiscTable;
     class MsfnTable;
     class SgcwmisTable;

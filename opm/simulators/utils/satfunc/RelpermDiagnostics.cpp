@@ -45,6 +45,8 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hh>
+#include <opm/grid/polyhedralgrid/levelcartesianindexmapper.hh>
 
 #ifdef HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
@@ -842,7 +844,7 @@ namespace Opm {
     {
         // All end points are subject to round-off errors, checks should account for it
         const float tolerance = 1e-6;
-        const int nc = cartesianIndexMapper.compressedLevelZeroSize();
+        const int nc = cartesianIndexMapper.compressedSize(0);
         const bool threepoint = eclState.runspec().endpointScaling().threepoint();
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties(eclState, false);
@@ -852,7 +854,7 @@ namespace Opm {
             std::string cellIdx;
             {
                 std::array<int, 3> ijk;
-                cartesianIndexMapper.cartesianCoordinateLevel(c, ijk, 0);
+                cartesianIndexMapper.cartesianCoordinate(c, ijk, 0);
                 cellIdx = "(" + std::to_string(ijk[0]) + ", " +
                     std::to_string(ijk[1]) + ", " +
                     std::to_string(ijk[2]) + ")";
@@ -887,8 +889,8 @@ namespace Opm {
     }
 
 #define INSTANCE_DIAGNOSIS(...) \
-    template void RelpermDiagnostics::diagnosis<Dune::CartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Dune::CartesianIndexMapper<__VA_ARGS__>&); \
-    template void RelpermDiagnostics::scaledEndPointsCheck_<Dune::CartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Dune::CartesianIndexMapper<__VA_ARGS__>&);
+    template void RelpermDiagnostics::diagnosis<Opm::LevelCartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Opm::LevelCartesianIndexMapper<__VA_ARGS__>&); \
+    template void RelpermDiagnostics::scaledEndPointsCheck_<Opm::LevelCartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Opm::LevelCartesianIndexMapper<__VA_ARGS__>&);
 
     INSTANCE_DIAGNOSIS(Dune::CpGrid)
     INSTANCE_DIAGNOSIS(Dune::PolyhedralGrid<3,3>)
