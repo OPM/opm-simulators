@@ -237,7 +237,7 @@ public:
     int compressedLevelZeroSize() const
     { return cartesianIndex_.size(); }
 
-    /** \brief Only for unifying calls with CpGrid specializations. */.
+    /** \brief Only for unifying calls with CpGrid specializations. */
     int cartesianIndexLevel(const int compressedElementIndex, const int level) const
     {
         if (level) {
