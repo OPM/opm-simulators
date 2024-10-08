@@ -50,18 +50,14 @@ updatePostStep(const WellInterfaceGeneric<Scalar>& well,
     assert (conc > 0.);
     auto& ws = well_state.well(well.indexOfWell());
     const auto nperf = ws.perf_data.size();
-    if (prev_skin_factor_.empty()) {
-        prev_skin_factor_.assign(nperf, 0.);
+    if (skin_factor_.empty()) {
         skin_factor_.assign(nperf, 0.);
         thickness_.assign(nperf, 0.);
-        prev_thickness_.assign(nperf, 0.);
     }
 
-    prev_skin_factor_ = skin_factor_;
-    prev_thickness_ = thickness_;
     ws.filtrate_conc = conc;
 
-    updateMultipliers(well, well_state, dt, water_index, deferred_logger);
+    updateSkinFactorsAndMultipliers(well, well_state, dt, water_index, deferred_logger);
 }
 
 template<class Scalar>
@@ -92,18 +88,17 @@ applyCleaning(const WellInterfaceGeneric<Scalar>& well,
 
         filter_cake.sf_multiplier = 1.0;
         skin_factor_[perf] *= factor;
-        const auto denom = connection.ctfProperties().peaceman_denom;
-        inj_fc_multiplier_[perf] = denom / (denom + skin_factor_[perf]);
+        updateMultiplier(connection, perf);
         const Scalar rw = connection.getFilterCakeRadius();
         switch (filter_cake.geometry) {
             case FilterCake::FilterCakeGeometry::LINEAR: {
-                // Previuos thickness adjusted to give correct cleaning multiplier at start of time step
+                // Previous thickness adjusted to give correct cleaning multiplier at start of time step
                 thickness_[perf] *= factor;
                 break;
             }
             case FilterCake::FilterCakeGeometry::RADIAL: {
-                Scalar rc_prev = std::sqrt(rw * rw + 2. * rw * prev_thickness_[perf]);
-                // Previuos thickness and rc adjusted to give correct cleaning multiplier at start of time step
+                Scalar rc_prev = std::sqrt(rw * rw + 2. * rw * thickness_[perf]);
+                // Previous thickness and rc adjusted to give correct cleaning multiplier at start of time step
                 rc_prev = rw*std::exp(factor*std::log(rc_prev/rw));
                 thickness_[perf] = (rc_prev * rc_prev - rw * rw) / (2. * rw);
                 break;
@@ -122,7 +117,7 @@ applyCleaning(const WellInterfaceGeneric<Scalar>& well,
 
 template<class Scalar>
 void WellFilterCake<Scalar>::
-updateMultipliers(const WellInterfaceGeneric<Scalar>& well,
+updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
                   WellState<Scalar>& well_state,
                   const double dt,
                   const std::size_t water_index,
@@ -174,13 +169,13 @@ updateMultipliers(const WellInterfaceGeneric<Scalar>& well,
         Scalar thickness = 0.;
         switch (filter_cake.geometry) {
             case FilterCake::FilterCakeGeometry::LINEAR: {
-                thickness = prev_thickness_[perf] + delta_thickness;
+                thickness = thickness_[perf] + delta_thickness;
                 filtrate_data.thickness[perf] = thickness;
                 delta_skin_factor = delta_thickness / rw * K / perm;
                 break;
             }
             case FilterCake::FilterCakeGeometry::RADIAL: {
-                const auto prev_thickness = prev_thickness_[perf];
+                const auto prev_thickness = thickness_[perf];
                 Scalar rc_prev = std::sqrt(rw * rw + 2. * rw * prev_thickness);
                 thickness = prev_thickness + delta_thickness;
 
@@ -197,14 +192,21 @@ updateMultipliers(const WellInterfaceGeneric<Scalar>& well,
                                                 geometry, well.name()),
                                     deferred_logger);
         }
-        skin_factor_[perf] = prev_skin_factor_[perf] + delta_skin_factor;
+        skin_factor_[perf] += delta_skin_factor;
         filtrate_data.skin_factor[perf] = skin_factor_[perf];
         thickness_[perf] = thickness;
 
-        const auto denom = connection.ctfProperties().peaceman_denom;
-        const auto denom2 = denom + skin_factor_[perf];
-        inj_fc_multiplier_[perf] = denom / denom2;
+        updateMultiplier(connection, perf);
     }
+}
+
+template<class Scalar> template <class Conn>
+void WellFilterCake<Scalar>::
+updateMultiplier(const Conn& connection, const int perf)
+{
+    const auto denom = connection.ctfProperties().peaceman_denom;
+    const auto denom2 = denom + skin_factor_[perf];
+    inj_fc_multiplier_[perf] = denom / denom2;
 }
 
 template class WellFilterCake<double>;

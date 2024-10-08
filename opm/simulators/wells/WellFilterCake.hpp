@@ -52,11 +52,13 @@ public:
 
 private:
     //! \brief Update the multiplier for well transmissbility due to cake filtration.
-    void updateMultipliers(const WellInterfaceGeneric<Scalar>& well,
-                           WellState<Scalar>& well_state,
-                           const double dt,
-                           const std::size_t water_index,
-                           DeferredLogger& deferred_logger);
+    void updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
+                                         WellState<Scalar>& well_state,
+                                         const double dt,
+                                         const std::size_t water_index,
+                                         DeferredLogger& deferred_logger);
+    template<class Conn>
+    void updateMultiplier(const Conn& conn, const int perf);
 
     //! \brief Apply cleaning multipliers to skin factors and reduce cake thickness accordingly
     //! \details The cake thickness is re-computed to give the new (reduced) skin factor with current cake properties
@@ -66,9 +68,7 @@ private:
 
     std::vector<Scalar> inj_fc_multiplier_; //!< Multiplier due to injection filtration cake
     std::vector<Scalar> skin_factor_;
-    std::vector<Scalar> prev_skin_factor_;
     std::vector<Scalar> thickness_;
-    std::vector<Scalar> prev_thickness_;
 };
 
 }
