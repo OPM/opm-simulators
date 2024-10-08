@@ -22,6 +22,9 @@
 #ifndef OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -67,17 +70,21 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
-    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well);
+    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info);
 
     //! \brief Setup sparsity pattern for the matrices.
-    //! \param num_cells Total number of cells
-    //! \param numPerfs Number of perforations
-    //! \param cells Cell indices for perforations
-    //! \param segment_inlets Cell indices for segment inlets
-    //! \param segment_perforations Cell indices for segment perforations
-    void init(const int num_cells,
-              const int numPerfs,
+    //! \param num_cells_this_process Number of cells on this process
+    //! \param num_perfs_whole_mswell Number of cells of the whole well
+    //! \param num_perfs_this_process Number of perforations on this process
+    //! \param num_perfs_whole_mswell Number of perforations of the whole well
+    //! \param cells Cell indices for perforations of the whole well
+    //! \param segment_inlets Cell indices for segment inlets of the whole well
+    void init(const int num_cells_this_process,
+              const int num_cells_all_processes_of_this_well,
+              const int num_perfs_this_process,
+              const int num_perfs_whole_mswell,
               const std::vector<int>& cells,
+              const std::vector<int>& cells_whole_mswell,
               const std::vector<std::vector<int>>& segment_inlets,
               const std::vector<std::vector<int>>& segment_perforations);
 
@@ -128,6 +135,16 @@ public:
         return resWell_;
     }
 
+    //! \brief Returns a const reference to duneD_.
+    const DiagMatWell& duneD() const
+    {
+        return duneD_;
+    }
+
+
+    OffDiagMatWell duneBGlobal_;
+    OffDiagMatWell duneCGlobal_;
+
   private:
     friend class MultisegmentWellEquationAccess<Scalar,numWellEq,numEq>;
     // two off-diagonal matrices
@@ -145,6 +162,7 @@ public:
     BVectorWell resWell_;
 
     const MultisegmentWellGeneric<Scalar>& well_; //!< Reference to well
+    const ParallelWellInfo<Scalar>& pw_info_;
 };
 
 }
