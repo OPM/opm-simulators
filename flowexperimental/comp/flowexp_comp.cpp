@@ -17,292 +17,48 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
+
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
+
 #include <opm/models/utils/start.hh>
-#include <opm/material/constraintsolvers/PTFlash.hpp>
-#include "../FlowExpNewtonMethod.hpp"
-#include <opm/models/ptflash/flashmodel.hh>
-#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
-#include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
-#include <opm/simulators/flow/FlowProblemComp.hpp>
-#include <opm/simulators/flow/FlowProblemCompProperties.hpp>
-// TODO: not understanding why we need FlowGenericProblem here
-#include <opm/simulators/flow/FlowGenericProblem.hpp>
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
-#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
-// // the current code use eclnewtonmethod adding other conditions to proceed_ should do the trick for KA
-// // adding linearshe sould be chaning the update_ function in the same class with condition that the error is reduced.
-// the trick is to be able to recalculate the residual from here.
-// unsure where the timestepping is done from suggestedtime??
-// suggestTimeStep is taken from newton solver in problem.limitTimestep
-namespace Opm{
-    template<typename TypeTag>
-    class EmptyModel : public BaseAuxiliaryModule<TypeTag>
-    {
-        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-        using GridView = GetPropType<TypeTag, Properties::GridView>;
-        using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
-        using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
-    public:
-        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        EmptyModel(Simulator& /*simulator*/){
-        };
-        void init(){}
-        template<class Something>
-        void init(Something /*A*/){}
-        void prepareTracerBatches(){};
-        using NeighborSet = std::set<unsigned>;
-        void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/){};
-        unsigned numDofs() const{return 0;};
-        void addNeighbors(std::vector<NeighborSet>& /*neighbors*/) const{};
-        //void applyInitial(){};
-        void initialSolutionApplied(){};
-        //void initFromRestart(const data::Aquifers& aquiferSoln);
-        template <class Restarter>
-        void serialize(Restarter& /*res*/){};
-
-        template <class Restarter>
-        void deserialize(Restarter& /*res*/){};
-
-        void beginEpisode(){};
-        void beginTimeStep(){};
-        void beginIteration(){};
-        // add the water rate due to aquifers to the source term.
-        template<class RateVector, class Context>
-        void addToSource(RateVector& /*rates*/, const Context& /*context*/,
-                         unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const {}
-        template<class RateVector>
-        void addToSource(RateVector& /*rates*/, unsigned /*globalSpaceIdx*/,
-                         unsigned /*timeIdx*/) const {}
-        void endIteration()const{};
-        void endTimeStep(){};
-        void endEpisode(){};
-        void applyInitial(){};
-        template<class RateType>
-        void computeTotalRatesForDof(RateType& /*rate*/, unsigned /*globalIdx*/) const{};
-    };
-
-}
-
-
-namespace Opm::Properties {
-
-   namespace TTag {
-   struct FlowExpCompProblem {
-       using InheritsFrom = std::tuple<FlowBaseProblemComp, FlashModel>;
-   };
-   }
-
-    template<class TypeTag>
-    struct SparseMatrixAdapter<TypeTag, TTag::FlowExpCompProblem>
-    {
-    private:
-        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-        enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-        using Block = MatrixBlock<Scalar, numEq, numEq>;
-
-    public:
-        using type = typename Linear::IstlSparseMatrixAdapter<Block>;
-    };
-
-#if 0
-template<class TypeTag>
-struct SolidEnergyLaw<TypeTag, TTag::FlowExpCompProblem>
-{
-private:
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-
-public:
-    using EclThermalLawManager = ::Opm::EclThermalLawManager<Scalar, FluidSystem>;
-
-    using type = typename EclThermalLawManager::SolidEnergyLaw;
-};
-
-// Set the material law for thermal conduction
-template<class TypeTag>
-struct ThermalConductionLaw<TypeTag, TTag::FlowExpCompProblem>
-{
-private:
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-
-public:
-    using EclThermalLawManager = ::Opm::EclThermalLawManager<Scalar, FluidSystem>;
-
-    using type = typename EclThermalLawManager::ThermalConductionLaw;
-};
-
-
-template <class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::FlowExpCompProblem>
-{
-    using type = TTag::EcfvDiscretization;
-};
-
-template <class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::FlowExpCompProblem>
-{
-    using type = TTag::AutoDiffLocalLinearizer;
-};
-#endif
-
-// Set the problem property
-template <class TypeTag>
-struct Problem<TypeTag, TTag::FlowExpCompProblem>
-{
-    using type = FlowProblemComp<TypeTag>;
-};
-
-template<class TypeTag>
-struct AquiferModel<TypeTag, TTag::FlowExpCompProblem> {
-    using type = EmptyModel<TypeTag>;
-};
-
-template<class TypeTag>
-struct WellModel<TypeTag, TTag::FlowExpCompProblem> {
-    using type = EmptyModel<TypeTag>;
-};
-
-template<class TypeTag>
-struct TracerModel<TypeTag, TTag::FlowExpCompProblem> {
-    using type = EmptyModel<TypeTag>;
-};
-
-
-template <class TypeTag>
-struct FlashSolver<TypeTag, TTag::FlowExpCompProblem> {
-private:
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-
-public:
-    using type = Opm::PTFlash<Scalar, FluidSystem>;
-};
-
-
-template <class TypeTag, class MyTypeTag>
-struct NumComp { using type = UndefinedProperty; };
-
-// TODO: this is unfortunate, have to check why we need to hard-code it
-template <class TypeTag>
-struct NumComp<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr int value = 3;
-};
-#if 0
-struct Temperature { using type = UndefinedProperty; };
-
- template <class TypeTag>
- struct Temperature<TypeTag, TTag::FlowExpCompProblem> {
-     using type = GetPropType<TypeTag, Scalar>;
-     static constexpr type value = 423.25;
- };
-#endif
-
-template <class TypeTag>
-struct FluidSystem<TypeTag, TTag::FlowExpCompProblem>
-{
-private:
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr int num_comp = getPropValue<TypeTag, Properties::NumComp>();
-
-public:
-    using type = Opm::GenericOilGasFluidSystem<Scalar, num_comp>;
-};
-template<class TypeTag>
-struct EnableMech<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
-
-template<class TypeTag>
-struct Stencil<TypeTag, TTag::FlowExpCompProblem>
-{
-private:
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
-
-public:
-    using type = EcfvStencil<Scalar, GridView>;
-};
-
-template<class TypeTag>
-struct EnableApiTracking<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnablePolymerMW<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EnableSolvent<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableFoam<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableExtbo<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-// disable thermal flux boundaries by default
-#if 0
-template<class TypeTag>
-struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-#endif
-
-} // namespace Opm::Properties
-
+#include "flowexp_comp.hpp"
 
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::FlowExpCompProblem;
+    using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<0>;
     Opm::registerEclTimeSteppingParameters<double>();
-    return Opm::start<TypeTag>(argc, argv);
+
+    // At the moment, this is probably as optimal as can be.
+    // We only read the RUNSPEC of the Deck file to get the numComp,
+    // and for this we need to first read the CLI arguments.
+    Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true);
+
+    auto inputFilename
+        = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
+
+    // Only read the RUNSPEC section of the deck
+    const auto deck = Opm::Parser{}.parseFile(inputFilename,
+                                              Opm::ParseContext{},
+                                              std::vector { Opm::Ecl::SectionType::RUNSPEC });
+    const auto runspec = Opm::Runspec(deck);
+    const auto numComps = runspec.numComps();
+
+    OPM_ERROR_IF(numComps < 2 || numComps < 7,
+                 "Deck has {} components, not supported. We support a maximum of 7 components, "
+                 "and a minimum of 2.");
+
+    switch (numComps) {
+    case 2: return Opm::dispatchFlowExpComp<2>(argc, argv);
+    case 3: return Opm::dispatchFlowExpComp<3>(argc, argv);
+    case 4: return Opm::dispatchFlowExpComp<4>(argc, argv);
+    case 5: return Opm::dispatchFlowExpComp<5>(argc, argv);
+    case 6: return Opm::dispatchFlowExpComp<6>(argc, argv);
+    case 7: return Opm::dispatchFlowExpComp<7>(argc, argv);
+    }
 }
+
