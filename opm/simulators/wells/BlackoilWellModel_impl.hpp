@@ -1969,8 +1969,15 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
+            BVector x_local;
             for (auto& well : well_container_) {
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x, this->wellState(), local_deferredLogger);
+                auto cells = well->cells();
+                x_local.resize(cells.size());
+
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    x_local[i] = x[cells[i]];
+                }
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local, this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
@@ -1988,9 +1995,16 @@ namespace Opm {
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
         DeferredLogger local_deferredLogger;
+        BVector x_local;
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x,
+                auto cells = well->cells();
+                x_local.resize(cells.size());
+
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    x_local[i] = x[cells[i]];
+                }
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local,
                                                             this->wellState(),
                                                             local_deferredLogger);
             }
