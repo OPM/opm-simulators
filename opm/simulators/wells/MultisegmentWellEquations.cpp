@@ -43,6 +43,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+//define COMMENTS
 
 namespace Opm {
 
@@ -181,6 +182,16 @@ template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 apply(const BVector& x, BVector& Ax) const
 {
+
+#ifdef COMMENTS
+    std::cout << "In apply, x:" << std::endl;
+    for (int i = 0; i < x.size(); i++)
+        std::cout << i << ": " << x[i] << std::endl;
+    std::cout << "Beginning: Ax:" << std::endl; 
+    for (int i = 0; i < Ax.size(); i++)
+        std::cout << i << ": " << Ax[i] << std::endl;
+#endif
+
     BVectorWell Bx(duneB_.N());
 
     duneB_.mv(x, Bx);
@@ -194,6 +205,12 @@ apply(const BVector& x, BVector& Ax) const
 
     // Ax = Ax - duneC_^T * invDBx
     duneC_.mmtv(invDBx,Ax);
+
+#ifdef COMMENTS
+    std::cout << "At the end: Ax:" << std::endl; 
+    for (int i = 0; i < Ax.size(); i++)
+        std::cout << i << ": " << Ax[i] << std::endl;
+#endif
 }
 
 template<class Scalar, int numWellEq, int numEq>
