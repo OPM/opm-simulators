@@ -185,6 +185,9 @@ apply(const BVector& x, BVector& Ax) const
 
     duneB_.mv(x, Bx);
 
+    // We need to communicate here to get the contributions from all segments
+    this->pw_info_.communication().sum(Bx.data(), Bx.size());
+
     // invDBx = duneD^-1 * Bx_
     const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
 
@@ -241,8 +244,14 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
     BVectorWell resWell = resWell_;
+    BVectorWell Bx(duneB_.N());
+    duneB_.mv(x, Bx);
+    // We need to communicate here to get the contributions from all segments
+    this->pw_info_.communication().sum(Bx.data(), Bx.size());
+
     // resWell = resWell - B * x
-    duneB_.mmv(x, resWell);
+    resWell -= Bx;
+
     // xw = D^-1 * resWell
     xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
 }
