@@ -179,6 +179,7 @@ template <class T>
 void
 GpuBuffer<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
+    fmt::print("data in asStdVector: {}\n", (void*)data());
     assertSameSize(numberOfElements);
     OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
