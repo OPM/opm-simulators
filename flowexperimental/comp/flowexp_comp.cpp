@@ -26,6 +26,8 @@
 
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
+#include <fmt/format.h>
+
 #include "flowexp_comp.hpp"
 
 int main(int argc, char** argv)
@@ -48,9 +50,9 @@ int main(int argc, char** argv)
     const auto runspec = Opm::Runspec(deck);
     const auto numComps = runspec.numComps();
 
-    OPM_ERROR_IF(numComps < 2 || numComps < 7,
-                 "Deck has {} components, not supported. We support a maximum of 7 components, "
-                 "and a minimum of 2.");
+    OPM_ERROR_IF(numComps < 2 || numComps > 7,
+                 fmt::format("Deck has {} components, not supported. We support a maximum of 7 components, "
+                             "and a minimum of 2.", numComps) );
 
     switch (numComps) {
     case 2: return Opm::dispatchFlowExpComp<2>(argc, argv);
