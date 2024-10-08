@@ -72,6 +72,18 @@ public:
         return eqns_.duneC_;
     }
 
+    //! \brief Returns a reference to the global B matrix.
+    OffDiatMatWell& BGlobal()
+    {
+        return eqns_.duneBGlobal_;
+    }
+
+    //! \brief Returns a reference to C matrix.
+    OffDiatMatWell& CGlobal()
+    {
+        return eqns_.duneCGlobal_;
+    }
+
     //! \brief Returns a reference to D matrix.
     DiagMatWell& D()
     {
@@ -353,6 +365,7 @@ template<class FluidSystem, class Indices>
 void MultisegmentWellAssemble<FluidSystem,Indices>::
 assemblePerforationEq(const int seg,
                       const int cell_idx,
+                      const int global_cell_idx,
                       const int comp_idx,
                       const EvalWell& cq_s_effective,
                       Equations& eqns1) const
@@ -365,6 +378,7 @@ assemblePerforationEq(const int seg,
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
         eqns.C()[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
+        eqns.CGlobal()[seg][global_cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
 
         // the index name for the D should be eq_idx / pv_idx
         eqns.D()[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);
@@ -373,6 +387,7 @@ assemblePerforationEq(const int seg,
     for (int pv_idx = 0; pv_idx < Indices::numEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
         eqns.B()[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
+        eqns.BGlobal()[seg][global_cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
     }
 }
 

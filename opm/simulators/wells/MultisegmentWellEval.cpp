@@ -57,7 +57,7 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const Pa
     : MultisegmentWellGeneric<Scalar>(baseif)
     , pw_info_(pw_info)
     , baseif_(baseif)
-    , linSys_(*this)
+    , linSys_(*this, pw_info)
     , primary_variables_(baseif)
     , segments_(this->numberOfSegments(), baseif)
     , cell_perforation_depth_diffs_(baseif_.numPerfs(), 0.0)
@@ -70,8 +70,23 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 initMatrixAndVectors(const int num_cells)
 {
-    linSys_.init(num_cells, baseif_.numPerfs(),
-                 baseif_.cells(), segments_.inlets(),
+    int num_cells_whole_mswell = this->pw_info_.communication().sum(num_cells);
+    int num_perfs_this_process = baseif_.numPerfs();
+    int num_perfs_whole_mswell = this->pw_info_.communication().sum(num_perfs_this_process);
+
+    std::vector<int> cells_for_perfs_whole_well(num_perfs_whole_mswell, 0.0);
+    for (int perf = 0; perf < num_perfs_this_process; perf++) {
+        cells_for_perfs_whole_well[this->pw_info_.getGlobalPerfContainerFactory().localToGlobal(perf)] = baseif_.cells_global()[perf];
+    }
+    this->pw_info_.communication().sum(cells_for_perfs_whole_well.data(), num_perfs_whole_mswell);
+    
+    linSys_.init(num_cells,
+                 num_cells_whole_mswell,
+                 num_perfs_this_process,
+                 num_perfs_whole_mswell,
+                 baseif_.cells(),
+                 cells_for_perfs_whole_well,
+                 segments_.inlets(),
                  segments_.perforations());
     primary_variables_.resize(this->numberOfSegments());
 }
