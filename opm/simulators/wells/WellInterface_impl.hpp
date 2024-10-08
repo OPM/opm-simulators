@@ -309,7 +309,7 @@ namespace Opm
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                     changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                    if (hasGroupControl && param_.check_group_constraints_inner_well_iterations_) {
+                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
                         changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
                     }
 
