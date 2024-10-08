@@ -157,6 +157,9 @@ apply(const BVector& x, BVector& Ax) const
         this->pw_info_.communication().sum(Bx.data(), Bx.size());
     }
 
+    // It is ok to do this on each process instead of only on one,
+    // because the other processes would remain idle while waiting for
+    // the single process to complete the computation.
     // invDBx = duneD^-1 * Bx_
     const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
 
@@ -168,6 +171,9 @@ template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 apply(BVector& r) const
 {
+    // It is ok to do this on each process instead of only on one,
+    // because the other processes would remain idle while waiting for
+    // the single process to complete the computation.
     // invDrw_ = duneD^-1 * resWell_
     const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
     // r = r - duneC_^T * invDrw
@@ -198,6 +204,9 @@ template<class Scalar, int numWellEq, int numEq>
 typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::BVectorWell
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve() const
 {
+    // It is ok to do this on each process instead of only on one,
+    // because the other processes would remain idle while waiting for
+    // the single process to complete the computation.
     return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
 }
 
@@ -205,6 +214,9 @@ template<class Scalar, int numWellEq, int numEq>
 typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::BVectorWell
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve(const BVectorWell& rhs) const
 {
+    // It is ok to do this on each process instead of only on one,
+    // because the other processes would remain idle while waiting for
+    // the single process to complete the computation.
     return mswellhelpers::applyUMFPack(*duneDSolver_, rhs);
 }
 
@@ -227,6 +239,9 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     }
 
     // xw = D^-1 * resWell
+    // It is ok to do this on each process instead of only on one,
+    // because the other processes would remain idle while waiting for
+    // the single process to complete the computation.
     xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
 }
 
