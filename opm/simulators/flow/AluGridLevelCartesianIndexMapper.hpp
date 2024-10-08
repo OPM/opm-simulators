@@ -36,8 +36,11 @@
 
 #include <dune/alugrid/grid.hh>
 #include <opm/grid/common/LevelCartesianIndexMapper.hh>
+#include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
 
+#include <array>
 #include <memory>
+#include <vector>
 
 
 namespace Opm
@@ -56,66 +59,47 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
  public:
     static const int dimension = 3 ;
 
-    explicit LevelCartesianIndexMapper(const Grid& grid) : grid_{ &grid }// std::make_unique<Grid>(grid)}
+    LevelCartesianIndexMapper(const Grid& grid,
+                              const Dune::CartesianIndexMapper<Grid>& cartesianIndexMapper)
+        : grid_{&grid}
+        , cartesianIndexMapper_{cartesianIndexMapper}
     {}
-
+          
     const std::array<int,3>& cartesianDimensions(int level) const
     {
         throwIfLevelPositive(level);
-        return grid_->logicalCartesianSize();
+        return cartesianIndexMapper_ ->cartesianDimensions();
     }
 
     int cartesianSize(int level) const
     {
         throwIfLevelPositive(level);
-        return computeLevelCartesianSize(0);
+        return cartesianIndexMapper_->computeCartesianSize();
     }
 
     int compressedSize(int level) const
     {
         throwIfLevelPositive(level);
-        return grid_->size(0);
+        return cartesianIndexMapper_-> compressedize();
     }
 
 
     int cartesianIndex( const int compressedElementIndex, const int level) const
     {
-        throwIfLevelPositive(level);
-        assert( compressedElementIndex >= 0 && compressedElementIndex < compressedSize(0) );
-        return grid_->globalCell()[ compressedElementIndex ];
+        throwIfLevelPositive(level);;
+        return cartesianIndexMapper_->cartesianIndex(compressedElementIndex);
     }
 
     void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords, int level) const
     {
         throwIfLevelPositive(level);
-
-        int gc = cartesianIndex( compressedElementIndex, 0);
-        auto cartesianDimensions = grid_->logicalCartesianSize();
-        if( dimension >=2 )
-        {
-            for( int d=0; d<dimension-2; ++d )
-            {
-                coords[d] = gc % cartesianDimensions[d];  gc /= cartesianDimensions[d];
-            }
-
-            coords[dimension-2] = gc % cartesianDimensions[dimension-2];
-            coords[dimension-1] = gc / cartesianDimensions[dimension-1];
-        }
-        else
-            coords[ 0 ] = gc ;
+        cartesianIndexMapper_->cartesianCoordinate(compressedElementIndex, coords);
     }
 
  private:
     const Grid* grid_;
-
-    int computeCartesianSize(int level) const
-    {
-        int size = cartesianDimensions(level)[ 0 ];
-        for( int d=1; d<dimension; ++d )
-            size *= cartesianDimensions(level)[ d ];
-        return size;
-    }
-
+    const Dune::CartesianIndexMapper<Grid> cartesianIndexMapper_;
+    
     void throwIfLevelPositive(int level) const
     {
         if (level) {

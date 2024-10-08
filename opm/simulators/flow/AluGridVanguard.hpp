@@ -239,8 +239,8 @@ public:
      * \brief Returns the object which maps a global element index of the simulation grid
      *        to the corresponding element index of the level logically Cartesian index.
      */
-    const LevelCartesianIndexMapper levelCartesianIndexMapper() const
-    { return LevelCartesianIndexMapper(*grid_); }
+    const LevelCartesianIndexMapper levelCartesianIndexMapper() const // Consider adding data member to reduce/optimize memory-use?
+    { return LevelCartesianIndexMapper(*grid_, *cartesianIndexMapper_); }
 
     /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
