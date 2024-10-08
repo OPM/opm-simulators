@@ -300,6 +300,8 @@ template<class Scalar> class WellContributions;
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
+            void applyDomain(const BVector& x, BVector& Ax, int domainIndex) const;
+
 #if COMPILE_BDA_BRIDGE
             // accumulate the contributions of all Wells in the WellContributions object
             void getWellContributions(WellContributions<Scalar>& x) const;
@@ -307,6 +309,8 @@ template<class Scalar> class WellContributions;
 
             // apply well model with scaling of alpha
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
+
+            void applyScaleAddDomain(const Scalar alpha, const BVector& x, BVector& Ax, int domainIndex) const;
 
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false) const;
@@ -357,6 +361,9 @@ template<class Scalar> class WellContributions;
             using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
             void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const;
+
+            void addWellPressureEquationsDomain(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights, int domainIndex) const;
+
 
             void addWellPressureEquationsStruct(PressureMatrix& jacobian) const;
 

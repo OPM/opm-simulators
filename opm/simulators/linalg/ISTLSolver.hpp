@@ -352,6 +352,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 // Outch! We need to be able to scale the linear system! Hence const_cast
                 matrix_ = const_cast<Matrix*>(&M);
 
+                is_nldd_local_solver_ = parameters_[activeSolverNum_].is_nldd_local_solver_;
+
                 useWellConn_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
             } else {
@@ -450,6 +452,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         const CommunicationType* comm() const { return comm_.get(); }
 
+        void setDomainIndex(int index)
+        {
+            domainIndex_ = index;
+        }
+
     protected:
 #if HAVE_MPI
         using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
@@ -490,8 +497,15 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             OPM_TIMEBLOCK(flexibleSolverPrepare);
             if (shouldCreateSolver()) {
                 if (!useWellConn_) {
-                    auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
-                    flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
+                    if (is_nldd_local_solver_) {
+                        auto wellOp = std::make_unique<DomainWellModelAsLinearOperator<WellModel, Vector, Vector>>(simulator_.problem().wellModel());
+                        wellOp->setDomainIndex(domainIndex_);
+                        flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
+                    }
+                    else {
+                        auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
+                        flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
+                    }
                 }
                 std::function<Vector()> weightCalculator = this->getWeightsCalculator(prm_[activeSolverNum_], getMatrix(), pressureIndex);
                 OPM_TIMEBLOCK(flexibleSolverCreate);
@@ -650,6 +664,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         std::vector<detail::FlexibleSolverInfo<Matrix,Vector,CommunicationType>> flexibleSolver_;
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
+
+        bool is_nldd_local_solver_;
+
+        int domainIndex_ = -1;
 
         bool useWellConn_;
 

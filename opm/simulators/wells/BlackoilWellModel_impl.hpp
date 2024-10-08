@@ -1749,9 +1749,36 @@ namespace Opm {
             x_local.resize(cells.size());
             Ax_local.resize(cells.size());
 
-            if (this->param_.nonlinear_solver_ == "nldd") {
-                // transfer global cells index to local subdomain cells index
+            for (size_t i = 0; i < cells.size(); ++i) {
+                x_local[i] = x[cells[i]];
+                Ax_local[i] = Ax[cells[i]];
+            }
 
+            well->apply(x_local, Ax_local);
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                // only need to update Ax
+                Ax[cells[i]] = Ax_local[i];
+            }
+        }
+    }
+
+    // Ax = A x - C D^-1 B x
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    applyDomain(const BVector& x, BVector& Ax, int domainIndex) const
+    {
+        BVector x_local;
+        BVector Ax_local;
+
+        for (auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domainIndex) {
+                // Well equations B and C uses only the perforated cells, so need to apply on local vectors
+                auto cells = well->cells();
+                x_local.resize(cells.size());
+                Ax_local.resize(cells.size());
+                // transfer global cells index to local subdomain cells index
                 auto domain_cells = domains_cells_[well_domain_.at(well->name())];
 
                 // Assuming domain_cells is sorted
@@ -1765,18 +1792,18 @@ namespace Opm {
                         std::cerr << "Cell value " << cells[i] << " not found in domain_cells." << std::endl;
                     }
                 }
-            }
 
-            for (size_t i = 0; i < cells.size(); ++i) {
-                x_local[i] = x[cells[i]];
-                Ax_local[i] = Ax[cells[i]];
-            }
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    x_local[i] = x[cells[i]];
+                    Ax_local[i] = Ax[cells[i]];
+                }
 
-            well->apply(x_local, Ax_local);
+                well->apply(x_local, Ax_local);
 
-            for (size_t i = 0; i < cells.size(); ++i) {
-                // only need to update Ax
-                Ax[cells[i]] = Ax_local[i];
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    // only need to update Ax
+                    Ax[cells[i]] = Ax_local[i];
+                }
             }
         }
     }
@@ -1840,6 +1867,27 @@ namespace Opm {
         Ax.axpy( alpha, scaleAddRes_ );
     }
 
+    // Ax = Ax - alpha * C D^-1 B x
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    applyScaleAddDomain(const Scalar alpha, const BVector& x, BVector& Ax, int domainIndex) const
+    {
+        if (this->well_container_.empty()) {
+            return;
+        }
+
+        if( scaleAddRes_.size() != Ax.size() ) {
+            scaleAddRes_.resize( Ax.size() );
+        }
+
+        scaleAddRes_ = 0.0;
+        // scaleAddRes_  = - C D^-1 B x
+        applyDomain(x, scaleAddRes_, domainIndex);
+        // Ax = Ax + alpha * scaleAddRes_
+        Ax.axpy( alpha, scaleAddRes_ );
+    }
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -1865,6 +1913,28 @@ namespace Opm {
         for ( const auto& well : well_container_ ) {
             well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
         }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addWellPressureEquationsDomain(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights, int domainIndex) const
+    {
+        throw std::logic_error("CPRW is not yet implemented for NLDD subdomains");
+        // To fix this function, rdofs should be the size of the domain, and the nw should be the number of wells in the domain
+        // int nw =  this->numLocalWellsEnd(); // should number of wells in the domain
+        // int rdofs = local_num_cells_;  // should be the size of the domain
+        // for ( int i = 0; i < nw; i++ ){
+        //     int wdof = rdofs + i;
+        //     jacobian[wdof][wdof] = 1.0;// better scaling ?
+        // }
+
+        // for ( const auto& well : well_container_ ) {
+        //     if (well_domain_.at(well->name()) == domainIndex) {
+                    // weights should be the size of the domain
+        //         well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
+        //     }
+        // }
     }
 
     template <typename TypeTag>
