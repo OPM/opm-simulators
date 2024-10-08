@@ -39,7 +39,7 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 #include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
-#include <opm/simulators/flow/AlGridLevelCartesianIndexMapper.hpp>
+#include <opm/simulators/flow/AluGridLevelCartesianIndexMapper.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
