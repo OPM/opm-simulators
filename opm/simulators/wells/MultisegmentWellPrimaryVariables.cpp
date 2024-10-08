@@ -156,12 +156,13 @@ update(const WellState<Scalar>& well_state,
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
-updateNewton(const BVectorWell& dwells,
-             const Scalar relaxation_factor,
-             const Scalar dFLimit,
-             const bool stop_or_zero_rate_target,
-             const Scalar max_pressure_change)
+updateNewton([[maybe_unused]] const BVectorWell& dwells,
+             [[maybe_unused]] const Scalar relaxation_factor,
+             [[maybe_unused]] const Scalar dFLimit,
+             [[maybe_unused]] const bool stop_or_zero_rate_target,
+             [[maybe_unused]] const Scalar max_pressure_change)
 {
+    #if 0
     const std::vector<std::array<Scalar, numWellEq>> old_primary_variables = value_;
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
@@ -208,6 +209,7 @@ updateNewton(const BVectorWell& dwells,
     if (stop_or_zero_rate_target) {
         value_[0][WQTotal] = 0.;
     }
+    #endif
 }
 
 template<class FluidSystem, class Indices>
