@@ -247,6 +247,10 @@ void registerAdaptiveParameters();
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
+                catch (const ConvergenceMonitorFailure& e) {
+                    substepReport = solver.failureReport();
+                    causeOfFailure = "Convergence monitor failure";
+                }
                 catch (const LinearSolverProblem& e) {
                     substepReport = solver.failureReport();
                     causeOfFailure = "Linear solver convergence failure";

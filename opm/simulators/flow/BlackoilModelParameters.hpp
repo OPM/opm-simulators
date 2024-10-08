@@ -115,6 +115,7 @@ struct MaximumNumberOfWellSwitches { static constexpr int value = 10; };
 struct UseAverageDensityMsWells { static constexpr bool value = false; };
 struct LocalWellSolveControlSwitching { static constexpr bool value = true; };
 struct UseImplicitIpr { static constexpr bool value = true; };
+struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = true; };
 
 // Network solver parameters
 struct NetworkMaxStrictIterations { static constexpr int value = 100; };
@@ -136,6 +137,11 @@ struct LocalDomainsPartitioningImbalance { static constexpr Scalar value = 1.03;
 
 struct LocalDomainsPartitioningMethod { static constexpr auto value = "zoltan"; };
 struct LocalDomainsOrderingMeasure { static constexpr auto value = "maxpressure"; };
+
+struct ConvergenceMonitoring { static constexpr bool value = false; };
+struct ConvergenceMonitoringCutOff { static constexpr int value = 6; };
+template<class Scalar>
+struct ConvergenceMonitoringDecayFactor { static constexpr Scalar value = 0.75; };
 
 } // namespace Opm::Parameters
 
@@ -260,6 +266,9 @@ public:
     /// Whether to use implicit IPR for thp stability checks and solution search
     bool use_implicit_ipr_;
 
+    /// Whether to allow checking/changing to group controls during inner well iterations
+    bool check_group_constraints_inner_well_iterations_; 
+
     /// Maximum number of iterations in the network solver before relaxing tolerance
     int network_max_strict_iterations_;
 
@@ -283,6 +292,13 @@ public:
     DomainOrderingMeasure local_domain_ordering_{DomainOrderingMeasure::MaxPressure};
 
     bool write_partitions_{false};
+
+    /// Whether to enable convergence monitoring
+    bool convergence_monitoring_;
+    /// Cut-off limit for convergence monitoring
+    int convergence_monitoring_cutoff_;
+    /// Decay factor used in convergence monitoring
+    Scalar convergence_monitoring_decay_factor_;
 
     /// Construct from user parameters or defaults.
     BlackoilModelParameters();

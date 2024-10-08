@@ -91,12 +91,12 @@ struct AMGSmootherArgsHelper<ParallelOverlappingILU0<M, V, V, C>>
 
 // trailing return type with decltype used for detecting existence of setUseFixedOrder member function by overloading the setUseFixedOrder function
 template <typename C>
-auto setUseFixedOrder(C criterion, bool booleanValue) -> decltype(criterion.setUseFixedOrder(booleanValue))
+auto setUseFixedOrder(C& criterion, bool booleanValue) -> decltype(criterion.setUseFixedOrder(booleanValue))
 {
     return criterion.setUseFixedOrder(booleanValue); // Set flag to ensure that the matrices in the AMG hierarchy are constructed with deterministic indices.
 }
 template <typename C>
-void setUseFixedOrder(C, ...)
+void setUseFixedOrder(C&, ...)
 {
     // do nothing, since the function setUseFixedOrder does not exist yet
 }

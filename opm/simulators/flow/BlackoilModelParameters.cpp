@@ -72,6 +72,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     use_average_density_ms_wells_ = Parameters::Get<Parameters::UseAverageDensityMsWells>();
     local_well_solver_control_switching_ = Parameters::Get<Parameters::LocalWellSolveControlSwitching>();
     use_implicit_ipr_ = Parameters::Get<Parameters::UseImplicitIpr>();
+    check_group_constraints_inner_well_iterations_ = Parameters::Get<Parameters::CheckGroupConstraintsInnerWellIterations>();
     nonlinear_solver_ = Parameters::Get<Parameters::NonlinearSolver>();
     const auto approach = Parameters::Get<Parameters::LocalSolveApproach>();
     if (approach == "jacobi") {
@@ -94,6 +95,10 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_max_iterations_ = Parameters::Get<Parameters::NetworkMaxIterations>();
     local_domain_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
+
+    convergence_monitoring_ = Parameters::Get<Parameters::ConvergenceMonitoring>();
+    convergence_monitoring_cutoff_ = Parameters::Get<Parameters::ConvergenceMonitoringCutOff>();
+    convergence_monitoring_decay_factor_ = Parameters::Get<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>();
 }
 
 template<class Scalar>
@@ -195,6 +200,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Allow control switching during local well solutions");
     Parameters::Register<Parameters::UseImplicitIpr>
         ("Compute implict IPR for stability checks and stable solution search");
+    Parameters::Register<Parameters::CheckGroupConstraintsInnerWellIterations>
+        ("Allow checking of group constraints during inner well iterations");        
     Parameters::Register<Parameters::NetworkMaxStrictIterations>
         ("Maximum iterations in network solver before relaxing tolerance");
     Parameters::Register<Parameters::NetworkMaxIterations>
@@ -227,6 +234,13 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "and  'residual'.");
     Parameters::Register<Parameters::DebugEmitCellPartition>
         ("Whether or not to emit cell partitions as a debugging aid.");
+
+    Parameters::Register<Parameters::ConvergenceMonitoring>
+        ("Enable convergence monitoring");
+    Parameters::Register<Parameters::ConvergenceMonitoringCutOff>
+        ("Cut off limit for convergence monitoring");
+    Parameters::Register<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>
+        ("Decay factor for convergence monitoring");
 
     Parameters::Hide<Parameters::DebugEmitCellPartition>();
 
