@@ -62,7 +62,7 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
     LevelCartesianIndexMapper(const Grid& grid,
                               const Dune::CartesianIndexMapper<Grid>& cartesianIndexMapper)
         : grid_{&grid}
-        , cartesianIndexMapper_{std::maque_unique<Dune::CartesianIndexMapper<Grid>>(cartesianIndexMapper)}
+        , cartesianIndexMapper_{std::make_unique<Dune::CartesianIndexMapper<Grid>>(cartesianIndexMapper)}
     {}
           
     const std::array<int,3>& cartesianDimensions(int level) const
@@ -74,13 +74,13 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
     int cartesianSize(int level) const
     {
         throwIfLevelPositive(level);
-        return cartesianIndexMapper_->computeCartesianSize();
+        return cartesianIndexMapper_->cartesianSize();
     }
 
     int compressedSize(int level) const
     {
         throwIfLevelPositive(level);
-        return cartesianIndexMapper_-> compressedize();
+        return cartesianIndexMapper_-> compressedSize();
     }
 
 
