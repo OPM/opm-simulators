@@ -497,7 +497,7 @@ namespace Opm {
             well->setGuideRate(&this->guideRate_);
         }
 
-        this->updateInjFCMult(local_deferredLogger);
+        this->updateFiltrationModelsPreStep(local_deferredLogger);
 
         // Close completions due to economic reasons
         for (auto& well : well_container_) {
@@ -708,10 +708,10 @@ namespace Opm {
         }
 
         if (Indices::waterEnabled) {
-            this->updateFiltrationParticleVolume(dt, FluidSystem::waterPhaseIdx);
+            this->updateFiltrationModelsPostStep(dt, FluidSystem::waterPhaseIdx, local_deferredLogger);
         }
 
-        // at the end of the time step, updating the inj_multiplier saved in WellState for later use
+        // WINJMULT: At the end of the time step, update the inj_multiplier saved in WellState for later use
         this->updateInjMult(local_deferredLogger);
 
         // report well switching

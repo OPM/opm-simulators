@@ -1821,20 +1821,21 @@ void BlackoilWellModelGeneric<Scalar>::initInjMult()
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
-updateFiltrationParticleVolume(const double dt,
-                               const std::size_t water_index)
+updateFiltrationModelsPostStep(const double dt,
+                               const std::size_t water_index,
+                               DeferredLogger& deferred_logger)
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector()) {
             const Scalar conc = well->wellEcl().evalFilterConc(this->summaryState_);
             if (conc > 0.) {
-                auto fc = this->filter_cake_
+                // Update filter cake build-ups (external to the wellbore)
+                auto retval = this->filter_cake_
                         .emplace(std::piecewise_construct,
                                  std::forward_as_tuple(well->name()),
                                  std::tuple{});
-
-                fc.first->second.updateFiltrationParticleVolume(*well, dt, conc, water_index,
-                                                                this->wellState());
+                auto& fc = retval.first->second;
+                fc.updatePostStep(*well, this->wellState(), dt, conc, water_index, deferred_logger);
             }
         }
     }
@@ -1853,18 +1854,19 @@ updateInjMult(DeferredLogger& deferred_logger)
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
-updateInjFCMult(DeferredLogger& deferred_logger)
+updateFiltrationModelsPreStep(DeferredLogger& deferred_logger)
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector()) {
             const auto it = filter_cake_.find(well->name());
             if (it != filter_cake_.end()) {
-                it->second.updateInjFCMult(*well, this->wellState(), deferred_logger);
+                it->second.updatePreStep(*well, deferred_logger);
                 well->updateFilterCakeMultipliers(it->second.multipliers());
             }
         }
     }
 }
+
 
 template class BlackoilWellModelGeneric<double>;
 
