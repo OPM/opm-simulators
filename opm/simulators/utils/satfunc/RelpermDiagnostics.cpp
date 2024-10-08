@@ -51,6 +51,7 @@
 #ifdef HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/3d/gridview.hh>
+#include <opm/simulators/flow/AluGridLevelCartesianIndexMapper.hpp>
 #endif // HAVE_DUNE_ALUGRID
 
 namespace Opm {
@@ -824,9 +825,9 @@ namespace Opm {
         }
     }
 
-    template <class CartesianIndexMapper>
+    template <class LevelCartesianIndexMapper>
     void RelpermDiagnostics::diagnosis(const EclipseState& eclState,
-                                       const CartesianIndexMapper& cartesianIndexMapper)
+                                       const LevelCartesianIndexMapper& levelCartesianIndexMapper)
     {
         OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
         bool doDiagnostics = phaseCheck_(eclState);
@@ -835,16 +836,16 @@ namespace Opm {
         satFamilyCheck_(eclState);
         tableCheck_(eclState);
         unscaledEndPointsCheck_(eclState);
-        scaledEndPointsCheck_(eclState, cartesianIndexMapper);
+        scaledEndPointsCheck_(eclState, levelCartesianIndexMapper);
     }
 
-    template <class CartesianIndexMapper>
+    template <class LevelCartesianIndexMapper>
     void RelpermDiagnostics::scaledEndPointsCheck_(const EclipseState& eclState,
-                                                   const CartesianIndexMapper& cartesianIndexMapper)
+                                                   const LevelCartesianIndexMapper& levelCartesianIndexMapper)
     {
         // All end points are subject to round-off errors, checks should account for it
         const float tolerance = 1e-6;
-        const int nc = cartesianIndexMapper.compressedSize(0);
+        const int nc = levelCartesianIndexMapper.compressedSize(0);
         const bool threepoint = eclState.runspec().endpointScaling().threepoint();
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties(eclState, false);
@@ -854,7 +855,7 @@ namespace Opm {
             std::string cellIdx;
             {
                 std::array<int, 3> ijk;
-                cartesianIndexMapper.cartesianCoordinate(c, ijk, 0);
+                levelCartesianIndexMapper.cartesianCoordinate(c, ijk, 0);
                 cellIdx = "(" + std::to_string(ijk[0]) + ", " +
                     std::to_string(ijk[1]) + ", " +
                     std::to_string(ijk[2]) + ")";
