@@ -1734,48 +1734,6 @@ namespace Opm {
 
     }
 
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    apply(BVector& r) const
-    {
-        BVector r_local;
-        for (auto& well : well_container_) {
-            auto cells = well->cells();
-            r_local.resize(cells.size());
-
-            if (this->param_.nonlinear_solver_ == "nldd") {
-                // transfer global cells index to local subdomain cells index
-
-                auto domain_cells = domains_cells_[well_domain_.at(well->name())];
-
-                // Assuming domain_cells is sorted
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    auto it = std::lower_bound(domain_cells.begin(), domain_cells.end(), cells[i]);
-                    if (it != domain_cells.end() && *it == cells[i]) {
-                        // Found the cell, get the index
-                        auto local_index = std::distance(domain_cells.begin(), it);
-                        cells[i] = local_index;
-                    } else {
-                        std::cerr << "Cell value " << cells[i] << " not found in domain_cells." << std::endl;
-                    }
-                }
-            }
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                r_local[i] = r[cells[i]];
-            }
-
-            well->apply(r_local);
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                r[cells[i]] = r_local[i];
-            }
-        }
-    }
-
-
     // Ax = A x - C D^-1 B x
     template<typename TypeTag>
     void
