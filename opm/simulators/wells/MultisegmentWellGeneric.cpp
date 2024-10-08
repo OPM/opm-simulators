@@ -57,6 +57,19 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
+    Scalar sumTw = 0;
+    bool calculateSumTw = std::any_of(segment_rates.begin(), segment_rates.end(), [](const auto& unscaled_top_seg_rate) {
+        return std::abs(unscaled_top_seg_rate) <= 1e-12;
+    });
+    if (calculateSumTw) {
+        // Due to various reasons, the well/top segment rate can be zero for this phase.
+        // We can not scale this rate directly. The following approach is used to initialize the segment rates.
+        for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
+            sumTw += baseif_.wellIndex()[perf];
+        }
+        // We need to communicate here to scale the perf_phaserate_scaled with the contribution of all segments
+        sumTw = ws.parallel_info.get().communication().sum(sumTw);
+    }
     for (int phase = 0; phase < baseif_.numPhases(); ++phase) {
         const Scalar unscaled_top_seg_rate = segment_rates[phase];
         const Scalar well_phase_rate = ws.surface_rates[phase];
@@ -64,14 +77,7 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
                 segment_rates[baseif_.numPhases() * seg + phase] *= well_phase_rate / unscaled_top_seg_rate;
             }
-        } else {
-            // Due to various reasons, the well/top segment rate can be zero for this phase.
-            // We can not scale this rate directly. The following approach is used to initialize the segment rates.
-            Scalar sumTw = 0;
-            for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-                sumTw += baseif_.wellIndex()[perf];
-            }
-
+        } else { // In this case, we calculated sumTw
             // only handling this specific phase
             constexpr Scalar num_single_phase = 1;
             std::vector<Scalar> perforation_rates(num_single_phase * baseif_.numPerfs(), 0.0);
