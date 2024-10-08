@@ -189,6 +189,7 @@ apply(const BVector& x, BVector& Ax) const
     this->pw_info_.communication().sum(Bx.data(), Bx.size());
 
     // invDBx = duneD^-1 * Bx_
+    // TODO: do this only on one process and distribute the solution
     const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
 
     // Ax = Ax - duneC_^T * invDBx
@@ -200,6 +201,7 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 apply(BVector& r) const
 {
     // invDrw_ = duneD^-1 * resWell_
+    // TODO: do this only on one process and distribute the solution
     const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
     // r = r - duneC_^T * invDrw
     duneC_.mmtv(invDrw, r);
@@ -229,6 +231,7 @@ template<class Scalar, int numWellEq, int numEq>
 typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::BVectorWell
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve() const
 {
+    // TODO: do this only on one process and distribute the solution
     return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
 }
 
@@ -236,6 +239,7 @@ template<class Scalar, int numWellEq, int numEq>
 typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::BVectorWell
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve(const BVectorWell& rhs) const
 {
+    // TODO: do this only on one process and distribute the solution
     return mswellhelpers::applyUMFPack(*duneDSolver_, rhs);
 }
 
@@ -253,6 +257,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     resWell -= Bx;
 
     // xw = D^-1 * resWell
+    // TODO: do this only on one process and distribute the solution
     xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
 }
 
