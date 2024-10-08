@@ -71,6 +71,8 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
             for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
                 sumTw += baseif_.wellIndex()[perf];
             }
+            // We need to communicate here to scale the perf_phaserate_scaled with the contribution of all segments
+            sumTw = ws.parallel_info.get().communication().sum(sumTw);
 
             // only handling this specific phase
             constexpr Scalar num_single_phase = 1;
