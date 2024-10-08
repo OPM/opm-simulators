@@ -31,11 +31,11 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_ALUGRIDLEVELCARTESIANINDEXMAPPER_HH
-#define OPM_ALUGRIDLEVELCARTESIANINDEXMAPPER_HH
+#ifndef OPM_ALUGRIDLEVELCARTESIANINDEXMAPPER_HPP
+#define OPM_ALUGRIDLEVELCARTESIANINDEXMAPPER_HPP
 
-#include <opm/grid/common/LevelCartesianIndexMapper.hh>
 #include <dune/alugrid/grid.hh>
+#include <opm/grid/common/LevelCartesianIndexMapper.hh>
 
 #include <memory>
 
@@ -44,7 +44,7 @@ namespace Opm
 {
 
 template<>
-class LevelCartesianIndexMapper<<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
+class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
 {
 
 #if HAVE_MPI
