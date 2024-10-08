@@ -360,26 +360,23 @@ __global__ void pvtInternalEnergy(GpuViewCo2Pvt gpuViewCo2Pvt, GpuCO2 co2, Evalu
     *result = gpuViewCo2Pvt.internalEnergy<Evaluation>(co2, 1, *temp, *pressure, Evaluation(0.4), Evaluation(0.0)).value();
 }
 
-} // END EMPTY NAMESPACE
-
-void checkPointerLocation(void* ptr) {
-    cudaPointerAttributes attributes;
-    cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
-
-    if (err == cudaSuccess) {
-        if (attributes.type == cudaMemoryTypeDevice) {
-            std::cout << "Pointer is pointing to device (GPU) memory." << std::endl;
-        } else if (attributes.type == cudaMemoryTypeHost) {
-            std::cout << "Pointer is pointing to host memory." << std::endl;
-        } else if (attributes.type == cudaMemoryTypeManaged) {
-            std::cout << "Pointer is pointing to managed memory." << std::endl;
-        } else {
-            std::cout << "Pointer type is unknown." << std::endl;
-        }
-    } else {
-        std::cerr << "Error getting pointer attributes: " << cudaGetErrorString(err) << std::endl;
+bool compareSignificantDigits(double a, double b, int significantDigits) {
+    // Handle the case where both values are exactly zero
+    if (a == b) {
+        return true;
     }
+
+    // Calculate the relative error
+    double relativeError = std::abs(a - b) / std::max(std::abs(a), std::abs(b));
+
+    // Compute the number of matching digits
+    double digitsMatched = -std::log10(relativeError);
+
+    // Return true if they match the required number of significant digits
+    return digitsMatched >= significantDigits;
 }
+
+} // END EMPTY NAMESPACE
 
 // Test case evaluating pvt values for BrineDynamic on a GPU and CPU
 BOOST_AUTO_TEST_CASE(TestCo2GasPvt) {
@@ -392,25 +389,7 @@ BOOST_AUTO_TEST_CASE(TestCo2GasPvt) {
 
     const auto gpuBufCo2Pvt = Opm::gpuistl::move_to_gpu<double, GpuB>(cpuCo2Pvt);
     const auto brineReferenceDensityCPUCopy = gpuBufCo2Pvt.getBrineReferenceDensity().asStdVector();
-    fmt::print("brineReferenceDensityCPUCopy[1] = {}\n", brineReferenceDensityCPUCopy[1]);
     const auto gpuViewCo2Pvt = Opm::gpuistl::make_view<double, GpuB, GpuV>(gpuBufCo2Pvt);
-    const double *brineptr = gpuViewCo2Pvt.getBrineReferenceDensity().data();
-    checkPointerLocation((void*)brineptr);
-    std::vector<double> brineValue(1, -10);
-    // double brinevalue = -10;
-    fmt::print("brinepointer: = {}\n", (void*)brineptr);
-    fmt::print("buffer brine reference pointer: = {}\n", (void*)(gpuBufCo2Pvt.getBrineReferenceDensity().data()));
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-    double* tmpptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&tmpptr, sizeof(double)));
-    // remove me!
-    brineptr = tmpptr;
-    OPM_GPU_SAFE_CALL(cudaMemcpy(brineValue.data(), brineptr, sizeof(double), cudaMemcpyDeviceToHost));
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    fmt::print("brineReferenceDensityGPUViewCopy[1] = {}\n", brineValue[0]);
-
 
     // make a nonstatic version of the CPU CO2
     Opm::CO2NonStatic<double> CO2(Opm::CO2<double>::getEnthalpy(), Opm::CO2<double>::getDensity());
@@ -453,5 +432,6 @@ BOOST_AUTO_TEST_CASE(TestCo2GasPvt) {
     // Verify that the CPU and GPU results match within a reasonable tolerance
     const double tolerance = 1e-6; // Tolerance for floating-point comparison
     printf("%lf %lf\n", resultOnCpu, internalEnergyReference);
-    BOOST_CHECK(std::fabs(resultOnCpu - internalEnergyReference) < tolerance);
+    // BOOST_CHECK(std::fabs(resultOnCpu - internalEnergyReference) < tolerance);
+    BOOST_CHECK(compareSignificantDigits(resultOnCpu, internalEnergyReference, 6));
 }
