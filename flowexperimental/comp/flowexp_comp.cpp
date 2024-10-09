@@ -28,6 +28,7 @@
 
 #include <fmt/format.h>
 
+#include <cstdlib>
 #include <tuple>
 
 #include "flowexp_comp.hpp"
@@ -89,7 +90,7 @@ main(int argc, char** argv)
     const auto runspec = Opm::Runspec(deck);
     const auto numComps = runspec.numComps();
 
-    auto [componentSupported, executionSatus]
+    auto [componentSupported, executionStatus]
         = runComponent<OPM_COMPILE_COMPONENTS_TEMPLATE_LIST>(numComps, argc, argv);
 
     if (!componentSupported) {
@@ -99,5 +100,5 @@ main(int argc, char** argv)
                      numComps,
                      fmt::join(std::vector {OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}, ", "));
     }
-    return executionSatus;
+    return executionStatus;
 }
