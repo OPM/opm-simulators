@@ -13,6 +13,7 @@
 #include <opm/material/components/BrineDynamic.hpp>
 #include <opm/material/binarycoefficients/Brine_CO2.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/Co2GasPvt.hpp>
+#include <opm/input/eclipse/EclipseState/Co2StoreConfig.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
@@ -41,10 +42,8 @@ using CpuCo2Pvt = Opm::Co2GasPvt<double>;
 using GpuBufCo2Pvt = Opm::Co2GasPvt<double, GpuB>;
 using GpuViewCo2Pvt = Opm::Co2GasPvt<double, GpuV>;
 
-// TODO: understand why this particular class seemingly has to be explicitly instantiated
-// template class Opm::Co2GasPvt<double, Opm::gpuistl::GpuBuffer<double> const>;
-// template class Opm::Co2GasPvt<double, Opm::gpuistl::GpuView<double const>>;
-
+template GpuBufCo2Pvt::Co2GasPvt(GpuB, GpuB, GpuB, bool, bool, int, Co2StoreConfig::GasMixingType);
+template GpuViewCo2Pvt::Co2GasPvt(GpuV, GpuV, GpuV, bool, bool, int, Co2StoreConfig::GasMixingType);
 namespace {
 
 /*
