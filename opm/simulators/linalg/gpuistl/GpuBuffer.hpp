@@ -249,7 +249,7 @@ public:
      * @brief size returns the size (number of T elements) in the buffer
      * @return number of elements
      */
-    __host__ __device__ size_type size() const;
+    size_type size() const;
 
     /**
      * @brief resize the number of elements that fit in the buffer, shrinking it causes truncation
