@@ -96,10 +96,13 @@ main(int argc, char** argv)
 
     if (!componentSupported) {
         fmt::print("Deck has {} components, not supported. In this build of the simulator, we support the "
-                     "following number of components:\n\n\t{}.\n\n Note that the supported components can be changed "
-                     "when configuring CMake through the OPM_COMPILE_COMPONENTS options. Exiting.\n",
-                     numComps,
-                     fmt::join(std::array {OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}, ", "));
+                   "following number of components:\n\n\t{}\n\nNote that the supported components can be changed "
+                   "when configuring CMake through the OPM_COMPILE_COMPONENTS option. That is, run cmake as "
+                   "eg\n\n\tcmake ... -DOPM_COMPILE_COMPONENTS=\"4;7\"\n\nto compile only components 4 and 7, "
+                   "or\n\n\tcmake ... -DOPM_COMPILE_COMPONENTS=3\n\nto compile only component 3, then "
+                   "recompile.\n\nExiting.\n",
+                   numComps,
+                   fmt::join(std::array {OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}, ", "));
     }
     return executionStatus;
 }
