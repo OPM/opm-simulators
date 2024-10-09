@@ -28,6 +28,7 @@
 
 #include <fmt/format.h>
 
+#include <array>
 #include <cstdlib>
 #include <tuple>
 
@@ -98,7 +99,7 @@ main(int argc, char** argv)
                      "following number of components:\n\t{}. Note that the supported components can be changed "
                      "when configuring CMake through the OPM_COMPILE_COMPONENTS options. Exiting.",
                      numComps,
-                     fmt::join(std::vector {OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}, ", "));
+                     fmt::join(std::array {OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}, ", "));
     }
     return executionStatus;
 }
