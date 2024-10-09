@@ -33,13 +33,21 @@ GpuBuffer<T>::GpuBuffer(const std::vector<T>& data)
 {
 }
 
+// some class need a default constructor...
+// should we reintroduce the default constructor that allocates 0 bytes and initializes the handles?
+template <class T>
+GpuBuffer<T>::GpuBuffer()
+    : GpuBuffer(1)
+{
+}
+
 template <class T>
 GpuBuffer<T>::GpuBuffer(const size_t numberOfElements)
     : m_numberOfElements(numberOfElements)
 {
-    if (numberOfElements < 1) {
-        OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
-    }
+    // if (numberOfElements < 1) {
+    //     OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
+    // }
     OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * m_numberOfElements));
 }
 
@@ -171,6 +179,7 @@ template <class T>
 void
 GpuBuffer<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
+    fmt::print("data in asStdVector: {}\n", (void*)data());
     assertSameSize(numberOfElements);
     OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
