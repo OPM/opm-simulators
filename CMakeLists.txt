@@ -36,6 +36,11 @@ option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
 option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
+
+# Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
+if(OPM_COMPILE_COMPONENTS STREQUAL "")
+  message(FATAL_ERROR "OPM_COMPILE_COMPONENTS must contain at least one component.")
+endif()
 # Check that OPM_COMPILE_COMPONENTS is a subset of 2,3,4,5,6,7
 set(valid_components "2;3;4;5;6;7")
 foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
