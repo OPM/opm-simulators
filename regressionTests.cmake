@@ -563,6 +563,15 @@ foreach(udt_case ${_udt_cases})
     DIR udt)
 endforeach()
 
+foreach(eqreg_case RANGE 1 6)
+  add_test_compareECLFiles(CASENAME equalreg_multy_0${eqreg_case}
+    FILENAME EQUALREG-0${eqreg_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    DIR mult
+  )
+endforeach()
 
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
