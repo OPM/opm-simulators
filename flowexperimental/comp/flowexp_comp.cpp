@@ -95,9 +95,9 @@ main(int argc, char** argv)
         = runComponent<OPM_COMPILE_COMPONENTS_TEMPLATE_LIST>(numComps, argc, argv);
 
     if (!componentSupported) {
-        fmt::println("Deck has {} components, not supported. In this build of the simulator, we support the "
-                     "following number of components:\n\t{}. Note that the supported components can be changed "
-                     "when configuring CMake through the OPM_COMPILE_COMPONENTS options. Exiting.",
+        fmt::print("Deck has {} components, not supported. In this build of the simulator, we support the "
+                     "following number of components:\n\n\t{}.\n\n Note that the supported components can be changed "
+                     "when configuring CMake through the OPM_COMPILE_COMPONENTS options. Exiting.\n",
                      numComps,
                      fmt::join(std::array {OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}, ", "));
     }
