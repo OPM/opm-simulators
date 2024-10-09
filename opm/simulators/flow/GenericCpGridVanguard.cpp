@@ -227,7 +227,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                 }
             }
             std::vector<int> well_on_rank_global(nranks, 0);
-            MPI_Allreduce(&well_on_rank[0], &well_on_rank_global[0], nranks, MPI_INT, MPI_MAX, this->grid_->comm());
+            comm.max(&well_on_rank[0], nranks);
             for (int i=0; i<nranks; ++i) {
                 if (well_on_rank_global[i]) {
                     parallelWells.emplace_back(well_name, i);

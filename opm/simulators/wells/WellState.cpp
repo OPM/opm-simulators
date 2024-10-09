@@ -694,6 +694,9 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     for (int w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
         auto& ws = this->well(w);
+        // If the phase_rates has zero size this is an inactive well that will never be solved
+        if (ws.perf_data.phase_rates.size() == 0)
+            continue;
 
         if (well_ecl.isMultiSegment()) {
             const WellSegments& segment_set = well_ecl.getSegments();
