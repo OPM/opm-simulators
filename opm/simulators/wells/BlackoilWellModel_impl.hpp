@@ -1762,37 +1762,25 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     applyDomain(const BVector& x, BVector& Ax, int domainIndex) const
     {
-        for (auto& well : well_container_) {
+        for (size_t well_index = 0; well_index < well_container_.size(); ++well_index) {
+            auto& well = well_container_[well_index];
             if (well_domain_.at(well->name()) == domainIndex) {
                 // Well equations B and C uses only the perforated cells, so need to apply on local vectors
-                auto cells = well->cells();
-                x_local_.resize(cells.size());
-                Ax_local_.resize(cells.size());
                 // transfer global cells index to local subdomain cells index
-                auto domain_cells = domains_cells_[well_domain_.at(well->name())];
+                const auto& local_cells = well_local_cells_[well_index];
+                x_local_.resize(local_cells.size());
+                Ax_local_.resize(local_cells.size());
 
-                // Assuming domain_cells is sorted
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    auto it = std::lower_bound(domain_cells.begin(), domain_cells.end(), cells[i]);
-                    if (it != domain_cells.end() && *it == cells[i]) {
-                        // Found the cell, get the index
-                        auto local_index = std::distance(domain_cells.begin(), it);
-                        cells[i] = local_index;
-                    } else {
-                        std::cerr << "Cell value " << cells[i] << " not found in domain_cells." << std::endl;
-                    }
-                }
-
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    x_local_[i] = x[cells[i]];
-                    Ax_local_[i] = Ax[cells[i]];
+                for (size_t i = 0; i < local_cells.size(); ++i) {
+                    x_local_[i] = x[local_cells[i]];
+                    Ax_local_[i] = Ax[local_cells[i]];
                 }
 
                 well->apply(x_local_, Ax_local_);
 
-                for (size_t i = 0; i < cells.size(); ++i) {
+                for (size_t i = 0; i < local_cells.size(); ++i) {
                     // only need to update Ax
-                    Ax[cells[i]] = Ax_local_[i];
+                    Ax[local_cells[i]] = Ax_local_[i];
                 }
             }
         }
@@ -3012,9 +3000,28 @@ namespace Opm {
             global_log.logMessages();
         }
 
-        // Store the global index of the cells in the domain
-        for (const auto& domain : domains) {
-                domains_cells_.push_back(domain.cells);
+        // Pre-calculate the local cell indices for each well
+        well_local_cells_.clear();
+        well_local_cells_.reserve(well_container_.size(), 10);
+        std::vector<int> local_cells;
+        for (const auto& well : well_container_) {
+            const auto& global_cells = well->cells();
+            const int domain_index = well_domain_.at(well->name());
+            const auto& domain_cells = domains[domain_index].cells;
+            local_cells.resize(global_cells.size());
+
+            // find the local cell index for each well cell in the domain
+            // assume domain_cells is sorted
+            for (size_t i = 0; i < global_cells.size(); ++i) {
+                auto it = std::lower_bound(domain_cells.begin(), domain_cells.end(), global_cells[i]);
+                if (it != domain_cells.end() && *it == global_cells[i]) {
+                    local_cells[i] = std::distance(domain_cells.begin(), it);
+                } else {
+                    OPM_THROW(std::runtime_error, fmt::format("Cell {} not found in domain {}",
+                                                              global_cells[i], domain_index));
+                }
             }
+            well_local_cells_.appendRow(local_cells.begin(), local_cells.end());
+        }
     }
 } // namespace Opm

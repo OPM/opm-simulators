@@ -33,6 +33,8 @@
 #include <string>
 #include <vector>
 
+#include <opm/grid/utility/SparseTable.hpp>
+
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -445,8 +447,8 @@ template<class Scalar> class WellContributions;
             // Keep track of the domain of each well, if using subdomains.
             std::map<std::string, int> well_domain_;
 
-            // Store the global index of the cells in the domain, if using sumdomains
-            std::vector<std::vector<int>> domains_cells_;
+            // Store the local index of the wells perforated cells in the domain, if using sumdomains
+            SparseTable<int> well_local_cells_;
 
             const Grid& grid() const
             { return simulator_.vanguard().grid(); }
