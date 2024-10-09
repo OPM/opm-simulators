@@ -229,8 +229,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
-        GlobalEqVector res_local;
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& well: well_container_) {
             // Modifiy the Jacobian with explicit Schur complement
@@ -241,17 +239,17 @@ namespace Opm {
             // Apply as Schur complement the well residual to reservoir residuals:
             // r = r - duneC_^T * invDuneD_ * resWell_
             // Well equations B and C uses only the perforated cells, so need to apply on local residual
-            auto cells = well->cells();
-            res_local.resize(cells.size());
+            const auto& cells = well->cells();
+            linearize_res_local_.resize(cells.size());
 
             for (size_t i = 0; i < cells.size(); ++i) {
-                res_local[i] = res[cells[i]];
+                linearize_res_local_[i] = res[cells[i]];
             }
 
-            well->apply(res_local);
+            well->apply(linearize_res_local_);
 
             for (size_t i = 0; i < cells.size(); ++i) {
-                res[cells[i]] = res_local[i];
+                res[cells[i]] = linearize_res_local_[i];
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
@@ -264,8 +262,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     linearizeDomain(const Domain& domain, SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
-        GlobalEqVector res_local;
-
         // Note: no point in trying to do a parallel gathering
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
@@ -279,17 +275,17 @@ namespace Opm {
                 // Apply as Schur complement the well residual to reservoir residuals:
                 // r = r - duneC_^T * invDuneD_ * resWell_
                 // Well equations B and C uses only the perforated cells, so need to apply on local residual
-                auto cells = well->cells();
-                res_local.resize(cells.size());
+                const auto& cells = well->cells();
+                linearize_res_local_.resize(cells.size());
 
                 for (size_t i = 0; i < cells.size(); ++i) {
-                    res_local[i] = res[cells[i]];
+                    linearize_res_local_[i] = res[cells[i]];
                 }
 
-                well->apply(res_local);
+                well->apply(linearize_res_local_);
 
                 for (size_t i = 0; i < cells.size(); ++i) {
-                    res[cells[i]] = res_local[i];
+                    res[cells[i]] = linearize_res_local_[i];
                 }
             }
         }
@@ -1740,25 +1736,22 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        BVector x_local;
-        BVector Ax_local;
-
         for (auto& well : well_container_) {
             // Well equations B and C uses only the perforated cells, so need to apply on local vectors
-            auto cells = well->cells();
-            x_local.resize(cells.size());
-            Ax_local.resize(cells.size());
+            const auto& cells = well->cells();
+            x_local_.resize(cells.size());
+            Ax_local_.resize(cells.size());
 
             for (size_t i = 0; i < cells.size(); ++i) {
-                x_local[i] = x[cells[i]];
-                Ax_local[i] = Ax[cells[i]];
+                x_local_[i] = x[cells[i]];
+                Ax_local_[i] = Ax[cells[i]];
             }
 
-            well->apply(x_local, Ax_local);
+            well->apply(x_local_, Ax_local_);
 
             for (size_t i = 0; i < cells.size(); ++i) {
                 // only need to update Ax
-                Ax[cells[i]] = Ax_local[i];
+                Ax[cells[i]] = Ax_local_[i];
             }
         }
     }
@@ -1769,15 +1762,12 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     applyDomain(const BVector& x, BVector& Ax, int domainIndex) const
     {
-        BVector x_local;
-        BVector Ax_local;
-
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domainIndex) {
                 // Well equations B and C uses only the perforated cells, so need to apply on local vectors
                 auto cells = well->cells();
-                x_local.resize(cells.size());
-                Ax_local.resize(cells.size());
+                x_local_.resize(cells.size());
+                Ax_local_.resize(cells.size());
                 // transfer global cells index to local subdomain cells index
                 auto domain_cells = domains_cells_[well_domain_.at(well->name())];
 
@@ -1794,15 +1784,15 @@ namespace Opm {
                 }
 
                 for (size_t i = 0; i < cells.size(); ++i) {
-                    x_local[i] = x[cells[i]];
-                    Ax_local[i] = Ax[cells[i]];
+                    x_local_[i] = x[cells[i]];
+                    Ax_local_[i] = Ax[cells[i]];
                 }
 
-                well->apply(x_local, Ax_local);
+                well->apply(x_local_, Ax_local_);
 
                 for (size_t i = 0; i < cells.size(); ++i) {
                     // only need to update Ax
-                    Ax[cells[i]] = Ax_local[i];
+                    Ax[cells[i]] = Ax_local_[i];
                 }
             }
         }
@@ -1997,15 +1987,14 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            BVector x_local;
             for (auto& well : well_container_) {
-                auto cells = well->cells();
-                x_local.resize(cells.size());
+                const auto& cells = well->cells();
+                x_local_.resize(cells.size());
 
                 for (size_t i = 0; i < cells.size(); ++i) {
-                    x_local[i] = x[cells[i]];
+                    x_local_[i] = x[cells[i]];
                 }
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local, this->wellState(), local_deferredLogger);
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_, this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
@@ -2023,16 +2012,15 @@ namespace Opm {
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
         DeferredLogger local_deferredLogger;
-        BVector x_local;
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
-                auto cells = well->cells();
-                x_local.resize(cells.size());
+                const auto& cells = well->cells();
+                x_local_.resize(cells.size());
 
                 for (size_t i = 0; i < cells.size(); ++i) {
-                    x_local[i] = x[cells[i]];
+                    x_local_[i] = x[cells[i]];
                 }
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local,
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
                                                             this->wellState(),
                                                             local_deferredLogger);
             }

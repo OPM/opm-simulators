@@ -591,6 +591,11 @@ template<class Scalar> class WellContributions;
 
         private:
             BlackoilWellModel(Simulator& simulator, const PhaseUsage& pu);
+
+            mutable BVector x_local_;
+            mutable BVector Ax_local_;
+            mutable BVector res_local_;
+            mutable GlobalEqVector linearize_res_local_;
         };
 
 
