@@ -24,7 +24,7 @@
 #ifndef OPM_WELL_ASSEMBLE_HEADER_INCLUDED
 #define OPM_WELL_ASSEMBLE_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>

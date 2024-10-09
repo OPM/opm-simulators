@@ -29,8 +29,6 @@ namespace Dune {
 template<class Matrix> class UMFPack;
 }
 
-#include <memory>
-
 namespace Opm {
 
 class DeferredLogger;
@@ -69,26 +67,26 @@ namespace mswellhelpers
     // density is density
     // roughness is the absolute roughness
     // mu is the average phase viscosity
-    template <typename ValueType>
-    ValueType frictionPressureLoss(const double l, const double diameter,
-                                   const double area, const double roughness,
+    template <typename ValueType, typename Scalar>
+    ValueType frictionPressureLoss(const Scalar l, const Scalar diameter,
+                                   const Scalar area, const Scalar roughness,
                                    const ValueType& density,
                                    const ValueType& w, const ValueType& mu);
 
 
-    template <typename ValueType>
+    template <typename ValueType, typename Scalar>
     ValueType valveContrictionPressureLoss(const ValueType& mass_rate,
                                            const ValueType& density,
-                                           const double area_con, const double cv);
+                                           const Scalar area_con, const Scalar cv);
 
 
-    template <typename ValueType>
-    ValueType velocityHead(const double area, const ValueType& mass_rate,
+    template <typename ValueType, typename Scalar>
+    ValueType velocityHead(const Scalar area, const ValueType& mass_rate,
                            const ValueType& density);
 
 
     // calculating the viscosity of oil-water emulsion at local conditons
-    template <typename ValueType>
+    template <typename ValueType, typename Scalar>
     ValueType emulsionViscosity(const ValueType& water_fraction,
                                 const ValueType& water_viscosity,
                                 const ValueType& oil_fraction,

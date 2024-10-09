@@ -31,10 +31,11 @@
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
+#include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
@@ -159,10 +160,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
+        enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
+        enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
+        constexpr static bool isIncompatibleWithCprw = enableMICP || enablePolymerMolarWeight;
+
 #if HAVE_MPI
         using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
-        using CommunicationType = Dune::CollectiveCommunication<int>;
+        using CommunicationType = Dune::Communication<int>;
 #endif
 
     public:
@@ -170,7 +175,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         static void registerParameters()
         {
-            FlowLinearSolverParameters::registerParameters<TypeTag>();
+            FlowLinearSolverParameters::registerParameters();
         }
 
         /// Construct a system solver.
@@ -203,13 +208,28 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
               matrix_(nullptr)
         {
             parameters_.resize(1);
-            parameters_[0].template init<TypeTag>(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
+            parameters_[0].init(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
             initialize();
         }
 
         void initialize()
         {
             OPM_TIMEBLOCK(IstlSolver);
+
+            if (isIncompatibleWithCprw) {
+                // Some model variants are incompatible with the CPRW linear solver.
+                if (parameters_[0].linsolver_ == "cprw" || parameters_[0].linsolver_ == "hybrid") {
+                    std::string incompatible_model = "Unknown";
+                    if (enableMICP) {
+                        incompatible_model = "MICP";
+                    } else if (enablePolymerMolarWeight) {
+                        incompatible_model = "Polymer injectivity";
+                    }
+                    OPM_THROW(std::runtime_error,
+                              incompatible_model + " model is incompatible with the CPRW linear solver.\n"
+                              "Choose a different option, for example --linear-solver=ilu0");
+                }
+            }
 
             if (parameters_[0].linsolver_ == "hybrid") {
                 // Experimental hybrid configuration.
@@ -220,30 +240,38 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 parameters_.clear();
                 {
                     FlowLinearSolverParameters para;
-                    para.init<TypeTag>(false);
+                    para.init(false);
                     para.linsolver_ = "cprw";
                     parameters_.push_back(para);
                     prm_.push_back(setupPropertyTree(parameters_[0],
-                                                     Parameters::isSet<TypeTag,Properties::LinearSolverMaxIter>(),
-                                                     Parameters::isSet<TypeTag,Properties::LinearSolverReduction>()));
+                                                     Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
+                                                     Parameters::IsSet<Parameters::LinearSolverReduction>()));
                 }
                 {
                     FlowLinearSolverParameters para;
-                    para.init<TypeTag>(false);
+                    para.init(false);
                     para.linsolver_ = "ilu0";
                     parameters_.push_back(para);
                     prm_.push_back(setupPropertyTree(parameters_[1],
-                                                     Parameters::isSet<TypeTag,Properties::LinearSolverMaxIter>(),
-                                                     Parameters::isSet<TypeTag,Properties::LinearSolverReduction>()));
+                                                     Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
+                                                     Parameters::IsSet<Parameters::LinearSolverReduction>()));
                 }
                 // ------------
             } else {
-                // Do a normal linear solver setup.
                 assert(parameters_.size() == 1);
                 assert(prm_.empty());
-                prm_.push_back(setupPropertyTree(parameters_[0],
-                                                 Parameters::isSet<TypeTag,Properties::LinearSolverMaxIter>(),
-                                                 Parameters::isSet<TypeTag,Properties::LinearSolverReduction>()));
+
+                // Do a normal linear solver setup.
+                if (parameters_[0].is_nldd_local_solver_) {
+                    prm_.push_back(setupPropertyTree(parameters_[0],
+                                                     Parameters::IsSet<Parameters::NlddLocalLinearSolverMaxIter>(),
+                                                     Parameters::IsSet<Parameters::NlddLocalLinearSolverReduction>()));
+                }
+                else {
+                    prm_.push_back(setupPropertyTree(parameters_[0],
+                                                     Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
+                                                     Parameters::IsSet<Parameters::LinearSolverReduction>()));
+                }
             }
             flexibleSolver_.resize(prm_.size());
 
@@ -258,8 +286,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // Set it up manually
             ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
             detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
-            useWellConn_ = Parameters::get<TypeTag, Properties::MatrixAddWellContributions>();
-            const bool ownersFirst = Parameters::get<TypeTag, Properties::OwnerCellsFirst>();
+            useWellConn_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
+            const bool ownersFirst = Parameters::Get<Parameters::OwnerCellsFirst>();
             if (!ownersFirst) {
                 const std::string msg = "The linear solver no longer supports --owner-cells-first=false.";
                 if (on_io_rank) {
@@ -324,7 +352,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 // Outch! We need to be able to scale the linear system! Hence const_cast
                 matrix_ = const_cast<Matrix*>(&M);
 
-                useWellConn_ = Parameters::get<TypeTag, Properties::MatrixAddWellContributions>();
+                useWellConn_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
             } else {
                 // Pointers should not change
@@ -495,6 +523,13 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (!flexibleSolver_[activeSolverNum_].solver_) {
                 return true;
             }
+
+            if (flexibleSolver_[activeSolverNum_].pre_->hasPerfectUpdate()) {
+                return false;
+            }
+
+            // For AMG based preconditioners, the hierarchy depends on the matrix values
+            // so it is recreated at certain intervals
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 0) {
                 // Always recreate solver.
                 return true;
@@ -509,7 +544,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 return this->iterations() > 10;
             }
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 3) {
-                // Recreate solver if the last solve used more than 10 iterations.
+                // Never recreate the solver
                 return false;
             }
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 4) {
@@ -518,7 +553,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 const bool create = ((solveCount_ % step) == 0);
                 return create;
             }
-
             // If here, we have an invalid parameter.
             const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
             std::string msg = "Invalid value: " + std::to_string(this->parameters_[activeSolverNum_].cpr_reuse_setup_)
@@ -528,7 +562,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
             throw std::runtime_error(msg);
 
-            // Never reached.
             return false;
         }
 

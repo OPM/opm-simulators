@@ -26,7 +26,7 @@
 #define BOOST_TEST_MODULE Glift1
 
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/start.hh>
 
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -34,7 +34,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
@@ -85,10 +85,15 @@ initSimulator(const char *filename)
         filename_arg.c_str()
     };
 
-    registerEclTimeSteppingParameters<TypeTag>();
-    BlackoilModelParameters<TypeTag>::registerParameters();
-    Parameters::registerParam<TypeTag, Properties::EnableTerminalOutput>("Do *NOT* use!");
-    setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/true);
+    Parameters::reset();
+    registerAllParameters_<TypeTag>(false);
+    registerEclTimeSteppingParameters<double>();
+    BlackoilModelParameters<double>::registerParameters();
+    Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
+    Opm::Parameters::SetDefault<Opm::Parameters::ThreadsPerProcess>(2);
+    Parameters::endRegistration();
+    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
+                              argv, /*registerParams=*/false);
 
     FlowGenericVanguard::readDeck(filename);
     return std::make_unique<Simulator>();
@@ -97,18 +102,18 @@ initSimulator(const char *filename)
 
 namespace {
 
-struct GliftFixture {
-    GliftFixture() {
-    int argc = boost::unit_test::framework::master_test_suite().argc;
-    char** argv = boost::unit_test::framework::master_test_suite().argv;
-#if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc, argv);
-#else
-    Dune::MPIHelper::instance(argc, argv);
+struct GliftFixture
+{
+    GliftFixture()
+    {
+        int argc = boost::unit_test::framework::master_test_suite().argc;
+        char** argv = boost::unit_test::framework::master_test_suite().argv;
+    #if HAVE_DUNE_FEM
+        Dune::Fem::MPIManager::initialize(argc, argv);
+    #else
+        Dune::MPIHelper::instance(argc, argv);
 #endif
         Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
-        using TypeTag = Opm::Properties::TTag::FlowProblem;
-        Opm::registerAllParameters_<TypeTag>();
     }
 };
 
@@ -118,7 +123,7 @@ BOOST_GLOBAL_FIXTURE(GliftFixture);
 
 BOOST_AUTO_TEST_CASE(G1)
 {
-    //using TypeTag = Opm::Properties::TTag::FlowProblem;
+    //using TypeTag = Opm::Properties::TTag::FlowProblemBlackoil;
     using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
     //using EclProblem = Opm::EclProblem<TypeTag>;
     //using EclWellModel = typename EclProblem::EclWellModel;
@@ -126,8 +131,8 @@ BOOST_AUTO_TEST_CASE(G1)
     using WellState = Opm::WellState<double>;
     using StdWell = Opm::StandardWell<TypeTag>;
     using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
-    using GasLiftGroupInfo = Opm::GasLiftGroupInfo;
-    using GasLiftSingleWellGeneric = Opm::GasLiftSingleWellGeneric;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double>;
+    using GasLiftSingleWellGeneric = Opm::GasLiftSingleWellGeneric<double>;
     using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
     const std::string filename = "GLIFT1.DATA";
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;

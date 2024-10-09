@@ -27,15 +27,19 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Schedule/SummaryState.hpp>
-#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+
 #include <opm/input/eclipse/Python/Python.hpp>
 
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQParams.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/grid/GridManager.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/common/utility/TimeService.hpp>
 
@@ -43,12 +47,15 @@
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
+
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -56,7 +63,9 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
 using StandardWell = Opm::StandardWell<Opm::Properties::TTag::FlowProblem>;
 
@@ -64,18 +73,21 @@ struct SetupTest {
 
     using Grid = UnstructuredGrid;
 
-    SetupTest ()
+    SetupTest()
     {
-        Opm::Parser parser;
-        auto deck = parser.parseFile("TESTWELLMODEL.DATA");
-        ecl_state.reset(new Opm::EclipseState(deck) );
-        {
-          const Opm::TableManager table ( deck );
-          const Opm::Runspec runspec (deck);
-          python = std::make_shared<Opm::Python>();
-          schedule.reset( new Opm::Schedule(deck, *ecl_state, python));
-          summaryState.reset( new Opm::SummaryState(Opm::TimeService::from_time_t(schedule->getStartTime())));
-        }
+        const auto deck = Opm::Parser{}.parseFile("TESTWELLMODEL.DATA");
+        this->ecl_state = std::make_unique<const Opm::EclipseState>(deck);
+
+        const Opm::TableManager table(deck);
+        const Opm::Runspec runspec(deck);
+
+        this->schedule = std::make_unique<const Opm::Schedule>
+            (deck, *this->ecl_state, std::make_shared<Opm::Python>());
+
+        this->summaryState = std::make_unique<Opm::SummaryState>
+            (Opm::TimeService::from_time_t(schedule->getStartTime()),
+             this->ecl_state->runspec().udqParams().undefinedValue());
+
         current_timestep = 0;
     };
 
@@ -83,7 +95,7 @@ struct SetupTest {
     std::shared_ptr<Opm::Python> python;
     std::unique_ptr<const Opm::Schedule> schedule;
     std::unique_ptr<Opm::SummaryState> summaryState;
-    std::vector<std::vector<Opm::PerforationData>> well_perf_data;
+    std::vector<std::vector<Opm::PerforationData<double>>> well_perf_data;
     int current_timestep;
 };
 
@@ -112,7 +124,7 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
     const Opm::Well& well = wells_ecl[1];
-    const Opm::BlackoilModelParameters<Opm::Properties::TTag::FlowProblem> param;
+    const Opm::BlackoilModelParameters<double> param;
 
     // For the conversion between the surface volume rate and resrevoir voidage rate
     typedef Opm::BlackOilFluidSystem<double> FluidSystem;
@@ -125,17 +137,16 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     rateConverter.reset(new RateConverterType (phaseUsage,
                                      std::vector<int>(10, 0)));
 
-    Opm::PerforationData dummy;
-    std::vector<Opm::PerforationData> pdata(well.getConnections().size(), dummy);
+    Opm::PerforationData<double> dummy;
+    std::vector<Opm::PerforationData<double>> pdata(well.getConnections().size(), dummy);
     for (auto c = 0*pdata.size(); c < pdata.size(); ++c) {
         pdata[c].ecl_index = c;
     }
 
-    Opm::ParallelWellInfo pinfo{well.name()};
+    Opm::ParallelWellInfo<double> pinfo{well.name()};
 
     BOOST_CHECK_THROW( StandardWell( well, pinfo, -1, param, *rateConverter, 0, 3, 3, 0, pdata), std::invalid_argument);
 }
-
 
 BOOST_AUTO_TEST_CASE(TestBehavoir) {
     const SetupTest setup_test;
@@ -145,11 +156,11 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
 
     {
         const int nw = wells_ecl.size();
-        const Opm::BlackoilModelParameters<Opm::Properties::TTag::FlowProblem> param;
+        const Opm::BlackoilModelParameters<double> param;
 
         for (int w = 0; w < nw; ++w) {
             // For the conversion between the surface volume rate and resrevoir voidage rate
-            typedef Opm::BlackOilFluidSystem<double> FluidSystem;
+            using FluidSystem = Opm::BlackOilFluidSystem<double>;
             using RateConverterType = Opm::RateConverter::
                 SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
             // Compute reservoir volumes for RESV controls.
@@ -160,13 +171,13 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
             // Compute reservoir volumes for RESV controls.
             rateConverter.reset(new RateConverterType (phaseUsage,
                                              std::vector<int>(10, 0)));
-            Opm::PerforationData dummy;
-            std::vector<Opm::PerforationData> pdata(wells_ecl[w].getConnections().size(), dummy);
+            Opm::PerforationData<double> dummy;
+            std::vector<Opm::PerforationData<double>> pdata(wells_ecl[w].getConnections().size(), dummy);
             for (auto c = 0*pdata.size(); c < pdata.size(); ++c) {
                 pdata[c].ecl_index = c;
             }
 
-            Opm::ParallelWellInfo pinfo{wells_ecl[w].name()};
+            Opm::ParallelWellInfo<double> pinfo{wells_ecl[w].name()};
             wells.emplace_back(new StandardWell(wells_ecl[w], pinfo, current_timestep, param, *rateConverter, 0, 3, 3, w, pdata) );
         }
     }

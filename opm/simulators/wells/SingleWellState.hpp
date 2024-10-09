@@ -29,11 +29,12 @@
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 
-struct PerforationData;
+template<class Scalar> struct PerforationData;
 class SummaryState;
 class Well;
 
@@ -41,14 +42,14 @@ template<class Scalar>
 class SingleWellState {
 public:
     SingleWellState(const std::string& name,
-                    const ParallelWellInfo& pinfo,
+                    const ParallelWellInfo<Scalar>& pinfo,
                     bool is_producer,
                     Scalar presssure_first_connection,
-                    const std::vector<PerforationData>& perf_input,
+                    const std::vector<PerforationData<Scalar>>& perf_input,
                     const PhaseUsage& pu,
                     Scalar temp);
 
-    static SingleWellState serializationTestObject(const ParallelWellInfo& pinfo);
+    static SingleWellState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -79,7 +80,7 @@ public:
     bool operator==(const SingleWellState&) const;
 
     std::string name;
-    std::reference_wrapper<const ParallelWellInfo> parallel_info;
+    std::reference_wrapper<const ParallelWellInfo<Scalar>> parallel_info;
 
     WellStatus status{WellStatus::OPEN};
     bool producer;
@@ -120,7 +121,7 @@ public:
     /// \param[in] new_perf_data New perforation data.  Only
     ///    PerforationData::connection_transmissibility_factor actually
     ///    used (overwrites existing internal values).
-    void reset_connection_factors(const std::vector<PerforationData>& new_perf_data);
+    void reset_connection_factors(const std::vector<PerforationData<Scalar>>& new_perf_data);
     void update_producer_targets(const Well& ecl_well, const SummaryState& st);
     void update_injector_targets(const Well& ecl_well, const SummaryState& st);
     void update_targets(const Well& ecl_well, const SummaryState& st);

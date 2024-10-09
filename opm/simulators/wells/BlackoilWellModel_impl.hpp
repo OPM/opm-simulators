@@ -27,21 +27,31 @@
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #endif
 
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+#include <opm/common/utility/numeric/RootFinders.hpp>
 
-#include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Well/PAvgDynamicSourceData.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
+
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/TargetCalculator.hpp>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
+
+#if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#endif
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -66,8 +76,8 @@ namespace Opm {
                                             simulator.gridView().comm())
         , simulator_(simulator)
     {
-        this->terminal_output_ = ((simulator.gridView().comm().rank() == 0) &&
-                                   Parameters::get<TypeTag, Properties::EnableTerminalOutput>());
+        this->terminal_output_ = (simulator.gridView().comm().rank() == 0)
+            && Parameters::Get<Parameters::EnableTerminalOutput>();
 
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -84,15 +94,17 @@ namespace Opm {
         }
 
         this->alternative_well_rate_init_ =
-            Parameters::get<TypeTag, Properties::AlternativeWellRateInit>();
+            Parameters::Get<Parameters::AlternativeWellRateInit>();
+
+        using SourceDataSpan =
+            typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
 
         this->wbpCalculationService_
             .localCellIndex([this](const std::size_t globalIndex)
             { return this->compressedIndexForInterior(globalIndex); })
-            .evalCellSource([this](const int                                     localCell,
-                                   PAvgDynamicSourceData::SourceDataSpan<Scalar> sourceTerms)
+            .evalCellSource([this](const int localCell, SourceDataSpan sourceTerms)
             {
-                using Item = typename PAvgDynamicSourceData::SourceDataSpan<Scalar>::Item;
+                using Item = typename SourceDataSpan::Item;
 
                 const auto* intQuants = this->simulator_.model()
                     .cachedIntensiveQuantities(localCell, /*timeIndex = */0);
@@ -182,11 +194,28 @@ namespace Opm {
 
         // Create cartesian to compressed mapping
         const auto& schedule_wells = this->schedule().getWellsatEnd();
+        auto possibleFutureConnections = this->schedule().getPossibleFutureConnections();
 
+#if HAVE_MPI
+        // Communicate Map to other processes, since it is only available on rank 0
+        const auto& comm = this->simulator_.vanguard().grid().comm();
+        Parallel::MpiSerializer ser(comm);
+        ser.broadcast(possibleFutureConnections);
+#endif
         // initialize the additional cell connections introduced by wells.
         for (const auto& well : schedule_wells)
         {
             std::vector<int> wellCells = this->getCellsForConnections(well);
+            // Now add the cells of the possible future connections
+            const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
+            if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
+                for (auto& global_index : possibleFutureConnectionSetIt->second) {
+                    int compressed_idx = compressedIndexForInterior(global_index);
+                    if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+                        wellCells.push_back(compressed_idx);
+                    }
+                }
+            }
             for (int cellIdx : wellCells) {
                 neighbors[cellIdx].insert(wellCells.begin(),
                                           wellCells.end());
@@ -272,7 +301,7 @@ namespace Opm {
             {
                 const auto& sched_state = this->schedule()[timeStepIdx];
 
-                this->vfp_properties_ = std::make_unique<VFPProperties>
+                this->vfp_properties_ = std::make_unique<VFPProperties<Scalar>>
                     (sched_state.vfpinj(), sched_state.vfpprod(), this->wellState());
             }
         }
@@ -422,7 +451,7 @@ namespace Opm {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             simulator_.model().newtonMethod().numIterations());
 
-        this->wellState().updateWellsDefaultALQ(this->wells_ecl_, this->summaryState());
+        this->wellState().updateWellsDefaultALQ(this->schedule(), reportStepIdx, this->summaryState());
         this->wellState().gliftTimeStepInit();
 
         const double simulationTime = simulator_.time();
@@ -468,7 +497,7 @@ namespace Opm {
             well->setGuideRate(&this->guideRate_);
         }
 
-        this->updateInjFCMult(local_deferredLogger);
+        this->updateFiltrationModelsPreStep(local_deferredLogger);
 
         // Close completions due to economic reasons
         for (auto& well : well_container_) {
@@ -485,7 +514,7 @@ namespace Opm {
             // This is done only for producers, as injectors will only have a single
             // nonzero phase anyway.
             for (auto& well : well_container_) {
-                const bool zero_target = well->stopppedOrZeroRateTarget(summaryState, this->wellState());
+                const bool zero_target = well->stoppedOrZeroRateTarget(simulator_, this->wellState(), local_deferredLogger);
                 if (well->isProducer() && !zero_target) {
                     well->updateWellStateRates(simulator_, this->wellState(), local_deferredLogger);
                 }
@@ -679,10 +708,10 @@ namespace Opm {
         }
 
         if (Indices::waterEnabled) {
-            this->updateFiltrationParticleVolume(dt, FluidSystem::waterPhaseIdx);
+            this->updateFiltrationModelsPostStep(dt, FluidSystem::waterPhaseIdx, local_deferredLogger);
         }
 
-        // at the end of the time step, updating the inj_multiplier saved in WellState for later use
+        // WINJMULT: At the end of the time step, update the inj_multiplier saved in WellState for later use
         this->updateInjMult(local_deferredLogger);
 
         // report well switching
@@ -799,30 +828,35 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     initializeWellState(const int timeStepIdx)
     {
-        std::vector<Scalar> cellPressures(this->local_num_cells_, 0.0);
-        ElementContext elemCtx(simulator_);
+        const auto pressIx = []()
+        {
+            if (Indices::oilEnabled)   { return FluidSystem::oilPhaseIdx;   }
+            if (Indices::waterEnabled) { return FluidSystem::waterPhaseIdx; }
 
-        const auto& gridView = simulator_.vanguard().gridView();
+            return FluidSystem::gasPhaseIdx;
+        }();
+
+        auto cellPressures = std::vector<Scalar>(this->local_num_cells_, Scalar{0});
+        auto cellTemperatures = std::vector<Scalar>(this->local_num_cells_, Scalar{0});
+
+        auto elemCtx = ElementContext { this->simulator_ };
+        const auto& gridView = this->simulator_.vanguard().gridView();
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
+            const auto ix = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
-            // copy of get perfpressure in Standard well except for value
-            Scalar& perf_pressure = cellPressures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)];
-            if (Indices::oilEnabled) {
-                perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
-            } else if (Indices::waterEnabled) {
-                perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
-            } else {
-                perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
-            }
-        }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ", simulator_.vanguard().grid().comm());
 
-        this->wellState().init(cellPressures, this->schedule(), this->wells_ecl_,
+            cellPressures[ix] = fs.pressure(pressIx).value();
+            cellTemperatures[ix] = fs.temperature(0).value();
+        }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ",
+                                   this->simulator_.vanguard().grid().comm());
+
+        this->wellState().init(cellPressures, cellTemperatures, this->schedule(), this->wells_ecl_,
                                this->local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), this->well_perf_data_,
                                this->summaryState());
@@ -1071,8 +1105,7 @@ namespace Opm {
             }
             ++iter;
             for (auto& well : this->well_container_) {
-                const auto& summary_state = this->simulator_.vanguard().summaryState();
-                well->solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
+                well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
             }
             this->initPrimaryVariablesEvaluation();
         } while (iter < max_iter);
@@ -1236,7 +1269,143 @@ namespace Opm {
         return {more_network_update, well_group_control_changed};
     }
 
+    // This function is to be used for well groups in an extended network that act as a subsea manifold
+    // The wells of such group should have a common THP and total phase rate(s) obeying (if possible)
+    // the well group constraint set by GCONPROD
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
+    {
+        const int reportStepIdx = this->simulator_.episodeIndex();
+        const auto& network = this->schedule()[reportStepIdx].network();
+        const auto& balance = this->schedule()[reportStepIdx].network_balance();
+        const Scalar thp_tolerance = balance.thp_tolerance();
 
+        if (!network.active()) {
+            return;
+        }
+
+        auto& well_state = this->wellState();
+        auto& group_state = this->groupState();
+
+        for (const std::string& nodeName : network.node_names()) {
+            const bool has_choke = network.node(nodeName).as_choke();
+            if (has_choke) {
+                const auto& summary_state = this->simulator_.vanguard().summaryState();
+                const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
+                const auto ctrl = group.productionControls(summary_state);
+                const auto cmode = ctrl.cmode;
+                const auto pu = this->phase_usage_;
+                //TODO: Auto choke combined with RESV control is not supported
+                std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
+                Scalar gratTargetFromSales = 0.0;
+                if (group_state.has_grat_sales_target(group.name()))
+                    gratTargetFromSales = group_state.grat_sales_target(group.name());
+
+                WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
+                                                  gratTargetFromSales, nodeName, group_state,
+                                                  group.has_gpmaint_control(cmode));
+                const Scalar orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
+
+                auto mismatch = [&] (auto group_thp) {
+                    Scalar group_rate(0.0);
+                    Scalar rate(0.0);
+                    for (auto& well : this->well_container_) {
+                        std::string well_name = well->name();
+                        auto& ws = well_state.well(well_name);
+                        if (group.hasWell(well_name)) {
+                            well->setDynamicThpLimit(group_thp);
+                            const Well& well_ecl = this->wells_ecl_[well->indexOfWell()];
+                            const auto inj_controls = Well::InjectionControls(0);
+                            const auto prod_controls = well_ecl.productionControls(summary_state);
+                            well->iterateWellEqWithSwitching(this->simulator_, dt, inj_controls, prod_controls, well_state, group_state, local_deferredLogger,  false, false);
+                            rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
+                            group_rate += rate;
+                        }
+                    }
+                    return (group_rate - orig_target)/orig_target;
+                };
+
+                const auto upbranch = network.uptree_branch(nodeName);
+                const auto it = this->node_pressures_.find((*upbranch).uptree_node());
+                const Scalar nodal_pressure = it->second;
+                Scalar well_group_thp = nodal_pressure;
+
+                std::optional<Scalar> autochoke_thp;
+                if (auto iter = this->well_group_thp_calc_.find(nodeName); iter != this->well_group_thp_calc_.end()) {
+                    autochoke_thp = this->well_group_thp_calc_.at(nodeName);
+                }
+
+                //Find an initial bracket
+                std::array<Scalar, 2> range_initial;
+                if (!autochoke_thp.has_value()){
+                    Scalar min_thp, max_thp;
+                    // Retrieve the terminal pressure of the associated root of the manifold group
+                    std::string node_name =  nodeName;
+                    while (!network.node(node_name).terminal_pressure().has_value()) {
+                        auto branch = network.uptree_branch(node_name).value();
+                        node_name = branch.uptree_node();
+                    }
+                    min_thp = network.node(node_name).terminal_pressure().value();
+                    WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
+                    // Narrow down the bracket
+                    Scalar low1, high1;
+                    std::array<Scalar, 2> range = {Scalar{0.9}*min_thp, Scalar{1.1}*max_thp};
+                    std::optional<Scalar> appr_sol;
+                    WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
+                    min_thp = low1;
+                    max_thp = high1;
+                    range_initial = {min_thp, max_thp};
+                }
+
+                if (!autochoke_thp.has_value() || autochoke_thp.value() > nodal_pressure) {
+                    // The bracket is based on the initial bracket or on a range based on a previous calculated group thp
+                    std::array<Scalar, 2> range = autochoke_thp.has_value() ?
+                        std::array<Scalar, 2>{Scalar{0.9} * autochoke_thp.value(),
+                                              Scalar{1.1} * autochoke_thp.value()} : range_initial;
+                    Scalar low, high;
+                    std::optional<Scalar> approximate_solution;
+                    const Scalar tolerance1 = thp_tolerance;
+                    local_deferredLogger.debug("Using brute force search to bracket the group THP");
+                    const bool finding_bracket = WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
+
+                    if (approximate_solution.has_value()) {
+                        autochoke_thp = *approximate_solution;
+                        local_deferredLogger.debug("Approximate group THP value found: "  + std::to_string(autochoke_thp.value()));
+                    } else if (finding_bracket) {
+                        const Scalar tolerance2 = thp_tolerance;
+                        const int max_iteration_solve = 100;
+                        int iteration = 0;
+                        autochoke_thp = RegulaFalsiBisection<ThrowOnError>::
+                                         solve(mismatch, low, high, max_iteration_solve, tolerance2, iteration);
+                        local_deferredLogger.debug(" bracket = [" + std::to_string(low) + ", " + std::to_string(high) + "], " +
+                                                   "iteration = " + std::to_string(iteration));
+                        local_deferredLogger.debug("Group THP value = " + std::to_string(autochoke_thp.value()));
+                    } else {
+                        autochoke_thp.reset();
+                        local_deferredLogger.debug("Group THP solve failed due to bracketing failure");
+                    }
+                }
+                 if (autochoke_thp.has_value()) {
+                    well_group_thp_calc_[nodeName] = autochoke_thp.value();
+                    // Note: The node pressure of the auto-choke node is set to well_group_thp in computeNetworkPressures()
+                    // and must be larger or equal to the pressure of the uptree node of its branch.
+                    well_group_thp = std::max(autochoke_thp.value(), nodal_pressure);
+                }
+
+                for (auto& well : this->well_container_) {
+                    std::string well_name = well->name();
+                    if (group.hasWell(well_name)) {
+                        well->setDynamicThpLimit(well_group_thp);
+                    }
+                }
+
+                // Use the group THP in computeNetworkPressures().
+                group_state.update_well_group_thp(nodeName, well_group_thp);
+            }
+        }
+    }
 
     template<typename TypeTag>
     void
@@ -1340,8 +1509,10 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
-        GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-        GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map)
+                              GLiftProdWells& prod_wells,
+                              GLiftOptWells &glift_wells,
+                              GasLiftGroupInfo<Scalar>& group_info,
+                              GLiftWellStateMap& state_map)
     {
         auto comm = simulator_.vanguard().grid().comm();
         int num_procs = comm.size();
@@ -1445,11 +1616,13 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag> *well,
-        DeferredLogger& deferred_logger,
-        GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-        GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map,
-        GLiftSyncGroups& sync_groups)
+    gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
+                                        DeferredLogger& deferred_logger,
+                                        GLiftProdWells& prod_wells,
+                                        GLiftOptWells& glift_wells,
+                                        GasLiftGroupInfo<Scalar>& group_info,
+                                        GLiftWellStateMap& state_map,
+                                        GLiftSyncGroups& sync_groups)
     {
         const auto& summary_state = simulator_.vanguard().summaryState();
         std::unique_ptr<GasLiftSingleWell> glift
@@ -1556,10 +1729,11 @@ namespace Opm {
         }
     }
 
+#if COMPILE_BDA_BRIDGE
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    getWellContributions(WellContributions& wellContribs) const
+    getWellContributions(WellContributions<Scalar>& wellContribs) const
     {
         // prepare for StandardWells
         wellContribs.setBlockSize(StandardWell<TypeTag>::Indices::numEq, StandardWell<TypeTag>::numStaticWellEq);
@@ -1591,6 +1765,7 @@ namespace Opm {
             }
         }
     }
+#endif
 
     // Ax = Ax - alpha * C D^-1 B x
     template<typename TypeTag>
@@ -1700,9 +1875,8 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            const auto& summary_state = simulator_.vanguard().summaryState();
             for (auto& well : well_container_) {
-                well->recoverWellSolutionAndUpdateWellState(summary_state, x, this->wellState(), local_deferredLogger);
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x, this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
@@ -1720,10 +1894,9 @@ namespace Opm {
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
         DeferredLogger local_deferredLogger;
-        const auto& summary_state = this->simulator_.vanguard().summaryState();
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
-                well->recoverWellSolutionAndUpdateWellState(summary_state, x,
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x,
                                                             this->wellState(),
                                                             local_deferredLogger);
             }
@@ -1771,7 +1944,6 @@ namespace Opm {
                              const std::vector<Scalar>& B_avg,
                              DeferredLogger& local_deferredLogger) const
     {
-        const auto& summary_state = simulator_.vanguard().summaryState();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const bool relax_tolerance = iterationIdx > param_.strict_outer_iter_wells_;
 
@@ -1779,7 +1951,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if ((well_domain_.at(well->name()) == domain.index)) {
                 if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                    report += well->getWellConvergence(summary_state,
+                    report += well->getWellConvergence(simulator_,
                                                        this->wellState(),
                                                        B_avg,
                                                        local_deferredLogger,
@@ -1822,9 +1994,8 @@ namespace Opm {
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                const auto& summary_state = simulator_.vanguard().summaryState();
                 local_report += well->getWellConvergence(
-                        summary_state, this->wellState(), B_avg, local_deferredLogger,
+                        simulator_, this->wellState(), B_avg, local_deferredLogger,
                         iterationIdx > param_.strict_outer_iter_wells_);
             } else {
                 ConvergenceReport report;
@@ -1896,6 +2067,9 @@ namespace Opm {
         // network related
         bool more_network_update = false;
         if (this->shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
+            const double dt = this->simulator_.timeStepSize();
+            // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
+            computeWellGroupThp(dt, deferred_logger);
             const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx);
             const Scalar network_imbalance = comm.max(local_network_imbalance);
             const auto& balance = this->schedule()[episodeIdx].network_balance();
@@ -2024,7 +2198,7 @@ namespace Opm {
     {
         auto wbpResult = data::WellBlockAveragePressures{};
 
-        using Calculated = PAvgCalculator::Result::WBPMode;
+        using Calculated = typename PAvgCalculator<Scalar>::Result::WBPMode;
         using Output = data::WellBlockAvgPress::Quantity;
 
         this->wbpCalculationService_.collectDynamicValues();
@@ -2064,14 +2238,14 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    ParallelWBPCalculation::EvaluatorFactory
+    typename ParallelWBPCalculation<typename BlackoilWellModel<TypeTag>::Scalar>::EvaluatorFactory
     BlackoilWellModel<TypeTag>::
     makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
     {
-        using Span = PAvgDynamicSourceData::SourceDataSpan<Scalar>;
+        using Span = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
         using Item = typename Span::Item;
 
-        return [wellIdx, this]() -> ParallelWBPCalculation::Evaluator
+        return [wellIdx, this]() -> typename ParallelWBPCalculation<Scalar>::Evaluator
         {
             if (! this->wbpCalcMap_[wellIdx].openWellIdx_.has_value()) {
                 // Well is stopped/shut.  Return evaluator for stopped wells.
@@ -2182,7 +2356,7 @@ namespace Opm {
                                              this->groupState(),
                                              this->wellState(),
                                              deferred_logger);
-        
+
         if (changed_individual) {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
@@ -2205,7 +2379,8 @@ namespace Opm {
             const auto& wname = well->name();
             const auto wasClosed = wellTestState.well_is_closed(wname);
             well->checkWellOperability(simulator_, this->wellState(), local_deferredLogger);
-            well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
+            const bool under_zero_target = well->wellUnderZeroGroupRateTarget(this->simulator_, this->wellState(), local_deferredLogger);
+            well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, under_zero_target, wellTestState, local_deferredLogger);
 
             if (!wasClosed && wellTestState.well_is_closed(wname)) {
                 this->closed_this_step_.insert(wname);
@@ -2216,10 +2391,10 @@ namespace Opm {
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
 
         for (const auto& [group_name, to] : this->closed_offending_wells_) {
-            if (!this->wasDynamicallyShutThisTimeStep(to.second)) {
+            if (this->hasWell(to.second) && !this->wasDynamicallyShutThisTimeStep(to.second)) {
                 wellTestState.close_well(to.second, WellTestConfig::Reason::GROUP, simulationTime);
                 this->updateClosedWellsThisStep(to.second);
-                const std::string msg = 
+                const std::string msg =
                     fmt::format("Procedure on exceeding {} limit is WELL for group {}. Well {} is {}.",
                                 to.first,
                                 group_name,
@@ -2263,7 +2438,7 @@ namespace Opm {
         auto& ws = this->wellState().well(well->indexOfWell());
         for (int p = 0; p < np; ++p) {
             // make sure the potentials are positive
-            ws.well_potentials[p] = std::max(0.0, potentials[p]);
+            ws.well_potentials[p] = std::max(Scalar{0.0}, potentials[p]);
         }
     }
 
@@ -2345,8 +2520,7 @@ namespace Opm {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState<Scalar>::event_mask)) {
                 well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
-                const auto& summary_state = simulator_.vanguard().summaryState();
-                well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
+                well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
                 well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
@@ -2430,8 +2604,7 @@ namespace Opm {
     updatePrimaryVariables(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            const auto& summary_state = simulator_.vanguard().summaryState();
-            well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
+            well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
         }
     }
 
@@ -2526,10 +2699,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    calcRates(const int fipnum,
-              const int pvtreg,
-              const std::vector<Scalar>& production_rates,
-              std::vector<Scalar>& resv_coeff)
+    calcResvCoeff(const int fipnum,
+                  const int pvtreg,
+                  const std::vector<Scalar>& production_rates,
+                  std::vector<Scalar>& resv_coeff)
     {
         rateConverter_->calcCoeff(fipnum, pvtreg, production_rates, resv_coeff);
     }
@@ -2537,9 +2710,9 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    calcInjRates(const int fipnum,
-                 const int pvtreg,
-                 std::vector<Scalar>& resv_coeff)
+    calcInjResvCoeff(const int fipnum,
+                     const int pvtreg,
+                     std::vector<Scalar>& resv_coeff)
     {
         rateConverter_->calcInjCoeff(fipnum, pvtreg, resv_coeff);
     }
@@ -2561,14 +2734,18 @@ namespace Opm {
         const int nw = this->numLocalWells();
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             const Well& well = this->wells_ecl_[wellID];
-            if (well.isInjector())
-                continue;
+            auto& ws = this->wellState().well(wellID);
+            if (well.isInjector()){
+                if( !(ws.status == WellStatus::STOP)){
+                    this->wellState().well(wellID).temperature = well.inj_temperature();
+                    continue;
+                }
+            }
 
             std::array<Scalar,2> weighted{0.0,0.0};
             auto& [weighted_temperature, total_weight] = weighted;
 
             auto& well_info = this->local_parallel_well_info_[wellID].get();
-            auto& ws = this->wellState().well(wellID);
             auto& perf_data = ws.perf_data;
             auto& perf_phase_rate = perf_data.phase_rates;
 
@@ -2593,6 +2770,7 @@ namespace Opm {
                     perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];
                     weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
                 }
+                weight_factor = std::abs(weight_factor)+1e-13;
                 total_weight += weight_factor;
                 weighted_temperature += weight_factor * cellTemperatures;
             }

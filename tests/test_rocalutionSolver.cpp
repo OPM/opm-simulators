@@ -96,7 +96,7 @@ testRocalutionSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix,
     Dune::InverseOperatorResult result;
 
     Vector<bz> x(rhs.size());
-    auto wellContribs = Opm::WellContributions::create(accelerator_mode, true);
+    auto wellContribs = Opm::WellContributions<double>::create(accelerator_mode, true);
     std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
     try {
         bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,

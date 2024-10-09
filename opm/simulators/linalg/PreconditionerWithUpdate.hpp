@@ -32,6 +32,9 @@ class PreconditionerWithUpdate : public Preconditioner<X, Y>
 {
 public:
     virtual void update() = 0;
+
+    // Force derived classes to define if preconditioner has perfect update
+    virtual bool hasPerfectUpdate() const = 0;
 };
 
 template <class OriginalPreconditioner>
@@ -73,6 +76,10 @@ public:
     {
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return true;
+    }
+
 private:
     OriginalPreconditioner orig_precond_;
 };
@@ -91,6 +98,7 @@ struct GeneralPreconditionerMaker {
     virtual std::unique_ptr<
         Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>
     make() = 0;
+    virtual ~GeneralPreconditionerMaker() = default;
 };
 
 /// @brief Struct implementing a make function which creates a preconditioner
@@ -114,6 +122,7 @@ struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPrecondit
                 return std::make_unique<OriginalPreconditioner>(std::forward<Args>(args)...);
             }, args_);
     }
+    ~PreconditionerMaker(){}
     std::tuple<Args...> args_;
 };
 
@@ -158,6 +167,10 @@ public:
     void update() override
     {
         orig_precond_ = preconditioner_maker_->make();
+    }
+
+    virtual bool hasPerfectUpdate() const override {
+        return true;
     }
 
 private:

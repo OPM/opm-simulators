@@ -38,7 +38,7 @@
 
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -62,7 +62,7 @@
 namespace Opm::Properties {
     namespace TTag {
     struct TestRestartTypeTag {
-            using InheritsFrom = std::tuple<TestTypeTag, FlowTimeSteppingParameters>;
+            using InheritsFrom = std::tuple<TestTypeTag>;
         };
     }
 
@@ -149,7 +149,7 @@ TEST_FOR_TYPE_NAMED(BVec, BlockVectorWrapper)
 
 BOOST_AUTO_TEST_CASE(SingleWellState)
 {
-    Opm::ParallelWellInfo dummy;
+    Opm::ParallelWellInfo<double> dummy;
     auto data_out = Opm::SingleWellState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(WellContainer)
 
 BOOST_AUTO_TEST_CASE(WellState)
 {
-    Opm::ParallelWellInfo dummy;
+    Opm::ParallelWellInfo<double> dummy;
     auto data_out = Opm::WellState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(WellState)
 
 BOOST_AUTO_TEST_CASE(WGState)
 {
-    Opm::ParallelWellInfo dummy;
+    Opm::ParallelWellInfo<double> dummy;
     auto data_out = Opm::WGState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(WGState)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized WGState differ");
 }
 
-BOOST_AUTO_TEST_CASE(EclGenericVanguard)
+BOOST_AUTO_TEST_CASE(FlowGenericVanguard)
 {
     auto in_params = Opm::FlowGenericVanguard::serializationTestParams();
     Opm::FlowGenericVanguard val1(std::move(in_params));
@@ -229,20 +229,60 @@ BOOST_AUTO_TEST_CASE(EclGenericVanguard)
     BOOST_CHECK_MESSAGE(val1 == val2, "Deserialized FlowGenericVanguard differ");
 }
 
-BOOST_AUTO_TEST_CASE(EclGenericProblem)
+BOOST_AUTO_TEST_CASE(FlowGenericProblem)
 {
     Opm::EclipseState eclState;
     Opm::Schedule schedule;
     Dune::CpGrid grid;
+    using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
+    auto gridView = grid.leafGridView();
+    auto data_out
+        = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>>::
+            serializationTestObject(eclState, schedule, gridView);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(eclState, schedule, gridView);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for FlowGenericProblem");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized FlowGenericProblem differ");
+}
+
+BOOST_AUTO_TEST_CASE(MixingRateControls)
+{
+    Opm::Schedule schedule;
+    using FS = Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>;
+    auto data_out = Opm::MixingRateControls<FS>::serializationTestObject(schedule);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(schedule);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for MixingRateControls");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized MixingRateControls differ");
+}
+
 #if HAVE_DUNE_FEM
+BOOST_AUTO_TEST_CASE(FlowGenericProblemFem)
+{
+    Opm::EclipseState eclState;
+    Opm::Schedule schedule;
+    Dune::CpGrid grid;
+#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = GridPart::GridViewType;
+    auto gridPart = GridPart(grid);
+    auto gridView = gridPart.gridView();
+#else
     using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
     using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
     auto gridPart = GridPart(grid);
     auto gridView = GridView(static_cast<GridView>(gridPart));
-#else
-    using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
-    auto gridView = grid.leafGridView();
-#endif // HAVE_DUNE_FEM
+#endif
     auto data_out
         = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>>::
             serializationTestObject(eclState, schedule, gridView);
@@ -256,6 +296,7 @@ BOOST_AUTO_TEST_CASE(EclGenericProblem)
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
 }
+#endif // HAVE_DUNE_FEM
 
 namespace Opm {
 
@@ -296,10 +337,10 @@ public:
         closed_offending_wells_ = {{"test4", {"test5", "test6"}}};
     }
 
-    void calcRates(const int, const int, const std::vector<double>&, std::vector<double>&) override
+    void calcResvCoeff(const int, const int, const std::vector<double>&, std::vector<double>&) override
     {}
 
-    void calcInjRates(const int, const int, std::vector<double>&) override
+    void calcInjResvCoeff(const int, const int, std::vector<double>&) override
     {}
 
     void computePotentials(const std::size_t,
@@ -329,7 +370,7 @@ public:
     }
 
 private:
-    ParallelWellInfo dummy;
+    ParallelWellInfo<double> dummy;
 };
 
 }
@@ -356,10 +397,10 @@ BOOST_AUTO_TEST_CASE(BlackoilWellModelGeneric)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized BlackoilWellModelGeneric differ");
 }
 
-template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
-class GenericTracerModelTest : public Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>
+template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
+class GenericTracerModelTest : public Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>
 {
-    using Base = Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>;
+    using Base = Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>;
 public:
     GenericTracerModelTest(const GridView& gridView,
                               const Opm::EclipseState& eclState,
@@ -377,7 +418,7 @@ public:
                             const std::function<std::array<double,Grid::dimensionworld>(int)> centroids)
     {
         GenericTracerModelTest result(gridView, eclState, cartMapper, dofMapper, centroids);
-        result.tracerConcentration_ = {{1.0}, {2.0}, {3.0}};
+        result.tracerConcentration_ = {{{1.0, 2.0}}, {{3.0, 4.0}}, {{5.0, 6.0}}};
         result.wellTracerRate_.insert({{"foo", "bar"}, 4.0});
 
         return result;
@@ -400,26 +441,20 @@ public:
     }
 };
 
-BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
+BOOST_AUTO_TEST_CASE(FlowGenericTracerModel)
 {
     Dune::CpGrid grid;
     Opm::EclipseState eclState;
     Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
     auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
-#if HAVE_DUNE_FEM
-    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
-    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
-    auto gridPart = GridPart(grid);
-    auto gridView = GridView(static_cast<GridView>(gridPart));
-#else
     using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
     auto gridView = grid.leafGridView();
-#endif // HAVE_DUNE_FEM
     Dune::MultipleCodimMultipleGeomTypeMapper<GridView> dofMapper(gridView, Dune::mcmgElementLayout());
     auto data_out = GenericTracerModelTest<Dune::CpGrid,
                                            GridView,
                                            Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
                                            Opm::EcfvStencil<double, GridView, false, false>,
+                                           Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>,
                                            double>
         ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
     Opm::Serialization::MemPacker packer;
@@ -432,6 +467,44 @@ BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericTracerModel");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
 }
+
+#if HAVE_DUNE_FEM
+BOOST_AUTO_TEST_CASE(FlowGenericTracerModelFem)
+{
+    Dune::CpGrid grid;
+    Opm::EclipseState eclState;
+    Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
+    auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
+#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = GridPart::GridViewType;
+    auto gridPart = GridPart(grid);
+    auto gridView = gridPart.gridView();
+#else
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
+    auto gridPart = GridPart(grid);
+    auto gridView = GridView(static_cast<GridView>(gridPart));
+#endif
+    Dune::MultipleCodimMultipleGeomTypeMapper<GridView> dofMapper(gridView, Dune::mcmgElementLayout());
+    auto data_out = GenericTracerModelTest<Dune::CpGrid,
+                                           GridView,
+                                           Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
+                                           Opm::EcfvStencil<double, GridView, false, false>,
+                                           Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>,
+                                           double>
+        ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(gridView, eclState, mapper, dofMapper, centroids);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericTracerModel");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
+}
+#endif // HAVE_DUNE_FEM
 
 namespace Opm {
 
@@ -454,11 +527,12 @@ struct AquiferFixture {
             "test_RestartSerialization",
             "--ecl-deck-file-name=GLIFT1.DATA"
         };
+        Opm::ThreadManager::registerParameters();
         AdaptiveTimeStepping<TT>::registerParameters();
-        BlackoilModelParameters<TT>::registerParameters();
-        Parameters::registerParam<TT, Properties::EnableTerminalOutput>("Do *NOT* use!");
+        BlackoilModelParameters<double>::registerParameters();
+        Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
         setupParameters_<TT>(2, argv, /*registerParams=*/true);
-        FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }
 };
 

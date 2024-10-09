@@ -27,7 +27,6 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <functional>
-#include <utility>
 #include <vector>
 #include <optional>
 
@@ -39,22 +38,23 @@ using RegionId = int;
 class Rates;
 template<class Scalar> class SingleWellState;
 class SummaryState;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 enum class WellInjectorCMode;
 enum class WellProducerCMode;
 
 //! \brief Class for computing well group constraints.
+template<class Scalar>
 class WellConstraints {
 public:
     //! \brief Constructor sets reference to well.
-    WellConstraints(const WellInterfaceGeneric& well) : well_(well) {}
+    WellConstraints(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
 
     using RateConvFunc = std::function<void(const RegionId, const int,
-                                            const std::vector<double>&,
-                                            std::vector<double>&)>;
+                                            const std::vector<Scalar>&,
+                                            std::vector<Scalar>&)>;
 
     bool
-    checkIndividualConstraints(SingleWellState<double>& ws,
+    checkIndividualConstraints(SingleWellState<Scalar>& ws,
                                const SummaryState& summaryState,
                                const RateConvFunc& calcReservoirVoidageRates,
                                bool& thp_limit_violated_but_not_switched,
@@ -64,21 +64,21 @@ public:
 
 private:
     WellInjectorCMode
-    activeInjectionConstraint(const SingleWellState<double>& ws,
+    activeInjectionConstraint(const SingleWellState<Scalar>& ws,
                               const SummaryState& summaryState,
                               bool& thp_limit_violated_but_not_switched,
                               DeferredLogger& deferred_logger,
                               const std::optional<Well::InjectionControls>& inj_controls = std::nullopt) const;
 
     WellProducerCMode
-    activeProductionConstraint(const SingleWellState<double>& ws,
+    activeProductionConstraint(const SingleWellState<Scalar>& ws,
                                const SummaryState& summaryState,
                                const RateConvFunc& calcReservoirVoidageRates,
                                bool& thp_limit_violated_but_not_switched,
                                DeferredLogger& deferred_logger,
                                const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
-    const WellInterfaceGeneric& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface
 };
 
 }

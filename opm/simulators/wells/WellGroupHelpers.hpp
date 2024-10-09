@@ -37,7 +37,7 @@ template<class Scalar> class GroupState;
 namespace Network { class ExtNetwork; }
 struct PhaseUsage;
 class Schedule;
-class VFPProdProperties;
+template<class Scalar> class VFPProdProperties;
 template<class Scalar> class WellState;
 class FieldPropsManager;
 
@@ -202,7 +202,7 @@ public:
     computeNetworkPressures(const Network::ExtNetwork& network,
                             const WellState<Scalar>& well_state,
                             const GroupState<Scalar>& group_state,
-                            const VFPProdProperties& vfp_prod_props,
+                            const VFPProdProperties<Scalar>& vfp_prod_props,
                             const Schedule& schedule,
                             const int report_time_step);
 

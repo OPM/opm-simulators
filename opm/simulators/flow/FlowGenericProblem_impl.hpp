@@ -39,44 +39,10 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
-#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 
 namespace Opm {
-
-int eclPositionalParameter(Dune::ParameterTree& tree,
-                           std::set<std::string>& seenParams,
-                           std::string& errorMsg,
-                           const char** argv,
-                           int paramIdx)
-{
-    std::string param  = argv[paramIdx];
-    std::size_t i = param.find('=');
-    if (i != std::string::npos) {
-        std::string oldParamName = param.substr(0, i);
-        std::string oldParamValue = param.substr(i+1);
-        std::string newParamName = "--" + oldParamName;
-        std::replace(newParamName.begin(),
-                     newParamName.end(), '_' , '-');
-        errorMsg =
-          "The old syntax to specify parameters on the command line is no longer supported: "
-          "Try replacing '" + oldParamName + "=" + oldParamValue + "' with "+
-          "'" + newParamName + "=" + oldParamValue + "'!";
-        return 0;
-    }
-
-    if (seenParams.count("EclDeckFileName") > 0) {
-        errorMsg =
-            "Parameter 'EclDeckFileName' specified multiple times"
-            " as a command line parameter";
-        return 0;
-    }
-
-    tree["EclDeckFileName"] = argv[paramIdx];
-    seenParams.insert("EclDeckFileName");
-    return 1;
-}
 
 template<class GridView, class FluidSystem>
 FlowGenericProblem<GridView,FluidSystem>::
@@ -86,7 +52,6 @@ FlowGenericProblem(const EclipseState& eclState,
     : eclState_(eclState)
     , schedule_(schedule)
     , gridView_(gridView)
-    , mixControls_(schedule)
     , lookUpData_(gridView)
 {
 }
@@ -107,7 +72,6 @@ serializationTestObject(const EclipseState& eclState,
     result.solventRsw_ = {18.0};
     result.polymer_ = PolymerSolutionContainer<Scalar>::serializationTestObject();
     result.micp_ = MICPSolutionContainer<Scalar>::serializationTestObject();
-    result.mixControls_ = MixingRateControls<FluidSystem>::serializationTestObject(schedule);
 
     return result;
 }
@@ -146,8 +110,10 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
     {
         const auto& comp = rock_config.comp();
         rockParams_.clear();
-        for (const auto& c : comp)
-            rockParams_.push_back( { c.pref, c.compressibility } );
+        for (const auto& c : comp) {
+            rockParams_.push_back({static_cast<Scalar>(c.pref),
+                                   static_cast<Scalar>(c.compressibility)});
+        }
     }
 
     // read the parameters for water-induced rock compaction
@@ -409,26 +375,6 @@ updatePlmixnum_()
 }
 
 template<class GridView, class FluidSystem>
-void FlowGenericProblem<GridView,FluidSystem>::
-updateKrnum_()
-{
-    const auto num_regions = eclState_.getTableManager().getTabdims().getNumSatTables();
-    updateNum("KRNUMX", krnumx_, num_regions);
-    updateNum("KRNUMY", krnumy_, num_regions);
-    updateNum("KRNUMZ", krnumz_, num_regions);
-}
-
-template<class GridView, class FluidSystem>
-void FlowGenericProblem<GridView,FluidSystem>::
-updateImbnum_()
-{
-    const auto num_regions = eclState_.getTableManager().getTabdims().getNumSatTables();
-    updateNum("IMBNUMX", imbnumx_, num_regions);
-    updateNum("IMBNUMY", imbnumy_, num_regions);
-    updateNum("IMBNUMZ", imbnumz_, num_regions);
-}
-
-template<class GridView, class FluidSystem>
 bool FlowGenericProblem<GridView,FluidSystem>::
 vapparsActive(int episodeIdx) const
 {
@@ -495,9 +441,6 @@ beginTimeStep_(bool enableExperiments,
                << ", date = " << date;
         OpmLog::info(ss.str());
     }
-
-    // update explicit quantities between timesteps.
-    this->mixControls_.updateExplicitQuantities(episodeIdx, timeStepSize);
 }
 
 template<class GridView, class FluidSystem>
@@ -515,21 +458,28 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                                          bool enablePolymerMolarWeight,
                                          bool enableMICP)
 {
-    if (enableSolvent) {
-        if (eclState_.fieldProps().has_double("SSOL"))
-            solventSaturation_ = eclState_.fieldProps().get_double("SSOL");
-        else
-            solventSaturation_.resize(numDof, 0.0);
+    auto getArray = [](const std::vector<double>& input)
+    {
+        if constexpr (std::is_same_v<Scalar,double>) {
+            return input;
+        } else {
+            return std::vector<Scalar>{input.begin(), input.end()};
+        }
+    };
 
-        //if (eclState_.fieldProps().has_double("SSOL"))
-        //    solventRsw_ = eclState_.fieldProps().get_double("SSOL");
-        //else
-            solventRsw_.resize(numDof, 0.0);
+    if (enableSolvent) {
+        if (eclState_.fieldProps().has_double("SSOL")) {
+            solventSaturation_ = getArray(eclState_.fieldProps().get_double("SSOL"));
+        } else {
+            solventSaturation_.resize(numDof, 0.0);
+        }
+
+        solventRsw_.resize(numDof, 0.0);
     }
 
     if (enablePolymer) {
         if (eclState_.fieldProps().has_double("SPOLY")) {
-            polymer_.concentration = eclState_.fieldProps().get_double("SPOLY");
+            polymer_.concentration = getArray(eclState_.fieldProps().get_double("SPOLY"));
         } else {
             polymer_.concentration.resize(numDof, 0.0);
         }
@@ -537,7 +487,7 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
 
     if (enablePolymerMolarWeight) {
         if (eclState_.fieldProps().has_double("SPOLYMW")) {
-            polymer_.moleWeight = eclState_.fieldProps().get_double("SPOLYMW");
+            polymer_.moleWeight = getArray(eclState_.fieldProps().get_double("SPOLYMW"));
         } else {
             polymer_.moleWeight.resize(numDof, 0.0);
         }
@@ -545,27 +495,27 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
 
     if (enableMICP) {
         if (eclState_.fieldProps().has_double("SMICR")) {
-            micp_.microbialConcentration = eclState_.fieldProps().get_double("SMICR");
+            micp_.microbialConcentration = getArray(eclState_.fieldProps().get_double("SMICR"));
         } else {
             micp_.microbialConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SOXYG")) {
-            micp_.oxygenConcentration = eclState_.fieldProps().get_double("SOXYG");
+            micp_.oxygenConcentration = getArray(eclState_.fieldProps().get_double("SOXYG"));
         } else {
             micp_.oxygenConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SUREA")) {
-            micp_.ureaConcentration = eclState_.fieldProps().get_double("SUREA");
+            micp_.ureaConcentration = getArray(eclState_.fieldProps().get_double("SUREA"));
         } else {
             micp_.ureaConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SBIOF")) {
-            micp_.biofilmConcentration = eclState_.fieldProps().get_double("SBIOF");
+            micp_.biofilmConcentration = getArray(eclState_.fieldProps().get_double("SBIOF"));
         } else {
             micp_.biofilmConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SCALC")) {
-            micp_.calciteConcentration = eclState_.fieldProps().get_double("SCALC");
+            micp_.calciteConcentration = getArray(eclState_.fieldProps().get_double("SCALC"));
         } else {
             micp_.calciteConcentration.resize(numDof, 0.0);
         }
@@ -627,14 +577,7 @@ solventRsw(unsigned elemIdx) const
     return solventRsw_[elemIdx];
 }
 
-template<class GridView, class FluidSystem>
-typename FlowGenericProblem<GridView,FluidSystem>::Scalar
-FlowGenericProblem<GridView,FluidSystem>::
-drsdtcon(unsigned elemIdx, int episodeIdx) const
-{
-    return this->mixControls_.drsdtcon(elemIdx, episodeIdx,
-                                       this->pvtRegionIndex(elemIdx));
-}
+
 
 template<class GridView, class FluidSystem>
 typename FlowGenericProblem<GridView,FluidSystem>::Scalar
@@ -782,8 +725,7 @@ operator==(const FlowGenericProblem& rhs) const
            this->solventSaturation_ == rhs.solventSaturation_ &&
            this->solventRsw_ == rhs.solventRsw_ &&
            this->polymer_ == rhs.polymer_ &&
-           this->micp_ == rhs.micp_ &&
-           this->mixControls_ == rhs.mixControls_;
+           this->micp_ == rhs.micp_;
 }
 
 } // namespace Opm

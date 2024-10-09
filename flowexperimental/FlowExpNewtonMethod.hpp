@@ -31,42 +31,35 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/models/blackoil/blackoilnewtonmethod.hh>
+#include <opm/models/blackoil/blackoilnewtonmethod.hpp>
 #include <opm/models/utils/signum.hh>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EclNewtonSumTolerance
-{
-    using type = UndefinedProperty;
-};
+// the tolerated amount of "incorrect" amount of oil per time step for the complete
+// reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
+// will tolerate larger residuals.
+template<class Scalar>
+struct EclNewtonSumTolerance { static constexpr Scalar value = 1e-5; };
 
-template<class TypeTag, class MyTypeTag>
-struct EclNewtonStrictIterations
-{
-    using type = UndefinedProperty;
-};
+// make all Newton iterations strict, i.e., the volumetric Newton tolerance must be
+// always be upheld in the majority of the spatial domain. In this context, "majority"
+// means 1 - EclNewtonRelaxedVolumeFraction.
+struct EclNewtonStrictIterations { static constexpr int value = 100; };
 
-template<class TypeTag, class MyTypeTag>
-struct EclNewtonRelaxedVolumeFraction
-{
-    using type = UndefinedProperty;
-};
+// set fraction of the pore volume where the volumetric residual may be violated during
+// strict Newton iterations
+template<class Scalar>
+struct EclNewtonRelaxedVolumeFraction { static constexpr Scalar value = 0.05; };
 
-template<class TypeTag, class MyTypeTag>
-struct EclNewtonSumToleranceExponent
-{
-    using type = UndefinedProperty;
-};
+template<class Scalar>
+struct EclNewtonSumToleranceExponent { static constexpr Scalar value = 1.0 / 3.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct EclNewtonRelaxedTolerance
-{
-    using type = UndefinedProperty;
-};
+// the maximum volumetric error of a cell in the relaxed region
+template<class Scalar>
+struct EclNewtonRelaxedTolerance { static constexpr Scalar value = NewtonTolerance<Scalar>::value * 1e6; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -104,12 +97,12 @@ public:
     explicit FlowExpNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
         errorPvFraction_ = 1.0;
-        relaxedMaxPvFraction_ = Parameters::get<TypeTag, Properties::EclNewtonRelaxedVolumeFraction>();
+        relaxedMaxPvFraction_ = Parameters::Get<Parameters::EclNewtonRelaxedVolumeFraction<Scalar>>();
 
         sumTolerance_ = 0.0; // this gets determined in the error calculation proceedure
-        relaxedTolerance_ = Parameters::get<TypeTag, Properties::EclNewtonRelaxedTolerance>();
+        relaxedTolerance_ = Parameters::Get<Parameters::EclNewtonRelaxedTolerance<Scalar>>();
 
-        numStrictIterations_ = Parameters::get<TypeTag, Properties::EclNewtonStrictIterations>();
+        numStrictIterations_ = Parameters::Get<Parameters::EclNewtonStrictIterations>();
     }
 
     /*!
@@ -119,19 +112,19 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EclNewtonSumTolerance>
+        Parameters::Register<Parameters::EclNewtonSumTolerance<Scalar>>
                 ("The maximum error tolerated by the Newton "
                  "method for considering a solution to be converged");
-        Parameters::registerParam<TypeTag, Properties::EclNewtonStrictIterations>
+        Parameters::Register<Parameters::EclNewtonStrictIterations>
                  ("The number of Newton iterations where the "
                   "volumetric error is considered.");
-        Parameters::registerParam<TypeTag, Properties::EclNewtonRelaxedVolumeFraction>
+        Parameters::Register<Parameters::EclNewtonRelaxedVolumeFraction<Scalar>>
                   ("The fraction of the pore volume of the reservoir "
                    "where the volumetric error may be violated during strict Newton iterations.");
-        Parameters::registerParam<TypeTag, Properties::EclNewtonSumToleranceExponent>
+        Parameters::Register<Parameters::EclNewtonSumToleranceExponent<Scalar>>
                   ("The the exponent used to scale the sum tolerance by "
                    "the total pore volume of the reservoir.");
-        Parameters::registerParam<TypeTag, Properties::EclNewtonRelaxedTolerance>
+        Parameters::Register<Parameters::EclNewtonRelaxedTolerance<Scalar>>
                    ("The maximum error which the volumetric residual "
                      "may exhibit if it is in a 'relaxed' region during a strict iteration.");
     }
@@ -156,7 +149,7 @@ public:
     {
         const auto& constraintsMap = this->model().linearizer().constraintsMap();
         this->lastError_ = this->error_;
-        Scalar newtonMaxError = Parameters::get<TypeTag, Properties::NewtonMaxError>();
+        Scalar newtonMaxError = this->params_.maxError_;
 
         // calculate the error as the maximum weighted tolerance of
         // the solution's residual
@@ -205,7 +198,7 @@ public:
 
                 this->error_ = max(std::abs(tmpError), this->error_);
 
-                if (std::abs(tmpError) > this->tolerance_) {
+                if (std::abs(tmpError) > this->params_.tolerance_) {
                     cnvViolated = true;
                 }
 
@@ -234,11 +227,11 @@ public:
 
         // scale the tolerance for the total error with the pore volume. by default, the
         // exponent is 1/3, i.e., cubic root.
-        Scalar x = Parameters::get<TypeTag, Properties::EclNewtonSumTolerance>();
-        Scalar y = Parameters::get<TypeTag, Properties::EclNewtonSumToleranceExponent>();
+        Scalar x = Parameters::Get<Parameters::EclNewtonSumTolerance<Scalar>>();
+        Scalar y = Parameters::Get<Parameters::EclNewtonSumToleranceExponent<Scalar>>();
         sumTolerance_ = x*std::pow(sumPv, y);
 
-        this->endIterMsg() << " (max: " << this->tolerance_
+        this->endIterMsg() << " (max: " << this->params_.tolerance_
                            << ", violated for " << errorPvFraction_ * 100
                            << "% of the pore volume), aggegate error: "
                            << errorSum_ << " (max: " << sumTolerance_ << ")";

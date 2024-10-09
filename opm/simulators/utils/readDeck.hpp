@@ -67,6 +67,9 @@ prepareResultOutputDirectory(const std::string& baseName, const std::filesystem:
 
 std::unique_ptr<ParseContext> setupParseContext(const bool exitOnAllErrors);
 
+// Setup the OpmLog backends for screen output
+void setupStreamLogging(const std::string& stdout_log_id);
+
 // Setup the OpmLog backends
 FileOutputMode
 setupLogging(Parallel::Communication& comm,
@@ -91,8 +94,11 @@ void readDeck(Parallel::Communication         comm,
               std::shared_ptr<SummaryConfig>& summaryConfig,
               std::shared_ptr<Python>         python,
               const std::string&              parsingStrictness,
+              const std::string&              actionParsingStrictness,
+              const std::string&              inputSkipMode,
               bool                            initFromRestart,
               bool                            checkDeck,
+              bool                            keepKeywords,
               const std::optional<int>&       outputInterval);
 
 void verifyValidCellGeometry(Parallel::Communication comm,

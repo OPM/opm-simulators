@@ -57,83 +57,16 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EnableAdaptiveTimeStepping {
-    using type = UndefinedProperty;
-};
+struct EnableAdaptiveTimeStepping { static constexpr bool value = true; };
+struct OutputExtraConvergenceInfo { static constexpr auto* value = "none"; };
+struct SaveStep { static constexpr auto* value = ""; };
+struct SaveFile { static constexpr auto* value = ""; };
+struct LoadFile { static constexpr auto* value = ""; };
+struct LoadStep { static constexpr int value = -1; };
 
-template <class TypeTag, class MyTypeTag>
-struct OutputExtraConvergenceInfo
-{
-    using type = UndefinedProperty;
-};
-
-template <class TypeTag, class MyTypeTag>
-struct SaveStep
-{
-    using type = UndefinedProperty;
-};
-
-template <class TypeTag, class MyTypeTag>
-struct LoadStep
-{
-    using type = UndefinedProperty;
-};
-
-template <class TypeTag, class MyTypeTag>
-struct SaveFile
-{
-    using type = UndefinedProperty;
-};
-
-template <class TypeTag, class MyTypeTag>
-struct LoadFile
-{
-    using type = UndefinedProperty;
-};
-
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = true;
-};
-template<class TypeTag>
-struct EnableAdaptiveTimeStepping<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct OutputExtraConvergenceInfo<TypeTag, TTag::FlowProblem>
-{
-    static constexpr auto* value = "none";
-};
-
-template <class TypeTag>
-struct SaveStep<TypeTag, TTag::FlowProblem>
-{
-    static constexpr auto* value = "";
-};
-
-template <class TypeTag>
-struct SaveFile<TypeTag, TTag::FlowProblem>
-{
-    static constexpr auto* value = "";
-};
-
-template <class TypeTag>
-struct LoadFile<TypeTag, TTag::FlowProblem>
-{
-    static constexpr auto* value = "";
-};
-
-template <class TypeTag>
-struct LoadStep<TypeTag, TTag::FlowProblem>
-{
-    static constexpr int value = -1;
-};
-
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -189,19 +122,19 @@ public:
         , serializer_(*this,
                       FlowGenericVanguard::comm(),
                       simulator_.vanguard().eclState().getIOConfig(),
-                      Parameters::get<TypeTag, Properties::SaveStep>(),
-                      Parameters::get<TypeTag, Properties::LoadStep>(),
-                      Parameters::get<TypeTag, Properties::SaveFile>(),
-                      Parameters::get<TypeTag, Properties::LoadFile>())
+                      Parameters::Get<Parameters::SaveStep>(),
+                      Parameters::Get<Parameters::LoadStep>(),
+                      Parameters::Get<Parameters::SaveFile>(),
+                      Parameters::Get<Parameters::LoadFile>())
     {
         phaseUsage_ = phaseUsageFromDeck(eclState());
 
         // Only rank 0 does print to std::cout, and only if specifically requested.
         this->terminalOutput_ = false;
         if (this->grid().comm().rank() == 0) {
-            this->terminalOutput_ = Parameters::get<TypeTag, Properties::EnableTerminalOutput>();
+            this->terminalOutput_ = Parameters::Get<Parameters::EnableTerminalOutput>();
 
-            this->startConvergenceOutputThread(Parameters::get<TypeTag, Properties::OutputExtraConvergenceInfo>(),
+            this->startConvergenceOutputThread(Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
                                                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))");
         }
     }
@@ -218,11 +151,11 @@ public:
         SolverParameters::registerParameters();
         TimeStepper::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EnableTerminalOutput>
+        Parameters::Register<Parameters::EnableTerminalOutput>
             ("Print high-level information about the simulation's progress to the terminal");
-        Parameters::registerParam<TypeTag, Properties::EnableAdaptiveTimeStepping>
+        Parameters::Register<Parameters::EnableAdaptiveTimeStepping>
             ("Use adaptive time stepping between report steps");
-        Parameters::registerParam<TypeTag, Properties::OutputExtraConvergenceInfo>
+        Parameters::Register<Parameters::OutputExtraConvergenceInfo>
             ("Provide additional convergence output "
              "files for diagnostic purposes. "
              "\"none\" gives no extra output and "
@@ -231,25 +164,25 @@ public:
              "\"iterations\" generates an INFOITER file. "
              "Combine options with commas, e.g., "
              "\"steps,iterations\" for multiple outputs.");
-        Parameters::registerParam<TypeTag, Properties::SaveStep>
+        Parameters::Register<Parameters::SaveStep>
             ("Save serialized state to .OPMRST file. "
              "Either a specific report step, \"all\" to save "
              "all report steps or \":x\" to save every x'th step."
              "Use negative values of \"x\" to keep only the last "
              "written step, or \"last\" to save every step, keeping "
              "only the last.");
-        Parameters::registerParam<TypeTag, Properties::LoadStep>
+        Parameters::Register<Parameters::LoadStep>
             ("Load serialized state from .OPMRST file. "
              "Either a specific report step, or 0 to load last "
              "stored report step.");
-        Parameters::registerParam<TypeTag, Properties::SaveFile>
+        Parameters::Register<Parameters::SaveFile>
             ("FileName for .OPMRST file used for saving serialized state. "
              "If empty, CASENAME.OPMRST is used.");
-        Parameters::hideParam<TypeTag, Properties::SaveFile>();
-        Parameters::registerParam<TypeTag, Properties::LoadFile>
+        Parameters::Hide<Parameters::SaveFile>();
+        Parameters::Register<Parameters::LoadFile>
             ("FileName for .OPMRST file used to load serialized state. "
              "If empty, CASENAME.OPMRST is used.");
-        Parameters::hideParam<TypeTag, Properties::LoadFile>();
+        Parameters::Hide<Parameters::LoadFile>();
     }
 
     /// Run the simulation.
@@ -262,12 +195,16 @@ public:
     {
         init(timer);
         // Make cache up to date. No need for updating it in elementCtx.
+        // NB! Need to be at the correct step in case of restart
+        simulator_.setEpisodeIndex(timer.currentStepNum());
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         // Main simulation loop.
         while (!timer.done()) {
+            simulator_.problem().writeReports(timer);
             bool continue_looping = runStep(timer);
             if (!continue_looping) break;
         }
+        simulator_.problem().writeReports(timer);
         return finalize();
     }
 
@@ -281,8 +218,8 @@ public:
         totalTimer_->start();
 
         // adaptive time stepping
-        bool enableAdaptive = Parameters::get<TypeTag, Properties::EnableAdaptiveTimeStepping>();
-        bool enableTUNING = Parameters::get<TypeTag, Properties::EnableTuning>();
+        bool enableAdaptive = Parameters::Get<Parameters::EnableAdaptiveTimeStepping>();
+        bool enableTUNING = Parameters::Get<Parameters::EnableTuning>();
         if (enableAdaptive) {
             const UnitSystem& unitSystem = this->simulator_.vanguard().eclState().getUnits();
             const auto& sched_state = schedule()[timer.currentStepNum()];
@@ -346,7 +283,7 @@ public:
             simulator_.setEpisodeLength(0.0);
             simulator_.setTimeStepSize(0.0);
             wellModel_().beginReportStep(timer.currentStepNum());
-            simulator_.problem().writeOutput(timer);
+            simulator_.problem().writeOutput();
 
             report_.success.output_write_time += perfTimer.stop();
         }
@@ -363,13 +300,16 @@ public:
                + schedule().seconds(timer.currentStepNum()),
             timer.currentStepLength());
         simulator_.setEpisodeIndex(timer.currentStepNum());
+
         if (serializer_.shouldLoad()) {
             wellModel_().prepareDeserialize(serializer_.loadStep() - 1);
             serializer_.loadState();
             simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
-        solver_->model().beginReportStep();
-        bool enableTUNING = Parameters::get<TypeTag, Properties::EnableTuning>();
+
+        this->solver_->model().beginReportStep();
+
+        const bool enableTUNING = Parameters::Get<Parameters::EnableTuning>();
 
         // If sub stepping is enabled allow the solver to sub cycle
         // in case the report steps are too large for the solver to converge
@@ -430,7 +370,7 @@ public:
         perfTimer.start();
         const double nextstep = adaptiveTimeStepping_ ? adaptiveTimeStepping_->suggestedNextStep() : -1.0;
         simulator_.problem().setNextTimeStepSize(nextstep);
-        simulator_.problem().writeOutput(timer);
+        simulator_.problem().writeOutput();
         report_.success.output_write_time += perfTimer.stop();
 
         solver_->model().endReportStep();
@@ -442,10 +382,17 @@ public:
         report_.success.solver_time += solverTimer_->secsSinceStart();
 
         if (this->grid().comm().rank() == 0) {
-            // Grab the step convergence reports that are new since last we were here.
-            const auto& reps = solver_->model().stepReports();
-            this->writeConvergenceOutput(std::vector<StepReport>{reps.begin() + already_reported_steps_, reps.end()});
-            already_reported_steps_ = reps.size();
+            // Grab the step convergence reports that are new since last we
+            // were here.
+            const auto& reps = this->solver_->model().stepReports();
+
+            auto reports = std::vector<StepReport> {
+                reps.begin() + this->already_reported_steps_, reps.end()
+            };
+
+            this->writeConvergenceOutput(std::move(reports));
+
+            this->already_reported_steps_ = reps.size();
         }
 
         // Increment timer, remember well state.
@@ -519,7 +466,7 @@ protected:
     std::array<std::string,5> getHeader() const override
     {
         std::ostringstream str;
-        Parameters::printValues<TypeTag>(str);
+        Parameters::printValues(str);
         return {"OPM Flow",
                 moduleVersion(),
                 compileTimestamp(),

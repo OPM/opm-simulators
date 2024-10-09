@@ -25,9 +25,12 @@
 #define OPM_WELLINTERFACE_FLUID_SYSTEM_HEADER_INCLUDED
 
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <limits>
+#include <optional>
+#include <vector>
 
 namespace Opm
 {
@@ -44,7 +47,8 @@ template<class Scalar> class SingleWellState;
 template<class Scalar> class WellState;
 
 template<class FluidSystem>
-class WellInterfaceFluidSystem : public WellInterfaceGeneric {
+class WellInterfaceFluidSystem : public WellInterfaceGeneric<typename FluidSystem::Scalar>
+{
 protected:
     using RateConverterType = RateConverter::
     SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
@@ -52,6 +56,8 @@ protected:
     static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
 
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     int flowPhaseToModelPhaseIdx(const int phaseIdx) const;
 
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -65,54 +71,60 @@ public:
 
 protected:
     WellInterfaceFluidSystem(const Well& well,
-                             const ParallelWellInfo& parallel_well_info,
+                             const ParallelWellInfo<Scalar>& parallel_well_info,
                              const int time_step,
                              const RateConverterType& rate_converter,
                              const int pvtRegionIdx,
                              const int num_components,
                              const int num_phases,
                              const int index_of_well,
-                             const std::vector<PerforationData>& perf_data);
+                             const std::vector<PerforationData<Scalar>>& perf_data);
 
     // updating the voidage rates in well_state when requested
-    void calculateReservoirRates(SingleWellState<double>& ws) const;
+    void calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const;
 
-    bool checkIndividualConstraints(SingleWellState<double>& ws,
+    bool checkIndividualConstraints(SingleWellState<Scalar>& ws,
                                     const SummaryState& summaryState,
                                     DeferredLogger& deferred_logger,
                                     const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
                                     const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
-    bool checkGroupConstraints(WellState<double>& well_state,
-                               const GroupState<double>& group_state,
+    bool checkGroupConstraints(WellState<Scalar>& well_state,
+                               const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                DeferredLogger& deferred_logger) const;
 
-    bool checkConstraints(WellState<double>& well_state,
-                          const GroupState<double>& group_state,
+    bool checkConstraints(WellState<Scalar>& well_state,
+                          const GroupState<Scalar>& group_state,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           DeferredLogger& deferred_logger) const;
 
-    std::optional<double>
+    std::optional<Scalar>
     getGroupInjectionTargetRate(const Group& group,
-                                const WellState<double>& well_state,
-                                const GroupState<double>& group_state,
+                                const WellState<Scalar>& well_state,
+                                const GroupState<Scalar>& group_state,
                                 const Schedule& schedule,
                                 const SummaryState& summaryState,
                                 const InjectorType& injectorType,
-                                double efficiencyFactor,
+                                Scalar efficiencyFactor,
                                 DeferredLogger& deferred_logger) const;
 
-    double
+    Scalar
     getGroupProductionTargetRate(const Group& group,
-                                 const WellState<double>& well_state,
-                                 const GroupState<double>& group_state,
+                                 const WellState<Scalar>& well_state,
+                                 const GroupState<Scalar>& group_state,
                                  const Schedule& schedule,
                                  const SummaryState& summaryState,
-                                 double efficiencyFactor,
+                                 Scalar efficiencyFactor,
                                  DeferredLogger& deferred_logger) const;
+
+    bool zeroGroupRateTarget(const SummaryState& summary_state,
+                             const Schedule& schedule,
+                             const WellState<Scalar>& well_state,
+                             const GroupState<Scalar>& group_state,
+                             DeferredLogger& deferredLogger) const;
 
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;

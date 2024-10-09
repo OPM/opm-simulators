@@ -35,7 +35,6 @@
 #include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <cmath>
 #include <cstddef>
@@ -69,8 +68,7 @@ extendEval(const Eval& in) const
 template<class FluidSystem, class Indices>
 void
 StandardWellEval<FluidSystem,Indices>::
-updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
-                                    WellState<Scalar>& well_state,
+updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
                                     const SummaryState& summary_state,
                                     DeferredLogger& deferred_logger) const
 {
@@ -78,7 +76,6 @@ updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
 
     WellBhpThpCalculator(baseif_).
             updateThp(connections_.rho(),
-                      stop_or_zero_rate_target,
                       [this,&well_state]() { return this->baseif_.getALQ(well_state); },
                       {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
@@ -100,13 +97,13 @@ template<class FluidSystem, class Indices>
 ConvergenceReport
 StandardWellEval<FluidSystem,Indices>::
 getWellConvergence(const WellState<Scalar>& well_state,
-                   const std::vector<double>& B_avg,
-                   const double maxResidualAllowed,
-                   const double tol_wells,
-                   const double relaxed_tolerance_flow,
+                   const std::vector<Scalar>& B_avg,
+                   const Scalar maxResidualAllowed,
+                   const Scalar tol_wells,
+                   const Scalar relaxed_tolerance_flow,
                    const bool relax_tolerance,
                    const bool well_is_stopped, 
-                   std::vector<double>& res,
+                   std::vector<Scalar>& res,
                    DeferredLogger& deferred_logger) const
 {
     res.resize(this->primary_variables_.numWellEq());
@@ -115,7 +112,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
         res[eq_idx] = std::abs(this->linSys_.residual()[0][eq_idx]);
     }
 
-    std::vector<double> well_flux_residual(baseif_.numComponents());
+    std::vector<Scalar> well_flux_residual(baseif_.numComponents());
 
     // Finish computation
     for (int compIdx = 0; compIdx < baseif_.numComponents(); ++compIdx )
@@ -137,13 +134,20 @@ getWellConvergence(const WellState<Scalar>& well_state,
 
         if (std::isnan(well_flux_residual[compIdx])) {
             report.setWellFailed({type, CR::Severity::NotANumber, compIdx, baseif_.name()});
+            report.setWellConvergenceMetric(type, CR::Severity::NotANumber, compIdx, well_flux_residual[compIdx], baseif_.name());
         } else if (well_flux_residual[compIdx] > maxResidualAllowed) {
             report.setWellFailed({type, CR::Severity::TooLarge, compIdx, baseif_.name()});
+            report.setWellConvergenceMetric(type, CR::Severity::TooLarge, compIdx, well_flux_residual[compIdx], baseif_.name());
         } else if (!relax_tolerance && well_flux_residual[compIdx] > tol_wells) {
             report.setWellFailed({type, CR::Severity::Normal, compIdx, baseif_.name()});
+            report.setWellConvergenceMetric(type, CR::Severity::Normal, compIdx, well_flux_residual[compIdx], baseif_.name());
         } else if (well_flux_residual[compIdx] > relaxed_tolerance_flow) {
             report.setWellFailed({type, CR::Severity::Normal, compIdx, baseif_.name()});
+            report.setWellConvergenceMetric(type, CR::Severity::Normal, compIdx, well_flux_residual[compIdx], baseif_.name());
+        } else {
+            report.setWellConvergenceMetric(CR::WellFailure::Type::Invalid, CR::Severity::None, compIdx, well_flux_residual[compIdx], baseif_.name());
         }
+
     }
 
     WellConvergence(baseif_).
@@ -158,7 +162,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
     // for BHP or THP controlled wells, we need to make sure the flow direction is correct
     if (!well_is_stopped && baseif_.isPressureControlled(well_state)) {
         // checking the flow direction
-        const double sign = baseif_.isProducer() ? -1. : 1.;
+        const Scalar sign = baseif_.isProducer() ? -1. : 1.;
         const auto weight_total_flux = this->primary_variables_.value(PrimaryVariables::WQTotal) * sign;
         constexpr int dummy_phase = -1;
         if (weight_total_flux < 0.) {
@@ -173,8 +177,8 @@ getWellConvergence(const WellState<Scalar>& well_state,
 template<class FluidSystem, class Indices>
 void
 StandardWellEval<FluidSystem,Indices>::
-init(std::vector<double>& perf_depth,
-     const std::vector<double>& depth_arg,
+init(std::vector<Scalar>& perf_depth,
+     const std::vector<Scalar>& depth_arg,
      const int num_cells,
      const bool has_polymermw)
 {
@@ -202,38 +206,43 @@ init(std::vector<double>& perf_depth,
     this->linSys_.init(num_cells, numWellEq, baseif_.numPerfs(), baseif_.cells());
 }
 
-#define INSTANCE(...) \
-template class StandardWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__>;
+template<class Scalar>
+using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
 
-// One phase
-INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>)
+#define INSTANTIATE(T,...) \
+    template class StandardWellEval<FS<T>,__VA_ARGS__>;
 
-// Two phase
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,true,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>)
-// Blackoil
-INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
-INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,false,1u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,1u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
 
-INSTANCE(BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 }

@@ -149,4 +149,8 @@ bool SegmentState<Scalar>::operator==(const SegmentState& rhs) const
 
 template class SegmentState<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class SegmentState<float>;
+#endif
+
 } // namespace Opm

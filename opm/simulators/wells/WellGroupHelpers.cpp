@@ -41,6 +41,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -796,8 +797,13 @@ updateGpMaintTargetForGroups(const Group& group,
     // we only activate gpmaint if pressure is lower than the target regional pressure for injectors
     // (i.e. error > 0) and higher for producers.
     bool activate = (injection && error > 0) || (!injection && error < 0);
-    const Scalar rate = activate? gpm->rate(gpmaint_state, current_rate, error, dt) : 0.0;
-    group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
+    Scalar rate = 0.0;
+    if (activate) {
+        rate = gpm->rate(gpmaint_state, current_rate, error, dt);
+    } else {
+        gpm->resetState(gpmaint_state);
+    }
+    group_state.update_gpmaint_target(group.name(), std::max(Scalar{0.0}, sign * rate));
 }
 
 template<class Scalar>
@@ -806,7 +812,7 @@ WellGroupHelpers<Scalar>::
 computeNetworkPressures(const Network::ExtNetwork& network,
                         const WellState<Scalar>& well_state,
                         const GroupState<Scalar>& group_state,
-                        const VFPProdProperties& vfp_prod_props,
+                        const VFPProdProperties<Scalar>& vfp_prod_props,
                         const Schedule& schedule,
                         const int report_time_step)
 {
@@ -853,7 +859,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                 const auto& group = schedule.getGroup(node, report_time_step);
                 for (const std::string& wellname : group.wells()) {
                     const Well& well = schedule.getWell(wellname, report_time_step);
-                    if (well.isInjector()) continue;
+                    if (well.isInjector() || !well_state.isOpen(wellname)) continue;
                     // Here we use the efficiency unconditionally, but if WEFAC item 3
                     // for the well is false (it defaults to true) then we should NOT use
                     // the efficiency factor. Fixing this requires not only changing the
@@ -910,7 +916,12 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     auto rates = node_inflows[node];
                     for (auto& r : rates) { r *= -1.0; }
                     assert(rates.size() == 3);
-                    const Scalar alq = 0.0; // TODO: Do not ignore ALQ
+                    // NB! ALQ in extended network is never implicitly the gas lift rate (GRAT), i.e., the
+                    //     gas lift rates only enters the network pressure calculations through the rates
+                    //     (e.g., in GOR calculations) unless a branch ALQ is set in BRANPROP.
+                    //
+                    // @TODO: Standard network
+                    Scalar alq = (*upbranch).alq_value().value_or(0.0);
                     node_pressures[node] = vfp_prod_props.bhp(*vfp_table,
                                                             rates[BlackoilPhases::Aqua],
                                                             rates[BlackoilPhases::Liquid],
@@ -930,7 +941,12 @@ computeNetworkPressures(const Network::ExtNetwork& network,
 #endif
                 } else {
                     // Table number specified as 9999 in the deck, no pressure loss.
-                    node_pressures[node] = up_press;
+                    if (network.node(node).as_choke()){
+                        // Node pressure is set to the group THP.
+                        node_pressures[node] = group_state.well_group_thp(node);
+                    } else {
+                            node_pressures[node] = up_press;
+                    }
                 }
             }
         }
@@ -1751,25 +1767,35 @@ updateGuideRatesForWells(const Schedule& schedule,
     }
 }
 
-template class WellGroupHelpers<double>;
+template<class Scalar>
+using AvgP = RegionAverageCalculator::
+    AverageRegionalPressure<BlackOilFluidSystem<Scalar>,std::vector<int>>;
 
-using AvgP = RegionAverageCalculator::AverageRegionalPressure<BlackOilFluidSystem<double>,std::vector<int>>;
-using AvgPMap = std::map<std::string, std::unique_ptr<AvgP>>;
+template<class Scalar>
+using AvgPMap = std::map<std::string, std::unique_ptr<AvgP<Scalar>>>;
 
-template void WellGroupHelpers<double>::
-    updateGpMaintTargetForGroups<AvgPMap>(const Group&,
-                                          const Schedule&,
-                                          const AvgPMap&,
-                                          int,
-                                          double,
-                                          const WellState<double>&,
-                                          GroupState<double>&);
-template void WellGroupHelpers<double>::
-    setRegionAveragePressureCalculator<AvgP>(const Group&,
-                                             const Schedule&,
-                                             const int,
-                                             const FieldPropsManager&,
-                                             const PhaseUsage&,
-                                             AvgPMap&);
+#define INSTANTIATE_TYPE(T)                                                   \
+    template class WellGroupHelpers<T>;                                       \
+    template void WellGroupHelpers<T>::                                       \
+        updateGpMaintTargetForGroups<AvgPMap<T>>(const Group&,                \
+                                                 const Schedule&,             \
+                                                 const AvgPMap<T>&,           \
+                                                 int,                         \
+                                                 double,                      \
+                                                 const WellState<T>&,         \
+                                                 GroupState<T>&);             \
+    template void WellGroupHelpers<T>::                                       \
+        setRegionAveragePressureCalculator<AvgP<T>>(const Group&,             \
+                                                    const Schedule&,          \
+                                                    const int,                \
+                                                    const FieldPropsManager&, \
+                                                    const PhaseUsage&,        \
+                                                    AvgPMap<T>&);
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::WellGroupHelpers

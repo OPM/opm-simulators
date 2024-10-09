@@ -2,14 +2,17 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   This file is part of the Open Porous Media project (OPM).
+
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 2 of the License, or
   (at your option) any later version.
+
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
+
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
   Consult the COPYING file in the top-level source directory of this
@@ -47,6 +50,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -122,22 +126,34 @@ std::string EclString(const Opm::Inplace::Phase phase)
         return "GMIP";
 
     case Opm::Inplace::Phase::CO2MassInWaterPhase:
-        return "GMGP";
-
-    case Opm::Inplace::Phase::CO2MassInGasPhase:
         return "GMDS";
 
+    case Opm::Inplace::Phase::CO2MassInGasPhase:
+        return "GMGP";
+
     case Opm::Inplace::Phase::CO2MassInGasPhaseInMob:
-        return "GMTR";
+        return "GCDI_KG"; //Not used
         
     case Opm::Inplace::Phase::CO2MassInGasPhaseMob:
-        return "GMMO";
+        return "GKDM_KG"; //Not used
 
     case Opm::Inplace::Phase::CO2MassInGasPhaseInMobKrg:
         return "GKTR";
         
     case Opm::Inplace::Phase::CO2MassInGasPhaseMobKrg:
         return "GKMO";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseMaximumTrapped:
+        return "GMTR";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped:
+        return "GMMO";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped:
+        return "GMST";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped:
+        return "GMUS";
 
     default:
         throw std::logic_error {
@@ -339,8 +355,8 @@ outputFipAndResvLog(const Inplace& inplace,
 
     // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
     std::unique_ptr<FIPConfig> fipSched;
-    if (reportStepNum != 0) {
-        const auto& rpt = this->schedule_[reportStepNum].rpt_config.get();
+    if (reportStepNum > 0) {
+        const auto& rpt = this->schedule_[reportStepNum-1].rpt_config.get();
         fipSched = std::make_unique<FIPConfig>(rpt);
     }
     const FIPConfig& fipc = reportStepNum == 0 ? this->eclState_.getEclipseConfig().fip()
@@ -480,8 +496,12 @@ assignToSolution(data::Solution& sol)
         DataEntry{"RV",       UnitSystem::measure::oil_gas_ratio,                         rv_},
         DataEntry{"RVSAT",    UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_},
         DataEntry{"SALT",     UnitSystem::measure::salinity,                              cSalt_},
-        DataEntry{"SOMAX",    UnitSystem::measure::identity,                              soMax_},
+        DataEntry{"SGMAX",    UnitSystem::measure::identity,                              sgmax_},
+        DataEntry{"SHMAX",    UnitSystem::measure::identity,                              shmax_},
+        DataEntry{"SOMAX",    UnitSystem::measure::identity,                              soMax_},                    
+        DataEntry{"SOMIN",    UnitSystem::measure::identity,                              somin_},
         DataEntry{"SSOLVENT", UnitSystem::measure::identity,                              sSol_},
+        DataEntry{"SWHY1",    UnitSystem::measure::identity,                              swmin_},
         DataEntry{"SWMAX",    UnitSystem::measure::identity,                              swMax_},
         DataEntry{"WATKR",    UnitSystem::measure::identity,                              relativePermeability_[waterPhaseIdx]},
         DataEntry{"WAT_DEN",  UnitSystem::measure::density,                               density_[waterPhaseIdx]},
@@ -532,20 +552,18 @@ assignToSolution(data::Solution& sol)
         DataEntry{"DISPY",    UnitSystem::measure::length,             dispY_},
         DataEntry{"DISPZ",    UnitSystem::measure::length,             dispZ_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
-        DataEntry{"KRNSW_GO", UnitSystem::measure::identity,           krnSwMdcGo_},
-        DataEntry{"KRNSW_OW", UnitSystem::measure::identity,           krnSwMdcOw_},
         DataEntry{"MECHPOTF", UnitSystem::measure::pressure,           mechPotentialForce_},
         DataEntry{"MICROBES", UnitSystem::measure::density,            cMicrobes_},
         DataEntry{"OXYGEN",   UnitSystem::measure::density,            cOxygen_},
-        DataEntry{"PCSWM_GO", UnitSystem::measure::identity,           pcSwMdcGo_},
-        DataEntry{"PCSWM_OW", UnitSystem::measure::identity,           pcSwMdcOw_},
         DataEntry{"PERMFACT", UnitSystem::measure::identity,           permFact_},
         DataEntry{"PORV_RC",  UnitSystem::measure::identity,           rockCompPorvMultiplier_},
         DataEntry{"PRESPOTF", UnitSystem::measure::pressure,           mechPotentialPressForce_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
         DataEntry{"RSW",      UnitSystem::measure::gas_oil_ratio,      rsw_},
+        DataEntry{"RSWSAT",   UnitSystem::measure::gas_oil_ratio,      gasDissolutionFactorInWater_},
         DataEntry{"RSWSOL",   UnitSystem::measure::gas_oil_ratio,      rswSol_},
         DataEntry{"RVW",      UnitSystem::measure::oil_gas_ratio,      rvw_},
+        DataEntry{"RVWSAT",   UnitSystem::measure::oil_gas_ratio,      waterVaporizationFactor_},
         DataEntry{"SALTP",    UnitSystem::measure::identity,           pSalt_},
         DataEntry{"SS_X",     UnitSystem::measure::identity,           extboX_},
         DataEntry{"SS_Y",     UnitSystem::measure::identity,           extboY_},
@@ -667,14 +685,41 @@ assignToSolution(data::Solution& sol)
 
     // Fluid in place
     if (this->outputFipRestart_) {
-        const auto baseFIPArrays = std::array {
-            DataEntry{"FIPOIL", UnitSystem::measure::liquid_surface_volume, fip_[Inplace::Phase::OIL]},
-            DataEntry{"FIPWAT", UnitSystem::measure::liquid_surface_volume, fip_[Inplace::Phase::WATER]},
-            DataEntry{"FIPGAS", UnitSystem::measure::gas_surface_volume,    fip_[Inplace::Phase::GAS]},
-        };
+        using namespace std::string_literals;
 
-        for (const auto& fipArray : baseFIPArrays) {
-            doInsert(fipArray, data::TargetType::RESTART_SOLUTION);
+        using M = UnitSystem::measure;
+        using FIPEntry = std::tuple<std::string, M, Inplace::Phase>;
+
+        auto fipArrays = std::vector<FIPEntry> {};
+        if (this->outputFipRestart_.surface) {
+            fipArrays.insert(fipArrays.end(), {
+                    FIPEntry {"SFIPOIL"s, M::liquid_surface_volume, Inplace::Phase::OIL   },
+                    FIPEntry {"SFIPWAT"s, M::liquid_surface_volume, Inplace::Phase::WATER },
+                    FIPEntry {"SFIPGAS"s, M::gas_surface_volume,    Inplace::Phase::GAS   },
+                });
+        }
+
+        if (this->outputFipRestart_.reservoir) {
+            fipArrays.insert(fipArrays.end(), {
+                    FIPEntry {"RFIPOIL"s, M::volume, Inplace::Phase::OilResVolume   },
+                    FIPEntry {"RFIPWAT"s, M::volume, Inplace::Phase::WaterResVolume },
+                    FIPEntry {"RFIPGAS"s, M::volume, Inplace::Phase::GasResVolume   },
+                });
+        }
+
+        if (this->outputFipRestart_.noPrefix && !this->outputFipRestart_.surface) {
+            fipArrays.insert(fipArrays.end(), {
+                    FIPEntry { "FIPOIL"s, M::liquid_surface_volume, Inplace::Phase::OIL   },
+                    FIPEntry { "FIPWAT"s, M::liquid_surface_volume, Inplace::Phase::WATER },
+                    FIPEntry { "FIPGAS"s, M::gas_surface_volume,    Inplace::Phase::GAS   },
+                });
+        }
+
+        for (const auto& [mnemonic, unit, phase] : fipArrays) {
+            if (! this->fip_[phase].empty()) {
+                sol.insert(mnemonic, unit, std::move(this->fip_[phase]),
+                           data::TargetType::RESTART_SOLUTION);
+            }
         }
 
         for (const auto& phase : Inplace::mixingPhases()) {
@@ -688,21 +733,40 @@ assignToSolution(data::Solution& sol)
     }
 
     // Tracers
-    if (! this->tracerConcentrations_.empty()) {
+    if (! this->freeTracerConcentrations_.empty()) {
         const auto& tracers = this->eclState_.tracer();
         for (auto tracerIdx = 0*tracers.size();
              tracerIdx < tracers.size(); ++tracerIdx)
         {
             sol.insert(tracers[tracerIdx].fname(),
                        UnitSystem::measure::identity,
-                       std::move(tracerConcentrations_[tracerIdx]),
+                       std::move(freeTracerConcentrations_[tracerIdx]),
                        data::TargetType::RESTART_TRACER_SOLUTION);
         }
 
-        // Put tracerConcentrations container into a valid state.  Otherwise
+        // Put freeTracerConcentrations container into a valid state.  Otherwise
         // we'll move from vectors that have already been moved from if we
         // get here and it's not a restart step.
-        this->tracerConcentrations_.clear();
+        this->freeTracerConcentrations_.clear();
+    }
+    if (! this->solTracerConcentrations_.empty()) {
+        const auto& tracers = this->eclState_.tracer();
+        for (auto tracerIdx = 0*tracers.size();
+             tracerIdx < tracers.size(); ++tracerIdx)
+        {
+            if (solTracerConcentrations_[tracerIdx].empty())
+                continue;
+
+            sol.insert(tracers[tracerIdx].sname(),
+                       UnitSystem::measure::identity,
+                       std::move(solTracerConcentrations_[tracerIdx]),
+                       data::TargetType::RESTART_TRACER_SOLUTION);
+        }
+
+        // Put solTracerConcentrations container into a valid state.  Otherwise
+        // we'll move from vectors that have already been moved from if we
+        // get here and it's not a restart step.
+        this->solTracerConcentrations_.clear();
     }
 }
 
@@ -735,7 +799,7 @@ setRestart(const data::Solution& sol,
 
     if (!rswSol_.empty()) {
         if (sol.has("RSWSOL"))
-            rswSol_[elemIdx] = sol.data<Scalar>("RSWSOL")[globalDofIndex];
+            rswSol_[elemIdx] = sol.data<double>("RSWSOL")[globalDofIndex];
 
     }
 
@@ -755,12 +819,8 @@ setRestart(const data::Solution& sol,
         std::pair{"BIOFILM",  &cBiofilm_},
         std::pair{"CALCITE",  &cCalcite_},
         std::pair{"FOAM",     &cFoam_},
-        std::pair{"KRNSW_GO", &krnSwMdcGo_},
-        std::pair{"KRNSW_OW", &krnSwMdcOw_},
         std::pair{"MICROBES", &cMicrobes_},
         std::pair{"OXYGEN",   &cOxygen_},
-        std::pair{"PCSWM_GO", &pcSwMdcGo_},
-        std::pair{"PCSWM_OW", &pcSwMdcOw_},
         std::pair{"PERMFACT", &permFact_},
         std::pair{"POLYMER",  &cPolymer_},
         std::pair{"PPCW",     &ppcw_},
@@ -771,7 +831,12 @@ setRestart(const data::Solution& sol,
         std::pair{"RVW",      &rvw_},
         std::pair{"SALT",     &cSalt_},
         std::pair{"SALTP",    &pSalt_},
+        std::pair{"SGMAX",    &sgmax_},
+        std::pair{"SHMAX",    &shmax_},
         std::pair{"SOMAX",    &soMax_},
+        std::pair{"SOMIN",    &somin_},
+        std::pair{"SWHY1",    &swmin_},
+        std::pair{"SWMAX",    &swMax_},
         std::pair{"TEMP",     &temperature_},
         std::pair{"UREA",     &cUrea_},
     };
@@ -824,8 +889,11 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     log,
                const bool     isRestart,
                const bool     vapparsActive,
-               const bool     enableHysteresis,
+               const bool     enablePCHysteresis,
+               const bool     enableNonWettingHysteresis,
+               const bool     enableWettingHysteresis,
                const unsigned numTracers,
+               const std::vector<bool>& enableSolTracers,
                const unsigned numOutputNnc)
 {
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
@@ -844,22 +912,36 @@ doAllocBuffers(const unsigned bufferSize,
         norst = 0;
     }
 
-    this->outputFipRestart_ = false;
-    this->computeFip_ = false;
-
     // Fluid in place
-    for (const auto& phase : Inplace::phases()) {
-        if (!substep || summaryConfig_.require3DField(EclString(phase))) {
-            if (auto& fip = rstKeywords["FIP"]; fip > 0) {
-                fip = 0;
-                this->outputFipRestart_ = true;
-            }
+    {
+        using namespace std::string_literals;
 
-            this->fip_[phase].resize(bufferSize, 0.0);
-            this->computeFip_ = true;
+        const auto fipctrl = std::array {
+            std::pair { "FIP"s , &OutputFIPRestart::noPrefix  },
+            std::pair { "SFIP"s, &OutputFIPRestart::surface   },
+            std::pair { "RFIP"s, &OutputFIPRestart::reservoir },
+        };
+
+        this->outputFipRestart_.clearBits();
+        this->computeFip_ = false;
+
+        for (const auto& [mnemonic, kind] : fipctrl) {
+            if (auto fipPos = rstKeywords.find(mnemonic);
+                fipPos != rstKeywords.end())
+            {
+                fipPos->second = 0;
+                this->outputFipRestart_.*kind = true;
+            }
         }
-        else {
-            this->fip_[phase].clear();
+
+        for (const auto& phase : Inplace::phases()) {
+            if (!substep || summaryConfig_.require3DField(EclString(phase))) {
+                this->fip_[phase].resize(bufferSize, 0.0);
+                this->computeFip_ = true;
+            }
+            else {
+                this->fip_[phase].clear();
+            }
         }
     }
 
@@ -1101,11 +1183,41 @@ doAllocBuffers(const unsigned bufferSize,
         soMax_.resize(bufferSize, 0.0);
     }
 
-    if (enableHysteresis) {
-        pcSwMdcOw_.resize(bufferSize, 0.0);
-        krnSwMdcOw_.resize(bufferSize, 0.0);
-        pcSwMdcGo_.resize(bufferSize, 0.0);
-        krnSwMdcGo_.resize(bufferSize, 0.0);
+    if (enableNonWettingHysteresis) {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)){
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)){
+                soMax_.resize(bufferSize, 0.0);
+            }
+            if (FluidSystem::phaseIsActive(gasPhaseIdx)){
+                sgmax_.resize(bufferSize, 0.0);
+            }
+        } else {
+            //TODO add support for gas-water 
+        }
+    }
+    if (enableWettingHysteresis) {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)){
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)){
+                swMax_.resize(bufferSize, 0.0);
+            }
+            if (FluidSystem::phaseIsActive(gasPhaseIdx)){
+                shmax_.resize(bufferSize, 0.0);
+            }
+        } else {
+            //TODO add support for gas-water 
+        }
+    }
+    if (enablePCHysteresis) {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)){
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)){
+                swmin_.resize(bufferSize, 0.0);
+            }
+            if (FluidSystem::phaseIsActive(gasPhaseIdx)){
+                somin_.resize(bufferSize, 0.0);
+            }
+        } else {
+            //TODO add support for gas-water 
+        }
     }
 
     if (eclState_.fieldProps().has_double("SWATINIT")) {
@@ -1120,6 +1232,14 @@ doAllocBuffers(const unsigned bufferSize,
     if (FluidSystem::enableVaporizedOil() && rstKeywords["RVSAT"] > 0) {
         rstKeywords["RVSAT"] = 0;
         oilVaporizationFactor_.resize(bufferSize, 0.0);
+    }
+    if (FluidSystem::enableDissolvedGasInWater() && rstKeywords["RSWSAT"] > 0) {
+        rstKeywords["RSWSAT"] = 0;
+        gasDissolutionFactorInWater_.resize(bufferSize, 0.0);
+    }
+    if (FluidSystem::enableVaporizedWater() && rstKeywords["RVWSAT"] > 0) {
+        rstKeywords["RVWSAT"] = 0;
+        waterVaporizationFactor_.resize(bufferSize, 0.0);
     }
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["BW"] > 0) {
@@ -1292,10 +1412,16 @@ doAllocBuffers(const unsigned bufferSize,
 
     // tracers
     if (numTracers > 0) {
-        tracerConcentrations_.resize(numTracers);
+        freeTracerConcentrations_.resize(numTracers);
         for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
         {
-            tracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
+            freeTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
+        }
+        solTracerConcentrations_.resize(numTracers);
+        for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
+        {
+            if (enableSolTracers[tracerIdx])
+                solTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
         }
     }
 
@@ -1579,6 +1705,15 @@ assignGlobalFieldsToSolution(data::Solution& sol)
     }
 }
 
-template class GenericOutputBlackoilModule<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
+template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE_TYPE(T) \
+    template class GenericOutputBlackoilModule<FS<T>>;
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm

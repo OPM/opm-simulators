@@ -1,0 +1,379 @@
+\chapter{Detailed Installation Instructions}
+\label{install}
+
+\section{Preliminary remarks}
+
+In this section about the installation of \eWoms it is assumed that
+you work on a Unix or Linux compatible operating system and that you
+are familiar with the use of a command line shell. Installation means
+that you unpack \Dune together with \eWoms in a certain directory.
+Then, you compile it in that directory tree in which you do the
+further work, too. You also should know how to install new software
+packages or you should have a person on hand who assist you with
+that. In section \ref{sec:prerequisites} we list some prerequisites
+for running \Dune and \eWoms.  Please make sure to fulfill them before
+you proceed. In addition, section \ref{sec:external-modules-libraries}
+provides some details on optional libraries and modules.
+
+In a technical sense \eWoms is a module of \Dune.  Thus, the
+installation procedure of \eWoms is the same as that of \Dune (besides
+using different locations to retieve the source code).  Details
+regarding the installation of \Dune are provided on the \Dune
+website~\cite{DUNE-INST}. If you are interested in more details about
+the build system that is used, they can be found in the {\Dune}
+build system howto \cite{DUNE-BS}.
+
+All \Dune modules, including \eWoms, get extracted into a common
+directory. In the following, we refer to that directory as {\Dune}
+base directory or, in short, as {\Dune}-base.  If it is used as
+directory path of a shell command it is typed as
+\texttt{dune-base}.  For the actual location of the {\Dune} base
+directory on your file system, you may chose any valid directory name for
+which you have write permissions.
+
+Source code files for each \Dune module are contained in their own
+subdirectory within {\Dune}-base.  We name this directory of a certain
+module \emph{module base directory} or \texttt{module-base}
+if it is a directory path, e.\,g. for the module \texttt{ewoms} these
+names are \emph{ewoms base directory} respective
+\texttt{ewoms-base}.  The real directory names for the
+modules can be chosen arbitrarily. In this manual they are the same as
+the module name or the module name extended by a version number
+suffix.  The name of each \Dune module is defined in the file
+\texttt{dune.module}, which is in the base directory of the respective
+module. This should not be changed by the user.  It is allowed to have
+own files and directories in \Dune-base, which are not related to
+\Dune's needs.
+
+After installing source code for all relevant \Dune modules including
+\eWoms, \Dune is being built by the shell-command \texttt{dunecontrol}
+which is part of the \Dune build system. The \Dune build system is a
+front-end of to the GNU build system adapted to the needs of \Dune.
+
+\section{Prerequisites} \label{sec:prerequisites}
+
+The GNU compiler collection with \Cplusplus support (\texttt{g++}) and
+the tools of the GNU build system \cite{GNU-BS}, also known as GNU
+autotools (\texttt{autoconf}, \texttt{automake}, \texttt{autogen},
+\texttt{libtool}), as well as the GNU variant of \texttt{make} called
+gmake must be available in a recent enough version. For example Ubuntu
+Linux provides these tools by means of the packages \texttt{autoconf},
+\texttt{automake}, \texttt{libtool} and the  package 
+\texttt{build-essential} includes the \Cplusplus compiler
+\texttt{g++} and \texttt{make}.
+
+At the time of writing this manual, the minumum version required for
+\texttt{g++} is 4.4.0, \texttt{automake}  the documentation by setting the switch
+\texttt{--disable-documentation} in the \texttt{CONFIGURE\_FLAGS} of
+the building options (see Chapter \ref{buildIt}).  Additional parts of
+documentation are contained within the source code files as specially
+formatted comments.  Extracting them can be done using the tool
+\texttt{doxygen} (version $\geqslant$ 1.8.2 works).  See for this
+optional step section \ref{sec:build-doxy-doc}.
+
+Depending on whether you are going to use external libraries and
+modules for additional \Dune features, additional software packages
+may be required. Some hints on that are given in Section
+\ref{sec:external-modules-libraries}.
+
+To access the git or subversion software repositories, git and
+subversion clients are required. We recommend to use the git
+command-line client \texttt{git} version 1.7.12 or newer with the
+subversion integration plugin \texttt{git-svn} enabled~\cite{GIT-HP}.
+
+\begin{table}
+\centering
+\caption{Ubuntu package names for Ubuntu 12.04}
+\begin{tabular}{llll}
+\toprule
+\textbf{purpose} & \textbf{package names} \\
+\midrule
+general: & git & git-svn & libtool \\
+& automake & build-essential & libboost-all-dev \\
+& texlive-latex-base & doxygen & csh\\
+& gfortran & \\
+\midrule
+for alberta: & freeglut3-dev &  \\
+\midrule
+for parallel use: & openmpi-common & mpi-default-bin & mpi-default-dev \\
+\midrule
+for parallel UG: & flex & bison & \\
+\midrule
+for parallel alberta: & libblas-dev &\\
+\midrule
+for debugging: & valgrind &\\
+\bottomrule
+\end{tabular}
+\label{tbl:ubuntu-pkg}
+\end{table}
+
+\begin{table}
+\centering
+\caption{Package names for openSUSE 12.2. For this distribution, the {\em science} package repository needs to be added. The science repository is available from \url{http://download.opensuse.org/repositories/science/openSUSE_12.2/}. }
+\begin{tabular}{llll}
+\toprule
+\textbf{purpose} & \textbf{package names} \\
+\midrule
+git & git-svn & dune-istl-devel & dune-grid-devel \\
+dune-localfunctions-devel & \\
+\bottomrule
+\end{tabular}
+\label{tbl:opensuse-pkg}
+\end{table}
+
+\section{Obtaining source code for \Dune and \eWoms}
+
+As stated above, the \eWoms is based on the \Dune release 2.2,
+comprising the core modules \texttt{dune-common},
+\texttt{dune-geometry}, \texttt{dune-grid}, \texttt{dune-istl} and
+\texttt{dune-localfunctions}.  For working with \eWoms, these modules
+are required.
+
+Two possibilities exist to get the source code of \Dune and \eWoms.
+Firstly, released versions \Dune and \eWoms can be downloaded as tar
+files from the \Dune and \eWoms websites. They have to be extracted as
+described in the next paragraph.  Secondly, the most recent source
+code can be obtained by directly downloading it from its respective
+source-code repository. This method is described in the subsequent
+section.
+
+\paragraph{Obtaining the software by installing tar files}
+
+The slightly old-fashionedly named tape-archive-file, shortly named
+tar file or tarball, is a common file format for distributing
+collections of files contained within these archives.  The extraction
+from the tar files is done as follows: Download the tarballs from the
+respective \Dune~\cite{DUNE-HP} (version 2.2.0) and
+\eWoms~\cite{EWOMS-HP} websites.  Then, create the {\Dune} base
+directory, named \texttt{~/src} in the example below. Then, extract the
+content of the tar files, e.\,g. with the command-line program
+\texttt{tar}.  This can be achieved by the following shell
+commands. Replace \texttt{path\_to\_tarball} with the directory name
+where the downloaded files are actually located.  After extraction,
+the actual name of the \emph{ewoms base directory} is
+\texttt{ewoms-2.2}.
+
+\begin{lstlisting}[style=Bash]
+$ mkdir ~/src
+$ cd ~/src
+$ tar xzvf path_to_tarball_of/dune-common-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-grid-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-geometry-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-istl-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/dune-localfunctions-2.2.0.tar.gz 
+$ tar xzvf path_to_tarball_of/ewoms-2.2.0.tar.gz
+\end{lstlisting}
+
+\paragraph{Obtaining \Dune and \eWoms from software repositories} 
+
+Direct access to a software repositories for downloading code can be
+convenient to always follow the changes of done to the software
+project. Usually, source code repositories are structured in
+branches. One of these branches is commonly used to include the latest
+features of the software, and there is normally one branch for each
+release which only receives fixes for bug which have been discovered
+after the software was released. The following text describes how to
+retrieve the source code of \Dune and \eWoms from such release
+branches.
+
+The \Dune project uses Apache Subversion~\cite{APACHE-SUBVERSION-HP}
+to manage its software repositories, while \eWoms -- being part of the
+open porous media project -- opted to use the git source code
+management system~\cite{GIT-HP}. Fortunately, git ships with a
+subversion plugin, so all modules can be managed using git.
+
+In the technical language of Apache Subversion \emph{cloning a certain
+  software repository} means nothing more then fetching a local copy
+of the software repository and placing it on the local file system.
+In addition to the software some more files for the use of the
+software revision control system itself are created. They are kept in
+a directory named \texttt{.git} at the base directory of the cloned
+software repository.
+
+The installation procedure is structured as follows: Create a {\Dune} base
+directory (named \texttt{~/src} in the lines below).  Then, enter the
+previously created directory and check out the desired modules.  As
+you see below, the check-out uses two different servers for getting
+the sources, one for \Dune and one for \eWoms.  The \Dune modules of
+the stable 2.2 release branch are cloned similarly as described on the
+\Dune website~\cite{DUNE-DOWNLOAD-SVN}:
+
+\begin{lstlisting}[style=Bash]
+mkdir ~/src
+cd ~/src
+for DUNE_MODULE in common geometry grid istl localfunctions; do
+  git svn clone \
+   https://svn.dune-project.org/svn/dune-$DUNE_MODULE/branches/release-2.2 \
+   dune-$DUNE_MODULE
+done
+\end{lstlisting}
+
+The newest and maybe unstable developments are also provided in these
+repositories in a folder called \emph{trunk}. Please check the \Dune
+website \cite{DUNE-DOWNLOAD-SVN} for further information. However, the
+current \eWoms release is based on the stable 2.2 \Dune release and it
+might misbehave using the the newest version of \Dune.
+
+The \eWoms module is checked out as described below (see also the
+\eWoms website \cite{EWOMS-HP}).  Its source tree has to be created in
+the \Dune-base directory, where the \Dune modules have also been
+cloned into. Subsequently, the next command is executed there,
+too. The directory which holds the \eWoms module is called
+\texttt{ewoms} here.
+
+\begin{lstlisting}[style=Bash]
+cd ~/src
+git clone git://github.com/OPM/ewoms.git ewoms
+\end{lstlisting}
+
+\section{Building the doxygen documentation}
+\label{sec:build-doxy-doc}
+
+Doxygen documentation is done by especially formatted comments
+integrated in the source code, which can get extracted by the program
+\texttt{doxygen}. Beside extracting these comments, \texttt{doxygen}
+builds up a web-browsable code structure documentation like class
+hierarchy of code displayed as graphs, see \cite{DOXYGEN-HP}.
+
+Building the doxygen documentation of a module is done as follows,
+provided the program \texttt{doxygen} is installed: Set in building
+options the \texttt{--enable-doxygen} switch.  This is either
+accomplished by adding it in \texttt{dunecontrol} options-file to
+\texttt{CONFIGURE\_FLAGS}, or by adding it to \texttt{dunecontrol}'s
+command-line-argument \texttt{--configure-opts}.  After running
+\texttt{dunecontrol} enter in module's base directory the subdirectory
+\texttt{doc/doxygen}.  You then run the command \texttt{doxygen}
+within that directory. Point your web browser to the file
+\texttt{module-base-directory/doc/doxygen/html/index.html} to read the
+generated documentation.  For all \Dune-modules that described here,
+the doxygen documentation can be generated analogously.
+
+\begin{lstlisting}[style=Bash]
+cd ~/src/ewoms/doc/doxygen
+doxygen
+firefox html/index.html
+\end{lstlisting}
+
+\section{Building the \eWoms handbook}
+
+If the \texttt{--enable-documentation} switch has been set in the configure flags of
+\texttt{dunecontrol}, watch for a summary line of the build script that reads
+\begin{lstlisting}[style=Bash]
+Build eWoms handbook....: yes
+\end{lstlisting}
+
+If this is the case, the handbook should be automatically build by
+\texttt{dunecontrol} and can be found at
+\texttt{\$EWOMS\_BASE/doc/handbook/ewoms-handbook.pdf}.
+
+If the summary line says that the handbook is not going to be build,
+then you usually have to install additional \LaTeX packages.
+
+\section{External libraries and modules}
+\label{sec:external-modules-libraries}
+
+The libraries described below provide additional functionality but are
+not generally required to use \eWoms.  If you are going to use an
+external library, also check the information provided on the \Dune
+website~\cite{DUNE-EXT-LIB} for additional hints.  If you are going to
+use an external \Dune module, the website listing external
+modules~\cite{DUNE-EXT-MOD} can also be helpful.
+
+Some external libraries have additional dependencies which can also be
+used by \Dune.  Also, some libraries, such as BLAS or MPI might have
+multiple versions installed on the system.  To avoid problems, you
+should make sure that all external libraries use the same dependencies
+as \Dune.
+
+In the following list, you can find some external modules and external
+libraries, and some more libraries and tools which are prerequisites
+for their use.
+
+\begin{itemize}
+\item \textbf{ALBERTA}: External library which can be used as an
+  additional grid manager. ALBERTA stands for ``\textbf{A}daptive multi \textbf{L}evel finite element toolbox
+  using \textbf{B}isectioning refinement and \textbf{E}rror control by \textbf{R}esidual
+  \textbf{T}echniques for scientific \textbf{A}pplications''. Building it requires a
+  Fortran compiler, for example \texttt{gfortran}. It can be downloaded at:
+  \texttt{\url{http://www.alberta-fem.de}}.
+
+\item \textbf{ALUGrid}: External library for use as grid. ALUGrid
+  requires by a \Cplusplus compiler like \texttt{g++} to be build. If
+  you want to build a parallel version, you will need an MPI library
+  like, for example \texttt{openmpi}, installed on your system. The
+  parallel version needs also a graph partitioner, such as
+  \texttt{METIS}.
+
+  Download:
+  \texttt{\url{http://aam.mathematik.uni-freiburg.de/IAM/Research/alugrid}}
+
+\item \textbf{SuperLU}: External library for solving linear
+  equations. SuperLU is a general purpose library for the direct
+  solution of large, sparse, non-symmetric systems of linear
+  equations.
+
+  Download:
+  \texttt{\url{http://crd.lbl.gov/~xiaoye/SuperLU}}.
+
+\item \textbf{UG}: External library which can be used as an additional
+  grid manager. UG is a toolbox for \textbf{U}nstructured
+  \textbf{G}rids: For \eWoms it has to be build by GNU buildsystem and
+  a \Cplusplus compiler. That's why \Dune specific patches need
+  applied before use. Building it makes use of the tools
+  \texttt{lex}/\texttt{yacc} or the GNU variants
+  \texttt{flex}/\texttt{bison}.
+
+  Website:
+  \texttt{\url{http://atlas.gcsc.uni-frankfurt.de/~ug/}}\\
+  Further information:
+  \texttt{\url{http://www.dune-project.org/external_libraries/install_ug.html}}\\
+
+\end{itemize}
+
+The following are dependencies of some of the external libraries. You
+will need them depending on which modules of \Dune and which external
+libraries you use.
+
+\begin{itemize}
+\item \textbf{MPI}: The parallel version of \Dune and also some of the
+  external dependencies need MPI when they are going to be built for
+  parallel computing. \texttt{Openmpi} version $\geqslant$ 1.4.2 and
+  \texttt{MPICH} in a recent version have been reported to work.
+
+\item \textbf{lex/yacc} or \textbf{flex/bison}: These are quite common
+  developing tools, code generators for lexical analyzers and
+  parsers. This is a prerequisite for compiling UG.
+
+\item \textbf{BLAS}: Alberta makes use of BLAS (acronym for
+  ``\textbf{B}asic \textbf{L}inear \textbf{A}lgebra
+  \textbf{S}ubprograms). Thus install GotoBLAS2, ATLAS,
+  non-optimized BLAS or a BLAS library provided by a computer
+  vendor. Take care that the installation scripts select the intended
+  version of BLAS. For further information, see
+  \texttt{\url{http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms}}.
+
+\item \textbf{GotoBLAS2}: This is an optimized BLAS library. It does
+  not provide optimized routines for all modern processors, but quite
+  a broad range. Also, its license is now open. A Fortran compiler
+  like \texttt{gfortran} is needed to compile it.
+
+  Available at
+  \texttt{\url{http://www.tacc.utexas.edu/tacc-projects/gotoblas2/}}.
+
+\item \textbf{METIS}: This is a dependency of ALUGrid, if you are
+  going to run it parallel.
+  
+  Available for non-commercial use at
+  \texttt{\url{http://glaros.dtc.umn.edu/gkhome/metis/metis/overview}}
+
+\item \textbf{Compilers}: Besides \texttt{g++} \Dune and \eWoms can
+  also be built with the \texttt{clang++} compiler originating from
+  the LLVM project. If you try other compilers, be aware that in addition to a
+  \Cplusplus compiler, C and Fortran compilers are needed to compile
+  some external libraries.
+\end{itemize}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "ewoms-handbook"
+%%% End: 

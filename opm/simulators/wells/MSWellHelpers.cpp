@@ -47,10 +47,10 @@
 
 namespace {
 
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType haalandFormular(const ValueType& re,
-                          const double diameter,
-                          const double roughness)
+                          const Scalar diameter,
+                          const Scalar roughness)
 {
     const ValueType value = -3.6 * log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
 
@@ -62,10 +62,10 @@ ValueType haalandFormular(const ValueType& re,
 
 // water in oil emulsion viscosity
 // TODO: maybe it should be two different ValueTypes. When we calculate the viscosity for transitional zone
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType WIOEmulsionViscosity(const ValueType& oil_viscosity,
                                const ValueType& water_liquid_fraction,
-                               const double max_visco_ratio)
+                               const Scalar max_visco_ratio)
 {
     const ValueType temp_value = 1. / (1. - (0.8415 / 0.7480 * water_liquid_fraction) );
     const ValueType viscosity_ratio = pow(temp_value, 2.5);
@@ -78,10 +78,10 @@ ValueType WIOEmulsionViscosity(const ValueType& oil_viscosity,
 }
 
 // oil in water emulsion viscosity
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType OIWEmulsionViscosity(const ValueType& water_viscosity,
                                const ValueType& water_liquid_fraction,
-                               const double max_visco_ratio)
+                               const Scalar max_visco_ratio)
 {
     const ValueType temp_value = 1. / (1. - (0.6019 / 0.6410) * (1. - water_liquid_fraction) );
     const ValueType viscosity_ratio = pow(temp_value, 2.5);
@@ -95,10 +95,7 @@ ValueType OIWEmulsionViscosity(const ValueType& water_viscosity,
 
 }
 
-namespace Opm {
-
-namespace mswellhelpers
-{
+namespace Opm::mswellhelpers {
 
     /// Applies umfpack and checks for singularity
 template <typename MatrixType, typename VectorType>
@@ -113,18 +110,21 @@ applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
 
     // Object storing some statistics about the solving process
     Dune::InverseOperatorResult res;
+    if constexpr (std::is_same_v<typename VectorType::field_type,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use applyUMFPack() with floats.");
+    } else {
+        // Solve
+        linsolver.apply(y, x, res);
 
-    // Solve
-    linsolver.apply(y, x, res);
-
-    // Checking if there is any inf or nan in y
-    // it will be the solution before we find a way to catch the singularity of the matrix
-    for (std::size_t i_block = 0; i_block < y.size(); ++i_block) {
-        for (std::size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
-            if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
-                const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
-                OpmLog::debug(msg);
-                OPM_THROW_NOLOG(NumericalProblem, msg);
+        // Checking if there is any inf or nan in y
+        // it will be the solution before we find a way to catch the singularity of the matrix
+        for (std::size_t i_block = 0; i_block < y.size(); ++i_block) {
+            for (std::size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
+                if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
+                    const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
+                    OpmLog::debug(msg);
+                    OPM_THROW_NOLOG(NumericalProblem, msg);
+                }
             }
         }
     }
@@ -149,17 +149,21 @@ invertWithUMFPack(const int size,
     // Make a full block matrix.
     Dune::Matrix<typename MatrixType::block_type> inv(size, size);
 
-    // Create inverse by passing basis vectors to the solver.
-    for (int ii = 0; ii < size; ++ii) {
-        for (int jj = 0; jj < bsize; ++jj) {
-            e[ii][jj] = 1.0;
-            auto col = applyUMFPack(linsolver, e);
-            for (int cc = 0; cc < size; ++cc) {
-                for (int dd = 0; dd < bsize; ++dd) {
-                    inv[cc][ii][dd][jj] = col[cc][dd];
+    if constexpr (std::is_same_v<typename VectorType::field_type,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use invertWithUMFPack() with floats.");
+    } else {
+        // Create inverse by passing basis vectors to the solver.
+        for (int ii = 0; ii < size; ++ii) {
+            for (int jj = 0; jj < bsize; ++jj) {
+                e[ii][jj] = 1.0;
+                auto col = applyUMFPack(linsolver, e);
+                for (int cc = 0; cc < size; ++cc) {
+                    for (int dd = 0; dd < bsize; ++dd) {
+                        inv[cc][ii][dd][jj] = col[cc][dd];
+                    }
                 }
+                e[ii][jj] = 0.0;
             }
-            e[ii][jj] = 0.0;
         }
     }
 
@@ -212,17 +216,17 @@ invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
     return y;
 }
 
-template <typename ValueType>
-ValueType frictionPressureLoss(const double l, const double diameter,
-                               const double area, const double roughness,
+template <typename ValueType, typename Scalar>
+ValueType frictionPressureLoss(const Scalar l, const Scalar diameter,
+                               const Scalar area, const Scalar roughness,
                                const ValueType& density,
                                const ValueType& w, const ValueType& mu)
 {
     // Reynolds number
     const ValueType re = abs( diameter * w / (area * mu));
 
-    constexpr double re_value1 = 2000.;
-    constexpr double re_value2 = 4000.;
+    constexpr Scalar re_value1 = 2000.;
+    constexpr Scalar re_value2 = 4000.;
 
     if (re < re_value1) {
         // not using the formula directly because of the division with very small w
@@ -234,7 +238,7 @@ ValueType frictionPressureLoss(const double l, const double diameter,
     if (re > re_value2) {
         f = haalandFormular(re, diameter, roughness);
     } else { // in between
-        constexpr double f1 = 16. / re_value1;
+        constexpr Scalar f1 = 16. / re_value1;
         const ValueType f2 = haalandFormular(re_value2, diameter, roughness);
         f = (f2 - f1) / (re_value2 - re_value1) * (re - re_value1) + f1;
     }
@@ -242,19 +246,19 @@ ValueType frictionPressureLoss(const double l, const double diameter,
     return 2. * f * l * w * w / (area * area * diameter * density);
 }
 
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType valveContrictionPressureLoss(const ValueType& mass_rate,
                                        const ValueType& density,
-                                       const double area_con, const double cv)
+                                       const Scalar area_con, const Scalar cv)
 {
     // the formulation is adjusted a little bit for convinience
     // velocity = mass_rate / (density * area) is applied to the original formulation
-    const double area = (area_con > 1.e-10 ? area_con : 1.e-10);
+    const Scalar area = (area_con > 1.e-10 ? area_con : 1.e-10);
     return mass_rate * mass_rate / (2. * density * cv * cv * area * area);
 }
 
-template <typename ValueType>
-ValueType velocityHead(const double area, const ValueType& mass_rate,
+template <typename ValueType, typename Scalar>
+ValueType velocityHead(const Scalar area, const ValueType& mass_rate,
                        const ValueType& density)
 {
     // \Note: a factor of 2 is added to the formulation in order to match results from the
@@ -262,21 +266,21 @@ ValueType velocityHead(const double area, const ValueType& mass_rate,
     return (mass_rate * mass_rate / (area * area * density));
 }
 
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType emulsionViscosity(const ValueType& water_fraction,
                             const ValueType& water_viscosity,
                             const ValueType& oil_fraction,
                             const ValueType& oil_viscosity,
                             const SICD& sicd)
 {
-    const double width_transition = sicd.widthTransitionRegion();
+    const Scalar width_transition = sicd.widthTransitionRegion();
 
     // it is just for now, we should be able to treat it.
     if (width_transition <= 0.) {
         OPM_THROW(std::runtime_error, "Not handling non-positive transition width now");
     }
 
-    const double critical_value = sicd.criticalValue();
+    const Scalar critical_value = sicd.criticalValue();
     const ValueType transition_start_value = critical_value - width_transition / 2.0;
     const ValueType transition_end_value = critical_value + width_transition / 2.0;
 
@@ -288,7 +292,7 @@ ValueType emulsionViscosity(const ValueType& water_fraction,
 
     const ValueType water_liquid_fraction = water_fraction / liquid_fraction;
 
-    const double max_visco_ratio = sicd.maxViscosityRatio();
+    const Scalar max_visco_ratio = sicd.maxViscosityRatio();
     if (water_liquid_fraction <= transition_start_value) {
         return WIOEmulsionViscosity(oil_viscosity, water_liquid_fraction, max_visco_ratio);
     } else if (water_liquid_fraction >= transition_end_value) {
@@ -302,54 +306,59 @@ ValueType emulsionViscosity(const ValueType& water_fraction,
     }
 }
 
-template<int Dim>
-using Vec = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
-template<int Dim>
-using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>;
+template<class Scalar, int Dim>
+using Vec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
+template<class Scalar, int Dim>
+using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,Dim,Dim>>;
 
-#define INSTANCE_UMF(Dim) \
-    template Vec<Dim> applyUMFPack<Mat<Dim>,Vec<Dim>>(Dune::UMFPack<Mat<Dim>>&, \
-                                                      Vec<Dim>); \
-    template Dune::Matrix<typename Mat<Dim>::block_type> \
-    invertWithUMFPack<Vec<Dim>,Mat<Dim>>(const int, const int, Dune::UMFPack<Mat<Dim>>&);
+#define INSTANTIATE_UMF(T,Dim)                                             \
+    template Vec<T,Dim> applyUMFPack(Dune::UMFPack<Mat<T,Dim>>&,           \
+                                     Vec<T,Dim>);                          \
+    template Dune::Matrix<typename Mat<T,Dim>::block_type>                 \
+    invertWithUMFPack<Vec<T,Dim>,Mat<T,Dim>>(const int, const int,         \
+                                             Dune::UMFPack<Mat<T,Dim>>&);
 
-INSTANCE_UMF(2)
-INSTANCE_UMF(3)
-INSTANCE_UMF(4)
+#define INSTANTIATE_IMPL(T,...)                                    \
+    template __VA_ARGS__                                           \
+    frictionPressureLoss(const T,                                  \
+                         const T,                                  \
+                         const T,                                  \
+                         const T,                                  \
+                         const __VA_ARGS__&,                       \
+                         const __VA_ARGS__&,                       \
+                         const __VA_ARGS__&);                      \
+    template  __VA_ARGS__                                          \
+    valveContrictionPressureLoss(const __VA_ARGS__& mass_rate,     \
+                                 const __VA_ARGS__& density,       \
+                                 const T, const T);                \
+    template __VA_ARGS__                                           \
+    velocityHead(const T, const __VA_ARGS__&, const __VA_ARGS__&); \
+    template __VA_ARGS__                                           \
+    emulsionViscosity<__VA_ARGS__,T>(const __VA_ARGS__&,           \
+                                     const __VA_ARGS__&,           \
+                                     const __VA_ARGS__&,           \
+                                     const __VA_ARGS__&,           \
+                                     const SICD&);
 
-#define INSTANCE_IMPL(...) \
-    template __VA_ARGS__ \
-    frictionPressureLoss<__VA_ARGS__>(const double, \
-                                      const double, \
-                                      const double, \
-                                      const double, \
-                                      const __VA_ARGS__&, \
-                                      const __VA_ARGS__&, \
-                                      const __VA_ARGS__&); \
-    template  __VA_ARGS__ \
-    valveContrictionPressureLoss<__VA_ARGS__>(const __VA_ARGS__& mass_rate, \
-                                              const __VA_ARGS__& density, \
-                                              const double, const double); \
-    template __VA_ARGS__ \
-    velocityHead<__VA_ARGS__>(const double, const __VA_ARGS__&, const __VA_ARGS__&); \
-    template __VA_ARGS__ \
-    emulsionViscosity<__VA_ARGS__>(const __VA_ARGS__&,  \
-                                   const __VA_ARGS__&, \
-                                   const __VA_ARGS__&, \
-                                   const __VA_ARGS__&, \
-                                   const SICD&);
+#define INSTANTIATE_EVAL(T,Dim) \
+    INSTANTIATE_IMPL(T, DenseAd::Evaluation<T,Dim>)
 
-#define INSTANCE_EVAL(Dim) \
-    INSTANCE_IMPL(DenseAd::Evaluation<double,Dim>)
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE_UMF(T,2)    \
+    INSTANTIATE_UMF(T,3)    \
+    INSTANTIATE_UMF(T,4)    \
+    INSTANTIATE_EVAL(T,3)   \
+    INSTANTIATE_EVAL(T,4)   \
+    INSTANTIATE_EVAL(T,5)   \
+    INSTANTIATE_EVAL(T,6)   \
+    INSTANTIATE_EVAL(T,7)   \
+    INSTANTIATE_EVAL(T,8)   \
+    INSTANTIATE_EVAL(T,9)
 
-INSTANCE_EVAL(3)
-INSTANCE_EVAL(4)
-INSTANCE_EVAL(5)
-INSTANCE_EVAL(6)
-INSTANCE_EVAL(7)
-INSTANCE_EVAL(8)
-INSTANCE_EVAL(9)
+INSTANTIATE_TYPE(double)
 
-} // namespace mswellhelpers
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
-} // namespace Opm
+} // namespace Opm::mswellhelpers

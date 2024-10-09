@@ -130,7 +130,27 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     _throw(exc_type, message, comm);
 }
 
+inline void logAndCheckForProblemsAndThrow(Opm::DeferredLogger& deferred_logger,
+                                          Opm::ExceptionType::ExcEnum exc_type,
+                                          const std::string& message,
+                                          const bool terminal_output,
+                                          Opm::Parallel::Communication comm)
+{
+    // add exception message to logger in order to display message from all ranks
+    if (exc_type != Opm::ExceptionType::NONE && comm.size() > 1) {
+        deferred_logger.problem("[Exception on rank " + std::to_string(comm.rank()) + "]: " + message);
+    }
+    Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, comm);
 
+    if (terminal_output) {
+        global_deferredLogger.logMessages();
+    }
+    // Now that all messages have been logged, they are automatically
+    // cleared from the global logger, but we must also clear them
+    // from the local logger.
+    deferred_logger.clearMessages();
+    _throw(exc_type, message, comm);
+}
 /// \brief Macro to setup the try of a parallel try-catch
 ///
 /// Use OPM_END_PARALLEL_TRY_CATCH or OPM_END_PARALLEL_TRY_CATCH_LOG

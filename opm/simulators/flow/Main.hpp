@@ -57,7 +57,7 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
@@ -77,6 +77,7 @@
 #endif
 
 #include <cassert>
+#include <charconv>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -130,14 +131,16 @@ public:
     Main(int argc, char** argv, bool ownMPI = true);
 
     // This constructor can be called from Python
-    Main(const std::string& filename);
+    Main(const std::string& filename, bool mpi_init = true, bool mpi_finalize = true);
 
     // This constructor can be called from Python when Python has
     // already parsed a deck
     Main(const std::string& filename,
          std::shared_ptr<EclipseState> eclipseState,
          std::shared_ptr<Schedule> schedule,
-         std::shared_ptr<SummaryConfig> summaryConfig);
+         std::shared_ptr<SummaryConfig> summaryConfig,
+         bool mpi_init = true,
+         bool mpi_finalize = true);
 
     ~Main();
 
@@ -149,6 +152,7 @@ public:
     {
         int exitCode = EXIT_SUCCESS;
         if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
+            Parameters::reset();
             if (isSimulationRank_) {
                 return this->dispatchDynamic_();
             }
@@ -168,26 +172,6 @@ public:
         }
 
         return exitCode;
-    }
-
-    using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
-    // To be called from the Python interface code. Only do the
-    // initialization and then return a pointer to the FlowMain
-    // object that can later be accessed directly from the Python interface
-    // to e.g. advance the simulator one report step
-    std::unique_ptr<FlowMainType> initFlowBlackoil(int& exitCode)
-    {
-        exitCode = EXIT_SUCCESS;
-        if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
-            // TODO: check that this deck really represents a blackoil
-            // case. E.g. check that number of phases == 3
-            this->setupVanguard();
-            return flowBlackoilTpfaMainInit(
-                argc_, argv_, outputCout_, outputFiles_);
-        } else {
-            //NOTE: exitCode was set by initialize_() above;
-            return std::unique_ptr<FlowMainType>(); // nullptr
-        }
     }
 
     //! \brief Used for test_outputdir.
@@ -285,14 +269,16 @@ private:
         return flowMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
     }
 
+protected:
     /// \brief Initialize
     /// \param exitCode The exitCode of the program.
+    /// \param keepKeywords Keep Schedule keywords even if there are no actions
     ///
     /// \return Whether to actually run the simulator. I.e. true if
     /// parsing of command line was successful and no --help,
     /// --print-properties, or --print-parameters have been found.
     template <class TypeTagEarlyBird>
-    bool initialize_(int& exitCode)
+    bool initialize_(int& exitCode, bool keepKeywords = false)
     {
         Dune::Timer externalSetupTimer;
         externalSetupTimer.start();
@@ -333,12 +319,12 @@ private:
             outputDir = eclipseState_->getIOConfig().getOutputDir();
         }
         else {
-            deckFilename = Parameters::get<PreTypeTag, Properties::EclDeckFileName>();
-            outputDir = Parameters::get<PreTypeTag, Properties::OutputDir>();
+            deckFilename = Parameters::Get<Parameters::EclDeckFileName>();
+            outputDir = Parameters::Get<Parameters::OutputDir>();
         }
 
 #if HAVE_DAMARIS
-        enableDamarisOutput_ = Parameters::get<PreTypeTag, Properties::EnableDamarisOutput>();
+        enableDamarisOutput_ = Parameters::Get<Parameters::EnableDamarisOutput>();
         
         // Reset to false as we cannot use Damaris if there is only one rank.
         if ((enableDamarisOutput_ == true) && (FlowGenericVanguard::comm().size() == 1)) {
@@ -374,7 +360,7 @@ private:
         int mpiRank = FlowGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
-            outputCout_ = Parameters::get<PreTypeTag, Properties::EnableTerminalOutput>();
+            outputCout_ = Parameters::Get<Parameters::EnableTerminalOutput>();
 
         if (deckFilename.empty()) {
             if (mpiRank == 0) {
@@ -402,10 +388,10 @@ private:
         std::string cmdline_params;
         if (outputCout_) {
             printFlowBanner(FlowGenericVanguard::comm().size(),
-                            getNumThreads<PreTypeTag>(),
+                            getNumThreads(),
                             Opm::moduleVersionName());
             std::ostringstream str;
-            Parameters::printValues<PreTypeTag>(str);
+            Parameters::printValues(str);
             cmdline_params = str.str();
         }
 
@@ -413,12 +399,15 @@ private:
         try {
             this->readDeck(deckFilename,
                            outputDir,
-                           Parameters::get<PreTypeTag, Properties::OutputMode>(),
-                           !Parameters::get<PreTypeTag, Properties::SchedRestart>(),
-                           Parameters::get<PreTypeTag, Properties::EnableLoggingFalloutWarning>(),
-                           Parameters::get<PreTypeTag, Properties::ParsingStrictness>(),
-                           getNumThreads<PreTypeTag>(),
-                           Parameters::get<PreTypeTag, Properties::EclOutputInterval>(),
+                           Parameters::Get<Parameters::OutputMode>(),
+                           !Parameters::Get<Parameters::SchedRestart>(),
+                           Parameters::Get<Parameters::EnableLoggingFalloutWarning>(),
+                           Parameters::Get<Parameters::ParsingStrictness>(),
+                           Parameters::Get<Parameters::ActionParsingStrictness>(),
+                           Parameters::Get<Parameters::InputSkipMode>(),
+                           keepKeywords,
+                           getNumThreads(),
+                           Parameters::Get<Parameters::EclOutputInterval>(),
                            cmdline_params,
                            Opm::moduleVersion(),
                            Opm::compileTimestamp());
@@ -441,6 +430,9 @@ private:
         return true;
     }
 
+    void setupVanguard();
+
+private:
     // This function is an extreme special case, if the program has been invoked
     // *exactly* as:
     //
@@ -691,15 +683,15 @@ private:
                   const bool init_from_restart_file,
                   const bool allRanksDbgPrtLog,
                   const std::string& parsingStrictness,
+                  const std::string& actionParsingStrictness,
+                  const std::string& inputSkipMode,
+                  const bool keepKeywords,
                   const std::size_t numThreads,
                   const int output_param,
                   const std::string& parameters,
                   std::string_view moduleVersion,
                   std::string_view compileTimestamp);
 
-    void setupVanguard();
-
-    template<class TypeTag>
     static int getNumThreads()
     {
 
@@ -707,23 +699,36 @@ private:
 
 #ifdef _OPENMP
         // This function is called before the parallel OpenMP stuff gets initialized.
-        // That initialization happends after the deck is read and we want this message.
+        // That initialization happens after the deck is read and we want this message.
         // Hence we duplicate the code of setupParallelism to get the number of threads.
-        if (std::getenv("OMP_NUM_THREADS")) {
-            threads =  omp_get_max_threads();
-        }
-        else {
-            threads = 2;
+        static bool first_time = true;
+        constexpr int default_threads = 2;
+        const int requested_threads = Parameters::Get<Parameters::ThreadsPerProcess>();
+        threads = requested_threads > 0 ? requested_threads : default_threads;
 
-            const int input_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
-
-            if (input_threads > 0)
-                threads = input_threads;
+        const char* env_var = getenv("OMP_NUM_THREADS");
+        if (env_var) {
+            int omp_num_threads = -1;
+            auto result = std::from_chars(env_var, env_var + std::strlen(env_var), omp_num_threads);
+            const bool can_output = first_time && FlowGenericVanguard::comm().rank() == 0;
+            if (result.ec == std::errc() && omp_num_threads > 0) {
+                // Set threads to omp_num_threads if it was successfully parsed and is positive
+                threads = omp_num_threads;
+                if (can_output && requested_threads > 0) {
+                    std::cout << "Warning: Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument."
+                              << std::endl;
+                }
+            } else {
+                if (can_output) {
+                    std::cout << ("Warning: Invalid value for OMP_NUM_THREADS environment variable.") << std::endl;
+                }
+            }
         }
+
+        first_time = false;
 #else
         threads = 1;
 #endif
-
         return threads;
     }
 
@@ -731,11 +736,14 @@ private:
     void setupDamaris(const std::string& outputDir);
 #endif
 
+protected:
     int argc_{0};
     char** argv_{nullptr};
-    bool ownMPI_{true}; //!< True if we "own" MPI and should init / finalize
     bool outputCout_{false};
     bool outputFiles_{false};
+
+private:
+    bool ownMPI_{true}; //!< True if we "own" MPI and should init / finalize
     double setupTime_{0.0};
     std::string deckFilename_{};
     std::string flowProgName_{};
@@ -748,6 +756,8 @@ private:
     std::shared_ptr<EclipseState> eclipseState_{};
     std::shared_ptr<Schedule> schedule_{};
     std::shared_ptr<SummaryConfig> summaryConfig_{};
+    bool mpi_init_{true}; //!< True if MPI_Init should be called
+    bool mpi_finalize_{true}; //!< True if MPI_Finalize should be called
 
     // To demonstrate run with non_world_comm
     bool test_split_comm_ = false;

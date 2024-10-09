@@ -43,6 +43,7 @@
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 
@@ -60,6 +61,10 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+
+#if HAVE_MPI
+#include <opm/simulators/utils/MPISerializer.hpp>
+#endif
 
 #include <algorithm>
 #include <cassert>
@@ -112,7 +117,13 @@ BlackoilWellModelGeneric(Schedule& schedule,
 
     const auto& node_pressures = eclState.getRestartNetworkPressures();
     if (node_pressures.has_value()) {
-        this->node_pressures_ = node_pressures.value();
+        if constexpr (std::is_same_v<Scalar,double>) {
+            this->node_pressures_ = node_pressures.value();
+        } else {
+            for (const auto& it : node_pressures.value()) {
+                this->node_pressures_[it.first] = it.second;
+            }
+        }
     }
 }
 
@@ -186,7 +197,7 @@ getWellEcl(const std::string& well_name) const
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 initFromRestartFile(const RestartValue& restartValues,
-                    WellTestState wtestState,
+                    std::unique_ptr<WellTestState> wtestState,
                     const std::size_t numCells,
                     bool handle_ms_well)
 {
@@ -274,11 +285,11 @@ getLocalWells(const int timeStepIdx) const
 }
 
 template<class Scalar>
-std::vector<std::reference_wrapper<ParallelWellInfo>>
+std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>
 BlackoilWellModelGeneric<Scalar>::
 createLocalParallelWellInfo(const std::vector<Well>& wells)
 {
-    std::vector<std::reference_wrapper<ParallelWellInfo>> local_parallel_well_info;
+    std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>> local_parallel_well_info;
     local_parallel_well_info.reserve(wells.size());
     for (const auto& well : wells)
     {
@@ -318,7 +329,7 @@ initializeWellPerfData()
         int connection_index = 0;
 
         // INVALID_ECL_INDEX marks no above perf available
-        int connection_index_above = ParallelWellInfo::INVALID_ECL_INDEX;
+        int connection_index_above = ParallelWellInfo<Scalar>::INVALID_ECL_INDEX;
 
         well_perf_data_[well_index].clear();
         well_perf_data_[well_index].reserve(well.getConnections().size());
@@ -598,7 +609,7 @@ checkGroupHigherConstraints(const Group& group,
     if (!isField && group.isInjectionGroup()) {
         // Obtain rates for group.
         std::vector<Scalar> resv_coeff_inj(phase_usage_.num_phases, 0.0);
-        calcInjRates(fipnum, pvtreg, resv_coeff_inj);
+        calcInjResvCoeff(fipnum, pvtreg, resv_coeff_inj);
 
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
@@ -664,7 +675,7 @@ checkGroupHigherConstraints(const Group& group,
             rates[phasePos] = -comm_.sum(local_current_rate);
         }
         std::vector<Scalar> resv_coeff(phase_usage_.num_phases, 0.0);
-        calcRates(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
+        calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
         // Check higher up only if under individual (not FLD) control.
         const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
         if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {
@@ -892,6 +903,74 @@ setWsolvent(const Group& group,
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
+assignWellTargets(data::Wells& wsrpt) const
+{
+    auto pwInfo = this->local_parallel_well_info_.begin();
+
+    for (const auto& well : this->wells_ecl_) {
+        if (! pwInfo++->get().isOwner()) {
+            continue;
+        }
+
+        // data::Wells is a std::map<>
+        auto& limits = wsrpt[well.name()].limits;
+
+        if (well.isProducer()) {
+            this->assignProductionWellTargets(well, limits);
+        }
+        else {
+            this->assignInjectionWellTargets(well, limits);
+        }
+    }
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+assignProductionWellTargets(const Well& well, data::WellControlLimits& limits) const
+{
+    using Item = data::WellControlLimits::Item;
+
+    const auto ctrl = well.productionControls(this->summaryState());
+
+    limits
+        .set(Item::Bhp, ctrl.bhp_limit)
+        .set(Item::OilRate, ctrl.oil_rate)
+        .set(Item::WaterRate, ctrl.water_rate)
+        .set(Item::GasRate, ctrl.gas_rate)
+        .set(Item::ResVRate, ctrl.resv_rate)
+        .set(Item::LiquidRate, ctrl.liquid_rate);
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) const
+{
+    using Item = data::WellControlLimits::Item;
+
+    const auto ctrl = well.injectionControls(this->summaryState());
+
+    limits
+        .set(Item::Bhp, ctrl.bhp_limit)
+        .set(Item::ResVRate, ctrl.reservoir_rate);
+
+    if (ctrl.injector_type == InjectorType::MULTI) {
+        // Not supported
+        return;
+    }
+
+    auto rateItem = Item::WaterRate;
+    if (ctrl.injector_type == InjectorType::GAS) {
+        rateItem = Item::GasRate;
+    }
+    else if (ctrl.injector_type == InjectorType::OIL) {
+        rateItem = Item::OilRate;
+    }
+
+    limits.set(rateItem, ctrl.surface_rate);
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
 assignShutConnections(data::Wells& wsrpt,
                       const int reportStepIndex) const
 {
@@ -901,7 +980,7 @@ assignShutConnections(data::Wells& wsrpt,
         auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
 
         xwel.dynamicStatus = this->schedule()
-                             .getWell(well.name(), reportStepIndex).getStatus();
+            .getWell(well.name(), reportStepIndex).getStatus();
 
         const auto wellIsOpen = xwel.dynamicStatus == Well::Status::OPEN;
         auto skip = [wellIsOpen](const Connection& conn)
@@ -913,7 +992,7 @@ assignShutConnections(data::Wells& wsrpt,
             !this->wasDynamicallyShutThisTimeStep(wellID))
         {
             xwel.dynamicStatus = well.getAutomaticShutIn()
-                                 ? Well::Status::SHUT : Well::Status::STOP;
+                ? Well::Status::SHUT : Well::Status::STOP;
         }
 
         auto& xcon = xwel.connections;
@@ -1334,14 +1413,14 @@ calculateEfficiencyFactors(const int reportStepIdx)
 }
 
 template<class Scalar>
-WellInterfaceGeneric*
+WellInterfaceGeneric<Scalar>*
 BlackoilWellModelGeneric<Scalar>::
 getGenWell(const std::string& well_name)
 {
     // finding the iterator of the well in wells_ecl
     auto well = std::find_if(well_container_generic_.begin(),
                              well_container_generic_.end(),
-                                 [&well_name](const WellInterfaceGeneric* elem)->bool {
+                                [&well_name](const WellInterfaceGeneric<Scalar>* elem)->bool {
                                      return elem->name() == well_name;
                                  });
 
@@ -1397,7 +1476,7 @@ void BlackoilWellModelGeneric<Scalar>::
 gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                           GLiftProdWells& prod_wells,
                           GLiftOptWells& glift_wells,
-                          GasLiftGroupInfo& group_info,
+                          GasLiftGroupInfo<Scalar>& group_info,
                           GLiftWellStateMap& glift_well_state_map,
                           const int episodeIndex)
 {
@@ -1473,9 +1552,9 @@ updateWellPotentials(const int reportStepIdx,
         }
         ++widx;
     }
-    logAndCheckForExceptionsAndThrow(deferred_logger, exc_type,
-                                     "computeWellPotentials() failed: " + exc_msg,
-                                     terminal_output_, comm_);
+    logAndCheckForProblemsAndThrow(deferred_logger, exc_type,
+                                   "updateWellPotentials() failed: " + exc_msg,
+                                   terminal_output_, comm_);
 }
 
 template<class Scalar>
@@ -1611,6 +1690,20 @@ getWellsForTesting(const int timeStepIdx,
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
+assignMassGasRate(data::Wells& wsrpt,
+                  const Scalar& gasDensity) const
+{
+    using rt = data::Rates::opt;
+    for (auto& wrpt : wsrpt) {
+        auto& well_rates = wrpt.second.rates;
+        const auto w_mass_rate = well_rates.get(rt::gas, 0.0) * gasDensity;
+        well_rates.set(rt::mass_gas, w_mass_rate);
+    }
+}
+
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
 assignWellTracerRates(data::Wells& wsrpt,
                       const WellTracerRates& wellTracerRates) const
 {
@@ -1630,6 +1723,33 @@ assignWellTracerRates(data::Wells& wsrpt,
 }
 
 template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+assignMswTracerRates(data::Wells& wsrpt,
+                     const MswTracerRates& mswTracerRates) const
+{
+    if (mswTracerRates.empty())
+        return;
+    
+    for (const auto& mswTR : mswTracerRates) {
+        std::string wellName = std::get<0>(mswTR.first);
+        auto xwPos = wsrpt.find(wellName);
+        if (xwPos == wsrpt.end()) { // No well results.
+            continue;
+        }
+        std::string tracerName = std::get<1>(mswTR.first);
+        std::size_t segNumber = std::get<2>(mswTR.first);
+        Scalar rate = mswTR.second;
+
+        auto& wData = xwPos->second;
+        auto segPos = wData.segments.find(segNumber);
+        if (segPos != wData.segments.end()) {
+            auto& segment = segPos->second;
+            segment.rates.set(data::Rates::opt::tracer, rate, tracerName);
+        }
+    }
+}
+
+template<class Scalar>
 std::vector<std::vector<int>> BlackoilWellModelGeneric<Scalar>::
 getMaxWellConnections() const
 {
@@ -1639,11 +1759,26 @@ getMaxWellConnections() const
     schedule_wells.erase(std::remove_if(schedule_wells.begin(), schedule_wells.end(), not_on_process_), schedule_wells.end());
     wells.reserve(schedule_wells.size());
 
+    auto possibleFutureConnections = schedule().getPossibleFutureConnections();
+#if HAVE_MPI
+    // Communicate Map to other processes, since it is only available on rank 0
+    Parallel::MpiSerializer ser(comm_);
+    ser.broadcast(possibleFutureConnections);
+#endif
     // initialize the additional cell connections introduced by wells.
     for (const auto& well : schedule_wells)
     {
         std::vector<int> compressed_well_perforations = this->getCellsForConnections(well);
 
+        const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
+        if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
+            for (auto& global_index : possibleFutureConnectionSetIt->second) {
+                int compressed_idx = compressedIndexForInterior(global_index);
+                if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+                    compressed_well_perforations.push_back(compressed_idx);
+                }
+            }
+        }
         // also include wells with no perforations in case
         std::sort(compressed_well_perforations.begin(),
                   compressed_well_perforations.end());
@@ -1686,20 +1821,21 @@ void BlackoilWellModelGeneric<Scalar>::initInjMult()
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
-updateFiltrationParticleVolume(const double dt,
-                               const std::size_t water_index)
+updateFiltrationModelsPostStep(const double dt,
+                               const std::size_t water_index,
+                               DeferredLogger& deferred_logger)
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector()) {
             const Scalar conc = well->wellEcl().evalFilterConc(this->summaryState_);
             if (conc > 0.) {
-                auto fc = this->filter_cake_
+                // Update filter cake build-ups (external to the wellbore)
+                auto retval = this->filter_cake_
                         .emplace(std::piecewise_construct,
                                  std::forward_as_tuple(well->name()),
                                  std::tuple{});
-
-                fc.first->second.updateFiltrationParticleVolume(*well, dt, conc, water_index,
-                                                                this->wellState());
+                auto& fc = retval.first->second;
+                fc.updatePostStep(*well, this->wellState(), dt, conc, water_index, deferred_logger);
             }
         }
     }
@@ -1718,19 +1854,24 @@ updateInjMult(DeferredLogger& deferred_logger)
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
-updateInjFCMult(DeferredLogger& deferred_logger)
+updateFiltrationModelsPreStep(DeferredLogger& deferred_logger)
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector()) {
             const auto it = filter_cake_.find(well->name());
             if (it != filter_cake_.end()) {
-                it->second.updateInjFCMult(*well, this->wellState(), deferred_logger);
+                it->second.updatePreStep(*well, deferred_logger);
                 well->updateFilterCakeMultipliers(it->second.multipliers());
             }
         }
     }
 }
 
+
 template class BlackoilWellModelGeneric<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class BlackoilWellModelGeneric<float>;
+#endif
 
 }

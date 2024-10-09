@@ -44,6 +44,7 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/utils/signum.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 
 #include <array>
 
@@ -122,11 +123,16 @@ class NewTranExtensiveQuantities
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
+    static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
+
+
     using Toolbox = MathToolbox<Evaluation>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using EvalDimVector = Dune::FieldVector<Evaluation, dimWorld>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
+    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
+    using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
 public:
     /*!
      * \brief Return the intrinsic permeability tensor at a face [m^2]
@@ -277,11 +283,8 @@ public:
                                         I,
                                         J,
                                         distZ*g,
-                                        thpres);
-            if (pressureDifferences[phaseIdx] == 0) {
-                volumeFlux[phaseIdx] = 0.0;
-                continue;
-            }
+                                        thpres,
+                                        problem.moduleParams());
 
             const bool upwindIsInterior = (static_cast<unsigned>(upIdx[phaseIdx]) == interiorDofIdx);
             const IntensiveQuantities& up = upwindIsInterior ? intQuantsIn : intQuantsEx;
@@ -317,8 +320,8 @@ public:
                                             const unsigned globalIndexIn,
                                             const unsigned globalIndexEx,
                                             const Scalar distZg,
-                                            const Scalar thpres
-        )
+                                            const Scalar thpres,
+                                            const ModuleParams& moduleParams)
     {
 
         // check shortcut: if the mobility of the phase is zero in the interior as
@@ -337,6 +340,10 @@ public:
         const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
         Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
         Evaluation rhoAvg = (rhoIn + rhoEx)/2;
+
+        if constexpr(enableConvectiveMixing) {
+            ConvectiveMixingModule::modifyAvgDensity(rhoAvg, intQuantsIn, intQuantsEx, phaseIdx, moduleParams.convectiveMixingModuleParam);
+        }
 
         const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
         Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));

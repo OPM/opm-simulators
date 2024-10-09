@@ -76,9 +76,10 @@ public:
                            const SummaryState& summaryState,
                            const Well::InjectionControls& inj_controls,
                            const Well::ProductionControls& prod_controls,
-                           const double rho,
+                           const Scalar rho,
                            const PrimaryVariables& primary_variables,
                            Equations& eqns,
+                           const bool stopped_or_zero_target,
                            DeferredLogger& deferred_logger) const;
 
     //! \brief Assemble piece of the acceleration term

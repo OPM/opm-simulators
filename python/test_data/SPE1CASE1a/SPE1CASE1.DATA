@@ -59,8 +59,6 @@ WELLDIMS
 -- 	   - there must be two wells in a group as there are two wells in total
    2 1 1 2 /
 
-UNIFOUT
-
 GRID
 
 -- The INIT keyword is used to request an .INIT file. The .INIT file
@@ -421,8 +419,12 @@ WCONINJE
 -- pressure in the PVT table=9014.7psia (default is 100 000psia)
 
 TSTEP
+--Advance the simulater once a day for TEN days:
+--Relatively small time steps are used to avoid regression failures
+--due to time stepping change
+10*1 /
 --Advance the simulater once a month for TEN years:
-31 28 31 30 31 30 31 31 30 31 30 31 /
+--31 28 31 30 31 30 31 31 30 31 30 31 /
 --31 28 31 30 31 30 31 31 30 31 30 31 
 --31 28 31 30 31 30 31 31 30 31 30 31 
 --31 28 31 30 31 30 31 31 30 31 30 31 

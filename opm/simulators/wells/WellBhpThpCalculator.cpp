@@ -20,11 +20,10 @@
 */
 
 #include <config.h>
+
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <opm/common/utility/numeric/RootFinders.hpp>
-
-#include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
@@ -33,6 +32,7 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -48,11 +48,11 @@
 static constexpr bool extraBhpAtThpLimitOutput = false;
 static constexpr bool extraThpFromBhpOutput = false;
 
-namespace Opm
-{
+namespace Opm {
 
-bool
-WellBhpThpCalculator::wellHasTHPConstraints(const SummaryState& summaryState) const
+template<class Scalar>
+bool WellBhpThpCalculator<Scalar>::
+wellHasTHPConstraints(const SummaryState& summaryState) const
 {
     const auto& well_ecl = well_.wellEcl();
     if (well_ecl.isInjector()) {
@@ -70,7 +70,9 @@ WellBhpThpCalculator::wellHasTHPConstraints(const SummaryState& summaryState) co
     return false;
 }
 
-double WellBhpThpCalculator::getTHPConstraint(const SummaryState& summaryState) const
+template<class Scalar>
+Scalar WellBhpThpCalculator<Scalar>::
+getTHPConstraint(const SummaryState& summaryState) const
 {
     const auto& well_ecl = well_.wellEcl();
     if (well_ecl.isInjector()) {
@@ -86,7 +88,9 @@ double WellBhpThpCalculator::getTHPConstraint(const SummaryState& summaryState) 
     return 0.0;
 }
 
-double WellBhpThpCalculator::mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const
+template<class Scalar>
+Scalar WellBhpThpCalculator<Scalar>::
+mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const
 {
     const auto& well_ecl = well_.wellEcl();
     if (well_ecl.isInjector()) {
@@ -102,12 +106,14 @@ double WellBhpThpCalculator::mostStrictBhpFromBhpLimits(const SummaryState& summ
     return 0.0;
 }
 
-double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rates,
-                                                 const double bhp,
-                                                 const double rho,
-                                                 const std::optional<double>& alq,
-                                                 const double thp_limit,
-                                                 DeferredLogger& deferred_logger) const
+template<class Scalar>
+Scalar WellBhpThpCalculator<Scalar>::
+calculateThpFromBhp(const std::vector<Scalar>& rates,
+                    const Scalar bhp,
+                    const Scalar rho,
+                    const std::optional<Scalar>& alq,
+                    const Scalar thp_limit,
+                    DeferredLogger& deferred_logger) const
 {
     assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
 
@@ -115,33 +121,36 @@ double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rate
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
 
-    const double aqua = rates[Water];
-    const double liquid = rates[Oil];
-    const double vapour = rates[Gas];
+    const Scalar aqua = rates[Water];
+    const Scalar liquid = rates[Oil];
+    const Scalar vapour = rates[Gas];
 
     // pick the density in the top layer
-    double thp = 0.0;
+    Scalar thp = 0.0;
     const int table_id = well_.wellEcl().vfp_table_number();
     if (well_.isInjector()) {
         assert(!alq.has_value());
-        const double vfp_ref_depth = well_.vfpProperties()->getInj()->getTable(table_id).getDatumDepth();
-        const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+        const Scalar vfp_ref_depth = well_.vfpProperties()->getInj()->getTable(table_id).getDatumDepth();
+        const Scalar dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
         auto thp_func =
             [this, table_id, aqua, liquid, vapour, dp](
-                const double bhp_value, const double pressure_loss) {
+                const Scalar bhp_value, const Scalar pressure_loss) {
                     return this->well_.vfpProperties()->getInj()->thp(
                            table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss);
                 };
         thp = findThpFromBhpIteratively(thp_func, bhp, thp_limit, dp, deferred_logger);
     }
     else if (well_.isProducer()) {
-        const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(table_id).getDatumDepth();
-        const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+        const Scalar vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(table_id).getDatumDepth();
+        const Scalar dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+        const bool use_vfpexp = well_.useVfpExplicit();
+        const Scalar wfr = well_.vfpProperties()->getExplicitWFR(table_id, well_.indexOfWell());
+        const Scalar gfr = well_.vfpProperties()->getExplicitGFR(table_id, well_.indexOfWell());
         auto thp_func =
-            [this, table_id, aqua, liquid, vapour, dp, &alq]
-                (const double bhp_value, const double pressure_loss) {
+            [this, table_id, aqua, liquid, vapour, dp, &alq, wfr, gfr, use_vfpexp]
+                (const Scalar bhp_value, const Scalar pressure_loss) {
                     return this->well_.vfpProperties()->getProd()->thp(
-                       table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss, alq.value());
+                       table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss, alq.value(), wfr, gfr, use_vfpexp);
                 };
         thp = findThpFromBhpIteratively(thp_func, bhp, thp_limit, dp, deferred_logger);
     }
@@ -151,36 +160,35 @@ double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rate
     return thp;
 }
 
-double
-WellBhpThpCalculator::
-findThpFromBhpIteratively(
-    const std::function<double(const double, const double)>& thp_func,
-    const double bhp,
-    const double thp_limit,
-    const double dp,
-    DeferredLogger& deferred_logger) const
+template<class Scalar>
+Scalar WellBhpThpCalculator<Scalar>::
+findThpFromBhpIteratively(const std::function<Scalar(const Scalar, const Scalar)>& thp_func,
+                          const Scalar bhp,
+                          const Scalar thp_limit,
+                          const Scalar dp,
+                          DeferredLogger& deferred_logger) const
 {
     auto pressure_loss = getVfpBhpAdjustment(bhp + dp, thp_limit);
     auto thp = thp_func(bhp, pressure_loss);
-    const double tolerance = 1e-5 * unit::barsa;
+    const Scalar tolerance = 1e-5 * unit::barsa;
     bool do_iterate = true;
     int it = 1;
     int max_iterations = 50;
-    while(do_iterate) {
+    while (do_iterate) {
         if (it > max_iterations) {
             break;
         }
-        double thp_prev = thp;
+        Scalar thp_prev = thp;
         pressure_loss = getVfpBhpAdjustment(bhp + dp - pressure_loss, thp_prev);
         thp = thp_func(bhp, pressure_loss);
-        auto error = std::fabs(thp-thp_prev);
+        auto error = std::fabs(thp - thp_prev);
         if (extraThpFromBhpOutput) {
             const std::string msg = fmt::format(
                 "findThpFromBhpIteratively(): iteration {}, thp = {}, bhp = {}, "
                 "pressure_loss = {}, error = {}", it, thp, bhp+dp-pressure_loss, pressure_loss, error);
             deferred_logger.debug(msg);
         }
-        if (std::fabs(thp-thp_prev) < tolerance) {
+        if (std::fabs(thp - thp_prev) < tolerance) {
             break;
         }
         it++;
@@ -188,14 +196,15 @@ findThpFromBhpIteratively(
     return thp;
 }
 
-std::optional<double>
-WellBhpThpCalculator::
-computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>& frates,
+template<class Scalar>
+std::optional<Scalar>
+WellBhpThpCalculator<Scalar>::
+computeBhpAtThpLimitProd(const std::function<std::vector<Scalar>(const Scalar)>& frates,
                          const SummaryState& summary_state,
-                         const double maxPerfPress,
-                         const double rho,
-                         const double alq_value,
-                         const double thp_limit,
+                         const Scalar maxPerfPress,
+                         const Scalar rho,
+                         const Scalar alq_value,
+                         const Scalar thp_limit,
                          DeferredLogger& deferred_logger) const
 {
     // Given a VFP function returning bhp as a function of phase
@@ -221,34 +230,43 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     // Make the fbhp() function.
     const auto& controls = well_.wellEcl().productionControls(summary_state);
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
-    const double vfp_ref_depth = table.getDatumDepth();
-    const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+    const Scalar vfp_ref_depth = table.getDatumDepth();
+    const Scalar dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(),
+                                                                vfp_ref_depth,
+                                                                rho,
+                                                                well_.gravity());
 
-    auto fbhp = [this, &controls, thp_limit, dp, alq_value](const std::vector<double>& rates) {
+    auto fbhp = [this, &controls, thp_limit, dp, alq_value](const std::vector<Scalar>& rates) {
         assert(rates.size() == 3);
-        const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
-        const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
+        const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number,
+                                                                well_.indexOfWell());
+        const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number,
+                                                                well_.indexOfWell());
         const bool use_vfpexp = well_.useVfpExplicit();
-        const double bhp = well_.vfpProperties()->getProd()->bhp(controls.vfp_table_number,
-                                                     rates[Water],
-                                                     rates[Oil],
-                                                     rates[Gas],
-                                                     thp_limit,
-                                                     alq_value,
-                                                     wfr,
-                                                     gfr,
-                                                     use_vfpexp);
+        const Scalar bhp = well_.vfpProperties()->getProd()->bhp(controls.vfp_table_number,
+                                                                 rates[Water],
+                                                                 rates[Oil],
+                                                                 rates[Gas],
+                                                                 thp_limit,
+                                                                 alq_value,
+                                                                 wfr,
+                                                                 gfr,
+                                                                 use_vfpexp);
         return bhp - dp + getVfpBhpAdjustment(bhp, thp_limit);
     };
 
     // Make the flo() function.
-    auto flo = [&table](const std::vector<double>& rates) {
+    auto flo = [&table](const std::vector<Scalar>& rates) {
         return detail::getFlo(table, rates[Water], rates[Oil], rates[Gas]);
     };
 
     // Find the bhp-point where production becomes nonzero.
-    auto fflo = [&flo, &frates](double bhp) { return flo(frates(bhp)); };
-    auto bhp_max = this->bhpMax(fflo, controls.bhp_limit, maxPerfPress, table.getFloAxis().front(), deferred_logger);
+    auto fflo = [&flo, &frates](Scalar bhp) { return flo(frates(bhp)); };
+    auto bhp_max = this->bhpMax(fflo,
+                                controls.bhp_limit,
+                                maxPerfPress,
+                                table.getFloAxis().front(),
+                                deferred_logger);
 
     // could not solve for the bhp-point, we could not continue to find the bhp
     if (!bhp_max.has_value()) {
@@ -257,16 +275,17 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
                                 "find bhp-point where production becomes non-zero for well " + well_.name());
         return std::nullopt;
     }
-    const std::array<double, 2> range {controls.bhp_limit, *bhp_max};
+    const std::array<Scalar, 2> range {static_cast<Scalar>(controls.bhp_limit), *bhp_max};
     return this->computeBhpAtThpLimit(frates, fbhp, range, deferred_logger);
 }
 
-std::optional<double>
-WellBhpThpCalculator::
-computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& frates,
+template<class Scalar>
+std::optional<Scalar>
+WellBhpThpCalculator<Scalar>::
+computeBhpAtThpLimitInj(const std::function<std::vector<Scalar>(const Scalar)>& frates,
                         const SummaryState& summary_state,
-                        const double rho,
-                        const double flo_rel_tol,
+                        const Scalar rho,
+                        const Scalar flo_rel_tol,
                         const int max_iteration,
                         const bool throwOnError,
                         DeferredLogger& deferred_logger) const
@@ -282,13 +301,14 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
     }
 }
 
-void WellBhpThpCalculator::updateThp(const double rho,
-                                     const bool stop_or_zero_rate_target,
-                                     const std::function<double()>& alq_value,
-                                     const std::array<unsigned,3>& active,
-                                     WellState<double>& well_state,
-                                     const SummaryState& summary_state,
-                                     DeferredLogger& deferred_logger) const
+template<class Scalar>
+void WellBhpThpCalculator<Scalar>::
+updateThp(const Scalar rho,
+          const std::function<Scalar()>& alq_value,
+          const std::array<unsigned,3>& active,
+          WellState<Scalar>& well_state,
+          const SummaryState& summary_state,
+          DeferredLogger& deferred_logger) const
 {
     static constexpr int Gas = BlackoilPhases::Vapour;
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -296,7 +316,7 @@ void WellBhpThpCalculator::updateThp(const double rho,
     auto& ws = well_state.well(well_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
-    if (!well_.isVFPActive(deferred_logger) || stop_or_zero_rate_target) {
+    if (!well_.isVFPActive(deferred_logger)) {
         ws.thp = 0;
         return;
     }
@@ -308,7 +328,7 @@ void WellBhpThpCalculator::updateThp(const double rho,
     }
 
     // the well is under other control types, we calculate the thp based on bhp and rates
-    std::vector<double> rates(3, 0.0);
+    std::vector<Scalar> rates(3, 0.0);
 
     const PhaseUsage& pu = well_.phaseUsage();
     if (active[Water]) {
@@ -320,18 +340,19 @@ void WellBhpThpCalculator::updateThp(const double rho,
     if (active[Gas]) {
         rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
     }
-    const std::optional<double> alq = this->well_.isProducer() ? std::optional<double>(alq_value()) : std::nullopt;
-    const double thp_limit = well_.getTHPConstraint(summary_state);
+    const std::optional<Scalar> alq = this->well_.isProducer() ? std::optional<Scalar>(alq_value()) : std::nullopt;
+    const Scalar thp_limit = well_.getTHPConstraint(summary_state);
     ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, alq, thp_limit, deferred_logger);
 }
 
+template<class Scalar>
 template<class EvalWell>
-EvalWell WellBhpThpCalculator::
-calculateBhpFromThp(const WellState<double>& well_state,
+EvalWell WellBhpThpCalculator<Scalar>::
+calculateBhpFromThp(const WellState<Scalar>& well_state,
                     const std::vector<EvalWell>& rates,
                     const Well& well,
                     const SummaryState& summaryState,
-                    const double rho,
+                    const Scalar rho,
                     DeferredLogger& deferred_logger) const
 {
     // TODO: when well is under THP control, the BHP is dependent on the rates,
@@ -349,8 +370,8 @@ calculateBhpFromThp(const WellState<double>& well_state,
     const EvalWell aqua = rates[Water];
     const EvalWell liquid = rates[Oil];
     const EvalWell vapour = rates[Gas];
-    const double thp_limit = well_.getTHPConstraint(summaryState);
-    double vfp_ref_depth;
+    const Scalar thp_limit = well_.getTHPConstraint(summaryState);
+    Scalar vfp_ref_depth;
     EvalWell bhp_tab;
     if (well_.isInjector() )
     {
@@ -375,57 +396,62 @@ calculateBhpFromThp(const WellState<double>& well_state,
     else {
         OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + well_.name(), deferred_logger);
     }
-    double bhp_tab_double_value;
-    if constexpr (std::is_same_v<EvalWell, double>) {
+    Scalar bhp_tab_double_value;
+    if constexpr (std::is_same_v<EvalWell, Scalar>) {
         bhp_tab_double_value = bhp_tab;
     }
     else {  // EvalWell and bhp_tab is of type DenseAd::Evaluation<double,...,...>
         bhp_tab_double_value = bhp_tab.value();
     }
     const auto bhp_adjustment = getVfpBhpAdjustment(bhp_tab_double_value, thp_limit);
-    const double dp_hydro = wellhelpers::computeHydrostaticCorrection(
-            well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+    const Scalar dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(),
+                                                                      vfp_ref_depth,
+                                                                      rho,
+                                                                      well_.gravity());
     return bhp_tab - dp_hydro + bhp_adjustment;
 }
 
-double
-WellBhpThpCalculator::
-calculateMinimumBhpFromThp(const WellState<double>& well_state,
+template<class Scalar>
+Scalar WellBhpThpCalculator<Scalar>::
+calculateMinimumBhpFromThp(const WellState<Scalar>& well_state,
                            const Well& well,
                            const SummaryState& summaryState,
-                           const double rho) const
+                           const Scalar rho) const
 {
     assert(well_.isProducer()); // only producers can go here for now
 
-    const double thp_limit = well_.getTHPConstraint(summaryState);
+    const Scalar thp_limit = well_.getTHPConstraint(summaryState);
     
     const auto& controls = well.productionControls(summaryState);
     const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
     const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
 
-    const double bhp_min = well_.vfpProperties()->getProd()->minimumBHP(controls.vfp_table_number,
+    const Scalar bhp_min = well_.vfpProperties()->getProd()->minimumBHP(controls.vfp_table_number,
                                                                         thp_limit, wfr, gfr, 
                                                                         well_.getALQ(well_state));
  
-    const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+    const Scalar vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
     const auto bhp_adjustment = getVfpBhpAdjustment(bhp_min, thp_limit);
-    const double dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, 
+    const Scalar dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth,
                                                                       rho, well_.gravity());
     return bhp_min - dp_hydro + bhp_adjustment;
 }
 
-double WellBhpThpCalculator::getVfpBhpAdjustment(const double bhp_tab, const double thp_limit) const
+template<class Scalar>
+Scalar WellBhpThpCalculator<Scalar>::
+getVfpBhpAdjustment(const Scalar bhp_tab, const Scalar thp_limit) const
 {
     return well_.wellEcl().getWVFPDP().getPressureLoss(bhp_tab, thp_limit);
 }
 
+template<class Scalar>
 template<class ErrorPolicy>
-std::optional<double>
-WellBhpThpCalculator::
-computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double)>& frates,
+std::optional<Scalar>
+WellBhpThpCalculator<Scalar>::
+computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar)>& frates,
                             const SummaryState& summary_state,
-                            const double rho,
-                            const double flo_rel_tol,
+                            const Scalar rho,
+                            const Scalar flo_rel_tol,
                             const int max_iteration,
                             DeferredLogger& deferred_logger) const
 {
@@ -475,12 +501,12 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
     // Make the fbhp() function.
     const auto& controls = well_.wellEcl().injectionControls(summary_state);
     const auto& table = well_.vfpProperties()->getInj()->getTable(controls.vfp_table_number);
-    const double vfp_ref_depth = table.getDatumDepth();
-    const double thp_limit = this->getTHPConstraint(summary_state);
-    const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(),
+    const Scalar vfp_ref_depth = table.getDatumDepth();
+    const Scalar thp_limit = this->getTHPConstraint(summary_state);
+    const Scalar dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(),
                                                                 vfp_ref_depth,
                                                                 rho, well_.gravity());
-    auto fbhp = [this, &controls, thp_limit, dp](const std::vector<double>& rates) {
+    auto fbhp = [this, &controls, thp_limit, dp](const std::vector<Scalar>& rates) {
         assert(rates.size() == 3);
         const auto bhp = well_.vfpProperties()->getInj()
                 ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit);
@@ -488,7 +514,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
     };
 
     // Make the flo() function.
-    auto flo = [&table](const std::vector<double>& rates) {
+    auto flo = [&table](const std::vector<Scalar>& rates) {
         return detail::getFlo(table, rates[Water], rates[Oil], rates[Gas]);
     };
 
@@ -499,14 +525,14 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
         const double f0 = flo_samples[0];
         flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
     }
-    const double flo_bhp_limit = flo(frates(controls.bhp_limit));
+    const Scalar flo_bhp_limit = flo(frates(controls.bhp_limit));
     if (flo_samples.back() < flo_bhp_limit) {
         flo_samples.push_back(flo_bhp_limit);
     }
 
     // Find bhp values for inflow relation corresponding to flo samples.
-    std::vector<double> bhp_samples;
-    for (double flo_sample : flo_samples) {
+    std::vector<Scalar> bhp_samples;
+    for (Scalar flo_sample : flo_samples) {
         if (flo_sample > flo_bhp_limit) {
             // We would have to go over the bhp limit to obtain a
             // flow of this magnitude. We associate all such flows
@@ -516,16 +542,16 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
             bhp_samples.push_back(controls.bhp_limit);
             break;
         }
-        auto eq = [&flo, &frates, flo_sample](double bhp) {
+        auto eq = [&flo, &frates, flo_sample](Scalar bhp) {
             return flo(frates(bhp)) - flo_sample;
         };
         // TODO: replace hardcoded low/high limits.
-        const double low = 10.0 * unit::barsa;
-        const double high = 800.0 * unit::barsa;
-        const double flo_tolerance = flo_rel_tol * std::fabs(flo_samples.back());
+        const Scalar low = 10.0 * unit::barsa;
+        const Scalar high = 800.0 * unit::barsa;
+        const Scalar flo_tolerance = flo_rel_tol * std::fabs(flo_samples.back());
         int iteration = 0;
         try {
-            const double solved_bhp = RegulaFalsiBisection<ErrorPolicy>::
+            const Scalar solved_bhp = RegulaFalsiBisection<ErrorPolicy>::
                     solve(eq, low, high, max_iteration, flo_tolerance, iteration);
             bhp_samples.push_back(solved_bhp);
         }
@@ -539,7 +565,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
 
     // Find bhp values for VFP relation corresponding to flo samples.
     const int num_samples = bhp_samples.size(); // Note that this can be smaller than flo_samples.size()
-    std::vector<double> fbhp_samples(num_samples);
+    std::vector<Scalar> fbhp_samples(num_samples);
     for (int ii = 0; ii < num_samples; ++ii) {
         fbhp_samples[ii] = fbhp(frates(bhp_samples[ii]));
     }
@@ -564,8 +590,8 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
     // We only look at the valid
     int sign_change_index = -1;
     for (int ii = 0; ii < num_samples - 1; ++ii) {
-        const double curr = fbhp_samples[ii] - bhp_samples[ii];
-        const double next = fbhp_samples[ii + 1] - bhp_samples[ii + 1];
+        const Scalar curr = fbhp_samples[ii] - bhp_samples[ii];
+        const Scalar next = fbhp_samples[ii + 1] - bhp_samples[ii + 1];
         if (curr * next < 0.0) {
             // Sign change in the [ii, ii + 1] interval.
             sign_change_index = ii; // May overwrite, thereby choosing the highest-flo solution.
@@ -578,13 +604,13 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
     }
 
     // Solve for the proper solution in the given interval.
-    auto eq = [&fbhp, &frates](double bhp) {
+    auto eq = [&fbhp, &frates](Scalar bhp) {
         return fbhp(frates(bhp)) - bhp;
     };
     // TODO: replace hardcoded low/high limits.
-    const double low = bhp_samples[sign_change_index + 1];
-    const double high = bhp_samples[sign_change_index];
-    const double bhp_tolerance = 0.01 * unit::barsa;
+    const Scalar low = bhp_samples[sign_change_index + 1];
+    const Scalar high = bhp_samples[sign_change_index];
+    const Scalar bhp_tolerance = 0.01 * unit::barsa;
     int iteration = 0;
     if (low == high) {
         // We are in the high flow regime where the bhp_samples
@@ -595,7 +621,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
         return std::nullopt;
     }
     try {
-        const double solved_bhp = RegulaFalsiBisection<ErrorPolicy>::
+        const Scalar solved_bhp = RegulaFalsiBisection<ErrorPolicy>::
                 solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
         if constexpr (extraBhpAtThpLimitOutput) {
             OpmLog::debug("*****    " + well_.name() + "    solved_bhp = " + std::to_string(solved_bhp)
@@ -610,20 +636,21 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
     }
 }
 
-std::optional<double>
-WellBhpThpCalculator::
-bhpMax(const std::function<double(const double)>& fflo,
-       const double bhp_limit,
-       const double maxPerfPress,
-       const double vfp_flo_front,
+template<class Scalar>
+std::optional<Scalar>
+WellBhpThpCalculator<Scalar>::
+bhpMax(const std::function<Scalar(const Scalar)>& fflo,
+       const Scalar bhp_limit,
+       const Scalar maxPerfPress,
+       const Scalar vfp_flo_front,
        DeferredLogger& deferred_logger) const
 {
     // Find the bhp-point where production becomes nonzero.
-    double bhp_max = 0.0;
-    double low = bhp_limit;
-    double high = maxPerfPress + 1.0 * unit::barsa;
-    double f_low = fflo(low);
-    double f_high = fflo(high);
+    Scalar bhp_max = 0.0;
+    Scalar low = bhp_limit;
+    Scalar high = maxPerfPress + 1.0 * unit::barsa;
+    Scalar f_low = fflo(low);
+    Scalar f_high = fflo(high);
     if constexpr (extraBhpAtThpLimitOutput) {
         deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + well_.name() +
                               "  low = " + std::to_string(low) +
@@ -633,7 +660,7 @@ bhpMax(const std::function<double(const double)>& fflo,
     }
     int adjustments = 0;
     const int max_adjustments = 10;
-    const double adjust_amount = 5.0 * unit::barsa;
+    const Scalar adjust_amount = 5.0 * unit::barsa;
     while (f_low * f_high > 0.0 && adjustments < max_adjustments) {
         // Same sign, adjust high to see if we can flip it.
         high += adjust_amount;
@@ -656,12 +683,12 @@ bhpMax(const std::function<double(const double)>& fflo,
     } else {
         // Bisect to find a bhp point where we produce, but
         // not a large amount ('eps' below).
-        const double eps = 0.1 * std::fabs(vfp_flo_front);
+        const Scalar eps = 0.1 * std::fabs(vfp_flo_front);
         const int maxit = 50;
         int it = 0;
         while (std::fabs(f_low) > eps && it < maxit) {
-            const double curr = 0.5*(low + high);
-            const double f_curr = fflo(curr);
+            const Scalar curr = 0.5*(low + high);
+            const Scalar f_curr = fflo(curr);
             if (f_curr * f_low > 0.0) {
                 low = curr;
                 f_low = f_curr;
@@ -690,11 +717,12 @@ bhpMax(const std::function<double(const double)>& fflo,
     return bhp_max;
 }
 
-std::optional<double>
-WellBhpThpCalculator::
-computeBhpAtThpLimit(const std::function<std::vector<double>(const double)>& frates,
-                     const std::function<double(const std::vector<double>)>& fbhp,
-                     const std::array<double, 2>& range,
+template<class Scalar>
+std::optional<Scalar>
+WellBhpThpCalculator<Scalar>::
+computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& frates,
+                     const std::function<Scalar(const std::vector<Scalar>)>& fbhp,
+                     const std::array<Scalar, 2>& range,
                      DeferredLogger& deferred_logger) const
 {
     // Given a VFP function returning bhp as a function of phase
@@ -714,15 +742,16 @@ computeBhpAtThpLimit(const std::function<std::vector<double>(const double)>& fra
     // highest rate) should be returned.
 
     // Define the equation we want to solve.
-    auto eq = [&fbhp, &frates](double bhp) {
+    auto eq = [&fbhp, &frates](Scalar bhp) {
         return fbhp(frates(bhp)) - bhp;
     };
 
     // Find appropriate brackets for the solution.
-    std::optional<double> approximate_solution;
-    double low, high;
+    std::optional<Scalar> approximate_solution;
+    Scalar low, high;
     // trying to use bisect way to locate a bracket
-    bool finding_bracket = this->bisectBracket(eq, range, low, high, approximate_solution, deferred_logger);
+    bool finding_bracket = this->bisectBracket(eq, range, low, high,
+                                               approximate_solution, deferred_logger);
 
     // based on the origional design, if an approximate solution is suggested, we use this value directly
     // in the long run, we might change it
@@ -744,10 +773,10 @@ computeBhpAtThpLimit(const std::function<std::vector<double>(const double)>& fra
 
     // Solve for the proper solution in the given interval.
     const int max_iteration = 100;
-    const double bhp_tolerance = 0.01 * unit::barsa;
+    const Scalar bhp_tolerance = 0.01 * unit::barsa;
     int iteration = 0;
     try {
-        const double solved_bhp = RegulaFalsiBisection<ThrowOnError>::
+        const Scalar solved_bhp = RegulaFalsiBisection<ThrowOnError>::
             solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
         return solved_bhp;
     }
@@ -758,21 +787,21 @@ computeBhpAtThpLimit(const std::function<std::vector<double>(const double)>& fra
     }
 }
 
-bool
-WellBhpThpCalculator::
-bisectBracket(const std::function<double(const double)>& eq,
-              const std::array<double, 2>& range,
-              double& low, double& high,
-              std::optional<double>& approximate_solution,
+template<class Scalar>
+bool WellBhpThpCalculator<Scalar>::
+bisectBracket(const std::function<Scalar(const Scalar)>& eq,
+              const std::array<Scalar, 2>& range,
+              Scalar& low, Scalar& high,
+              std::optional<Scalar>& approximate_solution,
               DeferredLogger& deferred_logger) const
 {
     bool finding_bracket = false;
     low = range[0];
     high = range[1];
 
-    double eq_high = eq(high);
-    double eq_low = eq(low);
-    const double eq_bhplimit = eq_low;
+    Scalar eq_high = eq(high);
+    Scalar eq_low = eq(low);
+    const Scalar eq_bhplimit = eq_low;
     if constexpr (extraBhpAtThpLimitOutput) {
         deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + well_.name() +
                               "  low = " + std::to_string(low) +
@@ -783,12 +812,12 @@ bisectBracket(const std::function<double(const double)>& eq,
     if (eq_low * eq_high > 0.0) {
         // Failed to bracket the zero.
         // If this is due to having two solutions, bisect until bracketed.
-        double abs_low = std::fabs(eq_low);
-        double abs_high = std::fabs(eq_high);
+        Scalar abs_low = std::fabs(eq_low);
+        Scalar abs_high = std::fabs(eq_high);
         int bracket_attempts = 0;
         const int max_bracket_attempts = 20;
-        double interval = high - low;
-        const double min_interval = 1.0 * unit::barsa;
+        Scalar interval = high - low;
+        const Scalar min_interval = 1.0 * unit::barsa;
         while (eq_low * eq_high > 0.0 && bracket_attempts < max_bracket_attempts && interval > min_interval) {
             if (abs_high < abs_low) {
                 low = 0.5 * (low + high);
@@ -815,7 +844,7 @@ bisectBracket(const std::function<double(const double)>& eq,
             }
         } else { // eq_low * eq_high > 0.0
             // Still failed bracketing!
-            const double limit = 0.1 * unit::barsa;
+            const Scalar limit = 0.1 * unit::barsa;
             if (std::min(abs_low, abs_high) < limit) {
                 // Return the least bad solution if less off than 0.1 bar.
                 deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
@@ -834,20 +863,20 @@ bisectBracket(const std::function<double(const double)>& eq,
     return finding_bracket;
 }
 
-bool
-WellBhpThpCalculator::
-bruteForceBracket(const std::function<double(const double)>& eq,
-                  const std::array<double, 2>& range,
-                  double& low, double& high,
+template<class Scalar>
+bool WellBhpThpCalculator<Scalar>::
+bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
+                  const std::array<Scalar, 2>& range,
+                  Scalar& low, Scalar& high,
                   DeferredLogger& deferred_logger)
 {
     bool bracket_found = false;
     low = range[0];
     high = range[1];
     const int sample_number = 200;
-    const double interval = (high - low) / sample_number;
-    double eq_low = eq(low);
-    double eq_high = 0.0;
+    const Scalar interval = (high - low) / sample_number;
+    Scalar eq_low = eq(low);
+    Scalar eq_high = 0.0;
     for (int i = 0; i < sample_number + 1; ++i) {
         high = range[0] + interval * i;
         eq_high = eq(high);
@@ -866,10 +895,11 @@ bruteForceBracket(const std::function<double(const double)>& eq,
     return bracket_found;
 }
 
-bool WellBhpThpCalculator::
-isStableSolution(const WellState<double>& well_state,
+template<class Scalar>
+bool WellBhpThpCalculator<Scalar>::
+isStableSolution(const WellState<Scalar>& well_state,
                  const Well& well,
-                 const std::vector<double>& rates,
+                 const std::vector<Scalar>& rates,
                  const SummaryState& summaryState) const
 {
     assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
@@ -879,10 +909,10 @@ isStableSolution(const WellState<double>& well_state,
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Water = BlackoilPhases::Aqua;
 
-    const double aqua = rates[Water];
-    const double liquid = rates[Oil];
-    const double vapour = rates[Gas];
-    const double thp = well_.getTHPConstraint(summaryState);
+    const Scalar aqua = rates[Water];
+    const Scalar liquid = rates[Oil];
+    const Scalar vapour = rates[Gas];
+    const Scalar thp = well_.getTHPConstraint(summaryState);
 
     const auto& controls = well.productionControls(summaryState);
     const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
@@ -891,33 +921,36 @@ isStableSolution(const WellState<double>& well_state,
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
     const bool use_vfpexplicit = well_.useVfpExplicit();
 
-    detail::VFPEvaluation bhp = detail::bhp(table, aqua, liquid, vapour, thp, well_.getALQ(well_state), wfr, gfr, use_vfpexplicit);
+    auto bhp = VFPHelpers<double>::bhp(table, aqua, liquid, vapour, thp,
+                                       well_.getALQ(well_state), wfr, gfr,
+                                       use_vfpexplicit);
 
     if (bhp.dflo >= 0) {
         return true;
     } else {    // maybe check if ipr is available
         const auto ipr = getFloIPR(well_state, well, summaryState);
-        return bhp.dflo + 1/ipr.second >= 0; 
+        return bhp.dflo + 1.0 / ipr.second >= 0;
     }                  
 }
 
-std::optional<double> WellBhpThpCalculator::
-estimateStableBhp(const WellState<double>& well_state,
+template<class Scalar>
+std::optional<Scalar> WellBhpThpCalculator<Scalar>::
+estimateStableBhp(const WellState<Scalar>& well_state,
                   const Well& well,
-                  const std::vector<double>& rates,
-                  const double rho,
+                  const std::vector<Scalar>& rates,
+                  const Scalar rho,
                   const SummaryState& summaryState) const
 {   
     // Given a *converged* well_state with ipr, estimate bhp of the stable solution 
     const auto& controls = well.productionControls(summaryState);
-    const double thp = well_.getTHPConstraint(summaryState);
+    const Scalar thp = well_.getTHPConstraint(summaryState);
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
 
-    const double aqua = rates[BlackoilPhases::Aqua];
-    const double liquid = rates[BlackoilPhases::Liquid];
-    const double vapour = rates[BlackoilPhases::Vapour];
-    double flo = detail::getFlo(table, aqua, liquid, vapour);
-    double wfr, gfr;
+    const Scalar aqua = rates[BlackoilPhases::Aqua];
+    const Scalar liquid = rates[BlackoilPhases::Liquid];
+    const Scalar vapour = rates[BlackoilPhases::Vapour];
+    Scalar flo = detail::getFlo(table, aqua, liquid, vapour);
+    Scalar wfr, gfr;
     if (well_.useVfpExplicit() || -flo < table.getFloAxis().front()) {
         wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
         gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
@@ -928,24 +961,28 @@ estimateStableBhp(const WellState<double>& well_state,
 
     auto ipr = getFloIPR(well_state, well, summaryState);
     
-    const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+    const Scalar vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
 
-    const double dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, 
+    const Scalar dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth,
                                                                       rho, well_.gravity());
-    auto bhp_adjusted = [this, &thp, &dp_hydro](const double bhp) {
+    auto bhp_adjusted = [this, &thp, &dp_hydro](const Scalar bhp) {
            return bhp - dp_hydro + getVfpBhpAdjustment(bhp, thp);
        };
-    const auto retval = detail::intersectWithIPR(table, thp, wfr, gfr, well_.getALQ(well_state), ipr.first, ipr.second, bhp_adjusted);
+    const auto retval = VFPHelpers<double>::intersectWithIPR(table, thp, wfr, gfr,
+                                                             well_.getALQ(well_state),
+                                                             ipr.first, ipr.second,
+                                                             bhp_adjusted);
     if (retval.has_value()) {
         // returned pair is (flo, bhp)
         return retval.value().second;
     } else {
         return std::nullopt;
     }
-}    
+}
 
-std::pair<double, double> WellBhpThpCalculator::
-getFloIPR(const WellState<double>& well_state,
+template<class Scalar>
+std::pair<Scalar, Scalar> WellBhpThpCalculator<Scalar>::
+getFloIPR(const WellState<Scalar>& well_state,
           const Well& well, 
           const SummaryState& summary_state) const 
 {
@@ -954,43 +991,117 @@ getFloIPR(const WellState<double>& well_state,
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
     const auto& pu = well_.phaseUsage();
     const auto& ipr_a = well_state.well(well_.indexOfWell()).implicit_ipr_a;
-    const double& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
-    const double& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
-    const double& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
+    const Scalar& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
+    const Scalar& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
+    const Scalar& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
     const auto& ipr_b = well_state.well(well_.indexOfWell()).implicit_ipr_b;
-    const double& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
-    const double& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
-    const double& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
+    const Scalar& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
+    const Scalar& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
+    const Scalar& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
     // The getFlo helper is indended to pick one or add two of the phase rates (depending on FLO-type), 
     // but we can equally use it to pick/add the corresponding ipr_a, ipr_b  
     return std::make_pair(detail::getFlo(table, aqua_a, liquid_a, vapour_a), 
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }
 
-#define INSTANCE(...) \
-template __VA_ARGS__ WellBhpThpCalculator:: \
-calculateBhpFromThp<__VA_ARGS__>(const WellState<double>&, \
-                                 const std::vector<__VA_ARGS__>&, \
-                                 const Well&, \
-                                 const SummaryState&, \
-                                 const double, \
-                                 DeferredLogger&) const;
+template<class Scalar>
+bool
+WellBhpThpCalculator<Scalar>::
+bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
+                           const std::array<Scalar, 2>& range,
+                           Scalar& low, Scalar& high,
+                           std::optional<Scalar>& approximate_solution,
+                           const Scalar& limit,
+                           DeferredLogger& deferred_logger)
+{
+    bool bracket_found = false;
+    low = range[0];
+    high = range[1];
+    const int sample_number = 300;
+    const Scalar interval = (high - low) / sample_number;
+    Scalar eq_low = eq(low);
+    Scalar eq_high = 0.0;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        high = range[0] + interval * i;
+        eq_high = eq(high);
+        if ((std::fabs(eq_high) < limit)) {
+            approximate_solution = high;
+            break;
+        }
+        if (eq_high * eq_low <= 0.) {
+            bracket_found = true;
+            break;
+        }
+        low = high;
+        eq_low = eq_high;
+    }
 
-INSTANCE(double)
-INSTANCE(DenseAd::Evaluation<double,3,0u>)
-INSTANCE(DenseAd::Evaluation<double,4,0u>)
-INSTANCE(DenseAd::Evaluation<double,5,0u>)
-INSTANCE(DenseAd::Evaluation<double,6,0u>)
-INSTANCE(DenseAd::Evaluation<double,7,0u>)
-INSTANCE(DenseAd::Evaluation<double,8,0u>)
-INSTANCE(DenseAd::Evaluation<double,9,0u>)
-INSTANCE(DenseAd::Evaluation<double,10,0u>)
-INSTANCE(DenseAd::Evaluation<double,-1,4u>)
-INSTANCE(DenseAd::Evaluation<double,-1,5u>)
-INSTANCE(DenseAd::Evaluation<double,-1,6u>)
-INSTANCE(DenseAd::Evaluation<double,-1,7u>)
-INSTANCE(DenseAd::Evaluation<double,-1,8u>)
-INSTANCE(DenseAd::Evaluation<double,-1,9u>)
-INSTANCE(DenseAd::Evaluation<double,-1,10u>)
-INSTANCE(DenseAd::Evaluation<double,-1,11u>)
+    if (bracket_found) {
+        deferred_logger.debug(
+                " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
+                " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
+    }
+    return bracket_found;
+}
+
+template<class Scalar>
+bool
+WellBhpThpCalculator<Scalar>::
+bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
+                           Scalar& min_thp, Scalar& max_thp)
+{
+    bool bracket_found = false;
+    constexpr int sample_number = 1000; 
+    constexpr Scalar interval = 1E5; 
+    Scalar eq_low = eq(min_thp);
+    Scalar eq_high = 0.0;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        max_thp = min_thp + interval * i;
+        eq_high = eq(max_thp);
+        if (eq_high * eq_low <= 0.) {
+            bracket_found = true;
+            min_thp = max_thp - interval;
+            break;
+        }
+        eq_low = eq_high;
+    }
+    return bracket_found;
+}
+
+#define INSTANTIATE(T,...)                                   \
+    template __VA_ARGS__                                     \
+    WellBhpThpCalculator<T>::                                \
+        calculateBhpFromThp(const WellState<T>&,             \
+                            const std::vector<__VA_ARGS__>&, \
+                            const Well&,                     \
+                            const SummaryState&,             \
+                            const T,                         \
+                            DeferredLogger&) const;
+
+#define INSTANTIATE_TYPE(T)                      \
+    template class WellBhpThpCalculator<T>;      \
+    INSTANTIATE(T,T)                             \
+    INSTANTIATE(T,DenseAd::Evaluation<T,3,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,4,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,5,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,6,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,7,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,8,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,9,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,10,0u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,4u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,5u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,6u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,7u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,8u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,9u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,10u>) \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,11u>)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
+
 } // namespace Opm

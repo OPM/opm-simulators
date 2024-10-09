@@ -20,9 +20,8 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/WellGroupConstraints.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/wells/WellGroupConstraints.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
@@ -30,15 +29,18 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+
 namespace Opm
 {
 
-std::pair<bool, double>
-WellGroupConstraints::
+template<class Scalar>
+std::pair<bool, Scalar>
+WellGroupConstraints<Scalar>::
 checkGroupConstraintsInj(const Group& group,
-                         const WellState<double>& well_state,
-                         const GroupState<double>& group_state,
-                         const double efficiencyFactor,
+                         const WellState<Scalar>& well_state,
+                         const GroupState<Scalar>& group_state,
+                         const Scalar efficiencyFactor,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
                          const RateConvFunc& rateConverter,
@@ -69,12 +71,12 @@ checkGroupConstraintsInj(const Group& group,
     }
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
     // Call check for the well's injection phase.
-    return WellGroupHelpers<double>::checkGroupConstraintsInj(well_.name(),
+    return WellGroupHelpers<Scalar>::checkGroupConstraintsInj(well_.name(),
                                                               well_.wellEcl().groupName(),
                                                               group,
                                                               well_state,
@@ -91,23 +93,24 @@ checkGroupConstraintsInj(const Group& group,
                                                               deferred_logger);
 }
 
-std::pair<bool, double>
-WellGroupConstraints::
+template<class Scalar>
+std::pair<bool, Scalar>
+WellGroupConstraints<Scalar>::
 checkGroupConstraintsProd(const Group& group,
-                          const WellState<double>& well_state,
-                          const GroupState<double>& group_state,
-                          const double efficiencyFactor,
+                          const WellState<Scalar>& well_state,
+                          const GroupState<Scalar>& group_state,
+                          const Scalar efficiencyFactor,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           const RateConvFunc& rateConverter,
                           DeferredLogger& deferred_logger) const
 {
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
-    return WellGroupHelpers<double>::checkGroupConstraintsProd(well_.name(),
+    return WellGroupHelpers<Scalar>::checkGroupConstraintsProd(well_.name(),
                                                                well_.wellEcl().groupName(),
                                                                group,
                                                                well_state,
@@ -123,9 +126,10 @@ checkGroupConstraintsProd(const Group& group,
                                                                deferred_logger);
 }
 
-bool WellGroupConstraints::
-checkGroupConstraints(WellState<double>& well_state,
-                      const GroupState<double>& group_state,
+template<class Scalar>
+bool WellGroupConstraints<Scalar>::
+checkGroupConstraints(WellState<Scalar>& well_state,
+                      const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,
@@ -146,8 +150,8 @@ checkGroupConstraints(WellState<double>& well_state,
             // check, skipping over only the single group parent whose
             // control is the active one for the well (if any).
             const auto& group = schedule.getGroup(well.groupName(), well_.currentStep());
-            const double efficiencyFactor = well.getEfficiencyFactor();
-            const std::pair<bool, double> group_constraint =
+            const Scalar efficiencyFactor = well.getEfficiencyFactor();
+            const std::pair<bool, Scalar> group_constraint =
                 this->checkGroupConstraintsInj(group, well_state,
                                                group_state, efficiencyFactor,
                                                schedule, summaryState,
@@ -177,8 +181,8 @@ checkGroupConstraints(WellState<double>& well_state,
             // check, skipping over only the single group parent whose
             // control is the active one for the well (if any).
             const auto& group = schedule.getGroup(well.groupName(), well_.currentStep());
-            const double efficiencyFactor = well.getEfficiencyFactor();
-            const std::pair<bool, double> group_constraint =
+            const Scalar efficiencyFactor = well.getEfficiencyFactor();
+            const std::pair<bool, Scalar> group_constraint =
                 this->checkGroupConstraintsProd(group, well_state,
                                                 group_state, efficiencyFactor,
                                                 schedule, summaryState,
@@ -198,5 +202,11 @@ checkGroupConstraints(WellState<double>& well_state,
 
     return false;
 }
+
+template class WellGroupConstraints<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class WellGroupConstraints<float>;
+#endif
 
 } // namespace Opm

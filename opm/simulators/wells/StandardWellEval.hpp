@@ -38,7 +38,7 @@ class ConvergenceReport;
 class DeferredLogger;
 class Schedule;
 class SummaryState;
-class WellContributions;
+template<class Scalar> class WellContributions;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
 template<class Scalar> class WellState;
 
@@ -79,29 +79,28 @@ protected:
     void computeAccumWell();
 
     ConvergenceReport getWellConvergence(const WellState<Scalar>& well_state,
-                                         const std::vector<double>& B_avg,
-                                         const double maxResidualAllowed,
-                                         const double tol_wells,
-                                         const double relaxed_tolerance_flow,
+                                         const std::vector<Scalar>& B_avg,
+                                         const Scalar maxResidualAllowed,
+                                         const Scalar tol_wells,
+                                         const Scalar relaxed_tolerance_flow,
                                          const bool relax_tolerance,
                                          const bool well_is_stopped, 
-                                         std::vector<double>& res,
+                                         std::vector<Scalar>& res,
                                          DeferredLogger& deferred_logger) const;
 
-    void init(std::vector<double>& perf_depth,
-              const std::vector<double>& depth_arg,
+    void init(std::vector<Scalar>& perf_depth,
+              const std::vector<Scalar>& depth_arg,
               const int num_cells,
               const bool has_polymermw);
 
-    void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
-                                             WellState<Scalar>& well_state,
+    void updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
                                              const SummaryState& summary_state,
                                              DeferredLogger& deferred_logger) const;
 
     PrimaryVariables primary_variables_; //!< Primary variables for well
 
     // the saturations in the well bore under surface conditions at the beginning of the time step
-    std::vector<double> F0_;
+    std::vector<Scalar> F0_;
 
     StandardWellEquations<Scalar,Indices::numEq> linSys_; //!< Linear equation system
     StdWellConnections connections_; //!< Connection level values

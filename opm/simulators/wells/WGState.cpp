@@ -21,8 +21,9 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/WGState.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 
@@ -35,7 +36,7 @@ WGState<Scalar>::WGState(const PhaseUsage& pu) :
 
 template<class Scalar>
 WGState<Scalar> WGState<Scalar>::
-serializationTestObject(const ParallelWellInfo& pinfo)
+serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
     WGState result(PhaseUsage{});
     result.well_state = WellState<Scalar>::serializationTestObject(pinfo);
@@ -46,10 +47,10 @@ serializationTestObject(const ParallelWellInfo& pinfo)
 }
 
 template<class Scalar>
-void WGState<Scalar>::wtest_state(WellTestState wtest_state)
+void WGState<Scalar>::wtest_state(std::unique_ptr<WellTestState> wtest_state)
 {
-    wtest_state.filter_wells( this->well_state.wells() );
-    this->well_test_state = std::move(wtest_state);
+    wtest_state->filter_wells( this->well_state.wells() );
+    this->well_test_state = std::move(*wtest_state);
 }
 
 template<class Scalar>
@@ -61,5 +62,9 @@ bool WGState<Scalar>::operator==(const WGState& rhs) const
 }
 
 template struct WGState<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template struct WGState<float>;
+#endif
 
 }

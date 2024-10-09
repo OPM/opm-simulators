@@ -17,48 +17,60 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <algorithm>
 #include <config.h>
-#include <functional>
-#include <vector>
 
 #define BOOST_TEST_MODULE WellStateFIBOTest
 
-#include "MpiFixture.hpp"
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/wells/GlobalWellInfo.hpp>
-#include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/SingleWellState.hpp>
-#include <opm/simulators/wells/SegmentState.hpp>
-#include <opm/simulators/wells/WellContainer.hpp>
-#include <opm/simulators/wells/PerfData.hpp>
-#include <opm/input/eclipse/Python/Python.hpp>
-
 #include <boost/test/unit_test.hpp>
 
-#include <opm/input/eclipse/Deck/Deck.hpp>
+#include "MpiFixture.hpp"
+
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/utility/TimeService.hpp>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
-#include <opm/input/eclipse/Parser/ParseContext.hpp>
+
+#include <opm/input/eclipse/Python/Python.hpp>
+
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQParams.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
+#include <opm/simulators/wells/GlobalWellInfo.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/PerfData.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/SegmentState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
-#include <opm/common/utility/TimeService.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
-
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
-
 #include <opm/grid/GridManager.hpp>
 
+#include <opm/input/eclipse/Deck/Deck.hpp>
+
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
+
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <ctime>
+#include <functional>
+#include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 BOOST_GLOBAL_FIXTURE(MPIFixture);
 
@@ -72,9 +84,9 @@ struct Setup
         : es   (deck)
         , pu   (Opm::phaseUsageFromDeck(es))
         , grid (es.getInputGrid())
-        , python( std::make_shared<Opm::Python>() )
-        , sched(deck, es, python)
-        , st(Opm::TimeService::from_time_t(sched.getStartTime()))
+        , sched(deck, es, std::make_shared<Opm::Python>())
+        , st   { Opm::TimeService::from_time_t(sched.getStartTime()),
+                 es.runspec().udqParams().undefinedValue() }
     {
         initWellPerfData();
     }
@@ -106,7 +118,7 @@ struct Setup
                                + std::to_string(k) + " not found in grid (well = " + well.name() + ").");
                         OPM_THROW(std::runtime_error, msg);
                     } else {
-                        Opm::PerforationData pd;
+                        Opm::PerforationData<double> pd;
                         pd.cell_index = active_index;
                         pd.connection_transmissibility_factor = completion.CF();
                         pd.connection_d_factor = completion.dFactor();
@@ -132,13 +144,13 @@ struct Setup
     std::shared_ptr<Opm::Python> python;
     Opm::Schedule     sched;
     Opm::SummaryState st;
-    std::vector<std::vector<Opm::PerforationData>> well_perf_data;
+    std::vector<std::vector<Opm::PerforationData<double>>> well_perf_data;
 };
 
 namespace {
     Opm::WellState<double>
     buildWellState(const Setup& setup, const std::size_t timeStep,
-                   std::vector<Opm::ParallelWellInfo>& pinfos)
+                   std::vector<Opm::ParallelWellInfo<double>>& pinfos)
     {
         auto state  = Opm::WellState<double>{setup.pu};
 
@@ -146,9 +158,15 @@ namespace {
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
                                 100.0*Opm::unit::barsa);
 
+        const auto& unit_sytem = setup.es.getDeckUnitSystem();
+        const double temp = unit_sytem.to_si(Opm::UnitSystem::measure::temperature, 25);
+        const auto ctemp =
+            std::vector<double>(setup.grid.c_grid()->number_of_cells,
+                                temp);
+
         auto wells = setup.sched.getWells(timeStep);
         pinfos.resize(wells.size());
-        std::vector<std::reference_wrapper<Opm::ParallelWellInfo>> ppinfos;
+        std::vector<std::reference_wrapper<Opm::ParallelWellInfo<double>>> ppinfos;
         auto pw = pinfos.begin();
 
         for (const auto& well : wells)
@@ -159,7 +177,7 @@ namespace {
             ++pw;
         }
 
-        state.init(cpress, setup.sched,
+        state.init(cpress, ctemp, setup.sched,
                    wells, ppinfos,
                    timeStep, nullptr, setup.well_perf_data, setup.st);
 
@@ -258,7 +276,7 @@ BOOST_AUTO_TEST_CASE(Linearisation)
     const Setup setup{ "msw.data" };
     const auto tstep = std::size_t{0};
 
-    std::vector<Opm::ParallelWellInfo> pinfos;
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
     const auto wstate = buildWellState(setup, tstep, pinfos);
     const auto& ws = wstate.well("PROD01");
 
@@ -275,7 +293,7 @@ BOOST_AUTO_TEST_CASE(Pressure)
     const Setup setup{ "msw.data" };
     const auto tstep = std::size_t{0};
 
-    std::vector<Opm::ParallelWellInfo> pinfos;
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
     auto wstate = buildWellState(setup, tstep, pinfos);
 
     const auto& wells = setup.sched.getWells(tstep);
@@ -314,7 +332,7 @@ BOOST_AUTO_TEST_CASE(Rates)
     const Setup setup{ "msw.data" };
     const auto tstep = std::size_t{0};
 
-    std::vector<Opm::ParallelWellInfo> pinfos;
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
     auto wstate = buildWellState(setup, tstep, pinfos);
 
     const auto wells = setup.sched.getWells(tstep);
@@ -367,7 +385,7 @@ BOOST_AUTO_TEST_CASE(STOP_well)
     */
     const Setup setup{ "wells_manager_data_wellSTOP.data" };
 
-    std::vector<Opm::ParallelWellInfo> pinfos;
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
     auto wstate = buildWellState(setup, 0, pinfos);
     for (std::size_t well_index = 0; well_index < setup.sched.numWells(0); well_index++) {
         const auto& ws = wstate.well(well_index);
@@ -524,7 +542,7 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState) {
 
 BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
     const Setup setup{ "msw.data" };
-    std::vector<Opm::ParallelWellInfo> pinfo;
+    std::vector<Opm::ParallelWellInfo<double>> pinfo;
     const auto wstate = buildWellState(setup, 0, pinfo);
     const auto& well = setup.sched.getWell("PROD01", 0);
     const auto& ws = wstate.well("PROD01");
@@ -580,8 +598,8 @@ BOOST_AUTO_TEST_CASE(TESTPerfData) {
 
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
-    Opm::ParallelWellInfo pinfo;
-    std::vector<Opm::PerforationData> connections = {{0,1,1,0,0},{1,1,1,0,1},{2,1,1,0,2}};
+    Opm::ParallelWellInfo<double> pinfo;
+    std::vector<Opm::PerforationData<double>> connections = {{0,1,1,0,0},{1,1,1,0,1},{2,1,1,0,2}};
     Opm::PhaseUsage pu;
 
     // This is totally bonkers, but the pu needs a complete deck to initialize properly

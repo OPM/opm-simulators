@@ -1,6 +1,6 @@
 /*
   Copyright 2018 SINTEF Digital, Mathematics and Cybernetics.
-  Copyright 2018 Equinor.
+  Copyright 2018, 2024 Equinor.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -40,69 +40,210 @@ namespace Opm
 
         // ----------- Types -----------
 
-        enum Status { AllGood            = 0,
-                      ReservoirFailed    = 1 << 0,
-                      WellFailed         = 1 << 1 };
-        enum struct Severity { None       = 0,
-                               Normal     = 1,
-                               TooLarge   = 2,
-                               NotANumber = 3 };
+        enum Status {
+            AllGood         = 0,
+            ReservoirFailed = 1 << 0,
+            WellFailed      = 1 << 1,
+        };
+        // More severe problems should have higher numbers
+        enum struct Severity {
+            None       = 0,
+            Normal     = 1,
+            ConvergenceMonitorFailure = 2,
+            TooLarge   = 3,
+            NotANumber = 4,
+        };
+
+        struct PenaltyCard {
+            int nonConverged{0};
+            int distanceDecay{0};
+            int largeWellResiduals{0};
+
+            int total() const {
+                return nonConverged + distanceDecay + largeWellResiduals;
+            }
+
+            void reset()
+            {
+                nonConverged = 0;
+                distanceDecay = 0;
+                largeWellResiduals = 0;
+            }
+
+            PenaltyCard& operator+=(const PenaltyCard& other) {
+                nonConverged += other.nonConverged;
+                distanceDecay += other.distanceDecay;
+                largeWellResiduals += other.largeWellResiduals;
+                return *this;
+            }
+
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(nonConverged);
+                serializer(distanceDecay);
+                serializer(largeWellResiduals);
+            }
+        };
+
+        using CnvPvSplit = std::pair<
+            std::vector<double>,
+            std::vector<int>>;
+
         class ReservoirFailure
         {
         public:
-            enum struct Type { Invalid, MassBalance, Cnv };
+            enum struct Type { Invalid, MassBalance, Cnv, ConvergenceMonitorFailure };
+
+            // Default constructor needed for object serialisation.  Don't
+            // use this for anything else.
+            ReservoirFailure() = default;
+
             ReservoirFailure(Type t, Severity s, int phase)
                 : type_(t), severity_(s), phase_(phase)
-            {
-            }
+            {}
+
             Type type() const { return type_; }
             Severity severity() const { return severity_; }
             int phase() const { return phase_; }
+
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(this->type_);
+                serializer(this->severity_);
+                serializer(this->phase_);
+            }
+
         private:
-            Type type_;
-            Severity severity_;
-            int phase_;
+            // Note to maintainers: If you change this list of data members,
+            // then please update serializeOp() accordingly.
+            Type type_ { Type::Invalid };
+            Severity severity_ { Severity::None };
+            int phase_ { -1 };
         };
+
         class ReservoirConvergenceMetric
         {
         public:
-            ReservoirConvergenceMetric(ReservoirFailure::Type t, int phase, double value)
-                : type_(t), phase_(phase), value_(value)
-            {
-            }
+            // Default constructor needed for object serialisation.  Don't
+            // use this for anything else.
+            ReservoirConvergenceMetric() = default;
+
+            ReservoirConvergenceMetric(ReservoirFailure::Type t, int phase, double value, double tolerance)
+                : type_(t), phase_(phase), value_(value), tolerance_(tolerance)
+            {}
+
             ReservoirFailure::Type type() const { return type_; }
             int phase() const { return phase_; }
             double value() const { return value_; }
+            double tolerance() const { return tolerance_; }
+
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(this->type_);
+                serializer(this->phase_);
+                serializer(this->value_);
+                serializer(this->tolerance_);
+            }
+
         private:
-            ReservoirFailure::Type type_;
-            int phase_;
-            double value_;
+            // Note to maintainers: If you change this list of data members,
+            // then please update serializeOp() accordingly.
+            ReservoirFailure::Type type_ { ReservoirFailure::Type::Invalid };
+            int phase_ { -1 };
+            double value_ { 0.0 };
+            double tolerance_ { 0.0 };
         };
+
         class WellFailure
         {
         public:
-            enum struct Type { Invalid, MassBalance, Pressure, ControlBHP, ControlTHP, ControlRate, Unsolvable, WrongFlowDirection };
+            enum struct Type {
+                Invalid,
+                MassBalance,
+                Pressure,
+                ControlBHP,
+                ControlTHP,
+                ControlRate,
+                Unsolvable,
+                WrongFlowDirection,
+            };
+
+            // Default constructor needed for object serialisation.  Don't
+            // use this for anything else.
+            WellFailure() = default;
+
             WellFailure(Type t, Severity s, int phase, const std::string& well_name)
                 : type_(t), severity_(s), phase_(phase), well_name_(well_name)
-            {
-            }
+            {}
+
             Type type() const { return type_; }
             Severity severity() const { return severity_; }
             int phase() const { return phase_; }
             const std::string& wellName() const { return well_name_; }
+
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(this->type_);
+                serializer(this->severity_);
+                serializer(this->phase_);
+                serializer(this->well_name_);
+            }
+
         private:
-            Type type_;
-            Severity severity_;
-            int phase_;
-            std::string well_name_;
+            // Note to maintainers: If you change this list of data members,
+            // then please update serializeOp() accordingly.
+            Type type_ { Type::Invalid };
+            Severity severity_ { Severity::None };
+            int phase_ { -1 };
+            std::string well_name_ {};
+        };
+
+        class WellConvergenceMetric
+        {
+        public:
+            // Default constructor needed for object serialisation.  Don't
+            // use this for anything else.
+            WellConvergenceMetric() = default;
+
+            WellConvergenceMetric(WellFailure::Type t, Severity s, int phase, double value, const std::string& well_name)
+                : type_(t), severity_(s), phase_(phase), value_(value), well_name_(well_name)
+            {}
+
+            WellFailure::Type type() const { return type_; }
+            Severity severity() const { return severity_; }
+            int phase() const { return phase_; }
+            double value() const { return value_; }
+            const std::string& wellName() const { return well_name_; }
+
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(this->type_);
+                serializer(this->severity_);
+                serializer(this->phase_);
+                serializer(this->value_);
+                serializer(this->well_name_);
+            }
+
+        private:
+            // Note to maintainers: If you change this list of data members,
+            // then please update serializeOp() accordingly.
+            WellFailure::Type type_ { WellFailure::Type::Invalid };
+            Severity severity_ { Severity::None };
+            int phase_ { -1 };
+            double value_ { 0.0 };
+            std::string well_name_ {};
         };
 
         // ----------- Mutating member functions -----------
 
         ConvergenceReport()
             : ConvergenceReport{0.0}
-        {
-        }
+        {}
 
         explicit ConvergenceReport(const double reportTime)
             : reportTime_{reportTime}
@@ -110,8 +251,7 @@ namespace Opm
             , res_failures_{}
             , well_failures_{}
             , wellGroupTargetsViolated_(false)
-        {
-        }
+        {}
 
         void clear()
         {
@@ -139,9 +279,22 @@ namespace Opm
             this->res_convergence_.emplace_back(std::forward<Args>(args)...);
         }
 
+        template <typename... Args>
+        void setWellConvergenceMetric(Args&&... args)
+        {
+            this->well_convergence_.emplace_back(std::forward<Args>(args)...);
+        }
+
         void setWellGroupTargetsViolated(const bool wellGroupTargetsViolated)
         {
             wellGroupTargetsViolated_ = wellGroupTargetsViolated;
+        }
+
+        void setCnvPoreVolSplit(const CnvPvSplit& cnvPvSplit,
+                                const double eligiblePoreVolume)
+        {
+            this->cnvPvSplit_ = cnvPvSplit;
+            this->eligiblePoreVolume_ = eligiblePoreVolume;
         }
 
         ConvergenceReport& operator+=(const ConvergenceReport& other)
@@ -151,9 +304,23 @@ namespace Opm
             res_failures_.insert(res_failures_.end(), other.res_failures_.begin(), other.res_failures_.end());
             well_failures_.insert(well_failures_.end(), other.well_failures_.begin(), other.well_failures_.end());
             res_convergence_.insert(res_convergence_.end(), other.res_convergence_.begin(), other.res_convergence_.end());
+            well_convergence_.insert(well_convergence_.end(), other.well_convergence_.begin(), other.well_convergence_.end());
             assert(reservoirFailed() != res_failures_.empty());
             assert(wellFailed() != well_failures_.empty());
             wellGroupTargetsViolated_ = (wellGroupTargetsViolated_ || other.wellGroupTargetsViolated_);
+
+            // Note regarding the CNV pore-volume split: We depend on the
+            // fact that the quantities have already been aggregated across
+            // all MPI ranks--see the implementation of member function
+            // BlackoilModel::getReservoirConvergence() for details--and are
+            // therefore equal on all ranks.  Consequently, we simply assign
+            // 'other's values here, if it is non-empty.  Empty splits
+            // typically come from well contributions.
+            if (! other.cnvPvSplit_.first.empty()) {
+                this->cnvPvSplit_ = other.cnvPvSplit_;
+                this->eligiblePoreVolume_ = other.eligiblePoreVolume_;
+            }
+
             return *this;
         }
 
@@ -162,6 +329,16 @@ namespace Opm
         double reportTime() const
         {
             return reportTime_;
+        }
+
+        double eligiblePoreVolume() const
+        {
+            return this->eligiblePoreVolume_;
+        }
+
+        const CnvPvSplit& cnvPvSplit() const
+        {
+            return this->cnvPvSplit_;
         }
 
         bool converged() const
@@ -194,6 +371,31 @@ namespace Opm
             return well_failures_;
         }
 
+        const std::vector<WellConvergenceMetric>& wellConvergence() const
+        {
+            return well_convergence_;
+        }
+
+        const PenaltyCard& getPenaltyCard() const
+        {
+            return penaltyCard_;
+        }
+
+        void addNonConvergedPenalty()
+        {
+            penaltyCard_.nonConverged++;
+        }
+
+        void addDistanceDecayPenalty()
+        {
+            penaltyCard_.distanceDecay++;
+        }
+
+        void addLargeWellResidualsPenalty()
+        {
+            penaltyCard_.largeWellResiduals++;
+        }
+
         Severity severityOfWorstFailure() const
         {
             // A function to get the worst of two severities.
@@ -210,15 +412,35 @@ namespace Opm
             return s;
         }
 
-    private:
+        template <typename Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(this->reportTime_);
+            serializer(this->status_);
+            serializer(this->res_failures_);
+            serializer(this->well_failures_);
+            serializer(this->res_convergence_);
+            serializer(this->well_convergence_);
+            serializer(this->wellGroupTargetsViolated_);
+            serializer(this->cnvPvSplit_);
+            serializer(this->eligiblePoreVolume_);
+            serializer(this->penaltyCard_);
+        }
 
+    private:
         // ----------- Member variables -----------
+        // Note to maintainers: If you change this list of data members,
+        // then please update serializeOp() accordingly.
         double reportTime_;
         Status status_;
         std::vector<ReservoirFailure> res_failures_;
         std::vector<WellFailure> well_failures_;
         std::vector<ReservoirConvergenceMetric> res_convergence_;
+        std::vector<WellConvergenceMetric> well_convergence_;
         bool wellGroupTargetsViolated_;
+        CnvPvSplit cnvPvSplit_{};
+        double eligiblePoreVolume_{};
+        PenaltyCard penaltyCard_;
     };
 
     struct StepReport
@@ -228,7 +450,6 @@ namespace Opm
         std::vector<ConvergenceReport> report;
     };
 
-
     std::string to_string(const ConvergenceReport::ReservoirFailure::Type t);
 
     std::string to_string(const ConvergenceReport::Severity s);
@@ -236,6 +457,9 @@ namespace Opm
     std::string to_string(const ConvergenceReport::WellFailure::Type t);
 
     std::string to_string(const ConvergenceReport::WellFailure& wf);
+
+    std::string to_string(const ConvergenceReport::PenaltyCard& pc);
+
 
 
 } // namespace Opm

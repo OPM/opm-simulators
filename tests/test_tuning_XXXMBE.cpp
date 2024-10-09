@@ -149,9 +149,8 @@ BOOST_AUTO_TEST_CASE(CheckMassBalanceWithinXXXMBE)
 		BOOST_TEST_MESSAGE("---------------------------------------------------------------------------");
 
 
-		BOOST_CHECK( max_mb[0] < 1.0e-6 );
-		BOOST_CHECK( max_mb[1] < 1.0e-8 );
-		BOOST_CHECK( max_mb[2] < 1.0e-10 );
+		BOOST_CHECK_MESSAGE( max_mb[0] < 1.0e-6, "max_mb[0] (= " << max_mb[0] << ") is not strictly less than 1.0e-6" );
+		BOOST_CHECK_MESSAGE( max_mb[1] < 1.0e-8, "max_mb[1] (= " << max_mb[1] << ") is not strictly less than 1.0e-8"  );
+		BOOST_CHECK_MESSAGE( max_mb[2] < 1.0e-10, "max_mb[2] (= " << max_mb[1] << ") is not strictly less than 1.0e-10"  );
   
 }
-

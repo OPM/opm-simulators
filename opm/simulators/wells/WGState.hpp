@@ -24,9 +24,11 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
+#include <memory>
+
 namespace Opm {
 
-class ParallelWellInfo;
+template<class Scalar> class ParallelWellInfo;
 
 /*
   Microscopic class to handle well, group and well test state.
@@ -39,9 +41,9 @@ struct WGState
 {
     WGState(const PhaseUsage& pu);
 
-    static WGState serializationTestObject(const ParallelWellInfo& pinfo);
+    static WGState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
-    void wtest_state(WellTestState wtest_state);
+    void wtest_state(std::unique_ptr<WellTestState> wtest_state);
 
     WellState<Scalar> well_state;
     GroupState<Scalar> group_state;

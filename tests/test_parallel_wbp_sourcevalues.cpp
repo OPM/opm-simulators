@@ -108,7 +108,7 @@ private:
 class CalculateSourceTerm
 {
 public:
-    using SrcTerm = Opm::PAvgDynamicSourceData::SourceDataSpan<double>;
+    using SrcTerm = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>;
 
     explicit CalculateSourceTerm(const std::size_t rank)
         : rank_ { rank }
@@ -129,11 +129,11 @@ private:
 };
 
 std::size_t
-sourceTermsAreCorrect(const std::size_t                 comm_size,
-                      const std::size_t                 num_src,
-                      const Opm::PAvgDynamicSourceData& source_data)
+sourceTermsAreCorrect(const std::size_t                         comm_size,
+                      const std::size_t                         num_src,
+                      const Opm::PAvgDynamicSourceData<double>& source_data)
 {
-    using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<const double>::Item;
+    using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<const double>::Item;
 
     auto num_correct = 0*num_src;
 
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(Eval_and_collect)
 
     const auto num_src_loc = std::size_t{50};
 
-    auto source_data = Opm::ParallelPAvgDynamicSourceData {
+    auto source_data = Opm::ParallelPAvgDynamicSourceData<double> {
         comm, sourceLocations(num_src_loc),
         LocalCellIndex { comm_rank, comm_size }
     };

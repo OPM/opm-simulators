@@ -27,8 +27,7 @@
 
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
 template<class FluidSystem, class Indices>
 class WellInterfaceIndices : public WellInterfaceFluidSystem<FluidSystem>
@@ -42,7 +41,7 @@ public:
 
     int flowPhaseToModelCompIdx(const int phaseIdx) const;
     int modelCompIdxToFlowCompIdx(const unsigned compIdx) const;
-    double scalingFactor(const int phaseIdx) const;
+    Scalar scalingFactor(const int phaseIdx) const;
 
     template <class EvalWell>
     Eval restrictEval(const EvalWell& in) const
@@ -57,14 +56,14 @@ public:
 
 protected:
     WellInterfaceIndices(const Well& well,
-                         const ParallelWellInfo& parallel_well_info,
+                         const ParallelWellInfo<Scalar>& parallel_well_info,
                          const int time_step,
                          const typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType& rate_converter,
                          const int pvtRegionIdx,
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
-                         const std::vector<PerforationData>& perf_data);
+                         const std::vector<PerforationData<Scalar>>& perf_data);
 };
 
 }

@@ -78,16 +78,17 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EnableTerminalOutput {
-    using type = UndefinedProperty;
-};
+struct EnableTerminalOutput { static constexpr bool value = true; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
+
+#if COMPILE_BDA_BRIDGE
+template<class Scalar> class WellContributions;
+#endif
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
@@ -97,8 +98,6 @@ namespace Opm {
         {
         public:
             // ---------      Types      ---------
-            using ModelParameters = BlackoilModelParameters<TypeTag>;
-
             using Grid = GetPropType<TypeTag, Properties::Grid>;
             using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
             using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -114,8 +113,11 @@ namespace Opm {
             using GLiftProdWells = typename BlackoilWellModelGeneric<Scalar>::GLiftProdWells;
             using GLiftWellStateMap =
                 typename BlackoilWellModelGeneric<Scalar>::GLiftWellStateMap;
-            using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
-            using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
+            using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
+            using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
+
+            using ModelParameters = BlackoilModelParameters<Scalar>;
+
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
@@ -260,13 +262,33 @@ namespace Opm {
                     return this->wasDynamicallyShutThisTimeStep(well_index);
                 });
 
-                const auto& tracerRates = simulator_.problem().tracerModel().getWellTracerRates();
-                this->assignWellTracerRates(wsrpt, tracerRates);
+                {
+                    const auto& tracerRates = this->simulator_.problem()
+                        .tracerModel().getWellTracerRates();
+                    const auto& freeTracerRates = simulator_.problem()
+                        .tracerModel().getWellFreeTracerRates();
+                    const auto& solTracerRates = simulator_.problem()
+                        .tracerModel().getWellSolTracerRates();
+                    const auto& mswTracerRates = simulator_.problem()
+                        .tracerModel().getMswTracerRates();
 
+                    this->assignWellTracerRates(wsrpt, tracerRates);
+                    this->assignWellTracerRates(wsrpt, freeTracerRates);
+                    this->assignWellTracerRates(wsrpt, solTracerRates);
+                    this->assignMswTracerRates(wsrpt, mswTracerRates);
+                }
 
-                BlackoilWellModelGuideRates(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
+                BlackoilWellModelGuideRates(*this)
+                    .assignWellGuideRates(wsrpt, this->reportStepIndex());
+
+                this->assignWellTargets(wsrpt);
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
-
+                // only used to compute gas injection mass rates for CO2STORE runs
+                // The gas reference density is thus the same for all pvt regions
+                // We therefore for simplicity use 0 here 
+                if (eclState().runspec().co2Storage()) {
+                    this->assignMassGasRate(wsrpt, FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, 0));
+                }
                 return wsrpt;
             }
 
@@ -281,8 +303,10 @@ namespace Opm {
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
+#if COMPILE_BDA_BRIDGE
             // accumulate the contributions of all Wells in the WellContributions object
-            void getWellContributions(WellContributions& x) const;
+            void getWellContributions(WellContributions<Scalar>& x) const;
+#endif
 
             // apply well model with scaling of alpha
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
@@ -392,7 +416,7 @@ namespace Opm {
             Scalar gravity_{};
             std::vector<Scalar> depth_{};
             bool alternative_well_rate_init_{};
-
+            std::map<std::string, Scalar> well_group_thp_calc_;
             std::unique_ptr<RateConverterType> rateConverter_{};
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
 
@@ -444,6 +468,8 @@ namespace Opm {
                                               const double dt,
                                               DeferredLogger& local_deferredLogger);
 
+            void computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
+
             /// Update rank's notion of intersecting wells and their
             /// associate solution variables.
             ///
@@ -482,7 +508,7 @@ namespace Opm {
             data::WellBlockAveragePressures
             computeWellBlockAveragePressures() const;
 
-            ParallelWBPCalculation::EvaluatorFactory
+            typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
             makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
 
             void registerOpenWellsForWBPCalculation();
@@ -518,15 +544,19 @@ namespace Opm {
             bool maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 
             void gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
-                GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-                GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map);
+                                           GLiftProdWells& prod_wells,
+                                           GLiftOptWells& glift_wells,
+                                           GasLiftGroupInfo<Scalar>& group_info,
+                                           GLiftWellStateMap& state_map);
 
             // cannot be const since it accesses the non-const WellState
-            void gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag> *well,
-                DeferredLogger& deferred_logger,
-                GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-                GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map,
-                GLiftSyncGroups& groups_to_sync);
+            void gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
+                                                     DeferredLogger& deferred_logger,
+                                                     GLiftProdWells& prod_wells,
+                                                     GLiftOptWells& glift_wells,
+                                                     GasLiftGroupInfo<Scalar>& group_info,
+                                                     GLiftWellStateMap& state_map,
+                                                     GLiftSyncGroups& groups_to_sync);
 
             void extractLegacyCellPvtRegionIndex_();
 
@@ -537,14 +567,14 @@ namespace Opm {
 
             void wellTesting(const int timeStepIdx, const double simulationTime, DeferredLogger& deferred_logger);
 
-            void calcRates(const int fipnum,
-                           const int pvtreg,
-                           const std::vector<Scalar>& production_rates,
-                           std::vector<Scalar>& resv_coeff) override;
+            void calcResvCoeff(const int fipnum,
+                               const int pvtreg,
+                               const std::vector<Scalar>& production_rates,
+                               std::vector<Scalar>& resv_coeff) override;
 
-            void calcInjRates(const int fipnum,
-                           const int pvtreg,
-                           std::vector<Scalar>& resv_coeff) override;
+            void calcInjResvCoeff(const int fipnum,
+                                  const int pvtreg,
+                                  std::vector<Scalar>& resv_coeff) override;
 
             void computeWellTemperature();
 

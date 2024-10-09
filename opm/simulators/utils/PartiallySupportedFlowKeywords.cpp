@@ -211,7 +211,7 @@ partiallySupported()
          {
             "RPTRST",
             {
-               {1,{false, allow_values<std::string> {"ALLPROPS", "BASIC=1", "BASIC=2", "BASIC=3", "BASIC=4", "BASIC=5", "BASIC=6", "DEN", "KRG", "KRO", "KRW", "RSSAT", "RVSAT", "VISC"}, "RPTRST(RPTRST): invalid option or unsupported integer control format"}}, // MNEMONIC_LIST
+               {1,{false, allow_values<std::string> {"ALLPROPS", "BASIC=0", "BASIC=1", "BASIC=2", "BASIC=3", "BASIC=4", "BASIC=5", "BASIC=6", "DEN", "KRG", "KRO", "KRW", "RSSAT", "RVSAT", "VISC"}, "RPTRST(RPTRST): invalid option or unsupported integer control format"}}, // MNEMONIC_LIST
             },
          },
          {
@@ -368,7 +368,7 @@ partiallySupported()
          {
             "EHYSTR",
             {
-               {2,{true, allow_values<int> {0, 1, 2, 3}, "EHYSTR(HYSTMOD): only Carlson or Killough Hysteresis Models supported (0,1 or 2,3)"}}, // relative_perm_hyst
+               {2,{true, allow_values<int> {0, 1, 2, 3, 4}, "EHYSTR(HYSTMOD): only Carlson or Killough Hysteresis Models supported (0,1 or 2,3)"}}, // relative_perm_hyst
                {13,{true, allow_values<int> {0}, "EHYSTR(HYSWETRP): Killough’s option not supported and should be defaulted"}}, // FLAG_SOMETHING
             },
          },

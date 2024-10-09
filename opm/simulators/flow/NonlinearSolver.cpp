@@ -28,11 +28,12 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace Opm {
-namespace detail {
+namespace Opm::detail {
 
-void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
-                        const int it, const int numPhases, const double relaxRelTol,
+template<class Scalar>
+void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
+                        const int it, const int numPhases, const Scalar relaxRelTol,
+                        const int minimumOscillatingPhases,
                         bool& oscillate, bool& stagnate)
 {
     // The detection of oscillation in two primary variable results in the report of the detection
@@ -52,8 +53,8 @@ void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
     const auto& F1 = residualHistory[it - 1];
     const auto& F2 = residualHistory[it - 2];
     for (int p = 0; p < numPhases; ++p) {
-        const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
-        const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
+        const Scalar d1 = std::abs((F0[p] - F2[p]) / F0[p]);
+        const Scalar d2 = std::abs((F0[p] - F1[p]) / F0[p]);
 
         oscillatePhase += (d1 < relaxRelTol) && (relaxRelTol < d2);
 
@@ -62,12 +63,12 @@ void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
         stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
     }
 
-    oscillate = (oscillatePhase > 1);
+    oscillate = (oscillatePhase >= minimumOscillatingPhases);
 }
 
-template <class BVector>
+template <class BVector, class Scalar>
 void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
-                              const double omega,
+                              const Scalar omega,
                               NonlinearRelaxType relaxType)
 {
     // The dxOld is updated with dx.
@@ -104,16 +105,44 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
     return;
 }
 
-template<int Size> using BV = Dune::BlockVector<Dune::FieldVector<double,Size>>;
-#define INSTANCE(Size) \
-    template void stabilizeNonlinearUpdate<BV<Size>>(BV<Size>&, BV<Size>&, \
-                                                  const double, NonlinearRelaxType);
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
+template<class Scalar>
+void registerNonlinearParameters()
+{
+    Parameters::Register<Parameters::NewtonMaxRelax<Scalar>>
+        ("The maximum relaxation factor of a Newton iteration");
+    Parameters::Register<Parameters::NewtonMaxIterations>
+        ("The maximum number of Newton iterations per time step");
+    Parameters::Register<Parameters::NewtonMinIterations>
+        ("The minimum number of Newton iterations per time step");
+    Parameters::Register<Parameters::NewtonRelaxationType>
+        ("The type of relaxation used by Newton method");
 
-} // namespace detail
-} // namespace Opm
+    Parameters::SetDefault<Parameters::NewtonMaxIterations>(20);
+}
+
+template<class Scalar, int Size>
+using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
+
+#define INSTANTIATE(T,Size)                                                 \
+    template void stabilizeNonlinearUpdate(BV<T,Size>&, BV<T,Size>&,        \
+                                           const T, NonlinearRelaxType);
+
+#define INSTANTIATE_TYPE(T)                                                 \
+    template void detectOscillations(const std::vector<std::vector<T>>&,    \
+                                     const int, const int, const T,         \
+                                     const int, bool&, bool&);              \
+    template void registerNonlinearParameters<T>();                         \
+    INSTANTIATE(T,1)                                                        \
+    INSTANTIATE(T,2)                                                        \
+    INSTANTIATE(T,3)                                                        \
+    INSTANTIATE(T,4)                                                        \
+    INSTANTIATE(T,5)                                                        \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
+
+} // namespace Opm::detail

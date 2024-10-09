@@ -38,40 +38,22 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#include <charconv>
 #include <cstddef>
 #include <memory>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EnableDryRun {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct OutputInterval {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct EnableLoggingFalloutWarning {
-    using type = UndefinedProperty;
-};
-
-// TODO: enumeration parameters. we use strings for now.
-template<class TypeTag>
-struct EnableDryRun<TypeTag, TTag::FlowProblem> {
-    static constexpr auto value = "auto";
-};
 // Do not merge parallel output files or warn about them
-template<class TypeTag>
-struct EnableLoggingFalloutWarning<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct OutputInterval<TypeTag, TTag::FlowProblem> {
-    static constexpr int value = 1;
-};
+struct EnableLoggingFalloutWarning { static constexpr bool value = false; };
 
-} // namespace Opm::Properties
+struct OutputInterval { static constexpr int value = 1; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -102,8 +84,7 @@ namespace Opm {
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv, Parallel::Communication comm)
         {
-            using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-            if (!ParamsMeta::registrationOpen()) {
+            if (!Parameters::IsRegistrationOpen()) {
                 // We have already successfully run setupParameters_().
                 // For the dynamically chosen runs (as from the main flow
                 // executable) we must run this function again with the
@@ -114,111 +95,37 @@ namespace Opm {
                 return EXIT_SUCCESS;
             }
             // register the flow specific parameters
-            Parameters::registerParam<TypeTag, Properties::EnableDryRun>
-                ("Specify if the simulation ought to be actually run, or just pretended to be");
-            Parameters::registerParam<TypeTag, Properties::OutputInterval>
+            Parameters::Register<Parameters::OutputInterval>
                 ("Specify the number of report steps between two consecutive writes of restart data");
-            Parameters::registerParam<TypeTag, Properties::EnableLoggingFalloutWarning>
+            Parameters::Register<Parameters::EnableLoggingFalloutWarning>
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
+            ThreadManager::registerParameters();
             Simulator::registerParameters();
 
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
-            // hide the parameters unused by flow. TODO: this is a pain to maintain
-            Parameters::hideParam<TypeTag, Properties::EnableGravity>();
-            Parameters::hideParam<TypeTag, Properties::EnableGridAdaptation>();
+            detail::hideUnusedParameters<Scalar>();
 
-            // this parameter is actually used in eWoms, but the flow well model
-            // hard-codes the assumption that the intensive quantities cache is enabled,
-            // so flow crashes. Let's hide the parameter for that reason.
-            Parameters::hideParam<TypeTag, Properties::EnableIntensiveQuantityCache>();
-
-            // thermodynamic hints are not implemented/required by the eWoms blackoil
-            // model
-            Parameters::hideParam<TypeTag, Properties::EnableThermodynamicHints>();
-
-            // in flow only the deck file determines the end time of the simulation
-            Parameters::hideParam<TypeTag, Properties::EndTime>();
-
-            // time stepping is not done by the eWoms code in flow
-            Parameters::hideParam<TypeTag, Properties::InitialTimeStepSize>();
-            Parameters::hideParam<TypeTag, Properties::MaxTimeStepDivisions>();
-            Parameters::hideParam<TypeTag, Properties::MaxTimeStepSize>();
-            Parameters::hideParam<TypeTag, Properties::MinTimeStepSize>();
-            Parameters::hideParam<TypeTag, Properties::PredeterminedTimeStepsFile>();
-
-            // flow also does not use the eWoms Newton method
-            Parameters::hideParam<TypeTag, Properties::NewtonMaxError>();
-            Parameters::hideParam<TypeTag, Properties::NewtonTolerance>();
-            Parameters::hideParam<TypeTag, Properties::NewtonTargetIterations>();
-            Parameters::hideParam<TypeTag, Properties::NewtonVerbose>();
-            Parameters::hideParam<TypeTag, Properties::NewtonWriteConvergence>();
-
-            // the default eWoms checkpoint/restart mechanism does not work with flow
-            Parameters::hideParam<TypeTag, Properties::RestartTime>();
-            Parameters::hideParam<TypeTag, Properties::RestartWritingInterval>();
-            // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
-            //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
-                Parameters::hideParam<TypeTag, Properties::VtkWriteOilFormationVolumeFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteOilSaturationPressure>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteOilVaporizationFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWritePorosity>();
-                Parameters::hideParam<TypeTag, Properties::VtkWritePotentialGradients>();
-                Parameters::hideParam<TypeTag, Properties::VtkWritePressures>();
-                Parameters::hideParam<TypeTag, Properties::VtkWritePrimaryVars>();
-                Parameters::hideParam<TypeTag, Properties::VtkWritePrimaryVarsMeaning>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteProcessRank>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteRelativePermeabilities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturatedGasOilVaporizationFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturatedOilGasDissolutionFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturationRatios>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturations>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteTemperature>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteViscosities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteWaterFormationVolumeFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteGasDissolutionFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteGasFormationVolumeFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteGasSaturationPressure>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteIntrinsicPermeabilities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteTracerConcentration>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteExtrusionFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteFilterVelocities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteDensities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteDofIndex>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteMobilities>();
-                //}
-            Parameters::hideParam<TypeTag, Properties::VtkWriteAverageMolarMasses>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteFugacities>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteFugacityCoeffs>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteMassFractions>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteMolarities>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteMoleFractions>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteTotalMassFractions>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteTotalMoleFractions>();
-
-            Parameters::hideParam<TypeTag, Properties::VtkWriteTortuosities>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteDiffusionCoefficients>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteEffectiveDiffusionCoefficients>();
-            
-            // hide average density option
-            Parameters::hideParam<TypeTag, Properties::UseAverageDensityMsWells>();
-
-            Parameters::endParamRegistration<TypeTag>();
+            Parameters::endRegistration();
 
             int mpiRank = comm.rank();
 
             // read in the command line parameters
-            int status = ::Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/(mpiRank==0));
+            int status = ::Opm::setupParameters_<TypeTag>(argc,
+                                                          const_cast<const char**>(argv),
+                                                          /*doRegistration=*/false,
+                                                          /*allowUnused=*/true,
+                                                          /*handleHelp=*/(mpiRank==0));
             if (status == 0) {
 
                 // deal with unknown parameters.
 
                 int unknownKeyWords = 0;
                 if (mpiRank == 0) {
-                    unknownKeyWords = Parameters::printUnused<TypeTag>(std::cerr);
+                    unknownKeyWords = Parameters::printUnused(std::cerr);
                 }
                 int globalUnknownKeyWords = comm.sum(unknownKeyWords);
                 unknownKeyWords = globalUnknownKeyWords;
@@ -240,24 +147,13 @@ namespace Opm {
                     return EXIT_FAILURE;
                 }
 
-                // deal with --print-properties and --print-parameters and unknown parameters.
-
-                bool doExit = false;
-
-                if (Parameters::get<TypeTag, Properties::PrintProperties>() == 1) {
-                    doExit = true;
-                    if (mpiRank == 0)
-                        Properties::printValues<TypeTag>(std::cout);
-                }
-
-                if (Parameters::get<TypeTag, Properties::PrintParameters>() == 1) {
-                    doExit = true;
-                    if (mpiRank == 0)
-                        Parameters::printValues<TypeTag>();
-                }
-
-                if (doExit)
+                // deal with --print-parameters and unknown parameters.
+                if (Parameters::Get<Parameters::PrintParameters>() == 1) {
+                    if (mpiRank == 0) {
+                        Parameters::printValues(std::cout);
+                    }
                     return -1;
+                }
             }
 
             return status;
@@ -383,24 +279,38 @@ namespace Opm {
             mpi_size_ = comm.size();
 
 #if _OPENMP
-            // if openMP is available, default to 2 threads per process unless
-            // OMP_NUM_THREADS is set or command line --threads-per-process used
-            if (!getenv("OMP_NUM_THREADS"))
-            {
-                int threads = 2;
-                const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
-                if (requested_threads > 0)
-                    threads = requested_threads;
+            // If openMP is available, default to 2 threads per process unless
+            // OMP_NUM_THREADS is set or command line --threads-per-process used.
+            // Issue a warning if both OMP_NUM_THREADS and --threads-per-process are set,
+            // but let the environment variable take precedence.
+            constexpr int default_threads = 2;
+            const int requested_threads = Parameters::Get<Parameters::ThreadsPerProcess>();
+            int threads = requested_threads > 0 ? requested_threads : default_threads;
 
-                // We are not limiting this to the number of processes
-                // reported by OpenMP as on some hardware (and some OpenMPI
-                // versions) this will be 1 when run with mpirun
-                omp_set_num_threads(threads);
+            const char* env_var = getenv("OMP_NUM_THREADS");
+            if (env_var) {
+                int omp_num_threads = -1;
+                auto result = std::from_chars(env_var, env_var + std::strlen(env_var), omp_num_threads);
+                if (result.ec == std::errc() && omp_num_threads > 0) {
+                    // Set threads to omp_num_threads if it was successfully parsed and is positive
+                    threads = omp_num_threads;
+                    // Warning in 'Main.hpp', where this code is duplicated
+                    // if (requested_threads > 0) {
+                    //     OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
+                    // }
+                } else {
+                    OpmLog::warning("Invalid value for OMP_NUM_THREADS environment variable.");
+                }
             }
+
+            // We are not limiting this to the number of processes
+            // reported by OpenMP as on some hardware (and some OpenMPI
+            // versions) this will be 1 when run with mpirun
+            omp_set_num_threads(threads);
 #endif
 
-            using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
-            ThreadManager::init(false);
+            using TM = GetPropType<TypeTag, Properties::ThreadManager>;
+            TM::init(false);
         }
 
         void mergeParallelLogFiles()
@@ -413,8 +323,8 @@ namespace Opm {
             }
 
             detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
-                                          Parameters::get<TypeTag, Properties::EclDeckFileName>(),
-                                          Parameters::get<TypeTag, Properties::EnableLoggingFalloutWarning>());
+                                          Parameters::Get<Parameters::EclDeckFileName>(),
+                                          Parameters::Get<Parameters::EnableLoggingFalloutWarning>());
         }
 
         void setupModelSimulator()
@@ -422,32 +332,6 @@ namespace Opm {
             modelSimulator_ = std::make_unique<ModelSimulator>(FlowGenericVanguard::comm(), /*verbose=*/false);
             modelSimulator_->executionTimer().start();
             modelSimulator_->model().applyInitialSolution();
-
-            try {
-                // Possible to force initialization only behavior (NOSIM).
-                const std::string& dryRunString = Parameters::get<TypeTag, Properties::EnableDryRun>();
-                if (dryRunString != "" && dryRunString != "auto") {
-                    bool yesno;
-                    if (dryRunString == "true"
-                        || dryRunString == "t"
-                        || dryRunString == "1")
-                        yesno = true;
-                    else if (dryRunString == "false"
-                             || dryRunString == "f"
-                             || dryRunString == "0")
-                        yesno = false;
-                    else
-                        throw std::invalid_argument("Invalid value for parameter EnableDryRun: '"
-                                                    +dryRunString+"'");
-                    auto& ioConfig = eclState().getIOConfig();
-                    ioConfig.overrideNOSIM(yesno);
-                }
-            }
-            catch (const std::invalid_argument& e) {
-                std::cerr << "Failed to create valid EclipseState object" << std::endl;
-                std::cerr << "Exception caught: " << e.what() << std::endl;
-                throw;
-            }
         }
 
         const EclipseState& eclState() const
@@ -503,7 +387,7 @@ namespace Opm {
             printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, simulator_->model().localAccumulatedReports());
 
             detail::handleExtraConvergenceOutput(report,
-                                                 Parameters::get<TypeTag, Properties::OutputExtraConvergenceInfo>(),
+                                                 Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
                                                  R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
                                                  eclState().getIOConfig().getOutputDir(),
                                                  eclState().getIOConfig().getBaseName());
@@ -526,7 +410,7 @@ namespace Opm {
 
                 // This allows a user to catch typos and misunderstandings in the
                 // use of simulator parameters.
-                if (Parameters::printUnused<TypeTag>(oss)) {
+                if (Parameters::printUnused(oss)) {
                     std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
                     std::cout << oss.str();
                     std::cout << "----------------------------------------------------------------" << std::endl;

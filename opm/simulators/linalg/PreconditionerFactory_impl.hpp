@@ -17,11 +17,13 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include <config.h>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
-
 
 #include <opm/simulators/linalg/DILU.hpp>
 #include <opm/simulators/linalg/ExtraSmoothers.hpp>
@@ -44,23 +46,15 @@
 #include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/preconditioners.hh>
 
-#include <config.h>
-#if HAVE_CUDA
-#include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/cuistl/CuDILU.hpp>
-#include <opm/simulators/linalg/cuistl/CuJac.hpp>
-#include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp>
-
-#endif
+// Include all cuistl/GPU preconditioners inside of this headerfile
+#include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 
 
-namespace Opm
-{
+namespace Opm {
 
 template <class Smoother>
-struct AMGSmootherArgsHelper {
+struct AMGSmootherArgsHelper
+{
     static auto args(const PropertyTree& prm)
     {
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -75,10 +69,11 @@ struct AMGSmootherArgsHelper {
 };
 
 template <class M, class V, class C>
-struct AMGSmootherArgsHelper<Opm::ParallelOverlappingILU0<M, V, V, C>> {
+struct AMGSmootherArgsHelper<ParallelOverlappingILU0<M, V, V, C>>
+{
     static auto args(const PropertyTree& prm)
     {
-        using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
+        using Smoother = ParallelOverlappingILU0<M, V, V, C>;
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
         SmootherArgs smootherArgs;
         smootherArgs.iterations = prm.get<int>("iterations", 1);
@@ -94,15 +89,14 @@ struct AMGSmootherArgsHelper<Opm::ParallelOverlappingILU0<M, V, V, C>> {
     }
 };
 
-
 // trailing return type with decltype used for detecting existence of setUseFixedOrder member function by overloading the setUseFixedOrder function
 template <typename C>
-auto setUseFixedOrder(C criterion, bool booleanValue) -> decltype(criterion.setUseFixedOrder(booleanValue))
+auto setUseFixedOrder(C& criterion, bool booleanValue) -> decltype(criterion.setUseFixedOrder(booleanValue))
 {
     return criterion.setUseFixedOrder(booleanValue); // Set flag to ensure that the matrices in the AMG hierarchy are constructed with deterministic indices.
 }
 template <typename C>
-void setUseFixedOrder(C, ...)
+void setUseFixedOrder(C&, ...)
 {
     // do nothing, since the function setUseFixedOrder does not exist yet
 }
@@ -209,13 +203,14 @@ struct StandardPreconditioners {
         // is the overlapping schwarz operator. This could be extended
         // later, but at this point no other operators are compatible
         // with the AMG hierarchy construction.
-        if constexpr (std::is_same_v<O, Dune::OverlappingSchwarzOperator<M, V, V, C>>) {
+        if constexpr (std::is_same_v<O, Dune::OverlappingSchwarzOperator<M, V, V, C>> ||
+                      std::is_same_v<O, Opm::GhostLastMatrixAdapter<M, V, V, C>>) {
             F::addCreator("amg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
                 using PrecPtr = std::shared_ptr<Dune::PreconditionerWithUpdate<V, V>>;
                 const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
                 // TODO: merge this with ILUn, and possibly simplify the factory to only work with ILU?
                 if (smoother == "ILU0" || smoother == "ParOverILU0") {
-                    using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
+                    using Smoother = ParallelOverlappingILU0<M, V, V, C>;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
                     PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
@@ -285,7 +280,8 @@ struct StandardPreconditioners {
                               OPM_THROW(std::logic_error,
                                         "Pressure index out of bounds. It needs to specified for CPR");
                           }
-                          using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, false>;
+                          using Scalar = typename V::field_type;
+                          using LevelTransferPolicy = PressureTransferPolicy<O, Comm, Scalar, false>;
                           return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                               op, prm, weightsCalculator, pressureIndex, comm);
                       });
@@ -300,7 +296,8 @@ struct StandardPreconditioners {
                               OPM_THROW(std::logic_error,
                                         "Pressure index out of bounds. It needs to specified for CPR");
                           }
-                          using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, true>;
+                          using Scalar = typename V::field_type;
+                          using LevelTransferPolicy = PressureTransferPolicy<O, Comm, Scalar, true>;
                           return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                               op, prm, weightsCalculator, pressureIndex, comm);
                       });
@@ -317,44 +314,59 @@ struct StandardPreconditioners {
                                   OPM_THROW(std::logic_error,
                                             "Pressure index out of bounds. It needs to specified for CPR");
                               }
-                              using LevelTransferPolicy = Opm::PressureBhpTransferPolicy<O, Comm, false>;
+                              using Scalar = typename V::field_type;
+                              using LevelTransferPolicy = PressureBhpTransferPolicy<O, Comm, Scalar, false>;
                               return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                                   op, prm, weightsCalculator, pressureIndex, comm);
                           });
         }
 
 #if HAVE_CUDA
-        F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("GPUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using CuILU0 = typename Opm::cuistl::
-                CuSeqILU0<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            auto cuILU0 = std::make_shared<CuILU0>(op.getmat(), w);
+            using GpuILU0 = typename gpuistl::
+                GpuSeqILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            auto gpuILU0 = std::make_shared<GpuILU0>(op.getmat(), w);
 
-            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuILU0>>(cuILU0);
-            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuILU0>>(gpuILU0);
+            auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 
-        F::addCreator("CUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("GPUJAC", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using CuJac =
-                typename Opm::cuistl::CuJac<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            auto cuJac = std::make_shared<CuJac>(op.getmat(), w);
+            using GpuJac =
+                typename gpuistl::GpuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            auto gpuJac = std::make_shared<GpuJac>(op.getmat(), w);
 
-            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuJac>>(cuJac);
-            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuJac>>(gpuJac);
+            auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 
-        F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("GPUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
-            using CuDILU = typename Opm::cuistl::CuDILU<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            auto cuDILU = std::make_shared<CuDILU>(op.getmat());
+            using GpuDILU = typename gpuistl::GpuDILU<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            auto gpuDILU = std::make_shared<GpuDILU>(op.getmat(), split_matrix, tune_gpu_kernels);
 
-            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuDILU>>(cuDILU);
-            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuDILU>>(gpuDILU);
+            auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            return wrapped;
+        });
+
+        F::addCreator("OPMGPUILU0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
+            using field_type = typename V::field_type;
+            using OpmGpuILU0 = typename gpuistl::OpmGpuILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            auto gpuilu0 = std::make_shared<OpmGpuILU0>(op.getmat(), split_matrix, tune_gpu_kernels);
+
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, OpmGpuILU0>>(gpuilu0);
+            auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 #endif
@@ -374,11 +386,11 @@ struct StandardPreconditioners {
         // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
         if (ilulevel == 0) {
             const std::size_t num_interior = interiorIfGhostLast(comm);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, Comm>>(
-                op.getmat(), comm, w, Opm::MILU_VARIANT::ILU, num_interior, redblack, reorder_spheres);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, Comm>>(
+                op.getmat(), comm, w, MILU_VARIANT::ILU, num_interior, redblack, reorder_spheres);
         } else {
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, Comm>>(
-                op.getmat(), comm, ilulevel, w, Opm::MILU_VARIANT::ILU, redblack, reorder_spheres);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, Comm>>(
+                op.getmat(), comm, ilulevel, w, MILU_VARIANT::ILU, redblack, reorder_spheres);
         }
     }
 
@@ -418,8 +430,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         using P = PropertyTree;
         F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), 0, w, MILU_VARIANT::ILU);
         });
         F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
@@ -430,14 +442,14 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             const int n = prm.get<int>("ilulevel", 0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), n, w, MILU_VARIANT::ILU);
         });
         F::addCreator("ILUn", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("ilulevel", 0);
             const double w = prm.get<double>("relaxation", 1.0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), n, w, MILU_VARIANT::ILU);
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
@@ -519,11 +531,16 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 }
             });
             F::addCreator("famg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-                auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                Dune::Amg::Parameters parms;
-                parms.setNoPreSmoothSteps(1);
-                parms.setNoPostSmoothSteps(1);
-                return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                if  constexpr (std::is_same_v<typename V::field_type, float>) {
+                    OPM_THROW(std::logic_error, "famg requires UMFPack which is not available for floats");
+                    return nullptr;
+                } else {
+                    auto crit = AMGHelper<O, C, M, V>::criterion(prm);
+                    Dune::Amg::Parameters parms;
+                    parms.setNoPreSmoothSteps(1);
+                    parms.setNoPostSmoothSteps(1);
+                    return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                }
             });
         }
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
@@ -533,8 +550,9 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                     if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                         OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                     }
+                    using Scalar = typename V::field_type;
                     using LevelTransferPolicy
-                        = Opm::PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+                        = PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
                     return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                         op, prm, weightsCalculator, pressureIndex);
                 });
@@ -546,7 +564,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
-                using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+                using Scalar = typename V::field_type;
+                using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                     op, prm, weightsCalculator, pressureIndex);
             });
@@ -556,61 +575,75 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
-                using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, true>;
+                using Scalar = typename V::field_type;
+                using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, true>;
                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                     op, prm, weightsCalculator, pressureIndex);
             });
 
 #if HAVE_CUDA
-        F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using CuILU0 = typename Opm::cuistl::
-                CuSeqILU0<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuILU0>>(
-                std::make_shared<CuILU0>(op.getmat(), w));
+            using GpuILU0 = typename gpuistl::
+                GpuSeqILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuILU0>>(
+                std::make_shared<GpuILU0>(op.getmat(), w));
         });
 
-        F::addCreator("CUILU0Float", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUILU0Float", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
             using matrix_type_to =
                 typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
-            using CuILU0 = typename Opm::cuistl::
-                CuSeqILU0<matrix_type_to, Opm::cuistl::CuVector<float>, Opm::cuistl::CuVector<float>>;
-            using Adapter = typename Opm::cuistl::PreconditionerAdapter<VTo, VTo, CuILU0>;
-            using Converter = typename Opm::cuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
+            using GpuILU0 = typename gpuistl::
+                GpuSeqILU0<matrix_type_to, gpuistl::GpuVector<float>, gpuistl::GpuVector<float>>;
+            using Adapter = typename gpuistl::PreconditionerAdapter<VTo, VTo, GpuILU0>;
+            using Converter = typename gpuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
             auto converted = std::make_shared<Converter>(op.getmat());
-            auto adapted = std::make_shared<Adapter>(std::make_shared<CuILU0>(converted->getConvertedMatrix(), w));
+            auto adapted = std::make_shared<Adapter>(std::make_shared<GpuILU0>(converted->getConvertedMatrix(), w));
             converted->setUnderlyingPreconditioner(adapted);
             return converted;
         });
 
-        F::addCreator("CUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUJAC", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using CUJac =
-                typename Opm::cuistl::CuJac<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CUJac>>(
-                std::make_shared<CUJac>(op.getmat(), w));
+            using GPUJac =
+                typename gpuistl::GpuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUJac>>(
+                std::make_shared<GPUJac>(op.getmat(), w));
         });
 
-        F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("OPMGPUILU0", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
-            using CUDILU = typename Opm::cuistl::CuDILU<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat()));
+            using GPUILU0 = typename gpuistl::OpmGpuILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUILU0>>(std::make_shared<GPUILU0>(op.getmat(), split_matrix, tune_gpu_kernels));
         });
 
-        F::addCreator("CUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
+            using field_type = typename V::field_type;
+            using GPUDILU = typename gpuistl::GpuDILU<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUDILU>>(std::make_shared<GPUDILU>(op.getmat(), split_matrix, tune_gpu_kernels));
+        });
+
+        F::addCreator("GPUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
             using matrix_type_to = typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
-            using CuDILU = typename Opm::cuistl::CuDILU<matrix_type_to, Opm::cuistl::CuVector<float>, Opm::cuistl::CuVector<float>>;
-            using Adapter = typename Opm::cuistl::PreconditionerAdapter<VTo, VTo, CuDILU>;
-            using Converter = typename Opm::cuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
+            using GpuDILU = typename gpuistl::GpuDILU<matrix_type_to, gpuistl::GpuVector<float>, gpuistl::GpuVector<float>>;
+            using Adapter = typename gpuistl::PreconditionerAdapter<VTo, VTo, GpuDILU>;
+            using Converter = typename gpuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
             auto converted = std::make_shared<Converter>(op.getmat());
-            auto adapted = std::make_shared<Adapter>(std::make_shared<CuDILU>(converted->getConvertedMatrix()));
+            auto adapted = std::make_shared<Adapter>(std::make_shared<GpuDILU>(converted->getConvertedMatrix(), split_matrix, tune_gpu_kernels));
             converted->setUnderlyingPreconditioner(adapted);
             return converted;
         });
@@ -745,62 +778,77 @@ PreconditionerFactory<Operator, Comm>::addCreator(const std::string& type, ParCr
 
 using CommSeq = Dune::Amg::SequentialInformation;
 
-template <int Dim>
-using OpFSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<double, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>>;
-template <int Dim>
-using OpBSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<Opm::MatrixBlock<double, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>>;
+template<class Scalar, int Dim>
+using OpFSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
+template<class Scalar, int Dim>
+using OpBSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
 
-template <int Dim, bool overlap>
-using OpW = WellModelMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<double, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>,
+template<class Scalar, int Dim, bool overlap>
+using OpW = WellModelMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                    overlap>;
 
-template <int Dim, bool overlap>
-using OpWG = WellModelGhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<double, Dim, Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<double, Dim>>,
+template<class Scalar, int Dim, bool overlap>
+using OpWG = WellModelGhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                              overlap>;
 
 #if HAVE_MPI
 using CommPar = Dune::OwnerOverlapCopyCommunication<int, int>;
 
-template <int Dim>
-using OpFPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<Dune::FieldMatrix<double, Dim, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<double, Dim>>,
+template<class Scalar, int Dim>
+using OpFPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>,
+                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                                 CommPar>;
 
-template <int Dim>
-using OpBPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<MatrixBlock<double, Dim, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<double, Dim>>,
+template<class Scalar, int Dim>
+using OpBPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                                 CommPar>;
+template<class Scalar, int Dim>
+using OpGLFPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,Dim,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+                                             CommPar>;
 
-#define INSTANCE_PF_PAR(Dim)                                                                                           \
-    template class PreconditionerFactory<OpBSeq<Dim>, CommPar>;                                                        \
-    template class PreconditionerFactory<OpFPar<Dim>, CommPar>;                                                        \
-    template class PreconditionerFactory<OpBPar<Dim>, CommPar>;                                                        \
-    template class PreconditionerFactory<OpW<Dim, false>, CommPar>;                                                    \
-    template class PreconditionerFactory<OpWG<Dim, true>, CommPar>;                                                    \
-    template class PreconditionerFactory<OpBPar<Dim>, CommSeq>;
+template<class Scalar, int Dim>
+using OpGLBPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+                                             CommPar>;
+
+#define INSTANTIATE_PF_PAR(T,Dim)                                     \
+    template class PreconditionerFactory<OpBSeq<T,Dim>, CommPar>;     \
+    template class PreconditionerFactory<OpFPar<T,Dim>, CommPar>;     \
+    template class PreconditionerFactory<OpBPar<T,Dim>, CommPar>;     \
+    template class PreconditionerFactory<OpGLFPar<T,Dim>, CommPar>;   \
+    template class PreconditionerFactory<OpGLBPar<T,Dim>, CommPar>;   \
+    template class PreconditionerFactory<OpW<T,Dim, false>, CommPar>; \
+    template class PreconditionerFactory<OpWG<T,Dim, true>, CommPar>; \
+    template class PreconditionerFactory<OpBPar<T,Dim>, CommSeq>;     \
+    template class PreconditionerFactory<OpGLBPar<T,Dim>, CommSeq>;
 #endif
 
-#define INSTANCE_PF_SEQ(Dim)                                                                                           \
-    template class PreconditionerFactory<OpFSeq<Dim>, CommSeq>;                                                        \
-    template class PreconditionerFactory<OpBSeq<Dim>, CommSeq>;                                                        \
-    template class PreconditionerFactory<OpW<Dim, false>, CommSeq>;                                                    \
-    template class PreconditionerFactory<OpWG<Dim, true>, CommSeq>;
+#define INSTANTIATE_PF_SEQ(T,Dim)                                     \
+    template class PreconditionerFactory<OpFSeq<T,Dim>, CommSeq>;     \
+    template class PreconditionerFactory<OpBSeq<T,Dim>, CommSeq>;     \
+    template class PreconditionerFactory<OpW<T,Dim, false>, CommSeq>; \
+    template class PreconditionerFactory<OpWG<T,Dim, true>, CommSeq>;
 
 #if HAVE_MPI
-#define INSTANCE_PF(Dim)                                                                                               \
-    INSTANCE_PF_PAR(Dim)                                                                                               \
-    INSTANCE_PF_SEQ(Dim)
+#define INSTANTIATE_PF(T,Dim) \
+    INSTANTIATE_PF_PAR(T,Dim) \
+    INSTANTIATE_PF_SEQ(T,Dim)
 #else
-#define INSTANCE_PF(Dim) INSTANCE_PF_SEQ(Dim)
+#define INSTANTIATE_PF(T,Dim) INSTANTIATE_PF_SEQ(T,Dim)
 #endif
+
 } // namespace Opm

@@ -158,19 +158,24 @@ namespace Dune
       ~AMGCPR();
 
       /** \copydoc Preconditioner::pre */
-      void pre(Domain& x, Range& b);
+      void pre(Domain& x, Range& b) override;
 
       /** \copydoc Preconditioner::apply */
-      void apply(Domain& v, const Range& d);
+      void apply(Domain& v, const Range& d) override;
 
       //! Category of the preconditioner (see SolverCategory::Category)
-      virtual SolverCategory::Category category() const
+      SolverCategory::Category category() const override
       {
         return category_;
       }
 
+      bool hasPerfectUpdate() const override
+      {
+          return false;
+      }
+
       /** \copydoc Preconditioner::post */
-      void post(Domain& x);
+      void post(Domain& x) override;
 
       /**
        * @brief Get the aggregate number of each unknown on the coarsest level.
@@ -243,7 +248,7 @@ namespace Dune
       /**
        * @brief Update the coarse solver and the hierarchies.
        */
-      virtual void update();
+      void update() override;
 
       /**
        * @brief Check whether the coarse solver used is a direct solver.

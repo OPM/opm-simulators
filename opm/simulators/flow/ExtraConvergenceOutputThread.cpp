@@ -24,6 +24,7 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <condition_variable>
 #include <cstddef>
@@ -32,6 +33,7 @@
 #include <functional>
 #include <iomanip>
 #include <iterator>
+#include <limits>
 #include <mutex>
 #include <numeric>
 #include <optional>
@@ -40,11 +42,51 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace {
+
+    auto fixedHeaders() noexcept
+    {
+        using namespace std::literals::string_literals;
+
+        return std::array {
+            "ReportStep"s,
+            "TimeStep"s,
+            "Time"s,
+            "Iteration"s,
+            "CnvPvFracConv"s,
+            "CnvPvFracRelax"s,
+            "CnvPvFracUnconv"s,
+            "CnvCellCntConv"s,
+            "CnvCellCntRelax"s,
+            "CnvCellCntUnconv"s,
+            "PenaltyNonConv"s,
+            "PenaltyDecay"s,
+            "PenaltyWellRes"s,
+        };
+    }
+
+    template <typename HeaderSequence>
+    auto maxHeaderSize(const HeaderSequence& headers)
+    {
+        using sz_t = std::remove_cv_t<std::remove_reference_t<
+            decltype(std::declval<HeaderSequence>().front().size())>>;
+
+        if (headers.empty()) {
+            return sz_t{0};
+        }
+
+        return std::accumulate(headers.begin(), headers.end(), sz_t{1},
+                               [](const auto m, const auto& header)
+                               {
+                                   return std::max(m, header.size() + 1);
+                               });
+    }
 
     std::string
     formatMetricColumn(const Opm::ConvergenceOutputThread::ComponentToPhaseName& getPhaseName,
@@ -65,66 +107,147 @@ namespace {
             [&getPhaseName](const std::string::size_type                              maxChar,
                             const Opm::ConvergenceReport::ReservoirConvergenceMetric& metric)
         {
-            return std::max(maxChar, formatMetricColumn(getPhaseName, metric).size());
+            return std::max(maxChar, formatMetricColumn(getPhaseName, metric).size() + 1);
         });
     }
 
-    std::string::size_type
+    std::pair<std::string::size_type, std::string::size_type>
     writeConvergenceHeader(std::ostream&                                             os,
                            const Opm::ConvergenceOutputThread::ComponentToPhaseName& getPhaseName,
                            const Opm::ConvergenceReportQueue::OutputRequest&         firstRequest)
     {
-        const auto minColSize = std::string::size_type{11};
+        const auto initial_headers = fixedHeaders();
+        const auto minColSize = maxHeaderSize(initial_headers);
 
-        os << std::right << std::setw(minColSize) << "ReportStep" << ' '
-           << std::right << std::setw(minColSize) << "TimeStep"   << ' '
-           << std::right << std::setw(minColSize) << "Time"       << ' '
-           << std::right << std::setw(minColSize) << "Iteration";
+        {
+            auto leadingSpace = false;
 
-        const auto& metrics = firstRequest.reports.front().reservoirConvergence();
-        const auto  maxChar = maxColHeaderSize(minColSize, getPhaseName, metrics);
+            for (const auto& columnHeader : initial_headers) {
+                if (leadingSpace) { os << ' '; }
+                os << std::right << std::setw(minColSize) << columnHeader;
+                leadingSpace = true;
+            }
+        }
+
+        const auto& metrics    = firstRequest.reports.front().reservoirConvergence();
+        const auto  headerSize = maxColHeaderSize(minColSize, getPhaseName, metrics);
 
         for (const auto& metric : metrics) {
-            os << std::right << std::setw(maxChar + 1)
+            os << std::right << std::setw(headerSize)
                << formatMetricColumn(getPhaseName, metric);
         }
 
         // Note: Newline character intentionally placed in separate output
         // request to not influence right-justification of column header.
-        os << std::right << std::setw(maxChar + 1) << "WellStatus" << '\n';
+        os << std::right << std::setw(headerSize) << "WellStatus" << '\n';
 
-        return maxChar;
+        return { minColSize, headerSize };
     }
 
+    void writeTimeColumns(std::ostream&                                           os,
+                          const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
+                          const std::string::size_type                            firstColSize,
+                          const int                                               iter,
+                          const Opm::ConvergenceReport&                           report,
+                          const Opm::ConvergenceReportQueue::OutputRequest&       request)
+    {
+        os << std::setw(firstColSize)          << request.reportStep  << ' '
+           << std::setw(firstColSize)          << request.currentStep << ' '
+           << std::setprecision(4)             << std::setw(firstColSize)
+           << convertTime(report.reportTime()) << ' '
+           << std::setw(firstColSize)          << iter;
+    }
+
+    void writeCnvPvSplit(std::ostream&                        os,
+                         const std::vector<double>::size_type expectedNumValues,
+                         const std::string::size_type         firstColSize,
+                         const Opm::ConvergenceReport&        report)
+    {
+        const auto& [splitPv, cellCnt] = report.cnvPvSplit();
+
+        if (splitPv.size() == expectedNumValues) {
+            for (const auto& pv : splitPv) {
+                os << ' ' << std::setprecision(4) << std::setw(firstColSize)
+                   << pv / report.eligiblePoreVolume();
+            }
+        }
+        else {
+            constexpr auto val = std::numeric_limits<double>::has_quiet_NaN
+                ? std::numeric_limits<double>::quiet_NaN()
+                : -1.0;
+
+            for (auto i = 0*expectedNumValues; i < expectedNumValues; ++i) {
+                os << ' ' << std::setprecision(4) << std::setw(firstColSize) << val;
+            }
+        }
+
+        if (cellCnt.size() == expectedNumValues) {
+            for (const auto& cnt : cellCnt) {
+                os << ' ' << std::setw(firstColSize) << cnt;
+            }
+        }
+        else {
+            for (auto i = 0*expectedNumValues; i < expectedNumValues; ++i) {
+                os << ' ' << std::setw(firstColSize) << -1;
+            }
+        }
+    }
+
+    void writePenaltyCount(std::ostream&                 os,
+                           const std::string::size_type  firstColSize,
+                           const Opm::ConvergenceReport& report)
+    {
+        const auto& penaltyCard = report.getPenaltyCard();
+
+        os << ' ' << std::setw(firstColSize) << penaltyCard.nonConverged;
+        os << ' ' << std::setw(firstColSize) << penaltyCard.distanceDecay;
+        os << ' ' << std::setw(firstColSize) << penaltyCard.largeWellResiduals;
+    }
+
+    void writeReservoirConvergence(std::ostream&                 os,
+                                   const std::string::size_type  colSize,
+                                   const Opm::ConvergenceReport& report)
+    {
+        for (const auto& metric : report.reservoirConvergence()) {
+            os << std::setprecision(4) << std::setw(colSize) << metric.value();
+        }
+    }
+
+    void writeWellConvergence(std::ostream&                 os,
+                              const std::string::size_type  colSize,
+                              const Opm::ConvergenceReport& report)
+    {
+        os << std::right << std::setw(colSize)
+           << (report.wellFailed() ? "FAIL" : "CONV");
+
+        if (report.wellFailed()) {
+            for (const auto& wf : report.wellFailures()) {
+                os << ' ' << to_string(wf);
+            }
+        }
+    }
 
     void writeConvergenceRequest(std::ostream&                                           os,
                                  const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
-                                 std::string::size_type                                  colSize,
+                                 const std::string::size_type                            firstColSize,
+                                 const std::string::size_type                            colSize,
                                  const Opm::ConvergenceReportQueue::OutputRequest&       request)
     {
-        const auto firstColSize = std::string::size_type{11};
-
         os.setf(std::ios_base::scientific);
+
+        const auto expectNumCnvSplit = std::vector<double>::size_type{3};
 
         auto iter = 0;
         for (const auto& report : request.reports) {
-            os << std::setw(firstColSize)          << request.reportStep  << ' '
-               << std::setw(firstColSize)          << request.currentStep << ' '
-               << std::setprecision(4)             << std::setw(firstColSize)
-               << convertTime(report.reportTime()) << ' '
-               << std::setw(firstColSize)          << iter;
+            writeTimeColumns(os, convertTime, firstColSize, iter, report, request);
 
-            for (const auto& metric : report.reservoirConvergence()) {
-                os << std::setprecision(4) << std::setw(colSize + 1) << metric.value();
-            }
+            writeCnvPvSplit(os, expectNumCnvSplit, firstColSize, report);
 
-            os << std::right << std::setw(colSize + 1)
-               << (report.wellFailed() ? "FAIL" : "CONV");
-            if (report.wellFailed()) {
-                for (const auto& wf : report.wellFailures()) {
-                    os << " " << to_string(wf);
-                }
-            }
+            writePenaltyCount(os, firstColSize, report);
+
+            writeReservoirConvergence(os, colSize, report);
+            writeWellConvergence(os, colSize, report);
+
             os << '\n';
 
             ++iter;
@@ -160,6 +283,7 @@ private:
     ComponentToPhaseName getPhaseName_{};
     ConvertToTimeUnits convertTime_{};
     std::optional<std::ofstream> infoIter_{};
+    std::string::size_type firstColSize_{0};
     std::string::size_type colSize_{0};
     bool haveOutputIterHeader_{false};
     bool finalRequestWritten_{false};
@@ -203,7 +327,7 @@ writeIterInfo(const std::vector<ConvergenceReportQueue::OutputRequest>& requests
     }
 
     if (! this->haveOutputIterHeader_) {
-        this->colSize_ =
+        std::tie(this->firstColSize_, this->colSize_) =
             writeConvergenceHeader(this->infoIter_.value(),
                                    this->getPhaseName_,
                                    requests.front());
@@ -213,6 +337,7 @@ writeIterInfo(const std::vector<ConvergenceReportQueue::OutputRequest>& requests
     for (const auto& request : requests) {
         writeConvergenceRequest(this->infoIter_.value(),
                                 this->convertTime_,
+                                this->firstColSize_,
                                 this->colSize_,
                                 request);
 

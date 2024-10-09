@@ -25,7 +25,9 @@
 
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
+#include <array>
 #include <functional>
+#include <tuple>
 #include <variant>
 #include <vector>
 
@@ -36,6 +38,7 @@ class DeferredLogger;
 enum class Phase;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
 template<class Scalar> class WellState;
+template<class Scalar> class PerfData;
 
 template<class FluidSystem, class Indices>
 class StandardWellConnections
@@ -46,30 +49,39 @@ public:
 
     struct Properties
     {
-        std::vector<Scalar> b_perf;
-        std::vector<Scalar> rsmax_perf;
-        std::vector<Scalar> rvmax_perf;
-        std::vector<Scalar> rvwmax_perf;
-        std::vector<Scalar> rswmax_perf;
-        std::vector<Scalar> surf_dens_perf;
+        std::vector<Scalar> b_perf{};
+        std::vector<Scalar> rsmax_perf{};
+        std::vector<Scalar> rvmax_perf{};
+        std::vector<Scalar> rvwmax_perf{};
+        std::vector<Scalar> rswmax_perf{};
+        std::vector<Scalar> surf_dens_perf{};
     };
 
-    void computePropertiesForPressures(const WellState<Scalar>& well_state,
-                                       const std::function<Scalar(int,int)>& getTemperature,
-                                       const std::function<Scalar(int)>& getSaltConcentration,
-                                       const std::function<int(int)>& pvtRegionIdx,
-                                       const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                                       const std::function<Scalar(int)>& solventRefDensity,
-                                       Properties& props) const;
+    struct PressurePropertyFunctions
+    {
+        std::function<Scalar(int,int)> getTemperature{};
+        std::function<Scalar(int)>     getSaltConcentration{};
+        std::function<int(int)>        pvtRegionIdx{};
+        std::function<Scalar(int)>     solventInverseFormationVolumeFactor{};
+        std::function<Scalar(int)>     solventRefDensity{};
+    };
+
+    struct DensityPropertyFunctions
+    {
+        std::function<void(int, const std::vector<int>&, std::vector<Scalar>&)> mobility{};
+        std::function<void(int, const std::vector<int>&, std::vector<Scalar>&)> densityInCell{};
+    };
+
+    Properties
+    computePropertiesForPressures(const WellState<Scalar>&         well_state,
+                                  const PressurePropertyFunctions& propFunc) const;
 
     //! \brief Compute connection properties (densities, pressure drop, ...)
-    void computeProperties(const WellState<Scalar>& well_state,
-                           const std::function<Scalar(int,int)>& invB,
-                           const std::function<Scalar(int,int)>& mobility,
-                           const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                           const std::function<Scalar(int)>& solventMobility,
-                           const Properties& props,
-                           DeferredLogger& deferred_logger);
+    void computeProperties(const bool                      stop_or_zero_rate_target,
+                           const WellState<Scalar>&        well_state,
+                           const DensityPropertyFunctions& prop_func,
+                           const Properties&               props,
+                           DeferredLogger&                 deferred_logger);
 
     //! \brief Returns density for first perforation.
     Scalar rho() const
@@ -96,8 +108,8 @@ public:
     using Eval = typename WellInterfaceIndices<FluidSystem,Indices>::Eval;
     using EvalWell = typename StandardWellPrimaryVariables<FluidSystem,Indices>::EvalWell;
 
-    Eval connectionRateBrine(double& rate,
-                             const double vap_wat_rate,
+    Eval connectionRateBrine(Scalar& rate,
+                             const Scalar vap_wat_rate,
                              const std::vector<EvalWell>& cq_s,
                              const std::variant<Scalar,EvalWell>& saltConcentration) const;
 
@@ -107,7 +119,7 @@ public:
                             DeferredLogger& deferred_logger) const;
 
     std::tuple<Eval,EvalWell>
-    connectionRatePolymer(double& rate,
+    connectionRatePolymer(Scalar& rate,
                           const std::vector<EvalWell>& cq_s,
                           const std::variant<Scalar,EvalWell>& polymerConcentration) const;
 
@@ -118,8 +130,8 @@ public:
                         const std::variant<Scalar,EvalWell>& ureaConcentration) const;
 
     std::tuple<Eval,EvalWell>
-    connectionRatezFraction(double& rate,
-                            const double dis_gas_rate,
+    connectionRatezFraction(Scalar& rate,
+                            const Scalar dis_gas_rate,
                             const std::vector<EvalWell>& cq_s,
                             const std::variant<Scalar, std::array<EvalWell,2>>& solventConcentration) const;
 
@@ -131,6 +143,21 @@ private:
     void computeDensities(const std::vector<Scalar>& perfComponentRates,
                           const Properties& props,
                           DeferredLogger& deferred_logger);
+
+    void computeDensitiesForStoppedProducer(const DensityPropertyFunctions& prop_func);
+
+    std::vector<Scalar>
+    calculatePerforationOutflow(const std::vector<Scalar>& perfComponentRates) const;
+
+    void initialiseConnectionMixture(const int                  num_comp,
+                                     const int                  perf,
+                                     const std::vector<Scalar>& q_out_perf,
+                                     const std::vector<Scalar>& currentMixture,
+                                     std::vector<Scalar>&       previousMixture) const;
+
+    std::vector<Scalar>
+    copyInPerforationRates(const Properties&       props,
+                           const PerfData<Scalar>& perf_data) const;
 
     const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well interface
 

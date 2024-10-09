@@ -53,18 +53,18 @@
 namespace Opm {
     class DeferredLogger;
     class EclipseState;
-    class GasLiftGroupInfo;
-    class GasLiftSingleWellGeneric;
-    class GasLiftWellState;
+    template<class Scalar> class GasLiftGroupInfo;
+    template<class Scalar> class GasLiftSingleWellGeneric;
+    template<class Scalar> class GasLiftWellState;
     class Group;
     class GuideRateConfig;
-    class ParallelWellInfo;
+    template<class Scalar> class ParallelWellInfo;
     class RestartValue;
     class Schedule;
     struct SimulatorUpdate;
     class SummaryConfig;
-    class VFPProperties;
-    class WellInterfaceGeneric;
+    template<class Scalar> class VFPProperties;
+    template<class Scalar> class WellInterfaceGeneric;
     template<class Scalar> class WellState;
 } // namespace Opm
 
@@ -83,9 +83,9 @@ class BlackoilWellModelGeneric
 {
 public:
     // ---------      Types      ---------
-    using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric>>;
-    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric*>;
-    using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState>>;
+    using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric<Scalar>>>;
+    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric<Scalar>*>;
+    using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState<Scalar>>>;
 
     BlackoilWellModelGeneric(Schedule& schedule,
                              const SummaryState& summaryState,
@@ -115,7 +115,7 @@ public:
     const Schedule& schedule() const { return schedule_; }
     const PhaseUsage& phaseUsage() const { return phase_usage_; }
     const GroupState<Scalar>& groupState() const { return this->active_wgstate_.group_state; }
-    std::vector<const WellInterfaceGeneric*> genericWells() const
+    std::vector<const WellInterfaceGeneric<Scalar>*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
 
     /*
@@ -156,7 +156,7 @@ public:
                         const SummaryState& st);
 
     void initFromRestartFile(const RestartValue& restartValues,
-                             WellTestState wtestState,
+                             std::unique_ptr<WellTestState> wtestState,
                              const std::size_t numCells,
                              bool handle_ms_well);
 
@@ -193,7 +193,7 @@ public:
     bool forceShutWellByName(const std::string& wellname,
                              const double simulation_time);
 
-    const std::vector<PerforationData>& perfData(const int well_idx) const
+    const std::vector<PerforationData<Scalar>>& perfData(const int well_idx) const
     { return well_perf_data_[well_idx]; }
 
     const Parallel::Communication& comm() const { return comm_; }
@@ -323,7 +323,7 @@ protected:
 
     /// \brief Create the parallel well information
     /// \param localWells The local wells from ECL schedule
-    std::vector<std::reference_wrapper<ParallelWellInfo>>
+    std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>
     createLocalParallelWellInfo(const std::vector<Well>& wells);
 
     void initializeWellProdIndCalculators();
@@ -339,16 +339,19 @@ protected:
     void setWsolvent(const Group& group,
                      const int reportStepIdx,
                      Scalar wsolvent);
-    virtual void calcRates(const int fipnum,
-                           const int pvtreg,
-                           const std::vector<Scalar>& production_rates,
-                           std::vector<Scalar>& resv_coeff) = 0;
-    virtual void calcInjRates(const int fipnum,
-                              const int pvtreg,
-                              std::vector<Scalar>& resv_coeff) = 0;
+    virtual void calcResvCoeff(const int fipnum,
+                               const int pvtreg,
+                               const std::vector<Scalar>& production_rates,
+                               std::vector<Scalar>& resv_coeff) = 0;
+    virtual void calcInjResvCoeff(const int fipnum,
+                                  const int pvtreg,
+                                  std::vector<Scalar>& resv_coeff) = 0;
 
     void assignShutConnections(data::Wells& wsrpt,
                                const int reportStepIndex) const;
+    void assignWellTargets(data::Wells& wsrpt) const;
+    void assignProductionWellTargets(const Well& well, data::WellControlLimits& limits) const;
+    void assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) const;
     void assignGroupControl(const Group& group,
                             data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
@@ -387,7 +390,7 @@ protected:
     void gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                                    GLiftProdWells& prod_wells,
                                    GLiftOptWells& glift_wells,
-                                   GasLiftGroupInfo& group_info,
+                                   GasLiftGroupInfo<Scalar>& group_info,
                                    GLiftWellStateMap& map,
                                    const int episodeIndex);
 
@@ -408,8 +411,11 @@ protected:
     void updateInjMult(DeferredLogger& deferred_logger);
     void updateInjFCMult(DeferredLogger& deferred_logger);
 
-    void updateFiltrationParticleVolume(const double dt,
-                                        const std::size_t water_index);
+    void updateFiltrationModelsPostStep(const double dt,
+                                        const std::size_t water_index,
+                                        DeferredLogger& deferred_logger);
+
+    void updateFiltrationModelsPreStep(DeferredLogger& deferred_logger);
 
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;
@@ -434,6 +440,11 @@ protected:
     using WellTracerRates = std::map<std::pair<std::string, std::string>, Scalar>;
     void assignWellTracerRates(data::Wells& wsrpt,
                                const WellTracerRates& wellTracerRates) const;
+    using MswTracerRates = std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>;
+    void assignMswTracerRates(data::Wells& wsrpt,
+                              const MswTracerRates& mswTracerRates) const;
+    void assignMassGasRate(data::Wells& wsrpt,
+                           const Scalar& gasDensity) const;
 
     Schedule& schedule_;
     const SummaryState& summaryState_;
@@ -450,7 +461,7 @@ protected:
     std::optional<int> last_run_wellpi_{};
 
     std::vector<Well> wells_ecl_;
-    std::vector<std::vector<PerforationData>> well_perf_data_;
+    std::vector<std::vector<PerforationData<Scalar>>> well_perf_data_;
 
     /// Connection index mappings
     class ConnectionIndexMap
@@ -542,22 +553,22 @@ protected:
     std::function<bool(const Well&)> not_on_process_{};
 
     // a vector of all the wells.
-    std::vector<WellInterfaceGeneric*> well_container_generic_{};
+    std::vector<WellInterfaceGeneric<Scalar>*> well_container_generic_{};
 
     std::vector<int> local_shut_wells_{};
 
-    std::vector<ParallelWellInfo> parallel_well_info_;
-    std::vector<std::reference_wrapper<ParallelWellInfo>> local_parallel_well_info_;
+    std::vector<ParallelWellInfo<Scalar>> parallel_well_info_;
+    std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>> local_parallel_well_info_;
 
-    std::vector<WellProdIndexCalculator> prod_index_calc_;
-    mutable ParallelWBPCalculation wbpCalculationService_;
+    std::vector<WellProdIndexCalculator<Scalar>> prod_index_calc_;
+    mutable ParallelWBPCalculation<Scalar> wbpCalculationService_;
 
     std::vector<int> pvt_region_idx_;
 
     mutable std::unordered_set<std::string> closed_this_step_;
 
     GuideRate guideRate_;
-    std::unique_ptr<VFPProperties> vfp_properties_{};
+    std::unique_ptr<VFPProperties<Scalar>> vfp_properties_{};
     std::map<std::string, Scalar> node_pressures_; // Storing network pressures for output.
 
     // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
@@ -589,7 +600,7 @@ protected:
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
 
 private:
-    WellInterfaceGeneric* getGenWell(const std::string& well_name);
+    WellInterfaceGeneric<Scalar>* getGenWell(const std::string& well_name);
 };
 
 

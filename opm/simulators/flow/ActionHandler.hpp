@@ -46,6 +46,7 @@ class SummaryState;
 class UDQState;
 
 //! \brief Class handling Action support in simulator
+template<class Scalar>
 class ActionHandler
 {
 public:
@@ -56,7 +57,7 @@ public:
                   Schedule& schedule,
                   Action::State& actionState,
                   SummaryState& summaryState,
-                  BlackoilWellModelGeneric<double>& wellModel,
+                  BlackoilWellModelGeneric<Scalar>& wellModel,
                   Parallel::Communication comm);
 
     void applyActions(int reportStep,
@@ -79,7 +80,7 @@ public:
                               bool& commit_wellstate,
                               const TransFunc& updateTrans);
 
-    std::unordered_map<std::string, double>
+    std::unordered_map<std::string, Scalar>
     fetchWellPI(int reportStep,
                 const Action::ActionX& action,
                 const std::vector<std::string>& matching_wells) const;
@@ -88,7 +89,7 @@ public:
     Schedule& schedule_;
     Action::State& actionState_;
     SummaryState& summaryState_;
-    BlackoilWellModelGeneric<double>& wellModel_;
+    BlackoilWellModelGeneric<Scalar>& wellModel_;
     Parallel::Communication comm_;
 };
 

@@ -35,3 +35,10 @@ build/
 
 # emacs directory setting:
 .dir-locals.el
+
+# Python sphinx build
+python/sphinx_docs/docs/_build/
+
+# Python cache directories
+**/__pycache__/
+

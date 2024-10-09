@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_SUITE(ConnectionLevel)
 
 BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), noSkinFactor_SameCF())
     };
 
@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
 
 BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), noSkinFactor_DifferentCF())
     };
 
@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), skin2_SameCF())
     };
 
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
 
 BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), skin421_DifferentCF())
     };
 
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), noSkinFactor_SameCF())
     };
 
@@ -221,7 +221,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), noSkinFactor_DifferentCF())
     };
 
@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), skin2_SameCF())
     };
 
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_skin421_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), skin421_DifferentCF())
     };
 
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_SUITE(AllConnections)
 
 BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), noSkinFactor_SameCF())
     };
 
@@ -290,7 +290,7 @@ BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
 
 BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), noSkinFactor_DifferentCF())
     };
 
@@ -311,7 +311,7 @@ BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), skin2_SameCF())
     };
 
@@ -332,7 +332,7 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
 
 BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), skin421_DifferentCF())
     };
 
@@ -353,7 +353,7 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), noSkinFactor_SameCF())
     };
 
@@ -374,7 +374,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), noSkinFactor_DifferentCF())
     };
 
@@ -395,7 +395,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), skin2_SameCF())
     };
 
@@ -416,7 +416,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_skin421_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), skin421_DifferentCF())
     };
 
@@ -445,7 +445,7 @@ BOOST_AUTO_TEST_SUITE(WellLevel)
 
 BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), noSkinFactor_SameCF())
     };
 
@@ -461,7 +461,7 @@ BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
 
 BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), noSkinFactor_DifferentCF())
     };
 
@@ -477,7 +477,7 @@ BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), skin2_SameCF())
     };
 
@@ -493,7 +493,7 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
 
 BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(drainRadDefaulted(), skin421_DifferentCF())
     };
 
@@ -509,7 +509,7 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), noSkinFactor_SameCF())
     };
 
@@ -525,7 +525,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), noSkinFactor_DifferentCF())
     };
 
@@ -541,7 +541,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), skin2_SameCF())
     };
 
@@ -557,7 +557,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
 
 BOOST_AUTO_TEST_CASE(logarithmic_skin421_DifferentCF)
 {
-    const auto wpiCalc = Opm::WellProdIndexCalculator {
+    const auto wpiCalc = Opm::WellProdIndexCalculator<double> {
         createWell(explicitDrainRad(), skin421_DifferentCF())
     };
 
@@ -582,7 +582,7 @@ BOOST_AUTO_TEST_SUITE(Re_Init_Connection_Level)
 BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
 {
     auto well = createWell(drainRadDefaulted(), noSkinFactor_SameCF());
-    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+    auto wpiCalc = Opm::WellProdIndexCalculator<double> { well };
 
     well.updateWellProductivityIndex( );
     const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
@@ -605,7 +605,7 @@ BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
 BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
 {
     auto well = createWell(drainRadDefaulted(), noSkinFactor_DifferentCF());
-    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+    auto wpiCalc = Opm::WellProdIndexCalculator<double> { well };
 
     well.updateWellProductivityIndex( );
     const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
@@ -628,7 +628,7 @@ BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
 BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
 {
     auto well = createWell(drainRadDefaulted(), skin2_SameCF());
-    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+    auto wpiCalc = Opm::WellProdIndexCalculator<double> { well };
 
     well.updateWellProductivityIndex( );
     const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
@@ -651,7 +651,7 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
 BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
 {
     auto well = createWell(drainRadDefaulted(), skin421_DifferentCF());
-    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+    auto wpiCalc = Opm::WellProdIndexCalculator<double> { well };
 
     well.updateWellProductivityIndex( );
     const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
@@ -674,7 +674,7 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
 BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
 {
     auto well = createWell(explicitDrainRad(), noSkinFactor_SameCF());
-    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+    auto wpiCalc = Opm::WellProdIndexCalculator<double> { well };
 
     well.updateWellProductivityIndex( );
     const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
@@ -697,7 +697,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
 BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
 {
     auto well = createWell(explicitDrainRad(), noSkinFactor_DifferentCF());
-    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+    auto wpiCalc = Opm::WellProdIndexCalculator<double> { well };
 
     well.updateWellProductivityIndex( );
     const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
@@ -720,7 +720,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
 BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
 {
     auto well = createWell(explicitDrainRad(), skin2_SameCF());
-    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+    auto wpiCalc = Opm::WellProdIndexCalculator<double> { well };
 
     well.updateWellProductivityIndex( );
     const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
@@ -743,7 +743,7 @@ BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
 BOOST_AUTO_TEST_CASE(logarithmic_skin421_DifferentCF)
 {
     auto well = createWell(explicitDrainRad(), skin421_DifferentCF());
-    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+    auto wpiCalc = Opm::WellProdIndexCalculator<double> { well };
 
     well.updateWellProductivityIndex( );
     const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());

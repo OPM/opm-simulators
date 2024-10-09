@@ -84,7 +84,7 @@ namespace Opm
             dtEstimate *= decayrate_;
         }
         // increase the time step size if we are below the number of target iterations
-        else if ( iterations < target_iterations_-1 )
+        else if ( iterations < target_iterations_ )
         {
             dtEstimate *= growthrate_;
         }
@@ -184,7 +184,15 @@ namespace Opm
             assert(std::isfinite(errors_[i]));
         }
 
-        if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
+        if( errors_[2] > tol_ )
+        {
+            // adjust dt by given tolerance
+            const double newDt = dt * tol_ / error;
+            if ( verbose_ )
+                    OpmLog::info(fmt::format("Computed step size (tol): {} days", unit::convert::to( newDt, unit::day )));
+            return newDt;
+        }
+        else if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
         {
             if ( verbose_ )
                 OpmLog::info("The solution between time steps does not change, there is no time step constraint from the PID time step control ");

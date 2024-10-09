@@ -42,7 +42,7 @@ namespace Opm
 
 template<class Scalar, int numEq>
 StandardWellEquations<Scalar,numEq>::
-StandardWellEquations(const ParallelWellInfo& parallel_well_info)
+StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
     : parallelB_(duneB_, parallel_well_info)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
@@ -198,10 +198,10 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
 extract(const int numStaticWellEq,
-        WellContributions& wellContribs) const
+        WellContributions<Scalar>& wellContribs) const
 {
     std::vector<int> colIndices;
-    std::vector<double> nnzValues;
+    std::vector<Scalar> nnzValues;
     colIndices.reserve(duneB_.nonzeroes());
     nnzValues.reserve(duneB_.nonzeroes() * numStaticWellEq * numEq);
 
@@ -216,7 +216,7 @@ extract(const int numStaticWellEq,
             }
         }
     }
-    wellContribs.addMatrix(WellContributions::MatrixType::C,
+    wellContribs.addMatrix(WellContributions<Scalar>::MatrixType::C,
                            colIndices.data(), nnzValues.data(), duneC_.nonzeroes());
 
     // invDuneD
@@ -229,7 +229,7 @@ extract(const int numStaticWellEq,
             nnzValues.emplace_back(invDuneD_[0][0][i][j]);
         }
     }
-    wellContribs.addMatrix(WellContributions::MatrixType::D,
+    wellContribs.addMatrix(WellContributions<Scalar>::MatrixType::D,
                            colIndices.data(), nnzValues.data(), 1);
 
     // duneB
@@ -245,7 +245,7 @@ extract(const int numStaticWellEq,
             }
         }
     }
-    wellContribs.addMatrix(WellContributions::MatrixType::B,
+    wellContribs.addMatrix(WellContributions<Scalar>::MatrixType::B,
                            colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
 }
 #endif
@@ -291,7 +291,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
                          const bool use_well_weights,
-                         const WellInterfaceGeneric& well,
+                         const WellInterfaceGeneric<Scalar>& well,
                          const int bhp_var_index,
                          const WellState<Scalar>& well_state) const
 {
@@ -320,7 +320,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                   endC = duneC_[0].end(); colC != endC; ++colC) {
             const auto row_ind = colC.index();
             const auto& bw = weights[row_ind];
-            double matel = 0;
+            Scalar matel = 0;
             assert((*colC).M() == bw.size());
             for (std::size_t i = 0; i < bw.size(); ++i) {
                 matel += (*colC)[bhp_var_index][i] * bw[i];
@@ -337,12 +337,12 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     std::size_t blockSz = duneD_[0][0].N();
     bweights[0].resize(blockSz);
     bweights[0] = 0.0;
-    double diagElem = 0;
+    Scalar diagElem = 0;
     if (use_well_weights ) {
         // calculate weighs and set diagonal element
         //NB! use this options without treating pressure controlled separated
         //NB! calculate quasiimpes well weights NB do not work well with trueimpes reservoir weights
-        double abs_max = 0;
+        Scalar abs_max = 0;
         BVectorWell rhs(1);
         rhs[0].resize(blockSz);
         rhs[0][bhp_var_index] = 1.0;
@@ -387,7 +387,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                   endB = duneB_[0].end(); colB != endB; ++colB) {
             const auto col_index = colB.index();
             const auto& bw = bweights[0];
-            double matel = 0;
+            Scalar matel = 0;
             for (std::size_t i = 0; i < bw.size(); ++i) {
                  matel += (*colB)[i][pressureVarIndex] * bw[i];
             }
@@ -404,24 +404,31 @@ sumDistributed(Parallel::Communication comm)
     wellhelpers::sumDistributedWellEntries(duneD_[0][0], resWell_[0], comm);
 }
 
-#define INSTANCE(N) \
-template class StandardWellEquations<double,N>; \
-template void StandardWellEquations<double,N>:: \
-    extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,N,N>>&) const; \
-template void StandardWellEquations<double,N>:: \
-    extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<double,1,1>>&, \
-                             const typename StandardWellEquations<double,N>::BVector&, \
-                             const int, \
-                             const bool, \
-                             const WellInterfaceGeneric&, \
-                             const int, \
-                             const WellState<double>&) const;
+#define INSTANTIATE(T,N)                                                              \
+    template class StandardWellEquations<T,N>;                                        \
+    template void StandardWellEquations<T,N>::                                        \
+        extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<T,N,N>>&) const;          \
+    template void StandardWellEquations<T,N>::                                        \
+        extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,               \
+                                 const typename StandardWellEquations<T,N>::BVector&, \
+                                 const int,                                           \
+                                 const bool,                                          \
+                                 const WellInterfaceGeneric<T>&,                      \
+                                 const int,                                           \
+                                 const WellState<T>&) const;
 
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE(T,1)        \
+    INSTANTIATE(T,2)        \
+    INSTANTIATE(T,3)        \
+    INSTANTIATE(T,4)        \
+    INSTANTIATE(T,5)        \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 }

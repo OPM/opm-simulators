@@ -36,7 +36,7 @@
 #endif
 
 #if HAVE_CUDA
-#include <opm/simulators/linalg/cuistl/set_device.hpp>
+#include <opm/simulators/linalg/gpuistl/set_device.hpp>
 #endif
 
 namespace Opm {
@@ -49,7 +49,9 @@ Main::Main(int argc, char** argv, bool ownMPI)
     }
 }
 
-Main::Main(const std::string& filename)
+Main::Main(const std::string& filename, bool mpi_init, bool mpi_finalize)
+    : mpi_init_{mpi_init}
+    , mpi_finalize_{mpi_finalize}
 {
     setArgvArgc_(filename);
     initMPI();
@@ -58,10 +60,14 @@ Main::Main(const std::string& filename)
 Main::Main(const std::string& filename,
            std::shared_ptr<EclipseState> eclipseState,
            std::shared_ptr<Schedule> schedule,
-           std::shared_ptr<SummaryConfig> summaryConfig)
+           std::shared_ptr<SummaryConfig> summaryConfig,
+           bool mpi_init,
+           bool mpi_finalize)
     : eclipseState_{std::move(eclipseState)}
     , schedule_{std::move(schedule)}
     , summaryConfig_{std::move(summaryConfig)}
+    , mpi_init_{mpi_init}
+    , mpi_finalize_{mpi_finalize}
 {
     setArgvArgc_(filename);
     initMPI();
@@ -107,7 +113,7 @@ Main::~Main()
 #endif // HAVE_DAMARIS
 
 #if HAVE_MPI && !HAVE_DUNE_FEM
-    if (ownMPI_) {
+    if (ownMPI_ && this->mpi_finalize_) {
         MPI_Finalize();
     }
 #endif
@@ -132,9 +138,15 @@ void Main::setArgvArgc_(const std::string& filename)
 void Main::initMPI()
 {
 #if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc_, argv_);
+    // The instance() method already checks if MPI has been initialized so we may
+    // not need to check mpi_init_ here.
+    if (this->mpi_init_) {
+        Dune::MPIHelper::instance(argc_, argv_);
+    }
 #elif HAVE_MPI
-    MPI_Init(&argc_, &argv_);
+    if (this->mpi_init_) {
+        MPI_Init(&argc_, &argv_);
+    }
 #endif
     FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
 
@@ -151,7 +163,7 @@ void Main::initMPI()
     }
 
 #if HAVE_CUDA
-    Opm::cuistl::setDevice(FlowGenericVanguard::comm().rank(), FlowGenericVanguard::comm().size());
+    Opm::gpuistl::setDevice(FlowGenericVanguard::comm().rank(), FlowGenericVanguard::comm().size());
 #endif
 
 #endif // HAVE_MPI
@@ -188,6 +200,9 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool init_from_restart_file,
                     const bool allRanksDbgPrtLog,
                     const std::string& parsingStrictness,
+                    const std::string& actionParsingStrictness,
+                    const std::string& inputSkipMode,
+                    const bool keepKeywords,
                     const std::size_t numThreads,
                     const int output_param,
                     const std::string& parameters,
@@ -220,8 +235,11 @@ void Main::readDeck(const std::string& deckFilename,
                   summaryConfig_,
                   std::make_shared<Python>(),
                   parsingStrictness,
+                  actionParsingStrictness,
+                  inputSkipMode,
                   init_from_restart_file,
                   outputCout_,
+                  keepKeywords,
                   outputInterval);
 
     verifyValidCellGeometry(FlowGenericVanguard::comm(), *this->eclipseState_);

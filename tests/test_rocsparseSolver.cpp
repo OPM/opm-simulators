@@ -127,7 +127,7 @@ testRocsparseSolver(std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >
 {
     Dune::InverseOperatorResult result;
     Vector<bz> x(rhs.size());
-    auto wellContribs = Opm::WellContributions::create("rocsparse", true);
+    auto wellContribs = Opm::WellContributions<double>::create("rocsparse", true);
     auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
                         // matrix created by readMatrixMarket() did not have contiguous memory
     bridge->solve_system(&mat2, &mat2, /*numJacobiBlocks=*/0, rhs, *wellContribs, result);
@@ -142,7 +142,7 @@ testRocsparseSolverJacobi(std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>,
 {
     Dune::InverseOperatorResult result;
     Vector<bz> x(rhs.size());
-    auto wellContribs = Opm::WellContributions::create("rocsparse", true);
+    auto wellContribs = Opm::WellContributions<double>::create("rocsparse", true);
     auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
                         // matrix created by readMatrixMarket() did not have contiguous memory
     auto mat3 = matrix; // another deep copy, to make sure Jacobi matrix memory is different

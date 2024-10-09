@@ -21,63 +21,34 @@
 #ifndef OPM_NON_LINEAR_SOLVER_HPP
 #define OPM_NON_LINEAR_SOLVER_HPP
 
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <dune/common/fmatrix.hh>
+#include <dune/istl/bcrsmatrix.hh>
+
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
+
+#include <opm/models/nonlinear/newtonmethodparams.hpp>
+#include <opm/models/nonlinear/newtonmethodproperties.hh>
+
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/basicproperties.hh>
+
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/basicproperties.hh>
-#include <opm/models/nonlinear/newtonmethodproperties.hh>
-#include <opm/common/Exceptions.hpp>
-
-#include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <memory>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
-namespace TTag {
-struct FlowNonLinearSolver {};
-}
+template<class Scalar>
+struct NewtonMaxRelax { static constexpr Scalar value = 0.5; };
 
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxRelax {
-    using type = UndefinedProperty;
-};
+struct NewtonMinIterations { static constexpr int value = 2; };
+struct NewtonRelaxationType { static constexpr auto value = "dampen"; };
 
-// we are reusing NewtonMaxIterations from opm-models
-// See opm/models/nonlinear/newtonmethodproperties.hh
-
-template<class TypeTag, class MyTypeTag>
-struct NewtonMinIterations{
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct NewtonRelaxationType{
-    using type = UndefinedProperty;
-};
-
-template<class TypeTag>
-struct NewtonMaxRelax<TypeTag, TTag::FlowNonLinearSolver> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.5;
-};
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
-    static constexpr int value = 20;
-};
-template<class TypeTag>
-struct NewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
-    static constexpr int value = 2;
-};
-template<class TypeTag>
-struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
-    static constexpr auto value = "dampen";
-};
-
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -90,15 +61,20 @@ enum class NonlinearRelaxType {
 namespace detail {
 
 /// Detect oscillation or stagnation in a given residual history.
-void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
-                        const int it, const int numPhases, const double relaxRelTol,
+template<class Scalar>
+void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
+                        const int it, const int numPhases, const Scalar relaxRelTol,
+                        const int minimumOscillatingPhases,
                         bool& oscillate, bool& stagnate);
 
 /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
 /// Implemention for Dune block vectors.
-template <class BVector>
+template <class BVector, class Scalar>
 void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
-                              const double omega, NonlinearRelaxType relaxType);
+                              const Scalar omega, NonlinearRelaxType relaxType);
+
+template<class Scalar>
+void registerNonlinearParameters();
 
 }
 
@@ -115,9 +91,9 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         struct SolverParameters
         {
             NonlinearRelaxType relaxType_;
-            double relaxMax_;
-            double relaxIncrement_;
-            double relaxRelTol_;
+            Scalar relaxMax_;
+            Scalar relaxIncrement_;
+            Scalar relaxRelTol_;
             int maxIter_; // max nonlinear iterations
             int minIter_; // min nonlinear iterations
 
@@ -127,11 +103,11 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
                 reset();
 
                 // overload with given parameters
-                relaxMax_ = Parameters::get<TypeTag, Properties::NewtonMaxRelax>();
-                maxIter_ = Parameters::get<TypeTag, Properties::NewtonMaxIterations>();
-                minIter_ = Parameters::get<TypeTag, Properties::NewtonMinIterations>();
+                relaxMax_ = Parameters::Get<Parameters::NewtonMaxRelax<Scalar>>();
+                maxIter_ = Parameters::Get<Parameters::NewtonMaxIterations>();
+                minIter_ = Parameters::Get<Parameters::NewtonMinIterations>();
 
-                const auto& relaxationTypeString = Parameters::get<TypeTag, Properties::NewtonRelaxationType>();
+                const auto& relaxationTypeString = Parameters::Get<Parameters::NewtonRelaxationType>();
                 if (relaxationTypeString == "dampen") {
                     relaxType_ = NonlinearRelaxType::Dampen;
                 } else if (relaxationTypeString == "sor") {
@@ -144,16 +120,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
             static void registerParameters()
             {
-                TimeStepper::registerParameters();
-                
-                Parameters::registerParam<TypeTag, Properties::NewtonMaxRelax>
-                    ("The maximum relaxation factor of a Newton iteration");
-                Parameters::registerParam<TypeTag, Properties::NewtonMaxIterations>
-                    ("The maximum number of Newton iterations per time step");
-                Parameters::registerParam<TypeTag, Properties::NewtonMinIterations>
-                    ("The minimum number of Newton iterations per time step");
-                Parameters::registerParam<TypeTag, Properties::NewtonRelaxationType>
-                    ("The type of relaxation used by Newton method");
+                detail::registerNonlinearParameters<Scalar>();
             }
 
             void reset()
@@ -292,7 +259,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         int wellIterationsLastStep() const
         { return wellIterationsLast_; }
 
-        std::vector<std::vector<double> >
+        std::vector<std::vector<Scalar> >
         computeFluidInPlace(const std::vector<int>& fipnum) const
         { return model_->computeFluidInPlace(fipnum); }
 
@@ -305,28 +272,28 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         { return *model_; }
 
         /// Detect oscillation or stagnation in a given residual history.
-        void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
+        void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
                                 const int it, bool& oscillate, bool& stagnate) const
         {
             detail::detectOscillations(residualHistory, it, model_->numPhases(),
-                                       this->relaxRelTol(), oscillate, stagnate);
+                                       this->relaxRelTol(), 2, oscillate, stagnate);
         }
 
 
         /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
         /// Implemention for Dune block vectors.
         template <class BVector>
-        void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const
+        void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const Scalar omega) const
         {
             detail::stabilizeNonlinearUpdate(dx, dxOld, omega, this->relaxType());
         }
 
         /// The greatest relaxation factor (i.e. smallest factor) allowed.
-        double relaxMax() const
+        Scalar relaxMax() const
         { return param_.relaxMax_; }
 
         /// The step-change size for the relaxation factor.
-        double relaxIncrement() const
+        Scalar relaxIncrement() const
         { return param_.relaxIncrement_; }
 
         /// The relaxation type (Dampen or SOR).
@@ -334,7 +301,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         { return param_.relaxType_; }
 
         /// The relaxation relative tolerance.
-        double relaxRelTol() const
+        Scalar relaxRelTol() const
         { return param_.relaxRelTol_; }
 
         /// The maximum number of nonlinear iterations allowed.

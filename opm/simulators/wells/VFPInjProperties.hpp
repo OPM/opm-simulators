@@ -30,9 +30,9 @@ namespace Opm {
 
 class VFPInjTable;
 
+template<class Scalar>
 class VFPInjProperties {
 public:
-    VFPInjProperties() = default;
     /**
      * Takes *no* ownership of data.
      */
@@ -55,11 +55,11 @@ public:
      * input ADB objects.
      */
     template <class EvalWell>
-    EvalWell bhp(const int table_id,
+    EvalWell bhp(const int       table_id,
                  const EvalWell& aqua,
                  const EvalWell& liquid,
                  const EvalWell& vapour,
-                 const double& thp) const;
+                 const Scalar    thp) const;
 
     /**
      * Returns the table associated with the ID, or throws an exception if
@@ -75,7 +75,8 @@ public:
     /**
      * Returns true if no vfp tables are in the current map
      */
-    bool empty() const {
+    bool empty() const
+    {
         return m_tables.empty();
     }
 
@@ -90,11 +91,11 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double bhp(int table_id,
-               const double& aqua,
-               const double& liquid,
-               const double& vapour,
-               const double& thp) const;
+    Scalar bhp(const int    table_id,
+               const Scalar aqua,
+               const Scalar liquid,
+               const Scalar vapour,
+               const Scalar thp) const;
 
     /**
      * Linear interpolation of thp as a function of the input parameters
@@ -107,18 +108,16 @@ public:
      * @return The tubing hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double thp(int table_id,
-               const double& aqua,
-               const double& liquid,
-               const double& vapour,
-               const double& bhp) const;
+    Scalar thp(const int    table_id,
+               const Scalar aqua,
+               const Scalar liquid,
+               const Scalar vapour,
+               const Scalar bhp) const;
 
 protected:
     // Map which connects the table number with the table itself
     std::map<int, std::reference_wrapper<const VFPInjTable>> m_tables;
 };
-
-
 
 } //namespace
 

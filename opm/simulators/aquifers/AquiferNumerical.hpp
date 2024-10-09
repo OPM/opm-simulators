@@ -21,6 +21,8 @@
 #ifndef OPM_AQUIFERNUMERICAL_HEADER_INCLUDED
 #define OPM_AQUIFERNUMERICAL_HEADER_INCLUDED
 
+#include <dune/grid/common/partitionset.hh>
+
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
@@ -285,9 +287,7 @@ private:
         ElementContext elem_ctx(this->simulator_);
         const auto& gridView = this->simulator_.gridView();
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-            // elem_ctx.updatePrimaryStencil(elem);
-            elem_ctx.updateStencil(elem);
-
+            elem_ctx.updatePrimaryStencil(elem);
             const std::size_t cell_index = elem_ctx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const int idx = this->cell_to_aquifer_cell_idx_[cell_index];
             // we only need the first aquifer cell
@@ -295,10 +295,11 @@ private:
                 continue;
             }
 
+            elem_ctx.updateStencil(elem);
             const std::size_t num_interior_faces = elem_ctx.numInteriorFaces(/*timeIdx*/ 0);
-            // const auto &problem = elem_ctx.problem();
             const auto& stencil = elem_ctx.stencil(0);
-            // const auto& inQuants = elem_ctx.intensiveQuantities(0, /*timeIdx*/ 0);
+            elem_ctx.updateAllIntensiveQuantities();
+            elem_ctx.updateAllExtensiveQuantities();
 
             for (std::size_t face_idx = 0; face_idx < num_interior_faces; ++face_idx) {
                 const auto& face = stencil.interiorFace(face_idx);
@@ -316,8 +317,6 @@ private:
                 if (this->cell_to_aquifer_cell_idx_[J] > 0) {
                     continue;
                 }
-                elem_ctx.updateAllIntensiveQuantities();
-                elem_ctx.updateAllExtensiveQuantities();
 
                 const Scalar water_flux = getWaterFlux(elem_ctx,face_idx);
                 const std::size_t up_id = water_flux >= 0.0 ? i : j;

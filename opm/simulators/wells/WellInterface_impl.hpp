@@ -40,6 +40,7 @@
 
 #include <dune/common/version.hh>
 
+#include <cassert>
 #include <cstddef>
 #include <utility>
 
@@ -52,7 +53,7 @@ namespace Opm
     template<typename TypeTag>
     WellInterface<TypeTag>::
     WellInterface(const Well& well,
-                  const ParallelWellInfo& pw_info,
+                  const ParallelWellInfo<Scalar>& pw_info,
                   const int time_step,
                   const ModelParameters& param,
                   const RateConverterType& rate_converter,
@@ -60,7 +61,7 @@ namespace Opm
                   const int num_components,
                   const int num_phases,
                   const int index_of_well,
-                  const std::vector<PerforationData>& perf_data)
+                  const std::vector<PerforationData<Scalar>>& perf_data)
       : WellInterfaceIndices<FluidSystem,Indices>(well,
                                                   pw_info,
                                                   time_step,
@@ -89,10 +90,10 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     init(const PhaseUsage* phase_usage_arg,
-         const std::vector<double>& /* depth_arg */,
-         const double gravity_arg,
+         const std::vector<Scalar>& /* depth_arg */,
+         const Scalar gravity_arg,
          const int /* num_cells */,
-         const std::vector< Scalar >& B_avg,
+         const std::vector<Scalar>& B_avg,
          const bool changed_to_open_this_step)
     {
         this->phase_usage_ = phase_usage_arg;
@@ -105,7 +106,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    double
+    typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::
     wpolymer() const
     {
@@ -121,7 +122,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    double
+    typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::
     wfoam() const
     {
@@ -135,7 +136,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    double
+    typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::
     wsalt() const
     {
@@ -147,7 +148,7 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    double
+    typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::
     wmicrobes() const
     {
@@ -159,7 +160,7 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    double
+    typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::
     woxygen() const
     {
@@ -177,7 +178,7 @@ namespace Opm
     // vtkblackoilmicpmodule.hh and ecloutputblackoilmodel.hh respectively).
 
     template<typename TypeTag>
-    double
+    typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::
     wurea() const
     {
@@ -197,8 +198,7 @@ namespace Opm
                       const GroupState<Scalar>& group_state,
                       DeferredLogger& deferred_logger) /* const */
     {
-        const auto& summary_state = simulator.vanguard().summaryState();
-        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
+        if (stoppedOrZeroRateTarget(simulator, well_state, deferred_logger)) {
             return false;
         }
 
@@ -259,7 +259,7 @@ namespace Opm
 
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-            updatePrimaryVariables(summaryState, well_state, deferred_logger);
+            updatePrimaryVariables(simulator, well_state, deferred_logger);
         }
 
         return changed;
@@ -273,19 +273,27 @@ namespace Opm
                                              const GroupState<Scalar>& group_state,
                                              const Well::InjectionControls& inj_controls,
                                              const Well::ProductionControls& prod_controls,
-                                             const double wqTotal,
+                                             const Scalar wqTotal,
                                              DeferredLogger& deferred_logger, 
                                              const bool fixed_control, 
                                              const bool fixed_status)
     {
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto& schedule = simulator.vanguard().schedule();
+        auto& ws = well_state.well(this->index_of_well_);
+        std::string from;
+        if (this->isInjector()) {
+            from = WellInjectorCMode2String(ws.injection_cmode);
+        } else {
+            from = WellProducerCMode2String(ws.production_cmode);
+        }
+        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
 
-        if (this->wellUnderZeroRateTarget(summary_state, well_state) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
-        const double sgn = this->isInjector() ? 1.0 : -1.0;
+        const Scalar sgn = this->isInjector() ? 1.0 : -1.0;
         if (!this->wellIsStopped()){
             if (wqTotal*sgn <= 0.0 && !fixed_status){
                 this->stopWell();
@@ -293,12 +301,15 @@ namespace Opm
             } else {
                 bool changed = false;
                 if (!fixed_control) {
-                    auto& ws = well_state.well(this->index_of_well_);
+                    // Changing to group controls here may lead to inconsistencies in the group handling which in turn 
+                    // may result in excessive back and forth switching. However, we currently allow this by default.
+                    // The switch check_group_constraints_inner_well_iterations_ is a temporary solution.
+                    
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
-                                                                    prod_controls.hasControl(Well::ProducerCMode::GRUP);
+                                                                      prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                     changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                    if (hasGroupControl) {
+                    if (hasGroupControl && param_.check_group_constraints_inner_well_iterations_) {
                         changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
                     }
 
@@ -310,30 +321,40 @@ namespace Opm
                             updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
                         } else {
                             ws.thp = this->getTHPConstraint(summary_state);
-                        }  
-                        updatePrimaryVariables(summary_state, well_state, deferred_logger);
+                        }
+                        updatePrimaryVariables(simulator, well_state, deferred_logger);
                     }
                 }
                 return changed;
             }
         } else if (!fixed_status){
             // well is stopped, check if current bhp allows reopening
-            const double bhp = well_state.well(this->index_of_well_).bhp;
-            double prod_limit = prod_controls.bhp_limit;
-            double inj_limit = inj_controls.bhp_limit;
+            const Scalar bhp = well_state.well(this->index_of_well_).bhp;
+            Scalar prod_limit = prod_controls.bhp_limit;
+            Scalar inj_limit = inj_controls.bhp_limit;
             const bool has_thp = this->wellHasTHPConstraints(summary_state);
             if (has_thp){
-                std::vector<double> rates(this->num_components_);
+                std::vector<Scalar> rates(this->num_components_);
                 if (this->isInjector()){
-                    const double bhp_thp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state, this->getRefDensity(), deferred_logger);
-                    inj_limit = std::min(bhp_thp, inj_controls.bhp_limit);
+                    const Scalar bhp_thp = WellBhpThpCalculator(*this).
+                                                calculateBhpFromThp(well_state, rates,
+                                                                    this->well_ecl_,
+                                                                    summary_state,
+                                                                    this->getRefDensity(),
+                                                                    deferred_logger);
+                    inj_limit = std::min(bhp_thp, static_cast<Scalar>(inj_controls.bhp_limit));
                 } else {
-                    // if the well can operate, it must at least be able to produce at the lowest bhp of the bhp-curve (explicit fractions)
-                    const double bhp_min = WellBhpThpCalculator(*this).calculateMinimumBhpFromThp(well_state, this->well_ecl_, summary_state, this->getRefDensity());
-                    prod_limit = std::max(bhp_min, prod_controls.bhp_limit);
+                    // if the well can operate, it must at least be able to produce
+                    // at the lowest bhp of the bhp-curve (explicit fractions)
+                    const Scalar bhp_min = WellBhpThpCalculator(*this).
+                                                calculateMinimumBhpFromThp(well_state,
+                                                                           this->well_ecl_,
+                                                                           summary_state,
+                                                                           this->getRefDensity());
+                    prod_limit = std::max(bhp_min, static_cast<Scalar>(prod_controls.bhp_limit));
                 }
             }
-            const double bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
+            const Scalar bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
             if (bhp_diff > 0){
                 this->openWell();
                 well_state.well(this->index_of_well_).bhp = (this->isInjector())? inj_limit : prod_limit;
@@ -366,8 +387,7 @@ namespace Opm
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
-        const auto& summary_state = simulator.vanguard().summaryState();
-        updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
+        updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
         if (this->isProducer()) {
@@ -401,19 +421,27 @@ namespace Opm
                 deferred_logger.debug(msg);
                 return;
             }
-            std::vector<double> potentials;
+            std::vector<Scalar> potentials;
             try {
                 computeWellPotentials(simulator, well_state_copy, potentials, deferred_logger);
             } catch (const std::exception& e) {
-                const std::string msg = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during testing for re-opening: ") + e.what();
+                const std::string msg = fmt::format("well {}: computeWellPotentials() "
+                                                    "failed during testing for re-opening: ",
+                                                    this->name(), e.what());
                 deferred_logger.info(msg);
                 return;
             }
             const int np = well_state_copy.numPhases();
             for (int p = 0; p < np; ++p) {
-                ws.well_potentials[p] = std::max(0.0, potentials[p]);
+                ws.well_potentials[p] = std::max(Scalar{0.0}, potentials[p]);
             }
-            this->updateWellTestState(well_state_copy.well(this->indexOfWell()), simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
+            const bool under_zero_target = this->wellUnderZeroGroupRateTarget(simulator, well_state_copy, deferred_logger);
+            this->updateWellTestState(well_state_copy.well(this->indexOfWell()),
+                                     simulation_time,
+                                      /*writeMessageToOPMLog=*/ false,
+                                      under_zero_target,
+                                      welltest_state_temp,
+                                      deferred_logger);
             this->closeCompletions(welltest_state_temp);
 
             // Stop testing if the well is closed or shut due to all completions shut
@@ -510,7 +538,8 @@ namespace Opm
             } else {
                 // solve well with the estimated target bhp (or limit)
                 ws.thp = this->getTHPConstraint(summary_state);
-                const double bhp = std::max(bhp_target.value(), prod_controls.bhp_limit);
+                const Scalar bhp = std::max(bhp_target.value(),
+                                            static_cast<Scalar>(prod_controls.bhp_limit));
                 solveWellWithBhp(simulator, dt, bhp, well_state, deferred_logger);
             }
         }
@@ -521,18 +550,18 @@ namespace Opm
 
         const bool isThp = ws.production_cmode == Well::ProducerCMode::THP;
         // check stability of solution under thp-control
-        if (converged && !this->stopppedOrZeroRateTarget(summary_state, well_state) && isThp) {
+        if (converged && !stoppedOrZeroRateTarget(simulator, well_state, deferred_logger) && isThp) {
             auto rates = well_state.well(this->index_of_well_).surface_rates;
             this->adaptRatesForVFP(rates);
             this->updateIPRImplicit(simulator, well_state, deferred_logger);
             bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
             if (!is_stable) {
-                // solution converged to an unstable point! 
+                // solution converged to an unstable point!
                 this->operability_status_.use_vfpexplicit = true;
                 auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
                 // if we find an intersection with a sufficiently lower bhp, re-solve equations
-                const double reltol = 1e-3;
-                const double cur_bhp = ws.bhp;
+                const Scalar reltol = 1e-3;
+                const Scalar cur_bhp = ws.bhp;
                 if (bhp_stable.has_value() && cur_bhp - bhp_stable.value() > cur_bhp*reltol){
                     const auto msg = fmt::format("Well {} converged to an unstable solution, re-solving", this->name());
                     deferred_logger.debug(msg);
@@ -552,15 +581,21 @@ namespace Opm
             if (!bhp_target.has_value()) {
                 // well can't operate using explicit fractions
                 is_operable = false;
-                // solve with zero rate 
+                // solve with zero rate
                 converged = solveWellWithZeroRate(simulator, dt, well_state, deferred_logger);
                 this->stopWell();
-            } else {      
+            } else {
                 // solve well with the estimated target bhp (or limit)
-                const double bhp = std::max(bhp_target.value(), prod_controls.bhp_limit);
+                const Scalar bhp = std::max(bhp_target.value(),
+                                            static_cast<Scalar>(prod_controls.bhp_limit));
                 solveWellWithBhp(simulator, dt, bhp, well_state, deferred_logger);
                 ws.thp = this->getTHPConstraint(summary_state);
-                converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+                converged = this->iterateWellEqWithSwitching(simulator, dt,
+                                                             inj_controls,
+                                                             prod_controls,
+                                                             well_state,
+                                                             group_state,
+                                                             deferred_logger);
             }
         }
         // update operability
@@ -571,17 +606,17 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    std::optional<double>
+    std::optional<typename WellInterface<TypeTag>::Scalar>
     WellInterface<TypeTag>::
     estimateOperableBhp(const Simulator& simulator,
                         const double dt,
                         WellState<Scalar>& well_state,
                         const SummaryState& summary_state,
                         DeferredLogger& deferred_logger)
-    {   
-        // Given an unconverged well or closed well, estimate an operable bhp (if any) 
+    {
+        // Given an unconverged well or closed well, estimate an operable bhp (if any)
         // Get minimal bhp from vfp-curve
-        double bhp_min =  WellBhpThpCalculator(*this).calculateMinimumBhpFromThp(well_state, this->well_ecl_, summary_state, this->getRefDensity());
+        Scalar bhp_min =  WellBhpThpCalculator(*this).calculateMinimumBhpFromThp(well_state, this->well_ecl_, summary_state, this->getRefDensity());
         // Solve
         const bool converged = solveWellWithBhp(simulator, dt, bhp_min, well_state, deferred_logger);
         if (!converged || this->wellIsStopped()) {
@@ -591,21 +626,21 @@ namespace Opm
         auto rates = well_state.well(this->index_of_well_).surface_rates;
         this->adaptRatesForVFP(rates);
         return WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
-    } 
+    }
 
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
     solveWellWithBhp(const Simulator& simulator,
                      const double dt,
-                     const double bhp,
+                     const Scalar bhp,
                      WellState<Scalar>& well_state,
                      DeferredLogger& deferred_logger)
-    {   
+    {
         // Solve a well using single bhp-constraint (but close if not operable under this)
         auto group_state = GroupState<Scalar>(); // empty group
         auto inj_controls = Well::InjectionControls(0);
-        auto prod_controls = Well::ProductionControls(0); 
+        auto prod_controls = Well::ProductionControls(0);
         auto& ws = well_state.well(this->index_of_well_);
         auto cmode_inj = ws.injection_cmode;
         auto cmode_prod = ws.production_cmode;
@@ -613,21 +648,21 @@ namespace Opm
             inj_controls.addControl(Well::InjectorCMode::BHP);
             inj_controls.bhp_limit = bhp;
             inj_controls.cmode = Well::InjectorCMode::BHP;
-            ws.injection_cmode = Well::InjectorCMode::BHP;  
+            ws.injection_cmode = Well::InjectorCMode::BHP;
         } else {
             prod_controls.addControl(Well::ProducerCMode::BHP);
             prod_controls.bhp_limit = bhp;
             prod_controls.cmode = Well::ProducerCMode::BHP;
-            ws.production_cmode = Well::ProducerCMode::BHP;  
+            ws.production_cmode = Well::ProducerCMode::BHP;
         }
         // update well-state
         ws.bhp = bhp;
-        // solve 
+        // solve
         const bool converged =  this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger, /*fixed_control*/true);
         ws.injection_cmode = cmode_inj;
         ws.production_cmode = cmode_prod;
         return converged;
-    } 
+    }
 
     template<typename TypeTag>
     bool
@@ -636,18 +671,18 @@ namespace Opm
                           const double dt,
                           WellState<Scalar>& well_state,
                           DeferredLogger& deferred_logger)
-    {   
+    {
         // Solve a well as stopped
         const auto well_status_orig = this->wellStatus_;
         this->stopWell();
-        
+
         auto group_state = GroupState<Scalar>(); // empty group
         auto inj_controls = Well::InjectionControls(0);
-        auto prod_controls = Well::ProductionControls(0); 
+        auto prod_controls = Well::ProductionControls(0);
         const bool converged =  this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger, /*fixed_control*/true, /*fixed_status*/ true);
         this->wellStatus_ = well_status_orig;
         return converged;
-    } 
+    }
 
     template<typename TypeTag>
     bool
@@ -750,9 +785,7 @@ namespace Opm
                    const GroupState<Scalar>& group_state,
                    DeferredLogger& deferred_logger)
     {
-
         prepareWellBeforeAssembling(simulator, dt, well_state, group_state, deferred_logger);
-
         assembleWellEqWithoutIteration(simulator, dt, well_state, group_state, deferred_logger);
     }
 
@@ -805,18 +838,20 @@ namespace Opm
         }
         if (this->operability_status_.has_negative_potentials) {
             auto well_state_copy = well_state;
-            std::vector<double> potentials;
+            std::vector<Scalar> potentials;
             try {
                 computeWellPotentials(simulator, well_state_copy, potentials, deferred_logger);
             } catch (const std::exception& e) {
-                const std::string msg = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during attempt to recompute potentials for well : ") + e.what();
+                const std::string msg = fmt::format("well {}: computeWellPotentials() failed "
+                                                    "during attempt to recompute potentials for well: ",
+                                                    this->name(), e.what());
                 deferred_logger.info(msg);
                 this->operability_status_.has_negative_potentials = true;
             }
             auto& ws = well_state.well(this->indexOfWell());
             const int np = well_state.numPhases();
             for (int p = 0; p < np; ++p) {
-                ws.well_potentials[p] = std::max(0.0, potentials[p]);
+                ws.well_potentials[p] = std::max(Scalar{0.0}, potentials[p]);
             }
         }
         this->changed_to_open_this_step_ = false;
@@ -852,7 +887,8 @@ namespace Opm
 
     template<typename TypeTag>
     typename WellInterface<TypeTag>::Scalar
-    WellInterface<TypeTag>::volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const {
+    WellInterface<TypeTag>::volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const
+    {
         for (int perfIdx = 0; perfIdx < this->number_of_perforations_; ++perfIdx) {
             if (this->cells()[perfIdx] == cellIdx) {
                 const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
@@ -896,12 +932,11 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    gliftBeginTimeStepWellTestIterateWellEquations(
-        const Simulator& simulator,
-        const double dt,
-        WellState<Scalar>& well_state,
-        const GroupState<Scalar>& group_state,
-        DeferredLogger& deferred_logger)
+    gliftBeginTimeStepWellTestIterateWellEquations(const Simulator& simulator,
+                                                   const double dt,
+                                                   WellState<Scalar>& well_state,
+                                                   const GroupState<Scalar>& group_state,
+                                                   DeferredLogger& deferred_logger)
     {
         const auto& well_name = this->name();
         assert(this->wellHasTHPConstraints(simulator.vanguard().summaryState()));
@@ -954,7 +989,7 @@ namespace Opm
         }
         const auto& gl_well = glo.well(well_name);
         auto& max_alq_optional = gl_well.max_rate();
-        double max_alq;
+        Scalar max_alq;
         if (max_alq_optional) {
             max_alq = *max_alq_optional;
         }
@@ -1080,7 +1115,7 @@ namespace Opm
 
             const auto current = ws.injection_cmode;
 
-            switch(current) {
+            switch (current) {
             case Well::InjectorCMode::RATE:
             {
                 ws.surface_rates[phasePos] = (1.0 - this->rsRvInj()) * controls.surface_rate;
@@ -1098,9 +1133,9 @@ namespace Opm
 
             case Well::InjectorCMode::RESV:
             {
-                std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
+                std::vector<Scalar> convert_coeff(this->number_of_phases_, 1.0);
                 this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
-                const double coeff = convert_coeff[phasePos];
+                const Scalar coeff = convert_coeff[phasePos];
                 ws.surface_rates[phasePos] = controls.reservoir_rate/coeff;
                 break;
             }
@@ -1108,7 +1143,7 @@ namespace Opm
             case Well::InjectorCMode::THP:
             {
                 auto rates = ws.surface_rates;
-                double bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
+                Scalar bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
                                                                              rates,
                                                                              well,
                                                                              summaryState,
@@ -1120,7 +1155,7 @@ namespace Opm
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
                 // using the well potentials
-                double total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
+                Scalar total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
                 if (total_rate <= 0.0)
                     ws.surface_rates = ws.well_potentials;
 
@@ -1129,7 +1164,7 @@ namespace Opm
             case Well::InjectorCMode::BHP:
             {
                 ws.bhp = controls.bhp_limit;
-                double total_rate = 0.0;
+                Scalar total_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
                     total_rate += ws.surface_rates[p];
                 }
@@ -1145,8 +1180,8 @@ namespace Opm
             {
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-                const double efficiencyFactor = well.getEfficiencyFactor();
-                std::optional<double> target =
+                const Scalar efficiencyFactor = well.getEfficiencyFactor();
+                std::optional<Scalar> target =
                         this->getGroupInjectionTargetRate(group,
                                                           well_state,
                                                           group_state,
@@ -1171,7 +1206,7 @@ namespace Opm
             // the zero rate target, then we can use to retain the composition information
             // within the wellbore from the previous result, and hopefully it is a good
             // initial guess for the zero rate target.
-            ws.surface_rates[phasePos] = std::max(1.e-7, ws.surface_rates[phasePos]);
+            ws.surface_rates[phasePos] = std::max(Scalar{1.e-7}, ws.surface_rates[phasePos]);
 
             if (ws.bhp == 0.) {
                 ws.bhp = controls.bhp_limit;
@@ -1185,7 +1220,7 @@ namespace Opm
             switch (current) {
             case Well::ProducerCMode::ORAT:
             {
-                double current_rate = -ws.surface_rates[ pu.phase_pos[Oil] ];
+                Scalar current_rate = -ws.surface_rates[ pu.phase_pos[Oil] ];
                 // for trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
@@ -1193,7 +1228,7 @@ namespace Opm
                         ws.surface_rates[p] *= controls.oil_rate/current_rate;
                     }
                 } else {
-                    const std::vector<double> fractions = initialWellRateFractions(simulator, well_state);
+                    const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Oil]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
@@ -1205,7 +1240,7 @@ namespace Opm
             }
             case Well::ProducerCMode::WRAT:
             {
-                double current_rate = -ws.surface_rates[ pu.phase_pos[Water] ];
+                Scalar current_rate = -ws.surface_rates[ pu.phase_pos[Water] ];
                 // for trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
@@ -1213,11 +1248,11 @@ namespace Opm
                         ws.surface_rates[p] *= controls.water_rate/current_rate;
                     }
                 } else {
-                    const std::vector<double> fractions = initialWellRateFractions(simulator, well_state);
-                    double control_fraction = fractions[pu.phase_pos[Water]];
+                    const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
+                    const Scalar control_fraction = fractions[pu.phase_pos[Water]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            ws.surface_rates[p] = - fractions[p] * controls.water_rate/control_fraction;
+                            ws.surface_rates[p] = - fractions[p] * controls.water_rate / control_fraction;
                         }
                     }
                 }
@@ -1225,7 +1260,7 @@ namespace Opm
             }
             case Well::ProducerCMode::GRAT:
             {
-                double current_rate = -ws.surface_rates[pu.phase_pos[Gas] ];
+                Scalar current_rate = -ws.surface_rates[pu.phase_pos[Gas] ];
                 // or trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
@@ -1233,11 +1268,11 @@ namespace Opm
                         ws.surface_rates[p] *= controls.gas_rate/current_rate;
                     }
                 } else {
-                    const std::vector<double> fractions = initialWellRateFractions(simulator, well_state);
-                    double control_fraction = fractions[pu.phase_pos[Gas]];
+                    const std::vector<Scalar > fractions = initialWellRateFractions(simulator, well_state);
+                    const Scalar control_fraction = fractions[pu.phase_pos[Gas]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            ws.surface_rates[p] = - fractions[p] * controls.gas_rate/control_fraction;
+                            ws.surface_rates[p] = - fractions[p] * controls.gas_rate / control_fraction;
                         }
                     }
                 }
@@ -1247,8 +1282,8 @@ namespace Opm
             }
             case Well::ProducerCMode::LRAT:
             {
-                double current_rate = -ws.surface_rates[ pu.phase_pos[Water] ]
-                        - ws.surface_rates[ pu.phase_pos[Oil] ];
+                Scalar current_rate = - ws.surface_rates[ pu.phase_pos[Water] ]
+                                      - ws.surface_rates[ pu.phase_pos[Oil] ];
                 // or trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
@@ -1256,8 +1291,8 @@ namespace Opm
                         ws.surface_rates[p] *= controls.liquid_rate/current_rate;
                     }
                 } else {
-                    const std::vector<double> fractions = initialWellRateFractions(simulator, well_state);
-                    double control_fraction = fractions[pu.phase_pos[Water]] + fractions[pu.phase_pos[Oil]];
+                    const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
+                    const Scalar control_fraction = fractions[pu.phase_pos[Water]] + fractions[pu.phase_pos[Oil]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
                             ws.surface_rates[p] = - fractions[p] * controls.liquid_rate / control_fraction;
@@ -1274,9 +1309,9 @@ namespace Opm
             }
             case Well::ProducerCMode::RESV:
             {
-                std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
+                std::vector<Scalar> convert_coeff(this->number_of_phases_, 1.0);
                 this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, ws.surface_rates, convert_coeff);
-                double total_res_rate = 0.0;
+                Scalar total_res_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
                     total_res_rate -= ws.surface_rates[p] * convert_coeff[p];
                 }
@@ -1288,13 +1323,13 @@ namespace Opm
                             ws.surface_rates[p] *= controls.resv_rate/total_res_rate;
                         }
                     } else {
-                        const std::vector<double> fractions = initialWellRateFractions(simulator, well_state);
+                        const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
                         for (int p = 0; p<np; ++p) {
                             ws.surface_rates[p] = - fractions[p] * controls.resv_rate / convert_coeff[p];
                         }
                     }
                 } else {
-                    std::vector<double> hrates(this->number_of_phases_,0.);
+                    std::vector<Scalar> hrates(this->number_of_phases_,0.);
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         hrates[pu.phase_pos[Water]] = controls.water_rate;
                     }
@@ -1304,9 +1339,9 @@ namespace Opm
                     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                         hrates[pu.phase_pos[Gas]] = controls.gas_rate;
                     }
-                    std::vector<double> hrates_resv(this->number_of_phases_,0.);
+                    std::vector<Scalar> hrates_resv(this->number_of_phases_,0.);
                     this->rateConverter_.calcReservoirVoidageRates(/*fipreg*/ 0, this->pvtRegionIdx_, hrates, hrates_resv);
-                    double target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
+                    Scalar target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
                     // or trivial rates or opposite direction we don't just scale the rates
                     // but use either the potentials or the mobility ratio to initial the well rates
                     if (total_res_rate > 0.0) {
@@ -1314,19 +1349,18 @@ namespace Opm
                             ws.surface_rates[p] *= target/total_res_rate;
                         }
                     } else {
-                        const std::vector<double> fractions = initialWellRateFractions(simulator, well_state);
+                        const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
                         for (int p = 0; p<np; ++p) {
                             ws.surface_rates[p] = - fractions[p] * target / convert_coeff[p];
                         }
                     }
-
                 }
                 break;
             }
             case Well::ProducerCMode::BHP:
             {
                 ws.bhp = controls.bhp_limit;
-                double total_rate = 0.0;
+                Scalar total_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
                     total_rate -= ws.surface_rates[p];
                 }
@@ -1350,14 +1384,14 @@ namespace Opm
                     // more sophisticated design might be needed in the future
                     auto rates = ws.surface_rates;
                     this->adaptRatesForVFP(rates);
-                    const double bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(
+                    const Scalar bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(
                         well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                     ws.bhp = bhp;
                     ws.thp = this->getTHPConstraint(summaryState);
                     // if the total rates are negative or zero
                     // we try to provide a better initial well rate
                     // using the well potentials
-                    const double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
+                    const Scalar total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
                     if (total_rate <= 0.0) {
                         for (int p = 0; p < this->number_of_phases_; ++p) {
                             ws.surface_rates[p] = -ws.well_potentials[p];
@@ -1370,14 +1404,14 @@ namespace Opm
             {
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-                const double efficiencyFactor = well.getEfficiencyFactor();
-                double scale = this->getGroupProductionTargetRate(group,
-                                                          well_state,
-                                                          group_state,
-                                                          schedule,
-                                                          summaryState,
-                                                          efficiencyFactor,
-                                                          deferred_logger);
+                const Scalar efficiencyFactor = well.getEfficiencyFactor();
+                Scalar scale = this->getGroupProductionTargetRate(group,
+                                                                  well_state,
+                                                                  group_state,
+                                                                  schedule,
+                                                                  summaryState,
+                                                                  efficiencyFactor,
+                                                                  deferred_logger);
 
                 // we don't want to scale with zero and get zero rates.
                 if (scale > 0) {
@@ -1394,9 +1428,8 @@ namespace Opm
             case Well::ProducerCMode::NONE:
             {
                 OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well "  + this->name() , deferred_logger);
-            }
-
                 break;
+            }
             } // end of switch
 
             if (ws.bhp == 0.) {
@@ -1406,16 +1439,65 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    std::vector<double>
+    bool
+    WellInterface<TypeTag>::
+    wellUnderZeroRateTarget(const Simulator& simulator,
+                            const WellState<Scalar>& well_state,
+                            DeferredLogger& deferred_logger) const
+    {
+        // Check if well is under zero rate control, either directly or from group
+        const bool isGroupControlled = this->wellUnderGroupControl(well_state.well(this->index_of_well_));
+        if (!isGroupControlled) {
+            // well is not under group control, check "individual" version
+            const auto& summaryState = simulator.vanguard().summaryState();
+            return this->wellUnderZeroRateTargetIndividual(summaryState, well_state);
+        } else {
+            return this->wellUnderZeroGroupRateTarget(simulator, well_state, deferred_logger, isGroupControlled);
+        }
+    }
+
+    template <typename TypeTag>
+    bool
+    WellInterface<TypeTag>::wellUnderZeroGroupRateTarget(const Simulator& simulator,
+                                                         const WellState<Scalar>& well_state,
+                                                         DeferredLogger& deferred_logger,
+                                                         const std::optional<bool> group_control) const
+    {
+        // Check if well is under zero rate target from group
+        const bool isGroupControlled = group_control.value_or(this->wellUnderGroupControl(well_state.well(this->index_of_well_)));
+        if (isGroupControlled) {
+            const auto& summaryState = simulator.vanguard().summaryState();
+            const auto& group_state = simulator.problem().wellModel().groupState();
+            const auto& schedule = simulator.vanguard().schedule();
+            return this->zeroGroupRateTarget(summaryState, schedule, well_state, group_state, deferred_logger);
+        }
+        return false;
+    }
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    stoppedOrZeroRateTarget(const Simulator& simulator,
+                            const WellState<Scalar>& well_state,
+                            DeferredLogger& deferred_logger) const
+    {
+        // Check if well is stopped or under zero rate control, either
+        // directly or from group.
+        return this->wellIsStopped()
+            || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
+    }
+
+    template<typename TypeTag>
+    std::vector<typename WellInterface<TypeTag>::Scalar>
     WellInterface<TypeTag>::
     initialWellRateFractions(const Simulator& simulator,
                              const WellState<Scalar>& well_state) const
     {
         const int np = this->number_of_phases_;
-        std::vector<double> scaling_factor(np);
+        std::vector<Scalar> scaling_factor(np);
         const auto& ws = well_state.well(this->index_of_well_);
 
-        double total_potentials = 0.0;
+        Scalar total_potentials = 0.0;
         for (int p = 0; p<np; ++p) {
             total_potentials += ws.well_potentials[p];
         }
@@ -1427,7 +1509,7 @@ namespace Opm
         }
         // if we don't have any potentials we weight it using the mobilites
         // We only need approximation so we don't bother with the vapporized oil and dissolved gas
-        double total_tw = 0;
+        Scalar total_tw = 0;
         const int nperf = this->number_of_perforations_;
         for (int perf = 0; perf < nperf; ++perf) {
             total_tw += this->well_index_[perf];
@@ -1436,8 +1518,8 @@ namespace Opm
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
-            const double well_tw_fraction = this->well_index_[perf] / total_tw;
-            double total_mobility = 0.0;
+            const Scalar well_tw_fraction = this->well_index_[perf] / total_tw;
+            Scalar total_mobility = 0.0;
             for (int p = 0; p < np; ++p) {
                 int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
                 total_mobility += fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value();
@@ -1463,7 +1545,7 @@ namespace Opm
         // if more than one nonzero rate.
         auto& ws = well_state.well(this->index_of_well_);
         int nonzero_rate_index = -1;
-        const double floating_point_error_epsilon = 1e-14;
+        const Scalar floating_point_error_epsilon = 1e-14;
         for (int p = 0; p < this->number_of_phases_; ++p) {
             if (std::abs(ws.surface_rates[p]) > floating_point_error_epsilon) {
                 if (nonzero_rate_index == -1) {
@@ -1476,7 +1558,7 @@ namespace Opm
         }
 
         // Calculate the rates that follow from the current primary variables.
-        std::vector<double> well_q_s = computeCurrentWellRates(simulator, deferred_logger);
+        std::vector<Scalar> well_q_s = computeCurrentWellRates(simulator, deferred_logger);
 
         if (nonzero_rate_index == -1) {
             // No nonzero rates.
@@ -1488,13 +1570,13 @@ namespace Opm
         }
 
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
-        const double initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
+        const Scalar initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
         const int comp_idx_nz = this->flowPhaseToModelCompIdx(nonzero_rate_index);
         if (std::abs(well_q_s[comp_idx_nz]) > floating_point_error_epsilon) {
             for (int p = 0; p < this->number_of_phases_; ++p) {
                 if (p != nonzero_rate_index) {
                     const int comp_idx = this->flowPhaseToModelCompIdx(p);
-                    double& rate = ws.surface_rates[p];
+                    Scalar& rate = ws.surface_rates[p];
                     rate = (initial_nonzero_rate / well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
                 }
             }
@@ -1502,12 +1584,12 @@ namespace Opm
     }
 
     template <typename TypeTag>
-    std::vector<double>
+    std::vector<typename WellInterface<TypeTag>::Scalar>
     WellInterface<TypeTag>::
     wellIndex(const int                      perf,
               const IntensiveQuantities&     intQuants,
-              const double                   trans_mult,
-              const SingleWellState<double>& ws) const
+              const Scalar                   trans_mult,
+              const SingleWellState<Scalar>& ws) const
     {
         // Add a Forchheimer term to the gas phase CTF if the run uses
         // either of the WDFAC or the WDFACCOR keywords.
@@ -1525,7 +1607,7 @@ namespace Opm
             return wi;
         }
 
-        const double d = this->computeConnectionDFactor(perf, intQuants, ws);
+        const Scalar d = this->computeConnectionDFactor(perf, intQuants, ws);
         if (d < 1.0e-15) {
             return wi;
         }
@@ -1533,43 +1615,43 @@ namespace Opm
         // Solve quadratic equations for connection rates satisfying the ipr and the flow-dependent skin.
         // If more than one solution, pick the one corresponding to lowest absolute rate (smallest skin).
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
-        const double Kh = connection.Kh();
-        const double scaling = 3.141592653589 * Kh * connection.wpimult();
+        const Scalar Kh = connection.Kh();
+        const Scalar scaling = 3.141592653589 * Kh * connection.wpimult();
         const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
 
-        const double connection_pressure = ws.perf_data.pressure[perf];
-        const double cell_pressure = getValue(intQuants.fluidState().pressure(FluidSystem::gasPhaseIdx));
-        const double drawdown = cell_pressure - connection_pressure;
-        const double invB = getValue(intQuants.fluidState().invB(FluidSystem::gasPhaseIdx));
-        const double mob_g = getValue(intQuants.mobility(FluidSystem::gasPhaseIdx)) * invB;
-        const double a = d;
-        const double b = 2*scaling/wi[gas_comp_idx];
-        const double c = -2*scaling*mob_g*drawdown;
+        const Scalar connection_pressure = ws.perf_data.pressure[perf];
+        const Scalar cell_pressure = getValue(intQuants.fluidState().pressure(FluidSystem::gasPhaseIdx));
+        const Scalar drawdown = cell_pressure - connection_pressure;
+        const Scalar invB = getValue(intQuants.fluidState().invB(FluidSystem::gasPhaseIdx));
+        const Scalar mob_g = getValue(intQuants.mobility(FluidSystem::gasPhaseIdx)) * invB;
+        const Scalar a = d;
+        const Scalar b = 2*scaling/wi[gas_comp_idx];
+        const Scalar c = -2*scaling*mob_g*drawdown;
 
-        double consistent_Q = -1.0e20;
+        Scalar consistent_Q = -1.0e20;
         // Find and check negative solutions (a --> -a)
-        const double r2n = b*b + 4*a*c;
+        const Scalar r2n = b*b + 4*a*c;
         if (r2n >= 0) {
-            const double rn = std::sqrt(r2n);
-            const double xn1 = (b-rn)*0.5/a;
+            const Scalar rn = std::sqrt(r2n);
+            const Scalar xn1 = (b-rn)*0.5/a;
             if (xn1 <= 0) {
                 consistent_Q = xn1;
             }
-            const double xn2 = (b+rn)*0.5/a;
+            const Scalar xn2 = (b+rn)*0.5/a;
             if (xn2 <= 0 && xn2 > consistent_Q) {
                 consistent_Q = xn2;
             }
         }
         // Find and check positive solutions
         consistent_Q *= -1;
-        const double r2p = b*b - 4*a*c;
+        const Scalar r2p = b*b - 4*a*c;
         if (r2p >= 0) {
-            const double rp = std::sqrt(r2p);
-            const double xp1 = (rp-b)*0.5/a;
+            const Scalar rp = std::sqrt(r2p);
+            const Scalar xp1 = (rp-b)*0.5/a;
             if (xp1 > 0 && xp1 < consistent_Q) {
                 consistent_Q = xp1;
             }
-            const double xp2 = -(rp+b)*0.5/a;
+            const Scalar xp2 = -(rp+b)*0.5/a;
             if (xp2 > 0 && xp2 < consistent_Q) {
                 consistent_Q = xp2;
             }
@@ -1583,7 +1665,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateConnectionDFactor(const Simulator& simulator,
-                            SingleWellState<double>& ws) const
+                            SingleWellState<Scalar>& ws) const
     {
         if (! this->well_ecl_.getWDFAC().useDFactor()) {
             return;
@@ -1600,11 +1682,11 @@ namespace Opm
     }
 
     template <typename TypeTag>
-    double 
+    typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::
     computeConnectionDFactor(const int                      perf,
                              const IntensiveQuantities&     intQuants,
-                             const SingleWellState<double>& ws) const
+                             const SingleWellState<Scalar>& ws) const
     {
         auto rhoGS = [regIdx = this->pvtRegionIdx()]() {
             return FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regIdx);
@@ -1622,7 +1704,7 @@ namespace Opm
             // Note that rv here is from grid block with typically
             //    p_block > connection_pressure
             // so we may very well have rv > rv_sat
-            const double rv_sat = gasPvt.saturatedOilVaporizationFactor
+            const Scalar rv_sat = gasPvt.saturatedOilVaporizationFactor
                 (regIdx, temperature, connection_pressure);
 
             if (! (rv < rv_sat)) {
@@ -1645,7 +1727,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateConnectionTransmissibilityFactor(const Simulator& simulator,
-                                           SingleWellState<double>& ws) const
+                                           SingleWellState<Scalar>& ws) const
     {
         auto connCF = [&connIx = std::as_const(ws.perf_data.ecl_index),
                        &conns = this->well_ecl_.getConnections()]
@@ -1772,7 +1854,7 @@ namespace Opm
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
             simulator, summary_state, this->getALQ(well_state), deferred_logger);
         if (bhp_at_thp_limit) {
-            std::vector<double> rates(this->number_of_phases_, 0.0);
+            std::vector<Scalar> rates(this->number_of_phases_, 0.0);
             if (thp_update_iterations) {
                 computeWellRatesWithBhpIterations(simulator, *bhp_at_thp_limit,
                                                   rates, deferred_logger);
@@ -1794,9 +1876,9 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     computeConnLevelProdInd(const FluidState& fs,
-                            const std::function<double(const double)>& connPICalc,
+                            const std::function<Scalar(const Scalar)>& connPICalc,
                             const std::vector<Scalar>& mobility,
-                            double* connPI) const
+                            Scalar* connPI) const
     {
         const auto& pu = this->phaseUsage();
         const int   np = this->number_of_phases_;
@@ -1830,9 +1912,9 @@ namespace Opm
     WellInterface<TypeTag>::
     computeConnLevelInjInd(const FluidState& fs,
                            const Phase preferred_phase,
-                           const std::function<double(const double)>& connIICalc,
+                           const std::function<Scalar(const Scalar)>& connIICalc,
                            const std::vector<Scalar>& mobility,
-                           double* connII,
+                           Scalar* connII,
                            DeferredLogger& deferred_logger) const
     {
         // Assumes single phase injection

@@ -35,60 +35,62 @@ namespace Opm {
 class Well;
 
 template<class Matrix, class Vector, int block_size> class BdaBridge;
-class WellContributions;
+template<class Scalar> class WellContributions;
 namespace detail {
 
 template<class Matrix, class Vector>
 struct BdaSolverInfo
 {
-  using WellContribFunc = std::function<void(WellContributions&)>;
-  using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
+    using Scalar = typename Vector::field_type;
+    using WellContribFunc = std::function<void(WellContributions<Scalar>&)>;
+    using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
 
-  BdaSolverInfo(const std::string& accelerator_mode,
-                const int linear_solver_verbosity,
-                const int maxit,
-                const double tolerance,
-                const int platformID,
-                const int deviceID,
-                const bool opencl_ilu_parallel,
-                const std::string& linsolver);
+    BdaSolverInfo(const std::string& accelerator_mode,
+                  const int linear_solver_verbosity,
+                  const int maxit,
+                  const Scalar tolerance,
+                  const int platformID,
+                  const int deviceID,
+                  const bool opencl_ilu_parallel,
+                  const std::string& linsolver);
 
-  ~BdaSolverInfo();
+    ~BdaSolverInfo();
 
-  template<class Grid>
-  void prepare(const Grid& grid,
-               const Dune::CartesianIndexMapper<Grid>& cartMapper,
-               const std::vector<Well>& wellsForConn,
-               const std::vector<int>& cellPartition,
-               const std::size_t nonzeroes,
-               const bool useWellConn);
+    template<class Grid>
+    void prepare(const Grid& grid,
+                 const Dune::CartesianIndexMapper<Grid>& cartMapper,
+                 const std::vector<Well>& wellsForConn,
+                 const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
+                 const std::vector<int>& cellPartition,
+                 const std::size_t nonzeroes,
+                 const bool useWellConn);
 
-  bool apply(Vector& rhs,
-             const bool useWellConn,
-             WellContribFunc getContribs,
-             const int rank,
-             Matrix& matrix,
-             Vector& x,
-             Dune::InverseOperatorResult& result);
+    bool apply(Vector& rhs,
+               const bool useWellConn,
+               WellContribFunc getContribs,
+               const int rank,
+               Matrix& matrix,
+               Vector& x,
+               Dune::InverseOperatorResult& result);
 
-  bool gpuActive();
+    bool gpuActive();
 
-  int numJacobiBlocks_ = 0;
+    int numJacobiBlocks_ = 0;
 
 private:
-  /// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
-  /// Do not initialize the values, that is done in copyMatToBlockJac()
-  template<class Grid>
-  void blockJacobiAdjacency(const Grid& grid,
-                            const std::vector<int>& cell_part,
-                            std::size_t nonzeroes);
+    /// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
+    /// Do not initialize the values, that is done in copyMatToBlockJac()
+    template<class Grid>
+    void blockJacobiAdjacency(const Grid& grid,
+                              const std::vector<int>& cell_part,
+                              std::size_t nonzeroes);
 
-  void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac);
+    void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac);
 
-  std::unique_ptr<Bridge> bridge_;
-  std::string accelerator_mode_;
-  std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
-  std::vector<std::set<int>> wellConnectionsGraph_;
+    std::unique_ptr<Bridge> bridge_;
+    std::string accelerator_mode_;
+    std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
+    std::vector<std::set<int>> wellConnectionsGraph_;
 };
 
 }
@@ -122,7 +124,7 @@ protected:
 #if HAVE_MPI
     using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
-    using CommunicationType = Dune::CollectiveCommunication<int>;
+    using CommunicationType = Dune::Communication<int>;
 #endif
 
 public:
@@ -150,7 +152,7 @@ public:
     {
         OPM_TIMEBLOCK(initializeBda);
 
-        std::string accelerator_mode = Parameters::get<TypeTag, Properties::AcceleratorMode>();
+        std::string accelerator_mode = Parameters::Get<Parameters::AcceleratorMode>();
         // Force accelerator mode to none if using MPI.
         if ((this->simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
             const bool on_io_rank = (this->simulator_.gridView().comm().rank() == 0);
@@ -165,13 +167,13 @@ public:
         }
 
         // Initialize the BdaBridge
-        const int platformID = Parameters::get<TypeTag, Properties::OpenclPlatformId>();
-        const int deviceID = Parameters::get<TypeTag, Properties::BdaDeviceId>();
-        const int maxit = Parameters::get<TypeTag, Properties::LinearSolverMaxIter>();
-        const double tolerance = Parameters::get<TypeTag, Properties::LinearSolverReduction>();
-        const bool opencl_ilu_parallel = Parameters::get<TypeTag, Properties::OpenclIluParallel>();
+        const int platformID = Parameters::Get<Parameters::OpenclPlatformId>();
+        const int deviceID = Parameters::Get<Parameters::BdaDeviceId>();
+        const int maxit = Parameters::Get<Parameters::LinearSolverMaxIter>();
+        const double tolerance = Parameters::Get<Parameters::LinearSolverReduction>();
+        const bool opencl_ilu_parallel = Parameters::Get<Parameters::OpenclIluParallel>();
         const int linear_solver_verbosity = this->parameters_[0].linear_solver_verbosity_;
-        std::string linsolver = Parameters::get<TypeTag, Properties::LinearSolver>();
+        std::string linsolver = Parameters::Get<Parameters::LinearSolver>();
         bdaBridge_ = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
                                                                             linear_solver_verbosity,
                                                                             maxit,
@@ -202,10 +204,11 @@ public:
             // to the original one with a deleter that does nothing.
             // Outch! We need to be able to scale the linear system! Hence const_cast
             // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
-            bdaBridge_->numJacobiBlocks_ = Parameters::get<TypeTag, Properties::NumJacobiBlocks>();
+            bdaBridge_->numJacobiBlocks_ = Parameters::Get<Parameters::NumJacobiBlocks>();
             bdaBridge_->prepare(this->simulator_.vanguard().grid(),
                                this->simulator_.vanguard().cartesianIndexMapper(),
                                this->simulator_.vanguard().schedule().getWellsatEnd(),
+                               this->simulator_.vanguard().schedule().getPossibleFutureConnections(),
                                this->simulator_.vanguard().cellPartition(),
                                this->getMatrix().nonzeroes(), this->useWellConn_);
         }
@@ -249,8 +252,8 @@ public:
         // Solve system.
         Dune::InverseOperatorResult result;
 
-        std::function<void(WellContributions&)> getContribs =
-            [this](WellContributions& w)
+        std::function<void(WellContributions<Scalar>&)> getContribs =
+            [this](WellContributions<Scalar>& w)
             {
                 this->simulator_.problem().wellModel().getWellContributions(w);
             };

@@ -29,13 +29,13 @@
 
 #include <memory>
 
-namespace Opm
-{
+namespace Opm {
 
 class Well;
 
 /// \brief Class to facilitate getting values associated with the above/below perforation
 ///
+template<class Scalar>
 class CommunicateAboveBelow
 {
 public:
@@ -83,8 +83,8 @@ public:
     /// \param current C-array of the values at the perforations
     /// \param size The size of the C-array and the returned vector
     /// \return a vector containing the values for the perforation above.
-    std::vector<double> communicateAbove(double first_value,
-                                         const double* current,
+    std::vector<Scalar> communicateAbove(Scalar first_value,
+                                         const Scalar* current,
                                          std::size_t size);
 
     /// \brief Creates an array of values for the perforation below.
@@ -92,8 +92,8 @@ public:
     /// \param current C-array of the values at the perforations
     /// \param size The size of the C-array and the returned vector
     /// \return a vector containing the values for the perforation above.
-    std::vector<double> communicateBelow(double first_value,
-                                         const double* current,
+    std::vector<Scalar> communicateBelow(Scalar first_value,
+                                         const Scalar* current,
                                          std::size_t size);
 
     /// \brief Do a (in place) partial sum on values attached to all perforations.
@@ -131,11 +131,12 @@ private:
 /// even if the data is distributed. This class is supposed to help with that by
 /// computing the global data arrays for the well and copy computed values back to
 /// the distributed representation.
+template<class Scalar>
 class GlobalPerfContainerFactory
 {
 public:
-    using IndexSet = CommunicateAboveBelow::IndexSet;
-    using Attribute = CommunicateAboveBelow::Attribute;
+    using IndexSet = typename CommunicateAboveBelow<Scalar>::IndexSet;
+    using Attribute = typename CommunicateAboveBelow<Scalar>::Attribute;
     using GlobalIndex = typename IndexSet::IndexPair::GlobalIndex;
 
     /// \brief Constructor
@@ -149,14 +150,14 @@ public:
     /// \param num_components the number of components per perforation.
     /// \return A container with values attached to all perforations of a well.
     ///         Values are ordered by the index of the perforation in the ECL schedule.
-    std::vector<double> createGlobal(const std::vector<double>& local_perf_container,
+    std::vector<Scalar> createGlobal(const std::vector<Scalar>& local_perf_container,
                                      std::size_t num_components) const;
 
     /// \brief Copies the values of the global perforation to the local representation
     /// \param global values attached to all peforations of a well (as if the well would live on one process)
     /// \param num_components the number of components per perforation.
     /// \param[out] local The values attached to the local perforations only.
-    void copyGlobalToLocal(const std::vector<double>& global, std::vector<double>& local,
+    void copyGlobalToLocal(const std::vector<Scalar>& global, std::vector<Scalar>& local,
                            std::size_t num_components) const;
 
     int numGlobalPerfs() const;
@@ -180,6 +181,7 @@ private:
 /// \brief Class encapsulating some information about parallel wells
 ///
 /// e.g. It provides a communicator for well information
+template<class Scalar>
 class ParallelWellInfo
 {
 public:
@@ -218,30 +220,30 @@ public:
     /// \param current C-array of the values at the perforations
     /// \param size The size of the C-array and the returned vector
     /// \return a vector containing the values for the perforation above.
-    std::vector<double> communicateAboveValues(double first_value,
-                                               const double* current,
+    std::vector<Scalar> communicateAboveValues(Scalar first_value,
+                                               const Scalar* current,
                                                std::size_t size) const;
 
     /// \brief Creates an array of values for the perforation above.
     /// \param first_value Value to use for above of the first perforation
     /// \param current vector of current values
-    std::vector<double> communicateAboveValues(double first_value,
-                                               const std::vector<double>& current) const;
+    std::vector<Scalar> communicateAboveValues(Scalar first_value,
+                                               const std::vector<Scalar>& current) const;
 
     /// \brief Creates an array of values for the perforation below.
     /// \param last_value Value to use for below of the last perforation
     /// \param current C-array of the values at the perforations
     /// \param size The size of the C-array and the returned vector
     /// \return a vector containing the values for the perforation above.
-    std::vector<double> communicateBelowValues(double last_value,
-                                               const double* current,
+    std::vector<Scalar> communicateBelowValues(Scalar last_value,
+                                               const Scalar* current,
                                                std::size_t size) const;
 
     /// \brief Creates an array of values for the perforation above.
     /// \param last_value Value to use for below of the last perforation
     /// \param current vector of current values
-    std::vector<double> communicateBelowValues(double last_value,
-                                               const std::vector<double>& current) const;
+    std::vector<Scalar> communicateBelowValues(Scalar last_value,
+                                               const std::vector<Scalar>& current) const;
 
     /// \brief Adds information about the ecl indices of the perforations.
     ///
@@ -301,7 +303,7 @@ public:
     /// That is a container that holds data for every perforation no matter where
     /// it is stored. Container is ordered via ascendings index of the perforations
     /// in the ECL schedule.
-    const GlobalPerfContainerFactory& getGlobalPerfContainerFactory() const;
+    const GlobalPerfContainerFactory<Scalar>& getGlobalPerfContainerFactory() const;
 
 private:
 
@@ -326,19 +328,20 @@ private:
     std::unique_ptr<Parallel::Communication, DestroyComm> comm_;
 
     /// \brief used to communicate the values for the perforation above.
-    std::unique_ptr<CommunicateAboveBelow> commAboveBelow_;
+    std::unique_ptr<CommunicateAboveBelow<Scalar>> commAboveBelow_;
 
-    std::unique_ptr<GlobalPerfContainerFactory> globalPerfCont_;
+    std::unique_ptr<GlobalPerfContainerFactory<Scalar>> globalPerfCont_;
 };
 
 /// \brief Class checking that all connections are on active cells
 ///
 /// Works for distributed wells, too
+template<class Scalar>
 class CheckDistributedWellConnections
 {
 public:
     CheckDistributedWellConnections(const Well& well,
-                                   const ParallelWellInfo& info);
+                                    const ParallelWellInfo<Scalar>& info);
 
     /// \brief Inidicate that the i-th completion was found
     ///
@@ -351,26 +354,36 @@ public:
 private:
     std::vector<std::size_t> foundConnections_;
     const Well& well_;
-    const ParallelWellInfo& pwinfo_;
+    const ParallelWellInfo<Scalar>& pwinfo_;
 };
 
-bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2);
+template<class Scalar>
+bool operator<(const ParallelWellInfo<Scalar>& well1, const ParallelWellInfo<Scalar>& well2);
 
-bool operator==(const ParallelWellInfo& well1, const ParallelWellInfo& well2);
+template<class Scalar>
+bool operator==(const ParallelWellInfo<Scalar>& well1, const ParallelWellInfo<Scalar>& well2);
 
-bool operator!=(const ParallelWellInfo& well1, const ParallelWellInfo& well2);
+template<class Scalar>
+bool operator!=(const ParallelWellInfo<Scalar>& well1, const ParallelWellInfo<Scalar>& well2);
 
-bool operator<(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well);
+template<class Scalar>
+bool operator<(const std::pair<std::string, bool>& pair, const ParallelWellInfo<Scalar>& well);
 
-bool operator<( const ParallelWellInfo& well, const std::pair<std::string, bool>& pair);
+template<class Scalar>
+bool operator<( const ParallelWellInfo<Scalar>& well, const std::pair<std::string, bool>& pair);
 
-bool operator==(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well);
+template<class Scalar>
+bool operator==(const std::pair<std::string, bool>& pair, const ParallelWellInfo<Scalar>& well);
 
-bool operator==(const ParallelWellInfo& well, const std::pair<std::string, bool>& pair);
+template<class Scalar>
+bool operator==(const ParallelWellInfo<Scalar>& well, const std::pair<std::string, bool>& pair);
 
-bool operator!=(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well);
+template<class Scalar>
+bool operator!=(const std::pair<std::string, bool>& pair, const ParallelWellInfo<Scalar>& well);
 
-bool operator!=(const ParallelWellInfo& well, const std::pair<std::string, bool>& pair);
+template<class Scalar>
+bool operator!=(const ParallelWellInfo<Scalar>& well, const std::pair<std::string, bool>& pair);
 
 } // end namespace Opm
+
 #endif //  OPM_PARALLELWELLINFO_HEADER_INCLUDED

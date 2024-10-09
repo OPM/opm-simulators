@@ -24,8 +24,11 @@
 #include <opm/simulators/utils/DamarisVar.hpp>
 
 #if HAVE_DUNE_FEM
+#include <dune/common/version.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
+#if !DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
+#endif
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif // HAVE_DUNE_FEM
 
@@ -47,8 +50,15 @@ template<class T> using DV = DamarisOutput::DamarisVar<T>;
 INSTANCE(1, Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>)
 
 #if HAVE_DUNE_FEM
+#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
+using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
+                                           (Dune::PartitionIteratorType)4,
+                                           false>;
+INSTANCE(1, GV)
+#else
 INSTANCE(1, Dune::Fem::GridPart2GridViewImpl<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, (Dune::PartitionIteratorType)4, false> >)
 INSTANCE(1, Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>)
+#endif
 #endif
 
 } // namespace Opm::GridDataOutput

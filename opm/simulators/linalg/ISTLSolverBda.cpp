@@ -43,15 +43,21 @@
 
 #include <opm/grid/polyhedralgrid.hh>
 
-namespace Opm {
-namespace detail {
+#include <thread>
+std::shared_ptr<std::thread> copyThread;
+
+#if HAVE_OPENMP
+#include <omp.h>
+#endif // HAVE_OPENMP
+
+namespace Opm::detail {
 
 template<class Matrix, class Vector>
 BdaSolverInfo<Matrix,Vector>::
 BdaSolverInfo(const std::string& accelerator_mode,
               const int linear_solver_verbosity,
               const int maxit,
-              const double tolerance,
+              const Scalar tolerance,
               const int platformID,
               const int deviceID,
               const bool opencl_ilu_parallel,
@@ -72,12 +78,14 @@ void BdaSolverInfo<Matrix,Vector>::
 prepare(const Grid& grid,
         const Dune::CartesianIndexMapper<Grid>& cartMapper,
         const std::vector<Well>& wellsForConn,
+        const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
         const std::vector<int>& cellPartition,
         const std::size_t nonzeroes,
         const bool useWellConn)
 {
     if (numJacobiBlocks_ > 1) {
       detail::setWellConnections(grid, cartMapper, wellsForConn,
+                                 possibleFutureConnections,
                                  useWellConn,
                                  wellConnectionsGraph_,
                                  numJacobiBlocks_);
@@ -97,7 +105,7 @@ apply(Vector& rhs,
 {
     bool use_gpu = bridge_->getUseGpu();
     if (use_gpu) {
-        auto wellContribs = WellContributions::create(accelerator_mode_, useWellConn);
+        auto wellContribs = WellContributions<Scalar>::create(accelerator_mode_, useWellConn);
         bridge_->initWellContributions(*wellContribs, x.N() * x[0].N());
 
          // the WellContributions can only be applied separately with CUDA, OpenCL or rocsparse, not with amgcl or rocalution
@@ -107,14 +115,32 @@ apply(Vector& rhs,
         }
 #endif
 
+	bool use_multithreading = true;
+#if HAVE_OPENMP
+	// if user  manually sets --threads-per-process=1, do not use multithreading 
+        if (omp_get_max_threads() == 1)
+	    use_multithreading = false;
+#endif // HAVE_OPENMP
+
         if (numJacobiBlocks_ > 1) {
-            this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
+            if(use_multithreading) {
+	      //NOTE: copyThread can safely write to jacMat because in solve_system both matrix and *blockJacobiForGPUILU0_ diagonal entries
+	      //are checked and potentially overwritten in replaceZeroDiagonal() by mainThread. However, no matter the thread writing sequence,
+	      //the final entry in jacMat is correct.
+//#if HAVE_OPENMP
+              copyThread = std::make_shared<std::thread>([&](){this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);});
+//#endif // HAVE_OPENMP
+	    }
+	    else {
+	      this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
+	    }
+
             // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
             bridge_->solve_system(&matrix, blockJacobiForGPUILU0_.get(),
                                   numJacobiBlocks_, rhs, *wellContribs, result);
         }
         else
-            bridge_->solve_system(&matrix, &matrix,
+          bridge_->solve_system(&matrix, &matrix,
                                   numJacobiBlocks_, rhs, *wellContribs, result);
         if (result.converged) {
             // get result vector x from non-Dune backend, iff solve was successful
@@ -158,8 +184,9 @@ blockJacobiAdjacency(const Grid& grid,
     const auto& gridView = grid.leafGridView();
     auto elemIt = gridView.template begin<0>(); // should never overrun, since blockJacobiForGPUILU0_ is initialized with numCells rows
 
-    //Loop over cells
-    for (Iter row = blockJacobiForGPUILU0_->createbegin(); row != blockJacobiForGPUILU0_->createend(); ++elemIt, ++row)
+    // Loop over cells
+    for (Iter row = blockJacobiForGPUILU0_->createbegin();
+              row != blockJacobiForGPUILU0_->createend(); ++elemIt, ++row)
     {
         const auto& elem = *elemIt;
         size_type idx = lid.id(elem);
@@ -200,25 +227,27 @@ copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
         auto outerCol = (*outerRow).begin();
         for (auto col = (*row).begin(); col != (*row).end(); ++col) {
             // outerRow is guaranteed to have all column entries that row has!
-            while(outerCol.index() < col.index()) ++outerCol;
+            while (outerCol.index() < col.index()) {
+                ++outerCol;
+            }
             assert(outerCol.index() == col.index());
             *col = *outerCol; // copy nonzero block
         }
     }
 }
 
-template<int Dim>
-using BM = Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>;
-template<int Dim>
-using BV = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
+template<class Scalar, int Dim>
+using BM = Dune::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>;
+template<class Scalar, int Dim>
+using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 
-
-#define INSTANCE_GRID(Dim, Grid)                   \
-    template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \
-    prepare(const Grid&, \
-            const Dune::CartesianIndexMapper<Grid>&, \
-            const std::vector<Well>&, \
-            const std::vector<int>&, \
+#define INSTANTIATE_GRID(T, Dim, Grid)                             \
+    template void BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>::             \
+    prepare(const Grid&,                                           \
+            const Dune::CartesianIndexMapper<Grid>&,               \
+            const std::vector<Well>&,                              \
+            const std::unordered_map<std::string, std::set<int>>&, \
+            const std::vector<int>&,                               \
             const std::size_t, const bool);
 using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
 #if HAVE_DUNE_ALUGRID
@@ -227,23 +256,30 @@ using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
 #else
     using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
 #endif //HAVE_MPI
-#define INSTANCE(Dim) \
-    template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
-    INSTANCE_GRID(Dim,Dune::CpGrid) \
-    INSTANCE_GRID(Dim,ALUGrid3CN) \
-    INSTANCE_GRID(Dim,PolyHedralGrid3D)
+#define INSTANTIATE(T,Dim)                              \
+    template struct BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>; \
+    INSTANTIATE_GRID(T,Dim,Dune::CpGrid)                \
+    INSTANTIATE_GRID(T,Dim,ALUGrid3CN)                  \
+    INSTANTIATE_GRID(T,Dim,PolyHedralGrid3D)
 #else
-#define INSTANCE(Dim) \
-    template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
-    INSTANCE_GRID(Dim,Dune::CpGrid) \
-    INSTANCE_GRID(Dim,PolyHedralGrid3D)
+#define INSTANTIATE(T,Dim)                              \
+    template struct BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>; \
+    INSTANTIATE_GRID(T,Dim,Dune::CpGrid)                \
+    INSTANTIATE_GRID(T,Dim,PolyHedralGrid3D)
 #endif
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
 
-} // namespace detail
-} // namespace Opm
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE(T,1)        \
+    INSTANTIATE(T,2)        \
+    INSTANTIATE(T,3)        \
+    INSTANTIATE(T,4)        \
+    INSTANTIATE(T,5)        \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
+
+} // namespace Opm::detail

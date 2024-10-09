@@ -34,12 +34,12 @@
 namespace Opm
 {
 
-class ParallelWellInfo;
+template<class Scalar> class ParallelWellInfo;
 template<class Scalar, int numEq> class StandardWellEquationAccess;
 #if COMPILE_BDA_BRIDGE
-class WellContributions;
+template<class Scalar> class WellContributions;
 #endif
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 template<class Scalar, int numEq>
@@ -65,7 +65,7 @@ public:
     // block vector type
     using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
 
-    StandardWellEquations(const ParallelWellInfo& parallel_well_info);
+    StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info);
 
     //! \brief Setup sparsity pattern for the matrices.
     //! \param num_cells Total number of cells
@@ -102,7 +102,7 @@ public:
 #if COMPILE_BDA_BRIDGE
     //! \brief Add the matrices of this well to the WellContributions object.
     void extract(const int numStaticWellEq,
-                 WellContributions& wellContribs) const;
+                 WellContributions<Scalar>& wellContribs) const;
 #endif
 
     //! \brief Add the matrices of this well to the sparse matrix adapter.
@@ -115,7 +115,7 @@ public:
                                   const BVector& weights,
                                   const int pressureVarIndex,
                                   const bool use_well_weights,
-                                  const WellInterfaceGeneric& well,
+                                  const WellInterfaceGeneric<Scalar>& well,
                                   const int bhp_var_index,
                                   const WellState<Scalar>& well_state) const;
 

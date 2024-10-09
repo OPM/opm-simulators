@@ -17,6 +17,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+// By default, dune-ALUGrid uses Space-Filling Curve (SFC) ordering
+// for cells to optimize data access patterns for adaptive mesh refinements/coarsening.
+// However, if you want to use Cartesian ordering, as is used in OPM, you
+// can switch to it by defining the macro #define DISABLE_SFC_ORDERING 1.
+// This will change the default cell order to Cartesian.
+// Note that this option is not available for pre-built or installed versions of dune-ALUGrid.
+// To enable changig to Cartesian ordering, you will need to rebuild dune-ALUGrid from source, ensuring 
+// the build configuration allows disabling SFC ordering from OPM.
+// For more details, refer to the files gridfactory.hh and aluinline.hh located in the dune-alugrid/3d/
 
 #include <dune/alugrid/grid.hh>
 #include <opm/simulators/flow/Main.hpp>

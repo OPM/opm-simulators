@@ -27,67 +27,90 @@
 #include <opm/grid/CpGrid.hpp>
 
 #if HAVE_DUNE_FEM
+#include <dune/common/version.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
+#if !DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
+#endif
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif
 
 namespace Opm {
+
+template<class Scalar>
+using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
+
 namespace EQUIL {
 namespace DeckDependent {
 
-using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<double,0,1,2>>;
-
-#define INSTANCE_COMP(GridView, Mapper) \
-    template class InitialStateComputer<BlackOilFluidSystem<double>, \
-                                        Dune::CpGrid, \
-                                        GridView, \
-                                        Mapper, \
+#define INSTANTIATE_COMP(T, GridView, Mapper)                                      \
+    template class InitialStateComputer<BlackOilFluidSystem<T>,                    \
+                                        Dune::CpGrid,                              \
+                                        GridView,                                  \
+                                        Mapper,                                    \
                                         Dune::CartesianIndexMapper<Dune::CpGrid>>; \
-    template InitialStateComputer<BlackOilFluidSystem<double>, \
-                                  Dune::CpGrid, \
-                                  GridView, \
-                                  Mapper, \
-                                  Dune::CartesianIndexMapper<Dune::CpGrid>>::\
-        InitialStateComputer(MatLaw&, \
-                             const EclipseState&, \
-                             const Dune::CpGrid&, \
-                             const GridView&, \
-                             const Dune::CartesianIndexMapper<Dune::CpGrid>&, \
-                             const double, \
-                             const int, \
-                             const bool);
+    template InitialStateComputer<BlackOilFluidSystem<T>,                          \
+                                  Dune::CpGrid,                                    \
+                                  GridView,                                        \
+                                  Mapper,                                          \
+                                  Dune::CartesianIndexMapper<Dune::CpGrid>>::      \
+             InitialStateComputer(MatLaw<T>&,                                      \
+                                  const EclipseState&,                             \
+                                  const Dune::CpGrid&,                             \
+                                  const GridView&,                                 \
+                                  const Dune::CartesianIndexMapper<Dune::CpGrid>&, \
+                                  const T,                                         \
+                                  const int,                                       \
+                                  const bool);
 
 using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
 using Mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
-INSTANCE_COMP(GridView, Mapper)
+
+INSTANTIATE_COMP(double, GridView, Mapper)
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_COMP(float, GridView, Mapper)
+#endif
 
 #if HAVE_DUNE_FEM
+#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
+using GridViewFem = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
+                                                   (Dune::PartitionIteratorType)4,
+                                                    false>;
+#else
 using GridViewFem = Dune::Fem::GridPart2GridViewImpl<
                                         Dune::Fem::AdaptiveLeafGridPart<
                                             Dune::CpGrid,
                                             Dune::PartitionIteratorType(4),
                                             false>>;
+#endif
 using MapperFem = Dune::MultipleCodimMultipleGeomTypeMapper<GridViewFem>;
-INSTANCE_COMP(GridViewFem, MapperFem)
+
+INSTANTIATE_COMP(double, GridViewFem, MapperFem)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_COMP(float, GridViewFem, MapperFem)
+#endif
+
 #endif // HAVE_DUNE_FEM
 
 } // namespace DeckDependent
 
 namespace Details {
-    template class PressureTable<BlackOilFluidSystem<double>,EquilReg>;
-    template void verticalExtent<std::vector<int>,
-                                 Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>>(
-                                 const std::vector<int>&,
-                                 const std::vector<std::pair<double,double>>&,
-                                 const Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>&,
-                                 std::array<double,2>&);
+#define INSTANTIATE_TYPE(T)                                                 \
+    template class PressureTable<BlackOilFluidSystem<T>,EquilReg<T>>;       \
+    template void verticalExtent(const std::vector<int>&,                   \
+                                 const std::vector<std::pair<T,T>>&,        \
+                                 const Parallel::Communication&,            \
+                                 std::array<T,2>&);                         \
+    template class PhaseSaturations<MatLaw<T>,BlackOilFluidSystem<T>,       \
+                                    EquilReg<T>,std::size_t>;               \
+    template std::pair<T,T> cellZMinMax<T>(const Dune::cpgrid::Entity<0>&);
 
-    using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<double,0,1,2>>;
-    template class PhaseSaturations<MatLaw,BlackOilFluidSystem<double>,
-                                    EquilReg,std::size_t>;
+INSTANTIATE_TYPE(double)
 
-    template std::pair<double,double> cellZMinMax(const Dune::cpgrid::Entity<0>& element);
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 }
 
 } // namespace EQUIL

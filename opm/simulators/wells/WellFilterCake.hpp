@@ -26,35 +26,49 @@
 namespace Opm {
 
 class DeferredLogger;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 //! \brief Class for well calculations related to filter cakes.
 template<class Scalar>
 class WellFilterCake {
 public:
-    //! \brief Update the water injection volume.
-    //! \details Used for calculation related to cake filtration due to injection activity.
-    void updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
-                                        const double dt,
-                                        const Scalar conc,
-                                        const std::size_t water_index,
-                                        WellState<Scalar>& well_state);
+    //! \brief Post-step filtration model updates
+    //! \details Calculates the filtrate deposition volumes and associated skin factors / injectivity multipliers
+    void updatePostStep(const WellInterfaceGeneric<Scalar>& well,
+                WellState<Scalar>& well_state,
+                const double dt,
+                const Scalar conc,
+                const std::size_t water_index,
+                DeferredLogger& deferred_logger);
 
-    //! \brief Update the multiplier for well transmissbility due to cake filtration.
-    void updateInjFCMult(const WellInterfaceGeneric& well,
-                         WellState<Scalar>& well_state,
-                         DeferredLogger& deferred_logger);
+    //! \brief Pre-step filtration model updates
+    //! \details Applies filter cake cleaning
+    void updatePreStep(const WellInterfaceGeneric<Scalar>& well,
+                       DeferredLogger& deferred_logger);
 
     //! \brief Returns a const-ref to multipliers.
-    const std::vector<Scalar>& multipliers() const
-    {
-        return inj_fc_multiplier_;
-    }
+    const std::vector<Scalar>& multipliers() const { return inj_fc_multiplier_; }
 
 private:
-    std::vector<Scalar> filtration_particle_volume_; //!<// Volume of filtration particles during water injection
+    //! \brief Update the multiplier for well transmissbility due to cake filtration.
+    void updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
+                                         WellState<Scalar>& well_state,
+                                         const double dt,
+                                         const std::size_t water_index,
+                                         DeferredLogger& deferred_logger);
+    template<class Conn>
+    void updateMultiplier(const Conn& conn, const int perf);
+
+    //! \brief Apply cleaning multipliers to skin factors and reduce cake thickness accordingly
+    //! \details The cake thickness is re-computed to give the new (reduced) skin factor with current cake properties
+    void applyCleaning(const WellInterfaceGeneric<Scalar>& well,
+                       DeferredLogger& deferred_logger);
+
+
     std::vector<Scalar> inj_fc_multiplier_; //!< Multiplier due to injection filtration cake
+    std::vector<Scalar> skin_factor_;
+    std::vector<Scalar> thickness_;
 };
 
 }

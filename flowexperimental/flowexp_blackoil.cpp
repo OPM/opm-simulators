@@ -21,8 +21,9 @@
 #include "flowexp.hpp"
 
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 
 #include "BlackOilIntensiveQuantitiesGlobalIndex.hpp"
 #include "FIBlackOilModelNoCache.hpp"
@@ -55,49 +56,6 @@ struct Problem<TypeTag, TTag::FlowExpProblemBlackOil>
 };
 
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    static constexpr int value = 1;
-};
-
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-5;
-};
-
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-2;
-};
-
-// set fraction of the pore volume where the volumetric residual may be violated during
-// strict Newton iterations
-template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.0;
-};
-
-template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 10*getPropValue<TypeTag, Properties::NewtonTolerance>();
-};
-
-template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowExpProblemBlackOil>
 {
     static constexpr bool value = false;
@@ -115,11 +73,11 @@ struct Simulator<TypeTag, TTag::FlowExpProblemBlackOil>
     using type = Opm::Simulator<TypeTag>;
 };
 
-}
+} // namespace Opm::Properties
 
 int main(int argc, char** argv)
 {
     using TypeTag = Opm::Properties::TTag::FlowExpProblemBlackOil;
-    Opm::registerEclTimeSteppingParameters<TypeTag>();
+    Opm::registerEclTimeSteppingParameters<double>();
     return Opm::start<TypeTag>(argc, argv);
 }

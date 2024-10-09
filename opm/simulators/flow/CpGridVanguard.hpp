@@ -212,11 +212,6 @@ public:
         return *globalTrans_;
     }
 
-    void releaseGlobalTransmissibility()
-    {
-        globalTrans_.reset();
-    }
-
     /*!
      * \brief Distribute the simulation grid over multiple processes
      *
@@ -232,10 +227,11 @@ public:
         }
 
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
-                             this->serialPartitioning(), this->enableDistributedWells(),
-                             this->zoltanImbalanceTol(), this->gridView(),
-                             this->schedule(), this->eclState(),
-                             this->parallelWells_, this->numJacobiBlocks());
+                             this->partitionMethod(), this->serialPartitioning(),
+                             this->enableDistributedWells(), this->imbalanceTol(),
+                             this->gridView(), this->schedule(),
+                             this->eclState(), this->parallelWells_,
+                             this->numJacobiBlocks());
 #endif
 
         this->updateGridView_();
@@ -290,7 +286,7 @@ protected:
                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
                                                     getPropValue<TypeTag, Properties::EnableDispersion>()));
-        globalTrans_->update(false);
+        globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);
     }
 
     double getTransmissibility(unsigned I, unsigned J) const override
@@ -303,6 +299,10 @@ protected:
     {
         return this->zoltanParams_;
     }
+    const std::string& metisParams() const override
+    {
+        return this->metisParams_;
+    }
 #endif
 
     // removing some connection located in inactive grid cells
@@ -311,6 +311,10 @@ protected:
         this->doFilterConnections_(this->schedule());
     }
 
+    // \Note: this globalTrans_ is used for domain decomposition and INIT file output.
+    // It only contains trans_ due to permeability and does not contain thermalHalfTrans_,
+    // diffusivity_ abd dispersivity_. The main reason is to reduce the memory usage for rank 0
+    // during parallel running.
     std::unique_ptr<TransmissibilityType> globalTrans_;
 };
 

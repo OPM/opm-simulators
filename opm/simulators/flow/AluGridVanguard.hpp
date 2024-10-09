@@ -190,7 +190,8 @@ public:
                                                                  getPropValue<TypeTag,
                                                                  Properties::EnableDispersion>());
             // Re-ordering  for ALUGrid
-            globalTrans_->update(false, [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
+            globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans,
+                                 [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
         }
         
     }
@@ -254,11 +255,6 @@ public:
     {
         assert( globalTrans_ != nullptr );
         return *globalTrans_;
-    }
-
-    void releaseGlobalTransmissibility()
-    {
-        globalTrans_.reset();
     }
 
     const std::vector<int>& globalCell()
@@ -329,7 +325,7 @@ protected:
 
         factory_ = std::make_unique<Factory>();
         grid_ = factory_->convert(*equilGrid_, cartesianCellId_, ordering_);
-        OpmLog::warning("Space Filling Curve Ordering is not yet supported: DISABLE_ALUGRID_SFC_ORDERING is enabled");
+        OpmLog::warning("Space Filling Curve (SFC) ordering is enabled: see flow_blackoil_alugrid for more informations on disabling/enabling SFC reordering");
         equilGridToGrid_.resize(ordering_.size());
         for (std::size_t index = 0; index < ordering_.size(); ++index) {
             equilGridToGrid_[ordering_[index]] = index;
@@ -356,6 +352,10 @@ protected:
     std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
     std::unique_ptr<EquilCartesianIndexMapper> equilCartesianIndexMapper_;
     std::unique_ptr<Factory> factory_;
+    // \Note: this globalTrans_ is used for domain decomposition and INIT file output.
+    // It only contains trans_ due to permeability and does not contain thermalHalfTrans_,
+    // diffusivity_ abd dispersivity_. The main reason is to reduce the memory usage for rank 0
+    // during parallel running.
     std::unique_ptr<TransmissibilityType> globalTrans_;
     int mpiRank;
 };

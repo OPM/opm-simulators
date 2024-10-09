@@ -59,6 +59,8 @@ namespace Opm
             return "TooLarge";
         case S::NotANumber:
             return "NotANumber";
+        case S::ConvergenceMonitorFailure:
+            return "ConvergenceMonitorFailure";
         }
         throw std::logic_error("Unknown ConvergenceReport::Severity");
     }
@@ -96,5 +98,11 @@ namespace Opm
         return fmt::format("{{ {} {}{} }}", wf.wellName(), to_string(wf.type()), mberror);
     }
 
+
+    std::string to_string(const ConvergenceReport::PenaltyCard& pc)
+    {
+        return fmt::format("PenaltyCard {{ NonConverged: {}, DistanceDecay: {}, LargeWellResiduals: {}, Total: {} }}",
+                           pc.nonConverged, pc.distanceDecay, pc.largeWellResiduals, pc.total());
+    }
 
 } // namespace Opm

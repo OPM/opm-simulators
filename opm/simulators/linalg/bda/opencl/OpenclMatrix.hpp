@@ -29,28 +29,30 @@ namespace Opm
 namespace Accelerator
 {
 
-class Matrix;
-class BlockedMatrix;
+template<class Scalar> class Matrix;
+template<class Scalar> class BlockedMatrix;
 
 /// This struct resembles a csr matrix, only doubles are supported
 /// The matrix data is stored in OpenCL Buffers
-class OpenclMatrix {
+template<class Scalar>
+class OpenclMatrix
+{
 public:
-
     OpenclMatrix(cl::Context *context, int Nb_, int Mb_, int nnzbs_, unsigned int block_size_)
     : Nb(Nb_),
       Mb(Mb_),
       nnzbs(nnzbs_),
       block_size(block_size_)
     {
-        nnzValues = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * block_size * block_size * nnzbs);
+        nnzValues = cl::Buffer(*context, CL_MEM_READ_WRITE,
+                               sizeof(Scalar) * block_size * block_size * nnzbs);
         colIndices = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzbs);
         rowPointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
     }
 
-    void upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows);
-    void upload(cl::CommandQueue *queue, Matrix *matrix);
-    void upload(cl::CommandQueue *queue, BlockedMatrix *matrix);
+    void upload(cl::CommandQueue* queue, Scalar* vals, int* cols, int* rows);
+    void upload(cl::CommandQueue* queue, Matrix<Scalar>* matrix);
+    void upload(cl::CommandQueue* queue, BlockedMatrix<Scalar>* matrix);
 
     cl::Buffer nnzValues;
     cl::Buffer colIndices;

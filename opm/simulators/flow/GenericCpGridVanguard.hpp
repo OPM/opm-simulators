@@ -150,9 +150,10 @@ protected:
 #if HAVE_MPI
     void doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                         const bool                               ownersFirst,
+                        const Dune::PartitionMethod              partitionMethod,
                         const bool                               serialPartitioning,
                         const bool                               enableDistributedWells,
-                        const double                             zoltanImbalanceTol,
+                        const double                             imbalanceTol,
                         const GridView&                          gridView,
                         const Schedule&                          schedule,
                         EclipseState&                            eclState,
@@ -164,30 +165,35 @@ protected:
 private:
     std::vector<double> extractFaceTrans(const GridView& gridView) const;
 
-    void distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
-                        const bool                               ownersFirst,
-                        const bool                               serialPartitioning,
-                        const bool                               enableDistributedWells,
-                        const double                             zoltanImbalanceTol,
-                        const bool                               loadBalancerSet,
-                        const std::vector<double>&               faceTrans,
-                        const std::vector<Well>&                 wells,
-                        EclipseState&                            eclState,
-                        FlowGenericVanguard::ParallelWellStruct& parallelWells);
+    void distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
+                        const bool                                            ownersFirst,
+                        const Dune::PartitionMethod                           partitionMethod,
+                        const bool                                            serialPartitioning,
+                        const bool                                            enableDistributedWells,
+                        const double                                          imbalanceTol,
+                        const bool                                            loadBalancerSet,
+                        const std::vector<double>&                            faceTrans,
+                        const std::vector<Well>&                              wells,
+                        const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
+                        EclipseState&                                         eclState,
+                        FlowGenericVanguard::ParallelWellStruct&              parallelWells);
 
-    void distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
-                        const bool                               ownersFirst,
-                        const bool                               serialPartitioning,
-                        const bool                               enableDistributedWells,
-                        const double                             zoltanImbalanceTol,
-                        const bool                               loadBalancerSet,
-                        const std::vector<double>&               faceTrans,
-                        const std::vector<Well>&                 wells,
-                        ParallelEclipseState*                    eclState,
-                        FlowGenericVanguard::ParallelWellStruct& parallelWells);
+    void distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
+                        const bool                                            ownersFirst,
+                        const Dune::PartitionMethod                           partitionMethod,
+                        const bool                                            serialPartitioning,
+                        const bool                                            enableDistributedWells,
+                        const double                                          imbalanceTol,
+                        const bool                                            loadBalancerSet,
+                        const std::vector<double>&                            faceTrans,
+                        const std::vector<Well>&                              wells,
+                        const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
+                        ParallelEclipseState*                                 eclState,
+                        FlowGenericVanguard::ParallelWellStruct&              parallelWells);
 
 protected:
     virtual const std::string& zoltanParams() const = 0;
+    virtual const std::string& metisParams() const = 0;
 
 #endif  // HAVE_MPI
 

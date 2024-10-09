@@ -24,39 +24,37 @@
 
 #include <string>
 
-namespace Opm
-{
+namespace Opm {
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
 template<class Scalar> class WellState;
 
+template<class Scalar>
 class GasLiftCommon
 {
 public:
     virtual ~GasLiftCommon() = default;
 
 protected:
-    GasLiftCommon(
-        WellState<double>& well_state,
-        const GroupState<double>& group_state,
-        DeferredLogger &deferred_logger,
-        const Parallel::Communication& comm,
-        bool debug
-    );
+    GasLiftCommon(WellState<Scalar>& well_state,
+                  const GroupState<Scalar>& group_state,
+                  DeferredLogger& deferred_logger,
+                  const Parallel::Communication& comm,
+                  bool glift_debug);
+
     enum class MessageType { INFO, WARNING };
 
     int debugUpdateGlobalCounter_() const;
     virtual void displayDebugMessage_(const std::string& msg) const = 0;
-    void displayDebugMessageOnRank0_(const std::string &msg) const;
-    void logMessage_(
-        const std::string& prefix,
-        const std::string& msg,
-        MessageType msg_type = MessageType::INFO) const;
+    void displayDebugMessageOnRank0_(const std::string& msg) const;
+    void logMessage_(const std::string& prefix,
+                     const std::string& msg,
+                     MessageType msg_type = MessageType::INFO) const;
 
-    WellState<double>& well_state_;
-    const GroupState<double>& group_state_;
-    DeferredLogger &deferred_logger_;
+    WellState<Scalar>& well_state_;
+    const GroupState<Scalar>& group_state_;
+    DeferredLogger& deferred_logger_;
     const Parallel::Communication& comm_;
     bool debug;
     // By setting this variable to true we restrict some debug output

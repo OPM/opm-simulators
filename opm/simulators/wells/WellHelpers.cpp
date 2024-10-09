@@ -41,7 +41,8 @@ namespace wellhelpers {
 
 template<typename Scalar>
 ParallelStandardWellB<Scalar>::
-ParallelStandardWellB(const Matrix& B, const ParallelWellInfo& parallel_well_info)
+ParallelStandardWellB(const Matrix& B,
+                      const ParallelWellInfo<Scalar>& parallel_well_info)
     : B_(B), parallel_well_info_(parallel_well_info)
 {}
 
@@ -122,11 +123,12 @@ mmv (const X& x, Y& y) const
     }
 }
 
-double computeHydrostaticCorrection(const double well_ref_depth, const double vfp_ref_depth,
-                                    const double rho, const double gravity)
+template<class Scalar>
+Scalar computeHydrostaticCorrection(const Scalar well_ref_depth, const Scalar vfp_ref_depth,
+                                    const Scalar rho, const Scalar gravity)
 {
-    const double dh = vfp_ref_depth - well_ref_depth;
-    const double dp = rho * gravity * dh;
+    const Scalar dh = vfp_ref_depth - well_ref_depth;
+    const Scalar dp = rho * gravity * dh;
 
     return dp;
 }
@@ -200,7 +202,6 @@ bool rateControlWithZeroProdTarget(const WellProductionControls& controls,
     }
 }
 
-
 bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
                                   const WellInjectorCMode mode)
 {
@@ -214,30 +215,42 @@ bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
     }
 }
 
-
-template class ParallelStandardWellB<double>;
-
-template<int Dim> using Vec = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
-using DynVec = Dune::BlockVector<Dune::DynamicVector<double>>;
-
-#define INSTANCE(Dim) \
-    template void ParallelStandardWellB<double>::mv<Vec<Dim>,DynVec>(const Vec<Dim>&,DynVec&) const; \
-    template void ParallelStandardWellB<double>::mmv<Vec<Dim>,DynVec>(const Vec<Dim>&,DynVec&) const;
-
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
-
+template<class Scalar, int Dim>
+using Vec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
+template<class Scalar>
+using DynVec = Dune::BlockVector<Dune::DynamicVector<Scalar>>;
+template<class Scalar>
+using DMatrix = Dune::DynamicMatrix<Scalar>;
 using Comm = Parallel::Communication;
-template void sumDistributedWellEntries<double,Comm>(Dune::DynamicMatrix<double>& mat,
-                                                     Dune::DynamicVector<double>& vec,
-                                                     const Comm& comm);
 
-using DMatrix = Dune::DynamicMatrix<double>;
-template DMatrix transposeDenseDynMatrix<DMatrix>(const DMatrix&);
+#define INSTANTIATE(T,Dim)                       \
+    template void ParallelStandardWellB<T>::     \
+        mv(const Vec<T,Dim>&,DynVec<T>&) const;  \
+    template void ParallelStandardWellB<T>::     \
+        mmv(const Vec<T,Dim>&,DynVec<T>&) const;
+
+#define INSTANTIATE_TYPE(T)                                               \
+    template class ParallelStandardWellB<T>;                              \
+    template void sumDistributedWellEntries(Dune::DynamicMatrix<T>& mat,  \
+                                            Dune::DynamicVector<T>& vec,  \
+                                            const Comm& comm);            \
+    template DMatrix<T> transposeDenseDynMatrix(const DMatrix<T>&);       \
+    template T computeHydrostaticCorrection(const T,                      \
+                                            const T,                      \
+                                            const T,                      \
+                                            const T);                     \
+    INSTANTIATE(T,1)                                                      \
+    INSTANTIATE(T,2)                                                      \
+    INSTANTIATE(T,3)                                                      \
+    INSTANTIATE(T,4)                                                      \
+    INSTANTIATE(T,5)                                                      \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace wellhelpers
 } // namespace Opm

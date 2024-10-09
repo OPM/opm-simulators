@@ -128,7 +128,7 @@ public:
      */
     void finishInit(const std::function<unsigned int(unsigned int)>& map = {})
     {
-        this->update(true, map, /*applyNncMultRegT = */ true);
+        this->update(true, TransUpdateQuantities::All, map, /*applyNncMultRegT = */ true);
     }
 
     /*!
@@ -137,6 +137,13 @@ public:
      * \param[in] global Whether or not to call \c update() on all
      *   processes.  Also, this updates the "thermal half
      *   transmissibilities" if energy is enabled.
+     *
+     * \param[in] trans Indicating whether we only allocate and upate trans_ without considering
+     *   thermalHalfTrans_, diffusivity_, dispersivity_. For many usage, we only need trans_,
+     *   e.g. weights for domain decomposition, INIT file output. It might change following
+     *   further development.
+     *     Trans  only update the trans_, which is related to permeability
+     *     All    upate rans_, thermalHalfTrans_, diffusivity_ and dispersivity_.
      *
      * \param[in] map Undocumented.
      *
@@ -147,7 +154,9 @@ public:
      *   numerical aquifers.  Default value: \c false, meaning do not apply
      *   regional multipliers to explicit NNCs.
      */
-    void update(bool global, const std::function<unsigned int(unsigned int)>& map = {}, bool applyNncMultRegT = false);
+    enum class TransUpdateQuantities { Trans, All };
+    void update(bool global, TransUpdateQuantities update_quantities = TransUpdateQuantities::All,
+                const std::function<unsigned int(unsigned int)>& map = {}, bool applyNncMultRegT = false);
 
 protected:
     void updateFromEclState_(bool global);
@@ -163,8 +172,7 @@ protected:
                                unsigned insideCartElemIdx,
                                unsigned outsideCartElemIdx,
                                const TransMult& transMult,
-                               const std::array<int, dimWorld>& cartDims,
-                               bool pinchTop);
+                               const std::array<int, dimWorld>& cartDims);
 
     /// \brief Creates TRANS{XYZ} arrays for modification by FieldProps data
     ///
@@ -216,6 +224,12 @@ protected:
      */
     void applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed);
 
+    /// \brief Applies the previous calculate transmissibilities to the NNCs created via PINCH
+    ///
+    /// \param cartesianToCompressed Vector containing the compressed index (or -1 for inactive
+    ///                              cells) as the element at the cartesian index.
+    void applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed);
+
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
     void applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal);
 
@@ -227,7 +241,7 @@ protected:
     void applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& globalToLocal,
                                         const std::string& keyword, const std::vector<NNCdata>& nncs,
                                         const std::function<KeywordLocation(const NNCdata&)>& getLocation,
-                                        const std::function<void(double&, const double&)>& apply);
+                                        const std::function<void(Scalar&, const Scalar&)>& apply);
 
     void extractPermeability_();
 
@@ -248,10 +262,8 @@ protected:
                                  const DimVector& distance,
                                  const Scalar& poro) const;
 
-    DimVector distanceVector_(const DimVector& center,
-                              int faceIdx, // in the reference element that contains the intersection
-                              unsigned elemIdx,
-                              const std::array<std::vector<DimVector>, dimWorld>& axisCentroids) const;
+    DimVector distanceVector_(const DimVector& faceCenter,
+                              const unsigned& cellIdx) const;
 
     void applyMultipliers_(Scalar& trans,
                            unsigned faceIdx,
@@ -278,6 +290,7 @@ protected:
     bool enableEnergy_;
     bool enableDiffusivity_;
     bool enableDispersivity_;
+    bool warnEditNNC_ = true;
     std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_; //NB this is based on direction map size is ca 2*trans_ (diffusivity_)
     std::unordered_map<std::uint64_t, Scalar> diffusivity_;
     std::unordered_map<std::uint64_t, Scalar> dispersivity_;

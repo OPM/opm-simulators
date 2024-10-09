@@ -17,33 +17,39 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include <config.h> // CMake
+#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
+
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
+
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
 #endif // HAVE_UMFPACK
 
-#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
+namespace Opm {
 
-namespace Opm
-{
-
-MultisegmentWellContribution::MultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
-        unsigned int Mb_,
-        std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
-        unsigned int DnumBlocks_, double *Dvalues, UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
-        std::vector<double> &Cvalues)
-    :
-    dim(dim_),                // size of blockvectors in vectors x and y, equal to MultisegmentWell::numEq
-    dim_wells(dim_wells_),    // size of blocks in C, B and D, equal to MultisegmentWell::numWellEq
-    M(Mb_ * dim_wells),       // number of rows, M == dim_wells*Mb
-    Mb(Mb_),                  // number of blockrows in C, D and B
-    DnumBlocks(DnumBlocks_),  // number of blocks in D
+template<class Scalar>
+MultisegmentWellContribution<Scalar>::
+MultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
+                             unsigned int Mb_,
+                             std::vector<Scalar>& Bvalues,
+                             std::vector<unsigned int>& BcolIndices,
+                             std::vector<unsigned int>& BrowPointers,
+                             unsigned int DnumBlocks_,
+                             Scalar* Dvalues,
+                             UMFPackIndex* DcolPointers,
+                             UMFPackIndex* DrowIndices,
+                             std::vector<Scalar>& Cvalues)
+    : dim(dim_)                // size of blockvectors in vectors x and y, equal to MultisegmentWell::numEq
+    , dim_wells(dim_wells_)    // size of blocks in C, B and D, equal to MultisegmentWell::numWellEq
+    , M(Mb_ * dim_wells)       // number of rows, M == dim_wells*Mb
+    , Mb(Mb_)                  // number of blockrows in C, D and B
+    , DnumBlocks(DnumBlocks_)  // number of blocks in D
     // copy data for matrix D into vectors to prevent it going out of scope
-    Dvals(Dvalues, Dvalues + DnumBlocks * dim_wells * dim_wells),
-    Dcols(DcolPointers, DcolPointers + M + 1),
-    Drows(DrowIndices, DrowIndices + DnumBlocks * dim_wells * dim_wells)
+    , Dvals(Dvalues, Dvalues + DnumBlocks * dim_wells * dim_wells)
+    , Dcols(DcolPointers, DcolPointers + M + 1)
+    , Drows(DrowIndices, DrowIndices + DnumBlocks * dim_wells * dim_wells)
 {
     Cvals = std::move(Cvalues);
     Bvals = std::move(Bvalues);
@@ -53,21 +59,28 @@ MultisegmentWellContribution::MultisegmentWellContribution(unsigned int dim_, un
     z1.resize(Mb * dim_wells);
     z2.resize(Mb * dim_wells);
 
-    umfpack_di_symbolic(M, M, Dcols.data(), Drows.data(), Dvals.data(), &UMFPACK_Symbolic, nullptr, nullptr);
-    umfpack_di_numeric(Dcols.data(), Drows.data(), Dvals.data(), UMFPACK_Symbolic, &UMFPACK_Numeric, nullptr, nullptr);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use multisegment wells with float");
+    } else {
+        umfpack_di_symbolic(M, M, Dcols.data(), Drows.data(), Dvals.data(), &UMFPACK_Symbolic, nullptr, nullptr);
+        umfpack_di_numeric(Dcols.data(), Drows.data(), Dvals.data(), UMFPACK_Symbolic, &UMFPACK_Numeric, nullptr, nullptr);
+    }
 }
 
-MultisegmentWellContribution::~MultisegmentWellContribution()
+template<class Scalar>
+MultisegmentWellContribution<Scalar>::~MultisegmentWellContribution()
 {
-    umfpack_di_free_symbolic(&UMFPACK_Symbolic);
-    umfpack_di_free_numeric(&UMFPACK_Numeric);
+    if constexpr (std::is_same_v<Scalar,double>) {
+        umfpack_di_free_symbolic(&UMFPACK_Symbolic);
+        umfpack_di_free_numeric(&UMFPACK_Numeric);
+    }
 }
-
 
 // Apply the MultisegmentWellContribution, similar to MultisegmentWell::apply()
 // h_x and h_y reside on host
 // y -= (C^T * (D^-1 * (B * x)))
-void MultisegmentWellContribution::apply(double *h_x, double *h_y)
+template<class Scalar>
+void MultisegmentWellContribution<Scalar>::apply(Scalar* h_x, Scalar* h_y)
 {
     OPM_TIMEBLOCK(apply);
     // reset z1 and z2
@@ -80,7 +93,7 @@ void MultisegmentWellContribution::apply(double *h_x, double *h_y)
         for (unsigned int blockID = Brows[row]; blockID < Brows[row + 1]; ++blockID) {
             unsigned int colIdx = Bcols[blockID];
             for (unsigned int j = 0; j < dim_wells; ++j) {
-                double temp = 0.0;
+                Scalar temp = 0.0;
                 for (unsigned int k = 0; k < dim; ++k) {
                     temp += Bvals[blockID * dim * dim_wells + j * dim + k] * h_x[colIdx * dim + k];
                 }
@@ -91,7 +104,11 @@ void MultisegmentWellContribution::apply(double *h_x, double *h_y)
 
     // z2 = D^-1 * (B * x)
     // umfpack
-    umfpack_di_solve(UMFPACK_A, Dcols.data(), Drows.data(), Dvals.data(), z2.data(), z1.data(), UMFPACK_Numeric, nullptr, nullptr);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use multisegment wells with float");
+    } else {
+        umfpack_di_solve(UMFPACK_A, Dcols.data(), Drows.data(), Dvals.data(), z2.data(), z1.data(), UMFPACK_Numeric, nullptr, nullptr);
+    }
 
     // y -= (C^T * z2)
     // y -= (C^T * (D^-1 * (B * x)))
@@ -100,7 +117,7 @@ void MultisegmentWellContribution::apply(double *h_x, double *h_y)
         for (unsigned int blockID = Brows[row]; blockID < Brows[row + 1]; ++blockID) {
             unsigned int colIdx = Bcols[blockID];
             for (unsigned int j = 0; j < dim; ++j) {
-                double temp = 0.0;
+                Scalar temp = 0.0;
                 for (unsigned int k = 0; k < dim_wells; ++k) {
                     temp += Cvals[blockID * dim * dim_wells + j + k * dim] * z2[row * dim_wells + k];
                 }
@@ -111,10 +128,17 @@ void MultisegmentWellContribution::apply(double *h_x, double *h_y)
 }
 
 #if HAVE_CUDA
-void MultisegmentWellContribution::setCudaStream(cudaStream_t stream_)
+template<class Scalar>
+void MultisegmentWellContribution<Scalar>::setCudaStream(cudaStream_t stream_)
 {
     stream = stream_;
 }
+#endif
+
+template class MultisegmentWellContribution<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class MultisegmentWellContribution<float>;
 #endif
 
 } //namespace Opm

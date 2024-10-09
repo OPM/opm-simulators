@@ -26,11 +26,9 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/common/dynmatrix.hh>
 
-#include <array>
-
 namespace Opm {
 
-class ParallelWellInfo;
+template<class Scalar> class ParallelWellInfo;
 struct WellProductionControls;
 struct WellInjectionControls;
 enum class WellProducerCMode;
@@ -55,7 +53,8 @@ public:
     using Block = Dune::DynamicMatrix<Scalar>;
     using Matrix = Dune::BCRSMatrix<Block>;
 
-    ParallelStandardWellB(const Matrix& B, const ParallelWellInfo& parallel_well_info);
+    ParallelStandardWellB(const Matrix& B,
+                          const ParallelWellInfo<Scalar>& parallel_well_info);
 
     //! y = A x
     template<class X, class Y>
@@ -67,13 +66,14 @@ public:
 
 private:
     const Matrix& B_;
-    const ParallelWellInfo& parallel_well_info_;
+    const ParallelWellInfo<Scalar>& parallel_well_info_;
 };
 
-double computeHydrostaticCorrection(const double well_ref_depth,
-                                    const double vfp_ref_depth,
-                                    const double rho, const double gravity);
-
+template<class Scalar>
+Scalar computeHydrostaticCorrection(const Scalar well_ref_depth,
+                                    const Scalar vfp_ref_depth,
+                                    const Scalar rho,
+                                    const Scalar gravity);
 
 /// \brief Sums entries of the diagonal Matrix for distributed wells
 template<typename Scalar, typename Comm>

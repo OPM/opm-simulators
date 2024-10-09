@@ -39,9 +39,9 @@ namespace Opm
 template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquationAccess;
 template<class Scalar> class MultisegmentWellGeneric;
 #if COMPILE_BDA_BRIDGE
-class WellContributions;
+template<class Scalar> class WellContributions;
 #endif
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 template<class Scalar, int numWellEq, int numEq>
@@ -105,7 +105,7 @@ public:
 
 #if COMPILE_BDA_BRIDGE
     //! \brief Add the matrices of this well to the WellContributions object.
-    void extract(WellContributions& wellContribs) const;
+    void extract(WellContributions<Scalar>& wellContribs) const;
 #endif
 
     //! \brief Add the matrices of this well to the sparse matrix adapter.
@@ -118,7 +118,7 @@ public:
                                   const BVector& weights,
                                   const int pressureVarIndex,
                                   const bool /*use_well_weights*/,
-                                  const WellInterfaceGeneric& well,
+                                  const WellInterfaceGeneric<Scalar>& well,
                                   const int seg_pressure_var_ind,
                                   const WellState<Scalar>& well_state) const;
 

@@ -32,7 +32,7 @@ namespace Opm
 
 class DeferredLogger;
 class SummaryState;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 enum class WellSegmentCompPressureDrop;
 class WellSegments;
 template<class Scalar> class WellState;
@@ -52,7 +52,7 @@ public:
     int numberOfSegments() const;
 
 protected:
-    MultisegmentWellGeneric(WellInterfaceGeneric& baseif);
+    MultisegmentWellGeneric(WellInterfaceGeneric<Scalar>& baseif);
 
     // scale the segment rates and pressure based on well rates and bhp
     void scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
@@ -64,18 +64,18 @@ protected:
     WellSegmentCompPressureDrop compPressureDrop() const;
 
     /// Detect oscillation or stagnation based on the residual measure history
-    void detectOscillations(const std::vector<double>& measure_history,
+    void detectOscillations(const std::vector<Scalar>& measure_history,
                             bool& oscillate,
                             bool& stagnate) const;
 
     bool accelerationalPressureLossConsidered() const;
     bool frictionalPressureLossConsidered() const;
 
-    double getSegmentDp(const int seg,
-                        const double density,
-                        const std::vector<double>& seg_dp) const;
+    Scalar getSegmentDp(const int seg,
+                        const Scalar density,
+                        const std::vector<Scalar>& seg_dp) const;
 
-    const WellInterfaceGeneric& baseif_;
+    const WellInterfaceGeneric<Scalar>& baseif_;
 };
 
 }

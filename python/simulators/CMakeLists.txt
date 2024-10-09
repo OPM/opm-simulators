@@ -1,17 +1,22 @@
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
 
 # Set the path to the input docstrings.json file and the output .hpp file
-set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings.json")
+set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_simulators.json")
 set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
 #  Note: If the new find_package(Python3) is used in the top level CMakeLists.txt, the variable
 #    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
 #
 # Command to run the Python script
+
+find_file(PYTHON_GENERATE_DOCSTRINGS_PY generate_docstring_hpp.py
+  PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
+  PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
+
 add_custom_command(
     OUTPUT ${PYTHON_DOCSTRINGS_GENERATED_HPP}
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-            ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/python/generate_docstring_hpp.py
-            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP}
+            ${PYTHON_EXECUTABLE} ${PYTHON_GENERATE_DOCSTRINGS_PY}
+            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP} PYBLACKOILSIMULATORDOC_HPP "Opm::Pybind::DocStrings"
     DEPENDS ${PYTHON_DOCSTRINGS_FILE}
     COMMENT "Generating PyBlackOilSimulatorDoc.hpp from JSON file"
 )
@@ -60,7 +65,7 @@ if(OPM_ENABLE_PYTHON_TESTS)
   #   splitting the python tests into multiple add_test() tests instead
   #   of having a single "python -m unittest" test call that will run all
   #   the tests in the "test" sub directory.
-  foreach(case_name IN ITEMS basic fluidstate_variables primary_variables schedule throw)
+  foreach(case_name IN ITEMS basic fluidstate_variables mpi primary_variables schedule throw)
     add_test(NAME python_${case_name}
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
         COMMAND ${CMAKE_COMMAND}
@@ -85,6 +90,23 @@ add_custom_target(copy_python ALL
     COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
         ${PROJECT_SOURCE_DIR}/python/test_data ${PROJECT_BINARY_DIR}/python 0
 )
+
+file(COPY ${PROJECT_SOURCE_DIR}/python/opm/CMakeLists.txt DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(COPY ${PROJECT_SOURCE_DIR}/python/requirements.txt DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(COPY ${PROJECT_SOURCE_DIR}/python/README.md DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(COPY ${PROJECT_SOURCE_DIR}/python/MANIFEST.in DESTINATION ${PROJECT_BINARY_DIR}/python)
+file(COPY ${PROJECT_SOURCE_DIR}/python/pyproject.toml DESTINATION ${PROJECT_BINARY_DIR}/python)
+
+
+set(opm-simulators_PYTHON_PACKAGE_VERSION ${OPM_PYTHON_PACKAGE_VERSION_TAG})
+
+# Generate versioned setup.py
+configure_file(${PROJECT_SOURCE_DIR}/python/setup.py.in
+                ${PROJECT_BINARY_DIR}/python/setup.py.tmp @ONLY)
+file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/python/setup.py
+               INPUT ${PROJECT_BINARY_DIR}/python/setup.py.tmp)
+
+add_dependencies(simulators copy_python)
 
 # Since the installation of Python code is nonstandard it is protected by an
 # extra cmake switch, OPM_INSTALL_PYTHON. If you prefer you can still invoke

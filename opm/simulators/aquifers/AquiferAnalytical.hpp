@@ -22,6 +22,8 @@
 #ifndef OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 #define OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 
+#include <dune/grid/common/partitionset.hh>
+
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>

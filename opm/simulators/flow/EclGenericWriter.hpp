@@ -28,7 +28,7 @@
 #ifndef OPM_ECL_GENERIC_WRITER_HPP
 #define OPM_ECL_GENERIC_WRITER_HPP
 
-#include <opm/models/parallel/tasklets.hh>
+#include <opm/models/parallel/tasklets.hpp>
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
@@ -69,9 +69,6 @@ class EclGenericWriter
     using TransmissibilityType = Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
 
 public:
-    // The Simulator object should preferably have been const - the
-    // only reason that is not the case is due to the SummaryState
-    // object owned deep down by the vanguard.
     EclGenericWriter(const Schedule& schedule,
                      const EclipseState& eclState,
                      const SummaryConfig& summaryConfig,
@@ -85,7 +82,7 @@ public:
 
     const EclipseIO& eclIO() const;
 
-    void writeInit(const std::function<unsigned int(unsigned int)>& map);
+    void writeInit();
 
     void setTransmissibilities(const TransmissibilityType* globalTrans)
     {
@@ -111,11 +108,14 @@ public:
         return collectOnIORank_;
     }
 
+    void extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map);
+
 protected:
     const TransmissibilityType& globalTrans() const;
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const;
 
     void doWriteOutput(const int                          reportStepNum,
+                       const std::optional<int>           timeStepNum,
                        const bool                         isSubStep,
                        data::Solution&&                   localCellData,
                        data::Wells&&                      localWellData,
@@ -164,9 +164,10 @@ protected:
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
     mutable std::vector<NNCdata> outputNnc_;
+    mutable std::unique_ptr<data::Solution> outputTrans_;
 
 private:
-    data::Solution computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
+    void computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
     std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
 };
 

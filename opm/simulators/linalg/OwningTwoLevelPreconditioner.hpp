@@ -173,6 +173,10 @@ public:
         return linear_operator_.category();
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return false;
+    }
+
 private:
     using CoarseOperator = typename LevelTransferPolicy::CoarseOperator;
     using CoarseSolverPolicy = Dune::Amg::PressureSolverPolicy<CoarseOperator,

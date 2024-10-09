@@ -22,6 +22,7 @@
 
 #include <opm/common/OpmLog/KeywordLocation.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>

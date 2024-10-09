@@ -1,0 +1,2 @@
+include opm/simulators/__init__.py
+include opm/simulators/*.so

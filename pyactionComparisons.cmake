@@ -15,6 +15,26 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_gconprod_insert_kw
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH)
 
+add_test_compareSeparateECLFiles(CASENAME pyaction_gconsump_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_GCONSUMP_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_GCONSUMP
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
+add_test_compareSeparateECLFiles(CASENAME pyaction_gruptree_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_GRUPTREE_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_GRUPTREE
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
 add_test_compareSeparateECLFiles(CASENAME pyaction_mult+_insert_kw
                                  DIR1 pyaction
                                  FILENAME1 PYACTION_MULT+_INSERT_KW
@@ -70,6 +90,26 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_wefac_insert_kw
                                  FILENAME1 PYACTION_WEFAC_INSERT_KW
                                  DIR2 actionx
                                  FILENAME2 ACTIONX_WEFAC
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
+add_test_compareSeparateECLFiles(CASENAME pyaction_wsegvalv_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_WSEGVALV_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_WSEGVALV
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
+add_test_compareSeparateECLFiles(CASENAME pyaction_wtest_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_WTEST_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_WTEST
                                  SIMULATOR flow
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}

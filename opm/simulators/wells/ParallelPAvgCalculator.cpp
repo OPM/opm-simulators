@@ -28,19 +28,20 @@
 #include <opm/input/eclipse/Schedule/Well/PAvgCalculator.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
-#include <array>
 #include <functional>
-#include <initializer_list>
 
-Opm::ParallelPAvgCalculator::
+template<class Scalar>
+Opm::ParallelPAvgCalculator<Scalar>::
 ParallelPAvgCalculator(const Parallel::Communication& comm,
                        const GridDims&                cellIndexMap,
                        const WellConnections&         connections)
-    : PAvgCalculator { cellIndexMap, connections }
+    : PAvgCalculator<Scalar> { cellIndexMap, connections }
     , comm_          { comm }
 {}
 
-void Opm::ParallelPAvgCalculator::collectGlobalContributions()
+template<class Scalar>
+void Opm::ParallelPAvgCalculator<Scalar>::
+collectGlobalContributions()
 {
     auto collect = [this](Accumulator& accumulator)
     {
@@ -54,3 +55,9 @@ void Opm::ParallelPAvgCalculator::collectGlobalContributions()
     collect(this->accumCTF_);
     collect(this->accumPV_);
 }
+
+template class Opm::ParallelPAvgCalculator<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class Opm::ParallelPAvgCalculator<float>;
+#endif

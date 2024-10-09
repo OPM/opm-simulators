@@ -84,5 +84,62 @@ consistentlyFailingWells(const std::vector<StepReport>& sr)
     return failing_wells;
 }
 
+void registerAdaptiveParameters()
+{
+    // TODO: make sure the help messages are correct (and useful)
+    Parameters::Register<Parameters::SolverContinueOnConvergenceFailure>
+        ("Continue instead of stop when minimum solver time step is reached");
+    Parameters::Register<Parameters::SolverMaxRestarts>
+        ("The maximum number of breakdowns before a substep is given up and "
+         "the simulator is terminated");
+    Parameters::Register<Parameters::SolverVerbosity>
+        ("Specify the \"chattiness\" of the non-linear solver itself");
+    Parameters::Register<Parameters::TimeStepVerbosity>
+        ("Specify the \"chattiness\" during the time integration");
+    Parameters::Register<Parameters::InitialTimeStepInDays>
+        ("The size of the initial time step in days");
+    Parameters::Register<Parameters::FullTimeStepInitially>
+        ("Always attempt to finish a report step using a single substep");
+    Parameters::Register<Parameters::TimeStepControl>
+        ("The algorithm used to determine time-step sizes. "
+         "Valid options are: "
+         "'pid' (default), "
+         "'pid+iteration', "
+         "'pid+newtoniteration', "
+         "'iterationcount', "
+        "'newtoniterationcount' "
+        "and 'hardcoded'");
+    Parameters::Register<Parameters::TimeStepControlTolerance>
+        ("The tolerance used by the time step size control algorithm");
+    Parameters::Register<Parameters::TimeStepControlTargetIterations>
+        ("The number of linear iterations which the time step control scheme "
+         "should aim for (if applicable)");
+    Parameters::Register<Parameters::TimeStepControlTargetNewtonIterations>
+        ("The number of Newton iterations which the time step control scheme "
+         "should aim for (if applicable)");
+    Parameters::Register<Parameters::TimeStepControlDecayRate>
+        ("The decay rate of the time step size of the number of "
+         "target iterations is exceeded");
+    Parameters::Register<Parameters::TimeStepControlGrowthRate>
+        ("The growth rate of the time step size of the number of "
+         "target iterations is undercut");
+    Parameters::Register<Parameters::TimeStepControlDecayDampingFactor>
+        ("The decay rate of the time step decrease when the "
+         "target iterations is exceeded");
+    Parameters::Register<Parameters::TimeStepControlGrowthDampingFactor>
+        ("The growth rate of the time step increase when the "
+         "target iterations is undercut");
+    Parameters::Register<Parameters::TimeStepControlFileName>
+        ("The name of the file which contains the hardcoded time steps sizes");
+    Parameters::Register<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>
+        ("The minimum time step size in days for which problematic wells are not shut");
+    Parameters::Register<Parameters::MinTimeStepBasedOnNewtonIterations>
+        ("The minimum time step size (in days for field and metric unit and hours for lab unit) "
+         "can be reduced to based on newton iteration counts");
+    Parameters::Register<Parameters::TimeStepSafetyFactor>
+        ("Safety factor in the formula for the time step cutting after a "
+        "time step has failed to satisfy the tolerance criterion");
+}
+
 } // namespace detail
 } // namespace Opm

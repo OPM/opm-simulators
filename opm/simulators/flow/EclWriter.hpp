@@ -31,6 +31,7 @@
 #include <dune/grid/common/partitionset.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
@@ -50,25 +51,25 @@
 #include <stdexcept>
 #include <string>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EnableEclOutput {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct EnableAsyncEclOutput {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct EclOutputDoublePrecision {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct EnableEsmry {
-    using type = UndefinedProperty;
-};
-} // namespace Opm::Properties
+// enable the ECL output by default
+struct EnableEclOutput { static constexpr bool value = true; };
+
+// If available, write the ECL output in a non-blocking manner
+struct EnableAsyncEclOutput { static constexpr bool value = true; };
+
+// By default, use single precision for the ECL formated results
+struct EclOutputDoublePrecision { static constexpr bool value = false; };
+
+// Write all solutions for visualization, not just the ones for the
+// report steps...
+struct EnableWriteAllSolutions { static constexpr bool value = false; };
+
+// Write ESMRY file for fast loading of summary data
+struct EnableEsmry { static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -79,11 +80,11 @@ class UDQState;
 /*!
  * \ingroup EclBlackOilSimulator
  *
- * \brief Collects necessary output values and pass it to opm-output.
+ * \brief Collects necessary output values and pass it to opm-common's ECL output.
  *
  * Caveats:
  * - For this class to do do anything meaningful, you will have to
- *   have the OPM module opm-output.
+ *   have the OPM module opm-common with ECL writing enabled.
  * - The only DUNE grid which is currently supported is Dune::CpGrid
  *   from the OPM module "opm-grid". Using another grid won't
  *   fail at compile time but you will provoke a fatal exception as
@@ -124,10 +125,10 @@ public:
     {
         OutputBlackOilModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EnableAsyncEclOutput>
+        Parameters::Register<Parameters::EnableAsyncEclOutput>
             ("Write the ECL-formated results in a non-blocking way "
              "(i.e., using a separate thread).");
-        Parameters::registerParam<TypeTag, Properties::EnableEsmry>
+        Parameters::Register<Parameters::EnableEsmry>
             ("Write ESMRY file for fast loading of summary data.");
     }
 
@@ -147,8 +148,8 @@ public:
                    ((simulator.vanguard().grid().comm().rank() == 0)
                     ? &simulator.vanguard().equilCartesianIndexMapper()
                     : nullptr),
-                   Parameters::get<TypeTag, Properties::EnableAsyncEclOutput>(),
-                   Parameters::get<TypeTag, Properties::EnableEsmry>())
+                   Parameters::Get<Parameters::EnableAsyncEclOutput>(),
+                   Parameters::Get<Parameters::EnableEsmry>())
         , simulator_(simulator)
     {
 #if HAVE_MPI
@@ -375,7 +376,28 @@ public:
         }
     }
 
-    void writeOutput(data::Solution&& localCellData, const SimulatorTimer& timer, bool isSubStep)
+    void writeReports(const SimulatorTimer& timer) {
+        auto rstep = timer.reportStepNum();
+
+        if ((rstep > 0) && (this->collectOnIORank_.isIORank())){
+
+            const auto& rpt = this->schedule_[rstep-1].rpt_config.get();
+            if (rpt.contains("WELLS") && rpt.at("WELLS") > 0) {
+                outputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime());
+                outputModule_->outputProdLog(rstep-1);
+                outputModule_->outputInjLog(rstep-1);
+                outputModule_->outputCumLog(rstep-1);
+            }
+
+            outputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
+                                               timer.currentDateTime(), false, simulator_.gridView().comm());
+
+
+            OpmLog::note("");   // Blank line after all reports.
+        }
+    }
+
+    void writeOutput(data::Solution&& localCellData, bool isSubStep)
     {
         OPM_TIMEBLOCK(writeOutput);
 
@@ -398,25 +420,8 @@ public:
         auto floresn = this->outputModule_->getFloresn();
 
         // data::Solution localCellData = {};
-        if (! isSubStep) {
-            
-            auto rstep = timer.reportStepNum();
-            
-            if ((rstep > 0) && (this->collectOnIORank_.isIORank())){
+        if (! isSubStep || Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
 
-                outputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
-                                                   timer.currentDateTime(), false, simulator_.gridView().comm());
-
-
-                outputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime());
-                                                             
-                outputModule_->outputProdLog(reportStepNum);
-                outputModule_->outputInjLog(reportStepNum);
-                outputModule_->outputCumLog(reportStepNum);
-
-                OpmLog::note("");   // Blank line after all reports.
-            }
-            
             if (localCellData.empty()) {
                 this->outputModule_->assignToSolution(localCellData);
             }
@@ -453,8 +458,11 @@ public:
         if (this->collectOnIORank_.isIORank()) {
             const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
-
-            this->doWriteOutput(reportStepNum, isSubStep,
+            std::optional<int> timeStepIdx; 
+            if (Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
+                timeStepIdx = simulator_.timeStepIndex();
+            }
+            this->doWriteOutput(reportStepNum, timeStepIdx, isSubStep,
                                 std::move(localCellData),
                                 std::move(localWellData),
                                 std::move(localGroupAndNetworkData),
@@ -465,7 +473,7 @@ public:
                                 this->summaryState(),
                                 this->simulator_.problem().thresholdPressure().getRestartVector(),
                                 curTime, nextStepSize,
-                                Parameters::get<TypeTag, Properties::EclOutputDoublePrecision>(),
+                                Parameters::Get<Parameters::EclOutputDoublePrecision>(),
                                 isFlowsn, std::move(flowsn),
                                 isFloresn, std::move(floresn));
         }
@@ -473,24 +481,30 @@ public:
 
     void beginRestart()
     {
-        bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
+        bool enablePCHysteresis = simulator_.problem().materialLawManager()->enablePCHysteresis();
+        bool enableNonWettingHysteresis = simulator_.problem().materialLawManager()->enableNonWettingHysteresis();
+        bool enableWettingHysteresis = simulator_.problem().materialLawManager()->enableWettingHysteresis();
+        bool oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        bool gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         bool enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
-        bool opm_rst_file = Parameters::get<TypeTag, Properties::EnableOpmRstFile>();
+        bool opm_rst_file = Parameters::Get<Parameters::EnableOpmRstFile>();
         bool read_temp = enableEnergy || (opm_rst_file && enableTemperature);
         std::vector<RestartKey> solutionKeys{
             {"PRESSURE", UnitSystem::measure::pressure},
-            {"SWAT", UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
-            {"SGAS", UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
+            {"SWAT", UnitSystem::measure::identity, static_cast<bool>(waterActive)},
+            {"SGAS", UnitSystem::measure::identity, static_cast<bool>(gasActive)},
             {"TEMP" , UnitSystem::measure::temperature, read_temp},
             {"SSOLVENT" , UnitSystem::measure::identity, enableSolvent},
             {"RS", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
             {"RVW", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedWater()},
-            {"SOMAX", UnitSystem::measure::identity, simulator_.problem().vapparsActive(simulator_.episodeIndex())},
-            {"PCSWM_OW", UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_OW", UnitSystem::measure::identity, enableHysteresis},
-            {"PCSWM_GO", UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_GO", UnitSystem::measure::identity, enableHysteresis},
+            {"SGMAX", UnitSystem::measure::identity, (enableNonWettingHysteresis && oilActive && gasActive)},
+            {"SHMAX", UnitSystem::measure::identity, (enableWettingHysteresis && oilActive && gasActive)},
+            {"SOMAX", UnitSystem::measure::identity, (enableNonWettingHysteresis && oilActive && waterActive) || simulator_.problem().vapparsActive(simulator_.episodeIndex())},
+            {"SOMIN", UnitSystem::measure::identity, (enablePCHysteresis && oilActive && gasActive)},
+            {"SWHY1", UnitSystem::measure::identity, (enablePCHysteresis && oilActive && waterActive)},
+            {"SWMAX", UnitSystem::measure::identity, (enableWettingHysteresis && oilActive && waterActive)},
             {"PPCW", UnitSystem::measure::pressure, enableSwatinit}
         };
 
@@ -500,8 +514,12 @@ public:
 
         {
             const auto& tracers = simulator_.vanguard().eclState().tracer();
-            for (const auto& tracer : tracers)
+            for (const auto& tracer : tracers) {
+                bool enableSolTracer = (tracer.phase == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
+                                       (tracer.phase == Phase::OIL && FluidSystem::enableVaporizedOil());
                 solutionKeys.emplace_back(tracer.fname(), UnitSystem::measure::identity, true);
+                solutionKeys.emplace_back(tracer.sname(), UnitSystem::measure::identity, enableSolTracer);
+            }
         }
 
         // The episodeIndex is rewined one back before beginRestart is called
@@ -527,11 +545,30 @@ public:
 
             auto& tracer_model = simulator_.problem().tracerModel();
             for (int tracer_index = 0; tracer_index < tracer_model.numTracers(); tracer_index++) {
-                const auto& tracer_name = tracer_model.fname(tracer_index);
-                const auto& tracer_solution = restartValues.solution.template data<double>(tracer_name);
+                // Free tracers
+                const auto& free_tracer_name = tracer_model.fname(tracer_index);
+                const auto& free_tracer_solution = restartValues.solution.template data<double>(free_tracer_name);
                 for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
                     unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                    tracer_model.setTracerConcentration(tracer_index, globalIdx, tracer_solution[globalIdx]);
+                    tracer_model.setFreeTracerConcentration(tracer_index, globalIdx, free_tracer_solution[globalIdx]);
+                }
+                // Solution tracer (only if DISGAS/VAPOIL are active for gas/oil tracers)
+                if ((tracer_model.phase(tracer_index) == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
+                    (tracer_model.phase(tracer_index) == Phase::OIL && FluidSystem::enableVaporizedOil())) {
+                        tracer_model.setEnableSolTracers(tracer_index, true);
+                        const auto& sol_tracer_name = tracer_model.sname(tracer_index);
+                        const auto& sol_tracer_solution = restartValues.solution.template data<double>(sol_tracer_name);
+                        for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+                            unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                            tracer_model.setSolTracerConcentration(tracer_index, globalIdx, sol_tracer_solution[globalIdx]);
+                        }
+                }
+                else {
+                    tracer_model.setEnableSolTracers(tracer_index, false);
+                    for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+                            unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                            tracer_model.setSolTracerConcentration(tracer_index, globalIdx, 0.0);
+                        }
                 }
             }
 
@@ -542,6 +579,8 @@ public:
                 thpres.setFromRestart(thpresValues);
             }
             restartTimeStepSize_ = restartValues.getExtra("OPMEXTRA")[0];
+            if (restartTimeStepSize_ <= 0)
+                restartTimeStepSize_ = std::numeric_limits<double>::max();
 
             // initialize the well model from restart values
             simulator_.problem().wellModel().initFromRestartFile(restartValues);
@@ -571,7 +610,10 @@ public:
 
 private:
     static bool enableEclOutput_()
-    { return Parameters::get<TypeTag, Properties::EnableEclOutput>(); }
+    {
+        static bool enable = Parameters::Get<Parameters::EnableEclOutput>();
+        return enable;
+    }
 
     const EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
@@ -604,7 +646,8 @@ private:
             countLocalInteriorCellsGridView(gridView);
         this->outputModule_->
             allocBuffers(num_interior, reportStepNum,
-                         isSubStep, log, /*isRestart*/ false);
+                         isSubStep && !Parameters::Get<Parameters::EnableWriteAllSolutions>(),
+                         log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
 

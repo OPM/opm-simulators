@@ -52,9 +52,9 @@ do
   if test -f ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${fname}
   then
     echo -e "\t - ${fname}"
-    ${H5DIFF_COMMAND} -d ${ABS_TOL} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${fname} ${RESULT_PATH}/${fname}
-    test $? -eq 0 || exit 1
-    ${H5DIFF_COMMAND} -p ${REL_TOL} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${fname} ${RESULT_PATH}/${fname}
-    test $? -eq 0 || exit 1
+    h5diffout=$(${H5DIFF_COMMAND} --relative=${REL_TOL} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${fname} ${RESULT_PATH}/${fname})
+    if [ -n "${h5diffout}" ]; then
+        exit 1
+    fi
   fi
 done
