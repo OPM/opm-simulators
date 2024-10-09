@@ -637,7 +637,29 @@ public:
     }
 
     void endRestart()
-    {}
+    {
+        // We need these objects to satisfy the interface requirements of
+        // member function calc_inplace(), but the objects are otherwise
+        // unused and intentionally so.
+        auto miscSummaryData = std::map<std::string, double>{};
+        auto regionData = std::map<std::string, std::vector<double>>{};
+
+        // Note: calc_inplace() *also* assigns the output module's
+        // "initialInplace_" data member.  This is, semantically speaking,
+        // very wrong, as the run's intial volumes then correspond to the
+        // volumes at the restart time instead of the start of the base run.
+        // Nevertheless, this is how Flow has "always" done it.
+        //
+        // See GenericOutputBlackoilModule::accumulateRegionSums() for
+        // additional comments.
+        auto inplace = this->outputModule_
+            ->calc_inplace(miscSummaryData, regionData,
+                           this->simulator_.gridView().comm());
+
+        if (this->collectOnIORank_.isIORank()) {
+            this->inplace_ = std::move(inplace);
+        }
+    }
 
     const OutputBlackOilModule<TypeTag>& outputModule() const
     { return *outputModule_; }
