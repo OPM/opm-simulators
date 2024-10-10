@@ -25,6 +25,7 @@
 #define OPM_WELLINTERFACE_GENERIC_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 
 #include <map>
 #include <optional>
@@ -50,9 +51,12 @@ class Schedule;
 template<class Scalar>
 class WellInterfaceGeneric {
 public:
+    using ModelParameters = BlackoilModelParameters<Scalar>;
+
     WellInterfaceGeneric(const Well& well,
                          const ParallelWellInfo<Scalar>& parallel_well_info,
                          const int time_step,
+                         const ModelParameters& param,
                          const int pvtRegionIdx,
                          const int num_components,
                          const int num_phases,
@@ -156,7 +160,7 @@ public:
 
     // Note:: for multisegment wells, bhp is actually segment pressure in practice based on observation
     // it might change in the future
-    Scalar getInjMult(const int perf, const Scalar bhp, const Scalar perf_pres) const;
+    Scalar getInjMult(const int perf, const Scalar bhp, const Scalar perf_pres, DeferredLogger& dlogger) const;
 
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
@@ -217,6 +221,10 @@ protected:
                                          Well::InjectionControls& inj_controls,
                                          Well::ProductionControls& prod_controls) const;
 
+    void resetDampening() {
+        std::fill(this->inj_multiplier_damp_factor_.begin(), this->inj_multiplier_damp_factor_.end(), 1.0);
+    }
+
     // definition of the struct OperabilityStatus
     struct OperabilityStatus
     {
@@ -274,6 +282,7 @@ protected:
 
     const ParallelWellInfo<Scalar>& parallel_well_info_;
     const int current_step_;
+    const ModelParameters& param_;
 
     // The pvt region of the well. We assume
     // We assume a well to not penetrate more than one pvt region.
@@ -354,6 +363,11 @@ protected:
     // the injection multiplier from the previous running, it is mostly used for CIRR mode
     // which intends to keep the fracturing open
     std::vector<Scalar> prev_inj_multiplier_;
+
+    // WINJMULT multipliers for previous iteration (used for oscillation detection)
+    mutable std::vector<Scalar> inj_multiplier_previter_;
+    // WINJMULT dampening factors (used in case of oscillations)
+    mutable std::vector<Scalar> inj_multiplier_damp_factor_;
 
     // the multiplier due to injection filtration cake
     std::vector<Scalar> inj_fc_multiplier_;
