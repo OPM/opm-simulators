@@ -20,6 +20,7 @@
 */
 
 #include <config.h>
+#include <dune/istl/io.hh>
 
 #include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 
@@ -38,7 +39,7 @@
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-
+//#define COMMENTS
 namespace Opm {
 
 //! \brief Class administering assembler access to equation system.
@@ -70,6 +71,18 @@ public:
     OffDiatMatWell& C()
     {
         return eqns_.duneC_;
+    }
+
+    //! \brief Returns a reference to the global B matrix.
+    OffDiatMatWell& BGlobal()
+    {
+        return eqns_.duneBGlobal_;
+    }
+
+    //! \brief Returns a reference to C matrix.
+    OffDiatMatWell& CGlobal()
+    {
+        return eqns_.duneCGlobal_;
     }
 
     //! \brief Returns a reference to D matrix.
@@ -193,6 +206,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
 
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     // using control_eq to update the matrix and residuals
+    // Here, we do not need to commuicate because we access only the top segment
     eqns.residual()[0][SPres] = control_eq.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         eqns.D()[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
@@ -222,6 +236,10 @@ assembleAccelerationTerm(const int seg_target,
     if constexpr (has_gfrac_variable) {
         eqns.D()[seg_target][seg_upwind][SPres][GFrac] -= accelerationTerm.derivative(GFrac + Indices::numEq);
     }
+#ifdef COMMENTS
+    std::cout << "assembleAccelerationTerm for seg_target = " << seg_target << ", seg = " << seg << ", seg_upwind = " << seg_upwind << std::endl; 
+    std::for_each(eqns.residual().begin(), eqns.residual().end(), [](const auto& entry) {std::cout << entry << std::endl;});
+#endif
 }                     
 
 template<class FluidSystem, class Indices>
@@ -236,7 +254,10 @@ assembleHydroPressureLoss(const int seg,
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         eqns.D()[seg][seg_density][SPres][pv_idx] -= hydro_pressure_drop_seg.derivative(pv_idx + Indices::numEq);
     }
-
+#ifdef COMMENTS
+    std::cout << "assembleHydroPressureLoss for seg = " << seg << ", seg_density = " << seg_density << std::endl; 
+    std::for_each(eqns.residual().begin(), eqns.residual().end(), [](const auto& entry) {std::cout << entry << std::endl;});
+#endif
 }
 
 template<class FluidSystem, class Indices>
@@ -251,6 +272,10 @@ assemblePressureEqExtraDerivatives(const int seg,
     // Frac - derivatives are zero (they belong to upwind^2)
     eqns.D()[seg][seg_upwind][SPres][SPres] += extra_derivatives.derivative(SPres + Indices::numEq);
     eqns.D()[seg][seg_upwind][SPres][WQTotal] += extra_derivatives.derivative(WQTotal + Indices::numEq);
+#ifdef COMMENTS
+    std::cout << "assemblePressureEqExtraDerivatives for seg = " << seg << ", seg_upwind = " << seg_upwind << std::endl; 
+    std::for_each(eqns.residual().begin(), eqns.residual().end(), [](const auto& entry) {std::cout << entry << std::endl;});
+#endif
 }
 
 
@@ -281,6 +306,10 @@ assemblePressureEq(const int seg,
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         eqns.D()[seg][outlet_segment_index][SPres][pv_idx] -= outlet_pressure.derivative(pv_idx + Indices::numEq);
     }
+#ifdef COMMENTS
+    std::cout << "assemblePressureEq for seg = " << seg << ", seg_upwind = " << seg_upwind << ", outlet_segment_index = " << outlet_segment_index << std::endl; 
+    std::for_each(eqns.residual().begin(), eqns.residual().end(), [](const auto& entry) {std::cout << entry << std::endl;});
+#endif
 }
 
 template<class FluidSystem, class Indices>
@@ -292,6 +321,10 @@ assembleTrivialEq(const int seg,
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][SPres] = value;
     eqns.D()[seg][seg][SPres][WQTotal] = 1.;
+#ifdef COMMENTS
+    std::cout << "assembleTrivialEq for seg = " << seg << std::endl; 
+    std::for_each(eqns.residual().begin(), eqns.residual().end(), [](const auto& entry) {std::cout << entry << std::endl;});
+#endif
 }
 
 template<class FluidSystem, class Indices>
@@ -306,6 +339,10 @@ assembleAccumulationTerm(const int seg,
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
       eqns.D()[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + Indices::numEq);
     }
+#ifdef COMMENTS
+    std::cout << "assembleAccumulationTerm for seg = " << seg << std::endl; 
+    std::for_each(eqns.residual().begin(), eqns.residual().end(), [](const auto& entry) {std::cout << entry << std::endl;});
+#endif
 }
 
 template<class FluidSystem, class Indices>
@@ -326,6 +363,10 @@ assembleOutflowTerm(const int seg,
         eqns.D()[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
+#ifdef COMMENTS
+    std::cout << "assembleOutflowTerm for seg = " << seg << ", seg_upwind = " << seg_upwind << std::endl; 
+    std::for_each(eqns.residual().begin(), eqns.residual().end(), [](const auto& entry) {std::cout << entry << std::endl;});
+#endif
 }
 
 template<class FluidSystem, class Indices>
@@ -347,12 +388,17 @@ assembleInflowTerm(const int seg,
         eqns.D()[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
+#ifdef COMMENTS
+    std::cout << "assembleOutflowTerm for seg = " << seg << ", inlet = " << inlet << ", inlet_upwind = " << inlet_upwind << std::endl; 
+    std::for_each(eqns.residual().begin(), eqns.residual().end(), [](const auto& entry) {std::cout << entry << std::endl;});
+#endif
 }
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellAssemble<FluidSystem,Indices>::
 assemblePerforationEq(const int seg,
                       const int cell_idx,
+                      const int global_cell_idx,
                       const int comp_idx,
                       const EvalWell& cq_s_effective,
                       Equations& eqns1) const
@@ -365,6 +411,7 @@ assemblePerforationEq(const int seg,
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
         eqns.C()[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
+        eqns.CGlobal()[seg][global_cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
 
         // the index name for the D should be eq_idx / pv_idx
         eqns.D()[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);
@@ -373,6 +420,10 @@ assemblePerforationEq(const int seg,
     for (int pv_idx = 0; pv_idx < Indices::numEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
         eqns.B()[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
+#ifdef COMMENTS
+        std::cout << "cq_s_effective.derivative(pv_idx) = " << cq_s_effective.derivative(pv_idx) << std::endl;
+#endif
+        eqns.BGlobal()[seg][global_cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
     }
 }
 

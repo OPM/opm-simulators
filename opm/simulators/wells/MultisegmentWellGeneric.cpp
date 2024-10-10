@@ -38,6 +38,8 @@
 
 #include <fmt/format.h>
 
+//#define COMMENTS
+
 namespace Opm {
 
 template<typename Scalar>
@@ -57,6 +59,19 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
+    #ifdef COMMENTS
+    std::cout << "in scaleSegmentRatesWithWellRates, will loop over the " << baseif_.numPhases() << " phases now:" << std::endl;
+    std::cout << "segment_inlets:" << std::endl;
+    std::for_each(segment_inlets.begin(), segment_inlets.end(), [](const auto& inner) {
+        std::for_each(inner.begin(), inner.end(), [](const auto& entry) {std::cout << entry << ", "; });
+        std::cout << std::endl;
+    });
+    for (int i = 0; i < segment_perforations.size(); i++) {
+        std::cout << i << ": ";
+        std::for_each(segment_perforations[i].begin(), segment_perforations[i].end(), [](const auto& entry) {std::cout << entry << ", "; });
+        std::cout << std::endl;
+    }
+    #endif
     for (int phase = 0; phase < baseif_.numPhases(); ++phase) {
         const Scalar unscaled_top_seg_rate = segment_rates[phase];
         const Scalar well_phase_rate = ws.surface_rates[phase];
@@ -71,6 +86,8 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
             for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
                 sumTw += baseif_.wellIndex()[perf];
             }
+            // We need to communicate here to scale the perf_phaserate_scaled with the contribution of all segments
+            sumTw = ws.parallel_info.get().communication().sum(sumTw);
 
             // only handling this specific phase
             constexpr Scalar num_single_phase = 1;
@@ -81,7 +98,8 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
             }
 
             std::vector<Scalar> rates;
-            WellState<Scalar>::calculateSegmentRates(segment_inlets,
+            WellState<Scalar>::calculateSegmentRates(ws,
+                                                     segment_inlets,
                                                      segment_perforations,
                                                      perforation_rates,
                                                      num_single_phase, 0, rates);

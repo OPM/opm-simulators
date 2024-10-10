@@ -46,6 +46,7 @@
 
 #include <fmt/format.h>
 
+//#define COMMENTS
 namespace Opm
 {
 
@@ -805,6 +806,7 @@ namespace Opm
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         // TODO: the reason to have inj_controls and prod_controls in the arguments, is that we want to change the control used for the well functions
         // TODO: maybe we can use std::optional or pointers to simplify here
+        std::cout << "WellInterface_impl: in assembleWellEqWithoutIteration" << std::endl;
         assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
@@ -1593,7 +1595,9 @@ namespace Opm
     {
         // Add a Forchheimer term to the gas phase CTF if the run uses
         // either of the WDFAC or the WDFACCOR keywords.
-
+        if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
+            OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - seemingly wellIndex was called with a gloabl instead of a local perforation index!");
+        }
         auto wi = std::vector<Scalar>
             (this->num_components_, this->well_index_[perf] * trans_mult);
 
@@ -1784,6 +1788,9 @@ namespace Opm
                                     return std::array<Eval,3>{};
                                 }
                             };
+        if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
+            OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - seemingly getMobility was called with a gloabl instead of a local perforation index!");
+        }
         const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == this->num_components_);
         const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
@@ -1839,6 +1846,11 @@ namespace Opm
                 }
             }
         }
+        #ifdef COMMENTS
+        std::cout << "mob :";
+        std::for_each(mob.begin(), mob.end(), [](const auto& entry){ std::cout << entry << ", "; });
+        std::cout << std::endl;
+        #endif
     }
 
 
