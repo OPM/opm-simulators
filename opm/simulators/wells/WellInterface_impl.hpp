@@ -40,6 +40,7 @@
 
 #include <dune/common/version.hh>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <utility>
@@ -827,11 +828,43 @@ namespace Opm
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = simulator.model().newtonMethod().numIterations();
         if (iteration_idx < this->param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
+            const auto& ws = well_state.well(this->indexOfWell());
+            const auto pmode_orig = ws.production_cmode;
+            const auto imode_orig = ws.injection_cmode;
+
+            const bool nonzero_rate_original =
+                std::any_of(ws.surface_rates.begin(),
+                            ws.surface_rates.begin() + well_state.numPhases(),
+                            [](Scalar rate) { return rate != Scalar(0.0); });
+
             this->operability_status_.solvable = true;
             bool converged = this->iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
 
-            // unsolvable wells are treated as not operable and will not be solved for in this iteration.
-            if (!converged) {
+            if (converged) {
+                const bool zero_target = this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
+                if (this->wellIsStopped() && !zero_target && nonzero_rate_original) {
+                    // Well had non-zero rate, but was stopped during local well-solve. We re-open the well 
+                    // for the next global iteration, but if the zero rate persists, it will be stopped.
+                    // This logic is introduced to prevent/ameliorate stopped/revived oscillations  
+                    this->operability_status_.resetOperability();
+                    this->openWell();
+                    deferred_logger.debug("    " + this->name() + " is re-opened after being stopped during local solve");
+                }
+                // Add debug info for switched controls
+                if (ws.production_cmode != pmode_orig || ws.injection_cmode != imode_orig) {
+                    std::string from,to;
+                    if (this->isInjector()) {
+                        from = WellInjectorCMode2String(imode_orig);
+                        to = WellInjectorCMode2String(ws.injection_cmode);
+                    } else {
+                        from = WellProducerCMode2String(pmode_orig);
+                        to = WellProducerCMode2String(ws.production_cmode);
+                    }
+                    deferred_logger.debug("    " + this->name() + " switched from " + from + " to " + to + " during local solve");
+                    }
+
+            } else {
+                // unsolvable wells are treated as not operable and will not be solved for in this iteration.
                 if (this->param_.shut_unsolvable_wells_)
                     this->operability_status_.solvable = false;
             }
