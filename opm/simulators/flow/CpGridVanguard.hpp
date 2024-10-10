@@ -37,6 +37,8 @@
 #include <opm/simulators/flow/GenericCpGridVanguard.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hh>
+
 #include <array>
 #include <functional>
 #include <memory>
@@ -98,6 +100,7 @@ class CpGridVanguard : public FlowBaseVanguard<TypeTag>
 public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    using LevelCartesianIndexMapper = Opm::LevelCartesianIndexMapper<Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
@@ -268,6 +271,13 @@ public:
     {
         return this->grid().globalCell();
     }
+
+    /*!
+     * \brief Returns the object which maps a global element index of the simulation grid
+     *        to the corresponding element index of the level logically Cartesian index.
+     */
+    const LevelCartesianIndexMapper levelCartesianIndexMapper() const
+    { return LevelCartesianIndexMapper(this->grid()); }
 
 protected:
     void createGrids_()

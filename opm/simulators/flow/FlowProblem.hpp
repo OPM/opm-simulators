@@ -249,7 +249,7 @@ public:
 
 
         RelpermDiagnostics relpermDiagnostics;
-        relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
+        relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.levelCartesianIndexMapper());
     }
 
     virtual ~FlowProblem() = default;
