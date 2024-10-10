@@ -52,8 +52,7 @@ StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
 
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
-init(const int num_cells,
-     const int numWellEq,
+init(const int numWellEq,
      const int numPerfs,
      const std::vector<int>& cells)
 {

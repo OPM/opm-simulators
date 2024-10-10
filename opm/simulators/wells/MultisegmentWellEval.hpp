@@ -71,7 +71,7 @@ public:
 protected:
     MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif);
 
-    void initMatrixAndVectors(const int num_cells);
+    void initMatrixAndVectors();
 
     void assembleDefaultPressureEq(const int seg,
                                    WellState<Scalar>& well_state,

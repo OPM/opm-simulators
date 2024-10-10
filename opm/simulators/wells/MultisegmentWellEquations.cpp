@@ -55,8 +55,7 @@ MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well)
 
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
-init(const int num_cells,
-     const int numPerfs,
+init(const int numPerfs,
      const std::vector<int>& cells,
      const std::vector<std::vector<int>>& segment_inlets,
      const std::vector<std::vector<int>>& perforations)

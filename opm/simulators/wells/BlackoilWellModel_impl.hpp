@@ -177,8 +177,7 @@ namespace Opm {
         const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
         for (auto& wellPtr : this->well_container_) {
             const bool well_opened_this_step = this->report_step_starts_ && events.hasEvent(wellPtr->name(), effective_events_mask);
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
-                          this->local_num_cells_, this->B_avg_, well_opened_this_step);
+            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, well_opened_this_step);
         }
     }
 
@@ -645,7 +644,7 @@ namespace Opm {
 
             WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
             // some preparation before the well can be used
-            well->init(&this->phase_usage_, depth_, gravity_, local_num_cells_, B_avg_, true);
+            well->init(&this->phase_usage_, depth_, gravity_, B_avg_, true);
 
             Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor();
             WellGroupHelpers<Scalar>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
@@ -2593,8 +2592,7 @@ namespace Opm {
             auto wellPtr = this->template createTypedWellPointer
                 <StandardWell<TypeTag>>(shutWell, reportStepIdx);
 
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
-                          this->local_num_cells_, this->B_avg_, true);
+            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, true);
 
             this->calculateProductivityIndexValues(wellPtr.get(), deferred_logger);
         }
