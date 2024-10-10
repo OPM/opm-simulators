@@ -352,8 +352,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 // Outch! We need to be able to scale the linear system! Hence const_cast
                 matrix_ = const_cast<Matrix*>(&M);
 
-                is_nldd_local_solver_ = parameters_[activeSolverNum_].is_nldd_local_solver_;
-
                 useWellConn_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
             } else {
@@ -452,9 +450,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         const CommunicationType* comm() const { return comm_.get(); }
 
-        void setDomainIndex(int index)
+        void setDomainIndex(const int index)
         {
             domainIndex_ = index;
+        }
+
+        bool isNlddLocalSolver() const
+        {
+            return parameters_[activeSolverNum_].is_nldd_local_solver_;
         }
 
     protected:
@@ -497,7 +500,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             OPM_TIMEBLOCK(flexibleSolverPrepare);
             if (shouldCreateSolver()) {
                 if (!useWellConn_) {
-                    if (is_nldd_local_solver_) {
+                    if (isNlddLocalSolver()) {
                         auto wellOp = std::make_unique<DomainWellModelAsLinearOperator<WellModel, Vector, Vector>>(simulator_.problem().wellModel());
                         wellOp->setDomainIndex(domainIndex_);
                         flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
@@ -664,8 +667,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         std::vector<detail::FlexibleSolverInfo<Matrix,Vector,CommunicationType>> flexibleSolver_;
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
-
-        bool is_nldd_local_solver_;
 
         int domainIndex_ = -1;
 
