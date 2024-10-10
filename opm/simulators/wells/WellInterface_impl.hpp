@@ -40,6 +40,7 @@
 
 #include <dune/common/version.hh>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <utility>
@@ -831,18 +832,17 @@ namespace Opm
             const auto pmode_orig = ws.production_cmode;
             const auto imode_orig = ws.injection_cmode;
 
-            Scalar qtotal_orig = 0.0;
-            const int np = well_state.numPhases();
-            for (int p = 0; p < np; ++p) {
-                qtotal_orig += ws.surface_rates[p];
-            }
+            const bool nonzero_rate_original =
+                std::any_of(ws.surface_rates.begin(),
+                            ws.surface_rates.begin() + well_state.numPhases(),
+                            [](Scalar rate) { return rate != Scalar(0.0); });
 
             this->operability_status_.solvable = true;
             bool converged = this->iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
 
             if (converged) {
                 const bool zero_target = this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
-                if (this->wellIsStopped() && !zero_target && qtotal_orig != 0.0) {
+                if (this->wellIsStopped() && !zero_target && nonzero_rate_original) {
                     // Well had non-zero rate, but was stopped during local well-solve. We re-open the well 
                     // for the next global iteration, but if the zero rate persists, it will be stopped.
                     // This logic is introduced to prevent/ameliorate stopped/revived oscillations  
