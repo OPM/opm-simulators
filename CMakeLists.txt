@@ -35,6 +35,26 @@ option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
 option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
 option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
+set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
+
+# Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
+if(OPM_COMPILE_COMPONENTS STREQUAL "")
+  message(FATAL_ERROR "OPM_COMPILE_COMPONENTS must contain at least one component.")
+endif()
+# Check that OPM_COMPILE_COMPONENTS is a subset of 2,3,4,5,6,7
+set(valid_components "2;3;4;5;6;7")
+foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
+  list(FIND valid_components ${component} index)
+  if(index EQUAL -1)
+    message(FATAL_ERROR "Invalid component ${component} in OPM_COMPILE_COMPONENTS. Valid components are: ${valid_components}")
+  endif()
+endforeach()
+# Check for duplicates in OPM_COMPILE_COMPONENTS
+list(REMOVE_DUPLICATES OPM_COMPILE_COMPONENTS)
+# Make a string we can use in the code
+# this will be used in a template argument pack.
+string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
+
 
 # HIP requires cmake version 3.21
 if (CONVERT_CUDA_TO_HIP AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
@@ -561,6 +581,12 @@ opm_add_test(flowexp_blackoil
   $<TARGET_OBJECTS:moduleVersion>
 )
 
+# We now specify the files we actually want to compile
+set(FLOWEXP_COMPONENTS_SOURCES)
+foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
+  list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
+endforeach()
+
 opm_add_test(flowexp_comp
   ONLY_COMPILE
   ALWAYS_ENABLE
@@ -568,12 +594,7 @@ opm_add_test(flowexp_comp
   LIBRARIES opmsimulators
   SOURCES
   flowexperimental/comp/flowexp_comp.cpp
-  flowexperimental/comp/flowexp_comp2.cpp
-  flowexperimental/comp/flowexp_comp3.cpp
-  flowexperimental/comp/flowexp_comp4.cpp
-  flowexperimental/comp/flowexp_comp5.cpp
-  flowexperimental/comp/flowexp_comp6.cpp
-  flowexperimental/comp/flowexp_comp7.cpp
+  ${FLOWEXP_COMPONENTS_SOURCES}
   $<TARGET_OBJECTS:moduleVersion>
 )
 

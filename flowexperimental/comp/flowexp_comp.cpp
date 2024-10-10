@@ -19,8 +19,8 @@
 #include "config.h"
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
 
 #include <opm/models/utils/start.hh>
 
@@ -28,9 +28,51 @@
 
 #include <fmt/format.h>
 
+#include <array>
+#include <cstdlib>
+#include <tuple>
+
 #include "flowexp_comp.hpp"
 
-int main(int argc, char** argv)
+template <int compileTimeComponent>
+std::tuple<bool, int>
+runComponent(int runtimeComponent, int argc, char** argv)
+{
+    if (runtimeComponent == compileTimeComponent) {
+        return std::make_tuple(true, Opm::dispatchFlowExpComp<compileTimeComponent>(argc, argv));
+    }
+    return std::make_tuple(false, EXIT_FAILURE);
+}
+
+
+/**
+ * @brief Runs a specified runtime component.
+ *
+ * This function checks if the provided runtime component matches the current compile-time component.
+ * If they match, it dispatches the simulator for the number of components and returns
+ * a tuple where the second element is the result of the execution.
+ *
+ * Otherwise, it recursively calls itself with the next component in the list.
+ *
+ * @param runtimecomponent The runtime component identifier to be executed.
+ * @param argc The number of command-line arguments.
+ * @param argv The array of command-line arguments.
+ * @return A tuple containing a boolean indicating if the component was executed and an integer result of the execution.
+ *
+ * @note We have two non-variadic templates to be able to properly overload for the base case.
+ */
+template <int currentCompileTimeComponent, int nextComponent, int... components>
+std::tuple<bool, int>
+runComponent(int runtimecomponent, int argc, char** argv)
+{
+    if (currentCompileTimeComponent == runtimecomponent) {
+        return std::make_tuple(true, Opm::dispatchFlowExpComp<currentCompileTimeComponent>(argc, argv));
+    }
+    return runComponent<nextComponent, components...>(runtimecomponent, argc, argv);
+}
+
+int
+main(int argc, char** argv)
 {
     using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<0>;
     Opm::registerEclTimeSteppingParameters<double>();
@@ -44,23 +86,23 @@ int main(int argc, char** argv)
         = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
 
     // Only read the RUNSPEC section of the deck
-    const auto deck = Opm::Parser{}.parseFile(inputFilename,
-                                              Opm::ParseContext{},
-                                              std::vector { Opm::Ecl::SectionType::RUNSPEC });
+    const auto deck
+        = Opm::Parser {}.parseFile(inputFilename, Opm::ParseContext {}, std::vector {Opm::Ecl::SectionType::RUNSPEC});
     const auto runspec = Opm::Runspec(deck);
     const auto numComps = runspec.numComps();
 
-    OPM_ERROR_IF(numComps < 2 || numComps > 7,
-                 fmt::format("Deck has {} components, not supported. We support a maximum of 7 components, "
-                             "and a minimum of 2.", numComps) );
+    auto [componentSupported, executionStatus]
+        = runComponent<OPM_COMPILE_COMPONENTS_TEMPLATE_LIST>(numComps, argc, argv);
 
-    switch (numComps) {
-    case 2: return Opm::dispatchFlowExpComp<2>(argc, argv);
-    case 3: return Opm::dispatchFlowExpComp<3>(argc, argv);
-    case 4: return Opm::dispatchFlowExpComp<4>(argc, argv);
-    case 5: return Opm::dispatchFlowExpComp<5>(argc, argv);
-    case 6: return Opm::dispatchFlowExpComp<6>(argc, argv);
-    case 7: return Opm::dispatchFlowExpComp<7>(argc, argv);
+    if (!componentSupported) {
+        fmt::print("Deck has {} components, not supported. In this build of the simulator, we support the "
+                   "following number of components:\n\n\t{}\n\nNote that the supported components can be changed "
+                   "when configuring CMake through the OPM_COMPILE_COMPONENTS option. That is, run cmake as "
+                   "eg\n\n\tcmake ... -DOPM_COMPILE_COMPONENTS=\"4;7\"\n\nto compile only components 4 and 7, "
+                   "or\n\n\tcmake ... -DOPM_COMPILE_COMPONENTS=3\n\nto compile only component 3, then "
+                   "recompile.\n\nExiting.\n",
+                   numComps,
+                   fmt::join(std::array {OPM_COMPILE_COMPONENTS_TEMPLATE_LIST}, ", "));
     }
+    return executionStatus;
 }
-
