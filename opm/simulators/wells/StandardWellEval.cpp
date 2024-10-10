@@ -179,7 +179,6 @@ void
 StandardWellEval<FluidSystem,Indices>::
 init(std::vector<Scalar>& perf_depth,
      const std::vector<Scalar>& depth_arg,
-     const int num_cells,
      const bool has_polymermw)
 {
     perf_depth.resize(baseif_.numPerfs(), 0.);
@@ -203,7 +202,7 @@ init(std::vector<Scalar>& perf_depth,
     primary_variables_.resize(numWellEq);
 
     // setup sparsity pattern for the matrices
-    this->linSys_.init(num_cells, numWellEq, baseif_.numPerfs(), baseif_.cells());
+    this->linSys_.init(numWellEq, baseif_.numPerfs(), baseif_.cells());
 }
 
 template<class Scalar>
