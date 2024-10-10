@@ -40,20 +40,40 @@ namespace Opm
         /// destructor
         virtual ~SimulatorTimerInterface() {}
 
-        /// Current step number. This is the number of timesteps that
-        /// has been completed from the start of the run. The time
-        /// after initialization but before the simulation has started
-        /// is timestep number zero.
-        virtual int currentStepNum() const = 0;
+        // -----------------------------------------------------------
+        // Pure virtual functions to be implemented by derived classes
+        // -----------------------------------------------------------
 
-        /// Current report step number. This might differ from currentStepNum in case of sub stepping
-        virtual int reportStepNum() const { return currentStepNum(); }
+        /// advance time by currentStepLength
+        virtual void advance() = 0 ;
+
+        /// return copy of current timer instance
+        virtual std::unique_ptr< SimulatorTimerInterface > clone () const = 0;
 
         /// Current step length. This is the length of the step
         /// the simulator will take in the next iteration.
         ///
         /// @note if done(), it is an error to call currentStepLength().
         virtual double currentStepLength() const = 0;
+
+        /// Current step number. This is the number of timesteps that
+        /// has been completed from the start of the run. The time
+        /// after initialization but before the simulation has started
+        /// is timestep number zero.
+        virtual int currentStepNum() const = 0;
+
+        /// Return true if timer indicates that simulation of timer interval is finished
+        virtual bool done() const = 0;
+
+        /// Whether the current step is the first step.
+        virtual bool initialStep() const = 0;
+
+        /// Return true if last time step failed
+        virtual bool lastStepFailed() const = 0;
+
+        /// Time elapsed since the start of the simulation until the
+        /// beginning of the current time step [s].
+        virtual double simulationTimeElapsed() const = 0;
 
         /// Previous step length. This is the length of the step that
         /// was taken to arrive at this time.
@@ -63,29 +83,12 @@ namespace Opm
         /// it is an error to call stepLengthTaken().
         virtual double stepLengthTaken () const = 0;
 
-        /// Previous report step length. This is the length of the step that
-        /// was taken to arrive at this report step time.
-        ///
-        /// @note if no increments have been done (i.e. the timer is
-        /// still in its constructed state and reportStepNum() == 0),
-        /// it is an error to call stepLengthTaken().
-        virtual double reportStepLengthTaken () const { return stepLengthTaken(); }
-
-        /// Time elapsed since the start of the simulation until the
-        /// beginning of the current time step [s].
-        virtual double simulationTimeElapsed() const = 0;
-
-        /// advance time by currentStepLength
-        virtual void advance() = 0 ;
-
-        /// Return true if timer indicates that simulation of timer interval is finished
-        virtual bool done() const = 0;
-
-        /// Whether the current step is the first step.
-        virtual bool initialStep() const = 0;
-
         /// Return start date of simulation
         virtual boost::posix_time::ptime startDateTime() const = 0;
+
+        // -----------------------------------------------------------------
+        // Virtual functions (not pure) to allow for default implementations
+        // -----------------------------------------------------------------
 
         /// Return the current time as a posix time object.
         virtual boost::posix_time::ptime currentDateTime() const;
@@ -94,11 +97,17 @@ namespace Opm
         /// 1970) until the current time step begins [s].
         virtual time_t currentPosixTime() const;
 
-        /// Return true if last time step failed
-        virtual bool lastStepFailed() const = 0;
+        /// Previous report step length. This is the length of the step that
+        /// was taken to arrive at this report step time.
+        ///
+        /// @note if no increments have been done (i.e. the timer is
+        /// still in its constructed state and reportStepNum() == 0),
+        /// it is an error to call stepLengthTaken().
+        virtual double reportStepLengthTaken () const { return stepLengthTaken(); }
 
-        /// return copy of current timer instance
-        virtual std::unique_ptr< SimulatorTimerInterface > clone () const = 0;
+        /// Current report step number. This might differ from currentStepNum in case of sub stepping
+        virtual int reportStepNum() const { return currentStepNum(); }
+
     };
 
 
