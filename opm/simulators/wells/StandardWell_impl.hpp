@@ -689,7 +689,7 @@ namespace Opm
         if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE) {
             const Scalar bhp = this->primary_variables_.value(Bhp);
             const Scalar perf_press = bhp +  this->connections_.pressure_diff(perf);
-            const Scalar multiplier = this->getInjMult(perf, bhp, perf_press);
+            const Scalar multiplier = this->getInjMult(perf, bhp, perf_press, deferred_logger);
             for (std::size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= multiplier;
             }
@@ -1522,6 +1522,7 @@ namespace Opm
         // creating a copy of the well itself, to avoid messing up the explicit information
         // during this copy, the only information not copied properly is the well controls
         StandardWell<TypeTag> well_copy(*this);
+        well_copy.resetDampening();
 
         // iterate to get a more accurate well density
         // create a copy of the well_state to use. If the operability checking is sucessful, we use this one

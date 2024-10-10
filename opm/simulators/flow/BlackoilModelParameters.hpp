@@ -35,6 +35,15 @@ struct DwellFractionMax { static constexpr Scalar value = 0.2; };
 struct EclDeckFileName { static constexpr auto value = ""; };
 
 template<class Scalar>
+struct InjMultOscThreshold { static constexpr Scalar value = 0.1; };
+
+template<class Scalar>
+struct InjMultDampMult { static constexpr Scalar value = 0.9; };
+
+template<class Scalar>
+struct InjMultMinDampFactor { static constexpr Scalar value = 0.05; };
+
+template<class Scalar>
 struct MaxResidualAllowed { static constexpr Scalar value = 1e7; };
 
 template<class Scalar>
@@ -156,6 +165,12 @@ public:
     Scalar dbhp_max_rel_;
     /// Max absolute change in well volume fraction in single iteration.
     Scalar dwell_fraction_max_;
+    /// Injectivity multiplier oscillation threshold
+    Scalar inj_mult_osc_threshold_;
+    /// Injectivity multiplier dampening multiplier
+    Scalar inj_mult_damp_mult_;
+    /// Minimum damping factor for injectivity multipliers
+    Scalar inj_mult_min_damp_factor_;
     /// Absolute max limit for residuals.
     Scalar max_residual_allowed_;
     //// Max allowed pore volume faction where CNV is violated. Below the

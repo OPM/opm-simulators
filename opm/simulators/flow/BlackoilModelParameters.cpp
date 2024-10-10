@@ -34,6 +34,9 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
 {
     dbhp_max_rel_ = Parameters::Get<Parameters::DbhpMaxRel<Scalar>>();
     dwell_fraction_max_ = Parameters::Get<Parameters::DwellFractionMax<Scalar>>();
+    inj_mult_osc_threshold_ = Parameters::Get<Parameters::InjMultOscThreshold<Scalar>>();
+    inj_mult_damp_mult_ = Parameters::Get<Parameters::InjMultDampMult<Scalar>>();
+    inj_mult_min_damp_factor_ = Parameters::Get<Parameters::InjMultMinDampFactor<Scalar>>();
     max_residual_allowed_ = Parameters::Get<Parameters::MaxResidualAllowed<Scalar>>();
     relaxed_max_pv_fraction_ = Parameters::Get<Parameters::RelaxedMaxPvFraction<Scalar>>();
     tolerance_mb_ = Parameters::Get<Parameters::ToleranceMb<Scalar>>();
@@ -108,6 +111,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Maximum relative change of the bottom-hole pressure in a single iteration");
     Parameters::Register<Parameters::DwellFractionMax<Scalar>>
         ("Maximum absolute change of a well's volume fraction in a single iteration");
+    Parameters::Register<Parameters::InjMultOscThreshold<Scalar>>
+        ("Injection multiplier oscillation threshold (used for multiplier dampening)");
+    Parameters::Register<Parameters::InjMultDampMult<Scalar>>
+        ("Injection multiplier dampening factor (dampening multiplied by this each time oscillation is detected)");
+    Parameters::Register<Parameters::InjMultMinDampFactor<Scalar>>
+        ("Minimum injection multiplier dampening factor (maximum dampening level)");
     Parameters::Register<Parameters::MaxResidualAllowed<Scalar>>
         ("Absolute maximum tolerated for residuals without cutting the time step size");
     Parameters::Register<Parameters::RelaxedMaxPvFraction<Scalar>>

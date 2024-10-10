@@ -65,13 +65,13 @@ namespace Opm
       : WellInterfaceIndices<FluidSystem,Indices>(well,
                                                   pw_info,
                                                   time_step,
+                                                  param,
                                                   rate_converter,
                                                   pvtRegionIdx,
                                                   num_components,
                                                   num_phases,
                                                   index_of_well,
                                                   perf_data)
-      , param_(param)
     {
         connectionRates_.resize(this->number_of_perforations_);
 
@@ -212,17 +212,17 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
+        bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
 
         if (oscillating) {
             // only output frist time
-            bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == param_.max_number_of_well_switches_;
+            bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
             if (output) {
                 std::ostringstream ss;
                 ss << "    The control mode for well " << this->name()
                    << " is oscillating\n"
                    << "    We don't allow for more than "
-                   << param_.max_number_of_well_switches_
+                   << this->param_.max_number_of_well_switches_
                    << " switches. The control is kept at " << from;
                 deferred_logger.info(ss.str());
                 // add one more to avoid outputting the same info again
@@ -287,7 +287,7 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
+        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
 
         if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
@@ -309,7 +309,7 @@ namespace Opm
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                     changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                    if (hasGroupControl && param_.check_group_constraints_inner_well_iterations_) {
+                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
                         changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
                     }
 
@@ -711,7 +711,7 @@ namespace Opm
             deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
             return true;
         }
-        const int max_iter = param_.max_welleq_iter_;
+        const int max_iter = this->param_.max_welleq_iter_;
         deferred_logger.debug("WellTest: Well equation for well " + this->name() + " failed converging in "
                               + std::to_string(max_iter) + " iterations");
         well_state = well_state0;
@@ -767,7 +767,7 @@ namespace Opm
         }
 
         if (!converged) {
-            const int max_iter = param_.max_welleq_iter_;
+            const int max_iter = this->param_.max_welleq_iter_;
             deferred_logger.debug("Compute initial well solution for well " + this->name() + ". Failed to converge in "
                                   + std::to_string(max_iter) + " iterations");
             well_state = well_state0;
@@ -821,12 +821,12 @@ namespace Opm
     {
         const bool old_well_operable = this->operability_status_.isOperableAndSolvable();
 
-        if (param_.check_well_operability_iter_)
+        if (this->param_.check_well_operability_iter_)
             checkWellOperability(simulator, well_state, deferred_logger);
 
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = simulator.model().newtonMethod().numIterations();
-        if (iteration_idx < param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
+        if (iteration_idx < this->param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
             auto& ws = well_state.well(this->indexOfWell());
             const auto pmode_orig = ws.production_cmode;
             const auto imode_orig = ws.injection_cmode;
@@ -866,7 +866,7 @@ namespace Opm
 
             } else {
                 // unsolvable wells are treated as not operable and will not be solved for in this iteration.
-                if (param_.shut_unsolvable_wells_)
+                if (this->param_.shut_unsolvable_wells_)
                     this->operability_status_.solvable = false;
             }
         }
@@ -946,7 +946,7 @@ namespace Opm
                          DeferredLogger& deferred_logger)
     {
 
-        if (!param_.check_well_operability_) {
+        if (!this->param_.check_well_operability_) {
             return;
         }
 
