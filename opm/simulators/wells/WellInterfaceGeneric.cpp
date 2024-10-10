@@ -256,8 +256,6 @@ getInjMult(const int perf,
     Scalar multiplier = 1.;
 
     const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
-
-
     const bool is_wrev = this->well_ecl_.getInjMultMode() == Well::InjMultMode::WREV;
 
     const bool active_injmult = (is_wrev && this->well_ecl_.aciveWellInjMult()) ||
@@ -277,8 +275,7 @@ getInjMult(const int perf,
         const Scalar prev_multiplier = this->inj_multiplier_[perf_ecl_index] > 0 ? this->inj_multiplier_[perf_ecl_index] : 1.0;
         if (std::abs(multiplier - prev_multiplier) > osc_threshold) {
             const Scalar prev2_multiplier = this->inj_multiplier_previter_[perf_ecl_index] > 0 ? this->inj_multiplier_previter_[perf_ecl_index] : 1.0;
-            const bool oscillating = (multiplier > prev_multiplier && prev_multiplier < prev2_multiplier) ||
-                                     (multiplier < prev_multiplier && prev_multiplier > prev2_multiplier);
+            const bool oscillating = (multiplier - prev_multiplier) * (prev_multiplier - prev2_multiplier) < 0;
 
             const Scalar min_damp_factor = this->param_.inj_mult_min_damp_factor_;
             Scalar damp_factor = this->inj_multiplier_damp_factor_[perf_ecl_index];
