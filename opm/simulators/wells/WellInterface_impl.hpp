@@ -831,7 +831,7 @@ namespace Opm
             const auto pmode_orig = ws.production_cmode;
             const auto imode_orig = ws.injection_cmode;
 
-            Scalar qtotal_orig = 0.0;
+            const Scalar qtotal_orig = 0.0;
             const int np = well_state.numPhases();
             for (int p = 0; p < np; ++p) {
                 qtotal_orig += ws.surface_rates[p];
@@ -842,13 +842,13 @@ namespace Opm
 
             if (converged) {
                 const bool zero_target = this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
-                if (this->wellIsStopped() && !zero_target && !(qtotal_orig == 0.0)) {
+                if (this->wellIsStopped() && !zero_target && qtotal_orig != 0.0) {
                     // Well had non-zero rate, but was stopped during local well-solve. We re-open the well 
                     // for the next global iteration, but if the zero rate persists, it will be stopped.
                     // This logic is introduced to prevent/ameliorate stopped/revived oscillations  
                     this->operability_status_.resetOperability();
                     this->openWell();
-                    deferred_logger.debug("    " + this->name() + " is re-opened after beeing stopped during local solve");
+                    deferred_logger.debug("    " + this->name() + " is re-opened after being stopped during local solve");
                 }
                 // Add debug info for switched controls
                 if (ws.production_cmode != pmode_orig || ws.injection_cmode != imode_orig) {
@@ -856,7 +856,6 @@ namespace Opm
                     if (this->isInjector()) {
                         from = WellInjectorCMode2String(imode_orig);
                         to = WellInjectorCMode2String(ws.injection_cmode);
-
                     } else {
                         from = WellProducerCMode2String(pmode_orig);
                         to = WellProducerCMode2String(ws.production_cmode);
