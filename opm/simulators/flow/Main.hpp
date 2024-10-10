@@ -72,6 +72,10 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #endif
 
+#if HAVE_CUDA
+#include <opm/simulators/linalg/gpuistl/set_device_indirection.hpp>
+#endif
+
 #if HAVE_DAMARIS
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #endif
@@ -425,6 +429,10 @@ protected:
             exitCode = EXIT_FAILURE;
             return false;
         }
+
+#if HAVE_CUDA
+    Opm::gpuistl::printDevice();
+#endif
 
         exitCode = EXIT_SUCCESS;
         return true;

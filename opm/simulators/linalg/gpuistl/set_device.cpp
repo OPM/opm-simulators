@@ -17,33 +17,62 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+#include <sstream>
 #include <cuda_runtime.h>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/set_device.hpp>
+
 namespace Opm::gpuistl
 {
 void
 setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
 {
+    try {
+        int deviceCount = -1;
+        [[maybe_unused]] auto cuError = cudaGetDeviceCount(&deviceCount);
 
-    int deviceCount = -1;
-    [[maybe_unused]] auto cuError = cudaGetDeviceCount(&deviceCount);
+        if (deviceCount <= 0) {
+            // If they have CUDA/HIP enabled (ie. using a component that needs CUDA, eg. gpubicgstab or CUILU0), this will fail
+            // later down the line. At this point in the simulator, we can not determine if CUDA is enabled, so we can only
+            // issue a warning.
+            OpmLog::warning("Could not find any CUDA/HIP devices.");
+            return;
+        }
 
-    if (deviceCount <= 0) {
-        // If they have CUDA enabled (ie. using a component that needs CUDA, eg. gpubicgstab or CUILU0), this will fail
-        // later down the line. At this point in the simulator, we can not determine if CUDA is enabled, so we can only
-        // issue a warning.
-        OpmLog::warning("Could not find any CUDA devices.");
-        return;
+        // Now do a round robin kind of assignment
+        // TODO: We need to be more sophistacted here. We have no guarantee this will pick the correct device.
+        const auto deviceId = mpiRank % deviceCount;
+        OPM_GPU_SAFE_CALL(cudaDeviceReset());
+        OPM_GPU_SAFE_CALL(cudaSetDevice(deviceId));
     }
-
-    // Now do a round robin kind of assignment
-    // TODO: We need to be more sophistacted here. We have no guarantee this will pick the correct device.
-    const auto deviceId = mpiRank % deviceCount;
-    OPM_GPU_SAFE_CALL(cudaDeviceReset());
-    OPM_GPU_SAFE_CALL(cudaSetDevice(deviceId));
-    OpmLog::info("Set CUDA device to " + std::to_string(deviceId) + " (out of " + std::to_string(deviceCount)
-                 + " devices).");
+    catch(...){}
 }
+
+void
+printDevice (int mpiRank, int numberOfMpiRanks)
+{
+    try {
+        int deviceCount = -1;
+        OPM_GPU_SAFE_CALL(cudaGetDeviceCount(&deviceCount));
+
+        const auto deviceId = mpiRank % deviceCount;
+
+        struct cudaDeviceProp props;
+        OPM_GPU_SAFE_CALL(cudaGetDeviceProperties(&props, deviceId));
+
+        std::ostringstream out;
+        if (numberOfMpiRanks > 0){
+          out << "GPU: " << props.name << ", Compute Capability: " << props.major << "." << props.minor;
+          out << " (device " << std::to_string(deviceId) << " out of " << std::to_string(deviceCount) << ")\n";
+        }
+        else{
+          out << "GPU: " << props.name << ", Compute Capability: " << props.major << "." << props.minor << std::endl;
+        }
+        OpmLog::info(out.str());
+    }
+    catch(...){}
+}
+
 } // namespace Opm::gpuistl

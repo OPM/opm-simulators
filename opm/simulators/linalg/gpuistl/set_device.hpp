@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_CUISTL_SET_DEVICE_HEADER
-#define OPM_CUISTL_SET_DEVICE_HEADER
+#ifndef OPM_GPUISTL_SET_DEVICE_HEADER
+#define OPM_GPUISTL_SET_DEVICE_HEADER
 
 namespace Opm::gpuistl
 {
@@ -32,5 +32,7 @@ namespace Opm::gpuistl
 //!
 //! @note If no CUDA device is present, this does nothing.
 void setDevice(int mpiRank, int numberOfMpiRanks);
+
+void printDevice(int mpiRank, int numberOfMpiRanks);
 } // namespace Opm::gpuistl
 #endif
