@@ -827,11 +827,11 @@ namespace Opm
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = simulator.model().newtonMethod().numIterations();
         if (iteration_idx < this->param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
-            auto& ws = well_state.well(this->indexOfWell());
+            const auto& ws = well_state.well(this->indexOfWell());
             const auto pmode_orig = ws.production_cmode;
             const auto imode_orig = ws.injection_cmode;
 
-            const Scalar qtotal_orig = 0.0;
+            Scalar qtotal_orig = 0.0;
             const int np = well_state.numPhases();
             for (int p = 0; p < np; ++p) {
                 qtotal_orig += ws.surface_rates[p];
