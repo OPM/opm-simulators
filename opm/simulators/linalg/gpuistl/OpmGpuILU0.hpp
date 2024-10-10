@@ -54,7 +54,9 @@ public:
     //! \brief The field type of the preconditioner.
     using field_type = typename X::field_type;
     //! \brief The GPU matrix type
-    using CuMat = GpuSparseMatrix<field_type>;
+    using GpuMat = GpuSparseMatrix<field_type>;
+    //! \brief The Float matrix type for mixed precision
+    using FloatMat = GpuSparseMatrix<float>;
 
     //! \brief Constructor.
     //!
@@ -62,7 +64,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernels);
+    explicit OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernels, bool storeFactorizationAsFloat);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -120,11 +122,15 @@ private:
     //! \brief converts from index in natural ordered structure to index reordered strucutre
     std::vector<int> m_naturalToReordered;
     //! \brief The A matrix stored on the gpu, and its reordred version
-    CuMat m_gpuMatrix;
-    std::unique_ptr<CuMat> m_gpuReorderedLU;
+    GpuMat m_gpuMatrix;
+    std::unique_ptr<GpuMat> m_gpuReorderedLU;
     //! \brief If matrix splitting is enabled, then we store the lower and upper part separately
-    std::unique_ptr<CuMat> m_gpuMatrixReorderedLower;
-    std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
+    std::unique_ptr<GpuMat> m_gpuMatrixReorderedLower;
+    std::unique_ptr<GpuMat> m_gpuMatrixReorderedUpper;
+    //! \brief If mixed precision is enabled, store a float matrix
+    std::unique_ptr<FloatMat> m_gpuMatrixReorderedLowerFloat;
+    std::unique_ptr<FloatMat> m_gpuMatrixReorderedUpperFloat;
+    std::optional<GpuVector<float>> m_gpuMatrixReorderedDiagFloat;
     //! \brief If matrix splitting is enabled, we also store the diagonal separately
     std::optional<GpuVector<field_type>> m_gpuMatrixReorderedDiag;
     //! row conversion from natural to reordered matrix indices stored on the GPU
@@ -137,6 +143,9 @@ private:
     bool m_splitMatrix;
     //! \brief Bool storing whether or not we will tune the threadblock sizes. Only used for AMD cards
     bool m_tuneThreadBlockSizes;
+    //! \brief Bool storing whether or not we should store the ILU factorization in a float datastructure.
+    //! This uses a mixed precision preconditioner to trade numerical accuracy for memory transfer speed.
+    bool m_storeFactorizationAsFloat;
     //! \brief variables storing the threadblocksizes to use if using the tuned sizes and AMD cards
     //! The default value of -1 indicates that we have not calibrated and selected a value yet
     int m_upperSolveThreadBlockSize = -1;
