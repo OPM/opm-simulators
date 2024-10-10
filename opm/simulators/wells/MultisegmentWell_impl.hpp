@@ -1906,7 +1906,7 @@ namespace Opm
                     this->connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
                     MultisegmentWellAssemble(*this).
-                        assemblePerforationEq(seg, cell_idx, comp_idx, cq_s_effective, this->linSys_);
+                        assemblePerforationEq(seg, perf, comp_idx, cq_s_effective, this->linSys_);
                 }
             }
 

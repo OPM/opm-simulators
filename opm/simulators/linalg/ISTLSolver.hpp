@@ -450,6 +450,16 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         const CommunicationType* comm() const { return comm_.get(); }
 
+        void setDomainIndex(const int index)
+        {
+            domainIndex_ = index;
+        }
+
+        bool isNlddLocalSolver() const
+        {
+            return parameters_[activeSolverNum_].is_nldd_local_solver_;
+        }
+
     protected:
 #if HAVE_MPI
         using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
@@ -490,8 +500,15 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             OPM_TIMEBLOCK(flexibleSolverPrepare);
             if (shouldCreateSolver()) {
                 if (!useWellConn_) {
-                    auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
-                    flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
+                    if (isNlddLocalSolver()) {
+                        auto wellOp = std::make_unique<DomainWellModelAsLinearOperator<WellModel, Vector, Vector>>(simulator_.problem().wellModel());
+                        wellOp->setDomainIndex(domainIndex_);
+                        flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
+                    }
+                    else {
+                        auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
+                        flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
+                    }
                 }
                 std::function<Vector()> weightCalculator = this->getWeightsCalculator(prm_[activeSolverNum_], getMatrix(), pressureIndex);
                 OPM_TIMEBLOCK(flexibleSolverCreate);
@@ -650,6 +667,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         std::vector<detail::FlexibleSolverInfo<Matrix,Vector,CommunicationType>> flexibleSolver_;
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
+
+        int domainIndex_ = -1;
 
         bool useWellConn_;
 

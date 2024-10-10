@@ -169,6 +169,7 @@ public:
             loc_param.linear_solver_print_json_definition_ = false;
             const bool force_serial = true;
             domain_linsolvers_.emplace_back(model_.simulator(), loc_param, force_serial);
+            domain_linsolvers_.back().setDomainIndex(index);
         }
 
         assert(int(domains_.size()) == num_domains);
