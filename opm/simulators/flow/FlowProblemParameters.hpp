@@ -39,6 +39,9 @@ struct EnableDriftCompensation { static constexpr bool value = false; };
 // implicit or explicit pressure in rock compaction
 struct ExplicitRockCompaction { static constexpr bool value = false; };
 
+// Whether or not to check saturation function consistency requirements.
+struct CheckSatfuncConsistency { static constexpr bool value = true; };
+
 // Parameterize equilibration accuracy
 struct NumPressurePointsEquil
 { static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue; };
