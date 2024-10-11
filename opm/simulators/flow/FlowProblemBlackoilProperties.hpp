@@ -36,7 +36,7 @@
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/NewTranFluxModule.hpp>
-#include <opm/simulators/flow/OutputCompositionalModule.hpp>
+#include <opm/simulators/flow/OutputBlackoilModule.hpp>
 
 
 #include <tuple>

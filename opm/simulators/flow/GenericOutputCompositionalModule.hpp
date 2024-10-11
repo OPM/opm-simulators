@@ -23,8 +23,8 @@
  * \file
  * \copydoc Opm::OutputCompositionalModule
  */
-#ifndef OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
-#define OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
+#ifndef OPM_GENERIC_OUTPUT_COMPOSITIONAL_MODULE_HPP
+#define OPM_GENERIC_OUTPUT_COMPOSITIONAL_MODULE_HPP
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
