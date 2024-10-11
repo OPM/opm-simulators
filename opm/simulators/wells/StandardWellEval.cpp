@@ -177,6 +177,7 @@ init(std::vector<Scalar>& perf_depth,
      const int num_cells,
      const bool has_polymermw)
 {
+    std::cout << "initialize standardwell with numPerfs = " << baseif_.numPerfs() << ", num_cells = " << num_cells << ", baseif_.numPerfs() = " << baseif_.numPerfs() << std::endl; 
     perf_depth.resize(baseif_.numPerfs(), 0.);
     for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
         const int cell_idx = baseif_.cells()[perf];

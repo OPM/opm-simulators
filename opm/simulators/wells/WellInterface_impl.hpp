@@ -46,6 +46,7 @@
 
 #include <fmt/format.h>
 
+//#define COMMENTS
 namespace Opm
 {
 
@@ -801,6 +802,7 @@ namespace Opm
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         // TODO: the reason to have inj_controls and prod_controls in the arguments, is that we want to change the control used for the well functions
         // TODO: maybe we can use std::optional or pointers to simplify here
+        std::cout << "WellInterface_impl: in assembleWellEqWithoutIteration" << std::endl;
         assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
@@ -1795,6 +1797,9 @@ namespace Opm
         const int satid = this->saturation_table_number_[perf] - 1;
         const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
         if (satid == satid_elem) { // the same saturation number is used. i.e. just use the mobilty from the cell
+#ifdef COMMENTS
+            std::cout << "using intQuants.mobility(phaseIdx)" << std::endl;
+#endif
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
@@ -1807,6 +1812,9 @@ namespace Opm
                 mob[Indices::contiSolventEqIdx] = extendEval(intQuants.solventMobility());
             }
         } else {
+#ifdef COMMENTS
+            std::cout << "compute mobility" << std::endl;
+#endif
             const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
             auto relativePerms = relpermArray();
             MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
@@ -1840,6 +1848,11 @@ namespace Opm
                 }
             }
         }
+        #ifdef COMMENTS
+        std::cout << "DIFFERENT mob :";
+        std::for_each(mob.begin(), mob.end(), [](const auto& entry){ std::cout << entry << ", "; });
+        std::cout << std::endl;
+        #endif
     }
 
 

@@ -359,6 +359,7 @@ public:
      */
     void beginTimeStep()
     {
+        std::cout << "FlowProblem:beginTimeStep" << std::endl;
         OPM_TIMEBLOCK(beginTimeStep);
         const int episodeIdx = this->episodeIndex();
         const int timeStepSize = this->simulator().timeStepSize();
@@ -780,6 +781,10 @@ public:
             // mobility_ class attribute. the division by the phase viscosity happens later.
             const auto& materialParams = materialLawParams(globalSpaceIdx);
             MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
+            // This seems correct actually!
+            //std::cout << std::endl << "updateRelperms, after relativePermeabilities, mobility = " << std::endl;
+            //std::for_each(mobility.begin(), mobility.end(), [](const auto& entry) { std::cout << entry << std::endl;  });
+            //std::cout << std::endl;
             Valgrind::CheckDefined(mobility);
         }
         if (materialLawManager_->hasDirectionalRelperms()

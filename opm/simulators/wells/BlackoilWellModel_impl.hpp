@@ -233,6 +233,7 @@ namespace Opm {
         for (const auto& well: well_container_) {
             // Modifiy the Jacobian with explicit Schur complement
             // contributions if requested.
+            std::cout << "Will add well contributions for well " << well->name() << "? " << param_.matrix_add_well_contributions_ << std::endl;
             if (param_.matrix_add_well_contributions_) {
                 well->addWellContributions(jacobian);
             }
@@ -273,6 +274,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginReportStep(const int timeStepIdx)
     {
+        std::cout << "BlackoilWellModel_impl:beginReportStep" << std::endl;
         DeferredLogger local_deferredLogger{};
 
         this->report_step_starts_ = true;
@@ -426,6 +428,9 @@ namespace Opm {
             // WELSPECS/COMPDAT and/or WELOPEN run from an ACTIONX block.
             // Reconstruct the local wells to account for the new well
             // structure.
+            // This cannot be true for the first timestep of a report step,
+            // since the well structure is set up at the beginning of each
+            // report step.
             const auto reportStepIdx =
                 this->simulator_.episodeIndex();
 

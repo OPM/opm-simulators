@@ -41,6 +41,7 @@
 
 #include <algorithm>
 #include <limits>
+//#define COMMENTS
 
 namespace Opm {
 
@@ -56,8 +57,14 @@ template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 init()
 {
+#ifdef COMMENTS
+    std::cout << "initialize primary variables with value_:" << std::endl;
+#endif
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+#ifdef COMMENTS
+            std::cout << "value_[" << seg << "][" << eq_idx << "] = " << value_[seg][eq_idx] << std::endl; 
+#endif
             evaluation_[seg][eq_idx] = 0.0;
             evaluation_[seg][eq_idx].setValue(value_[seg][eq_idx]);
             evaluation_[seg][eq_idx].setDerivative(eq_idx + Indices::numEq, 1.0);
@@ -87,6 +94,16 @@ update(const WellState<Scalar>& well_state,
     assert(segments.size() == value_.size());
     const auto& segment_rates = segments.rates;
     const auto& segment_pressure = segments.pressure;
+#ifdef COMMENTS
+    std::cout << "accessed segment_pressure, i.e. segments.pressure " << std::endl;
+    std::for_each(segment_pressure.begin(), segment_pressure.end(), [](const auto& entry){ std::cout << entry << ", "; });
+    std::cout << std::endl << "accessed segment_rates, i.e. segments.rates " << std::endl;
+    std::for_each(segment_rates.begin(), segment_rates.end(), [](const auto& entry){ std::cout << entry << ", "; });
+    std::cout << std::endl;
+    std::cout << "well_.numPhases(): " << well_.numPhases() << std::endl;
+    for (int p = 0; p < well_.numPhases(); p++)
+        std::cout << "well_.scalingFactor(" << p << "): " << well_.scalingFactor(p) << std::endl;
+#endif
     const PhaseUsage& pu = well_.phaseUsage();
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
@@ -99,6 +116,10 @@ update(const WellState<Scalar>& well_state,
         for (int p = 0; p < well_.numPhases(); p++) {
             total_seg_rate += well_.scalingFactor(p) * segment_rates[well_.numPhases() * seg + p];
         }
+#ifdef COMMENTS
+        std::cout << "value_[" << seg << "][" << SPres << "] = " << value_[seg][SPres] << std::endl;
+        std::cout << "total_seg_rate: " << total_seg_rate << std::endl;
+#endif
 
         if (seg == 0) {
             if (well_.isInjector()) {
@@ -110,15 +131,22 @@ update(const WellState<Scalar>& well_state,
         value_[seg][WQTotal] = total_seg_rate;
         if (stop_or_zero_rate_target && seg == 0) {
             value_[seg][WQTotal] = 0;
+            std::cout << "stop_or_zero_rate_target: set value_[" << seg << "][" << WQTotal << "] to 0" << std::endl;
         }
         if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
                 const int water_pos = pu.phase_pos[Water];
                 value_[seg][WFrac] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
+#ifdef COMMENTS
+                std::cout << "has_wfrac_variable, value_[" << seg <<"][" << WFrac <<"] " << value_[seg][WFrac] << std::endl;
+#endif
             }
             if (has_gfrac_variable) {
                 const int gas_pos = pu.phase_pos[Gas];
                 value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate;
+#ifdef COMMENTS
+                std::cout << "has_gfrac_variable, value_[" << seg <<"][" << GFrac <<"] " << value_[seg][GFrac] << std::endl;
+#endif
             }
         } else { // total_seg_rate == 0
             if (well_.isInjector()) {

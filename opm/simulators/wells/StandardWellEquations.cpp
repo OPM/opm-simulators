@@ -57,12 +57,18 @@ init(const int num_cells,
      const int numPerfs,
      const std::vector<int>& cells)
 {
+    std::cout << "StandardWellEquations: init" << std::endl;
+    std::cout << "StandardWellEquations: num_cells = " << num_cells << std::endl;
+    std::cout << "StandardWellEquations: numWellEq = " << numWellEq << std::endl;
+    std::cout << "StandardWellEquations: numEq = " << numEq << std::endl;
+    std::cout << "StandardWellEquations: numPerfs = " << numPerfs << std::endl;
+
     // setup sparsity pattern for the matrices
     //[A C^T    [x    =  [ res
     // B D] x_well]      res_well]
     // set the size of the matrices
     duneD_.setSize(1, 1, 1);
-    duneB_.setSize(1, num_cells, numPerfs);
+    duneB_.setSize(1, num_cells, numPerfs); //means: sgs x num_cells entries and numperfs nonzero entries
     duneC_.setSize(1, num_cells, numPerfs);
 
     for (auto row = duneD_.createbegin(),
@@ -159,6 +165,7 @@ void StandardWellEquations<Scalar,numEq>::apply(BVector& r) const
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::invert()
 {
+    std::cout << "inverting matrix D" << std::endl;
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
         detail::invertMatrix(invDuneD_[0][0]);
@@ -308,6 +315,11 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
 
     // Add the well contributions in cpr
     // use_well_weights is a quasiimpes formulation which is not implemented in multisegment
+    std::cout << "jacobian.M() = " << jacobian.M() << std::endl;
+    std::cout << "jacobian.N() = " << jacobian.N() << std::endl;
+    std::cout << "duneC_.M() = " << duneC_.M() << std::endl;
+    std::cout << "duneC_.N() = " << duneC_.N() << std::endl;
+    std::cout << "weights.size() = " << weights.size() << std::endl;
     int nperf = 0;
     auto cell_weights = weights[0];// not need for not(use_well_weights)
     cell_weights = 0.0;
@@ -400,6 +412,12 @@ template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
 sumDistributed(Parallel::Communication comm)
 {
+    std::cout << "on process " << comm.rank() << " accumulating the well residual" << std::endl;
+    comm.barrier();
+    std::cout << "on process " << comm.rank() << "resWell_[0] is ";
+    std::for_each(resWell_[0].begin(), resWell_[0].end(), [](const auto& entry){ std::cout << entry << ", "; });
+    std::cout << std::endl;
+    comm.barrier();
   // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
     wellhelpers::sumDistributedWellEntries(duneD_[0][0], resWell_[0], comm);
 }

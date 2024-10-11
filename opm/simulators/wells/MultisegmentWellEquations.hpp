@@ -129,6 +129,9 @@ public:
                                   const int seg_pressure_var_ind,
                                   const WellState<Scalar>& well_state) const;
 
+    //! \brief Sum with off-process contribution.
+    void sumDistributed(Parallel::Communication comm);
+
     //! \brief Returns a const reference to the residual.
     const BVectorWell& residual() const
     {

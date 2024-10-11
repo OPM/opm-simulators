@@ -369,6 +369,9 @@ namespace Opm
                                        const GroupState<Scalar>& group_state,
                                        DeferredLogger& deferred_logger)
     {
+        std::cout << "assembleWellEqWithoutIteration for StandardWell" << std::endl;
+        std::cout << "num_components_ = " << this->num_components_ << std::endl;
+        std::cout << "number_of_perforations_ " << this->number_of_perforations_ << std::endl;
         // try to regularize equation if the well does not converge
         const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
         const Scalar volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
@@ -473,6 +476,34 @@ namespace Opm
                               stopped_or_zero_target,
                               deferred_logger);
 
+        std::cout << "this->linSys_.B()" << std::endl;
+        std::cout << "B.columns() " << this->linSys_.duneB_.M() << std::endl;
+        std::cout << "B.rows() " << this->linSys_.duneB_.N() << std::endl;
+        std::cout << "B_inner.columns() " << this->linSys_.duneB_.begin()->begin()->M() << std::endl;
+        std::cout << "B_inner.rows() " << this->linSys_.duneB_.begin()->begin()->N() << std::endl;
+
+        for (auto it = this->linSys_.duneB_.begin(); it != this->linSys_.duneB_.end(); ++it)
+            for (auto innterIt = it->begin(); innterIt != it->end(); ++innterIt)
+                Dune::printmatrix(std::cout, *innterIt, "M", "row");
+
+
+        std::cout << "this->linSys_.C()" << std::endl;
+        std::cout << "C.columns() " << this->linSys_.duneC_.M() << std::endl;
+        std::cout << "C.rows() " << this->linSys_.duneC_.N() << std::endl;
+        std::cout << "C_inner.columns() " << this->linSys_.duneC_.begin()->begin()->M() << std::endl;
+        std::cout << "C_inner.rows() " << this->linSys_.duneC_.begin()->begin()->N() << std::endl;
+//        for (auto it = this->linSys_.duneC_.begin(); it != this->linSys_.duneC_.end(); ++it)
+//            for (auto innterIt = it->begin(); innterIt != it->end(); ++innterIt)
+//                Dune::printmatrix(std::cout, *innterIt, "M", "row");
+        
+        std::cout << "this->linSys_.D()" << std::endl;
+        std::cout << "D.columns() " << this->linSys_.duneD_.M() << std::endl;
+        std::cout << "D.rows() " << this->linSys_.duneD_.N() << std::endl;
+        std::cout << "D_inner.columns() " << this->linSys_.duneD_.begin()->begin()->M() << std::endl;
+        std::cout << "D_inner.rows() " << this->linSys_.duneD_.begin()->begin()->N() << std::endl;
+//        for (auto it = this->linSys_.duneD_.begin(); it != this->linSys_.duneD_.end(); ++it)
+//            for (auto innterIt = it->begin(); innterIt != it->end(); ++innterIt)
+//                Dune::printmatrix(std::cout, *innterIt, "M", "row");
 
         // do the local inversion of D.
         try {

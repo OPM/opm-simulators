@@ -131,7 +131,6 @@ public:
         return resWell_;
     }
 
-private:
     friend class StandardWellEquationAccess<Scalar,numEq>;
 
     // two off-diagonal matrices
@@ -140,6 +139,7 @@ private:
     // diagonal matrix for the well
     DiagMatWell invDuneD_;
     DiagMatWell duneD_;
+private:
 
     // Wrapper for the parallel application of B for distributed wells
     wellhelpers::ParallelStandardWellB<Scalar> parallelB_;

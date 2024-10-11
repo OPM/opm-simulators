@@ -357,7 +357,8 @@ namespace Opm {
     private:
         // Callback that will be called from runSimulatorInitOrRun_().
         int runSimulatorRunCallback_()
-        {
+        {   
+            std::cout << "FlowMain:runSimulatorRunCallback_, next: simulator_->run(...)" << std::endl;
             SimulatorReport report = simulator_->run(*simtimer_);
             runSimulatorAfterSim_(report);
             return report.success.exit_status;

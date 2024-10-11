@@ -200,6 +200,7 @@ public:
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         // Main simulation loop.
         while (!timer.done()) {
+            std::cout << "SimulatorFullyImplicitBlackoil:run, in while(!timer.done()) loop: next: runStep" << std::endl;
             bool continue_looping = runStep(timer);
             if (!continue_looping) break;
         }
@@ -348,12 +349,14 @@ public:
                 events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::INJECTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
+            std::cout << "SimulatorFullyImplicitBlackoil:runStep, next: adaptiveTimeStepping_->step(...)" << std::endl;
             auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr, tuningUpdater);
             report_ += stepReport;
             //Pass simulation report to eclwriter for summary output
             simulator_.problem().setSimulationReport(report_);
         } else {
             // solve for complete report step
+            std::cout << "SimulatorFullyImplicitBlackoil:runStep, adaptiveTimeStepping_ is turned off, next: solver->step(...)" << std::endl;
             auto stepReport = solver_->step(timer);
             report_ += stepReport;
             if (terminalOutput_) {
