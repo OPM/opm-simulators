@@ -248,6 +248,9 @@ public:
 
         const bool isSubStep = !this->simulator().episodeWillBeOver();
 
+        // after the solution is updated, the values in output module needs also updated
+        this->eclWriter_->mutableOutputModule().invalidateLocalData();
+
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
         const auto& grid = this->simulator().vanguard().gridView().grid();
 
