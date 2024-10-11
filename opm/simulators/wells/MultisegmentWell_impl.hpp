@@ -118,11 +118,10 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<Scalar>& depth_arg,
          const Scalar gravity_arg,
-         const int num_cells,
          const std::vector< Scalar >& B_avg,
          const bool changed_to_open_this_step)
     {
-        Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells, B_avg, changed_to_open_this_step);
+        Base::init(phase_usage_arg, depth_arg, gravity_arg, B_avg, changed_to_open_this_step);
 
         // TODO: for StandardWell, we need to update the perf depth here using depth_arg.
         // for MultisegmentWell, it is much more complicated.
@@ -134,7 +133,7 @@ namespace Opm
 
         // \Note: we do not update the depth here. And it looks like for now, we only have the option to use
         // specified perforation depth
-        this->initMatrixAndVectors(num_cells);
+        this->initMatrixAndVectors();
 
         // calculate the depth difference between the perforations and the perforated grid block
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {

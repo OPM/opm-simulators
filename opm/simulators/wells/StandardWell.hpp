@@ -133,7 +133,6 @@ namespace Opm
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<Scalar>& depth_arg,
                           const Scalar gravity_arg,
-                          const int num_cells,
                           const std::vector<Scalar>& B_avg,
                           const bool changed_to_open_this_step) override;
 

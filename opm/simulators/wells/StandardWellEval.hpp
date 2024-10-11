@@ -90,7 +90,6 @@ protected:
 
     void init(std::vector<Scalar>& perf_depth,
               const std::vector<Scalar>& depth_arg,
-              const int num_cells,
               const bool has_polymermw);
 
     void updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
