@@ -21,7 +21,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::OutputBlackOilModule
+ * \copydoc Opm::OutputCompositionalModule
  */
 #ifndef OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
 #define OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP

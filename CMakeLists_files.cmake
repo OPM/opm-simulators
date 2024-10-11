@@ -828,6 +828,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/MixingRateControls.hpp
   opm/simulators/flow/NewTranFluxModule.hpp
   opm/simulators/flow/NonlinearSolver.hpp
+  opm/simulators/flow/OutputCompositionalModule.hpp
   opm/simulators/flow/OutputBlackoilModule.hpp
   opm/simulators/flow/partitionCells.hpp
   opm/simulators/flow/PolyhedralGridVanguard.hpp

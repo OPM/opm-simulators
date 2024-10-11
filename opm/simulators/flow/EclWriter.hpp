@@ -41,7 +41,7 @@
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/EclGenericWriter.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/OutputBlackoilModule.hpp>
+#include <opm/simulators/flow/OutputCompositionalModule.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
@@ -132,7 +132,7 @@ public:
 
     static void registerParameters()
     {
-        OutputBlackOilModule<TypeTag>::registerParameters();
+        OutputCompositionalModule<TypeTag>::registerParameters();
 
         Parameters::Register<Parameters::EnableAsyncEclOutput>
             ("Write the ECL-formated results in a non-blocking way "
@@ -169,13 +169,13 @@ public:
 
             eclBroadcast(this->simulator_.vanguard().grid().comm(), smryCfg);
 
-            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+            this->outputModule_ = std::make_unique<OutputCompositionalModule<TypeTag>>
                 (simulator, smryCfg, this->collectOnIORank_);
         }
         else
 #endif
         {
-            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+            this->outputModule_ = std::make_unique<OutputCompositionalModule<TypeTag>>
                 (simulator, this->eclIO_->finalSummaryConfig(), this->collectOnIORank_);
         }
 
@@ -670,10 +670,10 @@ public:
         }
     }
 
-    const OutputBlackOilModule<TypeTag>& outputModule() const
+    const OutputCompositionalModule<TypeTag>& outputModule() const
     { return *outputModule_; }
 
-    OutputBlackOilModule<TypeTag>& mutableOutputModule() const
+    OutputCompositionalModule<TypeTag>& mutableOutputModule() const
     { return *outputModule_; }
 
     Scalar restartTimeStepSize() const
@@ -835,7 +835,7 @@ private:
     }
 
     Simulator& simulator_;
-    std::unique_ptr<OutputBlackOilModule<TypeTag> > outputModule_;
+    std::unique_ptr<OutputCompositionalModule<TypeTag> > outputModule_;
     Scalar restartTimeStepSize_;
     int rank_ ;
     Inplace inplace_;
