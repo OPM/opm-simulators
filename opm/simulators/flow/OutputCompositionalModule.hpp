@@ -52,7 +52,7 @@
 #include <opm/output/eclipse/Inplace.hpp>
 
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/GenericOutputCompositionalModule.hpp>
 
 #include <algorithm>
 #include <array>
@@ -86,7 +86,7 @@ class EcfvDiscretization;
  *        ECL binary format.
  */
 template <class TypeTag>
-class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>>
+class OutputCompositionalModule : public GenericOutputCompositionalModule<GetPropType<TypeTag, Properties::FluidSystem>>
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
@@ -100,7 +100,7 @@ class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
-    using BaseType = GenericOutputBlackoilModule<FluidSystem>;
+    using BaseType = GenericOutputCompositionalModule<FluidSystem>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Dir = FaceDir::DirEnum;
 
