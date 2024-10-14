@@ -802,9 +802,9 @@ setRestart(const data::Solution& sol,
             rswSol_[elemIdx] = sol.data<double>("RSWSOL")[globalDofIndex];
 
     }
-
-    assert(!saturation_[oilPhaseIdx].empty());
-    saturation_[oilPhaseIdx][elemIdx] = so;
+    if (!saturation_[oilPhaseIdx].empty())  {
+        saturation_[oilPhaseIdx][elemIdx] = so;
+    }
 
     auto assign = [elemIdx, globalDofIndex, &sol](const std::string& name,
                                                   ScalarBuffer& data)
