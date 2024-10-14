@@ -41,7 +41,7 @@ namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels)
+GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, bool storeFactorizationAsFloat)
     : m_cpuMatrix(A)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
@@ -52,6 +52,7 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
     , m_splitMatrix(splitMatrix)
     , m_tuneThreadBlockSizes(tuneKernels)
+    , m_storeFactorizationAsFloat(storeFactorizationAsFloat)
 
 {
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
@@ -80,6 +81,14 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels)
         m_gpuMatrixReordered = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural);
     }
+
+    if (m_storeFactorizationAsFloat) {
+        OPM_THROW(std::runtime_error, "Matrix must be split when storing as float.");
+        m_gpuMatrixReorderedLowerFloat = std::make_unique<FloatMat>(m_gpuMatrixReorderedLower->getRowIndices(), m_gpuMatrixReorderedLower->getColumnIndices(), blocksize_);
+        m_gpuMatrixReorderedUpperFloat = std::make_unique<FloatMat>(m_gpuMatrixReorderedUpper->getRowIndices(), m_gpuMatrixReorderedUpper->getColumnIndices(), blocksize_);
+        m_gpuMatrixReorderedDiagFloat = std::make_unique<FloatVec>(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize());
+    }
+
     computeDiagAndMoveReorderedData(m_moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
 
     if (m_tuneThreadBlockSizes) {

@@ -53,6 +53,8 @@ public:
     using field_type = typename X::field_type;
     //! \brief The GPU matrix type
     using CuMat = GpuSparseMatrix<field_type>;
+    using FloatMat = GpuSparseMatrix<float>;
+    using FloatVec = GpuVector<float>;
 
     //! \brief Constructor.
     //!
@@ -60,7 +62,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit GpuDILU(const M& A, bool splitMatrix, bool tuneKernels);
+    explicit GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, bool storeFactorizationAsFloat);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -127,6 +129,10 @@ private:
     std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
     //! \brief If matrix splitting is enabled, we also store the diagonal separately
     std::unique_ptr<GpuVector<field_type>> m_gpuMatrixReorderedDiag;
+    //! \brief If mixed precision is enabled, store a float matrix
+    std::unique_ptr<FloatMat> m_gpuMatrixReorderedLowerFloat;
+    std::unique_ptr<FloatMat> m_gpuMatrixReorderedUpperFloat;
+    std::unique_ptr<FloatVec> m_gpuMatrixReorderedDiagFloat;
     //! row conversion from natural to reordered matrix indices stored on the GPU
     GpuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
@@ -137,6 +143,8 @@ private:
     bool m_splitMatrix;
     //! \brief Bool storing whether or not we will tune the threadblock sizes. Only used for AMD cards
     bool m_tuneThreadBlockSizes;
+    //! \brief Bool storing whether or not we will store the factorization as float. Only used for mixed precision
+    bool m_storeFactorizationAsFloat;
     //! \brief variables storing the threadblocksizes to use if using the tuned sizes and AMD cards
     //! The default value of -1 indicates that we have not calibrated and selected a value yet
     int m_upperSolveThreadBlockSize = -1;
