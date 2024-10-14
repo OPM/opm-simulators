@@ -583,8 +583,8 @@ public:
 
                     for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
                         const auto globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                        tracer_model.setFreeTracerConcentration(tracer_index, globalIdx,
-                                                                free_tracer_solution[globalIdx]);
+                        tracer_model.setFreeTracerConcentration
+                            (tracer_index, elemIdx, free_tracer_solution[globalIdx]);
                     }
                 }
 
@@ -600,16 +600,15 @@ public:
 
                     for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
                         const auto globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                        tracer_model.setSolTracerConcentration(tracer_index, globalIdx,
-                                                               sol_tracer_solution[globalIdx]);
+                        tracer_model.setSolTracerConcentration
+                            (tracer_index, elemIdx, sol_tracer_solution[globalIdx]);
                     }
                 }
                 else {
                     tracer_model.setEnableSolTracers(tracer_index, false);
 
                     for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
-                        const auto globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                        tracer_model.setSolTracerConcentration(tracer_index, globalIdx, 0.0);
+                        tracer_model.setSolTracerConcentration(tracer_index, elemIdx, 0.0);
                     }
                 }
             }
