@@ -39,8 +39,8 @@
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
-#include <opm/material/fluidstates/BlackOilFluidState.hpp>
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+// #include <opm/material/fluidstates/BlackOilFluidState.hpp>
+// #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
@@ -106,6 +106,7 @@ class OutputCompositionalModule : public GenericOutputCompositionalModule<GetPro
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numPhases = FluidSystem::numPhases };
+    enum { numComponents = FluidSystem::numComponents };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -144,7 +145,7 @@ public:
             return collectToIORank.isCartIdxOnThisRank(idx);
         };
 
-       this->setupBlockData(isCartIdxOnThisRank);
+        this->setupBlockData(isCartIdxOnThisRank);
 
         this->forceDisableFipOutput_ =
             Parameters::Get<Parameters::ForceDisableFluidInPlaceOutput>();
@@ -294,6 +295,23 @@ public:
 
                 this->saturation_[phaseIdx][globalDofIdx] = getValue(fs.saturation(phaseIdx));
                 Valgrind::CheckDefined(this->saturation_[phaseIdx][globalDofIdx]);
+            }
+
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                if (this->moleFractions_[compIdx].empty()) continue;
+
+                this->moleFractions_[compIdx][globalDofIdx] = getValue(fs.moleFraction(compIdx));
+            }
+            // XMF and YMF
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                    if (this->phaseMoleFractions_[oilPhaseIdx][compIdx].empty()) continue;
+                    this->phaseMoleFractions_[oilPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(oilPhaseIdx, compIdx));
+                }
+                if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    if (this->phaseMoleFractions_[gasPhaseIdx][compIdx].empty()) continue;
+                    this->phaseMoleFractions_[gasPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(gasPhaseIdx, compIdx));
+                }
             }
 
 //            if (this->regionAvgDensity_.has_value()) {

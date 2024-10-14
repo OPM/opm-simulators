@@ -326,25 +326,26 @@ public:
     {
         const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         const auto& initial_fs = initialFluidStates_[globalDofIdx];
-        Opm::CompositionalFluidState<Evaluation, FluidSystem> fs;
-        using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
+        Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
+        // TODO: the current approach is assuming we begin with XMF and YMF.
+        // TODO: maybe we should make it begin with ZMF
+        using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
         for (unsigned p = 0; p < numPhases; ++p) { // TODO: assuming the phaseidx continuous
-            ComponentVector evals;
-            auto& last_eval = evals[numComponents - 1];
+            ComponentVector vals;
+            auto& last_eval = vals[numComponents - 1];
             last_eval = 1.;
             for (unsigned c = 0; c < numComponents - 1; ++c) {
                 const auto val = initial_fs.moleFraction(p, c);
-                const Evaluation eval = Evaluation::createVariable(val, c + 1);
-                evals[c] = eval;
-                last_eval -= eval;
+                vals[c] = val;
+                last_eval -= val;
             }
             for (unsigned c = 0; c < numComponents; ++c) {
-                fs.setMoleFraction(p, c, evals[c]);
+                fs.setMoleFraction(p, c, vals[c]);
             }
 
             // pressure
             const auto p_val = initial_fs.pressure(p);
-            fs.setPressure(p, Evaluation::createVariable(p_val, 0));
+            fs.setPressure(p, p_val);
 
             const auto sat_val = initial_fs.saturation(p);
             fs.setSaturation(p, sat_val);
@@ -354,7 +355,7 @@ public:
         }
 
         {
-            typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
             paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
             paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
             fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
@@ -363,13 +364,29 @@ public:
             fs.setViscosity(FluidSystem::gasPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::gasPhaseIdx));
         }
 
+        // determine the component fractions
+        Dune::FieldVector<Scalar, numComponents> z(0.0);
+        Scalar sumMoles = 0.0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                Scalar tmp = Opm::getValue(fs.molarity(phaseIdx, compIdx) * fs.saturation(phaseIdx));
+                z[compIdx] += Opm::max(tmp, 1e-8);
+                sumMoles += tmp;
+            }
+        }
+        z /= sumMoles;
+
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            const Evaluation Ktmp = fs.wilsonK_(compIdx);
+            const auto& Ktmp = fs.wilsonK_(compIdx);
             fs.setKvalue(compIdx, Ktmp);
         }
 
-        const Evaluation& Ltmp = -1.0;
+        for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
+            fs.setMoleFraction(compIdx, z[compIdx]);
+        }
+
+        const Scalar& Ltmp = -1.0;
         fs.setLvalue(Ltmp);
 
         values.assignNaive(fs);
@@ -540,6 +557,8 @@ protected:
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     const std::size_t data_idx = compIdx * numDof + dofIdx;
                     const Scalar zmf = zmfData[data_idx];
+                    dofFluidState.setMoleFraction(compIdx, zmf);
+
                     if (gas_active) {
                         const auto ymf = (dofFluidState.saturation(FluidSystem::gasPhaseIdx) > 0.) ? zmf : Scalar{0};
                         dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, ymf);
