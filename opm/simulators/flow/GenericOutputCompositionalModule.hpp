@@ -536,6 +536,7 @@ protected:
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
     std::array<ScalarBuffer, numComponents> moleFractions_;
+    std::array<std::array<ScalarBuffer, numComponents>, numPhases> phaseMoleFractions_;
 
     std::vector<ScalarBuffer> freeTracerConcentrations_;
     std::vector<ScalarBuffer> solTracerConcentrations_;

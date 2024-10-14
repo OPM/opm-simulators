@@ -25,8 +25,8 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-#include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
+// #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+// #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
 #include <opm/grid/common/CommunicationUtils.hpp>
 
@@ -589,6 +589,32 @@ assignToSolution(data::Solution& sol)
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
         DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
     };
+
+    auto compositionalEntries = std::vector<DataEntry>{};
+
+    {
+        // ZMF
+        for (int i = 0; i < numComponents; ++i) {
+            const std::string name = "ZMF" + std::to_string(i + 1);  // Generate ZMF1, ZMF2, ...
+            compositionalEntries.emplace_back(name, UnitSystem::measure::identity, moleFractions_[i]);
+        }
+
+        // XMF
+        for (int i = 0; i < numComponents; ++i) {
+            const std::string name = "XMF" + std::to_string(i + 1);  // Generate XMF1, XMF2, ...
+            compositionalEntries.emplace_back(name, UnitSystem::measure::identity, phaseMoleFractions_[oilPhaseIdx][i]);
+        }
+
+        // YMF
+        for (int i = 0; i < numComponents; ++i) {
+            const std::string name = "YMF" + std::to_string(i + 1);  // Generate YMF1, YMF2, ...
+            compositionalEntries.emplace_back(name, UnitSystem::measure::identity, phaseMoleFractions_[gasPhaseIdx][i]);
+        }
+    }
+
+    for (const auto& array : compositionalEntries) {
+        doInsert(array, data::TargetType::RESTART_SOLUTION);
+    }
 
     // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
     // and also, we need to map these values.
@@ -1459,7 +1485,26 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (rstKeywords["ZMF"] > 0) {
+        rstKeywords["ZMF"] = 0;
+        for (int i = 0; i < numComponents; ++i) {
+            moleFractions_[i].resize(bufferSize, 0.0);
+        }
     }
+
+    if (rstKeywords["XMF"] > 0 && FluidSystem::phaseIsActive(oilPhaseIdx)) {
+        rstKeywords["XMF"] = 0;
+        for (int i = 0; i < numComponents; ++i) {
+            phaseMoleFractions_[oilPhaseIdx][i].resize(bufferSize, 0.0);
+        }
+    }
+
+    if (rstKeywords["YMF"] > 0 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+        rstKeywords["YMF"] = 0;
+        for (int i = 0; i < numComponents; ++i) {
+            phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
+        }
+    }
+
 
     //Warn for any unhandled keyword
     if (log) {
