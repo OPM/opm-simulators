@@ -109,6 +109,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/RegionPhasePVAverage.cpp
+  opm/simulators/flow/ReservoirCouplingMaster.cpp
+  opm/simulators/flow/ReservoirCouplingSlave.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
@@ -919,6 +921,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/WriteSystemMatrixHelper.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeStepping.hpp
+  opm/simulators/timestepping/AdaptiveTimeStepping_impl.hpp
   opm/simulators/timestepping/ConvergenceReport.hpp
   opm/simulators/timestepping/EclTimeSteppingParams.hpp
   opm/simulators/timestepping/TimeStepControl.hpp
