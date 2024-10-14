@@ -1325,6 +1325,7 @@ namespace Opm {
         for (const std::string& nodeName : network.node_names()) {
             const bool has_choke = network.node(nodeName).as_choke();
             if (has_choke) {
+                // group_state.update_well_group_thp(nodeName, 0.0); //initialization
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
 
@@ -1370,6 +1371,7 @@ namespace Opm {
                 }
 
                 const Scalar orig_target = target_tmp;
+                std::cout<< "Group: " << group.name() << " orig_target: " << orig_target << std::endl;
 
                 auto mismatch = [&] (auto group_thp) {
                     Scalar group_rate(0.0);

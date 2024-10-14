@@ -535,7 +535,7 @@ getGroupProductionTargetRate(const Group& group,
              std::cout << "ii: " << ii << " group: " << chain[ii] << " LocRed:" << localReduction(chain[ii])*86400 << " target: " << target*86400 << std::endl;
         }
         target *= localFraction(chain[ii+1]);
-                std::cout << "ii: " << ii << " group: " << chain[ii+1] << " LocFrac: " << localFraction(chain[ii+1]) << " target: " << target*86400 << std::endl;
+        std::cout << "ii: " << ii << " group: " << chain[ii+1] << " LocFrac: " << localFraction(chain[ii+1]) << " target: " << target*86400 << std::endl;
     }
     // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
@@ -582,8 +582,6 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
                                                 guideRate, deferred_logger);
         }
     }
-
-    // const auto pu = well_.phaseUsage();
 
     if (!group.isProductionGroup()) {
         return std::make_pair(1.0, currentGroupControl);
@@ -632,6 +630,10 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     std::optional<Group::ProductionControls> ctrl;
     if (!group.has_gpmaint_control(currentGroupControl))
         ctrl = group.productionControls(summaryState);
+
+    Scalar fr_true = fcalc.fraction("B1", "M5S", true);
+    Scalar fr_false = fcalc.fraction("B1", "M5S", false);
+    std::cout << "fr_true: " << fr_true << "fr_false: " << fr_false << std::endl;
 
     const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
     const auto chain = WellGroupHelpers<double>::groupChainTopBot(name, group.name(),

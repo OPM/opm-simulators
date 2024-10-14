@@ -123,6 +123,7 @@ guideRateSum(const Group& group,
             total_guide_rate += guideRate(child_group, always_included_child);
         }
     }
+    //PJPE:check
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_producer_) {

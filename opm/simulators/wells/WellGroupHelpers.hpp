@@ -96,6 +96,7 @@ public:
                                            const PhaseUsage& pu,
                                            const GuideRate& guide_rate,
                                            const WellState<Scalar>& wellState,
+                                           const SummaryState& summaryState,
                                            GroupState<Scalar>& group_state,
                                            std::vector<Scalar>& groupTargetReduction);
 

@@ -35,6 +35,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/RegionAverageCalculator.hpp>
@@ -343,6 +344,7 @@ updateGroupTargetReduction(const Group& group,
                            const PhaseUsage& pu,
                            const GuideRate& guide_rate,
                            const WellState<Scalar>& wellState,
+                           const SummaryState& summaryState,
                            GroupState<Scalar>& group_state,
                            std::vector<Scalar>& groupTargetReduction)
 {
@@ -357,6 +359,7 @@ updateGroupTargetReduction(const Group& group,
                                    pu,
                                    guide_rate,
                                    wellState,
+                                   summaryState,
                                    group_state,
                                    subGroupTargetReduction);
 
@@ -415,7 +418,24 @@ updateGroupTargetReduction(const Group& group,
                                              && currentGroupControl != Group::ProductionCMode::NONE);
             const int num_group_controlled_wells
                 = groupControlledWells(schedule, wellState, group_state, reportStepIdx, subGroupName, "", !isInjector, /*injectionPhaseNotUsed*/Phase::OIL);
+            // DeferredLogger deffered_logger;
+            // auto constraints = BlackoilWellModelConstraints<double>() ;
+            // bool check =  constraints.checkGroupConstraints(subGroup, reportStepIdx, deffered_logger);
+            // bool check = false;
+            // if (subGroupName=="B1"){
+            //     // const auto controls = group.productionControls(summaryState);
+            //     const double current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
+            //                                                               schedule,
+            //                                                               wellState,
+            //                                                               reportStepIdx,
+            //                                                               pu.phase_pos[BlackoilPhases::Liquid],
+            //                                                               false);
+            //     if (current_rate < 0.08101851851 - 0.01)
+            //         check = true;
+            // }
+            std::cout<< "Group: " << subGroupName << " NumGroupControlledWells: " << num_group_controlled_wells << std::endl;
             if (individual_control || num_group_controlled_wells == 0) {
+            // if (individual_control || num_group_controlled_wells == 0 || (subGroupName=="B1" && check)) {
                 for (int phase = 0; phase < np; phase++) {
                     groupTargetReduction[phase]
                         += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase, isInjector);
@@ -429,6 +449,7 @@ updateGroupTargetReduction(const Group& group,
                     }
                 }
             }
+             std::cout << "A: Group: " << group.name() << ", currentGroupControl: " << Group::ProductionCMode2String(currentGroupControl) << ", GroupTargetReduction[1]: " << groupTargetReduction[1]*86400 << std::endl;
         }
     }
 
@@ -462,12 +483,25 @@ updateGroupTargetReduction(const Group& group,
                     groupTargetReduction[phase] += ws.surface_rates[phase] * efficiency;
                 }
         } else {
-            if (ws.production_cmode != Well::ProducerCMode::GRUP)
-                if (!group_state.is_autochoke_group(group.name())) {
-                    for (int phase = 0; phase < np; phase++) {
-                        groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
-                    }
+            // if (!group.as_choke()){
+                if ((ws.production_cmode != Well::ProducerCMode::GRUP)){
+                    // if (!group.as_choke() || reportStepIdx>=2) {
+                    if (!group.as_choke()) {
+                        for (int phase = 0; phase < np; phase++) {
+                            groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
+                        }
                 }
+                std::cout<< "B: " << " Group: " << group.name() << ", Well: " << wellName << ", cmode: " << ws.production_cmode  << ", GroupTargetReduction[1]: " << groupTargetReduction[1]*86400 << std::endl;
+            }
+            // else {
+            //     // if (ws.production_cmode != Well::ProducerCMode::THP){
+            //     if(reportStepIdx >= 2){
+            //         for (int phase = 0; phase < np; phase++) {
+            //             groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
+            //         }
+            //     }
+            //     std::cout<< "C: " << " Group: " << group.name() << ", Well: " << wellName << ", cmode: " << ws.production_cmode  << ", GroupTargetReduction[1]: " << groupTargetReduction[1]*86400 << std::endl;
+            // }
         }
     }
     if (isInjector)
@@ -1115,10 +1149,35 @@ groupControlledWells(const Schedule& schedule,
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_production_group) {
-            included = included || well_state.isProductionGrup(child_well) || group_state.is_autochoke_group(group.name());
+            //PJPE: number of wells should be calculated as zero when wells of auto choke group do not deliver target
+                included = included || well_state.isProductionGrup(child_well) || group.as_choke();
+            // }
         } else {
             included = included || well_state.isInjectionGrup(child_well);
         }
+        if (group.as_choke()){
+            //PJPE: number of wells should be calculated as zero when wells of auto choke group do not deliver target
+            // const double loc_frac=WGHelpers::FractionCalculator<Scalar>::localFraction(group_name, group_name);
+            // const auto controls = group.productionControls(summaryState);
+            //  WGHelpers::TargetCalculator tcalc(currentGroupControl,
+            //                           pu,
+            //                           resv_coeff,
+            //                           gratTargetFromSales,
+            //                           group.name(),
+            //                           group_state,
+            //                           group.has_gpmaint_control(currentGroupControl));
+            const double current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
+                                                                        schedule,
+                                                                        well_state,
+                                                                        report_step,
+                                                                        well_state.phaseUsage().phase_pos[BlackoilPhases::Liquid] /*well_state.phase_usage_.phase_pos[BlackoilPhases::Liquid]*/ /*pu.phase_pos[BlackoilPhases::Liquid]*/,
+                                                                        false);
+            // if (current_rate < controls.oil_target)
+            if (current_rate < 0.08101851851)
+                included = false;
+        }
+
+        // if ( group.as_choke() && report_step>=2) {included = false;} //pjpe: hack
         if (included) {
             ++num_wells;
         }

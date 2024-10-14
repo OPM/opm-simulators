@@ -225,7 +225,7 @@ checkGroupInjectionConstraints(const Group& group,
     }
     return std::make_pair(Group::InjectionCMode::NONE, 1.0);
 }
-
+//pjpe: check
 template<class Scalar>
 std::pair<Group::ProductionCMode, Scalar>
 BlackoilWellModelConstraints<Scalar>::
@@ -236,6 +236,7 @@ checkGroupProductionConstraints(const Group& group,
     const auto& well_state = wellModel_.wellState();
     const auto& pu = wellModel_.phaseUsage();
 
+    const auto group_name = group.name();
     const auto controls = group.productionControls(wellModel_.summaryState());
     const Group::ProductionCMode& currentControl = wellModel_.groupState().production_control(group.name());
 
@@ -610,7 +611,7 @@ updateGroupIndividualControl(const Group& group,
                                             changed_this.first, well_state, 
                                             worst_offending_well,
                                             group_state, deferred_logger);
-
+//PJPE: check
             if(changed) {
                 switched_prod.insert_or_assign(group.name(),
                                     Group::ProductionCMode2String(changed_this.first));
