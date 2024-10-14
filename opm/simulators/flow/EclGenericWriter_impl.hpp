@@ -136,10 +136,10 @@ getInterRegFlowsAsMap(const Opm::InterRegFlowMap& map)
 
 struct EclWriteTasklet : public Opm::TaskletInterface
 {
-    Opm::Action::State actionState_;
-    Opm::WellTestState wtestState_;
-    Opm::SummaryState summaryState_;
-    Opm::UDQState udqState_;
+    const Opm::Action::State& actionState_;
+    const Opm::WellTestState& wtestState_;
+    const Opm::SummaryState& summaryState_;
+    const Opm::UDQState& udqState_;
     Opm::EclipseIO& eclIO_;
     int reportStepNum_;
     std::optional<int> timeStepNum_;
