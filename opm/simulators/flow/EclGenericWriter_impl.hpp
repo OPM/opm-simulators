@@ -136,10 +136,6 @@ getInterRegFlowsAsMap(const Opm::InterRegFlowMap& map)
 
 struct EclWriteTasklet : public Opm::TaskletInterface
 {
-    // Opm::Action::State actionState_;
-    // Opm::WellTestState wtestState_;
-    // Opm::SummaryState summaryState_;
-    // Opm::UDQState udqState_;
     Opm::EclipseIO& eclIO_;
     int reportStepNum_;
     std::optional<int> timeStepNum_;
@@ -147,45 +143,48 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     double secondsElapsed_;
     Opm::RestartValue restartValue_;
     bool writeDoublePrecision_;
+    std::optional<Opm::Action::State> actionState_;
+    std::optional<Opm::WellTestState> wtestState_;
+    std::optional<Opm::SummaryState> summaryState_;
+    std::optional<Opm::UDQState> udqState_;
 
-    explicit EclWriteTasklet(/* const Opm::Action::State& actionState,
-                             const Opm::WellTestState& wtestState,
-                             const Opm::SummaryState& summaryState,
-                             const Opm::UDQState& udqState, */
-                             Opm::EclipseIO& eclIO,
+    explicit EclWriteTasklet(Opm::EclipseIO& eclIO,
                              int reportStepNum,
                              std::optional<int> timeStepNum,
                              bool isSubStep,
                              double secondsElapsed,
                              Opm::RestartValue restartValue,
-                             bool writeDoublePrecision)
-        : /* actionState_(actionState)
-        , wtestState_(wtestState)
-        , summaryState_(summaryState)
-        , udqState_(udqState)
-        , */ eclIO_(eclIO)
+                             bool writeDoublePrecision,
+                             std::optional<Opm::Action::State> actionState = std::nullopt,
+                             std::optional<Opm::WellTestState> wtestState = std::nullopt,
+                             std::optional<Opm::SummaryState> summaryState = std::nullopt,
+                             std::optional<Opm::UDQState> udqState = std::nullopt)
+        : eclIO_(eclIO)
         , reportStepNum_(reportStepNum)
         , timeStepNum_(timeStepNum)
         , isSubStep_(isSubStep)
         , secondsElapsed_(secondsElapsed)
         , restartValue_(std::move(restartValue))
         , writeDoublePrecision_(writeDoublePrecision)
+        , actionState_(std::move(actionState))
+        , wtestState_(std::move(wtestState))
+        , summaryState_(std::move(summaryState))
+        , udqState_(std::move(udqState))
     {}
 
     // callback to eclIO serial writeTimeStep method
     void run()
     {
-        this->eclIO_.writeTimeStep(/* this->actionState_,
-                                   this->wtestState_,
-                                   this->summaryState_,
-                                   this->udqState_, */
-                                   this->reportStepNum_,
+        this->eclIO_.writeTimeStep(this->reportStepNum_,
                                    this->isSubStep_,
                                    this->secondsElapsed_,
                                    std::move(this->restartValue_),
                                    this->writeDoublePrecision_,
-                                   this->timeStepNum_
-);
+                                   this->timeStepNum_,
+                                   std::move(this->actionState_),
+                                   std::move(this->wtestState_),
+                                   std::move(this->summaryState_),
+                                   std::move(this->udqState_));
     }
 };
 
