@@ -159,7 +159,7 @@ mmv(const T* a, const T* b, T* c)
 // dst -= A*B*C
 template <class T, int blocksize>
 __device__ __forceinline__ void
-mmx2Subtraction(T* A, T* B, T* C, T* dst)
+mmx2Subtraction(const T* A, const T* B, const T* C, T* dst)
 {
 
     T tmp[blocksize * blocksize] = {0};
@@ -250,6 +250,19 @@ mvMixedGeneral(const MatrixScalar* A, const VectorScalar* b, ResultScalar* c)
     for (int i = 0; i < blocksize; ++i) {
         c[i] = 0;
 
+        for (int j = 0; j < blocksize; ++j) {
+            c[i] += ResultScalar(ComputeScalar(A[i * blocksize + j]) * ComputeScalar(b[j]));
+        }
+    }
+}
+
+// TODO: consider merging with existing block operations
+// mixed precision general version of c += Ab
+template <int blocksize, class MatrixScalar, class VectorScalar, class ResultScalar, class ComputeScalar>
+__device__ __forceinline__ void
+umvMixedGeneral(const MatrixScalar* A, const VectorScalar* b, ResultScalar* c)
+{
+    for (int i = 0; i < blocksize; ++i) {
         for (int j = 0; j < blocksize; ++j) {
             c[i] += ResultScalar(ComputeScalar(A[i * blocksize + j]) * ComputeScalar(b[j]));
         }

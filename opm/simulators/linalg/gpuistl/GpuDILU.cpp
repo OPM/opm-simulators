@@ -83,10 +83,13 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, boo
     }
 
     if (m_storeFactorizationAsFloat) {
-        OPM_THROW(std::runtime_error, "Matrix must be split when storing as float.");
+        if (!m_splitMatrix){
+            OPM_THROW(std::runtime_error, "Matrix must be split when storing as float.");
+        }
         m_gpuMatrixReorderedLowerFloat = std::make_unique<FloatMat>(m_gpuMatrixReorderedLower->getRowIndices(), m_gpuMatrixReorderedLower->getColumnIndices(), blocksize_);
         m_gpuMatrixReorderedUpperFloat = std::make_unique<FloatMat>(m_gpuMatrixReorderedUpper->getRowIndices(), m_gpuMatrixReorderedUpper->getColumnIndices(), blocksize_);
         m_gpuMatrixReorderedDiagFloat = std::make_unique<FloatVec>(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize());
+        m_gpuDInvFloat = std::make_unique<FloatVec>(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize());
     }
 
     computeDiagAndMoveReorderedData(m_moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
@@ -120,17 +123,31 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
     for (int level = 0; level < m_levelSets.size(); ++level) {
         const int numOfRowsInLevel = m_levelSets[level].size();
         if (m_splitMatrix) {
-            detail::DILU::solveLowerLevelSetSplit<field_type, blocksize_>(
-                m_gpuMatrixReorderedLower->getNonZeroValues().data(),
-                m_gpuMatrixReorderedLower->getRowIndices().data(),
-                m_gpuMatrixReorderedLower->getColumnIndices().data(),
-                m_gpuReorderToNatural.data(),
-                levelStartIdx,
-                numOfRowsInLevel,
-                m_gpuDInv.data(),
-                d.data(),
-                v.data(),
-                lowerSolveThreadBlockSize);
+            if (m_storeFactorizationAsFloat) {
+                detail::DILU::solveLowerLevelSetSplit<blocksize_, field_type, float>(
+                    m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedLowerFloat->getRowIndices().data(),
+                    m_gpuMatrixReorderedLowerFloat->getColumnIndices().data(),
+                    m_gpuReorderToNatural.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    m_gpuDInvFloat->data(),
+                    d.data(),
+                    v.data(),
+                    lowerSolveThreadBlockSize);
+            } else {
+                detail::DILU::solveLowerLevelSetSplit<blocksize_, field_type, field_type>(
+                    m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedLower->getRowIndices().data(),
+                    m_gpuMatrixReorderedLower->getColumnIndices().data(),
+                    m_gpuReorderToNatural.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    m_gpuDInv.data(),
+                    d.data(),
+                    v.data(),
+                    lowerSolveThreadBlockSize);
+            }
         } else {
             detail::DILU::solveLowerLevelSet<field_type, blocksize_>(
                 m_gpuMatrixReordered->getNonZeroValues().data(),
@@ -153,16 +170,29 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
         const int numOfRowsInLevel = m_levelSets[level].size();
         levelStartIdx -= numOfRowsInLevel;
         if (m_splitMatrix) {
-            detail::DILU::solveUpperLevelSetSplit<field_type, blocksize_>(
-                m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
-                m_gpuMatrixReorderedUpper->getRowIndices().data(),
-                m_gpuMatrixReorderedUpper->getColumnIndices().data(),
-                m_gpuReorderToNatural.data(),
-                levelStartIdx,
-                numOfRowsInLevel,
-                m_gpuDInv.data(),
-                v.data(),
-                upperSolveThreadBlockSize);
+            if (m_storeFactorizationAsFloat){
+                detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, float>(
+                    m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedUpperFloat->getRowIndices().data(),
+                    m_gpuMatrixReorderedUpperFloat->getColumnIndices().data(),
+                    m_gpuReorderToNatural.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    m_gpuDInvFloat->data(),
+                    v.data(),
+                    upperSolveThreadBlockSize);
+            } else {
+                detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, field_type>(
+                    m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                    m_gpuMatrixReorderedUpper->getColumnIndices().data(),
+                    m_gpuReorderToNatural.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    m_gpuDInv.data(),
+                    v.data(),
+                    upperSolveThreadBlockSize);
+            }
         } else {
             detail::DILU::solveUpperLevelSet<field_type, blocksize_>(
                 m_gpuMatrixReordered->getNonZeroValues().data(),
@@ -241,20 +271,44 @@ GpuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData(int moveThreadBlockSize, in
     for (int level = 0; level < m_levelSets.size(); ++level) {
         const int numOfRowsInLevel = m_levelSets[level].size();
         if (m_splitMatrix) {
-            detail::DILU::computeDiluDiagonalSplit<field_type, blocksize_>(
-                m_gpuMatrixReorderedLower->getNonZeroValues().data(),
-                m_gpuMatrixReorderedLower->getRowIndices().data(),
-                m_gpuMatrixReorderedLower->getColumnIndices().data(),
-                m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
-                m_gpuMatrixReorderedUpper->getRowIndices().data(),
-                m_gpuMatrixReorderedUpper->getColumnIndices().data(),
-                m_gpuMatrixReorderedDiag->data(),
-                m_gpuReorderToNatural.data(),
-                m_gpuNaturalToReorder.data(),
-                levelStartIdx,
-                numOfRowsInLevel,
-                m_gpuDInv.data(),
-                factorizationBlockSize);
+            if (m_storeFactorizationAsFloat) {
+                detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, true>(
+                    m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedLower->getRowIndices().data(),
+                    m_gpuMatrixReorderedLower->getColumnIndices().data(),
+                    m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                    m_gpuMatrixReorderedUpper->getColumnIndices().data(),
+                    m_gpuMatrixReorderedDiag->data(),
+                    m_gpuReorderToNatural.data(),
+                    m_gpuNaturalToReorder.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    m_gpuDInv.data(),
+                    m_gpuDInvFloat->data(),
+                    m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
+                    factorizationBlockSize);
+            } else {
+                // TODO: should this be field type twice or field type then float in the template?
+                detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, false>(
+                    m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedLower->getRowIndices().data(),
+                    m_gpuMatrixReorderedLower->getColumnIndices().data(),
+                    m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+                    m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                    m_gpuMatrixReorderedUpper->getColumnIndices().data(),
+                    m_gpuMatrixReorderedDiag->data(),
+                    m_gpuReorderToNatural.data(),
+                    m_gpuNaturalToReorder.data(),
+                    levelStartIdx,
+                    numOfRowsInLevel,
+                    m_gpuDInv.data(),
+                    nullptr,
+                    nullptr,
+                    nullptr,
+                    factorizationBlockSize);
+            }
         } else {
             detail::DILU::computeDiluDiagonal<field_type, blocksize_>(
                 m_gpuMatrixReordered->getNonZeroValues().data(),

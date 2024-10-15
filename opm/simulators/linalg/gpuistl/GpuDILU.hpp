@@ -133,6 +133,7 @@ private:
     std::unique_ptr<FloatMat> m_gpuMatrixReorderedLowerFloat;
     std::unique_ptr<FloatMat> m_gpuMatrixReorderedUpperFloat;
     std::unique_ptr<FloatVec> m_gpuMatrixReorderedDiagFloat;
+    std::unique_ptr<FloatVec> m_gpuDInvFloat;
     //! row conversion from natural to reordered matrix indices stored on the GPU
     GpuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
