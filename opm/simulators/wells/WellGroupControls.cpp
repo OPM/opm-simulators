@@ -631,9 +631,9 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     if (!group.has_gpmaint_control(currentGroupControl))
         ctrl = group.productionControls(summaryState);
 
-    Scalar fr_true = fcalc.fraction("B1", "M5S", true);
-    Scalar fr_false = fcalc.fraction("B1", "M5S", false);
-    std::cout << "fr_true: " << fr_true << "fr_false: " << fr_false << std::endl;
+    // Scalar fr_true = fcalc.fraction("B1", "M5S", true);
+    // Scalar fr_false = fcalc.fraction("B1", "M5S", false);
+    // std::cout << "fr_true: " << fr_true << "fr_false: " << fr_false << std::endl;
 
     const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
     const auto chain = WellGroupHelpers<double>::groupChainTopBot(name, group.name(),
@@ -644,7 +644,6 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     std::cout << "target: " << target*86400 << " time: " << reportStepIdx << " modified" << std::endl;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || guideRate->has(chain[ii])) {
-        // if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
         //     Apply local reductions only at the control level
         //     (top) and for levels where we have a specified
         //     group guide rate.
@@ -656,17 +655,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     }
     // Avoid negative target rates coming from too large local reductions.
     const double target_rate = std::max(0.0, target / efficiencyFactor);
-    // const auto& ws = well_state.well(well_.indexOfWell());
-    // const auto& rates = ws.surface_rates;
-    // const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-    // double scale = 1.0;
-    // if (target_rate == 0.0) {
-    //     return 0.0;
-    // }
 
-    // if (current_rate > 1e-14)
-    //     scale = target_rate/current_rate;
-    // return scale;
     return std::make_pair(target_rate, currentGroupControl);
 }
 

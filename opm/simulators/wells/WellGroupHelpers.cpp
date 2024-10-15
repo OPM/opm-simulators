@@ -1149,7 +1149,6 @@ groupControlledWells(const Schedule& schedule,
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_production_group) {
-            //PJPE: number of wells should be calculated as zero when wells of auto choke group do not deliver target
                 included = included || well_state.isProductionGrup(child_well) || group.as_choke();
             // }
         } else {
@@ -1157,27 +1156,21 @@ groupControlledWells(const Schedule& schedule,
         }
         if (group.as_choke()){
             //PJPE: number of wells should be calculated as zero when wells of auto choke group do not deliver target
-            // const double loc_frac=WGHelpers::FractionCalculator<Scalar>::localFraction(group_name, group_name);
-            // const auto controls = group.productionControls(summaryState);
-            //  WGHelpers::TargetCalculator tcalc(currentGroupControl,
-            //                           pu,
-            //                           resv_coeff,
-            //                           gratTargetFromSales,
-            //                           group.name(),
-            //                           group_state,
-            //                           group.has_gpmaint_control(currentGroupControl));
             const double current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                         schedule,
                                                                         well_state,
                                                                         report_step,
                                                                         well_state.phaseUsage().phase_pos[BlackoilPhases::Liquid] /*well_state.phase_usage_.phase_pos[BlackoilPhases::Liquid]*/ /*pu.phase_pos[BlackoilPhases::Liquid]*/,
                                                                         false);
-            // if (current_rate < controls.oil_target)
+            //PJPE: This is the target rate for the auto choke group derived from the 
+            //parent group M5S target rate (e.g. 8000 m3/day) and the guide rates eg. 40 for M5S
+            //and 35 for auto choke group.targetrate is then (8000*35/40)/86400 = 0.081 
+            //Q: how to get this target value here??
+            const double target_rate = 0.08101851851;
             if (current_rate < 0.08101851851)
                 included = false;
         }
 
-        // if ( group.as_choke() && report_step>=2) {included = false;} //pjpe: hack
         if (included) {
             ++num_wells;
         }
