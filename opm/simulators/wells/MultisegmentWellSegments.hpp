@@ -49,6 +49,7 @@ class MultisegmentWellSegments
 
 public:
     MultisegmentWellSegments(const int numSegments,
+                             const int num_perfs_whole_mswell,
                              WellInterfaceGeneric<Scalar>& well);
 
     void computeFluidProperties(const EvalWell& temperature,
@@ -148,6 +149,9 @@ private:
     // depth difference between the segment and the perforation
     // or in another way, the depth difference between the perforation and
     // the segment the perforation belongs to
+    // This vector contains the depth differences for *all* perforations across all processes
+    // that this well lies on, its size is well.wellEcl().getConnections().size(),
+    // also it works with *global* perforation indices!
     std::vector<Scalar> perforation_depth_diffs_;
 
     // the inlet segments for each segment. It is for convenience and efficiency reason
