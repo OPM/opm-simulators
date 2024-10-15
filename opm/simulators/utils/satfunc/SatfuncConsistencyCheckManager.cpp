@@ -104,11 +104,11 @@ SatfuncConsistencyCheckManager(const std::size_t    numSamplePoints,
 
 template <typename Scalar>
 bool Opm::Satfunc::PhaseChecks::SatfuncConsistencyCheckManager<Scalar>::
-anyFailedChecks() const
+anyFailedStandardChecks() const
 {
     return std::any_of(this->curves_.begin(), this->curves_.end(),
                        [](const auto& curve)
-                       { return curve.checks.anyFailedChecks(); });
+                       { return curve.checks.anyFailedStandardChecks(); });
 }
 
 template <typename Scalar>

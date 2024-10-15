@@ -240,7 +240,7 @@ SWL
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -280,7 +280,7 @@ SWL
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -392,7 +392,7 @@ SWU
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -445,7 +445,7 @@ SWU
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -505,7 +505,7 @@ SWCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -545,7 +545,7 @@ SWCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -611,7 +611,7 @@ SGL
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -651,7 +651,7 @@ SGL
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -763,7 +763,7 @@ SGU
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -816,7 +816,7 @@ SGU
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -876,7 +876,7 @@ SGCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -916,7 +916,7 @@ SGCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -984,7 +984,7 @@ SWL
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(! checkMgr.anyFailedCriticalChecks(),
                         "There must not be failed checks at the critical level");
@@ -1028,7 +1028,7 @@ SGCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(! checkMgr.anyFailedCriticalChecks(),
                         "There must not be failed checks at the critical level");
@@ -1068,7 +1068,7 @@ SOWCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -1108,7 +1108,7 @@ SOWCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -1181,7 +1181,7 @@ SOGCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -1221,7 +1221,7 @@ SOGCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -1296,7 +1296,7 @@ SOWCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(! checkMgr.anyFailedCriticalChecks(),
                         "There must not be any failed checks at the critical level");
@@ -1340,7 +1340,7 @@ SOWCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -1402,7 +1402,7 @@ SOGCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(! checkMgr.anyFailedCriticalChecks(),
                         "There must not be any failed checks at the critical level");
@@ -1444,7 +1444,7 @@ SOGCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checkMgr.anyFailedStandardChecks(),
                         "There must be failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -1527,7 +1527,7 @@ SOWCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");
@@ -1577,7 +1577,7 @@ SOGCR
     checkMgr.collectFailuresTo(root)
         .run(grid.leafGridView(), [](const auto&) { return 0; });
 
-    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checkMgr.anyFailedStandardChecks(),
                         "There must not be any failed checks at the standard level");
     BOOST_CHECK_MESSAGE(checkMgr.anyFailedCriticalChecks(),
                         "There must be failed checks at the critical level");

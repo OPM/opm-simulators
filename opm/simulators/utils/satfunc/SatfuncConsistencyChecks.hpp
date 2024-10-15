@@ -217,7 +217,7 @@ namespace Opm {
         void collectFailures(int root, const Parallel::Communication& comm);
 
         /// Whether or not any checks failed at the \c Standard level.
-        bool anyFailedChecks() const;
+        bool anyFailedStandardChecks() const;
 
         /// Whether or not any checks failed at the \c Critical level.
         bool anyFailedCriticalChecks() const;

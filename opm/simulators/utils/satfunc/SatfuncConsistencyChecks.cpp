@@ -162,7 +162,7 @@ collectFailures(const int                      root,
 }
 
 template <typename Scalar>
-bool Opm::SatfuncConsistencyChecks<Scalar>::anyFailedChecks() const
+bool Opm::SatfuncConsistencyChecks<Scalar>::anyFailedStandardChecks() const
 {
     return this->anyFailedChecks(ViolationLevel::Standard);
 }
