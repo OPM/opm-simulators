@@ -37,8 +37,8 @@
 #include <opm/common/utility/TimeService.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/material/common/ConditionalStorage.hpp>
 #include <opm/material/common/Valgrind.hpp>
@@ -72,8 +72,10 @@
 #include <opm/utility/CopyablePtr.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -224,38 +226,36 @@ public:
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
     {
-        const auto& vanguard = simulator.vanguard();
-
-        enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
-
-        enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
-
+        this->enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
+        this->enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
         this->enableTuning_ = Parameters::Get<Parameters::EnableTuning>();
+
         this->initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
-        this->maxTimeStepAfterWellEvent_ = Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>() * 24 * 60 * 60;
+        this->maxTimeStepAfterWellEvent_ = unit::convert::from
+            (Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>(), unit::day);
 
-        // The value N for this parameter is defined in the following order of presedence:
+        // The value N for this parameter is defined in the following order of precedence:
+        //
         // 1. Command line value (--num-pressure-points-equil=N)
-        // 2. EQLDIMS item 2
-        // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
-        if (Parameters::IsSet<Parameters::NumPressurePointsEquil>())
-        {
-            this->numPressurePointsEquil_ = Parameters::Get<Parameters::NumPressurePointsEquil>();
-        } else {
-            this->numPressurePointsEquil_ = simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
-        }
+        //
+        // 2. EQLDIMS item 2.  Default value from
+        //    opm-common/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
 
-        explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
+        this->numPressurePointsEquil_ = Parameters::IsSet<Parameters::NumPressurePointsEquil>()
+            ? Parameters::Get<Parameters::NumPressurePointsEquil>()
+            : simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
 
+        this->explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
 
-        RelpermDiagnostics relpermDiagnostics;
-        relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
+        RelpermDiagnostics relpermDiagnostics{};
+        relpermDiagnostics.diagnosis(simulator.vanguard().eclState(),
+                                     simulator.vanguard().cartesianIndexMapper());
     }
 
     virtual ~FlowProblem() = default;
 
     void prefetch(const Element& elem) const
-    { pffDofData_.prefetch(elem); }
+    { this->pffDofData_.prefetch(elem); }
 
     /*!
      * \brief This method restores the complete state of the problem and its sub-objects

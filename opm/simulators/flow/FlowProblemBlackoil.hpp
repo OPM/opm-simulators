@@ -43,21 +43,25 @@
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
+#include <opm/input/eclipse/Units/Units.hpp>
+
+#include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
+#include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 
-#include <opm/simulators/flow/MixingRateControls.hpp>
 
-#include <opm/simulators/flow/ActionHandler.hpp>
 #if HAVE_DAMARIS
 #include <opm/simulators/flow/DamarisWriter.hpp>
 #endif
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -209,6 +213,7 @@ public:
         // create the ECL writer
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
         enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
+
 #if HAVE_DAMARIS
         // create Damaris writer
         damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
@@ -224,23 +229,27 @@ public:
         FlowProblemType::beginEpisode();
 
         auto& simulator = this->simulator();
-        int episodeIdx = simulator.episodeIndex();
+
+        const int episodeIdx = simulator.episodeIndex();
         const auto& schedule = simulator.vanguard().schedule();
 
         // Evaluate UDQ assign statements to make sure the settings are
         // available as UDA controls for the current report step.
-        actionHandler_.evalUDQAssignments(episodeIdx, simulator.vanguard().udqState());
+        this->actionHandler_
+            .evalUDQAssignments(episodeIdx, simulator.vanguard().udqState());
 
         if (episodeIdx >= 0) {
             const auto& oilVap = schedule[episodeIdx].oilvap();
             if (oilVap.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
                 FluidSystem::setVapPars(oilVap.vap1(), oilVap.vap2());
-            } else {
+            }
+            else {
                 FluidSystem::setVapPars(0.0, 0.0);
             }
         }
 
-        ConvectiveMixingModule::beginEpisode(simulator.vanguard().eclState(), simulator.vanguard().schedule(), episodeIdx, moduleParams_.convectiveMixingModuleParam);
+        ConvectiveMixingModule::beginEpisode(simulator.vanguard().eclState(), schedule, episodeIdx,
+                                             this->moduleParams_.convectiveMixingModuleParam);
     }
 
     /*!
@@ -248,18 +257,21 @@ public:
      */
     void finishInit()
     {
-        // TODO: there should be room to remove duplication for this function,
-        // but there is relatively complicated logic in the function calls in this function
-        // some refactoring is needed for this function
+        // TODO: there should be room to remove duplication for this
+        // function, but there is relatively complicated logic in the
+        // function calls here.  Some refactoring is needed.
         FlowProblemType::finishInit();
+
         auto& simulator = this->simulator();
 
         auto finishTransmissibilities = [updated = false, this]() mutable
         {
             if (updated) { return; }
+
             this->transmissibilities_.finishInit([&vg = this->simulator().vanguard()](const unsigned int it) {
                 return vg.gridIdxToEquilGridIdx(it);
             });
+
             updated = true;
         };
 
@@ -279,7 +291,8 @@ public:
             std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
                 return simulator.vanguard().gridEquilIdxToGridIdx(i);
             };
-            eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
+
+            this->eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
         }
         simulator.vanguard().releaseGlobalTransmissibilities();
 
@@ -301,10 +314,12 @@ public:
         // disables gravity, else the standard value of the gravity constant at sea level
         // on earth is used
         this->gravity_ = 0.0;
-        if (Parameters::Get<Parameters::EnableGravity>())
-            this->gravity_[dim - 1] = 9.80665;
-        if (!eclState.getInitConfig().hasGravity())
-            this->gravity_[dim - 1] = 0.0;
+        if (Parameters::Get<Parameters::EnableGravity>() &&
+            eclState.getInitConfig().hasGravity())
+        {
+            // unit::gravity is 9.80665 m^2/s--i.e., standard measure at Tellus equator.
+            this->gravity_[dim - 1] = unit::gravity;
+        }
 
         if (this->enableTuning_) {
             // if support for the TUNING keyword is enabled, we get the initial time
@@ -315,8 +330,6 @@ public:
         }
 
         this->initFluidSystem_();
-
-
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
@@ -333,22 +346,25 @@ public:
                                       }
                                       return coords;
                                   });
+
         this->readMaterialParameters_();
         this->readThermalParameters_();
 
         // write the static output files (EGRID, INIT)
         if (enableEclOutput_) {
-            eclWriter_->writeInit();
+            this->eclWriter_->writeInit();
         }
 
         finishTransmissibilities();
 
         const auto& initconfig = eclState.getInitConfig();
         this->tracerModel_.init(initconfig.restartRequested());
-        if (initconfig.restartRequested())
-            readEclRestartSolution_();
-        else
-            readInitialCondition_();
+        if (initconfig.restartRequested()) {
+            this->readEclRestartSolution_();
+        }
+        else {
+            this->readInitialCondition_();
+        }
 
         this->tracerModel_.prepareTracerBatches();
 
@@ -357,14 +373,14 @@ public:
         if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>()) {
             const auto& vanguard = this->simulator().vanguard();
             const auto& gridView = vanguard.gridView();
-            int numElements = gridView.size(/*codim=*/0);
+            const int numElements = gridView.size(/*codim=*/0);
             this->polymer_.maxAdsorption.resize(numElements, 0.0);
         }
 
         this->readBoundaryConditions_();
 
         // compute and set eq weights based on initial b values
-        computeAndSetEqWeights_();
+        this->computeAndSetEqWeights_();
 
         if (this->enableDriftCompensation_) {
             this->drift_.resize(this->model().numGridDof());
@@ -386,10 +402,11 @@ public:
         }
 
         // TODO: move to the end for later refactoring of the function finishInit()
-	// deal with DRSDT
+        //
+        // deal with DRSDT
         this->mixControls_.init(this->model().numGridDof(),
                                 this->episodeIndex(),
-                                eclState.runspec().tabdims().getNumPVTTables());   
+                                eclState.runspec().tabdims().getNumPVTTables());
     }
 
     /*!
