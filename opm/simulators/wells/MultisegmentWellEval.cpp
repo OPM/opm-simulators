@@ -59,7 +59,7 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const Pa
     , baseif_(baseif)
     , linSys_(*this)
     , primary_variables_(baseif)
-    , segments_(this->numberOfSegments(), baseif)
+    , segments_(this->numberOfSegments(), pw_info.communication().sum(baseif.numPerfs()), baseif)
     , cell_perforation_depth_diffs_(baseif_.numPerfs(), 0.0)
     , cell_perforation_pressure_diffs_(baseif_.numPerfs(), 0.0)
 {
