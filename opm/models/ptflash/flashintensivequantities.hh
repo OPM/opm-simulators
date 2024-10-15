@@ -113,6 +113,8 @@ public:
         const Scalar flashTolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
         const int flashVerbosity = Parameters::Get<Parameters::FlashVerbosity>();
         const std::string flashTwoPhaseMethod = Parameters::Get<Parameters::FlashTwoPhaseMethod>();
+        // TODO: the formulation here is still to begin with XMF and YMF values to derive ZMF value
+        // TODO: we should check how we update ZMF in the newton update, since it is the primary variables.
 
         // extract the total molar densities of the components
         ComponentVector z(0.);
@@ -130,6 +132,10 @@ public:
                 sumz +=z[compIdx];
             }
             z /= sumz;
+        }
+
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+            fluidState_.setMoleFraction(compIdx, z[compIdx]);
         }
 
         Evaluation p = priVars.makeEvaluation(pressure0Idx, timeIdx);

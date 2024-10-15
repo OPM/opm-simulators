@@ -65,13 +65,16 @@
 #include <utility>
 #include <vector>
 
-//namespace Opm::Parameters {
+// TODO: EclWriter how includes both OutputBlackoilModule and OutputCompositionalModule, so the following are defined twice
+// Will see whether some refactoring are needed here.
+
+// namespace Opm::Parameters {
 //
-//struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
-//struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
+// struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
+// struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
 //
-//} // namespace Opm::Parameters
-//
+// } // namespace Opm::Parameters
+
 namespace Opm
 {
 

@@ -300,8 +300,7 @@ public:
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 if (this->moleFractions_[compIdx].empty()) continue;
 
-                // TODO: there is not interface to update ZMF yet.
-//                 this->moleFractions_[compIdx][globalDofIdx] = getValue(fs.);
+                this->moleFractions_[compIdx][globalDofIdx] = getValue(fs.moleFraction(compIdx));
             }
             // XMF and YMF
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
