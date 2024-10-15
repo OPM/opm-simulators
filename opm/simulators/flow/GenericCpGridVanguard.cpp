@@ -209,7 +209,6 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         }
 
         // Add inactive wells to all ranks with connections (not solved, so OK even without distributed wells)
-        // @NOTE: Approach below is just for testing, there has to be a better way...
         std::unordered_set<unsigned> cellOnRank;
         const auto& global_cells = this->grid_->globalCell();
         for (const auto cell : global_cells) cellOnRank.insert(cell);
@@ -229,7 +228,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
             std::vector<int> well_on_rank_global(nranks, 0);
             comm.max(&well_on_rank[0], nranks);
             for (int i=0; i<nranks; ++i) {
-                if (well_on_rank_global[i]) {
+                if (well_on_rank[i]) {
                     parallelWells.emplace_back(well_name, i);
                 }
             }
