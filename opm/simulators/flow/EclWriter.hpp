@@ -497,19 +497,18 @@ public:
         const auto gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
         const auto waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         const auto enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
-        const auto opm_rst_file = Parameters::Get<Parameters::EnableOpmRstFile>();
-        const auto read_temp = enableEnergy || (opm_rst_file && enableTemperature);
 
         std::vector<RestartKey> solutionKeys {
             {"PRESSURE", UnitSystem::measure::pressure},
             {"SWAT",     UnitSystem::measure::identity,    waterActive},
             {"SGAS",     UnitSystem::measure::identity,    gasActive},
-            {"TEMP",     UnitSystem::measure::temperature, read_temp},
+            {"TEMP",     UnitSystem::measure::temperature, enableEnergy},
             {"SSOLVENT", UnitSystem::measure::identity,    enableSolvent},
 
             {"RS",  UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV",  UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
             {"RVW", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedWater()},
+            {"RSW", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGasInWater()},
 
             {"SGMAX", UnitSystem::measure::identity, enableNonWettingHysteresis && oilActive && gasActive},
             {"SHMAX", UnitSystem::measure::identity, enableWettingHysteresis && oilActive && gasActive},
