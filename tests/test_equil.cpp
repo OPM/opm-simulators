@@ -119,6 +119,7 @@ initSimulator(const char *filename)
     const char* argv[] = {
         "test_equil",
         filenameArg.c_str(),
+        "--check-satfunc-consistency=false",
     };
 
     Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);

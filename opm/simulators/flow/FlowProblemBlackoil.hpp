@@ -52,6 +52,7 @@
 #include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 
+#include <opm/simulators/utils/satfunc/SatfuncConsistencyCheckManager.hpp>
 
 #if HAVE_DAMARIS
 #include <opm/simulators/flow/DamarisWriter.hpp>
@@ -63,6 +64,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Opm {
@@ -399,6 +401,24 @@ public:
             simulator.startNextEpisode(schedule.seconds(1));
             simulator.setEpisodeIndex(0);
             simulator.setTimeStepIndex(0);
+        }
+
+        if (Parameters::Get<Parameters::CheckSatfuncConsistency>() &&
+            ! this->satfuncConsistencyRequirementsMet())
+        {
+            // User requested that saturation functions be checked for
+            // consistency and essential/critical requirements are not met.
+            // Abort simulation run.
+            //
+            // Note: We need synchronisation here lest ranks other than the
+            // I/O rank throw exceptions too early thereby risking an
+            // incomplete failure report being shown to the user.
+            this->simulator().vanguard().grid().comm().barrier();
+
+            throw std::domain_error {
+                "Saturation function end-points do not "
+                "meet requisite consistency conditions"
+            };
         }
 
         // TODO: move to the end for later refactoring of the function finishInit()
@@ -1465,6 +1485,78 @@ protected:
         }
 
         this->updateRockCompTransMultVal_();
+    }
+
+    bool satfuncConsistencyRequirementsMet() const
+    {
+        if (const auto nph = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+            + FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+            + FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+            nph < 2)
+        {
+            // Single phase runs don't need saturation functions and there's
+            // nothing to do here.  Return 'true' to tell caller that the
+            // consistency requirements are Met.
+            return true;
+        }
+
+        const auto numSamplePoints = static_cast<std::size_t>
+            (Parameters::Get<Parameters::NumSatfuncConsistencySamplePoints>());
+
+        auto sfuncConsistencyChecks =
+            Satfunc::PhaseChecks::SatfuncConsistencyCheckManager<Scalar> {
+            numSamplePoints, this->simulator().vanguard().eclState(),
+            [&cmap = this->simulator().vanguard().cartesianIndexMapper()](const int elemIdx)
+            { return cmap.cartesianIndex(elemIdx); }
+        };
+
+        const auto ioRank = 0;
+        const auto isIoRank = this->simulator().vanguard()
+            .grid().comm().rank() == ioRank;
+
+        sfuncConsistencyChecks.collectFailuresTo(ioRank)
+            .run(this->simulator().vanguard().grid().leafGridView(),
+                 [&vg   = this->simulator().vanguard(),
+                  &emap = this->simulator().model().elementMapper()]
+                 (const auto& elem)
+                 { return vg.gridIdxToEquilGridIdx(emap.index(elem)); });
+
+        using ViolationLevel = typename Satfunc::PhaseChecks::
+            SatfuncConsistencyCheckManager<Scalar>::ViolationLevel;
+
+        auto reportFailures = [&sfuncConsistencyChecks, this]
+            (const ViolationLevel level)
+        {
+            sfuncConsistencyChecks.reportFailures
+                (level, [](std::string_view record)
+                { OpmLog::info(std::string { record }); });
+        };
+
+        if (sfuncConsistencyChecks.anyFailedStandardChecks()) {
+            if (isIoRank) {
+                OpmLog::warning("Saturation Function "
+                                "End-point Consistency Problems");
+
+                reportFailures(ViolationLevel::Standard);
+            }
+        }
+
+        if (sfuncConsistencyChecks.anyFailedCriticalChecks()) {
+            if (isIoRank) {
+                OpmLog::error("Saturation Function "
+                              "End-point Consistency Failures");
+
+                reportFailures(ViolationLevel::Critical);
+            }
+
+            // There are "critical" check failures.  Report that consistency
+            // requirements are not Met.
+            return false;
+        }
+
+        // If we get here then there are no critical failures.  Report
+        // Met = true, i.e., that the consistency requirements ARE met.
+        return true;
     }
 
     FlowThresholdPressure<TypeTag> thresholdPressures_;

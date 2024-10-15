@@ -152,8 +152,8 @@ namespace Opm::Satfunc::PhaseChecks {
         /// Reports only those conditions/checks for which there is at least
         /// one violation.
         ///
-        /// In a parallel run it is only safe to call this function on the
-        /// root process defined by collectFailuresTo().
+        /// In a parallel run this function does nothing on ranks other than
+        /// the root process defined by collectFailuresTo().
         ///
         /// \param[in] level Report's severity level.
         ///

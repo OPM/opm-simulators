@@ -247,9 +247,14 @@ public:
 
         this->explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
 
-        RelpermDiagnostics relpermDiagnostics{};
-        relpermDiagnostics.diagnosis(simulator.vanguard().eclState(),
-                                     simulator.vanguard().cartesianIndexMapper());
+        if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
+            // User did not enable the "new" saturation function consistency
+            // check module.  Run the original checker instead.  This is a
+            // temporary measure.
+            RelpermDiagnostics relpermDiagnostics{};
+            relpermDiagnostics.diagnosis(simulator.vanguard().eclState(),
+                                         simulator.vanguard().cartesianIndexMapper());
+        }
     }
 
     virtual ~FlowProblem() = default;
