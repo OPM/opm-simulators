@@ -45,7 +45,7 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
-#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hh>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 #include <opm/grid/polyhedralgrid/levelcartesianindexmapper.hh>
 
 #ifdef HAVE_DUNE_ALUGRID

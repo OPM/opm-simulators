@@ -41,7 +41,7 @@
 #include <opm/common/OpmLog/CounterLog.hpp>
 
 #include <opm/grid/CpGrid.hpp>
-#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hh>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 #include <dune/grid/common/mcmgmapper.hh>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>

@@ -35,7 +35,7 @@
 #define OPM_ALUGRIDLEVELCARTESIANINDEXMAPPER_HPP
 
 #include <dune/alugrid/grid.hh>
-#include <opm/grid/common/LevelCartesianIndexMapper.hh>
+#include <opm/grid/common/LevelCartesianIndexMapper.hpp>
 #include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
 
 #include <array>

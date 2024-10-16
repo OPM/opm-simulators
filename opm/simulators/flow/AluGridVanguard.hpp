@@ -34,7 +34,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/grid/CpGrid.hpp>
-#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hh>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
@@ -239,7 +239,7 @@ public:
      * \brief Returns the object which maps a global element index of the simulation grid
      *        to the corresponding element index of the level logically Cartesian index.
      */
-    const LevelCartesianIndexMapper levelCartesianIndexMapper() const // Consider adding data member to reduce/optimize memory-use?
+    const LevelCartesianIndexMapper levelCartesianIndexMapper() const
     { return LevelCartesianIndexMapper(*grid_, *cartesianIndexMapper_); }
 
     /*!
