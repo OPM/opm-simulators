@@ -120,7 +120,7 @@ struct RelaxedWellFlowTol { static constexpr Scalar value = 1e-3; };
 template<class Scalar>
 struct RelaxedPressureTolMsw { static constexpr Scalar value = 1e4; };
 
-struct MaximumNumberOfWellSwitches { static constexpr int value = 3; };
+struct MaximumNumberOfWellSwitches { static constexpr int value = 10; };
 struct UseAverageDensityMsWells { static constexpr bool value = false; };
 struct LocalWellSolveControlSwitching { static constexpr bool value = true; };
 struct UseImplicitIpr { static constexpr bool value = true; };
