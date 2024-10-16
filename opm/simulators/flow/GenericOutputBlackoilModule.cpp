@@ -405,33 +405,21 @@ template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
 collectRftMapOnRoot(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm) {
 
-    const auto mapsize = local_map.size();
-    std::vector<int> keys;
-    std::vector<Scalar> values;
-    keys.reserve(mapsize);
-    values.reserve(mapsize);
-    for (const auto& [key, value] : local_map) {
-        keys.push_back(key);
-        values.push_back(value);
-    }
-
-    std::vector<int> all_keys;
-    std::vector<Scalar> all_values;
+    std::vector<std::pair<int, Scalar>> pairs(local_map.begin(), local_map.end());
+    std::vector<std::pair<int, Scalar>> all_pairs;
     std::vector<int> offsets;
 
-    std::tie(all_keys, offsets) = Opm::gatherv(keys, comm, 0);
-    std::tie(all_values, std::ignore) = Opm::gatherv(values, comm, 0);
-    assert(all_keys.size() == all_values.size());
+    std::tie(all_pairs, offsets) = Opm::gatherv(pairs, comm, 0);
 
     // Insert/update map values on root
     if (comm.rank() == 0) {
-        for (auto i=static_cast<std::size_t>(offsets[1]); i<all_keys.size(); ++i) {
-            const auto index = all_keys[i];
-            if (local_map.count(index)>0) {
-                const Scalar prev_value = local_map[index];
-                local_map[index] = std::max(prev_value, all_values[i]);
+        for (auto i=static_cast<std::size_t>(offsets[1]); i<all_pairs.size(); ++i) {
+            const auto& key_value = all_pairs[i];
+            if (auto candidate = local_map.find(key_value.first); candidate != local_map.end()) {
+                const Scalar prev_value = candidate->second;
+                candidate->second = std::max(prev_value, key_value.second);
             } else {
-                local_map[index] = all_values[i];
+                local_map[key_value.first] = key_value.second;
             }
         }
     }

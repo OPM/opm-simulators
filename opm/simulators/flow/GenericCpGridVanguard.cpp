@@ -214,24 +214,31 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         for (const auto cell : global_cells) cellOnRank.insert(cell);
         const auto& comm = this->grid_->comm();
         const auto nranks = comm.size();
-        const auto rank = comm.rank();
         const auto inactive_well_names = schedule.getInactiveWellNamesAtEnd();
+        std::size_t num_wells = inactive_well_names.size();
+        std::vector<int> well_on_rank(num_wells, 0);
+        std::size_t well_idx = 0;
         for (const auto& well_name : inactive_well_names) {
             const auto& well = schedule.getWell(well_name, schedule.size()-1);
-            std::vector<int> well_on_rank(nranks, 0);
             for (const auto& conn: well.getConnections()) {
                 if (cellOnRank.count(conn.global_index()) > 0) {
-                    well_on_rank[rank] = 1;
+                    well_on_rank[well_idx] = 1;
                     break;
                 }
             }
-            std::vector<int> well_on_rank_global(nranks, 0);
-            comm.max(&well_on_rank[0], nranks);
+            ++well_idx;
+        }
+        // values from rank i will be at indices i*num_wells, i*num_wells + 1, ..., (i+1) * num_wells -1
+        std::vector<int> well_on_rank_global(num_wells * nranks, 0);
+        comm.allgather(well_on_rank.data(), static_cast<int>(num_wells), well_on_rank_global.data());
+        well_idx = 0;
+        for (const auto& well_name : inactive_well_names) {
             for (int i=0; i<nranks; ++i) {
-                if (well_on_rank[i]) {
+                if (well_on_rank_global[i*num_wells + well_idx]) {
                     parallelWells.emplace_back(well_name, i);
                 }
             }
+            ++well_idx;
         }
         std::sort(parallelWells.begin(), parallelWells.end());
 
