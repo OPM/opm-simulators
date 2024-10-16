@@ -630,7 +630,8 @@ namespace Opm {
 
         logAndCheckForExceptionsAndThrow(local_deferredLogger,
                                          exc_type, "beginTimeStep() failed: " + exc_msg, this->terminal_output_, comm);
-
+        // END HERE, TO COMPARE THE ASSEMBLY OF ONE TIMESTEP ONLY
+        exit(0);
     }
 
     template<typename TypeTag>
