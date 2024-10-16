@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(All_Good)
 
     checker.checkEndpoints(1234, makePoints());
 
-    BOOST_CHECK_MESSAGE(! checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checker.anyFailedStandardChecks(),
                         "There must be no failed checks");
 
     BOOST_CHECK_MESSAGE(! checker.anyFailedCriticalChecks(),
@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE(Standard_Violation)
 
     checker.checkEndpoints(1234, makePoints());
 
-    BOOST_CHECK_MESSAGE(checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checker.anyFailedStandardChecks(),
                         "There must be at least one failed check");
 
     auto rpt = std::string{};
@@ -223,7 +223,7 @@ BOOST_AUTO_TEST_CASE(Standard_Violation_ReportIJK)
 
     checker.checkEndpoints(1234, makePoints());
 
-    BOOST_CHECK_MESSAGE(checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checker.anyFailedStandardChecks(),
                         "There must be at least one failed check");
 
     auto rpt = std::string{};
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE(Critical_Violation)
 
     checker.checkEndpoints(42, makePoints());
 
-    BOOST_CHECK_MESSAGE(! checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(! checker.anyFailedStandardChecks(),
                         "There must be no failed standard level checks");
 
     BOOST_CHECK_MESSAGE(checker.anyFailedCriticalChecks(),
@@ -338,7 +338,7 @@ BOOST_AUTO_TEST_CASE(Standard)
 
     checker.checkEndpoints(1234, makePoints());
 
-    BOOST_CHECK_MESSAGE(checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checker.anyFailedStandardChecks(),
                         "There must be at least one failed check");
 
     auto rpt = std::string{};
@@ -425,7 +425,7 @@ BOOST_AUTO_TEST_CASE(Standard)
 
     checker.checkEndpoints(1234, makePoints());
 
-    BOOST_CHECK_MESSAGE(checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checker.anyFailedStandardChecks(),
                         "There must be at least one failed check");
 
     auto rpt = std::string{};
@@ -464,7 +464,7 @@ BOOST_AUTO_TEST_CASE(Standard_Multiple_Failing_Points)
     checker.checkEndpoints( 1618, makePoints());
     checker.checkEndpoints(31415, makePoints());
 
-    BOOST_CHECK_MESSAGE(checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checker.anyFailedStandardChecks(),
                         "There must be at least one failed check");
 
     auto rpt = std::string{};
@@ -651,7 +651,7 @@ BOOST_AUTO_TEST_CASE(Standard)
 
     checker.checkEndpoints(1234, makePoints());
 
-    BOOST_CHECK_MESSAGE(checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checker.anyFailedStandardChecks(),
                         "There must be at least one failed check");
 
     auto rpt = std::string{};
@@ -732,7 +732,7 @@ BOOST_AUTO_TEST_CASE(Standard_Multiple_Failing_Points)
     checker.checkEndpoints( 1618, makePoints());
     checker.checkEndpoints(31415, makePoints());
 
-    BOOST_CHECK_MESSAGE(checker.anyFailedChecks(),
+    BOOST_CHECK_MESSAGE(checker.anyFailedStandardChecks(),
                         "There must be at least one failed check");
 
     auto rpt = std::string{};
