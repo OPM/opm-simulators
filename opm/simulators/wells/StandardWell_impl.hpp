@@ -2606,7 +2606,7 @@ namespace Opm
             }
 
             // change temperature for injecting fluids
-            if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
+            if (this->isInjector() && !this->wellIsStopped() && cq_r_thermal > 0.0){
                 // only handles single phase injection now
                 assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
                 fs.setTemperature(this->well_ecl_.inj_temperature());
@@ -2623,6 +2623,9 @@ namespace Opm
                 fs.setEnthalpy(phaseIdx, h);
                 cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
                 result += getValue(cq_r_thermal);
+            } else if (cq_r_thermal > 0.0) {
+                cq_r_thermal *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx));
+                result += Base::restrictEval(cq_r_thermal);
             } else {
                 // compute the thermal flux
                 cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
