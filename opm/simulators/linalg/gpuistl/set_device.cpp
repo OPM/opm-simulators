@@ -23,7 +23,6 @@
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/set_device.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
 
 namespace Opm::gpuistl
 {
@@ -46,31 +45,6 @@ setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
     const auto deviceId = mpiRank % deviceCount;
     OPM_GPU_WARN_IF_ERROR(cudaDeviceReset());
     OPM_GPU_WARN_IF_ERROR(cudaSetDevice(deviceId));
-}
-
-void
-printDevice (int mpiRank, int numberOfMpiRanks)
-{
-    int deviceCount = -1;
-    OPM_GPU_WARN_IF_ERROR(cudaGetDeviceCount(&deviceCount));
-
-    const auto deviceId = mpiRank % deviceCount;
-
-    struct cudaDeviceProp props;
-    OPM_GPU_WARN_IF_ERROR(cudaGetDeviceProperties(&props, deviceId));
-
-    std::string out;
-    if (numberOfMpiRanks > 0){
-        out = fmt::format("GPU: {}, Compute Capability: {}.{} (device {} out of {})\n",
-              props.name, props.major, props.minor, deviceId, deviceCount);
-    }
-    else{
-        out = fmt::format("GPU: {}, Compute Capability: {}.{}\n",
-              props.name, props.major, props.minor);
-    }
-    auto deferred_logger = Opm::DeferredLogger();
-    deferred_logger.info(out);
-    deferred_logger.logMessages();
 }
 
 } // namespace Opm::gpuistl

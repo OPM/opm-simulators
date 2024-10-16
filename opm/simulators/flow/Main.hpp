@@ -73,7 +73,7 @@
 #endif
 
 #if HAVE_CUDA
-#include <opm/simulators/linalg/gpuistl/set_device_indirection.hpp>
+#include <opm/simulators/linalg/gpuistl/device_management.hpp>
 #endif
 
 #if HAVE_DAMARIS

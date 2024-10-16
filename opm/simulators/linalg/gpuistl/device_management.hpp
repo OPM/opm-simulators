@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_GPUISTL_PRINT_DEVICE_INDIRECTION
-#define OPM_GPUISTL_PRINT_DEVICE_INDIRECTION
+#ifndef OPM_GPUISTL_DEVICE_MANAGEMENT
+#define OPM_GPUISTL_DEVICE_MANAGEMENT
 
 /*
   This file should not be hipified, and serves as a layer between main and gpuistl/set_device
