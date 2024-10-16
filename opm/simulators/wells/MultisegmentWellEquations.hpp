@@ -127,6 +127,16 @@ public:
         return resWell_;
     }
 
+    //! \brief Returns a const reference to duneD_.
+    const DiagMatWell& duneD() const
+    {
+        return duneD_;
+    }
+
+
+    OffDiagMatWell duneBGlobal_;
+    OffDiagMatWell duneCGlobal_;
+
   private:
     friend class MultisegmentWellEquationAccess<Scalar,numWellEq,numEq>;
     // two off-diagonal matrices
