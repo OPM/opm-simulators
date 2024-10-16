@@ -28,6 +28,8 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
+#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
+
 #include <opm/grid/common/CommunicationUtils.hpp>
 
 #include <opm/output/data/Solution.hpp>
@@ -624,6 +626,33 @@ assignToSolution(data::Solution& sol)
         DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
     };
 
+    // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
+    // and also, we need to map these values.
+    auto compositionalEntries = std::vector<DataEntry>{};
+    {
+        // ZMF
+        for (int i = 0; i < numComponents; ++i) {
+            const std::string name = "ZMF" + std::to_string(i + 1);  // Generate ZMF1, ZMF2, ...
+            compositionalEntries.emplace_back(name, UnitSystem::measure::identity, moleFractions_[i]);
+        }
+
+        // XMF
+        for (int i = 0; i < numComponents; ++i) {
+            const std::string name = "XMF" + std::to_string(i + 1);  // Generate XMF1, XMF2, ...
+            compositionalEntries.emplace_back(name, UnitSystem::measure::identity, phaseMoleFractions_[oilPhaseIdx][i]);
+        }
+
+        // YMF
+        for (int i = 0; i < numComponents; ++i) {
+            const std::string name = "YMF" + std::to_string(i + 1);  // Generate YMF1, YMF2, ...
+            compositionalEntries.emplace_back(name, UnitSystem::measure::identity, phaseMoleFractions_[gasPhaseIdx][i]);
+        }
+    }
+
+    for (const auto& array : compositionalEntries) {
+        doInsert(array, data::TargetType::RESTART_SOLUTION);
+    }
+
     for (const auto& array : baseSolutionArrays) {
         doInsert(array, data::TargetType::RESTART_SOLUTION);
     }
@@ -659,6 +688,15 @@ assignToSolution(data::Solution& sol)
                    std::move(this->saturation_[gasPhaseIdx]),
                    data::TargetType::RESTART_SOLUTION);
     }
+    
+    if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+        ! this->saturation_[oilPhaseIdx].empty())
+    {
+        sol.insert("SOIL", UnitSystem::measure::identity,
+                   std::move(this->saturation_[oilPhaseIdx]),
+                   data::TargetType::RESTART_SOLUTION);
+    }
+
 
     if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
         auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
@@ -1481,6 +1519,28 @@ doAllocBuffers(const unsigned bufferSize,
         overburdenPressure_.resize(bufferSize, 0.0);
     }
 
+    if (rstKeywords["ZMF"] > 0) {
+        rstKeywords["ZMF"] = 0;
+        for (int i = 0; i < numComponents; ++i) {
+            moleFractions_[i].resize(bufferSize, 0.0);
+        }
+    }
+
+    if (rstKeywords["XMF"] > 0 && FluidSystem::phaseIsActive(oilPhaseIdx)) {
+        rstKeywords["XMF"] = 0;
+        for (int i = 0; i < numComponents; ++i) {
+            phaseMoleFractions_[oilPhaseIdx][i].resize(bufferSize, 0.0);
+        }
+    }
+
+    if (rstKeywords["YMF"] > 0 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+        rstKeywords["YMF"] = 0;
+        for (int i = 0; i < numComponents; ++i) {
+            phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
+        }
+    }
+
+
     //Warn for any unhandled keyword
     if (log) {
         for (auto& keyValue: rstKeywords) {
@@ -1751,5 +1811,18 @@ INSTANTIATE_TYPE(double)
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
 #endif
+
+#define INSTANTIATE_COMP(NUM) \
+    template<class T> using FS##NUM = GenericOilGasFluidSystem<T, NUM>; \
+    template class GenericOutputBlackoilModule<FS##NUM<double>>;
+
+//INSTANTIATE_COMP(2)
+INSTANTIATE_COMP(3)
+//INSTANTIATE_COMP(4)
+//INSTANTIATE_COMP(5)
+//INSTANTIATE_COMP(6)
+//INSTANTIATE_COMP(7)
+// template class GenericOutputBlackoilModule<GenericOilGasFluidSystem<double, 3>>;
+
 
 } // namespace Opm
