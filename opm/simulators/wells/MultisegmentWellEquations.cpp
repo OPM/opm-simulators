@@ -214,8 +214,14 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
     BVectorWell resWell = resWell_;
+    BVectorWell Bx(duneB_.N());
+    duneB_.mv(x, Bx);
+    // We need to communicate here to get the contributions from all segments
+    this->pw_info_.communication().sum(Bx.data(), Bx.size());
+
     // resWell = resWell - B * x
-    duneB_.mmv(x, resWell);
+    resWell -= Bx;
+
     // xw = D^-1 * resWell
     // TODO: do this only on one process and distribute the solution
     xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
