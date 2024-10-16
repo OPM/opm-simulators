@@ -151,6 +151,9 @@ apply(const BVector& x, BVector& Ax) const
 
     duneB_.mv(x, Bx);
 
+    // We need to communicate here to get the contributions from all segments
+    this->pw_info_.communication().sum(Bx.data(), Bx.size());
+
     // invDBx = duneD^-1 * Bx_
     // TODO: do this only on one process and distribute the solution
     const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
