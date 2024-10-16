@@ -620,12 +620,12 @@ doWriteOutput(const int                          reportStepNum,
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-doWriteOutput(const int                      reportStepNum,
-               const std::optional<int>           timeStepNum,
-               const bool                         isSubStep,
-              Scalar                       curTime,
-              Scalar                       nextStepSize,
-               data::Solution&&                   localCellData)
+doWriteOutput(const int                          reportStepNum,
+              const std::optional<int>           timeStepNum,
+              const bool                         isSubStep,
+              Scalar                             curTime,
+              Scalar                             nextStepSize,
+              data::Solution&&                   localCellData)
 {
 
     const auto isParallel = this->collectOnIORank_.isParallel();
