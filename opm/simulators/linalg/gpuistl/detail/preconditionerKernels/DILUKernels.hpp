@@ -22,6 +22,7 @@
 #include <cstddef>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <opm/simulators/linalg/gpuistl/detail/kernel_enums.hpp>
 #include <vector>
 
 namespace Opm::gpuistl::detail::DILU
@@ -71,14 +72,14 @@ void solveLowerLevelSet(T* reorderedMat,
  * @param d Stores the defect
  * @param [out] v Will store the results of the lower solve
  */
-template <int blocksize, class LinearSolverScalar, class MatrixScalar>
+template <int blocksize, class LinearSolverScalar, class MatrixScalar, class DiagonalScalar>
 void solveLowerLevelSetSplit(MatrixScalar* reorderedUpperMat,
                              int* rowIndices,
                              int* colIndices,
                              int* indexConversion,
                              int startIdx,
                              int rowsInLevelSet,
-                             const MatrixScalar* dInv,
+                             const DiagonalScalar* dInv,
                              const LinearSolverScalar* d,
                              LinearSolverScalar* v,
                              int threadBlockSize);
@@ -124,14 +125,14 @@ void solveUpperLevelSet(T* reorderedMat,
  * @param [out] v Will store the results of the lower solve. To begin with it should store the output from the lower
  * solve
  */
-template <int blocksize, class LinearSolverScalar, class MatrixScalar>
+template <int blocksize, class LinearSolverScalar, class MatrixScalar, class DiagonalScalar>
 void solveUpperLevelSetSplit(MatrixScalar* reorderedUpperMat,
                              int* rowIndices,
                              int* colIndices,
                              int* indexConversion,
                              int startIdx,
                              int rowsInLevelSet,
-                             const MatrixScalar* dInv,
+                             const DiagonalScalar* dInv,
                              LinearSolverScalar* v,
                              int threadBlockSize);
 
@@ -183,7 +184,7 @@ void computeDiluDiagonal(T* reorderedMat,
  * function
  * @param [out] dInv The diagonal matrix used by the Diagonal ILU preconditioner
  */
-template <int blocksize, class InputScalar, class OutputScalar, bool copyResultToOtherMatrix>
+template <int blocksize, class InputScalar, class OutputScalar, MatrixStorageMPScheme>
 void computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
                               int* lowerRowIndices,
                               int* lowerColIndices,
