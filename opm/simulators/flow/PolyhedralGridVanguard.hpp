@@ -28,6 +28,7 @@
 #define OPM_POLYHEDRAL_GRID_VANGUARD_HPP
 
 #include <opm/grid/polyhedralgrid.hh>
+#include <opm/grid/polyhedralgrid/levelcartesianindexmapper.hh>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
@@ -93,6 +94,7 @@ public:
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    using LevelCartesianIndexMapper = Opm::LevelCartesianIndexMapper<Grid>;
     using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
     static constexpr int dimension = Grid::dimension;
     static constexpr int dimensionworld = Grid::dimensionworld;
@@ -168,6 +170,13 @@ public:
      */
     const CartesianIndexMapper& cartesianIndexMapper() const
     { return *cartesianIndexMapper_; }
+
+    /*!
+     * \brief Returns the object which maps a global element index of the simulation grid
+     *        to the corresponding element index of the level logically Cartesian index.
+     */
+    const LevelCartesianIndexMapper levelCartesianIndexMapper() const
+    { return LevelCartesianIndexMapper(*grid_); }
 
     /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid

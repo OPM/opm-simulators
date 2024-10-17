@@ -41,6 +41,7 @@
 #include <opm/common/OpmLog/CounterLog.hpp>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 #include <dune/grid/common/mcmgmapper.hh>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -84,12 +85,12 @@ BOOST_AUTO_TEST_CASE(diagnosis)
                                /*flipNormals=*/false,
                                /*clipZ=*/false);
 
-    typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
-    CartesianIndexMapper cartesianIndexMapper = CartesianIndexMapper(grid);
+    typedef Opm::LevelCartesianIndexMapper<Grid> LevelCartesianIndexMapper;
+    LevelCartesianIndexMapper levelCartesianIndexMapper = LevelCartesianIndexMapper(grid);
     std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
     OpmLog::addBackend( "COUNTERLOG" , counterLog );
     RelpermDiagnostics diagnostics;
-    diagnostics.diagnosis(eclState, cartesianIndexMapper);
+    diagnostics.diagnosis(eclState, levelCartesianIndexMapper);
     BOOST_CHECK_EQUAL(1, counterLog->numMessages(Log::MessageType::Warning));
 }
 BOOST_AUTO_TEST_SUITE_END()

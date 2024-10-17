@@ -34,10 +34,12 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 #include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
+#include <opm/simulators/flow/AluGridLevelCartesianIndexMapper.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
@@ -106,6 +108,7 @@ public:
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;        
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    using LevelCartesianIndexMapper = Opm::LevelCartesianIndexMapper<Grid>;
     using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
     using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     using Factory = Dune::FromToGridFactory<Grid>;
@@ -231,6 +234,13 @@ public:
      */
     const CartesianIndexMapper& cartesianIndexMapper() const
     { return *cartesianIndexMapper_; }
+
+    /*!
+     * \brief Returns the object which maps a global element index of the simulation grid
+     *        to the corresponding element index of the level logically Cartesian index.
+     */
+    const LevelCartesianIndexMapper levelCartesianIndexMapper() const
+    { return LevelCartesianIndexMapper(*grid_, *cartesianIndexMapper_); }
 
     /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
