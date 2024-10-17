@@ -745,26 +745,26 @@ private:
             this->outputModule_->accumulateDensityParallel();
         }
 
-//        if constexpr (enableMech) {
-//            if (simulator_.vanguard().eclState().runspec().mech()) {
-//                OPM_TIMEBLOCK(prepareMechData);
-//                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-//                    elemCtx.updatePrimaryStencil(elem);
-//                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-//                    outputModule_->processElementMech(elemCtx);
-//                }
-//            }
-//        }
+        if constexpr (enableMech) {
+            if (simulator_.vanguard().eclState().runspec().mech()) {
+                OPM_TIMEBLOCK(prepareMechData);
+                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    outputModule_->processElementMech(elemCtx);
+                }
+            }
+        }
 
-//        if (! this->simulator_.model().linearizer().getFlowsInfo().empty()) {
-//            OPM_TIMEBLOCK(prepareFlowsData);
-//            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-//                elemCtx.updatePrimaryStencil(elem);
-//                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-//
-//                this->outputModule_->processElementFlows(elemCtx);
-//            }
-//        }
+        if (! this->simulator_.model().linearizer().getFlowsInfo().empty()) {
+            OPM_TIMEBLOCK(prepareFlowsData);
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                this->outputModule_->processElementFlows(elemCtx);
+            }
+        }
 
         {
             OPM_TIMEBLOCK(prepareBlockData);
