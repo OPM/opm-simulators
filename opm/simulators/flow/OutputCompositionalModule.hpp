@@ -39,8 +39,6 @@
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
-// #include <opm/material/fluidstates/BlackOilFluidState.hpp>
-// #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
@@ -52,7 +50,6 @@
 #include <opm/output/eclipse/Inplace.hpp>
 
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-// #include <opm/simulators/flow/GenericOutputCompositionalModule.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
 
 #include <algorithm>
@@ -66,12 +63,6 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Parameters {
-
-struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
-struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
 
 namespace Opm
 {
@@ -148,12 +139,6 @@ public:
 
         this->setupBlockData(isCartIdxOnThisRank);
 
-        this->forceDisableFipOutput_ =
-            Parameters::Get<Parameters::ForceDisableFluidInPlaceOutput>();
-
-        this->forceDisableFipresvOutput_ =
-            Parameters::Get<Parameters::ForceDisableResvFluidInPlaceOutput>();
-
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectToIORank.isIORank()) {
@@ -183,12 +168,6 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::ForceDisableFluidInPlaceOutput>
-            ("Do not print fluid-in-place values after each report step "
-             "even if requested by the deck.");
-        Parameters::Register<Parameters::ForceDisableResvFluidInPlaceOutput>
-            ("Do not print reservoir volumes values after each report step "
-             "even if requested by the deck.");
     }
 
     /*!
@@ -205,8 +184,6 @@ public:
         if (! std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
         }
-
-        std::cout << " let us do doAllocBuffers " << std::endl;
 
         this->doAllocBuffers(bufferSize,
                               reportStepNum,
@@ -358,57 +335,11 @@ public:
         return this->interRegionFlows_;
     }
 
-    template <class FluidState>
-    void assignToFluidState(FluidState& fs, unsigned elemIdx) const
-    {
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (this->saturation_[phaseIdx].empty())
-                continue;
-
-            fs.setSaturation(phaseIdx, this->saturation_[phaseIdx][elemIdx]);
-        }
-
-        if (!this->fluidPressure_.empty()) {
-            // this assumes that capillary pressures only depend on the phase saturations
-            // and possibly on temperature. (this is always the case for ECL problems.)
-            std::array<Scalar, numPhases> pc = {0};
-            const MaterialLawParams& matParams = simulator_.problem().materialLawParams(elemIdx);
-            MaterialLaw::capillaryPressures(pc, matParams, fs);
-            Valgrind::CheckDefined(this->fluidPressure_[elemIdx]);
-            Valgrind::CheckDefined(pc);
-            assert(FluidSystem::phaseIsActive(oilPhaseIdx));
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
-
-                fs.setPressure(phaseIdx, this->fluidPressure_[elemIdx] + (pc[phaseIdx] - pc[oilPhaseIdx]));
-            }
-        }
-
-        if (!this->temperature_.empty())
-            fs.setTemperature(this->temperature_[elemIdx]);
-        if (!this->rs_.empty())
-            fs.setRs(this->rs_[elemIdx]);
-        if (!this->rsw_.empty())
-            fs.setRsw(this->rsw_[elemIdx]);
-        if (!this->rv_.empty())
-            fs.setRv(this->rv_[elemIdx]);
-        if (!this->rvw_.empty())
-            fs.setRvw(this->rvw_[elemIdx]);
-    }
-
-    void updateFluidInPlace(const ElementContext& elemCtx)
-    {
-        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-            updateFluidInPlace_(elemCtx, dofIdx);
-        }
-    }
-
     void updateFluidInPlace(const unsigned             globalDofIdx,
                             const IntensiveQuantities& intQuants,
                             const double               totVolume)
     {
-        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
+//        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
 private:
@@ -420,28 +351,6 @@ private:
         std::pair<std::string, bool> value {wname, true};
         auto candidate = std::lower_bound(parallelWells.begin(), parallelWells.end(), value);
         return candidate == parallelWells.end() || *candidate != value;
-    }
-
-//    void updateFluidInPlace_(const ElementContext& elemCtx, const unsigned dofIdx)
-//    {
-//        const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-//        const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-//        const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
-//
-//        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
-//    }
-//
-    void updateFluidInPlace_(const unsigned             globalDofIdx,
-                             const IntensiveQuantities& intQuants,
-                             const double               totVolume)
-    {
-//        OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
-//
-//        this->updateTotalVolumesAndPressures_(globalDofIdx, intQuants, totVolume);
-//
-//        if (this->computeFip_) {
-//            this->updatePhaseInplaceVolumes_(globalDofIdx, intQuants, totVolume);
-//        }
     }
 
     void createLocalRegion_(std::vector<int>& region)
