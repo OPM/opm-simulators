@@ -35,6 +35,7 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/LgrCollection.hpp>
 
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
@@ -194,7 +195,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         }
 
         const auto wells = ((mpiSize > 1) || partitionJacobiBlocks)
-            ? schedule.getWellsatEnd()
+            ? schedule.getActiveWellsAtEnd()
             : std::vector<Well>{};
         const auto& possibleFutureConnections = schedule.getPossibleFutureConnections();
         // Distribute the grid and switch to the distributed view.
@@ -206,6 +207,40 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                                  possibleFutureConnections,
                                  eclState1, parallelWells);
         }
+
+        // Add inactive wells to all ranks with connections (not solved, so OK even without distributed wells)
+        std::unordered_set<unsigned> cellOnRank;
+        const auto& global_cells = this->grid_->globalCell();
+        for (const auto cell : global_cells) cellOnRank.insert(cell);
+        const auto& comm = this->grid_->comm();
+        const auto nranks = comm.size();
+        const auto inactive_well_names = schedule.getInactiveWellNamesAtEnd();
+        std::size_t num_wells = inactive_well_names.size();
+        std::vector<int> well_on_rank(num_wells, 0);
+        std::size_t well_idx = 0;
+        for (const auto& well_name : inactive_well_names) {
+            const auto& well = schedule.getWell(well_name, schedule.size()-1);
+            for (const auto& conn: well.getConnections()) {
+                if (cellOnRank.count(conn.global_index()) > 0) {
+                    well_on_rank[well_idx] = 1;
+                    break;
+                }
+            }
+            ++well_idx;
+        }
+        // values from rank i will be at indices i*num_wells, i*num_wells + 1, ..., (i+1) * num_wells -1
+        std::vector<int> well_on_rank_global(num_wells * nranks, 0);
+        comm.allgather(well_on_rank.data(), static_cast<int>(num_wells), well_on_rank_global.data());
+        well_idx = 0;
+        for (const auto& well_name : inactive_well_names) {
+            for (int i=0; i<nranks; ++i) {
+                if (well_on_rank_global[i*num_wells + well_idx]) {
+                    parallelWells.emplace_back(well_name, i);
+                }
+            }
+            ++well_idx;
+        }
+        std::sort(parallelWells.begin(), parallelWells.end());
 
         // Calling Schedule::filterConnections would remove any perforated
         // cells that exist only on other ranks even in the case of
