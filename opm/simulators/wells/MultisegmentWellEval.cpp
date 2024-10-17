@@ -53,12 +53,13 @@ namespace Opm
 
 template<typename FluidSystem, typename Indices>
 MultisegmentWellEval<FluidSystem,Indices>::
-MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif)
+MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info)
     : MultisegmentWellGeneric<Scalar>(baseif)
+    , pw_info_(pw_info)
     , baseif_(baseif)
-    , linSys_(*this)
+    , linSys_(*this, pw_info)
     , primary_variables_(baseif)
-    , segments_(this->numberOfSegments(), baseif)
+    , segments_(this->numberOfSegments(), pw_info.communication().sum(baseif.numPerfs()), baseif)
     , cell_perforation_depth_diffs_(baseif_.numPerfs(), 0.0)
     , cell_perforation_pressure_diffs_(baseif_.numPerfs(), 0.0)
 {

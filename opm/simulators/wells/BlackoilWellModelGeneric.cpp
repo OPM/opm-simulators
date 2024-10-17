@@ -371,10 +371,11 @@ initializeWellPerfData()
                     auto& pd = well_perf_data_[well_index].emplace_back();
 
                     pd.cell_index = active_index;
+                    pd.global_cell_index = connection.global_index();
                     pd.connection_transmissibility_factor = connection.CF();
                     pd.satnum_id = connection.satTableId();
                     pd.ecl_index = connection_index;
-
+                    //Todo: Here I should have the possibility to have several indices - Verzweigungen!
                     parallelWellInfo.pushBackEclIndex(connection_index_above,
                                                       connection_index);
                 }

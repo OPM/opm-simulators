@@ -139,7 +139,8 @@ public:
 
     //! \brief Assemble equation for a perforation.
     void assemblePerforationEq(const int seg,
-                               const int cell_idx,
+                               const int perf,
+                               const int global_perf_idx,
                                const int comp_idx,
                                const EvalWell& cq_s_effective,
                                Equations& eqns) const;
