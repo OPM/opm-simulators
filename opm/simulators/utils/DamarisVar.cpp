@@ -272,13 +272,12 @@ bool DamarisVar<T>::TestType(const std::string& variable_name)
         has_error_ = true;
         return false;
     }
-    T test_id;
-    const std::type_info& t1 = typeid(test_id);
 
     auto check = [&variable_name,this](auto td)
     {
+        const std::type_info& t1 = typeid(T);
         const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
+        if (typeid(T) != t2) {
             formatTypeError(variable_name, t1.name(), t2.name());
             return false;
         }
