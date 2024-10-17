@@ -29,6 +29,7 @@ template<class Scalar>
 struct PerforationData
 {
     int cell_index{};
+    int global_cell_index{};
     Scalar connection_transmissibility_factor{};
     Scalar connection_d_factor{};
     int satnum_id{};

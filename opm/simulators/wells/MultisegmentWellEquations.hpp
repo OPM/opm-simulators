@@ -22,6 +22,7 @@
 #ifndef OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -67,7 +68,7 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
-    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well);
+    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info);
 
     //! \brief Setup sparsity pattern for the matrices.
     //! \param numPerfs Number of perforations
@@ -146,6 +147,8 @@ public:
 
     // Store the global index of well perforated cells
     std::vector<int> cells_;
+
+    const ParallelWellInfo<Scalar>& pw_info_;
 };
 
 }

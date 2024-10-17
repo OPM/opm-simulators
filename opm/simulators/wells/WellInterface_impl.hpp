@@ -1625,7 +1625,9 @@ namespace Opm
     {
         // Add a Forchheimer term to the gas phase CTF if the run uses
         // either of the WDFAC or the WDFACCOR keywords.
-
+        if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
+            OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - seemingly wellIndex was called with a gloabl instead of a local perforation index!");
+        }
         auto wi = std::vector<Scalar>
             (this->num_components_, this->well_index_[perf] * trans_mult);
 
@@ -1816,6 +1818,9 @@ namespace Opm
                                     return std::array<Eval,3>{};
                                 }
                             };
+        if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
+            OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - seemingly getMobility was called with a gloabl instead of a local perforation index!");
+        }
         const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == this->num_components_);
         const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
