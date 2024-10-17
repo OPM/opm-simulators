@@ -227,49 +227,55 @@ public:
             simulator_.setupTimer().realTimeElapsed() +
             simulator_.vanguard().setupTime();
 
-        // const auto localWellData            = simulator_.problem().wellModel().wellData();
-        // const auto localWBP                 = simulator_.problem().wellModel().wellBlockAveragePressures();
-        // const auto localGroupAndNetworkData = simulator_.problem().wellModel()
-        //     .groupAndNetworkData(reportStepNum);
-        //
-        // const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
-        // const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
+//        const data::Wells&                                   localWellData {};
+//        const data::WellBlockAveragePressures&               localWBP {};
+//        const data::GroupAndNetworkValues&                   localGroupAndNetworkData {};
+//        const data::Aquifers&                                localAquiferData {};
+//        const WellTestState&                                 localWellTestState {};
+//
+//        const auto localWellData            = simulator_.problem().wellModel().wellData();
+//        const auto localWBP                 = simulator_.problem().wellModel().wellBlockAveragePressures();
+//        const auto localGroupAndNetworkData = simulator_.problem().wellModel()
+//             .groupAndNetworkData(reportStepNum);
+//
+//        const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
+//        const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (this->outputModule_->needInterfaceFluxes(isSubStep)) {
             this->captureLocalFluxData();
         }
 
-        // if (this->collectOnIORank_.isParallel()) {
-        //     OPM_BEGIN_PARALLEL_TRY_CATCH()
-        //
-        //     this->collectOnIORank_.collect({},
-        //                                    outputModule_->getBlockData(),
-        //                                    localWellData,
-        //                                    localWBP,
-        //                                    localGroupAndNetworkData,
-        //                                    localAquiferData,
-        //                                    localWellTestState,
-        //                                    this->outputModule_->getInterRegFlows(),
-        //                                    {},
-        //                                    {});
-        //
-        //     if (this->collectOnIORank_.isIORank()) {
-        //         auto& iregFlows = this->collectOnIORank_.globalInterRegFlows();
-        //
-        //         if (! iregFlows.readIsConsistent()) {
-        //             throw std::runtime_error {
-        //                 "Inconsistent inter-region flow "
-        //                 "region set names in parallel"
-        //             };
-        //         }
-        //
-        //         iregFlows.compress();
-        //     }
-        //
-        //     OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
-        //                                this->simulator_.vanguard().grid().comm());
-        // }
+        if (this->collectOnIORank_.isParallel()) {
+            OPM_BEGIN_PARALLEL_TRY_CATCH()
+
+            this->collectOnIORank_.collect({},
+                                           outputModule_->getBlockData(),
+                                           localWellData,
+                                           localWBP,
+                                           localGroupAndNetworkData,
+                                           localAquiferData,
+                                           localWellTestState,
+                                           this->outputModule_->getInterRegFlows(),
+                                           {},
+                                           {});
+
+            if (this->collectOnIORank_.isIORank()) {
+                auto& iregFlows = this->collectOnIORank_.globalInterRegFlows();
+
+                if (! iregFlows.readIsConsistent()) {
+                    throw std::runtime_error {
+                        "Inconsistent inter-region flow "
+                        "region set names in parallel"
+                    };
+                }
+
+                iregFlows.compress();
+            }
+
+            OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
+                                       this->simulator_.vanguard().grid().comm());
+         }
         
 
         std::map<std::string, double> miscSummaryData;
