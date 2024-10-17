@@ -1524,7 +1524,7 @@ protected:
         using ViolationLevel = typename Satfunc::PhaseChecks::
             SatfuncConsistencyCheckManager<Scalar>::ViolationLevel;
 
-        auto reportFailures = [&sfuncConsistencyChecks, this]
+        auto reportFailures = [&sfuncConsistencyChecks]
             (const ViolationLevel level)
         {
             sfuncConsistencyChecks.reportFailures
