@@ -35,10 +35,6 @@
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
 #endif
 
-#if HAVE_CUDA
-#include <opm/simulators/linalg/gpuistl/set_device.hpp>
-#endif
-
 namespace Opm {
 
 Main::Main(int argc, char** argv, bool ownMPI)
@@ -163,7 +159,7 @@ void Main::initMPI()
     }
 
 #if HAVE_CUDA
-    Opm::gpuistl::setDevice(FlowGenericVanguard::comm().rank(), FlowGenericVanguard::comm().size());
+    Opm::gpuistl::setDevice();
 #endif
 
 #endif // HAVE_MPI
