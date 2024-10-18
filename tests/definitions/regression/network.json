@@ -1,0 +1,27 @@
+{
+    "abs_tol": 0.02,
+    "dir": "network",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_args": "--enable-tuning=true",
+    "test_cases": [
+        {
+            "casename": "network_balance_01",
+            "filename": "NETWORK-01"
+        },
+        {
+            "casename": "network_01_reroute",
+            "filename": "NETWORK-01-REROUTE",
+            "test_args": "--enable-tuning=true --local-well-solve-control-switching=true"
+        },
+        {
+            "casename": "network_01_reroute_std",
+            "filename": "NETWORK-01-REROUTE_STD",
+            "test_args": "--enable-tuning=true --local-well-solve-control-switching=true"
+        },
+        {
+            "casename": "network_standard",
+            "filename": "NETWORK-01_STANDARD"
+        }
+    ]
+}
