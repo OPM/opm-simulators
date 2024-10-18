@@ -72,6 +72,14 @@ void PropertyTree::write_json(std::ostream &os, bool pretty) const
     boost::property_tree::write_json(os, *tree_, pretty);
 }
 
+// PropertyTree&
+// PropertyTree::get_child(const std::string& key) const
+// {
+//   auto& pt = tree_->get_child(key);
+
+//   return PropertyTree(pt);
+// }
+  
 PropertyTree
 PropertyTree::get_child(const std::string& key) const
 {
