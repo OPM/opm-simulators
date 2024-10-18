@@ -39,7 +39,7 @@
 #include <opm/simulators/flow/DamarisParameters.hpp>
 #include <opm/simulators/flow/EclGenericWriter.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/OutputCompositionalModule.hpp>
+#include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/utils/DamarisVar.hpp>
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
