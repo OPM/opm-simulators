@@ -211,7 +211,7 @@ void registerNonlinearParameters();
             }
 
             double error = model_->relativeChange();
-            const double timeStepControlTolerance = Parameters::get<TypeTag, Properties::TimeStepControlTolerance>();
+            const double timeStepControlTolerance = Parameters::Get<Parameters::TimeStepControlTolerance>();
 
             if (error > timeStepControlTolerance) {
                 report.converged = false;

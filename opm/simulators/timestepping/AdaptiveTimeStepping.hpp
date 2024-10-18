@@ -392,7 +392,7 @@ void registerAdaptiveParameters();
                     }
 
                     // The new, chopped timestep.
-                    const double timeStepSafetyFactor = Parameters::get<TypeTag, Properties::TimeStepSafetyFactor>();
+                    const double timeStepSafetyFactor = Parameters::Get<Parameters::TimeStepSafetyFactor>();
                     const double newTimeStep = timeStepSafetyFactor * dt * timeStepControlTolerance_ / relativeChange.relativeChange();
 
                     // If we have restarted (i.e. cut the timestep) too
@@ -701,7 +701,7 @@ void registerAdaptiveParameters();
             // valid are "pid" and "pid+iteration"
             std::string control = Parameters::Get<Parameters::TimeStepControl>(); // "pid"
 
-            timeStepControlTolerance_ =  Parameters::get<Parameters::TimeStepControlTolerance>(); // 1e-1
+            timeStepControlTolerance_ =  Parameters::Get<Parameters::TimeStepControlTolerance>(); // 1e-1
             if (control == "pid") {
                 timeStepControl_ = std::make_unique<PIDTimeStepControl>(timeStepControlTolerance_);
                 timeStepControlType_ = TimeStepControlType::PID;
