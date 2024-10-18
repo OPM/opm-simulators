@@ -752,7 +752,11 @@ updateEclWells(const int timeStepIdx,
             auto pdIter = pd.begin();
 
             for (const auto& conn : well.getConnections()) {
-                if (conn.state() != Connection::State::SHUT) {
+                // Iterator needs to be bounds checked in case connections were added
+                // in the triggering actions. In that case the well_perf_data is not
+                // yet resized. The wellStructureChangedDynamically_ below
+                // however will trigger reinitialization on start of next time step.
+                if (conn.state() != Connection::State::SHUT && pdIter != pd.end()) {
                     pdIter->connection_transmissibility_factor = conn.CF();
                     ++pdIter;
                 }
