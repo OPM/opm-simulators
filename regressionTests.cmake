@@ -1541,3 +1541,18 @@ if(BUILD_FLOW_FLOAT_VARIANTS)
                            DIR spe1
                            TEST_ARGS --tolerance-mb=1e-6)
 endif()
+
+# Add tests from json file
+function(AddJsonRegressionTests json_file)
+  message(STATUS "Adding regression tests from ${json_file}")
+  file(READ ${json_file} JSON_STRING)
+  parse_json_common_params()
+  string(JSON size LENGTH ${test_cases})
+  math(EXPR COUNT "${size}-1")
+  foreach(idx RANGE ${COUNT})
+    parse_json_test_definition(${idx})
+    cmake_parse_arguments(CURTEST "$" "CASENAME" "" ${PARAMS})
+    message(STATUS "  - ${CURTEST_CASENAME}")
+    add_test_compareECLFiles(${PARAMS})
+  endforeach()
+endfunction()
