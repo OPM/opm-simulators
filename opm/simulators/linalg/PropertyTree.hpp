@@ -50,6 +50,8 @@ public:
     template<class T>
     T get(const std::string& key, const T& defValue) const;
 
+  //PropertyTree& get_child(const std::string& key) const;
+  
     PropertyTree get_child(const std::string& key) const;
 
     std::optional<PropertyTree> get_child_optional(const std::string& key) const;
@@ -57,7 +59,10 @@ public:
     PropertyTree& operator=(const PropertyTree& tree);
 
     void write_json(std::ostream& os, bool pretty) const;
-
+    boost::property_tree::ptree* getBoostParamPtr() const{
+      //just to be able to use full boost interface
+      return tree_.get();
+    }
 protected:
     PropertyTree(const boost::property_tree::ptree& tree);
 
