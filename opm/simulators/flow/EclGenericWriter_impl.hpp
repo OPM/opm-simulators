@@ -608,11 +608,13 @@ doWriteOutput(const int                          reportStepNum,
     }
 
     // create a tasklet to write the data for the current time step to disk
-    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(/*
+    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
+        *this->eclIO_,
+        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision,
         actionState,
         isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
-        summaryState, udqState, */*this->eclIO_,
-        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
+        summaryState, udqState
+        );
 
     // finally, start a new output writing job
     this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
