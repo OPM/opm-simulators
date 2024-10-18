@@ -57,6 +57,7 @@ protected:
 
 public:
     using Scalar = typename FluidSystem::Scalar;
+    using ModelParameters = typename WellInterfaceGeneric<Scalar>::ModelParameters;
 
     int flowPhaseToModelPhaseIdx(const int phaseIdx) const;
 
@@ -73,6 +74,7 @@ protected:
     WellInterfaceFluidSystem(const Well& well,
                              const ParallelWellInfo<Scalar>& parallel_well_info,
                              const int time_step,
+                             const ModelParameters& param,
                              const RateConverterType& rate_converter,
                              const int pvtRegionIdx,
                              const int num_components,

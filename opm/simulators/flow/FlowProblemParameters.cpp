@@ -66,6 +66,12 @@ void registerFlowProblemParameters()
         ("Use pressure from end of the last time step when evaluating rock compaction");
     Parameters::Hide<Parameters::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
 
+    Parameters::Register<Parameters::CheckSatfuncConsistency>
+        ("Whether or not to check saturation function consistency requirements");
+
+    Parameters::Register<Parameters::NumSatfuncConsistencySamplePoints>
+        ("Maximum number of reported failures for each individual saturation function consistency check");
+
     // By default, stop it after the universe will probably have stopped
     // to exist. (the ECL problem will finish the simulation explicitly
     // after it simulated the last episode specified in the deck.)

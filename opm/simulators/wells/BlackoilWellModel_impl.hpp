@@ -177,8 +177,7 @@ namespace Opm {
         const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
         for (auto& wellPtr : this->well_container_) {
             const bool well_opened_this_step = this->report_step_starts_ && events.hasEvent(wellPtr->name(), effective_events_mask);
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
-                          this->local_num_cells_, this->B_avg_, well_opened_this_step);
+            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, well_opened_this_step);
         }
     }
 
@@ -238,7 +237,19 @@ namespace Opm {
             }
             // Apply as Schur complement the well residual to reservoir residuals:
             // r = r - duneC_^T * invDuneD_ * resWell_
-            well->apply(res);
+            // Well equations B and C uses only the perforated cells, so need to apply on local residual
+            const auto& cells = well->cells();
+            linearize_res_local_.resize(cells.size());
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                linearize_res_local_[i] = res[cells[i]];
+            }
+
+            well->apply(linearize_res_local_);
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                res[cells[i]] = linearize_res_local_[i];
+            }
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
                                    simulator_.gridView().comm());
@@ -262,7 +273,19 @@ namespace Opm {
                 }
                 // Apply as Schur complement the well residual to reservoir residuals:
                 // r = r - duneC_^T * invDuneD_ * resWell_
-                well->apply(res);
+                // Well equations B and C uses only the perforated cells, so need to apply on local residual
+                const auto& cells = well->cells();
+                linearize_res_local_.resize(cells.size());
+
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    linearize_res_local_[i] = res[cells[i]];
+                }
+
+                well->apply(linearize_res_local_);
+
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    res[cells[i]] = linearize_res_local_[i];
+                }
             }
         }
     }
@@ -621,7 +644,7 @@ namespace Opm {
 
             WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
             // some preparation before the well can be used
-            well->init(&this->phase_usage_, depth_, gravity_, local_num_cells_, B_avg_, true);
+            well->init(&this->phase_usage_, depth_, gravity_, B_avg_, true);
 
             Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor();
             WellGroupHelpers<Scalar>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
@@ -1706,18 +1729,6 @@ namespace Opm {
 
     }
 
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    apply(BVector& r) const
-    {
-        for (auto& well : well_container_) {
-            well->apply(r);
-        }
-    }
-
-
     // Ax = A x - C D^-1 B x
     template<typename TypeTag>
     void
@@ -1725,7 +1736,52 @@ namespace Opm {
     apply(const BVector& x, BVector& Ax) const
     {
         for (auto& well : well_container_) {
-            well->apply(x, Ax);
+            // Well equations B and C uses only the perforated cells, so need to apply on local vectors
+            const auto& cells = well->cells();
+            x_local_.resize(cells.size());
+            Ax_local_.resize(cells.size());
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                x_local_[i] = x[cells[i]];
+                Ax_local_[i] = Ax[cells[i]];
+            }
+
+            well->apply(x_local_, Ax_local_);
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                // only need to update Ax
+                Ax[cells[i]] = Ax_local_[i];
+            }
+        }
+    }
+
+    // Ax = A x - C D^-1 B x
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    applyDomain(const BVector& x, BVector& Ax, const int domainIndex) const
+    {
+        for (size_t well_index = 0; well_index < well_container_.size(); ++well_index) {
+            auto& well = well_container_[well_index];
+            if (well_domain_.at(well->name()) == domainIndex) {
+                // Well equations B and C uses only the perforated cells, so need to apply on local vectors
+                // transfer global cells index to local subdomain cells index
+                const auto& local_cells = well_local_cells_[well_index];
+                x_local_.resize(local_cells.size());
+                Ax_local_.resize(local_cells.size());
+
+                for (size_t i = 0; i < local_cells.size(); ++i) {
+                    x_local_[i] = x[local_cells[i]];
+                    Ax_local_[i] = Ax[local_cells[i]];
+                }
+
+                well->apply(x_local_, Ax_local_);
+
+                for (size_t i = 0; i < local_cells.size(); ++i) {
+                    // only need to update Ax
+                    Ax[local_cells[i]] = Ax_local_[i];
+                }
+            }
         }
     }
 
@@ -1788,6 +1844,27 @@ namespace Opm {
         Ax.axpy( alpha, scaleAddRes_ );
     }
 
+    // Ax = Ax - alpha * C D^-1 B x
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    applyScaleAddDomain(const Scalar alpha, const BVector& x, BVector& Ax, const int domainIndex) const
+    {
+        if (this->well_container_.empty()) {
+            return;
+        }
+
+        if( scaleAddRes_.size() != Ax.size() ) {
+            scaleAddRes_.resize( Ax.size() );
+        }
+
+        scaleAddRes_ = 0.0;
+        // scaleAddRes_  = - C D^-1 B x
+        applyDomain(x, scaleAddRes_, domainIndex);
+        // Ax = Ax + alpha * scaleAddRes_
+        Ax.axpy( alpha, scaleAddRes_ );
+    }
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -1801,11 +1878,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const
+    addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights, const bool use_well_weights) const
     {
-        int nw =  this->numLocalWellsEnd();
+        int nw = this->numLocalWellsEnd();
         int rdofs = local_num_cells_;
-        for ( int i = 0; i < nw; i++ ){
+        for ( int i = 0; i < nw; i++ ) {
             int wdof = rdofs + i;
             jacobian[wdof][wdof] = 1.0;// better scaling ?
         }
@@ -1813,6 +1890,31 @@ namespace Opm {
         for ( const auto& well : well_container_ ) {
             well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
         }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addWellPressureEquationsDomain([[maybe_unused]] PressureMatrix& jacobian,
+                                   [[maybe_unused]] const BVector& weights,
+                                   [[maybe_unused]] const bool use_well_weights,
+                                   [[maybe_unused]] const int domainIndex) const
+    {
+        throw std::logic_error("CPRW is not yet implemented for NLDD subdomains");
+        // To fix this function, rdofs should be the size of the domain, and the nw should be the number of wells in the domain
+        // int nw = this->numLocalWellsEnd(); // should number of wells in the domain
+        // int rdofs = local_num_cells_;  // should be the size of the domain
+        // for ( int i = 0; i < nw; i++ ) {
+        //     int wdof = rdofs + i;
+        //     jacobian[wdof][wdof] = 1.0;// better scaling ?
+        // }
+
+        // for ( const auto& well : well_container_ ) {
+        //     if (well_domain_.at(well->name()) == domainIndex) {
+                   // weights should be the size of the domain
+        //         well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
+        //     }
+        // }
     }
 
     template <typename TypeTag>
@@ -1876,7 +1978,13 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             for (auto& well : well_container_) {
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x, this->wellState(), local_deferredLogger);
+                const auto& cells = well->cells();
+                x_local_.resize(cells.size());
+
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    x_local_[i] = x[cells[i]];
+                }
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_, this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
@@ -1896,7 +2004,13 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x,
+                const auto& cells = well->cells();
+                x_local_.resize(cells.size());
+
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    x_local_[i] = x[cells[i]];
+                }
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
                                                             this->wellState(),
                                                             local_deferredLogger);
             }
@@ -2478,8 +2592,7 @@ namespace Opm {
             auto wellPtr = this->template createTypedWellPointer
                 <StandardWell<TypeTag>>(shutWell, reportStepIdx);
 
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
-                          this->local_num_cells_, this->B_avg_, true);
+            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, true);
 
             this->calculateProductivityIndexValues(wellPtr.get(), deferred_logger);
         }
@@ -2887,6 +3000,29 @@ namespace Opm {
         if (this->terminal_output_) {
             global_log.logMessages();
         }
-    }
 
+        // Pre-calculate the local cell indices for each well
+        well_local_cells_.clear();
+        well_local_cells_.reserve(well_container_.size(), 10);
+        std::vector<int> local_cells;
+        for (const auto& well : well_container_) {
+            const auto& global_cells = well->cells();
+            const int domain_index = well_domain_.at(well->name());
+            const auto& domain_cells = domains[domain_index].cells;
+            local_cells.resize(global_cells.size());
+
+            // find the local cell index for each well cell in the domain
+            // assume domain_cells is sorted
+            for (size_t i = 0; i < global_cells.size(); ++i) {
+                auto it = std::lower_bound(domain_cells.begin(), domain_cells.end(), global_cells[i]);
+                if (it != domain_cells.end() && *it == global_cells[i]) {
+                    local_cells[i] = std::distance(domain_cells.begin(), it);
+                } else {
+                    OPM_THROW(std::runtime_error, fmt::format("Cell {} not found in domain {}",
+                                                              global_cells[i], domain_index));
+                }
+            }
+            well_local_cells_.appendRow(local_cells.begin(), local_cells.end());
+        }
+    }
 } // namespace Opm

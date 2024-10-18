@@ -1146,12 +1146,18 @@ public:
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             Valgrind::CheckDefined(this->fluidPressure_[elemIdx]);
             Valgrind::CheckDefined(pc);
-            assert(FluidSystem::phaseIsActive(oilPhaseIdx));
+            const auto& pressure = this->fluidPressure_[elemIdx];
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
 
-                fs.setPressure(phaseIdx, this->fluidPressure_[elemIdx] + (pc[phaseIdx] - pc[oilPhaseIdx]));
+                if (Indices::oilEnabled)
+                    fs.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
+                else if (Indices::gasEnabled)
+                    fs.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
+                else if (Indices::waterEnabled)
+                    //single (water) phase
+                    fs.setPressure(phaseIdx, pressure);
             }
         }
 

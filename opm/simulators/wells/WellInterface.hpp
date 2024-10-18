@@ -37,8 +37,6 @@ namespace Opm {
 
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
-#include <opm/simulators/flow/BlackoilModelParameters.hpp>
-
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
@@ -103,7 +101,7 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
 
-    using ModelParameters = BlackoilModelParameters<Scalar>;
+    using ModelParameters = typename Base::ModelParameters;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
@@ -148,7 +146,6 @@ public:
     virtual void init(const PhaseUsage* phase_usage_arg,
                       const std::vector<Scalar>& depth_arg,
                       const Scalar gravity_arg,
-                      const int num_cells,
                       const std::vector<Scalar>& B_avg,
                       const bool changed_to_open_this_step);
 
@@ -385,7 +382,6 @@ public:
                                             const bool fixed_status = false) = 0;
 protected:
     // simulation parameters
-    const ModelParameters& param_;
     std::vector<RateVector> connectionRates_;
     std::vector<Scalar> B_avg_;
     bool changed_to_stopped_this_step_ = false;

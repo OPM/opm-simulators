@@ -52,8 +52,7 @@ StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
 
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
-init(const int num_cells,
-     const int numWellEq,
+init(const int numWellEq,
      const int numPerfs,
      const std::vector<int>& cells)
 {
@@ -62,8 +61,8 @@ init(const int num_cells,
     // B D] x_well]      res_well]
     // set the size of the matrices
     duneD_.setSize(1, 1, 1);
-    duneB_.setSize(1, num_cells, numPerfs);
-    duneC_.setSize(1, num_cells, numPerfs);
+    duneB_.setSize(1, numPerfs, numPerfs);
+    duneC_.setSize(1, numPerfs, numPerfs);
 
     for (auto row = duneD_.createbegin(),
               end = duneD_.createend(); row != end; ++row) {
@@ -76,29 +75,25 @@ init(const int num_cells,
     for (auto row = duneB_.createbegin(),
               end = duneB_.createend(); row != end; ++row) {
         for (int perf = 0 ; perf < numPerfs; ++perf) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
     for (int perf = 0 ; perf < numPerfs; ++perf) {
-        const int cell_idx = cells[perf];
         // the block size is run-time determined now
-        duneB_[0][cell_idx].resize(numWellEq, numEq);
+        duneB_[0][perf].resize(numWellEq, numEq);
     }
 
          // make the C^T matrix
     for (auto row = duneC_.createbegin(),
               end = duneC_.createend(); row != end; ++row) {
         for (int perf = 0; perf < numPerfs; ++perf) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
     for (int perf = 0; perf < numPerfs; ++perf) {
-        const int cell_idx = cells[perf];
-        duneC_[0][cell_idx].resize(numWellEq, numEq);
+        duneC_[0][perf].resize(numWellEq, numEq);
     }
 
     resWell_.resize(1);
@@ -115,6 +110,9 @@ init(const int num_cells,
     for (unsigned i = 0; i < duneD_.N(); ++i) {
         invDrw_[i].resize(numWellEq);
     }
+
+    // Store the global index of well perforated cells
+    cells_ = cells;
 }
 
 template<class Scalar, int numEq>
@@ -265,14 +263,17 @@ extract(SparseMatrixAdapter& jacobian) const
     for (auto colC = duneC_[0].begin(),
               endC = duneC_[0].end(); colC != endC; ++colC)
     {
-        const auto row_index = colC.index();
+        // map the well perforated cell index to global cell index
+        const auto row_index = this->cells_[colC.index()];
 
         for (auto colB = duneB_[0].begin(),
                   endB = duneB_[0].end(); colB != endB; ++colB)
         {
+            // map the well perforated cell index to global cell index
+            const auto col_index = this->cells_[colB.index()];
             detail::multMatrix(invDuneD_[0][0], (*colB), tmp);
             detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
-            jacobian.addToBlock(row_index, colB.index(), tmpMat);
+            jacobian.addToBlock(row_index, col_index, tmpMat);
         }
     }
 }
@@ -311,22 +312,23 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     int nperf = 0;
     auto cell_weights = weights[0];// not need for not(use_well_weights)
     cell_weights = 0.0;
-    assert(duneC_.M() == weights.size());
-    const int welldof_ind = duneC_.M() + well.indexOfWell();
+    const int number_cells = weights.size();
+    const int welldof_ind = number_cells + well.indexOfWell();
     // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
     if (!well.isPressureControlled(well_state) || use_well_weights) {
         // make coupling for reservoir to well
         for (auto colC = duneC_[0].begin(),
                   endC = duneC_[0].end(); colC != endC; ++colC) {
-            const auto row_ind = colC.index();
-            const auto& bw = weights[row_ind];
+            // map the well perforated cell index to global cell index
+            const auto row_index = cells_[colC.index()];
+            const auto& bw = weights[row_index];
             Scalar matel = 0;
             assert((*colC).M() == bw.size());
             for (std::size_t i = 0; i < bw.size(); ++i) {
                 matel += (*colC)[bhp_var_index][i] * bw[i];
             }
 
-            jacobian[row_ind][welldof_ind] = matel;
+            jacobian[row_index][welldof_ind] = matel;
             cell_weights += bw;
             nperf += 1;
         }
@@ -385,7 +387,8 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     if (!well.isPressureControlled(well_state) || use_well_weights) {
         for (auto colB = duneB_[0].begin(),
                   endB = duneB_[0].end(); colB != endB; ++colB) {
-            const auto col_index = colB.index();
+            // map the well perforated cell index to global cell index
+            const auto col_index = cells_[colB.index()];
             const auto& bw = bweights[0];
             Scalar matel = 0;
             for (std::size_t i = 0; i < bw.size(); ++i) {

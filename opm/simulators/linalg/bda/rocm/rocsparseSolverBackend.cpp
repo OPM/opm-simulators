@@ -596,13 +596,13 @@ analyze_matrix()
     }
 #elif HIP_VERSION >= 50400000
     if constexpr (std::is_same_v<Scalar,float>) {
-        ROCSPARSE_CHECK(rocsparse_dbsrmv_ex_analysis(handle, dir, operation,
+        ROCSPARSE_CHECK(rocsparse_sbsrmv_ex_analysis(handle, dir, operation,
                                                     Nb, Nb, nnzb,
                                                     descr_A, d_Avals,
                                                     d_Arows, d_Acols,
                                                     block_size, spmv_info));
     } else {
-        ROCSPARSE_CHECK(rocsparse_sbsrmv_ex_analysis(handle, dir, operation,
+        ROCSPARSE_CHECK(rocsparse_dbsrmv_ex_analysis(handle, dir, operation,
                                                      Nb, Nb, nnzb,
                                                      descr_A, d_Avals,
                                                      d_Arows, d_Acols,

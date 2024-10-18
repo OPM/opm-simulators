@@ -96,12 +96,11 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<Scalar>& depth_arg,
          const Scalar gravity_arg,
-         const int num_cells,
          const std::vector< Scalar >& B_avg,
          const bool changed_to_open_this_step)
     {
-        Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells, B_avg, changed_to_open_this_step);
-        this->StdWellEval::init(this->perf_depth_, depth_arg, num_cells, Base::has_polymermw);
+        Base::init(phase_usage_arg, depth_arg, gravity_arg, B_avg, changed_to_open_this_step);
+        this->StdWellEval::init(this->perf_depth_, depth_arg, Base::has_polymermw);
     }
 
 
@@ -404,7 +403,6 @@ namespace Opm
                                                water_flux_s, deferred_logger);
                 }
             }
-            const int cell_idx = this->well_cells_[perf];
             for (int componentIdx = 0; componentIdx < this->num_components_; ++componentIdx) {
                 // the cq_s entering mass balance equations need to consider the efficiency factors.
                 const EvalWell cq_s_effective = cq_s[componentIdx] * this->well_efficiency_factor_;
@@ -414,7 +412,7 @@ namespace Opm
                 StandardWellAssemble<FluidSystem,Indices>(*this).
                     assemblePerforationEq(cq_s_effective,
                                           componentIdx,
-                                          cell_idx,
+                                          perf,
                                           this->primary_variables_.numWellEq(),
                                           this->linSys_);
 
@@ -430,7 +428,7 @@ namespace Opm
             if constexpr (has_zFraction) {
                 StandardWellAssemble<FluidSystem,Indices>(*this).
                     assembleZFracEq(cq_s_zfrac_effective,
-                                    cell_idx,
+                                    perf,
                                     this->primary_variables_.numWellEq(),
                                     this->linSys_);
             }
@@ -689,7 +687,7 @@ namespace Opm
         if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE) {
             const Scalar bhp = this->primary_variables_.value(Bhp);
             const Scalar perf_press = bhp +  this->connections_.pressure_diff(perf);
-            const Scalar multiplier = this->getInjMult(perf, bhp, perf_press);
+            const Scalar multiplier = this->getInjMult(perf, bhp, perf_press, deferred_logger);
             for (std::size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= multiplier;
             }
@@ -1522,6 +1520,7 @@ namespace Opm
         // creating a copy of the well itself, to avoid messing up the explicit information
         // during this copy, the only information not copied properly is the well controls
         StandardWell<TypeTag> well_copy(*this);
+        well_copy.resetDampening();
 
         // iterate to get a more accurate well density
         // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
@@ -2132,7 +2131,7 @@ namespace Opm
                                       eq_wat_vel,
                                       pskin_index,
                                       wat_vel_index,
-                                      cell_idx,
+                                      perf,
                                       this->primary_variables_.numWellEq(),
                                       this->linSys_);
     }

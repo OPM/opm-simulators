@@ -24,60 +24,46 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <opm/simulators/flow/LogOutputHelper.hpp>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/StreamLog.hpp>
+
 #include <opm/common/utility/String.hpp>
 
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
-#include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 
-#include <opm/simulators/flow/LogOutputHelper.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
 
+#include <opm/input/eclipse/Parser/Parser.hpp>
+
+#include <array>
 #include <memory>
+#include <sstream>
 #include <string>
-
-template<int type>
-struct LogFixture
-{
-    LogFixture() {
-        Opm::OpmLog::addBackend("stream",
-                                std::make_shared<Opm::StreamLog>(str, type));
-    }
-    ~LogFixture() {
-        Opm::OpmLog::removeBackend("stream");
-    }
-
-    std::stringstream str;
-};
-/*
-template<>
-std::stringstream LogFixture<Opm::Log::MessageType::Warning>::str;
-template<>
-std::stringstream LogFixture<Opm::Log::MessageType::Note>::str;
-*/
-using LogNoteFixture = LogFixture<Opm::Log::MessageType::Note>;
-using LogWarningFixture = LogFixture<Opm::Log::MessageType::Warning>;
 
 namespace {
 
-const std::string input = R"(
-RUNSPEC
+    Opm::Deck deck()
+    {
+        return Opm::Parser{}.parseString(R"(RUNSPEC
+OIL
+GAS
+WATER
 FIELD
 DIMENS
   10 10 3 /
-DX
-    300*1000 /
-DY
-  300*1000 /
-DZ
-  100*20 100*30 100*50 /
+DXV
+  10*1000.0 /
+DYV
+  10*1000.0 /
+DZV
+  20.0 30.0 50.0 /
 TOPS
-  100*8325 /
-START             -- 0
+  100*8325.0 /
+START        -- 0
 31 AUG 1993 /
 SCHEDULE
 WELSPECS
@@ -92,33 +78,62 @@ WCONPROD
 WCONINJE
 -- Item #:1  2   3   4  5      6  7
   'INJ' 'GAS' 'OPEN'  'RATE'  100000 1* 9014 /
-/)";
+/
+END
+)");
+    }
 
+    std::string trimStream(std::stringstream& str)
+    {
+        std::string data;
 
+        std::array<char, 1024> buffer{};
+        do {
+            str.getline(buffer.data(), buffer.size(), '\n');
 
-std::string trimStream(std::stringstream& str)
-{
-    char buffer[1024];
-    std::string data;
-    do {
-        str.getline(buffer, 1024, '\n');
-        std::string tmp(buffer);
-        if (!tmp.empty()) {
-            tmp = Opm::trim_copy(tmp);
-            data += tmp;
-            data += '\n';
+            const auto tmp = std::string { buffer.data() };
+            if (!tmp.empty()) {
+                data += Opm::trim_copy(tmp);
+                data += '\n';
+            }
+        } while (!str.eof());
+
+        return data;
+    }
+
+    template <int type>
+    struct LogFixture
+    {
+        LogFixture() : LogFixture { deck() } {}
+
+        LogFixture(const Opm::Deck& deck)
+            : eclState { deck }
+            , schedule { deck, eclState }
+        {
+            Opm::OpmLog::addBackend("stream", std::make_shared<Opm::StreamLog>(str, type));
         }
-    } while (!str.eof());
 
-    return data;
-}
+        ~LogFixture()
+        {
+            Opm::OpmLog::removeBackend("stream");
+        }
 
+        Opm::EclipseState eclState{};
+        Opm::Schedule schedule{};
+        Opm::SummaryState st{};
 
-}
+        std::stringstream str;
+    };
+
+    using LogNoteFixture = LogFixture<Opm::Log::MessageType::Note>;
+    using LogWarningFixture = LogFixture<Opm::Log::MessageType::Warning>;
+
+} // Anonymous namespace
 
 BOOST_FIXTURE_TEST_CASE(Cumulative, LogNoteFixture)
 {
-    const std::string reference = R"(=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================
+    const auto reference = std::string {
+        R"(=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================
 :  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :
 :  NAME  :  (I,J,K)  :  TYPE  :MODE:    PROD   :   PROD    :    PROD   :  RES.VOL. :    INJ    :   INJ     :    INJ    :  RES.VOL. :
 :        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :
@@ -128,95 +143,76 @@ BOOST_FIXTURE_TEST_CASE(Cumulative, LogNoteFixture)
 :    PROD:   10,   10:    PROD:ORAT:       16.0:       17.0:       18.0:       19.0:       20.0:       21.0:       22.0:       23.0:
 :     INJ:    1,    1:     INJ:GRAT:       24.0:       25.0:       26.0:       27.0:       28.0:       29.0:       30.0:       31.0:
 :--------:-----------:--------:----:-----------:-----------:-----------:-----------:-----------:-----------:-----------:-----------:
-)";
-    Opm::Parser parser;
-    auto python = std::make_shared<Opm::Python>();
-    auto deck = parser.parseString(input);
-    Opm::EclipseGrid grid(10,10,3);
-    Opm::TableManager table ( deck );
-    Opm::FieldPropsManager fp( deck, Opm::Phases{true, true, true}, grid, table);
-    Opm::Runspec runspec (deck );
-    Opm::Schedule schedule(deck,  grid, fp, runspec, python);
-
-    Opm::EclipseState eclState(deck);
-    Opm::SummaryState st;
+)"
+    };
 
     // Note: Cumulative gas values--e.g., FGPT--multiplied by an additional
     // factor of 1000, for a total multiplicative factor of one million, in
     // order to produce the expected balance sheet output in MM* units.
-    constexpr auto fields = std::array {
-        std::pair{"FOPT", 1.0},
-        std::pair{"FWPT", 2.0},
-        std::pair{"FGPT", 3.0e3},
-        std::pair{"FVPT", 4.0},
-        std::pair{"FOIT", 5.0},
-        std::pair{"FWIT", 6.0},
-        std::pair{"FGIT", 7.0e3},
-        std::pair{"FVIT", 8.0},
-        std::pair{"GOPT:G1", 9.0},
-        std::pair{"GWPT:G1", 10.0},
-        std::pair{"GGPT:G1", 11.0e3},
-        std::pair{"GVPT:G1", 12.0},
-        std::pair{"GOIT:G1", 13.0},
-        std::pair{"GWIT:G1", 14.0},
-        std::pair{"GGIT:G1", 15.0e3},
-        std::pair{"GVIT:G1", 15.0},
-        std::pair{"WOPT:PROD", 16.0},
-        std::pair{"WWPT:PROD", 17.0},
-        std::pair{"WGPT:PROD", 18.0e3},
-        std::pair{"WVPT:PROD", 19.0},
-        std::pair{"WOIT:PROD", 20.0},
-        std::pair{"WWIT:PROD", 21.0},
-        std::pair{"WGIT:PROD", 22.0e3},
-        std::pair{"WVIT:PROD", 23.0},
-        std::pair{"WOPT:INJ", 24.0},
-        std::pair{"WWPT:INJ", 25.0},
-        std::pair{"WGPT:INJ", 26.0e3},
-        std::pair{"WVPT:INJ", 27.0},
-        std::pair{"WOIT:INJ", 28.0},
-        std::pair{"WWIT:INJ", 29.0},
-        std::pair{"WGIT:INJ", 30.0e3},
-        std::pair{"WVIT:INJ", 31.0},
-    };
-    for (const auto& p : fields) {
-        st.set(p.first, p.second * 1e3);
-    }
+    st.set("FOPT", 1.0e3);
+    st.set("FWPT", 2.0e3);
+    st.set("FGPT", 3.0e6);
+    st.set("FVPT", 4.0e3);
+    st.set("FOIT", 5.0e3);
+    st.set("FWIT", 6.0e3);
+    st.set("FGIT", 7.0e6);
+    st.set("FVIT", 8.0e3);
+
+    st.update_group_var("G1", "GOPT",  9.0e3);
+    st.update_group_var("G1", "GWPT", 10.0e3);
+    st.update_group_var("G1", "GGPT", 11.0e6);
+    st.update_group_var("G1", "GVPT", 12.0e3);
+    st.update_group_var("G1", "GOIT", 13.0e3);
+    st.update_group_var("G1", "GWIT", 14.0e3);
+    st.update_group_var("G1", "GGIT", 15.0e6);
+    st.update_group_var("G1", "GVIT", 15.0e3);
+
+    st.update_well_var("PROD", "WOPT", 16.0e3);
+    st.update_well_var("PROD", "WWPT", 17.0e3);
+    st.update_well_var("PROD", "WGPT", 18.0e6);
+    st.update_well_var("PROD", "WVPT", 19.0e3);
+    st.update_well_var("PROD", "WOIT", 20.0e3);
+    st.update_well_var("PROD", "WWIT", 21.0e3);
+    st.update_well_var("PROD", "WGIT", 22.0e6);
+    st.update_well_var("PROD", "WVIT", 23.0e3);
+
+    st.update_well_var("INJ", "WOPT", 24.0e3);
+    st.update_well_var("INJ", "WWPT", 25.0e3);
+    st.update_well_var("INJ", "WGPT", 26.0e6);
+    st.update_well_var("INJ", "WVPT", 27.0e3);
+    st.update_well_var("INJ", "WOIT", 28.0e3);
+    st.update_well_var("INJ", "WWIT", 29.0e3);
+    st.update_well_var("INJ", "WGIT", 30.0e6);
+    st.update_well_var("INJ", "WVIT", 31.0e3);
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.cumulative(0);
-    std::string data = trimStream(str);
+
+    const auto data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
 
-
 BOOST_FIXTURE_TEST_CASE(Error, LogWarningFixture)
 {
-    const std::string reference = R"(Finding the bubble point pressure failed for 3 cells [(2,1,1), (1,3,1), (1,4,1)]
+    const auto reference = std::string {
+        R"(Finding the bubble point pressure failed for 3 cells [(2,1,1), (1,3,1), (1,4,1)]
 Finding the dew point pressure failed for 3 cells [(5,1,1), (6,1,1), (7,1,1)]
-)";
+)"
+    };
 
-    Opm::Parser parser;
-    auto python = std::make_shared<Opm::Python>();
-    auto deck = parser.parseString(input);
-    Opm::EclipseGrid grid(10,10,3);
-    Opm::TableManager table ( deck );
-    Opm::FieldPropsManager fp( deck, Opm::Phases{true, true, true}, grid, table);
-    Opm::Runspec runspec (deck );
-    Opm::Schedule schedule(deck,  grid, fp, runspec, python);
-    Opm::EclipseState eclState(deck);
-
-    Opm::SummaryState st;
     Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
 
     str.str(""); // clear out parser errors
     helper.error({1,20,30}, {4,5,6});
-    std::string data = trimStream(str);
+
+    const auto data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
 
 BOOST_FIXTURE_TEST_CASE(Fip, LogNoteFixture)
 {
-    const std::string reference = R"(
+    const auto reference = std::string {
+        R"(
                                                      ==================================================
                                                      :               FIELD TOTALS                     :
                                                      :         PAV =             0  PSIA              :
@@ -247,33 +243,25 @@ BOOST_FIXTURE_TEST_CASE(Fip, LogNoteFixture)
  ====================================================================================================================================
 
 
-)";
+)"
+    };
 
-    Opm::Parser parser;
-    auto python = std::make_shared<Opm::Python>();
-    auto deck = parser.parseString(input);
-    Opm::EclipseGrid grid(10,10,3);
-    Opm::TableManager table ( deck );
-    Opm::FieldPropsManager fp( deck, Opm::Phases{true, true, true}, grid, table);
-    Opm::Runspec runspec (deck );
-    Opm::Schedule schedule(deck,  grid, fp, runspec, python);
-
-    Opm::EclipseState eclState(deck);
-    Opm::SummaryState st;
-
-    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     Opm::Inplace initial, current;
-    const auto& phases = current.phases();
-    int offset = 17;
-    double j = 1.0;
-    for (const auto& phase : phases) {
-        initial.add(phase, j);
-        initial.add("FIPNUM", phase, 0, j + 2*offset);
-        initial.add("FIPNUM", phase, 1, j + 2*offset);
-        current.add(phase, j + offset);
-        current.add("FIPNUM", phase, 0, j + 3*offset);
-        current.add("FIPNUM", phase, 1, j + 3*offset);
-        ++j;
+    {
+        const auto offset = 17.0;
+
+        double j = 1.0;
+        for (const auto& phase : current.phases()) {
+            initial.add(phase, j);
+            initial.add("FIPNUM", phase, 0, j + 2*offset);
+            initial.add("FIPNUM", phase, 1, j + 2*offset);
+
+            current.add(phase, j + offset);
+            current.add("FIPNUM", phase, 0, j + 3*offset);
+            current.add("FIPNUM", phase, 1, j + 3*offset);
+
+            ++j;
+        }
     }
 
     initial.add(Opm::Inplace::Phase::PressureHydroCarbonPV, 1.0);
@@ -290,6 +278,7 @@ BOOST_FIXTURE_TEST_CASE(Fip, LogNoteFixture)
     current.add("FIPNUM", Opm::Inplace::Phase::PressurePV, 1, 6.0);
     current.add("FIPNUM", Opm::Inplace::Phase::DynamicPoreVolume, 1, 8.0);
 
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.fip(current, initial, "");
     helper.fip(current, initial, "FIPNUM");
 
@@ -298,7 +287,8 @@ BOOST_FIXTURE_TEST_CASE(Fip, LogNoteFixture)
 
 BOOST_FIXTURE_TEST_CASE(FipResv, LogNoteFixture)
 {
-    const std::string reference = R"(
+    const auto reference = std::string {
+        R"(
                                                      ===================================
                                                      :  RESERVOIR VOLUMES      RB      :
  :---------:---------------:---------------:---------------:---------------:---------------:
@@ -309,29 +299,19 @@ BOOST_FIXTURE_TEST_CASE(FipResv, LogNoteFixture)
  :   FIELD :            176:             13:             19:             25:             38:
  :       1 :            176:            170:            164:            176:            346:
  ===========================================================================================
-)";
-    
-    Opm::Parser parser;
-    auto python = std::make_shared<Opm::Python>();
-    auto deck = parser.parseString(input);
-    Opm::EclipseGrid grid(10,10,3);
-    Opm::TableManager table ( deck );
-    Opm::FieldPropsManager fp( deck, Opm::Phases{true, true, true}, grid, table);
-    Opm::Runspec runspec (deck );
-    Opm::Schedule schedule(deck,  grid, fp, runspec, python);
+)"
+    };
 
-    Opm::EclipseState eclState(deck);
-    Opm::SummaryState st;
+    const auto offset = 17.0;
 
-    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     Opm::Inplace current;
-    const auto& phases = current.phases();
-    int offset = 17;
-    double j = 1.0;
-    for (const auto& phase : phases) {
-        current.add(phase, offset);
-        current.add("FIPNUM", phase, 1, j + offset);
-        ++j;
+    {
+        double j = 1.0;
+        for (const auto& phase : current.phases()) {
+            current.add(phase, offset);
+            current.add("FIPNUM", phase, 1, j + offset);
+            ++j;
+        }
     }
 
     current.add(Opm::Inplace::Phase::DynamicPoreVolume, 1.0);
@@ -340,14 +320,16 @@ BOOST_FIXTURE_TEST_CASE(FipResv, LogNoteFixture)
     current.add(Opm::Inplace::Phase::GasResVolume, 4.0);
     current.add("FIPNUM", Opm::Inplace::Phase::DynamicPoreVolume, 1, 11.0 + offset);
 
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.fipResv(current, "FIPNUM");
+
     BOOST_CHECK_EQUAL(str.str(), reference);
 }
 
-
 BOOST_FIXTURE_TEST_CASE(Injection, LogNoteFixture)
 {
-    const std::string reference = R"(=================================================== INJECTION REPORT ========================================
+    const auto reference = std::string {
+        R"(=================================================== INJECTION REPORT ========================================
 :  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :
 :  NAME  :  (I,J,K)  : MODE : MODE : MODE :    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.:
 :        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :
@@ -356,49 +338,37 @@ BOOST_FIXTURE_TEST_CASE(Injection, LogNoteFixture)
 :      G1:           :      :      :      :        5.0:        6.0:        7.0:        8.0:        :        :
 :     INJ:    1,    1:      :      :  GRAT:        9.0:       10.0:       11.0:       12.0:    13.0:    14.0:
 :--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:
-)";
-
-    Opm::Parser parser;
-    auto python = std::make_shared<Opm::Python>();
-    auto deck = parser.parseString(input);
-    Opm::EclipseGrid grid(10,10,3);
-    Opm::TableManager table ( deck );
-    Opm::FieldPropsManager fp( deck, Opm::Phases{true, true, true}, grid, table);
-    Opm::Runspec runspec (deck );
-    Opm::Schedule schedule(deck,  grid, fp, runspec, python);
-
-    Opm::EclipseState eclState(deck);
-    Opm::SummaryState st;
-    constexpr auto fields = std::array {
-        std::pair{"FOIR", 1.0},
-        std::pair{"FWIR", 2.0},
-        std::pair{"FGIR", 3.0},
-        std::pair{"FVIR", 4.0},
-        std::pair{"GOIR:G1", 5.0},
-        std::pair{"GWIR:G1", 6.0},
-        std::pair{"GGIR:G1", 7.0},
-        std::pair{"GVIR:G1", 8.0},
-        std::pair{"WOIR:INJ", 9.0},
-        std::pair{"WWIR:INJ", 10.0},
-        std::pair{"WGIR:INJ", 11.0},
-        std::pair{"WVIR:INJ", 12.0},
-        std::pair{"WBHP:INJ", 13.0},
-        std::pair{"WTHP:INJ", 14.0},
+)"
     };
-    for (const auto& p : fields) {
-        st.set(p.first, p.second);
-    }
+
+    st.set("FOIR", 1.0);
+    st.set("FWIR", 2.0);
+    st.set("FGIR", 3.0);
+    st.set("FVIR", 4.0);
+
+    st.update_group_var("G1", "GOIR", 5.0);
+    st.update_group_var("G1", "GWIR", 6.0);
+    st.update_group_var("G1", "GGIR", 7.0);
+    st.update_group_var("G1", "GVIR", 8.0);
+
+    st.update_well_var("INJ", "WOIR",  9.0);
+    st.update_well_var("INJ", "WWIR", 10.0);
+    st.update_well_var("INJ", "WGIR", 11.0);
+    st.update_well_var("INJ", "WVIR", 12.0);
+    st.update_well_var("INJ", "WBHP", 13.0);
+    st.update_well_var("INJ", "WTHP", 14.0);
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.injection(0);
-    std::string data = trimStream(str);
+
+    const auto data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
 
-
 BOOST_FIXTURE_TEST_CASE(Production, LogNoteFixture)
 {
-    const std::string reference = R"(======================================================= PRODUCTION REPORT =======================================================
+    const auto reference = std::string {
+        R"(======================================================= PRODUCTION REPORT =======================================================
 :  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :
 :  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :    CUT    :  RATIO   :   RATIO    : CON.PR.: BLK.PR.:
 :        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :
@@ -407,49 +377,35 @@ BOOST_FIXTURE_TEST_CASE(Production, LogNoteFixture)
 :      G1:           :    :        7.0:        8.0:        9.0:       10.0:     11.000:     12.00:      0.8889:        :        :
 :    PROD:   10,   10:ORAT:       13.0:       14.0:       15.0:       16.0:     17.000:     18.00:      0.9333:    19.0:    20.0:
 :--------:-----------:----:-----------:-----------:-----------:-----------:-----------:----------:------------:--------:--------:
-)";
-
-
-    Opm::Parser parser;
-    auto python = std::make_shared<Opm::Python>();
-    auto deck = parser.parseString(input);
-    Opm::EclipseGrid grid(10,10,3);
-    Opm::TableManager table ( deck );
-    Opm::FieldPropsManager fp( deck, Opm::Phases{true, true, true}, grid, table);
-    Opm::Runspec runspec (deck );
-    Opm::Schedule schedule(deck,  grid, fp, runspec, python);
-
-    Opm::EclipseState eclState(deck);
-    Opm::SummaryState st;
-    constexpr auto fields = std::array {
-        std::pair{"FOPR", 1.0},
-        std::pair{"FWPR", 2.0},
-        std::pair{"FGPR", 3.0},
-        std::pair{"FVPR", 4.0},
-        std::pair{"FWCT", 5.0},
-        std::pair{"FGOR", 6.0},
-        std::pair{"GOPR:G1", 7.0},
-        std::pair{"GWPR:G1", 8.0},
-        std::pair{"GGPR:G1", 9.0},
-        std::pair{"GVPR:G1", 10.0},
-        std::pair{"GWCT:G1", 11.0},
-        std::pair{"GGOR:G1", 12.0},
-        std::pair{"WOPR:PROD", 13.0},
-        std::pair{"WWPR:PROD", 14.0},
-        std::pair{"WGPR:PROD", 15.0},
-        std::pair{"WVPR:PROD", 16.0},
-        std::pair{"WWCT:PROD", 17.0},
-        std::pair{"WGOR:PROD", 18.0},
-        std::pair{"WBHP:PROD", 19.0},
-        std::pair{"WTHP:PROD", 20.0},
+)"
     };
-    for (const auto& p : fields) {
-        st.set(p.first, p.second);
-    }
+
+    st.set("FOPR", 1.0);
+    st.set("FWPR", 2.0);
+    st.set("FGPR", 3.0);
+    st.set("FVPR", 4.0);
+    st.set("FWCT", 5.0);
+    st.set("FGOR", 6.0);
+
+    st.update_group_var("G1", "GOPR",  7.0);
+    st.update_group_var("G1", "GWPR",  8.0);
+    st.update_group_var("G1", "GGPR",  9.0);
+    st.update_group_var("G1", "GVPR", 10.0);
+    st.update_group_var("G1", "GWCT", 11.0);
+    st.update_group_var("G1", "GGOR", 12.0);
+
+    st.update_well_var("PROD", "WOPR", 13.0);
+    st.update_well_var("PROD", "WWPR", 14.0);
+    st.update_well_var("PROD", "WGPR", 15.0);
+    st.update_well_var("PROD", "WVPR", 16.0);
+    st.update_well_var("PROD", "WWCT", 17.0);
+    st.update_well_var("PROD", "WGOR", 18.0);
+    st.update_well_var("PROD", "WBHP", 19.0);
+    st.update_well_var("PROD", "WTHP", 20.0);
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.production(0);
-    std::string data = trimStream(str);
+
+    const auto data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
-

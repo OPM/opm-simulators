@@ -48,8 +48,13 @@
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <limits>
+#include <map>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace Opm::Parameters {
 
@@ -71,12 +76,16 @@ struct EnableEsmry { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
+namespace Opm::Action {
+    class State;
+} // namespace Opm::Action
+
 namespace Opm {
+    class EclipseIO;
+    class UDQState;
+} // namespace Opm
 
-namespace Action { class State; }
-class EclipseIO;
-class UDQState;
-
+namespace Opm {
 /*!
  * \ingroup EclBlackOilSimulator
  *
@@ -481,117 +490,174 @@ public:
 
     void beginRestart()
     {
-        bool enablePCHysteresis = simulator_.problem().materialLawManager()->enablePCHysteresis();
-        bool enableNonWettingHysteresis = simulator_.problem().materialLawManager()->enableNonWettingHysteresis();
-        bool enableWettingHysteresis = simulator_.problem().materialLawManager()->enableWettingHysteresis();
-        bool oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
-        bool gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-        bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
-        bool enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
-        bool opm_rst_file = Parameters::Get<Parameters::EnableOpmRstFile>();
-        bool read_temp = enableEnergy || (opm_rst_file && enableTemperature);
-        std::vector<RestartKey> solutionKeys{
-            {"PRESSURE", UnitSystem::measure::pressure},
-            {"SWAT", UnitSystem::measure::identity, static_cast<bool>(waterActive)},
-            {"SGAS", UnitSystem::measure::identity, static_cast<bool>(gasActive)},
-            {"TEMP" , UnitSystem::measure::temperature, read_temp},
-            {"SSOLVENT" , UnitSystem::measure::identity, enableSolvent},
-            {"RS", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
-            {"RV", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
-            {"RVW", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedWater()},
-            {"SGMAX", UnitSystem::measure::identity, (enableNonWettingHysteresis && oilActive && gasActive)},
-            {"SHMAX", UnitSystem::measure::identity, (enableWettingHysteresis && oilActive && gasActive)},
-            {"SOMAX", UnitSystem::measure::identity, (enableNonWettingHysteresis && oilActive && waterActive) || simulator_.problem().vapparsActive(simulator_.episodeIndex())},
-            {"SOMIN", UnitSystem::measure::identity, (enablePCHysteresis && oilActive && gasActive)},
-            {"SWHY1", UnitSystem::measure::identity, (enablePCHysteresis && oilActive && waterActive)},
-            {"SWMAX", UnitSystem::measure::identity, (enableWettingHysteresis && oilActive && waterActive)},
-            {"PPCW", UnitSystem::measure::pressure, enableSwatinit}
-        };
+        const auto enablePCHysteresis = simulator_.problem().materialLawManager()->enablePCHysteresis();
+        const auto enableNonWettingHysteresis = simulator_.problem().materialLawManager()->enableNonWettingHysteresis();
+        const auto enableWettingHysteresis = simulator_.problem().materialLawManager()->enableWettingHysteresis();
+        const auto oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        const auto gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        const auto waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+        const auto enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
 
-        const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
-        std::vector<RestartKey> extraKeys = {{"OPMEXTRA", UnitSystem::measure::identity, false},
-                                             {"THRESHPR", UnitSystem::measure::pressure, inputThpres.active()}};
+        std::vector<RestartKey> solutionKeys {
+            {"PRESSURE", UnitSystem::measure::pressure},
+            {"SWAT",     UnitSystem::measure::identity,    waterActive},
+            {"SGAS",     UnitSystem::measure::identity,    gasActive},
+            {"TEMP",     UnitSystem::measure::temperature, enableEnergy},
+            {"SSOLVENT", UnitSystem::measure::identity,    enableSolvent},
+
+            {"RS",  UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
+            {"RV",  UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
+            {"RVW", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedWater()},
+            {"RSW", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGasInWater()},
+
+            {"SGMAX", UnitSystem::measure::identity, enableNonWettingHysteresis && oilActive && gasActive},
+            {"SHMAX", UnitSystem::measure::identity, enableWettingHysteresis && oilActive && gasActive},
+
+            {"SOMAX", UnitSystem::measure::identity,
+             (enableNonWettingHysteresis && oilActive && waterActive)
+             || simulator_.problem().vapparsActive(simulator_.episodeIndex())},
+
+            {"SOMIN", UnitSystem::measure::identity, enablePCHysteresis && oilActive && gasActive},
+            {"SWHY1", UnitSystem::measure::identity, enablePCHysteresis && oilActive && waterActive},
+            {"SWMAX", UnitSystem::measure::identity, enableWettingHysteresis && oilActive && waterActive},
+
+            {"PPCW", UnitSystem::measure::pressure, enableSwatinit},
+        };
 
         {
             const auto& tracers = simulator_.vanguard().eclState().tracer();
+
             for (const auto& tracer : tracers) {
-                bool enableSolTracer = (tracer.phase == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
-                                       (tracer.phase == Phase::OIL && FluidSystem::enableVaporizedOil());
+                const auto enableSolTracer =
+                    ((tracer.phase == Phase::GAS) && FluidSystem::enableDissolvedGas()) ||
+                    ((tracer.phase == Phase::OIL) && FluidSystem::enableVaporizedOil());
+
                 solutionKeys.emplace_back(tracer.fname(), UnitSystem::measure::identity, true);
                 solutionKeys.emplace_back(tracer.sname(), UnitSystem::measure::identity, enableSolTracer);
             }
         }
 
-        // The episodeIndex is rewined one back before beginRestart is called
-        // and can not be used here.
-        // We just ask the initconfig directly to be sure that we use the correct
-        // index.
-        const auto& initconfig = simulator_.vanguard().eclState().getInitConfig();
-        int restartStepIdx = initconfig.getRestartStep();
+        const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
+        const std::vector<RestartKey> extraKeys {
+            {"OPMEXTRA", UnitSystem::measure::identity, false},
+            {"THRESHPR", UnitSystem::measure::pressure, inputThpres.active()},
+        };
 
-        const auto& gridView = simulator_.vanguard().gridView();
-        unsigned numElements = gridView.size(/*codim=*/0);
-        outputModule_->allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false, /*isRestart*/ true);
+        const auto& gridView = this->simulator_.vanguard().gridView();
+        const auto numElements = gridView.size(/*codim=*/0);
 
         {
-            SummaryState& summaryState = simulator_.vanguard().summaryState();
-            Action::State& actionState = simulator_.vanguard().actionState();
-            auto restartValues = loadParallelRestart(this->eclIO_.get(), actionState, summaryState, solutionKeys, extraKeys,
-                                                     gridView.grid().comm());
-            for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                outputModule_->setRestart(restartValues.solution, elemIdx, globalIdx);
+            // The episodeIndex is rewound one step back before calling
+            // beginRestart() and cannot be used here.  We just ask the
+            // initconfig directly to be sure that we use the correct index.
+            const auto restartStepIdx = this->simulator_.vanguard()
+                .eclState().getInitConfig().getRestartStep();
+
+            this->outputModule_->allocBuffers(numElements,
+                                              restartStepIdx,
+                                              /*isSubStep = */false,
+                                              /*log = */      false,
+                                              /*isRestart = */true);
+        }
+
+        {
+            const auto restartValues =
+                loadParallelRestart(this->eclIO_.get(),
+                                    this->actionState(),
+                                    this->summaryState(),
+                                    solutionKeys, extraKeys, gridView.comm());
+
+            for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
+                const auto globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                this->outputModule_->setRestart(restartValues.solution, elemIdx, globalIdx);
             }
 
             auto& tracer_model = simulator_.problem().tracerModel();
-            for (int tracer_index = 0; tracer_index < tracer_model.numTracers(); tracer_index++) {
+            for (int tracer_index = 0; tracer_index < tracer_model.numTracers(); ++tracer_index) {
                 // Free tracers
-                const auto& free_tracer_name = tracer_model.fname(tracer_index);
-                const auto& free_tracer_solution = restartValues.solution.template data<double>(free_tracer_name);
-                for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                    unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                    tracer_model.setFreeTracerConcentration(tracer_index, globalIdx, free_tracer_solution[globalIdx]);
+                {
+                    const auto& free_tracer_name = tracer_model.fname(tracer_index);
+                    const auto& free_tracer_solution = restartValues.solution
+                        .template data<double>(free_tracer_name);
+
+                    for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
+                        const auto globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                        tracer_model.setFreeTracerConcentration
+                            (tracer_index, elemIdx, free_tracer_solution[globalIdx]);
+                    }
                 }
+
                 // Solution tracer (only if DISGAS/VAPOIL are active for gas/oil tracers)
                 if ((tracer_model.phase(tracer_index) == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
-                    (tracer_model.phase(tracer_index) == Phase::OIL && FluidSystem::enableVaporizedOil())) {
-                        tracer_model.setEnableSolTracers(tracer_index, true);
-                        const auto& sol_tracer_name = tracer_model.sname(tracer_index);
-                        const auto& sol_tracer_solution = restartValues.solution.template data<double>(sol_tracer_name);
-                        for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                            unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                            tracer_model.setSolTracerConcentration(tracer_index, globalIdx, sol_tracer_solution[globalIdx]);
-                        }
+                    (tracer_model.phase(tracer_index) == Phase::OIL && FluidSystem::enableVaporizedOil()))
+                {
+                    tracer_model.setEnableSolTracers(tracer_index, true);
+
+                    const auto& sol_tracer_name = tracer_model.sname(tracer_index);
+                    const auto& sol_tracer_solution = restartValues.solution
+                        .template data<double>(sol_tracer_name);
+
+                    for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
+                        const auto globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                        tracer_model.setSolTracerConcentration
+                            (tracer_index, elemIdx, sol_tracer_solution[globalIdx]);
+                    }
                 }
                 else {
                     tracer_model.setEnableSolTracers(tracer_index, false);
-                    for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                            unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                            tracer_model.setSolTracerConcentration(tracer_index, globalIdx, 0.0);
-                        }
+
+                    for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
+                        tracer_model.setSolTracerConcentration(tracer_index, elemIdx, 0.0);
+                    }
                 }
             }
 
             if (inputThpres.active()) {
-                Simulator& mutableSimulator = const_cast<Simulator&>(simulator_);
-                auto& thpres = mutableSimulator.problem().thresholdPressure();
-                const auto& thpresValues = restartValues.getExtra("THRESHPR");
-                thpres.setFromRestart(thpresValues);
+                const_cast<Simulator&>(this->simulator_)
+                    .problem().thresholdPressure()
+                    .setFromRestart(restartValues.getExtra("THRESHPR"));
             }
+
             restartTimeStepSize_ = restartValues.getExtra("OPMEXTRA")[0];
-            if (restartTimeStepSize_ <= 0)
+            if (restartTimeStepSize_ <= 0) {
                 restartTimeStepSize_ = std::numeric_limits<double>::max();
+            }
 
-            // initialize the well model from restart values
-            simulator_.problem().wellModel().initFromRestartFile(restartValues);
+            // Initialize the well model from restart values
+            this->simulator_.problem().wellModel()
+                .initFromRestartFile(restartValues);
 
-            if (!restartValues.aquifer.empty())
-                simulator_.problem().mutableAquiferModel().initFromRestart(restartValues.aquifer);
+            if (!restartValues.aquifer.empty()) {
+                this->simulator_.problem().mutableAquiferModel()
+                    .initFromRestart(restartValues.aquifer);
+            }
         }
     }
 
     void endRestart()
-    {}
+    {
+        // We need these objects to satisfy the interface requirements of
+        // member function calc_inplace(), but the objects are otherwise
+        // unused and intentionally so.
+        auto miscSummaryData = std::map<std::string, double>{};
+        auto regionData = std::map<std::string, std::vector<double>>{};
+
+        // Note: calc_inplace() *also* assigns the output module's
+        // "initialInplace_" data member.  This is, semantically speaking,
+        // very wrong, as the run's intial volumes then correspond to the
+        // volumes at the restart time instead of the start of the base run.
+        // Nevertheless, this is how Flow has "always" done it.
+        //
+        // See GenericOutputBlackoilModule::accumulateRegionSums() for
+        // additional comments.
+        auto inplace = this->outputModule_
+            ->calc_inplace(miscSummaryData, regionData,
+                           this->simulator_.gridView().comm());
+
+        if (this->collectOnIORank_.isIORank()) {
+            this->inplace_ = std::move(inplace);
+        }
+    }
 
     const OutputBlackOilModule<TypeTag>& outputModule() const
     { return *outputModule_; }

@@ -38,6 +38,7 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Water;
     using Scalar = typename FluidSystem::Scalar;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
+    using ModelParameters = typename WellInterfaceFluidSystem<FluidSystem>::ModelParameters;
 
     int flowPhaseToModelCompIdx(const int phaseIdx) const;
     int modelCompIdxToFlowCompIdx(const unsigned compIdx) const;
@@ -58,6 +59,7 @@ protected:
     WellInterfaceIndices(const Well& well,
                          const ParallelWellInfo<Scalar>& parallel_well_info,
                          const int time_step,
+                         const ModelParameters& param,
                          const typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType& rate_converter,
                          const int pvtRegionIdx,
                          const int num_components,

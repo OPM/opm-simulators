@@ -118,11 +118,10 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<Scalar>& depth_arg,
          const Scalar gravity_arg,
-         const int num_cells,
          const std::vector< Scalar >& B_avg,
          const bool changed_to_open_this_step)
     {
-        Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells, B_avg, changed_to_open_this_step);
+        Base::init(phase_usage_arg, depth_arg, gravity_arg, B_avg, changed_to_open_this_step);
 
         // TODO: for StandardWell, we need to update the perf depth here using depth_arg.
         // for MultisegmentWell, it is much more complicated.
@@ -134,7 +133,7 @@ namespace Opm
 
         // \Note: we do not update the depth here. And it looks like for now, we only have the option to use
         // specified perforation depth
-        this->initMatrixAndVectors(num_cells);
+        this->initMatrixAndVectors();
 
         // calculate the depth difference between the perforations and the perforated grid block
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
@@ -394,6 +393,8 @@ namespace Opm
         // creating a copy of the well itself, to avoid messing up the explicit information
         // during this copy, the only information not copied properly is the well controls
         MultisegmentWell<TypeTag> well_copy(*this);
+        well_copy.resetDampening();
+
         well_copy.debug_cost_counter_ = 0;
 
         // store a copy of the well state, we don't want to update the real well state
@@ -1140,7 +1141,7 @@ namespace Opm
             const Scalar perf_seg_press_diff = this->gravity() * this->segments_.density(seg).value()
                                                                * this->segments_.perforation_depth_diff(perf);
             const Scalar perf_press = segment_pres + perf_seg_press_diff;
-            const Scalar multiplier = this->getInjMult(perf, segment_pres, perf_press);
+            const Scalar multiplier = this->getInjMult(perf, segment_pres, perf_press, deferred_logger);
             for (std::size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= multiplier;
             }
@@ -1904,7 +1905,7 @@ namespace Opm
                     this->connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
                     MultisegmentWellAssemble(*this).
-                        assemblePerforationEq(seg, cell_idx, comp_idx, cq_s_effective, this->linSys_);
+                        assemblePerforationEq(seg, perf, comp_idx, cq_s_effective, this->linSys_);
                 }
             }
 
@@ -2236,7 +2237,7 @@ namespace Opm
         constexpr int num_eq = MSWEval::numWellEq;
         std::array<Scalar, num_eq> tmp;
         for (int ii = 0; ii < num_seg; ++ii) {
-            const auto start = it + num_seg * num_eq;
+            const auto start = it + ii * num_eq;
             std::copy(start, start + num_eq, tmp.begin());
             this->primary_variables_.setValue(ii, tmp);
         }

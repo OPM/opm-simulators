@@ -55,8 +55,7 @@ MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well)
 
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
-init(const int num_cells,
-     const int numPerfs,
+init(const int numPerfs,
      const std::vector<int>& cells,
      const std::vector<std::vector<int>>& segment_inlets,
      const std::vector<std::vector<int>>& perforations)
@@ -78,8 +77,8 @@ init(const int num_cells,
         }
         duneD_.setSize(well_.numberOfSegments(), well_.numberOfSegments(), nnz_d);
     }
-    duneB_.setSize(well_.numberOfSegments(), num_cells, numPerfs);
-    duneC_.setSize(well_.numberOfSegments(), num_cells, numPerfs);
+    duneB_.setSize(well_.numberOfSegments(), numPerfs, numPerfs);
+    duneC_.setSize(well_.numberOfSegments(), numPerfs, numPerfs);
 
     // we need to add the off diagonal ones
     for (auto row = duneD_.createbegin(),
@@ -108,8 +107,7 @@ init(const int num_cells,
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
@@ -118,12 +116,14 @@ init(const int num_cells,
               end = duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
     resWell_.resize(well_.numberOfSegments());
+
+    // Store the global index of well perforated cells
+    cells_ = cells;
 }
 
 template<class Scalar, int numWellEq, int numEq>
@@ -299,11 +299,12 @@ extract(SparseMatrixAdapter& jacobian) const
     for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
         for (auto colC = duneC_[rowC].begin(),
                   endC = duneC_[rowC].end(); colC != endC; ++colC) {
-            const auto row_index = colC.index();
+            // map the well perforated cell index to global cell index
+            const auto row_index = cells_[colC.index()];
             for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
                 for (auto colB = duneB_[rowB].begin(),
                           endB = duneB_[rowB].end(); colB != endB; ++colB) {
-                    const auto col_index = colB.index();
+                    const auto col_index = cells_[colB.index()];
                     OffDiagMatrixBlockWellType tmp1;
                     detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
                     typename SparseMatrixAdapter::MatrixBlock tmp2;
@@ -329,12 +330,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     // Add the pressure contribution to the cpr system for the well
 
     // Add for coupling from well to reservoir
-    const int welldof_ind = duneC_.M() + well.indexOfWell();
+    const int number_cells = weights.size();
+    const int welldof_ind = number_cells + well.indexOfWell();
     if (!well.isPressureControlled(well_state)) {
         for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(),
                       endC = duneC_[rowC].end(); colC != endC; ++colC) {
-                const auto row_index = colC.index();
+                // map the well perforated cell index to global cell index
+                const auto row_index = cells_[colC.index()];
                 const auto& bw = weights[row_index];
                 double matel = 0.0;
 
@@ -354,7 +357,8 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
             for (auto colB = duneB_[rowB].begin(),
                       endB = duneB_[rowB].end(); colB != endB; ++colB) {
-                const auto col_index = colB.index();
+                // map the well perforated cell index to global cell index
+                const auto col_index = cells_[colB.index()];
                 const auto& bw = weights[col_index];
                 well_weight += bw;
                 num_perfs += 1;
@@ -370,7 +374,8 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             const auto& bw = well_weight;
             for (auto colB = duneB_[rowB].begin(),
                       endB = duneB_[rowB].end(); colB != endB; ++colB) {
-                const auto col_index = colB.index();
+                // map the well perforated cell index to global cell index
+                const auto col_index = cells_[colB.index()];
                 double matel = 0.0;
                 for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i] *(*colB)[i][pressureVarIndex];

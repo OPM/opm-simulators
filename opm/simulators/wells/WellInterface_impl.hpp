@@ -40,6 +40,7 @@
 
 #include <dune/common/version.hh>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <utility>
@@ -65,13 +66,13 @@ namespace Opm
       : WellInterfaceIndices<FluidSystem,Indices>(well,
                                                   pw_info,
                                                   time_step,
+                                                  param,
                                                   rate_converter,
                                                   pvtRegionIdx,
                                                   num_components,
                                                   num_phases,
                                                   index_of_well,
                                                   perf_data)
-      , param_(param)
     {
         connectionRates_.resize(this->number_of_perforations_);
 
@@ -92,7 +93,6 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<Scalar>& /* depth_arg */,
          const Scalar gravity_arg,
-         const int /* num_cells */,
          const std::vector<Scalar>& B_avg,
          const bool changed_to_open_this_step)
     {
@@ -212,17 +212,17 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
+        bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
 
         if (oscillating) {
             // only output frist time
-            bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == param_.max_number_of_well_switches_;
+            bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
             if (output) {
                 std::ostringstream ss;
                 ss << "    The control mode for well " << this->name()
                    << " is oscillating\n"
                    << "    We don't allow for more than "
-                   << param_.max_number_of_well_switches_
+                   << this->param_.max_number_of_well_switches_
                    << " switches. The control is kept at " << from;
                 deferred_logger.info(ss.str());
                 // add one more to avoid outputting the same info again
@@ -287,7 +287,7 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
+        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
 
         if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
@@ -309,7 +309,7 @@ namespace Opm
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                     changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                    if (hasGroupControl && param_.check_group_constraints_inner_well_iterations_) {
+                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
                         changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
                     }
 
@@ -711,7 +711,7 @@ namespace Opm
             deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
             return true;
         }
-        const int max_iter = param_.max_welleq_iter_;
+        const int max_iter = this->param_.max_welleq_iter_;
         deferred_logger.debug("WellTest: Well equation for well " + this->name() + " failed converging in "
                               + std::to_string(max_iter) + " iterations");
         well_state = well_state0;
@@ -767,7 +767,7 @@ namespace Opm
         }
 
         if (!converged) {
-            const int max_iter = param_.max_welleq_iter_;
+            const int max_iter = this->param_.max_welleq_iter_;
             deferred_logger.debug("Compute initial well solution for well " + this->name() + ". Failed to converge in "
                                   + std::to_string(max_iter) + " iterations");
             well_state = well_state0;
@@ -821,18 +821,50 @@ namespace Opm
     {
         const bool old_well_operable = this->operability_status_.isOperableAndSolvable();
 
-        if (param_.check_well_operability_iter_)
+        if (this->param_.check_well_operability_iter_)
             checkWellOperability(simulator, well_state, deferred_logger);
 
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = simulator.model().newtonMethod().numIterations();
-        if (iteration_idx < param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
+        if (iteration_idx < this->param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
+            const auto& ws = well_state.well(this->indexOfWell());
+            const auto pmode_orig = ws.production_cmode;
+            const auto imode_orig = ws.injection_cmode;
+
+            const bool nonzero_rate_original =
+                std::any_of(ws.surface_rates.begin(),
+                            ws.surface_rates.begin() + well_state.numPhases(),
+                            [](Scalar rate) { return rate != Scalar(0.0); });
+
             this->operability_status_.solvable = true;
             bool converged = this->iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
 
-            // unsolvable wells are treated as not operable and will not be solved for in this iteration.
-            if (!converged) {
-                if (param_.shut_unsolvable_wells_)
+            if (converged) {
+                const bool zero_target = this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
+                if (this->wellIsStopped() && !zero_target && nonzero_rate_original) {
+                    // Well had non-zero rate, but was stopped during local well-solve. We re-open the well 
+                    // for the next global iteration, but if the zero rate persists, it will be stopped.
+                    // This logic is introduced to prevent/ameliorate stopped/revived oscillations  
+                    this->operability_status_.resetOperability();
+                    this->openWell();
+                    deferred_logger.debug("    " + this->name() + " is re-opened after being stopped during local solve");
+                }
+                // Add debug info for switched controls
+                if (ws.production_cmode != pmode_orig || ws.injection_cmode != imode_orig) {
+                    std::string from,to;
+                    if (this->isInjector()) {
+                        from = WellInjectorCMode2String(imode_orig);
+                        to = WellInjectorCMode2String(ws.injection_cmode);
+                    } else {
+                        from = WellProducerCMode2String(pmode_orig);
+                        to = WellProducerCMode2String(ws.production_cmode);
+                    }
+                    deferred_logger.debug("    " + this->name() + " switched from " + from + " to " + to + " during local solve");
+                    }
+
+            } else {
+                // unsolvable wells are treated as not operable and will not be solved for in this iteration.
+                if (this->param_.shut_unsolvable_wells_)
                     this->operability_status_.solvable = false;
             }
         }
@@ -912,7 +944,7 @@ namespace Opm
                          DeferredLogger& deferred_logger)
     {
 
-        if (!param_.check_well_operability_) {
+        if (!this->param_.check_well_operability_) {
             return;
         }
 
