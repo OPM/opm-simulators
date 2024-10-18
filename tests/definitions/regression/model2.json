@@ -1,0 +1,207 @@
+{
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2",
+    "test_cases": [
+        {
+            "casename": "base_model2",
+            "filename": "0_BASE_MODEL2"
+        },
+        {
+            "casename": "base_model2_let",
+            "filename": "0_BASE_MODEL2_LET"
+        },
+        {
+            "casename": "base_model2_welpi",
+            "filename": "0B_WELPI_MODEL2",
+	    "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "0a1_grpctl_stw_model2",
+            "filename": "0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_STW"
+        },
+        {
+            "casename": "0a1_grpctl_msw_model2",
+            "filename": "0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_MSW",
+            "test_args": "--solver-max-time-step-in-days=3"
+        },
+        {
+            "casename": "0a2_grpctl_stw_model2",
+            "filename": "0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_STW"
+        },
+        {
+            "casename": "0a2_grpctl_msw_model2",
+            "filename": "0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_MSW",
+            "test_args": "--solver-max-time-step-in-days=3"
+        },
+        {
+            "casename": "0a3_grpctl_msw_model2",
+            "filename": "0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_MSW",
+            "test_args": "--solver-max-time-step-in-days=3"
+        },
+        {
+            "casename": "0a3_grpctl_stw_model2",
+            "filename": "0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_STW"
+        },
+        {
+            "casename": "0a4_grpctl_msw_model2",
+            "filename": "0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_MSW",
+            "test_args": "--solver-max-time-step-in-days=3"
+        },
+        {
+            "casename": "0a4_grpctl_stw_model2",
+            "filename": "0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_STW"
+        },
+        {
+            "casename": "9_1a_grpctl_stw_model2",
+            "filename": "9_1A_DEPL_MAX_RATE_MIN_BHP_STW"
+        },
+        {
+            "casename": "9_1a_grpctl_msw_model2",
+            "filename": "9_1A_DEPL_MAX_RATE_MIN_BHP_MSW"
+        },
+        {
+            "casename": "9_1b_grpctl_stw_model2",
+            "filename": "9_1B_DEPL_MAX_RATE_MIN_THP_STW"
+        },
+        {
+            "casename": "9_1b_grpctl_msw_model2",
+            "filename": "9_1B_DEPL_MAX_RATE_MIN_THP_MSW"
+        },
+        {
+            "casename": "9_2a_grpctl_stw_model2",
+            "filename": "9_2A_DEPL_GCONPROD_1L_STW"
+        },
+        {
+            "casename": "9_2a_grpctl_msw_model2",
+            "filename": "9_2A_DEPL_GCONPROD_1L_MSW"
+        },
+        {
+            "casename": "9_2b_grpctl_msw_model2",
+            "filename": "9_2B_DEPL_GCONPROD_2L_MSW"
+        },
+        {
+            "casename": "9_2b_grpctl_stw_model2",
+            "filename": "9_2B_DEPL_GCONPROD_2L_STW"
+        },
+        {
+            "casename": "9_3a_grpctl_stw_model2",
+            "filename": "9_3A_GINJ_REIN-G_STW"
+        },
+        {
+            "casename": "9_3a_grpctl_msw_model2",
+            "filename": "9_3A_GINJ_REIN-G_MSW"
+        },
+        {
+            "casename": "9_3b_grpctl_stw_model2",
+            "filename": "9_3B_GINJ_GAS_EXPORT_STW"
+        },
+        {
+            "casename": "9_3b_grpctl_msw_model2",
+            "filename": "9_3B_GINJ_GAS_EXPORT_MSW"
+        },
+        {
+            "casename": "9_3c_grpctl_stw_model2",
+            "filename": "9_3C_GINJ_GAS_GCONSUMP_STW"
+        },
+        {
+            "casename": "9_3c_grpctl_msw_model2",
+            "filename": "9_3C_GINJ_GAS_GCONSUMP_MSW"
+        },
+        {
+            "casename": "9_3d_grpctl_stw_model2",
+            "filename": "9_3D_GINJ_GAS_MAX_EXPORT_STW"
+        },
+        {
+            "casename": "9_3d_grpctl_msw_model2",
+            "filename": "9_3D_GINJ_GAS_MAX_EXPORT_MSW"
+        },
+        {
+            "casename": "9_3e_grpctl_stw_model2",
+            "filename": "9_3E_GAS_MIN_EXPORT_STW"
+        },
+        {
+            "casename": "9_3e_grpctl_msw_model2",
+            "filename": "9_3E_GAS_MIN_EXPORT_MSW"
+        },
+        {
+            "casename": "9_4a_grpctl_stw_model2",
+            "filename": "9_4A_WINJ_MAXWRATES_MAXBHP_GCONPROD_1L_STW"
+        },
+        {
+            "casename": "9_4a_grpctl_msw_model2",
+            "filename": "9_4A_WINJ_MAXWRATES_MAXBHP_GCONPROD_1L_MSW"
+        },
+        {
+            "casename": "9_4b_grpctl_stw_model2",
+            "filename": "9_4B_WINJ_VREP-W_STW"
+        },
+        {
+            "casename": "9_4b_grpctl_msw_model2",
+            "filename": "9_4B_WINJ_VREP-W_MSW"
+        },
+        {
+            "casename": "9_4c_grpctl_stw_model2",
+            "filename": "9_4C_WINJ_GINJ_VREP-W_REIN-G_STW"
+        },
+        {
+            "casename": "9_4c_grpctl_msw_model2",
+            "filename": "9_4C_WINJ_GINJ_VREP-W_REIN-G_MSW"
+        },
+        {
+            "casename": "9_4d_grpctl_stw_model2",
+            "filename": "9_4D_WINJ_GINJ_GAS_EXPORT_STW"
+        },
+        {
+            "casename": "9_4d_grpctl_msw_model2",
+            "filename": "9_4D_WINJ_GINJ_GAS_EXPORT_MSW"
+        },
+        {
+            "casename": "editnnc_model2",
+            "filename": "9_EDITNNC_MODEL2"
+        },
+        {
+            "casename": "endscale_model2",
+            "filename": "6_ENDSCALE_MODEL2"
+        },
+        {
+            "casename": "hysteresis_model2",
+            "filename": "7_HYSTERESIS_MODEL2"
+        },
+        {
+            "casename": "multflt_model2",
+            "filename": "3_MULTFLT_MODEL2",
+	    "test_args": "--solver-max-time-step-in-days=10"
+        },
+        {
+            "casename": "multflt_sched_model2",
+            "filename": "3_A_MPI_MULTFLT_SCHED_MODEL2"
+        },
+        {
+            "casename": "multiply_tranxyz_model2",
+            "filename": "8_MULTIPLY_TRANXYZ_MODEL2"
+        },
+        {
+            "casename": "multpvv_model2",
+            "filename": "4_MINPVV_MODEL2",
+	    "test_args": "--solver-max-time-step-in-days=10"
+        },
+        {
+            "casename": "multregt_model2",
+            "filename": "1_MULTREGT_MODEL2"
+        },
+        {
+            "casename": "multxyz_model2",
+            "filename": "2_MULTXYZ_MODEL2"
+        },
+        {
+            "casename": "swatinit_model2",
+            "filename": "5_SWATINIT_MODEL2"
+        },
+        {
+            "casename": "fbhpdef_model2",
+            "filename": "0C_BASE_FBHPDEF"
+        }
+    ]
+}

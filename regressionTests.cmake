@@ -353,96 +353,6 @@ add_test_compareECLFiles(CASENAME faults_model_1
                          DIR model1
                          TEST_ARGS --solver-max-time-step-in-days=5.0)
 
-add_test_compareECLFiles(CASENAME base_model2
-                         FILENAME 0_BASE_MODEL2
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME base_model2_welpi
-                         FILENAME 0B_WELPI_MODEL2
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME base_model2_let
-                         FILENAME 0_BASE_MODEL2_LET
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2
-                         TEST_ARGS)
-
-add_test_compareECLFiles(CASENAME 0a1_grpctl_stw_model2
-                         FILENAME 0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 0a1_grpctl_msw_model2
-                         FILENAME 0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2
-                         TEST_ARGS --solver-max-time-step-in-days=3)
-
-add_test_compareECLFiles(CASENAME 0a2_grpctl_stw_model2
-                         FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 0a2_grpctl_msw_model2
-                         FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2
-                         TEST_ARGS --solver-max-time-step-in-days=3)
-
-add_test_compareECLFiles(CASENAME 0a3_grpctl_stw_model2
-                         FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 0a3_grpctl_msw_model2
-                         FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2
-                         TEST_ARGS --solver-max-time-step-in-days=3)
-
-add_test_compareECLFiles(CASENAME 0a4_grpctl_stw_model2
-                         FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 0a4_grpctl_msw_model2
-                         FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2
-                         TEST_ARGS --solver-max-time-step-in-days=3)
-
-add_test_compareECLFiles(CASENAME multregt_model2
-                         FILENAME 1_MULTREGT_MODEL2
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
 add_test_compareECLFiles(CASENAME udq_actionx
                          FILENAME UDQ_ACTIONX
                          SIMULATOR flow
@@ -750,260 +660,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            DIR udq_actionx
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
-
-add_test_compareECLFiles(CASENAME multxyz_model2
-			  FILENAME 2_MULTXYZ_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2)
-
-add_test_compareECLFiles(CASENAME multflt_model2
-			  FILENAME 3_MULTFLT_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2
-			  TEST_ARGS --solver-max-time-step-in-days=10)
-
-add_test_compareECLFiles(CASENAME multflt_sched_model2
-			  FILENAME 3_A_MPI_MULTFLT_SCHED_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2)
-
-add_test_compareECLFiles(CASENAME multpvv_model2
-			  FILENAME 4_MINPVV_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2
-			  TEST_ARGS --solver-max-time-step-in-days=10)
-
-add_test_compareECLFiles(CASENAME swatinit_model2
-			  FILENAME 5_SWATINIT_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2)
-
-add_test_compareECLFiles(CASENAME endscale_model2
-			  FILENAME 6_ENDSCALE_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2)
-
-add_test_compareECLFiles(CASENAME hysteresis_model2
-			  FILENAME 7_HYSTERESIS_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2)
-
-add_test_compareECLFiles(CASENAME multiply_tranxyz_model2
-			  FILENAME 8_MULTIPLY_TRANXYZ_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2)
-
-add_test_compareECLFiles(CASENAME editnnc_model2
-			  FILENAME 9_EDITNNC_MODEL2
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2)
-
-add_test_compareECLFiles(CASENAME fbhpdef_model2
-			  FILENAME 0C_BASE_FBHPDEF
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol}
-			  DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_1a_grpctl_stw_model2
-                         FILENAME 9_1A_DEPL_MAX_RATE_MIN_BHP_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_1a_grpctl_msw_model2
-                         FILENAME 9_1A_DEPL_MAX_RATE_MIN_BHP_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_1b_grpctl_stw_model2
-                         FILENAME 9_1B_DEPL_MAX_RATE_MIN_THP_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_1b_grpctl_msw_model2
-                         FILENAME 9_1B_DEPL_MAX_RATE_MIN_THP_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_2a_grpctl_stw_model2
-                         FILENAME 9_2A_DEPL_GCONPROD_1L_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_2a_grpctl_msw_model2
-                         FILENAME 9_2A_DEPL_GCONPROD_1L_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_2b_grpctl_stw_model2
-                         FILENAME 9_2B_DEPL_GCONPROD_2L_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_2b_grpctl_msw_model2
-                         FILENAME 9_2B_DEPL_GCONPROD_2L_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3a_grpctl_stw_model2
-                         FILENAME 9_3A_GINJ_REIN-G_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3a_grpctl_msw_model2
-                         FILENAME 9_3A_GINJ_REIN-G_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3b_grpctl_stw_model2
-                         FILENAME 9_3B_GINJ_GAS_EXPORT_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3b_grpctl_msw_model2
-                         FILENAME 9_3B_GINJ_GAS_EXPORT_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3c_grpctl_stw_model2
-                         FILENAME 9_3C_GINJ_GAS_GCONSUMP_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3c_grpctl_msw_model2
-                         FILENAME 9_3C_GINJ_GAS_GCONSUMP_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3d_grpctl_stw_model2
-                         FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3d_grpctl_msw_model2
-                         FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3e_grpctl_stw_model2
-                         FILENAME 9_3E_GAS_MIN_EXPORT_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_3e_grpctl_msw_model2
-                         FILENAME 9_3E_GAS_MIN_EXPORT_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_4a_grpctl_stw_model2
-                         FILENAME 9_4A_WINJ_MAXWRATES_MAXBHP_GCONPROD_1L_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_4a_grpctl_msw_model2
-                         FILENAME 9_4A_WINJ_MAXWRATES_MAXBHP_GCONPROD_1L_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_4b_grpctl_stw_model2
-                         FILENAME 9_4B_WINJ_VREP-W_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_4b_grpctl_msw_model2
-                         FILENAME 9_4B_WINJ_VREP-W_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_4c_grpctl_stw_model2
-                         FILENAME 9_4C_WINJ_GINJ_VREP-W_REIN-G_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_4c_grpctl_msw_model2
-                         FILENAME 9_4C_WINJ_GINJ_VREP-W_REIN-G_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_4d_grpctl_stw_model2
-                         FILENAME 9_4D_WINJ_GINJ_GAS_EXPORT_STW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
-
-add_test_compareECLFiles(CASENAME 9_4d_grpctl_msw_model2
-                         FILENAME 9_4D_WINJ_GINJ_GAS_EXPORT_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model2)
 
 add_test_compareECLFiles(CASENAME model4_udq_group
                          FILENAME MOD4_UDQ_ACTIONX
@@ -1316,48 +972,6 @@ add_test_compareECLFiles(CASENAME spe1case2_krnum
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
-add_test_compareECLFiles(CASENAME krnum_02x
-                         FILENAME KRNUM-02X
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_02y
-                         FILENAME KRNUM-02Y
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_02z
-                         FILENAME KRNUM-02Z
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03x
-                         FILENAME KRNUM-03X
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03y
-                         FILENAME KRNUM-03Y
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03z
-                         FILENAME KRNUM-03Z
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
 add_test_compareECLFiles(CASENAME model_field_gridunit_cm
                          FILENAME M_FIELD_GRID_CM
                          SIMULATOR flow
@@ -1530,4 +1144,24 @@ if(BUILD_FLOW_FLOAT_VARIANTS)
                            REL_TOL ${rel_tol}
                            DIR spe1
                            TEST_ARGS --tolerance-mb=1e-6)
+endif()
+
+# Add tests from json file
+function(AddJsonRegressionTests json_file)
+  message(STATUS "Adding regression tests from ${json_file}")
+  file(READ ${json_file} JSON_STRING)
+  parse_json_common_params()
+  string(JSON size LENGTH ${test_cases})
+  math(EXPR COUNT "${size}-1")
+  foreach(idx RANGE ${COUNT})
+    parse_json_test_definition(${idx})
+    cmake_parse_arguments(CURTEST "$" "CASENAME" "" ${PARAMS})
+    message(STATUS "  - ${CURTEST_CASENAME}")
+    add_test_compareECLFiles(${PARAMS})
+  endforeach()
+endfunction()
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
+  AddJsonRegressionTests("tests/definitions/regression/krnum.json")
+  AddJsonRegressionTests("tests/definitions/regression/model2.json")
 endif()
