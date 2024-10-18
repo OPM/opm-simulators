@@ -30,61 +30,14 @@
 
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
+#include <flowexperimental/comp/EmptyModel.hpp>
+
 // // the current code use eclnewtonmethod adding other conditions to proceed_ should do the trick for KA
 // // adding linearshe sould be chaning the update_ function in the same class with condition that the error is reduced.
 // the trick is to be able to recalculate the residual from here.
 // unsure where the timestepping is done from suggestedtime??
 // suggestTimeStep is taken from newton solver in problem.limitTimestep
 namespace Opm {
-
-template<typename TypeTag>
-class EmptyModel : public BaseAuxiliaryModule<TypeTag>
-{
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
-    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
-
-public:
-    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    EmptyModel(Simulator& /*simulator*/)
-    {
-    }
-
-    void init(){}
-    template<class Something>
-    void init(Something /*A*/){}
-    void prepareTracerBatches(){};
-    using NeighborSet = std::set<unsigned>;
-    void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/){};
-    unsigned numDofs() const{return 0;};
-    void addNeighbors(std::vector<NeighborSet>& /*neighbors*/) const{};
-    //void applyInitial(){};
-    void initialSolutionApplied(){};
-    //void initFromRestart(const data::Aquifers& aquiferSoln);
-    template <class Restarter>
-    void serialize(Restarter& /*res*/){};
-
-    template <class Restarter>
-    void deserialize(Restarter& /*res*/){};
-
-    void beginEpisode(){};
-    void beginTimeStep(){};
-    void beginIteration(){};
-    // add the water rate due to aquifers to the source term.
-    template<class RateVector, class Context>
-    void addToSource(RateVector& /*rates*/, const Context& /*context*/,
-                     unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const {}
-    template<class RateVector>
-    void addToSource(RateVector& /*rates*/, unsigned /*globalSpaceIdx*/,
-                     unsigned /*timeIdx*/) const {}
-    void endIteration()const{};
-    void endTimeStep(){};
-    void endEpisode(){};
-    void applyInitial(){};
-    template<class RateType>
-    void computeTotalRatesForDof(RateType& /*rate*/, unsigned /*globalIdx*/) const{};
-};
 
 template<int numComp>
 int dispatchFlowExpComp(int argc, char** argv);
