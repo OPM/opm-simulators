@@ -32,6 +32,8 @@
 
 
 #include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/OutputCompositionalModule.hpp>
+
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/material/thermal/EclThermalLawManager.hpp>
@@ -82,7 +84,7 @@ class FlowProblemComp : public FlowProblem<TypeTag>
     using typename FlowProblemType::RateVector;
 
     using InitialFluidState = CompositionalFluidState<Scalar, FluidSystem>;
-    using EclWriterType = EclWriter<TypeTag>;
+    using EclWriterType = EclWriter<TypeTag, OutputCompositionalModule<TypeTag> >;
 
 public:
     using FlowProblemType::porosity;

@@ -50,6 +50,7 @@
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/MixingRateControls.hpp>
+#include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 
 #include <opm/simulators/utils/satfunc/SatfuncConsistencyCheckManager.hpp>
@@ -141,7 +142,7 @@ class FlowProblemBlackoil : public FlowProblem<TypeTag>
     using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
 
     using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
-    using EclWriterType = EclWriter<TypeTag>;
+    using EclWriterType = EclWriter<TypeTag, OutputBlackOilModule<TypeTag> >;
 #if HAVE_DAMARIS
     using DamarisWriterType = DamarisWriter<TypeTag>;
 #endif
