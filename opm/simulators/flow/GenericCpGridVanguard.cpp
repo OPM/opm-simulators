@@ -235,7 +235,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         for (const auto& well_name : inactive_well_names) {
             for (int i=0; i<nranks; ++i) {
                 if (well_on_rank_global[i*num_wells + well_idx]) {
-                    parallelWells.emplace_back(well_name, i);
+                    parallelWells.emplace_back(well_name, true);
                 }
             }
             ++well_idx;
