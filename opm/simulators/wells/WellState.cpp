@@ -272,6 +272,7 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
     this->global_well_info = std::make_optional<GlobalWellInfo>(schedule,
                                                                 report_step,
                                                                 wells_ecl);
+    well_rates.clear();
     for (const auto& wname : schedule.wellNames(report_step))
     {
         well_rates.insert({wname, std::make_pair(false, std::vector<Scalar>(this->numPhases()))});
@@ -694,6 +695,9 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     for (int w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
         auto& ws = this->well(w);
+        // If the phase_rates has zero size this is an inactive well that will never be solved
+        if (ws.perf_data.phase_rates.size() == 0)
+            continue;
 
         if (well_ecl.isMultiSegment()) {
             const WellSegments& segment_set = well_ecl.getSegments();
