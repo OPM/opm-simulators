@@ -798,6 +798,59 @@ updateGradVector_(const std::string& name,
     //   later in getEcoGradients()
 }
 
+
+template<class Scalar>
+void
+GasLiftStage2<Scalar>::
+updateGroupInfo(const std::string& well_name, bool add)
+{
+    const auto delta = computeDelta(well_name, add);
+    const auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
+    if (this->group_info_.hasWell(well_name)) {
+        const auto& pairs = this->group_info_.getWellGroups(well_name);
+       for (const auto& [group_name, efficiency] : pairs) {
+            this->group_info_.update(group_name,
+                                     efficiency * delta_oil,
+                                     efficiency * delta_gas,
+                                     efficiency * delta_water,
+                                     efficiency * delta_alq);
+        }
+    }
+}
+
+template<class Scalar>
+std::array<Scalar, 4>
+GasLiftStage2<Scalar>::
+computeDelta(const std::string& well_name, bool add)
+{
+    std::array<Scalar, 4> delta = {0.0, 0.0, 0.0, 0.0};
+    // compute the delta on wells on own rank
+    if (this->well_state_map_.count(well_name) > 0) {
+        const GradInfo& gi = add? this->inc_grads_.at(well_name) : this->dec_grads_.at(well_name);
+        GasLiftWellState<Scalar>& state = *(this->well_state_map_.at(well_name).get());
+        GasLiftSingleWell& gs_well = *(this->stage1_wells_.at(well_name).get());
+        const WellInterfaceGeneric<Scalar>& well = gs_well.getWell();
+        // only get deltas for wells owned by this rank
+        if (this->well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
+            const auto& well_ecl = well.wellEcl();
+            Scalar factor = well_ecl.getEfficiencyFactor();
+            auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
+            delta_oil = factor * (gi.new_oil_rate - state.oilRate());
+            delta_gas = factor * (gi.new_gas_rate - state.gasRate());
+            delta_water = factor * (gi.new_water_rate - state.waterRate());
+            delta_alq = factor * (gi.alq - state.alq());
+        }
+        state.update(gi.new_oil_rate, gi.oil_is_limited,
+                gi.new_gas_rate, gi.gas_is_limited,
+                gi.alq, gi.alq_is_limited,
+                gi.new_water_rate, gi.water_is_limited, add);
+    }
+
+    // and communicate the results
+    this->comm_.sum(delta.data(), delta.size());
+
+    return delta;
+}
 /***********************************************
  * Public methods declared in OptimizeState
  ***********************************************/
@@ -930,6 +983,9 @@ redistributeALQ(GradPairItr& min_dec_grad,
         this->parent.dec_grads_, /*well_name=*/min_dec_grad->first, /*add=*/false);
     this->parent.addOrRemoveALQincrement_(
         this->parent.inc_grads_, /*well_name=*/max_inc_grad->first, /*add=*/true);
+
+    this->parent.updateGroupInfo(min_dec_grad->first, /*add=*/false);
+    this->parent.updateGroupInfo(max_inc_grad->first, /*add=*/true);
 }
 
 /**********************************************
@@ -966,6 +1022,7 @@ addOrRemoveALQincrement(GradMap& grad_map,
         this->parent.displayDebugMessage_(msg);
     }
     this->parent.addOrRemoveALQincrement_(grad_map, well_name, add);
+    this->parent.updateGroupInfo(well_name, add);
 }
 
 template<class Scalar>

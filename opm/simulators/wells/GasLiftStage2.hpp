@@ -146,6 +146,10 @@ protected:
     void mpiSyncLocalToGlobalGradVector_(const std::vector<GradPair>& grads_local,
                                          std::vector<GradPair>& grads_global) const;
 
+    std::array<Scalar, 4> computeDelta(const std::string& name, bool add);
+    void updateGroupInfo(const std::string& name, bool add);
+
+
     GLiftProdWells& prod_wells_;
     GLiftOptWells& stage1_wells_;
     GasLiftGroupInfo<Scalar>& group_info_;
