@@ -639,6 +639,15 @@ initializeGroupRatesRecursive_(const Group& group)
     }
     if (oil_target || liquid_target || water_target || gas_target || max_total_gas || max_alq) {
         updateGroupIdxMap_(group.name());
+        this->group_rate_map_.try_emplace(group.name(),
+            oil_rate, gas_rate, water_rate, alq,
+            oil_potential, gas_potential, water_potential,
+            oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq);
+        if (this->debug) {
+            debugDisplayUpdatedGroupRates(
+                group.name(), oil_rate, gas_rate, water_rate, alq);
+        }
+
         if (oil_target)
             oil_rate = std::min(oil_rate, *oil_target);
         if (gas_target)
@@ -650,15 +659,6 @@ initializeGroupRatesRecursive_(const Group& group)
             Scalar liquid_rate_limited = std::min(liquid_rate, *liquid_target);
             oil_rate = oil_rate / liquid_rate * liquid_rate_limited;
             water_rate = water_rate / liquid_rate * liquid_rate_limited;
-        }
-
-        this->group_rate_map_.try_emplace(group.name(),
-            oil_rate, gas_rate, water_rate, alq,
-            oil_potential, gas_potential, water_potential,
-            oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq);
-        if (this->debug) {
-            debugDisplayUpdatedGroupRates(
-                group.name(), oil_rate, gas_rate, water_rate, alq);
         }
     }
     return std::make_tuple(oil_rate, gas_rate, water_rate, oil_potential, gas_potential, water_potential, alq);
