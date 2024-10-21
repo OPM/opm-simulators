@@ -32,6 +32,7 @@
 
 
 #include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/OutputCompositionalModule.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
@@ -109,6 +110,7 @@ public:
      */
     explicit FlowProblemComp(Simulator& simulator)
         : FlowProblemType(simulator)
+        , thresholdPressures_(simulator)
     {
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
         enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
@@ -408,11 +410,19 @@ public:
     const std::vector<InitialFluidState>& initialFluidStates() const
     { return initialFluidStates_; }
 
+    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
+    {
+        assert( !thresholdPressures_.enableThresholdPressure() &&
+                " Threshold Pressures are not supported by compostional simulation ");
+        return thresholdPressures_;
+    }
+
     // TODO: do we need this one?
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
         serializer(static_cast<FlowProblemType&>(*this));
+        serializer(*eclWriter_);
     }
 protected:
 
@@ -585,6 +595,8 @@ private:
     {
         throw std::logic_error("polymer is disabled for compositional modeling and you're trying to add polymer to BC");
     }
+
+    FlowThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<InitialFluidState> initialFluidStates_;
 

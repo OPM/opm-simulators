@@ -247,6 +247,15 @@ getRestartVector() const
 }
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
+bool
+GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+enableThresholdPressure() const
+{
+    return this->enableThresholdPressure_;
+}
+
+
+template<class Grid, class GridView, class ElementMapper, class Scalar>
 void
 GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 logPressures()
