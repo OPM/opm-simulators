@@ -436,6 +436,9 @@ public:
     {
         FlowProblemType::endTimeStep();
 
+        // after the solution is updated, the values in output module needs also updated
+        this->eclWriter()->mutableOutputModule().invalidateLocalData();
+
         const bool isSubStep = !this->simulator().episodeWillBeOver();
 
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
