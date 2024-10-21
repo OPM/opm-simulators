@@ -1816,13 +1816,11 @@ INSTANTIATE_TYPE(float)
     template<class T> using FS##NUM = GenericOilGasFluidSystem<T, NUM>; \
     template class GenericOutputBlackoilModule<FS##NUM<double>>;
 
-//INSTANTIATE_COMP(2)
+INSTANTIATE_COMP(2)
 INSTANTIATE_COMP(3)
-//INSTANTIATE_COMP(4)
-//INSTANTIATE_COMP(5)
-//INSTANTIATE_COMP(6)
-//INSTANTIATE_COMP(7)
-// template class GenericOutputBlackoilModule<GenericOilGasFluidSystem<double, 3>>;
-
+INSTANTIATE_COMP(4)
+INSTANTIATE_COMP(5)
+INSTANTIATE_COMP(6)
+INSTANTIATE_COMP(7)
 
 } // namespace Opm

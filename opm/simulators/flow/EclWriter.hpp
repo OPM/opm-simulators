@@ -488,7 +488,7 @@ public:
                                 this->actionState(),
                                 this->udqState(),
                                 this->summaryState(),
-                                {}, // this->simulator_.problem().thresholdPressure().getRestartVector(),
+                                this->simulator_.problem().thresholdPressure().getRestartVector(),
                                 curTime, nextStepSize,
                                 Parameters::Get<Parameters::EclOutputDoublePrecision>(),
                                 isFlowsn, std::move(flowsn),

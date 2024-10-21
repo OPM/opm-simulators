@@ -81,6 +81,8 @@ public:
     //! \details Returns the union of explicitly configured entries and defaulted values.
     std::vector<Scalar> getRestartVector() const;
 
+    bool enableThresholdPressure() const;
+
 protected:
     /*!
      * \brief Actually compute the threshold pressures over a face as a pre-compute step.
