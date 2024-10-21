@@ -491,7 +491,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"RBEDCONT", {true, std::nullopt}},
         {"RADFIN", {true, std::nullopt}},
         {"RADFIN4", {true, std::nullopt}},
-        {"RCMASTS", {true, std::nullopt}},
         {"REACACT", {true, std::nullopt}},
         {"REACHES", {true, std::nullopt}},
         {"READDATA", {true, std::nullopt}},
