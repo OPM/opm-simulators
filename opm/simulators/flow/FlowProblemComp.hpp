@@ -283,13 +283,6 @@ public:
         const bool isSubStep = !this->simulator().episodeWillBeOver();
 
         data::Solution localCellData = {};
-#if HAVE_DAMARIS
-        // N.B. the Damaris output has to be done before the ECL output as the ECL one
-        // does all kinds of std::move() relocation of data
-        if (enableDamarisOutput_) {
-            damarisWriter_->writeOutput(localCellData, isSubStep) ;
-        }
-#endif
         if (enableEclOutput_) {
             if (Parameters::Get<Parameters::EnableWriteAllSolutions>() || !isSubStep) {
                 eclWriter_->writeOutput(std::move(localCellData), isSubStep);
