@@ -768,25 +768,7 @@ getLiquidRateWithGroupLimit_(const Scalar new_oil_rate,
         = getRateWithGroupLimit_(Rate::liquid, new_liquid_rate, liquid_rate, gr_name_dont_limit);
     bool limited = group_name != nullptr;
     if (limited) {
-        // the oil, gas, and water cases can be handled directly by
-        //  getRateWithGroupLimit_() above. However, for the liquid case
-        //  we must do some postprocessing. I chose to include it here
-        //  instead of cluttering up getRateWithGroupLimit_() with this
-        //  special case.
-        Scalar delta_water = new_water_rate - water_rate;
-        Scalar delta_oil = new_oil_rate - oil_rate;
-
-        Scalar gr_water_rate = this->group_info_.waterRate(*group_name);
-        Scalar gr_oil_rate = this->group_info_.oilRate(*group_name);
-
-        // NOTE: these rates are too large according to the limited liquid rate
-        //  but it does not matter since we are only using them to calculate
-        //  the fraction of the liquid corresponding to the oil phase
-        Scalar new_gr_water_rate = gr_water_rate + efficiency * delta_water;
-        Scalar new_gr_oil_rate = gr_oil_rate + efficiency * delta_oil;
-        Scalar new_gr_liquid_rate = new_gr_water_rate + new_gr_oil_rate;
-
-        Scalar oil_fraction = new_gr_oil_rate / new_gr_liquid_rate;
+        Scalar oil_fraction = new_oil_rate / new_liquid_rate;
         Scalar delta_liquid = liquid_rate_limited - liquid_rate;
         auto limited_oil_rate = oil_rate + oil_fraction * delta_liquid;
         auto limited_water_rate = water_rate + (1.0 - oil_fraction) * delta_liquid;
