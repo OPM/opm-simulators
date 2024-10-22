@@ -262,6 +262,12 @@ void hideUnusedParameters()
     Parameters::Hide<Parameters::UseAverageDensityMsWells>();
 }
 
+namespace {
+    bool isEmptyString(const std::string& str) {
+        return str.size()==0 || str=="\"\"" || str=="''";
+    }
+}
+
 int eclPositionalParameter(std::function<void(const std::string&, const std::string&)> addKey,
                            std::set<std::string>& seenParams,
                            std::string& errorMsg,
@@ -282,6 +288,9 @@ int eclPositionalParameter(std::function<void(const std::string&, const std::str
           "'" + newParamName + "=" + oldParamValue + "'!";
         return 0;
     }
+
+    if (isEmptyString(argv[paramIdx]))
+        return 1;
 
     if (seenParams.count("EclDeckFileName") > 0) {
         errorMsg =
