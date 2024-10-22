@@ -228,7 +228,9 @@ public:
 
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
                              this->partitionMethod(), this->serialPartitioning(),
-                             this->enableDistributedWells(), this->imbalanceTol(),
+                             this->enableDistributedWells(),
+                             this->allow_splitting_inactive_wells_,
+                             this->imbalanceTol(),
                              this->gridView(), this->schedule(),
                              this->eclState(), this->parallelWells_,
                              this->numJacobiBlocks());
