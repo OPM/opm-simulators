@@ -436,7 +436,7 @@ optimizeGroup_(const Group& group)
         std::vector<GradPair> inc_grads;
         std::vector<GradPair> dec_grads;
         redistributeALQ_(wells, group, inc_grads, dec_grads);
-        removeSurplusALQ_(group, inc_grads, dec_grads);
+        removeSurplusALQ_(group, dec_grads);
     }
     else {
         if (this->debug) {
@@ -493,7 +493,7 @@ recalculateGradientAndUpdateData_(GradPairItr& grad_itr,
         }
         // If the old incremental/decremental gradient was defined, it becomes the new
         //   decremental/incremental gradient
-        if (old_grad) {
+        if (old_grad && !other_grads.empty()) {
             // NOTE: Either creates a new item or reassigns
             // The old incremental gradient becomes the new decremental gradient
             //   or the old decremental gradient becomes the new incremental gradient
@@ -634,13 +634,13 @@ redistributeALQ_(std::vector<GasLiftSingleWell*>& wells,
 template<class Scalar>
 void GasLiftStage2<Scalar>::
 removeSurplusALQ_(const Group& group,
-                  std::vector<GradPair>& inc_grads,
                   std::vector<GradPair>& dec_grads)
 {
     if (dec_grads.empty()) {
         displayDebugMessage_("no wells to remove ALQ from. Skipping");
         return;
     }
+    std::vector<GradPair> empty_vector;
     assert(!dec_grads.empty());
     const auto max_glift = getGroupMaxALQ_(group);
     const auto max_totalgas = getGroupMaxTotalGas_(group);
@@ -697,14 +697,14 @@ removeSurplusALQ_(const Group& group,
             state.addOrRemoveALQincrement( this->dec_grads_, well_name, /*add=*/false);
             // We pass the current group rate in order to avoid limiting the rates
             // and gaslift based on the current group limits. In other words we want to reduce
-            // the gasslift as much as possible as long as we are able to produce the group
+            // the gaslift as much as possible as long as we are able to produce the group
             // targets
+            // Note: empty_vector passed to avoid adding gradients to inc_grads
             recalculateGradientAndUpdateData_(
-                        dec_grad_itr, group.name(), /*increase=*/false, dec_grads, inc_grads);
+                        dec_grad_itr, group.name(), /*increase=*/false, dec_grads, empty_vector);
 
-            // The dec_grads and inc_grads needs to be syncronized across ranks
+            // The dec_grads needs to be syncronized across ranks
             mpiSyncGlobalGradVector_(dec_grads);
-            mpiSyncGlobalGradVector_(inc_grads);
             // NOTE: recalculateGradientAndUpdateData_() will remove the current gradient
             //   from dec_grads if it cannot calculate a new decremental gradient.
             //   This will invalidate dec_grad_itr and well_name

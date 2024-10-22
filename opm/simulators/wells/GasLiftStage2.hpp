@@ -127,7 +127,6 @@ protected:
                           std::vector<GradPair>& dec_grads);
 
     void removeSurplusALQ_(const Group& group,
-                           std::vector<GradPair>& inc_grads,
                            std::vector<GradPair>& dec_grads);
 
     void saveGrad_(GradMap& map, const std::string& name, GradInfo& grad);
