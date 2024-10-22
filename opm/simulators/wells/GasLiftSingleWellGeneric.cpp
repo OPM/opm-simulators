@@ -204,7 +204,7 @@ addOrSubtractAlqIncrement_(Scalar alq, bool increase) const
                 limited = true;
             }
         } else {
-            if (alq < 0) {
+            if (alq < 1e-12) {
                 alq = 0.0;
                 limited = true;
             }
