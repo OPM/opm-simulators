@@ -139,6 +139,7 @@ public:
         externalPartitionFile_ = Parameters::Get<Parameters::ExternalPartition>();
 #endif
         enableDistributedWells_ = Parameters::Get<Parameters::AllowDistributedWells>();
+        allow_splitting_inactive_wells_ = Parameters::Get<Parameters::AllowSplittingInactiveWells>();
         ignoredKeywords_ = Parameters::Get<Parameters::IgnoreKeywords>();
         int output_param = Parameters::Get<Parameters::EclOutputInterval>();
         if (output_param >= 0)

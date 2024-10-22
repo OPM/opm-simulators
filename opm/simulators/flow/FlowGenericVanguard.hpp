@@ -48,6 +48,8 @@
 namespace Opm::Parameters {
 
 struct AllowDistributedWells { static constexpr bool value = false; };
+struct AllowSplittingInactiveWells { static constexpr bool value = true; };
+
 struct EclOutputInterval { static constexpr int value = -1; };
 struct EdgeWeightsMethod  { static constexpr int value = 1; };
 struct EnableDryRun { static constexpr auto value = "auto"; };
@@ -360,6 +362,8 @@ protected:
     std::string externalPartitionFile_{};
 #endif
     bool enableDistributedWells_;
+    bool allow_splitting_inactive_wells_;
+
     std::string ignoredKeywords_;
     std::optional<int> outputInterval_;
     bool useMultisegmentWell_;
