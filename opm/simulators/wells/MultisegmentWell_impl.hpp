@@ -140,7 +140,8 @@ namespace Opm
             // The variable perf loops over the number_of_perforations_ of *this* process.
             // This is why we do not need to convert perf to a local id, it is already *local*.
             const int cell_idx = this->well_cells_[perf];
-            this->cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - this->perf_depth_[perf];
+            //Here we need to access the depth at the global perforation index though!
+            this->cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - this->perf_depth_[this->pw_info_.localToGlobal(perf)];
         }
     }
 
