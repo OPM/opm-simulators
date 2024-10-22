@@ -236,30 +236,51 @@ public:
                     this->dispX_[globalDofIdx] = model.disp(globalDofIdx, 0);
                     this->dispY_[globalDofIdx] = model.disp(globalDofIdx, 1);
                     this->dispZ_[globalDofIdx] = model.disp(globalDofIdx, 2);
-                    this->stressXX_[globalDofIdx] = model.stress(globalDofIdx, 0);
-                    this->stressYY_[globalDofIdx] = model.stress(globalDofIdx, 1);
-                    this->stressZZ_[globalDofIdx] = model.stress(globalDofIdx, 2);
+                    //total stress is not stored but calulated result is voit notation
+                    auto stress = model.stress(globalDofIdx);
+                    this->stressXX_[globalDofIdx] = stress[0];
+                    this->stressYY_[globalDofIdx] = stress[1];
+                    this->stressZZ_[globalDofIdx] = stress[2];
                     // voight notation
-                    this->stressXY_[globalDofIdx] = model.stress(globalDofIdx, 5);
-                    this->stressXZ_[globalDofIdx] = model.stress(globalDofIdx, 4);
-                    this->stressYZ_[globalDofIdx] = model.stress(globalDofIdx, 3);
-
-                    this->strainXX_[globalDofIdx] = model.strain(globalDofIdx, 0);
-                    this->strainYY_[globalDofIdx] = model.strain(globalDofIdx, 1);
-                    this->strainZZ_[globalDofIdx] = model.strain(globalDofIdx, 2);
+                    this->stressXY_[globalDofIdx] = stress[5];
+                    this->stressXZ_[globalDofIdx] = stress[4];
+                    this->stressYZ_[globalDofIdx] = stress[3];
+                    
+                    auto strain = model.strain(globalDofIdx);
+                    this->strainXX_[globalDofIdx] = strain[0];
+                    this->strainYY_[globalDofIdx] = strain[1];
+                    this->strainZZ_[globalDofIdx] = strain[2];
                     // voight notation
-                    this->strainXY_[globalDofIdx] = model.strain(globalDofIdx, 5);
-                    this->strainXZ_[globalDofIdx] = model.strain(globalDofIdx, 4);
-                    this->strainYZ_[globalDofIdx] = model.strain(globalDofIdx, 3);
+                    this->strainXY_[globalDofIdx] = strain[5];
+                    this->strainXZ_[globalDofIdx] = strain[4];
+                    this->strainYZ_[globalDofIdx] = strain[3];
 
+                    auto delstress = model.delstress(globalDofIdx);
+                    this->delstressXX_[globalDofIdx] = delstress[ 0];
+                    this->delstressYY_[globalDofIdx] = delstress[ 1];
+                    this->delstressZZ_[globalDofIdx] = delstress[ 2];
+                    // voight notation                             
+                    this->delstressXY_[globalDofIdx] = delstress[ 5];
+                    this->delstressXZ_[globalDofIdx] = delstress[ 4];
+                    this->delstressYZ_[globalDofIdx] = delstress[ 3];
 
-                    this->delstressXX_[globalDofIdx] = model.delstress(globalDofIdx, 0);
-                    this->delstressYY_[globalDofIdx] = model.delstress(globalDofIdx, 1);
-                    this->delstressZZ_[globalDofIdx] = model.delstress(globalDofIdx, 2);
-                    // voight notation
-                    this->delstressXY_[globalDofIdx] = model.delstress(globalDofIdx, 5);
-                    this->delstressXZ_[globalDofIdx] = model.delstress(globalDofIdx, 4);
-                    this->delstressYZ_[globalDofIdx] = model.delstress(globalDofIdx, 3);
+                    auto linstress = model.linstress(globalDofIdx);
+                    this->linstressXX_[globalDofIdx] = linstress[ 0];
+                    this->linstressYY_[globalDofIdx] = linstress[ 1];
+                    this->linstressZZ_[globalDofIdx] = linstress[ 2];
+                    // voight notation                             
+                    this->linstressXY_[globalDofIdx] = linstress[ 5];
+                    this->linstressXZ_[globalDofIdx] = linstress[ 4];
+                    this->linstressYZ_[globalDofIdx] = linstress[ 3];
+
+                    auto fracstress = model.fractureStress(globalDofIdx);
+                    this->fracstressXX_[globalDofIdx] = fracstress[ 0];
+                    this->fracstressYY_[globalDofIdx] = fracstress[ 1];
+                    this->fracstressZZ_[globalDofIdx] = fracstress[ 2];
+                    // voight notation                             
+                    this->fracstressXY_[globalDofIdx] = fracstress[ 5];
+                    this->fracstressXZ_[globalDofIdx] = fracstress[ 4];
+                    this->fracstressYZ_[globalDofIdx] = fracstress[ 3];
                 }
             }
         }
