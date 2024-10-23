@@ -1,0 +1,32 @@
+{
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "krnum",
+    "test_cases": [
+        {
+            "casename": "krnum_02x",
+            "filename": "KRNUM-02X"
+        },
+        {
+            "casename": "krnum_02y",
+            "filename": "KRNUM-02Y"
+        },
+        {
+            "casename": "krnum_02z",
+            "filename": "KRNUM-02Z"
+        },
+        {
+            "casename": "krnum_03x",
+            "filename": "KRNUM-03X"
+        },
+        {
+            "casename": "krnum_03y",
+            "filename": "KRNUM-03Y"
+        },
+        {
+            "casename": "krnum_03z",
+            "filename": "KRNUM-03Z"
+        }
+    ]
+}
