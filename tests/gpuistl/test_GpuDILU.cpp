@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE(TestDiluApply)
 
     // Initialize preconditioner objects
     Dune::MultithreadDILU<Sp1x1BlockMatrix, B1x1Vec, B1x1Vec> cpudilu(matA);
-    auto gpudilu = GpuDilu1x1(matA, true, true);
+    auto gpudilu = GpuDilu1x1(matA, true, true, false);
 
     // Use the apply
     gpudilu.apply(d_output, d_input);
@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(TestDiluApplyBlocked)
 
     // init matrix with 2x2 blocks
     Sp2x2BlockMatrix matA = get2x2BlockTestMatrix();
-    auto gpudilu = GpuDilu2x2(matA, true, true);
+    auto gpudilu = GpuDilu2x2(matA, true, true, false);
     Dune::MultithreadDILU<Sp2x2BlockMatrix, B2x2Vec, B2x2Vec> cpudilu(matA);
 
     // create input/output buffers for the apply
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE(TestDiluInitAndUpdateLarge)
 {
     // create gpu dilu preconditioner
     Sp1x1BlockMatrix matA = get1x1BlockTestMatrix();
-    auto gpudilu = GpuDilu1x1(matA, true, true);
+    auto gpudilu = GpuDilu1x1(matA, true, true, false);
 
     matA[0][0][0][0] = 11.0;
     matA[0][1][0][0] = 12.0;
