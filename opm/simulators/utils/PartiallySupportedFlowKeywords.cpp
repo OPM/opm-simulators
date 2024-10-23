@@ -39,6 +39,12 @@ partiallySupported()
             },
          },
          {
+            "DUMPCUPL",
+            {
+               {1,{true, allow_values<std::string> {"F", "U"}, "DUMPCUPL(VALUE): only option F and U are supported"}},  // VALUE
+            },
+         },
+         {
             "EDITNNC",
             {
                {12,{true, allow_values<std::string> {"NONE"}, "EDITNNC(FACE1): not supported use default."}}, // FACE_FLOW12
