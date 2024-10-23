@@ -1699,7 +1699,7 @@ namespace Opm
     {
         Scalar bhp;
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
-                              simulator, summary_state, alq, deferred_logger);
+                              simulator, summary_state, alq, deferred_logger, /*iterate_if_no_solution */ true);
         if (bhp_at_thp_limit) {
             const auto& controls = this->well_ecl_.productionControls(summary_state);
             bhp = std::max(*bhp_at_thp_limit,
@@ -2213,7 +2213,8 @@ namespace Opm
         return computeBhpAtThpLimitProdWithAlq(simulator,
                                                summary_state,
                                                this->getALQ(well_state),
-                                               deferred_logger);
+                                               deferred_logger,
+                                               /*iterate_if_no_solution */ true);
     }
 
     template<typename TypeTag>
@@ -2222,7 +2223,8 @@ namespace Opm
     computeBhpAtThpLimitProdWithAlq(const Simulator& simulator,
                                     const SummaryState& summary_state,
                                     const Scalar alq_value,
-                                    DeferredLogger& deferred_logger) const
+                                    DeferredLogger& deferred_logger,
+                                    bool iterate_if_no_solution) const
     {
         // Make the frates() function.
         auto frates = [this, &simulator, &deferred_logger](const Scalar bhp) {
@@ -2260,6 +2262,8 @@ namespace Opm
             }
         }
 
+        if (!iterate_if_no_solution)
+            return std::nullopt;
 
         auto fratesIter = [this, &simulator, &deferred_logger](const Scalar bhp) {
             // Solver the well iterations to see if we are

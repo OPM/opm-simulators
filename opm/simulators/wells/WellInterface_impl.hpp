@@ -1884,7 +1884,7 @@ namespace Opm
         const auto& summary_state = simulator.vanguard().summaryState();
 
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
-            simulator, summary_state, this->getALQ(well_state), deferred_logger);
+            simulator, summary_state, this->getALQ(well_state), deferred_logger, /*iterate_if_no_solution */ true);
         if (bhp_at_thp_limit) {
             std::vector<Scalar> rates(this->number_of_phases_, 0.0);
             if (thp_update_iterations) {
