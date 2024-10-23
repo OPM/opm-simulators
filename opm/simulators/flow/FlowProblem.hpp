@@ -1678,7 +1678,6 @@ protected:
     }
 protected:
     typename Vanguard::TransmissibilityType transmissibilities_;
-private:
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;
 
@@ -1695,9 +1694,6 @@ private:
     TracerModel tracerModel_;
 
 
-
-protected:
-    ActionHandler<Scalar> actionHandler_;
 private:
     template<class T>
     struct BCData
@@ -1731,8 +1727,9 @@ private:
     virtual void handleSolventBC(const BCProp::BCFace&, RateVector&) const = 0;
 
     virtual void handlePolymerBC(const BCProp::BCFace&, RateVector&) const = 0;
-
+protected:
     BCData<int> bcindex_;
+private:    
     bool nonTrivialBoundaryConditions_ = false;
     bool explicitRockCompaction_ = false;
     bool first_step_ = true;
