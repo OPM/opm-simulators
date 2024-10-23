@@ -39,11 +39,16 @@
 #include <opm/simulators/linalg/gpuistl/set_device.hpp>
 #endif
 
+#include <iostream>
+#include <fcntl.h>  // for open()
+#include <unistd.h> // for dup2(), close()
+
 namespace Opm {
 
 Main::Main(int argc, char** argv, bool ownMPI)
     : argc_(argc), argv_(argv), ownMPI_(ownMPI)
 {
+    maybeSaveReservoirCouplingSlaveLogFilename_();
     if (ownMPI_) {
         initMPI();
     }
@@ -119,6 +124,50 @@ Main::~Main()
 #endif
 }
 
+void Main::maybeSaveReservoirCouplingSlaveLogFilename_()
+{
+    // If first command line argument is "--slave-log-file=<filename>",
+    // then redirect stdout and stderr to the specified file.
+    if (this->argc_ >= 2) {
+        std::string_view arg = this->argv_[1];
+        if (arg.substr(0, 17) == "--slave-log-file=") {
+            // For now, just save the basename of the filename and we will append the rank
+            // to the filename after having called MPI_Init() to avoid all ranks outputting
+            // to the same file.
+            this->reservoirCouplingSlaveOutputFilename_ = arg.substr(17);
+            this->argc_ -= 1;
+            char *program_name = this->argv_[0];
+            this->argv_ += 1;
+            // We assume the "argv" array pointers remain valid (not freed) for the lifetime
+            //   of this program, so the following assignment is safe.
+            // Overwrite the first argument with the program name, i.e. pretend the program
+            //   was called with the same arguments, but without the "--slave-log-file" argument.
+            this->argv_[0] = program_name;
+        }
+    }
+}
+
+void Main::maybeRedirectReservoirCouplingSlaveOutput_() {
+    if (!this->reservoirCouplingSlaveOutputFilename_.empty()) {
+        std::string filename = this->reservoirCouplingSlaveOutputFilename_
+                     + "." + std::to_string(FlowGenericVanguard::comm().rank()) + ".log";
+        int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd == -1) {
+            std::string error_msg = "Slave: Failed to open stdout+stderr file" + filename;
+            perror(error_msg.c_str());
+            MPI_Abort(MPI_COMM_WORLD, /*status=*/1);
+        }
+        // Redirect stdout and stderr to the file.
+        if (dup2(fd, fileno(stdout)) == -1 || dup2(fileno(stdout), fileno(stderr)) == -1) {
+            std::string error_msg = "Slave: Failed to redirect stdout+stderr to " + filename;
+            perror(error_msg.c_str());
+            close(fd);
+            MPI_Abort(MPI_COMM_WORLD, /*status=*/1);
+        }
+        close(fd);
+    }
+}
+
 void Main::setArgvArgc_(const std::string& filename)
 {
     this->deckFilename_ = filename;
@@ -151,6 +200,7 @@ void Main::initMPI()
     FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
 
     handleTestSplitCommunicatorCmdLine_();
+    maybeRedirectReservoirCouplingSlaveOutput_();
 
 #if HAVE_MPI
     if (test_split_comm_ && FlowGenericVanguard::comm().size() > 1) {
@@ -205,6 +255,7 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool keepKeywords,
                     const std::size_t numThreads,
                     const int output_param,
+                    const bool slaveMode,
                     const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp)
@@ -240,7 +291,8 @@ void Main::readDeck(const std::string& deckFilename,
                   init_from_restart_file,
                   outputCout_,
                   keepKeywords,
-                  outputInterval);
+                  outputInterval,
+                  slaveMode);
 
     verifyValidCellGeometry(FlowGenericVanguard::comm(), *this->eclipseState_);
 
@@ -270,7 +322,7 @@ void Main::setupDamaris(const std::string& outputDir )
     //const auto find_replace_map = Opm::DamarisOutput::DamarisKeywords<PreTypeTag>(EclGenericVanguard::comm(), outputDir);
     std::map<std::string, std::string> find_replace_map;
     find_replace_map = Opm::DamarisOutput::getDamarisKeywords<PreTypeTag>(FlowGenericVanguard::comm(), outputDir);
-    
+
     // By default EnableDamarisOutputCollective is true so all simulation results will
     // be written into one single file for each iteration using Parallel HDF5.
     // If set to false, FilePerCore mode is used in Damaris, then simulation results in each
@@ -282,9 +334,9 @@ void Main::setupDamaris(const std::string& outputDir )
                                      find_replace_map);
     int is_client;
     MPI_Comm new_comm;
-    // damaris_start() is where the Damaris Server ranks will block, until damaris_stop() 
+    // damaris_start() is where the Damaris Server ranks will block, until damaris_stop()
     // is called from the client ranks
-    int err = damaris_start(&is_client);  
+    int err = damaris_start(&is_client);
     isSimulationRank_ = (is_client > 0);
     if (isSimulationRank_ && err == DAMARIS_OK) {
         damaris_client_comm_get(&new_comm);
