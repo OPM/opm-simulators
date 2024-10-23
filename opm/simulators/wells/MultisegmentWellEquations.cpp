@@ -48,8 +48,9 @@ namespace Opm {
 
 template<class Scalar, int numWellEq, int numEq>
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::
-MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well)
+MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info)
     : well_(well)
+    , pw_info_(pw_info)
 {
 }
 
@@ -60,6 +61,9 @@ init(const int numPerfs,
      const std::vector<std::vector<int>>& segment_inlets,
      const std::vector<std::vector<int>>& perforations)
 {
+    duneBGlobal_.setBuildMode(OffDiagMatWell::row_wise);
+    duneCGlobal_.setBuildMode(OffDiagMatWell::row_wise);
+
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);
     duneD_.setBuildMode(DiagMatWell::row_wise);
@@ -79,6 +83,10 @@ init(const int numPerfs,
     }
     duneB_.setSize(well_.numberOfSegments(), numPerfs, numPerfs);
     duneC_.setSize(well_.numberOfSegments(), numPerfs, numPerfs);
+
+    auto num_perfs_whole_mswell = pw_info_.communication().sum(numPerfs);
+    duneBGlobal_.setSize(well_.numberOfSegments(), num_perfs_whole_mswell, num_perfs_whole_mswell); 
+    duneCGlobal_.setSize(well_.numberOfSegments(), num_perfs_whole_mswell, num_perfs_whole_mswell); 
 
     // we need to add the off diagonal ones
     for (auto row = duneD_.createbegin(),
@@ -107,6 +115,18 @@ init(const int numPerfs,
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
+            const int local_perf_index = pw_info_.globalToLocal(perf);
+            if (local_perf_index < 0) // then the perforation is not on this process
+                continue;
+            row.insert(local_perf_index);
+        }
+    }
+
+    // make the global C matrix
+    for (auto row = duneCGlobal_.createbegin(),
+              end = duneCGlobal_.createend(); row != end; ++row) {
+        // the number of the row corresponds to the segment number now.
+        for (const int& perf : perforations[row.index()]) {
             row.insert(perf);
         }
     }
@@ -114,6 +134,17 @@ init(const int numPerfs,
     // make the B^T matrix
     for (auto row = duneB_.createbegin(),
               end = duneB_.createend(); row != end; ++row) {
+        // the number of the row corresponds to the segment number now.
+        for (const int& perf : perforations[row.index()]) {
+            const int local_perf_index = pw_info_.globalToLocal(perf);
+            if (local_perf_index < 0) // then the perforation is not on this process
+                continue;
+            row.insert(local_perf_index);
+        }
+    }
+    // make the global B matrix
+    for (auto row = duneBGlobal_.createbegin(),
+              end = duneBGlobal_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
             row.insert(perf);
@@ -130,7 +161,9 @@ template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::clear()
 {
     duneB_ = 0.0;
+    duneBGlobal_ = 0.0;
     duneC_ = 0.0;
+    duneCGlobal_ = 0.0;
     duneD_ = 0.0;
     resWell_ = 0.0;
     duneDSolver_.reset();
@@ -144,7 +177,11 @@ apply(const BVector& x, BVector& Ax) const
 
     duneB_.mv(x, Bx);
 
+    // We need to communicate here to get the contributions from all segments
+    this->pw_info_.communication().sum(Bx.data(), Bx.size());
+
     // invDBx = duneD^-1 * Bx_
+    // TODO: do this only on one process and distribute the solution
     const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
 
     // Ax = Ax - duneC_^T * invDBx
@@ -156,6 +193,7 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 apply(BVector& r) const
 {
     // invDrw_ = duneD^-1 * resWell_
+    // TODO: do this only on one process and distribute the solution
     const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
     // r = r - duneC_^T * invDrw
     duneC_.mmtv(invDrw, r);
@@ -185,6 +223,7 @@ template<class Scalar, int numWellEq, int numEq>
 typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::BVectorWell
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve() const
 {
+    // TODO: do this only on one process and distribute the solution
     return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
 }
 
@@ -192,6 +231,7 @@ template<class Scalar, int numWellEq, int numEq>
 typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::BVectorWell
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve(const BVectorWell& rhs) const
 {
+    // TODO: do this only on one process and distribute the solution
     return mswellhelpers::applyUMFPack(*duneDSolver_, rhs);
 }
 
@@ -199,10 +239,17 @@ template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
-    BVectorWell resWell = resWell_;
+    BVectorWell Bx(duneB_.N());
+    duneB_.mv(x, Bx);
+    // We need to communicate here to get the contributions from all segments
+    this->pw_info_.communication().sum(Bx.data(), Bx.size());
+
     // resWell = resWell - B * x
-    duneB_.mmv(x, resWell);
+    BVectorWell resWell = resWell_;
+    resWell -= Bx;
+
     // xw = D^-1 * resWell
+    // TODO: do this only on one process and distribute the solution
     xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
 }
 

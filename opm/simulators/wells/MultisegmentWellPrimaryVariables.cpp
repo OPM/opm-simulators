@@ -162,6 +162,7 @@ updateNewton(const BVectorWell& dwells,
              const bool stop_or_zero_rate_target,
              const Scalar max_pressure_change)
 {
+    #if 0
     const std::vector<std::array<Scalar, numWellEq>> old_primary_variables = value_;
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
@@ -208,6 +209,7 @@ updateNewton(const BVectorWell& dwells,
     if (stop_or_zero_rate_target) {
         value_[0][WQTotal] = 0.;
     }
+    #endif
 }
 
 template<class FluidSystem, class Indices>

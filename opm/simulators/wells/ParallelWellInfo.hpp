@@ -150,7 +150,8 @@ public:
     /// \param num_components the number of components per perforation.
     /// \return A container with values attached to all perforations of a well.
     ///         Values are ordered by the index of the perforation in the ECL schedule.
-    std::vector<Scalar> createGlobal(const std::vector<Scalar>& local_perf_container,
+    template<class Value>
+    std::vector<Value> createGlobal(const std::vector<Value>& local_perf_container,
                                      std::size_t num_components) const;
 
     /// \brief Copies the values of the global perforation to the local representation
@@ -161,6 +162,8 @@ public:
                            std::size_t num_components) const;
 
     int numGlobalPerfs() const;
+    int globalToLocal(const int globalIndex) const;
+    int localToGlobal(std::size_t localIndex) const;
 
 private:
     const IndexSet& local_indices_;
@@ -208,6 +211,8 @@ public:
     /// \brief Collectively decide which rank has first perforation.
     void communicateFirstPerforation(bool hasFirst);
 
+    int globalToLocal(const int globalIndex) const;
+    int localToGlobal(std::size_t localIndex) const;
 
     /// If the well does not have any open connections the member rankWithFirstPerf
     /// is not initialized, and no broadcast is performed. In this case the argument
