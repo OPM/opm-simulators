@@ -202,13 +202,9 @@ public:
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
             return;
 
-        const auto& problem = elemCtx.simulator().problem();
-        const auto& modelResid = elemCtx.simulator().model().linearizer().residual();
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
-
-            using FluidState = std::remove_cv_t<std::remove_reference_t<decltype(fs)>>;
 
             const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             // const unsigned pvtRegionIdx = 0; // elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
@@ -259,14 +255,14 @@ public:
         }
     }
 
-    void processElementFlows(const ElementContext& elemCtx)
+    void processElementFlows(const ElementContext& /* elemCtx */)
     {
         OPM_TIMEBLOCK_LOCAL(processElementBlockData);
         if (!std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>)
             return;
     }
 
-    void processElementBlockData(const ElementContext& elemCtx)
+    void processElementBlockData(const ElementContext& /* elemCtx */)
     {
         OPM_TIMEBLOCK_LOCAL(processElementBlockData);
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
@@ -302,9 +298,9 @@ public:
      *    to globally unique Cartesian cell/element index.
      */
     template <class ActiveIndex, class CartesianIndex>
-    void processFluxes(const ElementContext& elemCtx,
-                       ActiveIndex&&         activeIndex,
-                       CartesianIndex&&      cartesianIndex)
+    void processFluxes(const ElementContext& /* elemCtx */,
+                       ActiveIndex&&         /* activeIndex*/,
+                       CartesianIndex&&      /* cartesianIndex */)
     {
     }
 
@@ -335,9 +331,9 @@ public:
         return this->interRegionFlows_;
     }
 
-    void updateFluidInPlace(const unsigned             globalDofIdx,
-                            const IntensiveQuantities& intQuants,
-                            const double               totVolume)
+    void updateFluidInPlace(const unsigned             /* globalDofIdx */,
+                            const IntensiveQuantities& /* intQuants */,
+                            const double               /* totVolume */)
     {
 //        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
