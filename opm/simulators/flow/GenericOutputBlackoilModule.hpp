@@ -335,7 +335,8 @@ protected:
                                 bool enableBrine,
                                 bool enableSaltPrecipitation,
                                 bool enableExtbo,
-                                bool enableMICP);
+                                bool enableMICP,
+                                bool isCompositional = false);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
@@ -405,6 +406,7 @@ protected:
     bool enableSaltPrecipitation_{false};
     bool enableExtbo_{false};
     bool enableMICP_{false};
+    bool isCompositional_{false};
 
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
