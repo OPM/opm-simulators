@@ -283,7 +283,7 @@ public:
             simulator_.setEpisodeLength(0.0);
             simulator_.setTimeStepSize(0.0);
             wellModel_().beginReportStep(timer.currentStepNum());
-            simulator_.problem().writeOutput();
+            simulator_.problem().writeOutput(true);
 
             report_.success.output_write_time += perfTimer.stop();
         }
@@ -370,7 +370,7 @@ public:
         perfTimer.start();
         const double nextstep = adaptiveTimeStepping_ ? adaptiveTimeStepping_->suggestedNextStep() : -1.0;
         simulator_.problem().setNextTimeStepSize(nextstep);
-        simulator_.problem().writeOutput();
+        simulator_.problem().writeOutput(true);
         report_.success.output_write_time += perfTimer.stop();
 
         solver_->model().endReportStep();

@@ -493,7 +493,7 @@ public:
      * \brief Write the requested quantities of the current solution into the output
      *        files.
      */
-    void writeOutput(bool verbose = true)
+    virtual void writeOutput(bool verbose)
     {
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to

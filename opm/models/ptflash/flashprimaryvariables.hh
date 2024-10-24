@@ -120,22 +120,10 @@ public:
         // the energy module
         EnergyModule::setPriVarTemperatures(*this, fluidState);
 
-        // determine the component fractions
-        Dune::FieldVector<Scalar, numComponents> z(0.0);
-        Scalar sumMoles = 0.0;
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                Scalar tmp = Opm::getValue(fluidState.molarity(phaseIdx, compIdx) * fluidState.saturation(phaseIdx));
-                z[compIdx] += Opm::max(tmp, 1e-8);
-                sumMoles += tmp;
-            }
-        }
-        z /= sumMoles;
-
         for (int i = 0; i < numComponents - 1; ++i)
-            (*this)[z0Idx + i] = z[i];
+            (*this)[z0Idx + i] = getValue(fluidState.moleFraction(i));
 
-        (*this)[pressure0Idx] = Opm::getValue(fluidState.pressure(0));
+        (*this)[pressure0Idx] = getValue(fluidState.pressure(0));
     }
 
     /*!
