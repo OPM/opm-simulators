@@ -161,6 +161,7 @@ protected:
                         const Dune::PartitionMethod              partitionMethod,
                         const bool                               serialPartitioning,
                         const bool                               enableDistributedWells,
+                        const bool                               allowSplittingInactiveWells,
                         const double                             imbalanceTol,
                         const GridView&                          gridView,
                         const Schedule&                          schedule,
