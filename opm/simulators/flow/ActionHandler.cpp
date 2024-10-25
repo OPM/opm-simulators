@@ -220,12 +220,12 @@ fetchWellPI(const int reportStep,
             const Action::ActionX& action,
             const std::vector<std::string>& matching_wells) const
 {
-  auto wellpi_wells = action.wellpi_wells(WellMatcher(schedule_[reportStep].well_order(),
-                                                      schedule_[reportStep].wlist_manager()),
-                                          matching_wells);
+  auto wellpi_wells = action.wellpi_wells
+      (this->schedule_.wellMatcher(reportStep), matching_wells);
 
-  if (wellpi_wells.empty())
+  if (wellpi_wells.empty()) {
       return {};
+  }
 
   const auto num_wells = schedule_[reportStep].well_order().size();
   std::vector<Scalar> wellpi_vector(num_wells);
