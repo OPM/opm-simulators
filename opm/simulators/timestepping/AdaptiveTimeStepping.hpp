@@ -233,7 +233,7 @@ void registerAdaptiveParameters();
                 SimulatorReportSingle substepReport;
                 std::string causeOfFailure;
                 try {
-                    substepReport = solver.step(substepTimer);
+                    substepReport = solver.step(substepTimer, *timeStepControl_);
 
                     if (solverVerbose_) {
                         // report number of linear iterations
@@ -316,7 +316,7 @@ void registerAdaptiveParameters();
                     const int iterations = useNewtonIteration_ ? substepReport.total_newton_iterations
                         : substepReport.total_linear_iterations;
                     double dtEstimate = timeStepControl_->computeTimeStepSize(dt, iterations, relativeChange,
-                                                                               substepTimer.simulationTimeElapsed());
+                                                                               substepTimer);
 
                     assert(dtEstimate > 0);
                     // limit the growth of the timestep size by the growth factor
@@ -481,6 +481,9 @@ void registerAdaptiveParameters();
         void setSuggestedNextStep(const double x)
         { suggestedNextTimestep_ = x; }
 
+        const TimeStepControlInterface& timeStepControl() const
+        { return *timeStepControl_; }
+
         void updateTUNING(double max_next_tstep, const Tuning& tuning)
         {
             restartFactor_ = tuning.TSFCNV;
@@ -516,6 +519,8 @@ void registerAdaptiveParameters();
             case TimeStepControlType::PID:
                 allocAndSerialize<PIDTimeStepControl>(serializer);
                 break;
+            case TimeStepControlType::General3rdOrder:
+                allocAndSerialize<General3rdOrderController>(serializer);
             }
             serializer(restartFactor_);
             serializer(growthFactor_);
@@ -553,6 +558,11 @@ void registerAdaptiveParameters();
             return serializationTestObject_<SimpleIterationCountTimeStepControl>();
         }
 
+        static AdaptiveTimeStepping<TypeTag> serializationTestObjectGeneral3rdOrder()
+        {
+            return serializationTestObject_<General3rdOrderController>();
+        }
+
         bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs)
         {
             if (timeStepControlType_ != rhs.timeStepControlType_ ||
@@ -574,6 +584,9 @@ void registerAdaptiveParameters();
                 break;
             case TimeStepControlType::PID:
                 result = castAndComp<PIDTimeStepControl>(rhs);
+                break;
+            case TimeStepControlType::General3rdOrder:
+                result = castAndComp<General3rdOrderController>(rhs);
                 break;
             }
 
@@ -683,6 +696,11 @@ void registerAdaptiveParameters();
                 const std::string filename = Parameters::Get<Parameters::TimeStepControlFileName>(); // "timesteps"
                 timeStepControl_ = std::make_unique<HardcodedTimeStepControl>(filename);
                 timeStepControlType_ = TimeStepControlType::HardCodedTimeStep;
+            }
+            else if (control == "general3rdorder") {
+                const double safetyFactor = 0.8;
+                timeStepControl_ = std::make_unique<General3rdOrderController>(tol, safetyFactor);
+                timeStepControlType_ = TimeStepControlType::General3rdOrder;
             }
             else
                 OPM_THROW(std::runtime_error,

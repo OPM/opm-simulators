@@ -36,6 +36,7 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/TimeStepControl.hpp>
 
 #include <memory>
 
@@ -161,7 +162,7 @@ void registerNonlinearParameters();
         }
 
 
-        SimulatorReportSingle step(const SimulatorTimerInterface& timer)
+        SimulatorReportSingle step(const SimulatorTimerInterface& timer, const TimeStepControlInterface& timeStepControl)
         {
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
@@ -207,6 +208,10 @@ void registerNonlinearParameters();
                 std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
                 OPM_THROW_NOLOG(TooManyIterations, msg);
             }
+
+            std::cout << "TESTING: ";
+            double error = timeStepControl.timeStepAccepted(model_->relativeChange());
+            std::cout << error << std::endl;
 
             // Do model-specific post-step actions.
             report += model_->afterStep(timer);

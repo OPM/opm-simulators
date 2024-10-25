@@ -33,6 +33,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <fmt/format.h>
 
@@ -73,7 +74,7 @@ namespace Opm
     }
 
     double SimpleIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const double /*simulationTimeElapsed */) const
+    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const SimulatorTimerInterface& /* substepTimer */) const
     {
         double dtEstimate = dt ;
 
@@ -134,10 +135,10 @@ namespace Opm
     }
 
     double HardcodedTimeStepControl::
-    computeTimeStepSize( const double /*dt */, const int /*iterations */, const RelativeChangeInterface& /* relativeChange */ , const double simulationTimeElapsed) const
+    computeTimeStepSize( const double /*dt */, const int /*iterations */, const RelativeChangeInterface& /* relativeChange */ , const SimulatorTimerInterface& substepTimer) const
     {
-        auto nextTime = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), simulationTimeElapsed);
-        return (*nextTime - simulationTimeElapsed);
+        auto nextTime = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), substepTimer.simulationTimeElapsed());
+        return (*nextTime - substepTimer.simulationTimeElapsed());
     }
 
     bool HardcodedTimeStepControl::operator==(const HardcodedTimeStepControl& ctrl) const
@@ -170,7 +171,7 @@ namespace Opm
     }
 
     double PIDTimeStepControl::
-    computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relChange, const double /*simulationTimeElapsed */) const
+    computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relChange, const SimulatorTimerInterface& /*substepTimer */) const
     {
         // shift errors
         for( int i=0; i<2; ++i ) {
@@ -184,7 +185,7 @@ namespace Opm
             assert(std::isfinite(errors_[i]));
         }
 
-        if( errors_[2] > tol_ )
+        /*if( errors_[2] > tol_ )
         {
             // adjust dt by given tolerance
             const double newDt = dt * tol_ / error;
@@ -192,7 +193,7 @@ namespace Opm
                     OpmLog::info(fmt::format("Computed step size (tol): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
-        else if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
+        else */if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
         {
             if ( verbose_ )
                 OpmLog::info("The solution between time steps does not change, there is no time step constraint from the PID time step control ");
@@ -249,9 +250,9 @@ namespace Opm
     }
 
     double PIDAndIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange,  const double simulationTimeElapsed ) const
+    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange, const SimulatorTimerInterface& substepTimer ) const
     {
-        double dtEstimatePID = PIDTimeStepControl :: computeTimeStepSize( dt, iterations, relChange, simulationTimeElapsed);
+        double dtEstimatePID = PIDTimeStepControl :: computeTimeStepSize( dt, iterations, relChange, substepTimer);
 
         // adjust timesteps based on target iteration
         double dtEstimateIter;
@@ -277,6 +278,101 @@ namespace Opm
                this->decayDampingFactor_ == ctrl.decayDampingFactor_ &&
                this->growthDampingFactor_ == ctrl.growthDampingFactor_ &&
                this->minTimeStepBasedOnIterations_ == ctrl.minTimeStepBasedOnIterations_;
+    }
+
+
+    General3rdOrderController::General3rdOrderController( const double tolerance,
+                                                          const double safetyFactor,
+                                                          const bool verbose)
+        : tolerance_( tolerance )
+        , safetyFactor_( safetyFactor )
+        , errors_( 3, tolerance_ )
+        , timeSteps_ ( 3, 1.0 )
+        , verbose_( verbose )
+    {}
+
+    General3rdOrderController
+    General3rdOrderController::serializationTestObject()
+    {
+        General3rdOrderController result(1.0, 0.8, true);
+        result.errors_ = {2.0, 3.0};
+
+        return result;
+    }
+
+    double General3rdOrderController::
+    computeTimeStepSize(const double dt, const int /*iterations */, const RelativeChangeInterface& relChange, const SimulatorTimerInterface& substepTimer ) const
+    {
+        // Shift errors and time steps
+        for( int i = 0; i < 2; ++i )
+        {
+            errors_[i] = errors_[i+1];
+            timeSteps_[i] = timeSteps_[i+1];
+        }
+
+        // Store new error and time step
+        const double error = relChange.relativeChange();
+        errors_[2] = error;
+        std::cout << error << std::endl;
+        if (error > 1e-05)
+        {
+            std::cout << "Larger than 1e-05!" << std::endl;
+        }
+        timeSteps_[2] = dt;
+        for( int i = 0; i < 2; ++i )
+        {
+            assert(std::isfinite(errors_[i]));
+        }
+
+        if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
+        {
+            if ( verbose_ )
+                OpmLog::info("The solution between time steps does not change, there is no time step constraint from the controller.");
+            return std::numeric_limits<double>::max();
+        }
+        // Use an I controller after report time steps or chopped time steps
+        else if (substepTimer.currentStepNum() < 3 || substepTimer.lastStepFailed() || stepFailed_)
+        {
+            if (substepTimer.lastStepFailed())
+                stepFailed_ = true;
+            else if (stepFailed_)
+                stepFailed_ = false;
+            const double newDt = dt * std::pow(safetyFactor_ * tolerance_ / errors_[2], 0.35);
+            std::cout << "New time 1: " << unit::convert::to(newDt, unit::day) << std::endl;
+            return newDt;
+        }
+        // Use the general third order controller for all other time steps
+        else
+        {
+            const std::vector<double> beta{ 0.125, 0.25, 0.125 };
+            const std::vector<double> alpha = { 0.375, 0.125 };
+            const double newDt = dt * std::pow(safetyFactor_ * tolerance_ / errors_[2], beta[0]) *
+                                      std::pow(safetyFactor_ * tolerance_ / errors_[1], beta[1]) *
+                                      std::pow(safetyFactor_ * tolerance_ / errors_[0], beta[2]) *
+                                      std::pow(timeSteps_[2] / timeSteps_[1], -alpha[0]) *
+                                      std::pow(timeSteps_[1] / timeSteps_[0], -alpha[1]);
+            if( verbose_ )
+                OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
+            std::cout << "New time 2: " << unit::convert::to(newDt, unit::day) << std::endl;
+            return newDt;
+        }
+    }
+
+    bool General3rdOrderController::
+    timeStepAccepted(const double error) const
+    {
+        if (error > tolerance_)
+            return false;
+        return true;
+    }
+
+    bool General3rdOrderController::operator==(const General3rdOrderController& ctrl) const
+    {
+        return this->tolerance_ == ctrl.tolerance_ &&
+               this->safetyFactor_ == ctrl.safetyFactor_ &&
+               this->errors_ == ctrl.errors_ &&
+               this->timeSteps_ == ctrl.timeSteps_ &&
+               this->verbose_ == ctrl.verbose_;
     }
 
 } // end namespace Opm

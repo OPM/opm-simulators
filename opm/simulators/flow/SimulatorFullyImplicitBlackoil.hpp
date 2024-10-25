@@ -356,7 +356,7 @@ public:
             simulator_.problem().setSimulationReport(report_);
         } else {
             // solve for complete report step
-            auto stepReport = solver_->step(timer);
+            auto stepReport = solver_->step(timer, adaptiveTimeStepping_->timeStepControl());
             report_ += stepReport;
             if (terminalOutput_) {
                 std::ostringstream ss;
@@ -442,6 +442,9 @@ public:
 
     const Model& model() const
     { return solver_->model(); }
+
+    const TimeStepper& timeStepper() const
+    { return adaptiveTimeStepping_; }
 
 protected:
     //! \brief Load simulator state from hdf5 serializer.
