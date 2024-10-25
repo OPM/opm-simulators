@@ -66,6 +66,7 @@ struct TimeStepControlGrowthDampingFactor { static constexpr double value = 3.2;
 struct TimeStepControlFileName { static constexpr auto value = "timesteps"; };
 struct MinTimeStepBeforeShuttingProblematicWellsInDays { static constexpr double value = 0.01; };
 struct MinTimeStepBasedOnNewtonIterations { static constexpr double value = 0.0; };
+struct TimeStepSafetyFactor { static constexpr double value = 0.8; };
 
 } // namespace Opm::Parameters
 
@@ -232,6 +233,7 @@ void registerAdaptiveParameters();
 
                 SimulatorReportSingle substepReport;
                 std::string causeOfFailure;
+                bool tooLargeTimeStep = false;
                 try {
                     substepReport = solver.step(substepTimer, *timeStepControl_);
 
@@ -257,6 +259,13 @@ void registerAdaptiveParameters();
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
+                }
+                catch (const TimeSteppingBreakdown& e) {
+                    tooLargeTimeStep = true;
+                    substepReport = solver.failureReport();
+                    causeOfFailure = "Error in time stepping exceeded tolerance";
+
+                    logException_(e, solverVerbose_);
                 }
                 catch (const NumericalProblem& e) {
                     substepReport = solver.failureReport();
@@ -304,13 +313,13 @@ void registerAdaptiveParameters();
                     OpmLog::problem(msg);
                 }
 
+                // create object to compute the time error, simply forwards the call to the model
+                SolutionTimeErrorSolverWrapper<Solver> relativeChange(solver);
+
                 if (substepReport.converged || continue_on_uncoverged_solution) {
 
                     // advance by current dt
                     ++substepTimer;
-
-                    // create object to compute the time error, simply forwards the call to the model
-                    SolutionTimeErrorSolverWrapper<Solver> relativeChange(solver);
 
                     // compute new time step estimate
                     const int iterations = useNewtonIteration_ ? substepReport.total_newton_iterations
@@ -364,6 +373,58 @@ void registerAdaptiveParameters();
                     report.success.converged = substepTimer.done();
                     substepTimer.setLastStepFailed(false);
 
+                }
+                else if (tooLargeTimeStep) {
+
+                    substepTimer.setLastStepFailed(true);
+
+                    // If we have restarted (i.e. cut the timestep) too
+                    // many times, we have failed and throw an exception.
+                    if (restarts >= solverRestartMax_) {
+                        const auto msg = fmt::format(
+                            "Solver failed to satisfy adaptive time stepping requirement."
+                        );
+                        if (solverVerbose_) {
+                            OpmLog::error(msg);
+                        }
+                        // Use throw directly to prevent file and line
+                        throw TimeSteppingBreakdown{msg};
+                    }
+
+                    // The new, chopped timestep.
+                    const double timeStepSafetyFactor = Parameters::Get<Parameters::TimeStepSafetyFactor>();
+                    const double newTimeStep = timeStepSafetyFactor * dt * timeStepControlTolerance_ / relativeChange.relativeChange();
+
+                    // If we have restarted (i.e. cut the timestep) too
+                    // much, we have failed and throw an exception.
+                    if (newTimeStep < minTimeStep_) {
+                        const auto msg = fmt::format(
+                            "Solver failed to converge after cutting timestep to {}\n"
+                            "which is the minimum threshold given by option --solver-min-time-step\n",
+                            minTimeStep_
+                        );
+                        if (solverVerbose_) {
+                            OpmLog::error(msg);
+                        }
+                        // Use throw directly to prevent file and line
+                        throw TimeSteppingBreakdown{msg};
+                    }
+
+                    // Define utility function for chopping timestep.
+                    auto chopTimestep = [&]() {
+                        substepTimer.provideTimeStepEstimate(newTimeStep);
+                        if (solverVerbose_) {
+                            const auto msg = fmt::format(
+                                "{}\nTimestep chopped to {} days\n",
+                                causeOfFailure,
+                                std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day))
+                            );
+                            OpmLog::problem(msg);
+                        }
+                        ++restarts;
+                    };
+
+                    chopTimestep();
                 }
                 else { // in case of no convergence
                     substepTimer.setLastStepFailed(true);
@@ -653,16 +714,16 @@ void registerAdaptiveParameters();
             // valid are "pid" and "pid+iteration"
             std::string control = Parameters::Get<Parameters::TimeStepControl>(); // "pid"
 
-            const double tol =  Parameters::Get<Parameters::TimeStepControlTolerance>(); // 1e-1
+            timeStepControlTolerance_ =  Parameters::Get<Parameters::TimeStepControlTolerance>(); // 1e-1
             if (control == "pid") {
-                timeStepControl_ = std::make_unique<PIDTimeStepControl>(tol);
+                timeStepControl_ = std::make_unique<PIDTimeStepControl>(timeStepControlTolerance_);
                 timeStepControlType_ = TimeStepControlType::PID;
             }
             else if (control == "pid+iteration") {
                 const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetIterations>(); // 30
                 const double decayDampingFactor = Parameters::Get<Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
                 const double growthDampingFactor = Parameters::Get<Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
-                timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor, growthDampingFactor, tol);
+                timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor, growthDampingFactor, timeStepControlTolerance_);
                 timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
             }
             else if (control == "pid+newtoniteration") {
@@ -673,7 +734,7 @@ void registerAdaptiveParameters();
                 // the min time step can be reduced by the newton iteration numbers
                 double minTimeStepReducedByIterations = unitSystem.to_si(UnitSystem::measure::time, nonDimensionalMinTimeStepIterations);
                 timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor,
-                                                                                         growthDampingFactor, tol, minTimeStepReducedByIterations);
+                                                                                         growthDampingFactor, timeStepControlTolerance_, minTimeStepReducedByIterations);
                 timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
                 useNewtonIteration_ = true;
             }
@@ -714,6 +775,7 @@ void registerAdaptiveParameters();
 
         TimeStepControlType timeStepControlType_; //!< type of time step control object
         TimeStepController timeStepControl_; //!< time step control object
+        double timeStepControlTolerance_;    //!< tolerance for the adaptive time stepping
         double restartFactor_;               //!< factor to multiply time step with when solver fails to converge
         double growthFactor_;                //!< factor to multiply time step when solver recovered from failed convergence
         double maxGrowth_;                   //!< factor that limits the maximum growth of a time step
