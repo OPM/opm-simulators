@@ -532,16 +532,21 @@ getProducerWellRates_(const Well* well, int well_index)
 
     const auto controls = well->productionControls(this->summary_state_);
     Scalar oil_rate = oil_pot;
-    if (controls.hasControl(Well::ProducerCMode::ORAT)) {
-        oil_rate = std::min(static_cast<Scalar>(controls.oil_rate), oil_rate);
-    }
+    Scalar water_rate = water_pot;
     Scalar gas_rate = gas_pot;
+
+    if (controls.hasControl(Well::ProducerCMode::ORAT) && oil_rate > static_cast<Scalar>(controls.oil_rate)) {
+        water_rate *= (static_cast<Scalar>(controls.oil_rate) / oil_rate); 
+        oil_rate = static_cast<Scalar>(controls.oil_rate);
+    }
+    
     if (controls.hasControl(Well::ProducerCMode::GRAT)) {
         gas_rate = std::min(static_cast<Scalar>(controls.gas_rate), gas_rate);
     }
-    Scalar water_rate = water_pot;
-    if (controls.hasControl(Well::ProducerCMode::WRAT)) {
-        water_rate = std::min(static_cast<Scalar>(controls.water_rate), water_rate);
+    
+    if (controls.hasControl(Well::ProducerCMode::WRAT) && water_rate > static_cast<Scalar>(controls.water_rate)) {
+        oil_rate *= (static_cast<Scalar>(controls.water_rate) / water_rate); 
+        water_rate = static_cast<Scalar>(controls.water_rate);
     }
     if (controls.hasControl(Well::ProducerCMode::LRAT)) {
         Scalar liquid_rate = oil_rate + water_rate;
@@ -650,12 +655,16 @@ initializeGroupRatesRecursive_(const Group& group)
                 group.name(), oil_rate, gas_rate, water_rate, alq);
         }
 
-        if (oil_target)
-            oil_rate = std::min(oil_rate, *oil_target);
-        if (gas_target)
-            gas_rate = std::min(gas_rate, *gas_target);
-        if (water_target)
-            water_rate = std::min(water_rate, *water_target);
+        if (oil_target && oil_rate > *oil_target)  {
+            water_rate *= (*oil_target/oil_rate);
+            oil_rate = *oil_target;
+        }
+        if (gas_target && gas_rate > *gas_target)
+            gas_rate = *gas_target;
+        if (water_target && water_rate > *water_target) {
+            oil_rate *= (*water_target/water_rate); 
+            water_rate = *water_target;
+        }
         if (liquid_target) {
             Scalar liquid_rate = oil_rate + water_rate;
             Scalar liquid_rate_limited = *liquid_target;
