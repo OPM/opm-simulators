@@ -22,12 +22,12 @@
 */
 /*!
  * \file
- * \copydoc Opm::OutputBlackOilModule
+ * \copydoc Opm::OutputCompositionalModule
  */
 #ifndef OPM_OUTPUT_COMPOSITIONAL_MODULE_HPP
 #define OPM_OUTPUT_COMPOSITIONAL_MODULE_HPP
 
-#include <dune/common/fvector.hh>
+#include <dune/grid/common/gridenums.hh>
 
 #include <opm/simulators/utils/moduleVersion.hpp>
 
@@ -38,25 +38,14 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
-
-#include <opm/models/blackoil/blackoilproperties.hh>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
-
-#include <opm/output/data/Cells.hpp>
-#include <opm/output/eclipse/EclipseIO.hpp>
-#include <opm/output/eclipse/Inplace.hpp>
 
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
 
 #include <algorithm>
-#include <array>
-#include <cassert>
 #include <cstddef>
-#include <functional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -83,29 +72,16 @@ class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
-    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using Element = typename GridView::template Codim<0>::Entity;
-    using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using BaseType = GenericOutputBlackoilModule<FluidSystem>;
-    using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using Dir = FaceDir::DirEnum;
 
-    enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
-    enum { gasCompIdx = FluidSystem::gasCompIdx };
-    enum { oilCompIdx = FluidSystem::oilCompIdx };
-    enum { waterCompIdx = FluidSystem::waterCompIdx };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
 public:
     template <class CollectDataToIORankType>
@@ -336,7 +312,7 @@ public:
                             const IntensiveQuantities& /* intQuants */,
                             const double               /* totVolume */)
     {
-//        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
+        // this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
 private:
