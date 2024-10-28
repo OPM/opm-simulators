@@ -637,7 +637,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"UNCODHMD", {true, std::nullopt}},
         {"UNIFOUTS", {false, std::nullopt}},
         {"UNIFSAVE", {false, std::nullopt}},
-        {"USECUPL", {true, std::nullopt}},
         {"USEFLUX", {true, std::nullopt}},
         {"USENOFLO", {true, std::nullopt}},
         {"VDFLOW", {true, std::nullopt}},
