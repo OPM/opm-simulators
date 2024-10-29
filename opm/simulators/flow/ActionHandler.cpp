@@ -70,6 +70,16 @@ namespace {
                            time_point, reportStep, reportStep + 1);
     }
 
+    void logActivePyAction(const std::string& actionName,
+                           const std::string& timeString)
+    {
+        const auto message =
+            fmt::format("Action {} (Python) triggered at {}",
+                        actionName, timeString);
+
+        Opm::OpmLog::info("ACTION_TRIGGERED", message);
+    }
+
     void logActiveAction(const std::string&              actionName,
                          const std::vector<std::string>& matchingWells,
                          const std::string&              timeString)
@@ -85,6 +95,16 @@ namespace {
                         actionName, timeString, wellString);
 
         Opm::OpmLog::info("ACTION_TRIGGERED", message);
+    }
+
+    void logInactivePyAction(const std::string& actionName,
+                             const std::string& timeString)
+    {
+        const auto message =
+            fmt::format("Action {} (Python) NOT triggered at {}.",
+                        actionName, timeString);
+
+        Opm::OpmLog::debug("NAMED_ACTION_NOT_TRIGGERED", message);
     }
 
     void logInactiveAction(const std::string& actionName,
@@ -149,6 +169,17 @@ applyActions(const int reportStep,
     for (const auto& pyaction : actions.pending_python(actionState_)) {
         auto sim_update = schedule_.runPyAction(reportStep, *pyaction, actionState_,
                                                 ecl_state_, summaryState_);
+
+        if (const auto pyRes = this->actionState_.python_result(pyaction->name());
+            !pyRes.has_value() || !*pyRes)
+        {
+            logInactivePyAction(pyaction->name(), ts);
+            continue;
+        }
+        else {
+            logActivePyAction(pyaction->name(), ts);
+        }
+
         this->applySimulatorUpdate(reportStep, sim_update, commit_wellstate, transUp);
     }
 
