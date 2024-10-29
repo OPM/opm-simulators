@@ -632,8 +632,10 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
         ctrl = group.productionControls(summaryState);
 
     // Scalar fr_true = fcalc.fraction("B1", "M5S", true);
+    // fr_true = fcalc.fraction("B1", "M5S", true);
     // Scalar fr_false = fcalc.fraction("B1", "M5S", false);
-    // std::cout << "fr_true: " << fr_true << "fr_false: " << fr_false << std::endl;
+    // fr_false = fcalc.fraction("B1", "M5S", false);
+    // std::cout << "fr_true: " << fr_true << " fr_false: " << fr_false << std::endl;
 
     const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
     const auto chain = WellGroupHelpers<double>::groupChainTopBot(name, group.name(),

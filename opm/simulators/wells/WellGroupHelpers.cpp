@@ -418,21 +418,6 @@ updateGroupTargetReduction(const Group& group,
                                              && currentGroupControl != Group::ProductionCMode::NONE);
             const int num_group_controlled_wells
                 = groupControlledWells(schedule, wellState, group_state, reportStepIdx, subGroupName, "", !isInjector, /*injectionPhaseNotUsed*/Phase::OIL);
-            // DeferredLogger deffered_logger;
-            // auto constraints = BlackoilWellModelConstraints<double>() ;
-            // bool check =  constraints.checkGroupConstraints(subGroup, reportStepIdx, deffered_logger);
-            // bool check = false;
-            // if (subGroupName=="B1"){
-            //     // const auto controls = group.productionControls(summaryState);
-            //     const double current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
-            //                                                               schedule,
-            //                                                               wellState,
-            //                                                               reportStepIdx,
-            //                                                               pu.phase_pos[BlackoilPhases::Liquid],
-            //                                                               false);
-            //     if (current_rate < 0.08101851851 - 0.01)
-            //         check = true;
-            // }
             std::cout<< "Group: " << subGroupName << " NumGroupControlledWells: " << num_group_controlled_wells << std::endl;
             if (individual_control || num_group_controlled_wells == 0) {
             // if (individual_control || num_group_controlled_wells == 0 || (subGroupName=="B1" && check)) {
@@ -483,25 +468,16 @@ updateGroupTargetReduction(const Group& group,
                     groupTargetReduction[phase] += ws.surface_rates[phase] * efficiency;
                 }
         } else {
-            // if (!group.as_choke()){
                 if ((ws.production_cmode != Well::ProducerCMode::GRUP)){
-                    // if (!group.as_choke() || reportStepIdx>=2) {
                     if (!group.as_choke()) {
                         for (int phase = 0; phase < np; phase++) {
                             groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
                         }
                 }
-                std::cout<< "B: " << " Group: " << group.name() << ", Well: " << wellName << ", cmode: " << ws.production_cmode  << ", GroupTargetReduction[1]: " << groupTargetReduction[1]*86400 << std::endl;
+                std::cout<< "B: " << " Group: " << group.name() << ", Well: " 
+                         << wellName << ", cmode: " << ws.production_cmode  << ", GroupTargetReduction[1]: "
+                         << groupTargetReduction[1]*86400 << std::endl;
             }
-            // else {
-            //     // if (ws.production_cmode != Well::ProducerCMode::THP){
-            //     if(reportStepIdx >= 2){
-            //         for (int phase = 0; phase < np; phase++) {
-            //             groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
-            //         }
-            //     }
-            //     std::cout<< "C: " << " Group: " << group.name() << ", Well: " << wellName << ", cmode: " << ws.production_cmode  << ", GroupTargetReduction[1]: " << groupTargetReduction[1]*86400 << std::endl;
-            // }
         }
     }
     if (isInjector)
@@ -1165,9 +1141,21 @@ groupControlledWells(const Schedule& schedule,
             //PJPE: This is the target rate for the auto choke group derived from the 
             //parent group M5S target rate (e.g. 8000 m3/day) and the guide rates eg. 40 for M5S
             //and 35 for auto choke group.targetrate is then (8000*35/40)/86400 = 0.081 
-            //Q: how to get this target value here??
+            //Q: How to get this target value here??
+            //  const GuideRate& guide_rate;
+            //  const GuideRateModel::Target* target;
+            //  WGHelpers::FractionCalculator fcalc(schedule,
+            //                             well_state,
+            //                             group_state,
+            //                             report_step,
+            //                             guide_rate,
+            //                             target, //tcalc.guideTargetMode(),
+            //                             well_state.phaseUsage().phase_pos[BlackoilPhases::Liquid],
+            //                             true,
+            //                             Phase::OIL);
+
             const double target_rate = 0.08101851851;
-            if (current_rate < 0.08101851851)
+            if (current_rate < target_rate)
                 included = false;
         }
 
@@ -1348,6 +1336,7 @@ checkGroupConstraintsProd(const std::string& name,
             // we add a factor here to avoid switching due to numerical instability
             const Scalar factor = 1.01;
             if (currentRateFraction > (guiderateFraction * factor)) {
+                std::cout << guided_group << " localCurrentRate(guided_group): " << localCurrentRate(guided_group) << chain[ii-1] << " localCurrentRate(chain[ii-1]) " << localCurrentRate(chain[ii-1]) << std::endl;
                 return std::make_pair(true, guiderateFraction / currentRateFraction);
             }
         }

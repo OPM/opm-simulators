@@ -236,7 +236,7 @@ checkGroupProductionConstraints(const Group& group,
     const auto& well_state = wellModel_.wellState();
     const auto& pu = wellModel_.phaseUsage();
 
-    const auto group_name = group.name();
+    const auto group_name = group.name();//PJPE
     const auto controls = group.productionControls(wellModel_.summaryState());
     const Group::ProductionCMode& currentControl = wellModel_.groupState().production_control(group.name());
 

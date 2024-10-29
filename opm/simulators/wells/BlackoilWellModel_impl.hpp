@@ -1371,7 +1371,7 @@ namespace Opm {
                 }
 
                 const Scalar orig_target = target_tmp;
-                std::cout<< "Group: " << group.name() << " orig_target: " << orig_target << std::endl;
+                std::cout<< "Group: " << group.name() << " orig_target: " << orig_target*86400 << std::endl;
 
                 auto mismatch = [&] (auto group_thp) {
                     Scalar group_rate(0.0);
