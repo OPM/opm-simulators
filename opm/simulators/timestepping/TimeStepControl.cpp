@@ -313,11 +313,6 @@ namespace Opm
         // Store new error and time step
         const double error = relChange.relativeChange();
         errors_[2] = error;
-        std::cout << error << std::endl;
-        if (error > 1e-05)
-        {
-            std::cout << "Larger than 1e-05!" << std::endl;
-        }
         timeSteps_[2] = dt;
         for( int i = 0; i < 2; ++i )
         {
@@ -338,7 +333,7 @@ namespace Opm
             else if (stepFailed_)
                 stepFailed_ = false;
             const double newDt = dt * std::pow(safetyFactor_ * tolerance_ / errors_[2], 0.35);
-            std::cout << "New time 1: " << unit::convert::to(newDt, unit::day) << std::endl;
+            //std::cout << "New time 1: " << unit::convert::to(newDt, unit::day) << std::endl;
             return newDt;
         }
         // Use the general third order controller for all other time steps
@@ -353,7 +348,7 @@ namespace Opm
                                       std::pow(timeSteps_[1] / timeSteps_[0], -alpha[1]);
             if( verbose_ )
                 OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
-            std::cout << "New time 2: " << unit::convert::to(newDt, unit::day) << std::endl;
+            //std::cout << "New time 2: " << unit::convert::to(newDt, unit::day) << std::endl;
             return newDt;
         }
     }

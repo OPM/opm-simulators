@@ -136,9 +136,12 @@ void registerAdaptiveParameters()
     Parameters::Register<Parameters::MinTimeStepBasedOnNewtonIterations>
         ("The minimum time step size (in days for field and metric unit and hours for lab unit) "
          "can be reduced to based on newton iteration counts");
-    Parameters::Register<Parameters::TimeStepSafetyFactor>
-        ("Safety factor in the formula for the time step cutting after a "
-        "time step has failed to satisfy the tolerance criterion");
+    Parameters::Register<Parameters::TimeStepChoppingFactor>
+        ("Safety factor in the formula for the time step chopping after a time "
+        "step has failed to satisfy the tolerance criterion due to a too large time step");
+    Parameters::Register<Parameters::TimeStepControlSafetyFactor>
+        ("Safety factor to be multiplied with the tolerance parameter in the controllers "
+        "used to propose time steps");
 }
 
 } // namespace detail

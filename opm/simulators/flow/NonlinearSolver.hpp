@@ -215,7 +215,7 @@ void registerNonlinearParameters();
                 report.converged = false;
                 failureReport_ = report;
 
-                std::string msg = "Time step too large - Failed to satisfy the tolerance test, since the error (" + std::to_string(error) + ") was larger than the tolerance (" + std::to_string(timeStepControlTolerance) + ").";
+                std::string msg = "Time step too large - Failed to satisfy the tolerance test.";
                 OPM_THROW_NOLOG(TimeSteppingBreakdown, msg);
             }
 

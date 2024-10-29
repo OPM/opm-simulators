@@ -34,6 +34,8 @@
 
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 #include <fmt/format.h>
 
 #include <algorithm>
@@ -66,7 +68,8 @@ struct TimeStepControlGrowthDampingFactor { static constexpr double value = 3.2;
 struct TimeStepControlFileName { static constexpr auto value = "timesteps"; };
 struct MinTimeStepBeforeShuttingProblematicWellsInDays { static constexpr double value = 0.01; };
 struct MinTimeStepBasedOnNewtonIterations { static constexpr double value = 0.0; };
-struct TimeStepSafetyFactor { static constexpr double value = 0.8; };
+struct TimeStepChoppingFactor { static constexpr double value = 0.8; };
+struct TimeStepControlSafetyFactor { static constexpr double value = 0.8; };
 
 } // namespace Opm::Parameters
 
@@ -263,7 +266,7 @@ void registerAdaptiveParameters();
                 catch (const TimeSteppingBreakdown& e) {
                     tooLargeTimeStep = true;
                     substepReport = solver.failureReport();
-                    causeOfFailure = "Error in time stepping exceeded tolerance";
+                    causeOfFailure = "Time step was too large";
 
                     logException_(e, solverVerbose_);
                 }
@@ -317,6 +320,13 @@ void registerAdaptiveParameters();
                 SolutionTimeErrorSolverWrapper<Solver> relativeChange(solver);
 
                 if (substepReport.converged || continue_on_uncoverged_solution) {
+                    
+                    double RC = relativeChange.relativeChange();
+                    if (solver.model().simulator().gridView().comm().rank() == 0)
+                    {
+                        std::cout << "RC: " << RC << std::endl;
+                        std::cout << "T: " << boost::posix_time::to_iso_extended_string(substepTimer.currentDateTime()) << std::endl;
+                    }
 
                     // advance by current dt
                     ++substepTimer;
@@ -392,8 +402,7 @@ void registerAdaptiveParameters();
                     }
 
                     // The new, chopped timestep.
-                    const double timeStepSafetyFactor = Parameters::Get<Parameters::TimeStepSafetyFactor>();
-                    const double newTimeStep = timeStepSafetyFactor * dt * timeStepControlTolerance_ / relativeChange.relativeChange();
+                    const double newTimeStep = timeStepChoppingFactor_ * dt * timeStepControlTolerance_ / relativeChange.relativeChange();
 
                     // If we have restarted (i.e. cut the timestep) too
                     // much, we have failed and throw an exception.
@@ -715,6 +724,9 @@ void registerAdaptiveParameters();
             std::string control = Parameters::Get<Parameters::TimeStepControl>(); // "pid"
 
             timeStepControlTolerance_ =  Parameters::Get<Parameters::TimeStepControlTolerance>(); // 1e-1
+            timeStepChoppingFactor_ = Parameters::Get<Parameters::TimeStepChoppingFactor>(); // 0.8
+            timeStepControlSafetyFactor_ = Parameters::Get<Parameters::TimeStepControlSafetyFactor>(); // 0.8
+
             if (control == "pid") {
                 timeStepControl_ = std::make_unique<PIDTimeStepControl>(timeStepControlTolerance_);
                 timeStepControlType_ = TimeStepControlType::PID;
@@ -759,8 +771,7 @@ void registerAdaptiveParameters();
                 timeStepControlType_ = TimeStepControlType::HardCodedTimeStep;
             }
             else if (control == "general3rdorder") {
-                const double safetyFactor = 0.8;
-                timeStepControl_ = std::make_unique<General3rdOrderController>(tol, safetyFactor);
+                timeStepControl_ = std::make_unique<General3rdOrderController>(timeStepControlTolerance_, timeStepControlSafetyFactor_);
                 timeStepControlType_ = TimeStepControlType::General3rdOrder;
             }
             else
@@ -790,6 +801,8 @@ void registerAdaptiveParameters();
         double timestepAfterEvent_;          //!< suggested size of timestep after an event
         bool useNewtonIteration_;            //!< use newton iteration count for adaptive time step control
         double minTimeStepBeforeShuttingProblematicWells_; //! < shut problematic wells when time step size in days are less than this
+        double timeStepChoppingFactor_;      //!< multiplicative factor for time step chopping after tolerance test fail
+        double timeStepControlSafetyFactor_; //!< factor multiplied with tolerance parameter in the adaptive time stepping controllers
     };
 }
 
