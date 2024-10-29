@@ -265,7 +265,7 @@ namespace Opm
                 ss << "    The control mode for well " << this->name()
                 << " is oscillating.\n"
                 << "       The individual control is fixed after  "
-                << param_.max_number_of_well_switches_
+                << this->param_.max_number_of_well_switches_
                 << " switches. The control is kept at " << to;
                 deferred_logger.info(ss.str());
                 updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
@@ -331,7 +331,14 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        if (this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        bool oscillating = false;
+        for (const auto& key : this->well_control_log_) {
+            if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), key) >= this->param_.max_number_of_well_switches_) {
+                oscillating = true;
+                break;
+            }
+        }
+        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -344,7 +351,7 @@ namespace Opm
                 bool changed = false;
                 bool oscillating = false;
                 for (const auto& key : this->well_control_log_) {
-                    if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), key) >= param_.max_number_of_well_switches_) {
+                    if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), key) >= this->param_.max_number_of_well_switches_) {
                         oscillating = true;
                         break;
                     }
