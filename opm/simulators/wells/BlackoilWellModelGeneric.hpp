@@ -601,6 +601,16 @@ protected:
 
 private:
     WellInterfaceGeneric<Scalar>* getGenWell(const std::string& well_name);
+
+    template <typename Iter, typename Body>
+    void wellUpdateLoop(Iter first, Iter last, const int timeStepIdx, Body&& body);
+
+    void updateEclWellsConstraints(const int timeStepIdx,
+                                   const SimulatorUpdate& sim_update,
+                                   const SummaryState& st);
+
+    void updateEclWellsCTFFromAction(const int timeStepIdx,
+                                     const SimulatorUpdate& sim_update);
 };
 
 
