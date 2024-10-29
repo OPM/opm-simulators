@@ -28,6 +28,7 @@
 namespace Opm {
 
     class EclipseState;
+    template <typename Grid> class LevelCartesianIndexMapper;
     class MiscTable;
     class MsfnTable;
     class SgcwmisTable;
@@ -54,9 +55,9 @@ namespace Opm {
         ///output if they're found.
         ///\param[in] eclState  eclipse state.
         ///\param[in] grid      unstructured grid.
-        template <class CartesianIndexMapper>
+        template <class LevelCartesianIndexMapper>
         void diagnosis(const EclipseState& eclState,
-                       const CartesianIndexMapper& cartesianIndexMapper);
+                       const LevelCartesianIndexMapper& levelCartesianIndexMapper);
 
     private:
         enum FluidSystem {
@@ -95,9 +96,9 @@ namespace Opm {
         ///Check endpoints in the saturation tables.
         void unscaledEndPointsCheck_(const EclipseState& eclState);
 
-        template <class CartesianIndexMapper>
+        template <class LevelCartesianIndexMapper>
         void scaledEndPointsCheck_(const EclipseState& eclState,
-                                   const CartesianIndexMapper& cartesianIndexMapper);
+                                   const LevelCartesianIndexMapper& levelCartesianIndexMapper);
 
         ///For every table, need to deal with case by case.
         void swofTableCheck_(const SwofTable& swofTables,

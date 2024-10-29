@@ -272,6 +272,7 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
     this->global_well_info = std::make_optional<GlobalWellInfo>(schedule,
                                                                 report_step,
                                                                 wells_ecl);
+    well_rates.clear();
     for (const auto& wname : schedule.wellNames(report_step))
     {
         well_rates.insert({wname, std::make_pair(false, std::vector<Scalar>(this->numPhases()))});

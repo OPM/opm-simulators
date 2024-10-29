@@ -109,6 +109,8 @@ public:
 
     void outputErrorLog(const Parallel::Communication& comm) const;
 
+    void accumulateRftDataParallel(const Parallel::Communication& comm);
+
     void addRftDataToWells(data::Wells& wellDatas,
                            std::size_t reportStepNum);
 
@@ -380,6 +382,8 @@ protected:
     void setupBlockData(std::function<bool(int)> isCartIdxOnThisRank);
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
+
+    void collectRftMapOnRoot(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm);
 
     const EclipseState& eclState_;
     const Schedule& schedule_;

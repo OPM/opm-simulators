@@ -28,6 +28,7 @@
 #define OPM_GENERIC_CPGRID_VANGUARD_HPP
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 
@@ -78,6 +79,7 @@ template<class ElementMapper, class GridView, class Scalar>
 class GenericCpGridVanguard {
 protected:
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Dune::CpGrid>;
+    using LevelCartesianIndexMapper = Opm::LevelCartesianIndexMapper<Dune::CpGrid>;
     using Element = typename GridView::template Codim<0>::Entity;
 
 public:
@@ -132,6 +134,12 @@ public:
     const CartesianIndexMapper& cartesianIndexMapper() const;
 
     /*!
+     * \brief Returns the object which maps a global element index of the simulation grid
+     *        to the corresponding element index of the level logically Cartesian index.
+     */
+    const LevelCartesianIndexMapper levelCartesianIndexMapper() const;
+
+    /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const;
@@ -153,6 +161,7 @@ protected:
                         const Dune::PartitionMethod              partitionMethod,
                         const bool                               serialPartitioning,
                         const bool                               enableDistributedWells,
+                        const bool                               allowSplittingInactiveWells,
                         const double                             imbalanceTol,
                         const GridView&                          gridView,
                         const Schedule&                          schedule,

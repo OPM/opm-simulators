@@ -780,6 +780,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/utils/timerguard.hh
   opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/AluGridCartesianIndexMapper.hpp
+  opm/simulators/flow/AluGridLevelCartesianIndexMapper.hpp
   opm/simulators/flow/AluGridVanguard.hpp
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/BaseAquiferModel.hpp

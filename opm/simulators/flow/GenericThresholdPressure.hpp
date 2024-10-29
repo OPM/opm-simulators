@@ -110,7 +110,7 @@ protected:
     std::vector<Scalar> thpresftValues_;
     std::vector<int> cartElemFaultIdx_;
 
-    bool enableThresholdPressure_;
+    bool enableThresholdPressure_ {false};
 };
 
 } // namespace Opm
