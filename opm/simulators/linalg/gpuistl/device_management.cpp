@@ -32,6 +32,13 @@ namespace Opm::gpuistl {
 
     /*
         * Print the device name and compute capability on every rank
+
+        If you have an AMD GPU and you have an AMD CPU you might run
+        into problems with this code when using multiple MPI ranks.
+        The simulation might hang because the integrated GPU in the CPU
+        is detected has Radeon compute units, but it does not support ROCM.
+        This is fixable my making only the GPUS on your system visible with
+        ROCR_VISIBLE_DEVICES environment variable.
     */
     void printDevice()
     {
