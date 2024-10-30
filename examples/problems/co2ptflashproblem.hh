@@ -498,6 +498,26 @@ private:
             fs.setViscosity(FluidSystem::gasPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::gasPhaseIdx));
         }
 
+        // determine the component total fractions
+        // TODO: duplicated code here, while should be refactored out when we swithing
+        // to starting from total mole fractions
+        Dune::FieldVector<Scalar, numComponents> z(0.0);
+        Scalar sumMoles = 0.0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            const auto saturation = getValue(fs.saturation(phaseIdx));
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                Scalar tmp = getValue(fs.molarity(phaseIdx, compIdx)) * saturation;
+                tmp = max(tmp, 1.e-8);
+                z[compIdx] += tmp;
+                sumMoles += tmp;
+            }
+        }
+        z /= sumMoles;
+
+        for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
+            fs.setMoleFraction(compIdx, z[compIdx]);
+        }
+
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             const Evaluation Ktmp = fs.wilsonK_(compIdx);

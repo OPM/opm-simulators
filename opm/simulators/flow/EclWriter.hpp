@@ -30,22 +30,29 @@
 
 #include <dune/grid/common/partitionset.hh>
 
+#include <opm/common/TimingMacros.hpp> // OPM_TIMEBLOCK
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
+#include <opm/output/eclipse/Inplace.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
+
+#include <opm/models/blackoil/blackoilproperties.hh> // Properties::EnableMech, EnableTemperature, EnableSolvent
+#include <opm/models/common/multiphasebaseproperties.hh> // Properties::FluidSystem
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/EclGenericWriter.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <limits>
 #include <map>
@@ -101,7 +108,7 @@ namespace Opm {
  * - This class requires to use the black oil model with the element
  *   centered finite volume discretization.
  */
-template <class TypeTag>
+template <class TypeTag, class OutputModule>
 class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>,
                                           GetPropType<TypeTag, Properties::EquilGrid>,
                                           GetPropType<TypeTag, Properties::GridView>,
@@ -120,7 +127,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
-    
+
     typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView > VertexMapper;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
@@ -132,7 +139,7 @@ public:
 
     static void registerParameters()
     {
-        OutputBlackOilModule<TypeTag>::registerParameters();
+        OutputModule::registerParameters();
 
         Parameters::Register<Parameters::EnableAsyncEclOutput>
             ("Write the ECL-formated results in a non-blocking way "
@@ -169,13 +176,13 @@ public:
 
             eclBroadcast(this->simulator_.vanguard().grid().comm(), smryCfg);
 
-            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+            this->outputModule_ = std::make_unique<OutputModule>
                 (simulator, smryCfg, this->collectOnIORank_);
         }
         else
 #endif
         {
-            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+            this->outputModule_ = std::make_unique<OutputModule>
                 (simulator, this->eclIO_->finalSummaryConfig(), this->collectOnIORank_);
         }
 
@@ -428,7 +435,6 @@ public:
         const bool isFloresn = this->outputModule_->hasFloresn();
         auto floresn = this->outputModule_->getFloresn();
 
-        // data::Solution localCellData = {};
         if (! isSubStep || Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
 
             if (localCellData.empty()) {
@@ -661,10 +667,10 @@ public:
         }
     }
 
-    const OutputBlackOilModule<TypeTag>& outputModule() const
+    const OutputModule& outputModule() const
     { return *outputModule_; }
 
-    OutputBlackOilModule<TypeTag>& mutableOutputModule() const
+    OutputModule& mutableOutputModule() const
     { return *outputModule_; }
 
     Scalar restartTimeStepSize() const
@@ -826,7 +832,7 @@ private:
     }
 
     Simulator& simulator_;
-    std::unique_ptr<OutputBlackOilModule<TypeTag> > outputModule_;
+    std::unique_ptr<OutputModule> outputModule_;
     Scalar restartTimeStepSize_;
     int rank_ ;
     Inplace inplace_;

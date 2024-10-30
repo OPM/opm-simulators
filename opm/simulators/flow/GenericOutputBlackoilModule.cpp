@@ -28,6 +28,8 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
+#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
+
 #include <opm/grid/common/CommunicationUtils.hpp>
 
 #include <opm/output/data/Solution.hpp>
@@ -201,7 +203,8 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             bool enableBrine,
                             bool enableSaltPrecipitation,
                             bool enableExtbo,
-                            bool enableMICP)
+                            bool enableMICP,
+                            bool isCompositional)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
@@ -220,6 +223,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
+    , isCompositional_(isCompositional)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -497,83 +501,90 @@ assignToSolution(data::Solution& sol)
                    target);
     };
 
-    const auto baseSolutionArrays = std::array {
-        DataEntry{"1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_[gasPhaseIdx]},
-        DataEntry{"1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   invB_[oilPhaseIdx]},
-        DataEntry{"1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx]},
-        DataEntry{"FLRGASI+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][gasCompIdx]},
-        DataEntry{"FLRGASJ+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][gasCompIdx]},
-        DataEntry{"FLRGASK+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][gasCompIdx]},
-        DataEntry{"FLROILI+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][oilCompIdx]},
-        DataEntry{"FLROILJ+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][oilCompIdx]},
-        DataEntry{"FLROILK+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][oilCompIdx]},
-        DataEntry{"FLRWATI+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][waterCompIdx]},
-        DataEntry{"FLRWATJ+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][waterCompIdx]},
-        DataEntry{"FLRWATK+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][waterCompIdx]},
-        DataEntry{"FOAM",     UnitSystem::measure::identity,                              cFoam_},
-        DataEntry{"GASKR",    UnitSystem::measure::identity,                              relativePermeability_[gasPhaseIdx]},
-        DataEntry{"GAS_DEN",  UnitSystem::measure::density,                               density_[gasPhaseIdx]},
-        DataEntry{"GAS_VISC", UnitSystem::measure::viscosity,                             viscosity_[gasPhaseIdx]},
-        DataEntry{"OILKR",    UnitSystem::measure::identity,                              relativePermeability_[oilPhaseIdx]},
-        DataEntry{"OIL_DEN",  UnitSystem::measure::density,                               density_[oilPhaseIdx]},
-        DataEntry{"OIL_VISC", UnitSystem::measure::viscosity,                             viscosity_[oilPhaseIdx]},
-        DataEntry{"PBUB",     UnitSystem::measure::pressure,                              bubblePointPressure_},
-        DataEntry{"PCGW",     UnitSystem::measure::pressure,                              pcgw_},
-        DataEntry{"PCOG",     UnitSystem::measure::pressure,                              pcog_},
-        DataEntry{"PCOW",     UnitSystem::measure::pressure,                              pcow_},
-        DataEntry{"PDEW",     UnitSystem::measure::pressure,                              dewPointPressure_},
-        DataEntry{"POLYMER",  UnitSystem::measure::identity,                              cPolymer_},
-        DataEntry{"PPCW",     UnitSystem::measure::pressure,                              ppcw_},
-        DataEntry{"PRESROCC", UnitSystem::measure::pressure,                              minimumOilPressure_},
-        DataEntry{"PRESSURE", UnitSystem::measure::pressure,                              fluidPressure_},
-        DataEntry{"RPORV",    UnitSystem::measure::volume,                                rPorV_},
-        DataEntry{"RS",       UnitSystem::measure::gas_oil_ratio,                         rs_},
-        DataEntry{"RSSAT",    UnitSystem::measure::gas_oil_ratio,                         gasDissolutionFactor_},
-        DataEntry{"RV",       UnitSystem::measure::oil_gas_ratio,                         rv_},
-        DataEntry{"RVSAT",    UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_},
-        DataEntry{"SALT",     UnitSystem::measure::salinity,                              cSalt_},
-        DataEntry{"SGMAX",    UnitSystem::measure::identity,                              sgmax_},
-        DataEntry{"SHMAX",    UnitSystem::measure::identity,                              shmax_},
-        DataEntry{"SOMAX",    UnitSystem::measure::identity,                              soMax_},                    
-        DataEntry{"SOMIN",    UnitSystem::measure::identity,                              somin_},
-        DataEntry{"SSOLVENT", UnitSystem::measure::identity,                              sSol_},
-        DataEntry{"SWHY1",    UnitSystem::measure::identity,                              swmin_},
-        DataEntry{"SWMAX",    UnitSystem::measure::identity,                              swMax_},
-        DataEntry{"WATKR",    UnitSystem::measure::identity,                              relativePermeability_[waterPhaseIdx]},
-        DataEntry{"WAT_DEN",  UnitSystem::measure::density,                               density_[waterPhaseIdx]},
-        DataEntry{"WAT_VISC", UnitSystem::measure::viscosity,                             viscosity_[waterPhaseIdx]},
+    // if index not specified, we treat it as valid (>= 0)
+    auto addEntry = [](std::vector<DataEntry>& container, const std::string& name, UnitSystem::measure measure, const auto& flowArray, int index = 1) {
+        if (index >= 0) {  // Only add if index is valid
+            container.emplace_back(name, measure, flowArray);
+        }
     };
 
+
+    std::vector<DataEntry> baseSolutionVector;
+    addEntry(baseSolutionVector, "1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_[gasPhaseIdx],                                              gasPhaseIdx);
+    addEntry(baseSolutionVector, "1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   invB_[oilPhaseIdx],                                              oilPhaseIdx);
+    addEntry(baseSolutionVector, "1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx],                                            waterPhaseIdx);
+    addEntry(baseSolutionVector, "FLRGASI+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][gasCompIdx],   gasCompIdx);
+    addEntry(baseSolutionVector, "FLRGASJ+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][gasCompIdx],   gasCompIdx);
+    addEntry(baseSolutionVector, "FLRGASK+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][gasCompIdx],   gasCompIdx);
+    addEntry(baseSolutionVector, "FLROILI+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][oilCompIdx],   oilCompIdx);
+    addEntry(baseSolutionVector, "FLROILJ+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][oilCompIdx],   oilCompIdx);
+    addEntry(baseSolutionVector, "FLROILK+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][oilCompIdx],   oilCompIdx);
+    addEntry(baseSolutionVector, "FLRWATI+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][waterCompIdx], waterCompIdx);
+    addEntry(baseSolutionVector, "FLRWATJ+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][waterCompIdx], waterCompIdx);
+    addEntry(baseSolutionVector, "FLRWATK+", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][waterCompIdx], waterCompIdx);
+    addEntry(baseSolutionVector, "FOAM",     UnitSystem::measure::identity,                              cFoam_);
+    addEntry(baseSolutionVector, "GASKR",    UnitSystem::measure::identity,                              relativePermeability_[gasPhaseIdx],                              gasPhaseIdx);
+    addEntry(baseSolutionVector, "GAS_DEN",  UnitSystem::measure::density,                               density_[gasPhaseIdx],                                           gasPhaseIdx);
+    addEntry(baseSolutionVector, "GAS_VISC", UnitSystem::measure::viscosity,                             viscosity_[gasPhaseIdx],                                         gasPhaseIdx);
+    addEntry(baseSolutionVector, "OILKR",    UnitSystem::measure::identity,                              relativePermeability_[oilPhaseIdx],                              oilPhaseIdx);
+    addEntry(baseSolutionVector, "OIL_DEN",  UnitSystem::measure::density,                               density_[oilPhaseIdx],                                           oilPhaseIdx);
+    addEntry(baseSolutionVector, "OIL_VISC", UnitSystem::measure::viscosity,                             viscosity_[oilPhaseIdx],                                         oilPhaseIdx);
+    addEntry(baseSolutionVector, "PBUB",     UnitSystem::measure::pressure,                              bubblePointPressure_);
+    addEntry(baseSolutionVector, "PCGW",     UnitSystem::measure::pressure,                              pcgw_);
+    addEntry(baseSolutionVector, "PCOG",     UnitSystem::measure::pressure,                              pcog_);
+    addEntry(baseSolutionVector, "PCOW",     UnitSystem::measure::pressure,                              pcow_);
+    addEntry(baseSolutionVector, "PDEW",     UnitSystem::measure::pressure,                              dewPointPressure_);
+    addEntry(baseSolutionVector, "POLYMER",  UnitSystem::measure::identity,                              cPolymer_);
+    addEntry(baseSolutionVector, "PPCW",     UnitSystem::measure::pressure,                              ppcw_);
+    addEntry(baseSolutionVector, "PRESROCC", UnitSystem::measure::pressure,                              minimumOilPressure_);
+    addEntry(baseSolutionVector, "PRESSURE", UnitSystem::measure::pressure,                              fluidPressure_);
+    addEntry(baseSolutionVector, "RPORV",    UnitSystem::measure::volume,                                rPorV_);
+    addEntry(baseSolutionVector, "RS",       UnitSystem::measure::gas_oil_ratio,                         rs_);
+    addEntry(baseSolutionVector, "RSSAT",    UnitSystem::measure::gas_oil_ratio,                         gasDissolutionFactor_);
+    addEntry(baseSolutionVector, "RV",       UnitSystem::measure::oil_gas_ratio,                         rv_);
+    addEntry(baseSolutionVector, "RVSAT",    UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_);
+    addEntry(baseSolutionVector, "SALT",     UnitSystem::measure::salinity,                              cSalt_);
+    addEntry(baseSolutionVector, "SGMAX",    UnitSystem::measure::identity,                              sgmax_);
+    addEntry(baseSolutionVector, "SHMAX",    UnitSystem::measure::identity,                              shmax_);
+    addEntry(baseSolutionVector, "SOMAX",    UnitSystem::measure::identity,                              soMax_);
+    addEntry(baseSolutionVector, "SOMIN",    UnitSystem::measure::identity,                              somin_);
+    addEntry(baseSolutionVector, "SSOLVENT", UnitSystem::measure::identity,                              sSol_);
+    addEntry(baseSolutionVector, "SWHY1",    UnitSystem::measure::identity,                              swmin_);
+    addEntry(baseSolutionVector, "SWMAX",    UnitSystem::measure::identity,                              swMax_);
+    addEntry(baseSolutionVector, "WATKR",    UnitSystem::measure::identity,                              relativePermeability_[waterPhaseIdx],                            waterPhaseIdx);
+    addEntry(baseSolutionVector, "WAT_DEN",  UnitSystem::measure::density,                               density_[waterPhaseIdx],                                         waterPhaseIdx);
+    addEntry(baseSolutionVector, "WAT_VISC", UnitSystem::measure::viscosity,                             viscosity_[waterPhaseIdx],                                       waterPhaseIdx);
+
+
     // Separate these as flows*_ may be defined due to BFLOW[I|J|K] even without FLOWS in RPTRST
-    const auto flowsSolutionArrays = std::array {
-        DataEntry{"FLOGASI+", UnitSystem::measure::gas_surface_rate,                      flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][gasCompIdx]},
-        DataEntry{"FLOGASJ+", UnitSystem::measure::gas_surface_rate,                      flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][gasCompIdx]},
-        DataEntry{"FLOGASK+", UnitSystem::measure::gas_surface_rate,                      flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][gasCompIdx]},
-        DataEntry{"FLOOILI+", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][oilCompIdx]},
-        DataEntry{"FLOOILJ+", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][oilCompIdx]},
-        DataEntry{"FLOOILK+", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][oilCompIdx]},
-        DataEntry{"FLOWATI+", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][waterCompIdx]},
-        DataEntry{"FLOWATJ+", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][waterCompIdx]},
-        DataEntry{"FLOWATK+", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][waterCompIdx]},
-        DataEntry{"FLOGASI-", UnitSystem::measure::gas_surface_rate,                      flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][gasCompIdx]},
-        DataEntry{"FLOGASJ-", UnitSystem::measure::gas_surface_rate,                      flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][gasCompIdx]},
-        DataEntry{"FLOGASK-", UnitSystem::measure::gas_surface_rate,                      flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][gasCompIdx]},
-        DataEntry{"FLOOILI-", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][oilCompIdx]},
-        DataEntry{"FLOOILJ-", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][oilCompIdx]},
-        DataEntry{"FLOOILK-", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][oilCompIdx]},
-        DataEntry{"FLOWATI-", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][waterCompIdx]},
-        DataEntry{"FLOWATJ-", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][waterCompIdx]},
-        DataEntry{"FLOWATK-", UnitSystem::measure::liquid_surface_rate,                   flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][waterCompIdx]},
-        DataEntry{"FLRGASI-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][gasCompIdx]},
-        DataEntry{"FLRGASJ-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][gasCompIdx]},
-        DataEntry{"FLRGASK-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][gasCompIdx]},
-        DataEntry{"FLROILI-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][oilCompIdx]},
-        DataEntry{"FLROILJ-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][oilCompIdx]},
-        DataEntry{"FLROILK-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][oilCompIdx]},
-        DataEntry{"FLRWATI-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][waterCompIdx]},
-        DataEntry{"FLRWATJ-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][waterCompIdx]},
-        DataEntry{"FLRWATK-", UnitSystem::measure::rate,                                  flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][waterCompIdx]},
-    };
+    std::vector<DataEntry> flowsSolutionVector;
+    addEntry(flowsSolutionVector, "FLOGASI+", UnitSystem::measure::gas_surface_rate,    flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][gasCompIdx],     gasCompIdx);
+    addEntry(flowsSolutionVector, "FLOGASJ+", UnitSystem::measure::gas_surface_rate,    flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][gasCompIdx],     gasCompIdx);
+    addEntry(flowsSolutionVector, "FLOGASK+", UnitSystem::measure::gas_surface_rate,    flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][gasCompIdx],     gasCompIdx);
+    addEntry(flowsSolutionVector, "FLOOILI+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][oilCompIdx],     oilCompIdx);
+    addEntry(flowsSolutionVector, "FLOOILJ+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][oilCompIdx],     oilCompIdx);
+    addEntry(flowsSolutionVector, "FLOOILK+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][oilCompIdx],     oilCompIdx);
+    addEntry(flowsSolutionVector, "FLOWATI+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][waterCompIdx],   waterCompIdx);
+    addEntry(flowsSolutionVector, "FLOWATJ+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][waterCompIdx],   waterCompIdx);
+    addEntry(flowsSolutionVector, "FLOWATK+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][waterCompIdx],   waterCompIdx);
+    addEntry(flowsSolutionVector, "FLOGASI-", UnitSystem::measure::gas_surface_rate,    flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][gasCompIdx],    gasCompIdx);
+    addEntry(flowsSolutionVector, "FLOGASJ-", UnitSystem::measure::gas_surface_rate,    flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][gasCompIdx],    gasCompIdx);
+    addEntry(flowsSolutionVector, "FLOGASK-", UnitSystem::measure::gas_surface_rate,    flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][gasCompIdx],    gasCompIdx);
+    addEntry(flowsSolutionVector, "FLOOILI-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][oilCompIdx],    oilCompIdx);
+    addEntry(flowsSolutionVector, "FLOOILJ-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][oilCompIdx],    oilCompIdx);
+    addEntry(flowsSolutionVector, "FLOOILK-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][oilCompIdx],    oilCompIdx);
+    addEntry(flowsSolutionVector, "FLOWATI-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][waterCompIdx],  waterCompIdx);
+    addEntry(flowsSolutionVector, "FLOWATJ-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][waterCompIdx],  waterCompIdx);
+    addEntry(flowsSolutionVector, "FLOWATK-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][waterCompIdx],  waterCompIdx);
+    addEntry(flowsSolutionVector, "FLRGASI-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][gasCompIdx],   gasCompIdx);
+    addEntry(flowsSolutionVector, "FLRGASJ-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][gasCompIdx],   gasCompIdx);
+    addEntry(flowsSolutionVector, "FLRGASK-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][gasCompIdx],   gasCompIdx);
+    addEntry(flowsSolutionVector, "FLROILI-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][oilCompIdx],   oilCompIdx);
+    addEntry(flowsSolutionVector, "FLROILJ-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][oilCompIdx],   oilCompIdx);
+    addEntry(flowsSolutionVector, "FLROILK-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][oilCompIdx],   oilCompIdx);
+    addEntry(flowsSolutionVector, "FLRWATI-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][waterCompIdx], waterCompIdx);
+    addEntry(flowsSolutionVector, "FLRWATJ-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][waterCompIdx], waterCompIdx);
+    addEntry(flowsSolutionVector, "FLRWATK-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][waterCompIdx], waterCompIdx);
 
     const auto extendedSolutionArrays = std::array {
         DataEntry{"BIOFILM",  UnitSystem::measure::identity,           cBiofilm_},
@@ -624,12 +635,44 @@ assignToSolution(data::Solution& sol)
         DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
     };
 
-    for (const auto& array : baseSolutionArrays) {
+    // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
+    // and also, we need to map these values.
+    // TODO: the following should go to a function
+    if (this->isCompositional_) {
+        auto compositionalEntries = std::vector<DataEntry>{};
+        {
+            // ZMF
+            for (int i = 0; i < numComponents; ++i) {
+                const auto name = fmt::format("ZMF{}", i + 1);  // Generate ZMF1, ZMF2, ...
+                compositionalEntries.emplace_back(name, UnitSystem::measure::identity, moleFractions_[i]);
+            }
+
+            // XMF
+            for (int i = 0; i < numComponents; ++i) {
+                const auto name = fmt::format("XMF{}", i + 1);  // Generate XMF1, XMF2, ...
+                compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
+                                                  phaseMoleFractions_[oilPhaseIdx][i]);
+            }
+
+            // YMF
+            for (int i = 0; i < numComponents; ++i) {
+                const auto name = fmt::format("YMF{}", i + 1);  // Generate YMF1, YMF2, ...
+                compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
+                                                  phaseMoleFractions_[gasPhaseIdx][i]);
+            }
+        }
+
+        for (const auto& array: compositionalEntries) {
+            doInsert(array, data::TargetType::RESTART_SOLUTION);
+        }
+    }
+
+    for (const auto& array : baseSolutionVector) {
         doInsert(array, data::TargetType::RESTART_SOLUTION);
     }
 
     if (this->enableFlows_) {
-        for (const auto& array : flowsSolutionArrays) {
+        for (const auto& array : flowsSolutionVector) {
             doInsert(array, data::TargetType::RESTART_SOLUTION);
         }
     }
@@ -659,6 +702,15 @@ assignToSolution(data::Solution& sol)
                    std::move(this->saturation_[gasPhaseIdx]),
                    data::TargetType::RESTART_SOLUTION);
     }
+
+    if (this->isCompositional_ && FluidSystem::phaseIsActive(oilPhaseIdx) &&
+        ! this->saturation_[oilPhaseIdx].empty())
+    {
+        sol.insert("SOIL", UnitSystem::measure::identity,
+                   std::move(this->saturation_[oilPhaseIdx]),
+                   data::TargetType::RESTART_SOLUTION);
+    }
+
 
     if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
         auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
@@ -1481,6 +1533,30 @@ doAllocBuffers(const unsigned bufferSize,
         overburdenPressure_.resize(bufferSize, 0.0);
     }
 
+    if (this->isCompositional_) {
+        if (rstKeywords["ZMF"] > 0) {
+            rstKeywords["ZMF"] = 0;
+            for (int i = 0; i < numComponents; ++i) {
+                moleFractions_[i].resize(bufferSize, 0.0);
+            }
+        }
+
+        if (rstKeywords["XMF"] > 0 && FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            rstKeywords["XMF"] = 0;
+            for (int i = 0; i < numComponents; ++i) {
+                phaseMoleFractions_[oilPhaseIdx][i].resize(bufferSize, 0.0);
+            }
+        }
+
+        if (rstKeywords["YMF"] > 0 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+            rstKeywords["YMF"] = 0;
+            for (int i = 0; i < numComponents; ++i) {
+                phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
+            }
+        }
+    }
+
+
     //Warn for any unhandled keyword
     if (log) {
         for (auto& keyValue: rstKeywords) {
@@ -1751,5 +1827,16 @@ INSTANTIATE_TYPE(double)
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
 #endif
+
+#define INSTANTIATE_COMP(NUM) \
+    template<class T> using FS##NUM = GenericOilGasFluidSystem<T, NUM>; \
+    template class GenericOutputBlackoilModule<FS##NUM<double>>;
+
+INSTANTIATE_COMP(2)
+INSTANTIATE_COMP(3)
+INSTANTIATE_COMP(4)
+INSTANTIATE_COMP(5)
+INSTANTIATE_COMP(6)
+INSTANTIATE_COMP(7)
 
 } // namespace Opm

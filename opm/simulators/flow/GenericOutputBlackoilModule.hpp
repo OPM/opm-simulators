@@ -335,20 +335,21 @@ protected:
                                 bool enableBrine,
                                 bool enableSaltPrecipitation,
                                 bool enableExtbo,
-                                bool enableMICP);
+                                bool enableMICP,
+                                bool isCompositional = false);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
                         const bool substep,
                         const bool log,
                         const bool isRestart,
-                        const bool vapparsActive,
-                        const bool enablePCHysteresis,
-                        const bool enableNonWettingHysteresis,
-                        const bool enableWettingHysteresis,
-                        unsigned numTracers,
-                        const std::vector<bool>& enableSolTracers,
-                        unsigned numOutputNnc);
+                        const bool vapparsActive = false,
+                        const bool enablePCHysteresis = false,
+                        const bool enableNonWettingHysteresis =false,
+                        const bool enableWettingHysteresis = false,
+                        unsigned numTracers = 0,
+                        const std::vector<bool>& enableSolTracers = {},
+                        unsigned numOutputNnc = 0);
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -405,6 +406,7 @@ protected:
     bool enableSaltPrecipitation_{false};
     bool enableExtbo_{false};
     bool enableMICP_{false};
+    bool isCompositional_{false};
 
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
@@ -539,6 +541,10 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
+    // total mole fractions for each component
+    std::array<ScalarBuffer, numComponents> moleFractions_;
+    // mole fractions for each component in each phase
+    std::array<std::array<ScalarBuffer, numComponents>, numPhases> phaseMoleFractions_;
     std::vector<ScalarBuffer> freeTracerConcentrations_;
     std::vector<ScalarBuffer> solTracerConcentrations_;
 

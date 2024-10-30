@@ -32,6 +32,9 @@
 
 
 #include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowThresholdPressure.hpp>
+#include <opm/simulators/flow/OutputCompositionalModule.hpp>
+
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/material/thermal/EclThermalLawManager.hpp>
@@ -82,6 +85,7 @@ class FlowProblemComp : public FlowProblem<TypeTag>
     using typename FlowProblemType::RateVector;
 
     using InitialFluidState = CompositionalFluidState<Scalar, FluidSystem>;
+    using EclWriterType = EclWriter<TypeTag, OutputCompositionalModule<TypeTag> >;
 
 public:
     using FlowProblemType::porosity;
@@ -94,6 +98,8 @@ public:
     {
         FlowProblemType::registerParameters();
 
+        EclWriterType::registerParameters();
+
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
     }
@@ -104,7 +110,10 @@ public:
      */
     explicit FlowProblemComp(Simulator& simulator)
         : FlowProblemType(simulator)
+        , thresholdPressures_(simulator)
     {
+        eclWriter_ = std::make_unique<EclWriterType>(simulator);
+        enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
     }
 
     /*!
@@ -127,8 +136,17 @@ public:
                 [&vg = this->simulator().vanguard()](const unsigned int it) { return vg.gridIdxToEquilGridIdx(it); });
             updated = true;
         };
+        // TODO: we might need to do the same with FlowProblemBlackoil for parallel
 
         finishTransmissibilities();
+
+        if (enableEclOutput_) {
+            eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+            std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
+                return simulator.vanguard().gridEquilIdxToGridIdx(i);
+            };
+            eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
+        }
 
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
@@ -179,6 +197,11 @@ public:
         FlowProblemType::readMaterialParameters_();
         FlowProblemType::readThermalParameters_();
 
+        // write the static output files (EGRID, INIT)
+        if (enableEclOutput_) {
+            eclWriter_->writeInit();
+        }
+
         const auto& initconfig = eclState.getInitConfig();
         if (initconfig.restartRequested())
             readEclRestartSolution_();
@@ -221,6 +244,53 @@ public:
     }
 
     /*!
+     * \brief Called by the simulator after each time integration.
+     */
+    void endTimeStep() override
+    {
+        FlowProblemType::endTimeStep();
+
+        const bool isSubStep = !this->simulator().episodeWillBeOver();
+
+        // after the solution is updated, the values in output module also needs to be updated
+        this->eclWriter_->mutableOutputModule().invalidateLocalData();
+
+        // For CpGrid with LGRs, ecl/vtk output is not supported yet.
+        const auto& grid = this->simulator().vanguard().gridView().grid();
+
+        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
+        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
+        if (!isCpGrid || (grid.maxLevel() == 0)) {
+            this->eclWriter_->evalSummaryState(isSubStep);
+        }
+
+    }
+
+    void writeReports(const SimulatorTimer& timer) {
+        if (enableEclOutput_){
+            eclWriter_->writeReports(timer);
+        }
+    }
+
+    /*!
+     * \brief Write the requested quantities of the current solution into the output
+     *        files.
+     */
+    void writeOutput(bool verbose) override
+    {
+        FlowProblemType::writeOutput(verbose);
+
+        const bool isSubStep = !this->simulator().episodeWillBeOver();
+
+        data::Solution localCellData = {};
+        if (enableEclOutput_) {
+            if (Parameters::Get<Parameters::EnableWriteAllSolutions>() || !isSubStep) {
+                eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+            }
+        }
+    }
+
+    /*!
      * \copydoc FvBaseProblem::boundary
      *
      * Reservoir simulation uses no-flow conditions as default for all boundaries.
@@ -253,25 +323,26 @@ public:
     {
         const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         const auto& initial_fs = initialFluidStates_[globalDofIdx];
-        Opm::CompositionalFluidState<Evaluation, FluidSystem> fs;
-        using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
+        Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
+        // TODO: the current approach is assuming we begin with XMF and YMF.
+        // TODO: maybe we should make it begin with ZMF
+        using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
         for (unsigned p = 0; p < numPhases; ++p) { // TODO: assuming the phaseidx continuous
-            ComponentVector evals;
-            auto& last_eval = evals[numComponents - 1];
+            ComponentVector vals;
+            auto& last_eval = vals[numComponents - 1];
             last_eval = 1.;
             for (unsigned c = 0; c < numComponents - 1; ++c) {
                 const auto val = initial_fs.moleFraction(p, c);
-                const Evaluation eval = Evaluation::createVariable(val, c + 1);
-                evals[c] = eval;
-                last_eval -= eval;
+                vals[c] = val;
+                last_eval -= val;
             }
             for (unsigned c = 0; c < numComponents; ++c) {
-                fs.setMoleFraction(p, c, evals[c]);
+                fs.setMoleFraction(p, c, vals[c]);
             }
 
             // pressure
             const auto p_val = initial_fs.pressure(p);
-            fs.setPressure(p, Evaluation::createVariable(p_val, 0));
+            fs.setPressure(p, p_val);
 
             const auto sat_val = initial_fs.saturation(p);
             fs.setSaturation(p, sat_val);
@@ -281,7 +352,7 @@ public:
         }
 
         {
-            typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
             paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
             paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
             fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
@@ -290,13 +361,31 @@ public:
             fs.setViscosity(FluidSystem::gasPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::gasPhaseIdx));
         }
 
+        // determine the component fractions
+        Dune::FieldVector<Scalar, numComponents> z(0.0);
+        Scalar sumMoles = 0.0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            const auto saturation = getValue(fs.saturation(phaseIdx));
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                Scalar tmp = getValue(fs.molarity(phaseIdx, compIdx)) * saturation;
+                tmp = max(tmp, 1e-8);
+                z[compIdx] += tmp;
+                sumMoles += tmp;
+            }
+        }
+        z /= sumMoles;
+
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            const Evaluation Ktmp = fs.wilsonK_(compIdx);
+            const auto& Ktmp = fs.wilsonK_(compIdx);
             fs.setKvalue(compIdx, Ktmp);
         }
 
-        const Evaluation& Ltmp = -1.0;
+        for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
+            fs.setMoleFraction(compIdx, z[compIdx]);
+        }
+
+        const Scalar& Ltmp = -1.0;
         fs.setLvalue(Ltmp);
 
         values.assignNaive(fs);
@@ -316,11 +405,19 @@ public:
     const std::vector<InitialFluidState>& initialFluidStates() const
     { return initialFluidStates_; }
 
+    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
+    {
+        assert( !thresholdPressures_.enableThresholdPressure() &&
+                " Threshold Pressures are not supported by compostional simulation ");
+        return thresholdPressures_;
+    }
+
     // TODO: do we need this one?
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
         serializer(static_cast<FlowProblemType&>(*this));
+        serializer(*eclWriter_);
     }
 protected:
 
@@ -467,6 +564,8 @@ protected:
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     const std::size_t data_idx = compIdx * numDof + dofIdx;
                     const Scalar zmf = zmfData[data_idx];
+                    dofFluidState.setMoleFraction(compIdx, zmf);
+
                     if (gas_active) {
                         const auto ymf = (dofFluidState.saturation(FluidSystem::gasPhaseIdx) > 0.) ? zmf : Scalar{0};
                         dofFluidState.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, ymf);
@@ -492,9 +591,14 @@ private:
         throw std::logic_error("polymer is disabled for compositional modeling and you're trying to add polymer to BC");
     }
 
+    FlowThresholdPressure<TypeTag> thresholdPressures_;
+
     std::vector<InitialFluidState> initialFluidStates_;
 
-    bool enableVtkOutput_;
+    bool enableEclOutput_{false};
+    std::unique_ptr<EclWriterType> eclWriter_;
+
+    bool enableVtkOutput_{false};
 };
 
 } // namespace Opm
