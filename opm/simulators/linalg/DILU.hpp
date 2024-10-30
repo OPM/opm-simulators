@@ -243,18 +243,6 @@ private:
     void serialSplitUpdate(){
 
         OPM_TIMEBLOCK(dilu_prec_update);
-        // move data from A_ to A_lower_ and A_upper_
-        // at first sight this can not be done with two large memory copies
-        for (auto row = A_.begin(); row != A_.end(); ++row) {
-            const auto row_i = row.index();
-            for (auto a_ij = row->begin(); a_ij != row->end(); ++a_ij) {
-                if (a_ij.index() < row_i) {
-                    A_lower_.value()[row_i][a_ij.index()] = *a_ij;
-                } else if (a_ij.index() > row_i) {
-                    A_upper_.value()[row_i][a_ij.index()] = *a_ij;
-                }
-            }
-        }
 
         for (std::size_t row = 0; row < A_.N(); ++row) {
             Dinv_[row] = A_[row][row];
@@ -269,6 +257,9 @@ private:
                 // if A_lower[i, j] != 0 and A_upper[j, i] != 0
                 if (a_ji != A_upper_.value()[col_j].end()) {
                     // Dinv_temp -= A_lower[i, j] * d[j] * A_upper[j, i]
+                    // ensure the values are moved from A_ into A_lower_ and A_upper_ before use
+                    *a_ij = A_[row_i][col_j];
+                    *a_ji = A_[col_j][row_i];
                     Dinv_temp -= (*a_ij) * Dune::FieldMatrix(Dinv_[col_j]) * (*a_ji);
                 }
             }
