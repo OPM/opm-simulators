@@ -22,6 +22,7 @@
 */
 
 #include <config.h>
+
 #include <opm/simulators/flow/ActionHandler.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -29,6 +30,7 @@
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+
 #include <opm/input/eclipse/Schedule/Action/ActionContext.hpp>
 #include <opm/input/eclipse/Schedule/Action/Actions.hpp>
 #include <opm/input/eclipse/Schedule/Action/ActionX.hpp>
@@ -40,6 +42,8 @@
 #include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <chrono>
@@ -128,6 +132,61 @@ namespace {
 
         Opm::OpmLog::debug("ACTION_NOT_TRIGGERED", message);
     }
+
+    template <typename Scalar, class WellModel>
+    std::unordered_map<std::string, Scalar>
+    fetchWellPI(const int                          reportStep,
+                const Opm::Schedule&               schedule,
+                const WellModel&                   wellModel,
+                const Opm::Action::ActionX&        action,
+                const std::vector<std::string>&    matching_wells,
+                const Opm::Parallel::Communication comm)
+    {
+        auto wellpi = std::unordered_map<std::string, Scalar> {};
+
+        const auto wellpi_wells = action.wellpi_wells
+            (schedule.wellMatcher(reportStep), matching_wells);
+
+        if (wellpi_wells.empty()) {
+            return wellpi;
+        }
+
+        const auto num_wells = schedule[reportStep].well_order().size();
+
+        std::vector<Scalar> wellpi_vector(num_wells);
+        for (const auto& wname : wellpi_wells) {
+            if (wellModel.hasWell(wname)) {
+                const auto& well = schedule.getWell(wname, reportStep);
+                wellpi_vector[well.seqIndex()] = wellModel.wellPI(wname);
+            }
+        }
+
+        if (comm.size() > 1) {
+            std::vector<Scalar> wellpi_buffer(num_wells * comm.size());
+            comm.gather(wellpi_vector.data(), wellpi_buffer.data(), num_wells, 0);
+
+            if (comm.rank() == 0) {
+                for (int rank = 1; rank < comm.size(); ++rank) {
+                    for (std::size_t well_index = 0; well_index < num_wells; ++well_index) {
+                        const auto global_index = rank*num_wells + well_index;
+                        const auto value = wellpi_buffer[global_index];
+                        if (value != Scalar{0}) {
+                            wellpi_vector[well_index] = value;
+                        }
+                    }
+                }
+            }
+
+            comm.broadcast(wellpi_vector.data(), wellpi_vector.size(), 0);
+        }
+
+        for (const auto& wname : wellpi_wells) {
+            const auto& well = schedule.getWell(wname, reportStep);
+            wellpi.insert_or_assign(wname, wellpi_vector[well.seqIndex()]);
+        }
+
+        return wellpi;
+    }
 } // Anonymous namespace
 
 namespace Opm {
@@ -180,13 +239,13 @@ applyActions(const int reportStep,
             logActivePyAction(pyaction->name(), ts);
         }
 
-        this->applySimulatorUpdate(reportStep, sim_update, commit_wellstate, transUp);
+        this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
     }
 
     auto non_triggered = 0;
     const auto simTime = asTimeT(now);
-    for (const auto& action : actions.pending(actionState_, simTime)) {
-        const auto actionResult = action->eval(context);
+    for (const auto& action : actions.pending(this->actionState_, simTime)) {
+        auto actionResult = action->eval(context);
         if (! actionResult) {
             ++non_triggered;
             logInactiveAction(action->name(), ts);
@@ -197,13 +256,15 @@ applyActions(const int reportStep,
 
         logActiveAction(action->name(), matching_wells, ts);
 
-        const auto wellpi = this->fetchWellPI(reportStep, *action, matching_wells);
+        const auto wellpi = fetchWellPI<Scalar>
+            (reportStep, this->schedule_, this->wellModel_,
+             *action, matching_wells, this->comm_);
 
         const auto sim_update = this->schedule_
             .applyAction(reportStep, *action, matching_wells, wellpi);
 
-        this->applySimulatorUpdate(reportStep, sim_update, commit_wellstate, transUp);
-        actionState_.add_run(*action, simTime, std::move(actionResult));
+        this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
+        this->actionState_.add_run(*action, simTime, std::move(actionResult));
     }
 
     if (non_triggered > 0) {
@@ -223,8 +284,8 @@ template<class Scalar>
 void ActionHandler<Scalar>::
 applySimulatorUpdate(const int report_step,
                      const SimulatorUpdate& sim_update,
-                     bool& commit_wellstate,
-                     const TransFunc& updateTrans)
+                     const TransFunc& updateTrans,
+                     bool& commit_wellstate)
 {
     OPM_TIMEBLOCK(applySimulatorUpdate);
 
@@ -242,53 +303,6 @@ applySimulatorUpdate(const int report_step,
         // re-compute transmissibility
         updateTrans(true);
     }
-}
-
-template<class Scalar>
-std::unordered_map<std::string, Scalar>
-ActionHandler<Scalar>::
-fetchWellPI(const int reportStep,
-            const Action::ActionX& action,
-            const std::vector<std::string>& matching_wells) const
-{
-  auto wellpi_wells = action.wellpi_wells
-      (this->schedule_.wellMatcher(reportStep), matching_wells);
-
-  if (wellpi_wells.empty()) {
-      return {};
-  }
-
-  const auto num_wells = schedule_[reportStep].well_order().size();
-  std::vector<Scalar> wellpi_vector(num_wells);
-  for (const auto& wname : wellpi_wells) {
-      if (this->wellModel_.hasWell(wname)) {
-          const auto& well = schedule_.getWell( wname, reportStep );
-          wellpi_vector[well.seqIndex()] = this->wellModel_.wellPI(wname);
-      }
-  }
-
-  if (comm_.size() > 1) {
-      std::vector<Scalar> wellpi_buffer(num_wells * comm_.size());
-      comm_.gather( wellpi_vector.data(), wellpi_buffer.data(), num_wells, 0 );
-      if (comm_.rank() == 0) {
-          for (int rank = 1; rank < comm_.size(); rank++) {
-              for (std::size_t well_index=0; well_index < num_wells; well_index++) {
-                  const auto global_index = rank*num_wells + well_index;
-                  const auto value = wellpi_buffer[global_index];
-                  if (value != 0)
-                      wellpi_vector[well_index] = value;
-              }
-          }
-      }
-      comm_.broadcast(wellpi_vector.data(), wellpi_vector.size(), 0);
-  }
-
-  std::unordered_map<std::string, Scalar> wellpi;
-  for (const auto& wname : wellpi_wells) {
-      const auto& well = schedule_.getWell( wname, reportStep );
-      wellpi[wname] = wellpi_vector[ well.seqIndex() ];
-  }
-  return wellpi;
 }
 
 template<class Scalar>
