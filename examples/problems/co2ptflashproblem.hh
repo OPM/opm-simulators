@@ -504,9 +504,11 @@ private:
         Dune::FieldVector<Scalar, numComponents> z(0.0);
         Scalar sumMoles = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            const auto saturation = getValue(fs.saturation(phaseIdx));
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                Scalar tmp = Opm::getValue(fs.molarity(phaseIdx, compIdx) * fs.saturation(phaseIdx));
-                z[compIdx] += Opm::max(tmp, 1e-8);
+                Scalar tmp = getValue(fs.molarity(phaseIdx, compIdx)) * saturation;
+                tmp = max(tmp, 1.e-8);
+                z[compIdx] += tmp;
                 sumMoles += tmp;
             }
         }

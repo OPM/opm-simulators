@@ -252,7 +252,7 @@ public:
 
         const bool isSubStep = !this->simulator().episodeWillBeOver();
 
-        // after the solution is updated, the values in output module needs also updated
+        // after the solution is updated, the values in output module also needs to be updated
         this->eclWriter_->mutableOutputModule().invalidateLocalData();
 
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
@@ -365,9 +365,11 @@ public:
         Dune::FieldVector<Scalar, numComponents> z(0.0);
         Scalar sumMoles = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            const auto saturation = getValue(fs.saturation(phaseIdx));
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                Scalar tmp = Opm::getValue(fs.molarity(phaseIdx, compIdx) * fs.saturation(phaseIdx));
-                z[compIdx] += Opm::max(tmp, 1e-8);
+                Scalar tmp = getValue(fs.molarity(phaseIdx, compIdx)) * saturation;
+                tmp = max(tmp, 1e-8);
+                z[compIdx] += tmp;
                 sumMoles += tmp;
             }
         }
@@ -593,10 +595,10 @@ private:
 
     std::vector<InitialFluidState> initialFluidStates_;
 
-    bool enableEclOutput_;
+    bool enableEclOutput_{false};
     std::unique_ptr<EclWriterType> eclWriter_;
 
-    bool enableVtkOutput_;
+    bool enableVtkOutput_{false};
 };
 
 } // namespace Opm

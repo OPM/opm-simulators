@@ -636,20 +636,20 @@ assignToSolution(data::Solution& sol)
         {
             // ZMF
             for (int i = 0; i < numComponents; ++i) {
-                const std::string name = "ZMF" + std::to_string(i + 1);  // Generate ZMF1, ZMF2, ...
+                const auto name = fmt::format("ZMF{}", i + 1);  // Generate ZMF1, ZMF2, ...
                 compositionalEntries.emplace_back(name, UnitSystem::measure::identity, moleFractions_[i]);
             }
 
             // XMF
             for (int i = 0; i < numComponents; ++i) {
-                const std::string name = "XMF" + std::to_string(i + 1);  // Generate XMF1, XMF2, ...
+                const auto name = fmt::format("XMF{}", i + 1);  // Generate XMF1, XMF2, ...
                 compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
                                                   phaseMoleFractions_[oilPhaseIdx][i]);
             }
 
             // YMF
             for (int i = 0; i < numComponents; ++i) {
-                const std::string name = "YMF" + std::to_string(i + 1);  // Generate YMF1, YMF2, ...
+                const auto name = fmt::format("YMF{}", i + 1);  // Generate YMF1, YMF2, ...
                 compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
                                                   phaseMoleFractions_[gasPhaseIdx][i]);
             }
