@@ -75,6 +75,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
@@ -730,23 +731,82 @@ updateEclWells(const int timeStepIdx,
                const SimulatorUpdate& sim_update,
                const SummaryState& st)
 {
-    for (const auto& wname : sim_update.affected_wells) {
-        auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(),
-            [&wname] (const auto& well) -> bool
-        {
-            return well.name() == wname;
-        });
+    this->updateEclWellsConstraints(timeStepIdx, sim_update, st);
+
+    if (! sim_update.well_structure_changed &&
+        ! this->wellStructureChangedDynamically_)
+    {
+        this->updateEclWellsCTFFromAction(timeStepIdx, sim_update);
+    }
+
+    if (sim_update.well_structure_changed) {
+        // Note: Record change if this update triggered a well structure
+        // change.  Otherwise, we risk setting ChangedDynamically_ to false
+        // if a subsequent action at the same time step does *not* change
+        // the well topology.
+        this->wellStructureChangedDynamically_ = true;
+    }
+}
+
+template<class Scalar>
+template<typename Iter, typename Body>
+void BlackoilWellModelGeneric<Scalar>::
+wellUpdateLoop(Iter first, Iter last, const int timeStepIdx, Body&& body)
+{
+    std::for_each(first, last,
+                  [this, timeStepIdx,
+                   loopBody = std::forward<Body>(body)]
+                  (const auto& wname)
+    {
+        auto well_iter = std::find_if(this->wells_ecl_.begin(),
+                                      this->wells_ecl_.end(),
+                                      [&wname](const auto& well)
+                                      { return well.name() == wname; });
 
         if (well_iter == this->wells_ecl_.end()) {
-            continue;
+            return;
         }
 
-        const auto well_index = std::distance(this->wells_ecl_.begin(), well_iter);
+        const auto wellIdx =
+            std::distance(this->wells_ecl_.begin(), well_iter);
 
-        const auto& well = this->wells_ecl_[well_index] =
+        const auto& well = this->wells_ecl_[wellIdx] =
             this->schedule_.getWell(wname, timeStepIdx);
 
-        auto& pd = this->well_perf_data_[well_index];
+        loopBody(wellIdx, well);
+    });
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+updateEclWellsConstraints(const int              timeStepIdx,
+                          const SimulatorUpdate& sim_update,
+                          const SummaryState&    st)
+{
+    this->wellUpdateLoop(sim_update.affected_wells.begin(),
+                         sim_update.affected_wells.end(),
+                         timeStepIdx,
+                         [this, &st]
+                         (const auto wellIdx, const auto& well)
+    {
+        auto& ws = this->wellState().well(wellIdx);
+
+        ws.updateStatus(well.getStatus());
+        ws.update_targets(well, st);
+    });
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+updateEclWellsCTFFromAction(const int              timeStepIdx,
+                            const SimulatorUpdate& sim_update)
+{
+    this->wellUpdateLoop(sim_update.welpi_wells.begin(),
+                         sim_update.welpi_wells.end(),
+                         timeStepIdx,
+                         [this](const auto wellIdx, const auto& well)
+    {
+        auto& pd = this->well_perf_data_[wellIdx];
 
         {
             auto pdIter = pd.begin();
@@ -759,18 +819,9 @@ updateEclWells(const int timeStepIdx,
             }
         }
 
-        {
-            auto& ws = this->wellState().well(well_index);
-
-            ws.updateStatus(well.getStatus());
-            ws.reset_connection_factors(pd);
-            ws.update_targets(well, st);
-        }
-
-        this->prod_index_calc_[well_index].reInit(well);
-    }
-
-    this->wellStructureChangedDynamically_ = sim_update.well_structure_changed;
+        this->wellState().well(wellIdx).reset_connection_factors(pd);
+        this->prod_index_calc_[wellIdx].reInit(well);
+    });
 }
 
 template<class Scalar>
