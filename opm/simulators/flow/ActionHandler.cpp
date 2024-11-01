@@ -151,38 +151,17 @@ namespace {
             return wellpi;
         }
 
-        const auto num_wells = schedule[reportStep].well_order().size();
-
-        std::vector<Scalar> wellpi_vector(num_wells);
-        for (const auto& wname : wellpi_wells) {
-            if (wellModel.hasWell(wname)) {
-                const auto& well = schedule.getWell(wname, reportStep);
-                wellpi_vector[well.seqIndex()] = wellModel.wellPI(wname);
+        auto wellPI = std::vector<Scalar>(wellpi_wells.size());
+        for (auto i = 0*wellpi_wells.size(); i < wellpi_wells.size(); ++i) {
+            if (wellModel.hasWell(wellpi_wells[i])) {
+                wellPI[i] = wellModel.wellPI(wellpi_wells[i]);
             }
         }
 
-        if (comm.size() > 1) {
-            std::vector<Scalar> wellpi_buffer(num_wells * comm.size());
-            comm.gather(wellpi_vector.data(), wellpi_buffer.data(), num_wells, 0);
+        comm.max(wellPI.data(), wellPI.size());
 
-            if (comm.rank() == 0) {
-                for (int rank = 1; rank < comm.size(); ++rank) {
-                    for (std::size_t well_index = 0; well_index < num_wells; ++well_index) {
-                        const auto global_index = rank*num_wells + well_index;
-                        const auto value = wellpi_buffer[global_index];
-                        if (value != Scalar{0}) {
-                            wellpi_vector[well_index] = value;
-                        }
-                    }
-                }
-            }
-
-            comm.broadcast(wellpi_vector.data(), wellpi_vector.size(), 0);
-        }
-
-        for (const auto& wname : wellpi_wells) {
-            const auto& well = schedule.getWell(wname, reportStep);
-            wellpi.insert_or_assign(wname, wellpi_vector[well.seqIndex()]);
+        for (auto i = 0*wellpi_wells.size(); i < wellpi_wells.size(); ++i) {
+            wellpi.emplace(wellpi_wells[i], wellPI[i]);
         }
 
         return wellpi;
