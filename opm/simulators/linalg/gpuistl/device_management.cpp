@@ -37,7 +37,7 @@ namespace Opm::gpuistl {
         into problems with this code when using multiple MPI ranks.
         The simulation might hang because the integrated GPU in the CPU
         is detected has Radeon compute units, but it does not support ROCM.
-        This is fixable my making only the GPUS on your system visible with
+        This is fixable by making only the GPUS on your system visible with
         ROCR_VISIBLE_DEVICES environment variable.
     */
     void printDevice()
@@ -51,22 +51,23 @@ namespace Opm::gpuistl {
         int deviceCount = -1;
         OPM_GPU_WARN_IF_ERROR(cudaGetDeviceCount(&deviceCount));
 
-        const auto deviceId = mpiRank % deviceCount;
-
-        struct cudaDeviceProp props;
-        OPM_GPU_WARN_IF_ERROR(cudaGetDeviceProperties(&props, deviceId));
-
-        std::string out;
-        out = fmt::format("rank: {}, GPU: {}, Compute Capability: {}.{} (device {} out of {})\n",
-            mpiRank, props.name, props.major, props.minor, deviceId, deviceCount);
         auto deferred_logger = ::Opm::DeferredLogger();
-        deferred_logger.info(out);
+        if (deviceCount > 0) {
+            const auto deviceId = mpiRank % deviceCount;
+
+            struct cudaDeviceProp props;
+            OPM_GPU_WARN_IF_ERROR(cudaGetDeviceProperties(&props, deviceId));
+
+            std::string out;
+            out = fmt::format("rank: {}, GPU: {}, Compute Capability: {}.{} (device {} out of {})\n",
+                mpiRank, props.name, props.major, props.minor, deviceId, deviceCount);
+            deferred_logger.info(out);
+        }
 
         DeferredLogger global = gatherDeferredLogger(deferred_logger, FlowGenericVanguard::comm());
         if (mpiRank == 0) {
             global.logMessages();
         }
-
 #endif
     }
 
