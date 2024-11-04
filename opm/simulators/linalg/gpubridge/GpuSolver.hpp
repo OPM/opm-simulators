@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BDASOLVER_BACKEND_HEADER_INCLUDED
-#define OPM_BDASOLVER_BACKEND_HEADER_INCLUDED
+#ifndef OPM_GPUSOLVER_BACKEND_HEADER_INCLUDED
+#define OPM_GPUSOLVER_BACKEND_HEADER_INCLUDED
 
 
 #include <opm/simulators/linalg/gpubridge/GpuResult.hpp>
@@ -33,16 +33,16 @@ template<class Scalar> class WellContributions;
 namespace Accelerator {
 
 enum class SolverStatus {
-    BDA_SOLVER_SUCCESS,
-    BDA_SOLVER_ANALYSIS_FAILED,
-    BDA_SOLVER_CREATE_PRECONDITIONER_FAILED,
-    BDA_SOLVER_UNKNOWN_ERROR
+    GPU_SOLVER_SUCCESS,
+    GPU_SOLVER_ANALYSIS_FAILED,
+    GPU_SOLVER_CREATE_PRECONDITIONER_FAILED,
+    GPU_SOLVER_UNKNOWN_ERROR
 };
 
 /// This class serves to simplify choosing between different backend solvers, such as cusparseSolver and openclSolver
 /// This class is abstract, no instantiations can of it can be made, only of its children
 template<class Scalar, unsigned int block_size>
-class BdaSolver
+class GpuSolver
 {
 protected:
     // verbosity
@@ -66,24 +66,24 @@ protected:
     bool initialized = false;
 
 public:
-    /// Construct a BdaSolver
+    /// Construct a GpuSolver
     /// \param[in] linear_solver_verbosity    verbosity of solver
     /// \param[in] maxit                      maximum number of iterations for solver
     /// \param[in] tolerance                  required relative tolerance for solver
     /// \param[in] platformID                 the OpenCL platform to be used, only used in openclSolver
     /// \param[in] deviceID                   the device to be used
-    BdaSolver(int linear_solver_verbosity, int max_it, Scalar tolerance_)
+    GpuSolver(int linear_solver_verbosity, int max_it, Scalar tolerance_)
         : verbosity(linear_solver_verbosity)
         , maxit(max_it)
         , tolerance(tolerance_)
     {}
-    BdaSolver(int linear_solver_verbosity, int max_it,
+    GpuSolver(int linear_solver_verbosity, int max_it,
               Scalar tolerance_, unsigned int deviceID_)
         : verbosity(linear_solver_verbosity)
         , maxit(max_it)
         , tolerance(tolerance_)
         , deviceID(deviceID_) {};
-    BdaSolver(int linear_solver_verbosity, int max_it,
+    GpuSolver(int linear_solver_verbosity, int max_it,
               double tolerance_, unsigned int platformID_,
               unsigned int deviceID_)
         : verbosity(linear_solver_verbosity)
@@ -94,17 +94,17 @@ public:
     {}
 
     /// Define virtual destructor, so that the derivedclass destructor will be called
-    virtual ~BdaSolver() = default;
+    virtual ~GpuSolver() = default;
 
     /// Define as pure virtual functions, so derivedclass must implement them
     virtual SolverStatus solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
                                       Scalar* b,
                                       std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                                       WellContributions<Scalar>& wellContribs,
-                                      BdaResult& res) = 0;
+                                      GpuResult& res) = 0;
 
     virtual void get_result(Scalar* x) = 0;
-}; // end class BdaSolver
+}; // end class GpuSolver
 
 } // namespace Accelerator
 } // namespace Opm

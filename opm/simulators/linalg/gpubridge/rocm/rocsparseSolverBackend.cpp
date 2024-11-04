@@ -133,7 +133,7 @@ rocsparseSolverBackend<Scalar,block_size>::~rocsparseSolverBackend()
 template<class Scalar, unsigned int block_size>
 void rocsparseSolverBackend<Scalar,block_size>::
 gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
-              BdaResult& res)
+              GpuResult& res)
 {
     float it = 0.5;
     Scalar rho, rhop, beta, alpha, nalpha, omega, nomega, tmp1, tmp2;
@@ -638,7 +638,7 @@ create_preconditioner()
 
 template<class Scalar, unsigned int block_size>
 void rocsparseSolverBackend<Scalar,block_size>::
-solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res)
+solve_system(WellContributions<Scalar>& wellContribs, GpuResult& res)
 {
     Timer t;
 
@@ -678,28 +678,28 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
              Scalar* b,
              std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
              WellContributions<Scalar>& wellContribs,
-             BdaResult& res)
+             GpuResult& res)
 {
     if (initialized == false) {
         initialize(matrix, jacMatrix);
         copy_system_to_gpu(b);
         if (analysis_done == false) {
             if (!analyze_matrix()) {
-                return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
+                return SolverStatus::GPU_SOLVER_ANALYSIS_FAILED;
             }
         }
         if (!create_preconditioner()) {
-            return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+            return SolverStatus::GPU_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
     } else {
         update_system_on_gpu(b);
         if (!create_preconditioner()) {
-            return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+            return SolverStatus::GPU_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
     }
     solve_system(wellContribs, res);
 
-    return SolverStatus::BDA_SOLVER_SUCCESS;
+    return SolverStatus::GPU_SOLVER_SUCCESS;
 }
 
 #define INSTANTIATE_TYPE(T)                     \

@@ -35,7 +35,7 @@ template<class Scalar> class MultisegmentWellContribution;
 /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver or openclSolver.
 /// If the --matrix-add-well-contributions commandline parameter is true, this class should still be used, but be empty.
 /// StandardWell and MultisegmentWell are supported for both cusparseSolver and openclSolver.
-/// A single instance (or pointer) of this class is passed to the BdaSolver.
+/// A single instance (or pointer) of this class is passed to the GpuSolver.
 /// For StandardWell, this class contains all the data and handles the computation. For MultisegmentWell, the vector 'multisegments' contains all the data. For more information, check the MultisegmentWellContribution class.
 
 /// A StandardWell uses C, D and B and performs y -= (C^T * (D^-1 * (B*x)))

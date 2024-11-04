@@ -157,7 +157,7 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
              Scalar* b,
              [[maybe_unused]] std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
              [[maybe_unused]] WellContributions<Scalar>& wellContribs,
-             BdaResult& res)
+             GpuResult& res)
 {
     if (initialized == false) {
         initialize(matrix.get());
@@ -234,7 +234,7 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
         OpmLog::info(out.str());
     }
 
-    return SolverStatus::BDA_SOLVER_SUCCESS;
+    return SolverStatus::GPU_SOLVER_SUCCESS;
 }
 
 #define INSTANTIATE_TYPE(T)                      \

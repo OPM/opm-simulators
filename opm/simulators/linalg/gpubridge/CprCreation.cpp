@@ -232,7 +232,7 @@ analyzeHierarchy()
             }
         }
 
-        Opm::BdaBridge<DuneMat, DuneVec, 1>::copySparsityPatternFromISTL(A, Amatrices.back().rowPointers, Amatrices.back().colIndices);
+        Opm::GpuBridge<DuneMat, DuneVec, 1>::copySparsityPatternFromISTL(A, Amatrices.back().rowPointers, Amatrices.back().colIndices);
 
         // compute inverse diagonal values for current level
         invDiags.emplace_back(A.N());

@@ -283,7 +283,7 @@ void solve_vexcl(const AIJInfo& A,
 
 template<class Scalar, unsigned int block_size>
 void amgclSolverBackend<Scalar,block_size>::
-solve_system(Scalar* b, BdaResult& res)
+solve_system(Scalar* b, GpuResult& res)
 {
     Timer t;
 
@@ -417,7 +417,7 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
              Scalar* b,
              [[maybe_unused]] std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
              [[maybe_unused]] WellContributions<Scalar>& wellContribs,
-             BdaResult& res)
+             GpuResult& res)
 {
     if (initialized == false) {
         initialize(matrix->Nb, matrix->nnzbs);
@@ -425,7 +425,7 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
     }
     convert_data(matrix->nnzValues, matrix->rowPointers);
     solve_system(b, res);
-    return SolverStatus::BDA_SOLVER_SUCCESS;
+    return SolverStatus::GPU_SOLVER_SUCCESS;
 }
 
 #define INSTANTIATE_TYPE(T)                 \

@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BDABRIDGE_HEADER_INCLUDED
-#define BDABRIDGE_HEADER_INCLUDED
+#ifndef GPUBRIDGE_HEADER_INCLUDED
+#define GPUBRIDGE_HEADER_INCLUDED
 
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
@@ -31,16 +31,16 @@ template<class Scalar> class WellContributions;
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
-/// BdaBridge acts as interface between opm-simulators with the BdaSolvers
+/// GpuBridge acts as interface between opm-simulators with the GpuSolvers
 template <class BridgeMatrix, class BridgeVector, int block_size>
-class BdaBridge
+class GpuBridge
 {
 private:
     using Scalar = typename BridgeVector::field_type;
     int verbosity = 0;
     bool use_gpu = false;
     std::string accelerator_mode;
-    std::unique_ptr<Accelerator::BdaSolver<Scalar,block_size>> backend;
+    std::unique_ptr<Accelerator::GpuSolver<Scalar,block_size>> backend;
     std::shared_ptr<Accelerator::BlockedMatrix<Scalar>> matrix;  // 'stores' matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
     std::shared_ptr<Accelerator::BlockedMatrix<Scalar>> jacMatrix;  // 'stores' preconditioner matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
     std::vector<int> h_rows, h_cols;  // store the sparsity pattern of the matrix
@@ -49,16 +49,16 @@ private:
     std::vector<typename BridgeMatrix::size_type> jacDiagIndices;   // same but for jacMatrix
 
 public:
-    /// Construct a BdaBridge
+    /// Construct a GpuBridge
     /// \param[in] accelerator_mode           to select if an accelerated solver is used, is passed via command-line: '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]'
-    /// \param[in] linear_solver_verbosity    verbosity of BdaSolver
-    /// \param[in] maxit                      maximum number of iterations for BdaSolver
-    /// \param[in] tolerance                  required relative tolerance for BdaSolver
+    /// \param[in] linear_solver_verbosity    verbosity of GpuSolver
+    /// \param[in] maxit                      maximum number of iterations for GpuSolver
+    /// \param[in] tolerance                  required relative tolerance for GpuSolver
     /// \param[in] platformID                 the OpenCL platform ID to be used
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
     /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL with level_scheduling
     /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
-    BdaBridge(std::string accelerator_mode,
+    GpuBridge(std::string accelerator_mode,
               int linear_solver_verbosity,
               int maxit,
               Scalar tolerance,
@@ -87,8 +87,8 @@ public:
     /// \param[inout] x    vector x, should be of type Dune::BlockVector
     void get_result(BridgeVector &x);
 
-    /// Return whether the BdaBridge will use the GPU or not
-    /// return whether the BdaBridge will use the GPU or not
+    /// Return whether the GpuBridge will use the GPU or not
+    /// return whether the GpuBridge will use the GPU or not
     bool getUseGpu()
     {
         return use_gpu;
@@ -113,7 +113,7 @@ public:
     {
         return accelerator_mode;
     }
-}; // end class BdaBridge
+}; // end class GpuBridge
 
 }
 

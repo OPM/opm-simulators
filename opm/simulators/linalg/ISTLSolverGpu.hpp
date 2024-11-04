@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_ISTLSOLVER_WITH_BDA_HEADER_INCLUDED
-#define OPM_ISTLSOLVER_WITH_BDA_HEADER_INCLUDED
+#ifndef OPM_ISTLSOLVER_WITH_GPUBRIDGE_HEADER_INCLUDED
+#define OPM_ISTLSOLVER_WITH_GPUBRIDGE_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
@@ -34,18 +34,18 @@ namespace Opm {
 
 class Well;
 
-template<class Matrix, class Vector, int block_size> class BdaBridge;
+template<class Matrix, class Vector, int block_size> class GpuBridge;
 template<class Scalar> class WellContributions;
 namespace detail {
 
 template<class Matrix, class Vector>
-struct BdaSolverInfo
+struct GpuSolverInfo
 {
     using Scalar = typename Vector::field_type;
     using WellContribFunc = std::function<void(WellContributions<Scalar>&)>;
-    using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
+    using Bridge = GpuBridge<Matrix,Vector,Matrix::block_type::rows>;
 
-    BdaSolverInfo(const std::string& accelerator_mode,
+    GpuSolverInfo(const std::string& accelerator_mode,
                   const int linear_solver_verbosity,
                   const int maxit,
                   const Scalar tolerance,
@@ -54,7 +54,7 @@ struct BdaSolverInfo
                   const bool opencl_ilu_parallel,
                   const std::string& linsolver);
 
-    ~BdaSolverInfo();
+    ~GpuSolverInfo();
 
     template<class Grid>
     void prepare(const Grid& grid,
@@ -100,7 +100,7 @@ private:
 /// as a block-structured matrix (one block for all cell variables) for a fixed
 /// number of cell variables np .
 template <class TypeTag>
-class ISTLSolverBda : public ISTLSolver<TypeTag>
+class ISTLSolverGpu : public ISTLSolver<TypeTag>
 {
 protected:
     using ParentType = ISTLSolver<TypeTag>;
@@ -134,23 +134,23 @@ public:
     /// \param[in] simulator   The opm-models simulator object
     /// \param[in] parameters  Explicit parameters for solver setup, do not
     ///                        read them from command line parameters.
-    ISTLSolverBda(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
+    ISTLSolverGpu(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
         : ParentType(simulator, parameters)
     {
-        initializeBda();
+        initializeGpu();
     }
 
     /// Construct a system solver.
     /// \param[in] simulator   The opm-models simulator object
-    explicit ISTLSolverBda(const Simulator& simulator)
+    explicit ISTLSolverGpu(const Simulator& simulator)
         : ParentType(simulator)
     {
-        initializeBda();
+        initializeGpu();
     }
 
-    void initializeBda()
+    void initializeGpu()
     {
-        OPM_TIMEBLOCK(initializeBda);
+        OPM_TIMEBLOCK(initializeGpu);
 
         std::string accelerator_mode = Parameters::Get<Parameters::AcceleratorMode>();
         // Force accelerator mode to none if using MPI.
@@ -166,15 +166,15 @@ public:
             return;
         }
 
-        // Initialize the BdaBridge
+        // Initialize the GpuBridge
         const int platformID = Parameters::Get<Parameters::OpenclPlatformId>();
-        const int deviceID = Parameters::Get<Parameters::BdaDeviceId>();
+        const int deviceID = Parameters::Get<Parameters::GpuDeviceId>();
         const int maxit = Parameters::Get<Parameters::LinearSolverMaxIter>();
         const double tolerance = Parameters::Get<Parameters::LinearSolverReduction>();
         const bool opencl_ilu_parallel = Parameters::Get<Parameters::OpenclIluParallel>();
         const int linear_solver_verbosity = this->parameters_[0].linear_solver_verbosity_;
         std::string linsolver = Parameters::Get<Parameters::LinearSolver>();
-        bdaBridge_ = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
+        gpuBridge_ = std::make_unique<detail::GpuSolverInfo<Matrix,Vector>>(accelerator_mode,
                                                                             linear_solver_verbosity,
                                                                             maxit,
                                                                             tolerance,
@@ -191,7 +191,7 @@ public:
 
         // Avoid performing the decomposition on CPU when we also do it on GPU,
         // but we do need to initialize the pointers.
-        if (bdaBridge_) {
+        if (gpuBridge_) {
             ParentType::initPrepare(M,b);
         } else {
             ParentType::prepare(M,b);
@@ -199,13 +199,13 @@ public:
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
         // update matrix entries for solvers.
-        if (firstcall && bdaBridge_) {
+        if (firstcall && gpuBridge_) {
             // model will not change the matrix object. Hence simply store a pointer
             // to the original one with a deleter that does nothing.
             // Outch! We need to be able to scale the linear system! Hence const_cast
             // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
-            bdaBridge_->numJacobiBlocks_ = Parameters::Get<Parameters::NumJacobiBlocks>();
-            bdaBridge_->prepare(this->simulator_.vanguard().grid(),
+            gpuBridge_->numJacobiBlocks_ = Parameters::Get<Parameters::NumJacobiBlocks>();
+            gpuBridge_->prepare(this->simulator_.vanguard().grid(),
                                this->simulator_.vanguard().cartesianIndexMapper(),
                                this->simulator_.vanguard().schedule().getWellsatEnd(),
                                this->simulator_.vanguard().schedule().getPossibleFutureConnections(),
@@ -233,11 +233,11 @@ public:
 
     bool solve(Vector& x)
     {
-        if (!bdaBridge_) {
+        if (!gpuBridge_) {
             return ParentType::solve(x);
         }
 
-        OPM_TIMEBLOCK(istlSolverBdaSolve);
+        OPM_TIMEBLOCK(istlSolverGpuSolve);
         this->solveCount_ += 1;
         // Write linear system if asked for.
         const int verbosity = this->prm_[this->activeSolverNum_].template get<int>("verbosity", 0);
@@ -257,13 +257,13 @@ public:
             {
                 this->simulator_.problem().wellModel().getWellContributions(w);
             };
-        if (!bdaBridge_->apply(*(this->rhs_), this->useWellConn_, getContribs,
+        if (!gpuBridge_->apply(*(this->rhs_), this->useWellConn_, getContribs,
                               this->simulator_.gridView().comm().rank(),
                               const_cast<Matrix&>(this->getMatrix()),
                               x, result))
         {
-            if(bdaBridge_->gpuActive()){
-                // bda solve fails use istl solver setup need to be done since it is not setup in prepare
+            if(gpuBridge_->gpuActive()){
+                // gpu solve fails use istl solver setup need to be done since it is not setup in prepare
                 ParentType::prepareFlexibleSolver();
             }
             assert(this->flexibleSolver_[this->activeSolverNum_].solver_);
@@ -277,9 +277,9 @@ public:
     }
 
 protected:
-    std::unique_ptr<detail::BdaSolverInfo<Matrix, Vector>> bdaBridge_;
+    std::unique_ptr<detail::GpuSolverInfo<Matrix, Vector>> gpuBridge_;
 }; // end ISTLSolver
 
 } // namespace Opm
 
-#endif // OPM_ISTLSOLVER_WITH_BDA_HEADER_INCLUDED
+#endif // OPM_ISTLSOLVER_WITH_GPUBRIDGE_HEADER_INCLUDED

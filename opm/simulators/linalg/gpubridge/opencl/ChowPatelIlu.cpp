@@ -983,7 +983,7 @@ void ChowPatelIlu<block_size>::gpu_decomposition(
 }
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                          \
+#define INSTANTIATE_GPU_FUNCTIONS(n)                                          \
 template void ChowPatelIlu<n>::decomposition(                                 \
     cl::CommandQueue *queue, cl::Context *context,                            \
     BlockedMatrix *LUmat, BlockedMatrix *Lmat, BlockedMatrix *Umat,  \
@@ -992,14 +992,14 @@ template void ChowPatelIlu<n>::decomposition(                                 \
     cl::Buffer& d_Lvals, cl::Buffer& d_Lcols, cl::Buffer& d_Lrows,            \
     cl::Buffer& d_Uvals, cl::Buffer& d_Ucols, cl::Buffer& d_Urows);
 
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
+INSTANTIATE_GPU_FUNCTIONS(1);
+INSTANTIATE_GPU_FUNCTIONS(2);
+INSTANTIATE_GPU_FUNCTIONS(3);
+INSTANTIATE_GPU_FUNCTIONS(4);
+INSTANTIATE_GPU_FUNCTIONS(5);
+INSTANTIATE_GPU_FUNCTIONS(6);
 
-#undef INSTANTIATE_BDA_FUNCTIONS
+#undef INSTANTIATE_GPU_FUNCTIONS
 
 } // namespace Accelerator
 } // namespace Opm

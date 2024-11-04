@@ -38,7 +38,7 @@ inline void __cudaCheckError(const char *file, const int line, const char *msg){
     if (cudaSuccess != err){
         std::ostringstream out;
         out << cudaGetErrorString(err) << "\n";
-        out << "BDA error message: " << msg << "\n";
+        out << "GPU error message: " << msg << "\n";
         OPM_THROW(std::logic_error, out.str());
     }
 }

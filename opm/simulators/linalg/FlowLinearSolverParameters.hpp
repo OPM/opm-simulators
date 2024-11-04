@@ -32,7 +32,7 @@
 namespace Opm {
 
 template <class TypeTag>
-class ISTLSolverBda;
+class ISTLSolverGpu;
 
 template <class TypeTag>
 class ISTLSolver;
@@ -51,8 +51,8 @@ struct FlowIstlSolverParams {};
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams>
 {
-#if COMPILE_BDA_BRIDGE
-    using type = ISTLSolverBda<TypeTag>;
+#if COMPILE_GPU_BRIDGE
+    using type = ISTLSolverGpu<TypeTag>;
 #else
     using type = ISTLSolver<TypeTag>;
 #endif
@@ -82,7 +82,7 @@ struct LinearSolverPrintJsonDefinition { static constexpr auto value = true; };
 struct CprReuseSetup { static constexpr int value = 4; };
 struct CprReuseInterval { static constexpr int value = 30; };
 struct AcceleratorMode { static constexpr auto value = "none"; };
-struct BdaDeviceId { static constexpr int value = 0; };
+struct GpuDeviceId { static constexpr int value = 0; };
 struct OpenclPlatformId { static constexpr int value = 0; };
 struct OpenclIluParallel { static constexpr bool value = true; }; // note: false should only be used in debug
 
@@ -112,7 +112,7 @@ struct FlowLinearSolverParameters
     int cpr_reuse_setup_;
     int cpr_reuse_interval_;
     std::string accelerator_mode_;
-    int bda_device_id_;
+    int gpu_device_id_;
     int opencl_platform_id_;
     bool opencl_ilu_parallel_;
 

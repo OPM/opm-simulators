@@ -31,9 +31,9 @@ namespace Opm::Accelerator {
 
 /// This class implements a opencl-based ilu0-bicgstab solver on GPU
 template<class Scalar, unsigned int block_size>
-class openclSolverBackend : public BdaSolver<Scalar,block_size>
+class openclSolverBackend : public GpuSolver<Scalar,block_size>
 {
-    using Base = BdaSolver<Scalar,block_size>;
+    using Base = GpuSolver<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -62,7 +62,7 @@ private:
 
     std::unique_ptr<openclPreconditioner<Scalar,block_size>> prec;
                                                                   // can perform blocked ILU0 and AMG on pressure component
-    bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
+    bool is_root;                                                 // allow for nested solvers, the root solver is called by GpuBridge
     bool analysis_done = false;
     std::shared_ptr<BlockedMatrix<Scalar>> mat{};                 // original matrix
     std::shared_ptr<BlockedMatrix<Scalar>> jacMat{};              // matrix for preconditioner
@@ -73,7 +73,7 @@ private:
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res);
+    void gpu_pbicgstab(WellContributions<Scalar>& wellContribs, GpuResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
@@ -104,7 +104,7 @@ private:
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     ///                           could be empty
     /// \param[inout] res         summary of solver result
-    void solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res);
+    void solve_system(WellContributions<Scalar>& wellContribs, GpuResult& res);
 
 public:
     std::shared_ptr<cl::Context> context{};
@@ -138,11 +138,11 @@ public:
                               Scalar* b,
                               std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                               WellContributions<Scalar>& wellContribs,
-                              BdaResult& res) override;
+                              GpuResult& res) override;
 
     /// Solve scalar linear system, for example a coarse system of an AMG preconditioner
     /// Data is already on the GPU
-    // SolverStatus solve_system(BdaResult &res);
+    // SolverStatus solve_system(GpuResult &res);
 
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array

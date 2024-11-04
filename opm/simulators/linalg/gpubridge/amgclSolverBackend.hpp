@@ -46,9 +46,9 @@ namespace Opm::Accelerator {
 /// This class does not implement a solver, but converts the BCSR format to normal CSR and uses amgcl for solving
 /// Note amgcl also implements blocked solvers, but looks like it needs unblocked input data
 template<class Scalar, unsigned int block_size>
-class amgclSolverBackend : public BdaSolver<Scalar,block_size>
+class amgclSolverBackend : public GpuSolver<Scalar,block_size>
 {
-    using Base = BdaSolver<Scalar,block_size>;
+    using Base = GpuSolver<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -115,7 +115,7 @@ private:
     /// Solve linear system
     /// \param[in] b              pointer to b vector
     /// \param[inout] res         summary of solver result
-    void solve_system(Scalar* b, BdaResult& res);
+    void solve_system(Scalar* b, GpuResult& res);
 
 public:
     /// Construct an amgcl solver
@@ -142,7 +142,7 @@ public:
                               Scalar* b,
                               std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                               WellContributions<Scalar>& wellContribs,
-                              BdaResult& res) override;
+                              GpuResult& res) override;
     
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array

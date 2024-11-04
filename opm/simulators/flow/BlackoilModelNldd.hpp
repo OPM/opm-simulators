@@ -38,8 +38,8 @@
 
 #include <opm/simulators/linalg/extractMatrix.hpp>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/ISTLSolverBda.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/ISTLSolverGpu.hpp>
 #else
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #endif

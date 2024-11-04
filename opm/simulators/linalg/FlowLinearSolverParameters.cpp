@@ -67,7 +67,7 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
     }
 
     accelerator_mode_ = Parameters::Get<Parameters::AcceleratorMode>();
-    bda_device_id_ = Parameters::Get<Parameters::BdaDeviceId>();
+    gpu_device_id_ = Parameters::Get<Parameters::GpuDeviceId>();
     opencl_platform_id_ = Parameters::Get<Parameters::OpenclPlatformId>();
     opencl_ilu_parallel_ = Parameters::Get<Parameters::OpenclIluParallel>();
 }
@@ -142,7 +142,7 @@ void FlowLinearSolverParameters::registerParameters()
     Parameters::Register<Parameters::AcceleratorMode>
         ("Choose a linear solver, usage: "
          "'--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]'");
-    Parameters::Register<Parameters::BdaDeviceId>
+    Parameters::Register<Parameters::GpuDeviceId>
         ("Choose device ID for cusparseSolver or openclSolver, "
          "use 'nvidia-smi' or 'clinfo' to determine valid IDs");
     Parameters::Register<Parameters::OpenclPlatformId>
@@ -175,7 +175,7 @@ void FlowLinearSolverParameters::reset()
     cpr_reuse_setup_          = 4;
     cpr_reuse_interval_       = 30;
     accelerator_mode_         = "none";
-    bda_device_id_            = 0;
+    gpu_device_id_            = 0;
     opencl_platform_id_       = 0;
     opencl_ilu_parallel_      = true;
 }

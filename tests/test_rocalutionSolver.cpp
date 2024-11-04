@@ -23,8 +23,8 @@
 #define BOOST_TEST_MODULE OPM_test_rocalutionSolver
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/linalg/bda/BdaBridge.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/simulators/linalg/gpubridge/GpuBridge.hpp>
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #include <rocalution.hpp>
 
 #include <dune/common/fvector.hh>
@@ -97,9 +97,9 @@ testRocalutionSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix,
 
     Vector<bz> x(rhs.size());
     auto wellContribs = Opm::WellContributions<double>::create(accelerator_mode, true);
-    std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
+    std::unique_ptr<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
     try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
+        bridge = std::make_unique<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
                                                                                linear_solver_verbosity,
                                                                                maxit,
                                                                                tolerance,

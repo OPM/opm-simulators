@@ -46,8 +46,8 @@
 #include <cstddef>
 #include <string>
 
-#if COMPILE_BDA_BRIDGE && (HAVE_CUDA || HAVE_OPENCL)
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE && (HAVE_CUDA || HAVE_OPENCL)
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 namespace Opm

@@ -49,8 +49,8 @@
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 #if HAVE_MPI
@@ -1785,7 +1785,7 @@ namespace Opm {
         }
     }
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::

@@ -33,9 +33,9 @@
 
 #include <fmt/format.h>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/bda/BdaBridge.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/gpubridge/GpuBridge.hpp>
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 namespace Opm {

@@ -56,13 +56,13 @@ using InverseOperatorResult = Dune::InverseOperatorResult;
 
 namespace Opm {
 
-using Accelerator::BdaResult;
-using Accelerator::BdaSolver;
+using Accelerator::GpuResult;
+using Accelerator::GpuSolver;
 using Accelerator::SolverStatus;
 
 template<class BridgeMatrix, class BridgeVector, int block_size>
-BdaBridge<BridgeMatrix, BridgeVector, block_size>::
-BdaBridge(std::string accelerator_mode_,
+GpuBridge<BridgeMatrix, BridgeVector, block_size>::
+GpuBridge(std::string accelerator_mode_,
           int linear_solver_verbosity,
           [[maybe_unused]] int maxit,
           [[maybe_unused]] Scalar tolerance,
@@ -176,7 +176,7 @@ int replaceZeroDiagonal(BridgeMatrix& mat,
 // sparsity pattern should stay the same
 // this could be removed if Dune::BCRSMatrix features an API call that returns colIndices and rowPointers
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+void GpuBridge<BridgeMatrix, BridgeVector, block_size>::
 copySparsityPatternFromISTL(const BridgeMatrix& mat,
                             std::vector<int>& h_rows,
                             std::vector<int>& h_cols)
@@ -197,7 +197,7 @@ copySparsityPatternFromISTL(const BridgeMatrix& mat,
     if (static_cast<unsigned int>(h_rows[mat.N()]) != mat.nonzeroes()) {
         OPM_THROW(std::logic_error,
                   "Error size of rows do not sum to number of nonzeroes "
-                  "in BdaBridge::copySparsityPatternFromISTL()");
+                  "in GpuBridge::copySparsityPatternFromISTL()");
     }
 }
 
@@ -225,7 +225,7 @@ void checkMemoryContiguous(const BridgeMatrix& mat)
 }
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+void GpuBridge<BridgeMatrix, BridgeVector, block_size>::
 solve_system(BridgeMatrix* bridgeMat,
              BridgeMatrix* jacMat,
              int numJacobiBlocks,
@@ -234,14 +234,14 @@ solve_system(BridgeMatrix* bridgeMat,
              InverseOperatorResult& res)
 {
     if (use_gpu) {
-        BdaResult result;
+        GpuResult result;
         result.converged = false;
         const int dim = (*bridgeMat)[0][0].N();
         const int Nb = bridgeMat->N();
         const int nnzb = bridgeMat->nonzeroes();
 
         if (dim != 3) {
-            OpmLog::warning("BdaSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
+            OpmLog::warning("GpuSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
             use_gpu = false;
             return;
         }
@@ -294,27 +294,27 @@ solve_system(BridgeMatrix* bridgeMat,
 
         /////////////////////////
         // actually solve
-        // assume that underlying data (nonzeroes) from b (Dune::BlockVector) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
+        // assume that underlying data (nonzeroes) from b (Dune::BlockVector) are contiguous, if this is not the case, the chosen GpuSolver is expected to perform undefined behaviour
         SolverStatus status = backend->solve_system(matrix,
                                                     static_cast<Scalar*>(&(b[0][0])),
                                                     jacMatrix, wellContribs, result);
 
         switch (status) {
-        case SolverStatus::BDA_SOLVER_SUCCESS:
-            //OpmLog::info("BdaSolver converged");
+        case SolverStatus::GPU_SOLVER_SUCCESS:
+            //OpmLog::info("GpuSolver converged");
             break;
-        case SolverStatus::BDA_SOLVER_ANALYSIS_FAILED:
-            OpmLog::warning("BdaSolver could not analyse level information of matrix, "
+        case SolverStatus::GPU_SOLVER_ANALYSIS_FAILED:
+            OpmLog::warning("GpuSolver could not analyse level information of matrix, "
                             "perhaps there is still a 0.0 on the diagonal of a "
                             "block on the diagonal");
             break;
-        case SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED:
-            OpmLog::warning("BdaSolver could not create preconditioner, "
+        case SolverStatus::GPU_SOLVER_CREATE_PRECONDITIONER_FAILED:
+            OpmLog::warning("GpuSolver could not create preconditioner, "
                             "perhaps there is still a 0.0 on the diagonal "
                             "of a block on the diagonal");
             break;
         default:
-            OpmLog::warning("BdaSolver returned unknown status code");
+            OpmLog::warning("GpuSolver returned unknown status code");
         }
 
         res.iterations = result.iterations;
@@ -328,7 +328,7 @@ solve_system(BridgeMatrix* bridgeMat,
 }
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+void GpuBridge<BridgeMatrix, BridgeVector, block_size>::
 get_result([[maybe_unused]] BridgeVector& x)
 {
     if (use_gpu) {
@@ -337,7 +337,7 @@ get_result([[maybe_unused]] BridgeVector& x)
 }
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+void GpuBridge<BridgeMatrix, BridgeVector, block_size>::
 initWellContributions([[maybe_unused]] WellContributions<Scalar>& wellContribs,
                       [[maybe_unused]] unsigned N)
 {
@@ -356,19 +356,19 @@ initWellContributions([[maybe_unused]] WellContributions<Scalar>& wellContribs,
 }
 
 // the tests use Dune::FieldMatrix, Flow uses Opm::MatrixBlock
-#define INSTANTIATE_BDA_FUNCTIONS(T,n)                                     \
-    template class BdaBridge<Dune::BCRSMatrix<MatrixBlock<T,n,n>>,         \
+#define INSTANTIATE_GPU_FUNCTIONS(T,n)                                     \
+    template class GpuBridge<Dune::BCRSMatrix<MatrixBlock<T,n,n>>,         \
                    Dune::BlockVector<Dune::FieldVector<T,n>>,n>;           \
-    template class BdaBridge<Dune::BCRSMatrix<Dune::FieldMatrix<T,n,n>>,   \
+    template class GpuBridge<Dune::BCRSMatrix<Dune::FieldMatrix<T,n,n>>,   \
                              Dune::BlockVector<Dune::FieldVector<T,n>>,n>;
 
 #define INSTANTIATE_TYPE(T)        \
-    INSTANTIATE_BDA_FUNCTIONS(T,1) \
-    INSTANTIATE_BDA_FUNCTIONS(T,2) \
-    INSTANTIATE_BDA_FUNCTIONS(T,3) \
-    INSTANTIATE_BDA_FUNCTIONS(T,4) \
-    INSTANTIATE_BDA_FUNCTIONS(T,5) \
-    INSTANTIATE_BDA_FUNCTIONS(T,6)
+    INSTANTIATE_GPU_FUNCTIONS(T,1) \
+    INSTANTIATE_GPU_FUNCTIONS(T,2) \
+    INSTANTIATE_GPU_FUNCTIONS(T,3) \
+    INSTANTIATE_GPU_FUNCTIONS(T,4) \
+    INSTANTIATE_GPU_FUNCTIONS(T,5) \
+    INSTANTIATE_GPU_FUNCTIONS(T,6)
 
 INSTANTIATE_TYPE(double)
 

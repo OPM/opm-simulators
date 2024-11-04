@@ -53,8 +53,8 @@ std::shared_ptr<std::thread> copyThread;
 namespace Opm::detail {
 
 template<class Matrix, class Vector>
-BdaSolverInfo<Matrix,Vector>::
-BdaSolverInfo(const std::string& accelerator_mode,
+GpuSolverInfo<Matrix,Vector>::
+GpuSolverInfo(const std::string& accelerator_mode,
               const int linear_solver_verbosity,
               const int maxit,
               const Scalar tolerance,
@@ -70,11 +70,11 @@ BdaSolverInfo(const std::string& accelerator_mode,
 {}
 
 template<class Matrix, class Vector>
-BdaSolverInfo<Matrix,Vector>::~BdaSolverInfo() = default;
+GpuSolverInfo<Matrix,Vector>::~GpuSolverInfo() = default;
 
 template<class Matrix, class Vector>
 template<class Grid>
-void BdaSolverInfo<Matrix,Vector>::
+void GpuSolverInfo<Matrix,Vector>::
 prepare(const Grid& grid,
         const Dune::CartesianIndexMapper<Grid>& cartMapper,
         const std::vector<Well>& wellsForConn,
@@ -94,7 +94,7 @@ prepare(const Grid& grid,
 }
 
 template<class Matrix, class Vector>
-bool BdaSolverInfo<Matrix,Vector>::
+bool GpuSolverInfo<Matrix,Vector>::
 apply(Vector& rhs,
       const bool useWellConn,
       [[maybe_unused]] WellContribFunc getContribs,
@@ -148,9 +148,9 @@ apply(Vector& rhs,
             return true;
         } else {
             // warn about CPU fallback
-            // BdaBridge might have disabled its BdaSolver for this simulation due to some error
-            // in that case the BdaBridge is disabled and flexibleSolver is always used
-            // or maybe the BdaSolver did not converge in time, then it will be used next linear solve
+            // GpuBridge might have disabled its GpuSolver for this simulation due to some error
+            // in that case the GpuBridge is disabled and flexibleSolver is always used
+            // or maybe the GpuSolver did not converge in time, then it will be used next linear solve
             if (rank == 0) {
                 OpmLog::warning(bridge_->getAccleratorName() + " did not converge, now trying Dune to solve current linear system...");
             }
@@ -161,7 +161,7 @@ apply(Vector& rhs,
 }
 
 template<class Matrix, class Vector>
-bool BdaSolverInfo<Matrix,Vector>::
+bool GpuSolverInfo<Matrix,Vector>::
 gpuActive()
 {
     return bridge_->getUseGpu();
@@ -169,7 +169,7 @@ gpuActive()
 
 template<class Matrix, class Vector>
 template<class Grid>
-void BdaSolverInfo<Matrix,Vector>::
+void GpuSolverInfo<Matrix,Vector>::
 blockJacobiAdjacency(const Grid& grid,
                      const std::vector<int>& cell_part,
                      std::size_t nonzeroes)
@@ -217,7 +217,7 @@ blockJacobiAdjacency(const Grid& grid,
 }
 
 template<class Matrix, class Vector>
-void BdaSolverInfo<Matrix,Vector>::
+void GpuSolverInfo<Matrix,Vector>::
 copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
 {
     auto rbegin = blockJac.begin();
@@ -242,7 +242,7 @@ template<class Scalar, int Dim>
 using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 
 #define INSTANTIATE_GRID(T, Dim, Grid)                             \
-    template void BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>::             \
+    template void GpuSolverInfo<BM<T,Dim>,BV<T,Dim>>::             \
     prepare(const Grid&,                                           \
             const Dune::CartesianIndexMapper<Grid>&,               \
             const std::vector<Well>&,                              \
@@ -257,13 +257,13 @@ using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
     using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
 #endif //HAVE_MPI
 #define INSTANTIATE(T,Dim)                              \
-    template struct BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>; \
+    template struct GpuSolverInfo<BM<T,Dim>,BV<T,Dim>>; \
     INSTANTIATE_GRID(T,Dim,Dune::CpGrid)                \
     INSTANTIATE_GRID(T,Dim,ALUGrid3CN)                  \
     INSTANTIATE_GRID(T,Dim,PolyHedralGrid3D)
 #else
 #define INSTANTIATE(T,Dim)                              \
-    template struct BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>; \
+    template struct GpuSolverInfo<BM<T,Dim>,BV<T,Dim>>; \
     INSTANTIATE_GRID(T,Dim,Dune::CpGrid)                \
     INSTANTIATE_GRID(T,Dim,PolyHedralGrid3D)
 #endif

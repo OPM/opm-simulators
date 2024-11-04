@@ -37,9 +37,9 @@ namespace Opm::Accelerator {
 
 /// This class implements a rocsparse-based ilu0-bicgstab solver on GPU
 template<class Scalar, unsigned int block_size>
-class rocsparseSolverBackend : public BdaSolver<Scalar,block_size>
+class rocsparseSolverBackend : public GpuSolver<Scalar,block_size>
 {
-    using Base = BdaSolver<Scalar,block_size>;
+    using Base = GpuSolver<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -82,7 +82,7 @@ private:
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res);
+    void gpu_pbicgstab(WellContributions<Scalar>& wellContribs, GpuResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
@@ -109,7 +109,7 @@ private:
     /// Solve linear system
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res);
+    void solve_system(WellContributions<Scalar>& wellContribs, GpuResult& res);
 
 public:
     /// Construct a rocsparseSolver
@@ -143,7 +143,7 @@ public:
                               Scalar* b,
                               std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                               WellContributions<Scalar>& wellContribs,
-                              BdaResult& res) override;
+                              GpuResult& res) override;
 
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array
