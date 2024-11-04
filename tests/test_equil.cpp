@@ -187,15 +187,16 @@ void initDefaultFluidSystem()
     dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
     dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
-    dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
+    dryGasPvt.setGasViscosity(/*regionIdx=*/0, Opm::Tabulated1DFunction<double>(mug));
 
     auto oilPvt = std::make_shared<Opm::OilPvtMultiplexer<double>>();
     oilPvt->setApproach(Opm::OilPvtApproach::DeadOil);
     auto& deadOilPvt = oilPvt->getRealPvt<Opm::OilPvtApproach::DeadOil>();
     deadOilPvt.setNumRegions(/*numPvtRegion=*/1);
     deadOilPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
-    deadOilPvt.setInverseOilFormationVolumeFactor(/*regionIdx=*/0, Bo);
-    deadOilPvt.setOilViscosity(/*regionIdx=*/0, muo);
+    deadOilPvt.setInverseOilFormationVolumeFactor(/*regionIdx=*/0,
+                                                  Opm::Tabulated1DFunction<double>(Bo));
+    deadOilPvt.setOilViscosity(/*regionIdx=*/0, Opm::Tabulated1DFunction<double>(muo));
 
     auto waterPvt = std::make_shared<Opm::WaterPvtMultiplexer<double>>();
     waterPvt->setApproach(Opm::WaterPvtApproach::ConstantCompressibilityWater);
