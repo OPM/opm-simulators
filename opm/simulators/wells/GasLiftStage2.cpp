@@ -421,7 +421,7 @@ optimizeGroup_(const Group& group)
 {
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
-    if (this->glo_.has_group(group.name()) || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
+    if ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD))
     {
         if (this->debug) {
             const std::string msg = fmt::format("optimizing (control = {})", Group::ProductionCMode2String(prod_control));
