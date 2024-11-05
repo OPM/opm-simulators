@@ -677,7 +677,6 @@ evalSummary(const int                                            reportStepNum,
 
         this->schedule_.getUDQConfig(udq_step)
             .eval(udq_step,
-                  this->schedule_,
                   this->schedule_.wellMatcher(udq_step),
                   this->schedule_.segmentMatcherFactory(udq_step),
                   [es = std::cref(this->eclState_)]() {
