@@ -40,11 +40,8 @@
 
 #include <array>
 #include <memory>
-#include <vector>
 
-
-namespace Opm
-{
+namespace Opm {
 
 template<>
 class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
@@ -57,7 +54,7 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
 #endif //HAVE_MPI
 
  public:
-    static const int dimension = 3 ;
+    static constexpr int dimension = 3 ;
 
     LevelCartesianIndexMapper(const Grid& grid,
                               const Dune::CartesianIndexMapper<Grid>& cartesianIndexMapper)
@@ -83,7 +80,6 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
         return cartesianIndexMapper_-> compressedSize();
     }
 
-
     int cartesianIndex( const int compressedElementIndex, const int level) const
     {
         throwIfLevelPositive(level);;
@@ -97,7 +93,7 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
     }
 
  private:
-    const Grid* grid_;
+    [[maybe_unused]] const Grid* grid_;
     std::unique_ptr<Dune::CartesianIndexMapper<Grid>> cartesianIndexMapper_;
     
     void throwIfLevelPositive(int level) const
