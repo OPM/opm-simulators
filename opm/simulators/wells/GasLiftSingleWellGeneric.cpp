@@ -1093,8 +1093,6 @@ maybeAdjustALQbeforeOptimizeLoop_(const LimitedRates& orig_rates,
             const std::string msg = fmt::format("adjusted ALQ to: {}", alq);
             displayDebugMessage_(msg);
         }
-        Scalar delta_alq = alq - orig_alq;
-        updateGroupRates_(orig_rates, rates, delta_alq);
     }
     return {rates, alq};
 }
