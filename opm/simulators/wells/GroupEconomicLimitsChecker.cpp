@@ -330,7 +330,7 @@ addPrintMessage(const std::string& msg,
         this->group_.name()
     );
     const std::string measure_name(this->unit_system_.name(measure));
-    const std::string message = fmt::format(msg,
+    const std::string message = fmt::format(fmt::runtime(msg),
                                          this->unit_system_.from_si(measure, value), measure_name,
                                          this->unit_system_.from_si(measure, limit), measure_name);
 
