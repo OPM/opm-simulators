@@ -1266,6 +1266,7 @@ namespace Opm {
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "updateWellControlsAndNetworkIteration() failed: ",
                                        this->terminal_output_, grid().comm());
 
+        // guideRateUpdateIsNeeded - only required at start of time step?
         //update guide rates
         const int reportStepIdx = simulator_.episodeIndex();
         if (alq_updated || BlackoilWellModelGuideRates(*this).

@@ -61,7 +61,7 @@ private:
                      const std::string& always_included_child);
     int groupControlledWells(const std::string& group_name,
                              const std::string& always_included_child);
-    GuideRate::RateVector getGroupRateVector(const std::string& group_name);
+    GuideRate::RateVector getGroupGuideRateVector(const std::string& group_name);
     const Schedule& schedule_;
     const WellState<Scalar>& well_state_;
     const GroupState<Scalar>& group_state_;

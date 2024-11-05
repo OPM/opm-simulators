@@ -102,7 +102,7 @@ public:
     GPMaint::State& gpmaint(const std::string& gname);
 
     template<class Comm>
-    void communicate_rates(const Comm& comm)
+    void communicate_rates(const Comm& comm, const bool update_nupcol)
     {
         // Note that injection_group_vrep_rates is handled separate from
         // the forAllGroupData() function, since it contains single doubles,
@@ -119,12 +119,14 @@ public:
 
 
         auto forAllGroupData = [&](auto& func) {
-            iterateContainer(m_production_rates, func);
             iterateContainer(prod_red_rates, func);
             iterateContainer(inj_red_rates, func);
-            iterateContainer(inj_resv_rates, func);
-            iterateContainer(inj_rein_rates, func);
-            iterateContainer(inj_surface_rates, func);
+            if (update_nupcol) {
+                iterateContainer(m_production_rates, func);
+                iterateContainer(inj_resv_rates, func);
+                iterateContainer(inj_rein_rates, func);
+                iterateContainer(inj_surface_rates, func);
+            }
         };
 
         // Compute the size of the data.
@@ -133,7 +135,9 @@ public:
             sz += v.size();
         };
         forAllGroupData(computeSize);
-        sz += this->inj_vrep_rate.size();
+        if (update_nupcol) {
+            sz += this->inj_vrep_rate.size();
+        }
 
         // Make a vector and collect all data into it.
         std::vector<Scalar> data(sz);
@@ -148,9 +152,12 @@ public:
             }
         };
         forAllGroupData(collect);
-        for (const auto& x : this->inj_vrep_rate) {
-            data[pos++] = x.second;
+        if (update_nupcol) {
+            for (const auto& x : this->inj_vrep_rate) {
+                data[pos++] = x.second;
+            }
         }
+
         if (pos != sz)
             throw std::logic_error("Internal size mismatch when collecting groupData");
 
@@ -165,9 +172,12 @@ public:
             }
         };
         forAllGroupData(distribute);
-        for (auto& x : this->inj_vrep_rate) {
-            x.second = data[pos++];
+        if (update_nupcol) {
+            for (auto& x : this->inj_vrep_rate) {
+                x.second = data[pos++];
+            }
         }
+
         if (pos != sz)
             throw std::logic_error("Internal size mismatch when distributing groupData");
     }

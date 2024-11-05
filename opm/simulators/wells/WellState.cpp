@@ -141,7 +141,7 @@ serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
     WellState result(PhaseUsage{});
     result.alq_state = ALQState<Scalar>::serializationTestObject();
-    result.well_rates = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
+    result.well_rates_for_guiderate = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
     result.wells_.add("test4", SingleWellState<Scalar>::serializationTestObject(pinfo));
 
     return result;
@@ -272,14 +272,14 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
     this->global_well_info = std::make_optional<GlobalWellInfo>(schedule,
                                                                 report_step,
                                                                 wells_ecl);
-    well_rates.clear();
+    well_rates_for_guiderate.clear();
     for (const auto& wname : schedule.wellNames(report_step))
     {
-        well_rates.insert({wname, std::make_pair(false, std::vector<Scalar>(this->numPhases()))});
+        well_rates_for_guiderate.insert({wname, std::make_pair(false, std::vector<Scalar>(this->numPhases()))});
     }
     for (const auto& winfo: parallel_well_info)
     {
-        well_rates[winfo.get().name()].first = winfo.get().isOwner();
+        well_rates_for_guiderate[winfo.get().name()].first = winfo.get().isOwner();
     }
 
     const int nw = wells_ecl.size();
@@ -447,11 +447,11 @@ void WellState<Scalar>::resize(const std::vector<Well>& wells_ecl,
 
 template<class Scalar>
 const std::vector<Scalar>&
-WellState<Scalar>::currentWellRates(const std::string& wellName) const
+WellState<Scalar>::getWellRatesForGuideRate(const std::string& wellName) const
 {
-    auto it = well_rates.find(wellName);
+    auto it = well_rates_for_guiderate.find(wellName);
 
-    if (it == well_rates.end())
+    if (it == well_rates_for_guiderate.end())
         OPM_THROW(std::logic_error,
                   "Could not find any rates for well " + wellName);
 
@@ -866,11 +866,11 @@ void WellState<Scalar>::updateStatus(int well_index, WellStatus status)
 }
 
 template<class Scalar>
-void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& comm)
+void WellState<Scalar>::communicateWellRatesForGuideRate(const Parallel::Communication& comm)
 {
     // Compute the size of the data.
     std::size_t sz = 0;
-    for (const auto& [_, owner_rates] : this->well_rates) {
+    for (const auto& [_, owner_rates] : this->well_rates_for_guiderate) {
         (void)_;
         const auto& [__, rates] = owner_rates;
         (void)__;
@@ -881,7 +881,7 @@ void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& com
     // Make a vector and collect all data into it.
     std::vector<Scalar> data(sz);
     std::size_t pos = 0;
-    for (const auto& [_, owner_rates] : this->well_rates) {
+    for (const auto& [_, owner_rates] : this->well_rates_for_guiderate) {
         (void)_;
         const auto& [owner, rates] = owner_rates;
         for (const auto& value : rates) {
@@ -900,7 +900,7 @@ void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& com
     comm.sum(data.data(), data.size());
 
     pos = 0;
-    for (auto& [_, owner_rates] : this->well_rates) {
+    for (auto& [_, owner_rates] : this->well_rates_for_guiderate) {
         (void)_;
         auto& [__, rates] = owner_rates;
         (void)__;
@@ -1049,7 +1049,7 @@ template<class Scalar>
 bool WellState<Scalar>::operator==(const WellState& rhs) const
 {
     return this->alq_state == rhs.alq_state &&
-           this->well_rates == rhs.well_rates &&
+           this->well_rates_for_guiderate == rhs.well_rates_for_guiderate &&
            this->wells_ == rhs.wells_;
 }
 

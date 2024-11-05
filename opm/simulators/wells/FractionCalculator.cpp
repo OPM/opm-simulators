@@ -149,7 +149,7 @@ guideRate(const std::string& name,
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name)) {
-                return guide_rate_->get(name, target_, getGroupRateVector(name));
+                return guide_rate_->get(name, target_, getGroupGuideRateVector(name));
             } else if (!is_producer_ && guide_rate_->has(name, injection_phase_)) {
                 return guide_rate_->get(name, injection_phase_);
             } else {
@@ -183,10 +183,10 @@ groupControlledWells(const std::string& group_name,
 
 template<class Scalar>
 GuideRate::RateVector FractionCalculator<Scalar>::
-getGroupRateVector(const std::string& group_name)
+getGroupGuideRateVector(const std::string& group_name)
 {
     assert(is_producer_);
-    return WellGroupHelpers<Scalar>::getProductionGroupRateVector(this->group_state_,
+    return WellGroupHelpers<Scalar>::getProductionGroupGuideRateVector(this->group_state_,
                                                                   this->pu_,
                                                                   group_name);
 }
