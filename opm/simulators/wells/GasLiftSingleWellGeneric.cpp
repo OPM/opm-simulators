@@ -421,8 +421,8 @@ void GasLiftSingleWellGeneric<Scalar>::
 debugShowBhpAlqTable_()
 {
     Scalar alq = 0.0;
-    const std::string fmt_fmt1 {"{:^12s} {:^12s} {:^12s} {:^12s}"};
-    const std::string fmt_fmt2 {"{:>12.5g} {:>12.5g} {:>12.5g} {:>12.5g}"};
+    constexpr std::string_view fmt_fmt1 {"{:^12s} {:^12s} {:^12s} {:^12s}"};
+    constexpr std::string_view fmt_fmt2 {"{:>12.5g} {:>12.5g} {:>12.5g} {:>12.5g}"};
     const std::string header = fmt::format(fmt_fmt1, "ALQ", "BHP", "oil", "gas");
     displayDebugMessage_(header);
     auto max_it = 50;

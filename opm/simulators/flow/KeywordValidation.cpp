@@ -21,7 +21,6 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <map>
 #include <string>
 #include <type_traits>
 
@@ -36,20 +35,13 @@
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
 
-namespace Opm
-{
-
-
-
-namespace KeywordValidation
-{
-
+namespace Opm::KeywordValidation {
 
     std::string get_error_report(const std::vector<ValidationError>& errors, const bool include_noncritical, const bool include_critical)
     {
         const std::string keyword_format = "  {keyword}: keyword not supported\n";
-        const std::string item_format1 = "  {{keyword}}: invalid value '{}' for item {}\n";
-        const std::string item_format2 = "  {{keyword}}: invalid value '{}' in record {} for item {}\n";
+        constexpr std::string_view item_format1 = "  {{keyword}}: invalid value '{}' for item {}\n";
+        constexpr std::string_view item_format2 = "  {{keyword}}: invalid value '{}' in record {} for item {}\n";
         const std::string location_format = "  In file: {file}, line {line}\n";
 
         std::string report;
@@ -206,7 +198,4 @@ namespace KeywordValidation
         }
     }
 
-
-} // namespace KeywordValidation
-
-} // namespace Opm
+} // namespace Opm::KeywordValidation
