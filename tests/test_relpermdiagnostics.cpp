@@ -57,7 +57,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-BOOST_AUTO_TEST_SUITE ()
+BOOST_AUTO_TEST_SUITE (RelPermDiagnostics)
 
 BOOST_AUTO_TEST_CASE(diagnosis)
 {
