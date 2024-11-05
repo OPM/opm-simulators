@@ -117,11 +117,6 @@ addOrRemoveALQincrement_(GradMap &grad_map,
             well_name, (add ? "adding" : "subtracting"), old_alq, new_alq);
         this->displayDebugMessage_(msg);
     }
-    state.update(gi.new_oil_rate, gi.oil_is_limited,
-                 gi.new_gas_rate, gi.gas_is_limited,
-                 gi.alq, gi.alq_is_limited,
-                 gi.new_water_rate, gi.water_is_limited, add);
-
     this->well_state_.setALQ(well_name, gi.alq);
     const auto& pu = this->well_state_.phaseUsage();
     std::vector<Scalar> well_pot(pu.num_phases, 0.0);

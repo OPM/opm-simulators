@@ -700,7 +700,9 @@ initializeWell2GroupMapRecursive_(const Group& group,
             // TODO: can the same well be memember of two different groups
             //  (on the same recursion level) ?
             assert(this->well_group_map_.count(well_name) == 0);
-            if (checkDoGasLiftOptimization_(well_name)) {
+            bool checkDoGasLift = checkDoGasLiftOptimization_(well_name);
+            checkDoGasLift = this->comm_.max(checkDoGasLift);
+            if (checkDoGasLift) {
                 const auto &well = this->schedule_.getWell(
                     well_name, this->report_step_idx_);
                 Scalar wfac = well.getEfficiencyFactor();
