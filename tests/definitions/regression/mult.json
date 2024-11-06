@@ -1,0 +1,68 @@
+{
+    "abs_tol": 0.02,
+    "dir": "mult",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "01_multflt",
+            "filename": "MULTFLT-01"
+        },
+        {
+            "casename": "01_multregt",
+            "filename": "MULTREGT-01"
+        },
+        {
+            "casename": "02_multflt",
+            "filename": "MULTFLT-02"
+        },
+        {
+            "casename": "03_multflt",
+            "filename": "MULTFLT-03"
+        },
+        {
+            "casename": "05_multxyz",
+            "filename": "MULTXYZ05"
+        },
+        {
+            "casename": "06_multxyz",
+            "filename": "MULTXYZ06"
+        },
+        {
+            "casename": "07_multxyz",
+            "filename": "MULTXYZ07"
+        },
+        {
+            "casename": "08_multxyz",
+            "filename": "MULTXYZ08"
+        },
+        {
+            "casename": "11_multxyz",
+            "filename": "MULTXYZ11"
+        },
+        {
+            "casename": "equalreg_multy_01",
+            "filename": "EQUALREG-01"
+        },
+        {
+            "casename": "equalreg_multy_02",
+            "filename": "EQUALREG-02"
+        },
+        {
+            "casename": "equalreg_multy_03",
+            "filename": "EQUALREG-03"
+        },
+        {
+            "casename": "equalreg_multy_04",
+            "filename": "EQUALREG-04"
+        },
+        {
+            "casename": "equalreg_multy_05",
+            "filename": "EQUALREG-05"
+        },
+        {
+            "casename": "equalreg_multy_06",
+            "filename": "EQUALREG-06"
+        }
+    ]
+}

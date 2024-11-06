@@ -305,16 +305,6 @@ add_test_compareECLFiles(CASENAME gpmaint11
                          REL_TOL ${rel_tol}
                          DIR gpmaint)
 
-foreach(eqreg_case RANGE 1 6)
-  add_test_compareECLFiles(CASENAME equalreg_multy_0${eqreg_case}
-    FILENAME EQUALREG-0${eqreg_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol}
-    REL_TOL ${rel_tol}
-    DIR mult
-  )
-endforeach()
-
 foreach(templ_case RANGE 1 6)
   add_test_compareECLFiles(CASENAME actionx_well_templ_0${templ_case}
     FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
@@ -747,60 +737,6 @@ add_test_compareECLFiles(CASENAME 01_vappars
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR vappars)
-add_test_compareECLFiles(CASENAME 01_multflt
-                         FILENAME MULTFLT-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 02_multflt
-                         FILENAME MULTFLT-02
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 03_multflt
-                         FILENAME MULTFLT-03
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 01_multregt
-                         FILENAME MULTREGT-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 05_multxyz
-                         FILENAME MULTXYZ05
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 06_multxyz
-                         FILENAME MULTXYZ06
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 07_multxyz
-                         FILENAME MULTXYZ07
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 08_multxyz
-                         FILENAME MULTXYZ08
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 11_multxyz
-                         FILENAME MULTXYZ11
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
 
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
@@ -853,6 +789,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/gridunit.json"
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
+        "tests/definitions/regression/mult.json"
         "tests/definitions/regression/network.json"
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/radial_grid.json"
