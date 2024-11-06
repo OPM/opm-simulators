@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "wecon_wtest",
+    "rel_tol": 0.01,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "wecon_wtest",
+            "filename": "3D_WECON"
+        }
+    ]
+}
