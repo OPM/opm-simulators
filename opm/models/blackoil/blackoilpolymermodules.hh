@@ -591,7 +591,9 @@ public:
         const Scalar& maxAdsorbtion = PolymerModule::plyrockMaxAdsorbtion(elemCtx, dofIdx, timeIdx);
         const auto& plyadsAdsorbedPolymer = PolymerModule::plyadsAdsorbedPolymer(elemCtx, dofIdx, timeIdx);
         polymerAdsorption_ = plyadsAdsorbedPolymer.eval(polymerConcentration_, /*extrapolate=*/true);
-        if (PolymerModule::plyrockAdsorbtionIndex(elemCtx, dofIdx, timeIdx) == BlackOilPolymerParams<Scalar>::NoDesorption) {
+        if (static_cast<int>(PolymerModule::plyrockAdsorbtionIndex(elemCtx, dofIdx, timeIdx)) ==
+            BlackOilPolymerParams<Scalar>::NoDesorption)
+        {
             const Scalar& maxPolymerAdsorption = elemCtx.problem().maxPolymerAdsorption(elemCtx, dofIdx, timeIdx);
             polymerAdsorption_ = std::max(Evaluation(maxPolymerAdsorption) , polymerAdsorption_);
         }
