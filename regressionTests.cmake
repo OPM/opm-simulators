@@ -685,20 +685,6 @@ add_test_compareECLFiles(CASENAME wsegvalv_2d_vert
                          REL_TOL ${rel_tol}
                          DIR msw)
 
-add_test_compareECLFiles(CASENAME nnc
-                         FILENAME NNC_AND_EDITNNC
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR editnnc)
-
-add_test_compareECLFiles(CASENAME nonnc
-                         FILENAME NONNC
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR editnnc)
-
 add_test_compareECLFiles(CASENAME spe1_foam
                          FILENAME SPE1FOAM
                          SIMULATOR flow
@@ -1141,6 +1127,7 @@ endfunction()
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
   set(JSON_FILES 
+        "tests/definitions/regression/editnnc.json"
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/network.json"
