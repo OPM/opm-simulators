@@ -553,7 +553,7 @@ void registerAdaptiveParameters();
             return serializationTestObject_<SimpleIterationCountTimeStepControl>();
         }
 
-        bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs)
+        bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs) const
         {
             if (timeStepControlType_ != rhs.timeStepControlType_ ||
                 (timeStepControl_ && !rhs.timeStepControl_) ||
