@@ -225,38 +225,6 @@ add_test_compareECLFiles(CASENAME min_qoil_1
                          DIR wtest/wecon_qo_min
                          TEST_ARGS --enable-tuning=true)
 
-add_test_compareECLFiles(CASENAME max_watercut_1
-                         FILENAME MAX_WATERCUT_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME max_watercut_2
-                         FILENAME MAX_WATERCUT_2
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME max_watercut_3
-                         FILENAME MAX_WATERCUT_3
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME max_watercut_4
-                         FILENAME MAX_WATERCUT_4
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
-                         TEST_ARGS --enable-tuning=true)
-
 add_test_compareECLFiles(CASENAME max_wgr_1
                          FILENAME MAX_WGR_1
                          SIMULATOR flow
@@ -350,6 +318,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/h2store.json"
         "tests/definitions/regression/jfunc.json"
         "tests/definitions/regression/krnum.json"
+        "tests/definitions/regression/max_watercut.json"
         "tests/definitions/regression/model1.json"
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/model4.json"
