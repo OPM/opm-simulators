@@ -1156,3 +1156,9 @@ if(dune-alugrid_FOUND)
     examples/fracture_discretefracture.cpp
   )
 endif()
+
+if(HYPRE_FOUND)
+  list(APPEND PUBLIC_HEADER_FILES
+    opm/simulators/linalg/HyprePreconditioner.hpp
+  )
+endif()

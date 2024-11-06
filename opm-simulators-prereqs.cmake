@@ -23,6 +23,7 @@ set (opm-simulators_CONFIG_VAR
   HAVE_SUITESPARSE_UMFPACK
   HAVE_DAMARIS
   HAVE_HDF5
+  HAVE_HYPRE
   USE_HIP
   USE_TRACY
   FLOW_INSTANTIATE_FLOAT
@@ -56,6 +57,8 @@ set (opm-simulators_DEPS
   # packages from ROCm framework
   "rocblas"
   "rocsparse"
+  # HYPRE solver library
+  "HYPRE"
   # OPM dependency
   "opm-common REQUIRED"
   "opm-grid REQUIRED"

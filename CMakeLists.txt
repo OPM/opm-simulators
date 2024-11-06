@@ -35,6 +35,7 @@ option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
 option(USE_GPU_BRIDGE "Enable the GPU bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
 option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
+option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
 
 # Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
@@ -715,3 +716,17 @@ endif()
 
 install(DIRECTORY doc/man1 DESTINATION ${CMAKE_INSTALL_MANDIR}
   FILES_MATCHING PATTERN "*.1")
+
+if(USE_HYPRE)
+  find_package(HYPRE)
+  if(HYPRE_FOUND)
+    set(HAVE_HYPRE 1)
+  else()
+    message(WARNING "Hypre requested but not found. Continuing without Hypre support.")
+    set(USE_HYPRE OFF)
+  endif()
+endif()
+
+if(HYPRE_FOUND)
+  target_link_libraries(opmsimulators PUBLIC HYPRE::HYPRE)
+endif()
