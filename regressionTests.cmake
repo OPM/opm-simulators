@@ -294,22 +294,6 @@ add_test_compareECLFiles(CASENAME wvfpexp_02
                          REL_TOL ${rel_tol}
                          DIR wvfpexp)
 
-add_test_compareECLFiles(CASENAME 01_wgrupcon
-                         FILENAME 01-WGRUPCON
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wgrupcon
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME 02_wgrupcon
-                         FILENAME 02-WGRUPCON
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wgrupcon
-                         TEST_ARGS --enable-tuning=true)
-
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
                            FILENAME SPE1CASE2
@@ -383,6 +367,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/udt.json"
         "tests/definitions/regression/vappars.json"
         "tests/definitions/regression/waghystr.json"
+        "tests/definitions/regression/wgrupcon.json"
         "tests/definitions/regression/winjdam.json"
         "tests/definitions/regression/winjmult.json"
         "tests/definitions/regression/wtest_bhp.json"
