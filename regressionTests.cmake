@@ -6,13 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME fetkovich_2d
-                         FILENAME 2D_FETKOVICHAQUIFER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR aquifer-fetkovich)
-
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
                          SIMULATOR flow
@@ -295,6 +288,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
   set(JSON_FILES 
         "tests/definitions/regression/actionx.json"
         "tests/definitions/regression/aquifer_num.json"
+        "tests/definitions/regression/aquifer-fetkovich.json"
         "tests/definitions/regression/aquifer-oilwater.json"
         "tests/definitions/regression/aquifers.json"
         "tests/definitions/regression/co2store.json"
