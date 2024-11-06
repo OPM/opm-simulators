@@ -6,13 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME spe1flowexp
-                         FILENAME SPE1CASE2
-                         SIMULATOR flowexp_blackoil
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
 add_test_compareECLFiles(CASENAME spe1_brine
                          FILENAME SPE1CASE1_BRINE
                          SIMULATOR flow
@@ -637,6 +630,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/aquifer_num.json"
         "tests/definitions/regression/cskin.json"
         "tests/definitions/regression/editnnc.json"
+        "tests/definitions/regression/flowexp_blackoil.json"
         "tests/definitions/regression/gridunit.json"
         "tests/definitions/regression/jfunc.json"
         "tests/definitions/regression/krnum.json"
