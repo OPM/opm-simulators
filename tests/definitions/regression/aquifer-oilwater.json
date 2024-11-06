@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "aquifer-oilwater",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "ctaquifer_2d_oilwater",
+            "filename": "2D_OW_CTAQUIFER"
+        }
+    ]
+}
