@@ -117,11 +117,6 @@ addOrRemoveALQincrement_(GradMap &grad_map,
             well_name, (add ? "adding" : "subtracting"), old_alq, new_alq);
         this->displayDebugMessage_(msg);
     }
-    state.update(gi.new_oil_rate, gi.oil_is_limited,
-                 gi.new_gas_rate, gi.gas_is_limited,
-                 gi.alq, gi.alq_is_limited,
-                 gi.new_water_rate, gi.water_is_limited, add);
-
     this->well_state_.setALQ(well_name, gi.alq);
     const auto& pu = this->well_state_.phaseUsage();
     std::vector<Scalar> well_pot(pu.num_phases, 0.0);
@@ -426,7 +421,7 @@ optimizeGroup_(const Group& group)
 {
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
-    if (this->glo_.has_group(group.name()) || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
+    if ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD))
     {
         if (this->debug) {
             const std::string msg = fmt::format("optimizing (control = {})", Group::ProductionCMode2String(prod_control));
@@ -436,7 +431,7 @@ optimizeGroup_(const Group& group)
         std::vector<GradPair> inc_grads;
         std::vector<GradPair> dec_grads;
         redistributeALQ_(wells, group, inc_grads, dec_grads);
-        removeSurplusALQ_(group, inc_grads, dec_grads);
+        removeSurplusALQ_(group, dec_grads);
     }
     else {
         if (this->debug) {
@@ -493,7 +488,7 @@ recalculateGradientAndUpdateData_(GradPairItr& grad_itr,
         }
         // If the old incremental/decremental gradient was defined, it becomes the new
         //   decremental/incremental gradient
-        if (old_grad) {
+        if (old_grad && !other_grads.empty()) {
             // NOTE: Either creates a new item or reassigns
             // The old incremental gradient becomes the new decremental gradient
             //   or the old decremental gradient becomes the new incremental gradient
@@ -634,13 +629,13 @@ redistributeALQ_(std::vector<GasLiftSingleWell*>& wells,
 template<class Scalar>
 void GasLiftStage2<Scalar>::
 removeSurplusALQ_(const Group& group,
-                  std::vector<GradPair>& inc_grads,
                   std::vector<GradPair>& dec_grads)
 {
     if (dec_grads.empty()) {
         displayDebugMessage_("no wells to remove ALQ from. Skipping");
         return;
     }
+    std::vector<GradPair> empty_vector;
     assert(!dec_grads.empty());
     const auto max_glift = getGroupMaxALQ_(group);
     const auto max_totalgas = getGroupMaxTotalGas_(group);
@@ -697,14 +692,14 @@ removeSurplusALQ_(const Group& group,
             state.addOrRemoveALQincrement( this->dec_grads_, well_name, /*add=*/false);
             // We pass the current group rate in order to avoid limiting the rates
             // and gaslift based on the current group limits. In other words we want to reduce
-            // the gasslift as much as possible as long as we are able to produce the group
+            // the gaslift as much as possible as long as we are able to produce the group
             // targets
+            // Note: empty_vector passed to avoid adding gradients to inc_grads
             recalculateGradientAndUpdateData_(
-                        dec_grad_itr, group.name(), /*increase=*/false, dec_grads, inc_grads);
+                        dec_grad_itr, group.name(), /*increase=*/false, dec_grads, empty_vector);
 
-            // The dec_grads and inc_grads needs to be syncronized across ranks
+            // The dec_grads needs to be syncronized across ranks
             mpiSyncGlobalGradVector_(dec_grads);
-            mpiSyncGlobalGradVector_(inc_grads);
             // NOTE: recalculateGradientAndUpdateData_() will remove the current gradient
             //   from dec_grads if it cannot calculate a new decremental gradient.
             //   This will invalidate dec_grad_itr and well_name
@@ -798,6 +793,59 @@ updateGradVector_(const std::string& name,
     //   later in getEcoGradients()
 }
 
+
+template<class Scalar>
+void
+GasLiftStage2<Scalar>::
+updateGroupInfo(const std::string& well_name, bool add)
+{
+    const auto delta = computeDelta(well_name, add);
+    const auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
+    if (this->group_info_.hasWell(well_name)) {
+        const auto& pairs = this->group_info_.getWellGroups(well_name);
+       for (const auto& [group_name, efficiency] : pairs) {
+            this->group_info_.update(group_name,
+                                     efficiency * delta_oil,
+                                     efficiency * delta_gas,
+                                     efficiency * delta_water,
+                                     efficiency * delta_alq);
+        }
+    }
+}
+
+template<class Scalar>
+std::array<Scalar, 4>
+GasLiftStage2<Scalar>::
+computeDelta(const std::string& well_name, bool add)
+{
+    std::array<Scalar, 4> delta = {0.0, 0.0, 0.0, 0.0};
+    // compute the delta on wells on own rank
+    if (this->well_state_map_.count(well_name) > 0) {
+        const GradInfo& gi = add? this->inc_grads_.at(well_name) : this->dec_grads_.at(well_name);
+        GasLiftWellState<Scalar>& state = *(this->well_state_map_.at(well_name).get());
+        GasLiftSingleWell& gs_well = *(this->stage1_wells_.at(well_name).get());
+        const WellInterfaceGeneric<Scalar>& well = gs_well.getWell();
+        // only get deltas for wells owned by this rank
+        if (this->well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
+            const auto& well_ecl = well.wellEcl();
+            Scalar factor = well_ecl.getEfficiencyFactor();
+            auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
+            delta_oil = factor * (gi.new_oil_rate - state.oilRate());
+            delta_gas = factor * (gi.new_gas_rate - state.gasRate());
+            delta_water = factor * (gi.new_water_rate - state.waterRate());
+            delta_alq = factor * (gi.alq - state.alq());
+        }
+        state.update(gi.new_oil_rate, gi.oil_is_limited,
+                gi.new_gas_rate, gi.gas_is_limited,
+                gi.alq, gi.alq_is_limited,
+                gi.new_water_rate, gi.water_is_limited, add);
+    }
+
+    // and communicate the results
+    this->comm_.sum(delta.data(), delta.size());
+
+    return delta;
+}
 /***********************************************
  * Public methods declared in OptimizeState
  ***********************************************/
@@ -930,6 +978,9 @@ redistributeALQ(GradPairItr& min_dec_grad,
         this->parent.dec_grads_, /*well_name=*/min_dec_grad->first, /*add=*/false);
     this->parent.addOrRemoveALQincrement_(
         this->parent.inc_grads_, /*well_name=*/max_inc_grad->first, /*add=*/true);
+
+    this->parent.updateGroupInfo(min_dec_grad->first, /*add=*/false);
+    this->parent.updateGroupInfo(max_inc_grad->first, /*add=*/true);
 }
 
 /**********************************************
@@ -966,6 +1017,7 @@ addOrRemoveALQincrement(GradMap& grad_map,
         this->parent.displayDebugMessage_(msg);
     }
     this->parent.addOrRemoveALQincrement_(grad_map, well_name, add);
+    this->parent.updateGroupInfo(well_name, add);
 }
 
 template<class Scalar>

@@ -204,7 +204,7 @@ addOrSubtractAlqIncrement_(Scalar alq, bool increase) const
                 limited = true;
             }
         } else {
-            if (alq < 0) {
+            if (alq < 1e-12) {
                 alq = 0.0;
                 limited = true;
             }
@@ -261,7 +261,7 @@ checkGroupTargetsViolated(const BasicRates& rates,
             auto target_opt = this->group_info_.getTarget(rate_type, group_name);
             if (target_opt) {
                 auto delta_rate = new_rates[rate_type] - rates[rate_type];
-                auto new_group_rate = this->group_info_.getPotential(rate_type, group_name) + efficiency * delta_rate;
+                auto new_group_rate = this->group_info_.getRate(rate_type, group_name) + efficiency * delta_rate;
                 if (new_group_rate > *target_opt) {
                     if (this->debug) {
                         const std::string msg
@@ -666,6 +666,14 @@ getRateWithLimit_(Rate rate_type, const BasicRates& rates) const
     //   for why the rate was limited.
     std::optional<Rate> target_type;
 
+    // we also need to limit the other rate (currently only for water and oil and not gas)
+    Scalar rate2 = 0.0;
+    if (rate_type == Rate::oil) {
+        rate2 = getRate_(Rate::water, rates);
+    } else if (rate_type == Rate::water) {
+        rate2 = getRate_(Rate::oil, rates);
+    }
+
     if (hasProductionControl_(rate_type)) {
         auto target = getProductionTarget_(rate_type);
         if (new_rate > target) {
@@ -675,42 +683,73 @@ getRateWithLimit_(Rate rate_type, const BasicRates& rates) const
                                                 new_rate,
                                                 target);
             displayDebugMessage_(msg);
+            rate2 *= target/new_rate;
             new_rate = target;
-            target_type = rate_type;
+            target_type = rate_type; 
         }
     }
-    if (((rate_type == Rate::oil) || (rate_type == Rate::water)) && hasProductionControl_(Rate::liquid)) {
-        Scalar rate2;
+    if (((rate_type == Rate::oil) || (rate_type == Rate::water))) {
         if (rate_type == Rate::oil) {
-            rate2 = getRate_(Rate::water, rates);
+            if(hasProductionControl_(Rate::water)) {
+                auto water_target = getProductionTarget_(Rate::water);
+                if (rate2 > water_target) {
+                    new_rate *= (water_target / rate2);
+                    target_type = Rate::water;
+                    rate2 = water_target;
+                    const std::string msg = fmt::format("limiting {} rate to {} due to WRAT target: "
+                                                        "computed WRAT: {}, target WRAT: {}",
+                                                        GasLiftGroupInfo<Scalar>::rateToString(rate_type),
+                                                        new_rate,
+                                                        rate2,
+                                                        water_target);
+                    displayDebugMessage_(msg);
+                }
+            }
         } else {
-            rate2 = getRate_(Rate::oil, rates);
+            if(hasProductionControl_(Rate::oil)) {
+                auto oil_target = getProductionTarget_(Rate::oil);
+                if (rate2 > oil_target) {
+                    new_rate *= (oil_target / rate2);
+                    target_type = Rate::oil;
+                    rate2 = oil_target;
+                    const std::string msg = fmt::format("limiting {} rate to {} due to ORAT target: "
+                                                        "computed ORAT: {}, target ORAT: {}",
+                                                        GasLiftGroupInfo<Scalar>::rateToString(rate_type),
+                                                        new_rate,
+                                                        rate2,
+                                                        oil_target);
+                    displayDebugMessage_(msg);
+                }
+            }
         }
-        // Note: Since "new_rate" was first updated for ORAT or WRAT, see first "if"
-        //   statement in the method, the rate is limited due to LRAT only if
-        //   it becomes less than the rate limited by a WRAT or ORAT target..
-        Scalar liq_rate = new_rate + rate2;
 
-        auto liq_target = getProductionTarget_(Rate::liquid);
-        if (liq_rate > liq_target) {
-            Scalar fraction = new_rate / liq_rate;
-            // NOTE: since
-            //      fraction * liq_rate = new_rate,
-            //  we must have
-            //      fraction * liq_target < new_rate
-            //  since
-            //      liq_target < liq_rate
-            //  therefore new_rate will become less than it original was and
-            //  limited = true.
-            new_rate = fraction * liq_target;
-            target_type = Rate::liquid;
-            const std::string msg = fmt::format("limiting {} rate to {} due to LRAT target: "
-                                                "computed LRAT: {}, target LRAT: {}",
-                                                GasLiftGroupInfo<Scalar>::rateToString(rate_type),
-                                                new_rate,
-                                                liq_rate,
-                                                liq_target);
-            displayDebugMessage_(msg);
+        if(hasProductionControl_(Rate::liquid)) {
+            // Note: Since "new_rate" was first updated for ORAT or WRAT, see first "if"
+            //   statement in the method, the rate is limited due to LRAT only if
+            //   it becomes less than the rate limited by a WRAT or ORAT target..
+            Scalar liq_rate = new_rate + rate2;
+
+            auto liq_target = getProductionTarget_(Rate::liquid);
+            if (liq_rate > liq_target) {
+                Scalar fraction = new_rate / liq_rate;
+                // NOTE: since
+                //      fraction * liq_rate = new_rate,
+                //  we must have
+                //      fraction * liq_target < new_rate
+                //  since
+                //      liq_target < liq_rate
+                //  therefore new_rate will become less than it original was and
+                //  limited = true.
+                new_rate = fraction * liq_target;
+                target_type = Rate::liquid;
+                const std::string msg = fmt::format("limiting {} rate to {} due to LRAT target: "
+                                                    "computed LRAT: {}, target LRAT: {}",
+                                                    GasLiftGroupInfo<Scalar>::rateToString(rate_type),
+                                                    new_rate,
+                                                    liq_rate,
+                                                    liq_target);
+                displayDebugMessage_(msg);
+            }
         }
     }
     // TODO: Also check RESV target?
@@ -768,25 +807,7 @@ getLiquidRateWithGroupLimit_(const Scalar new_oil_rate,
         = getRateWithGroupLimit_(Rate::liquid, new_liquid_rate, liquid_rate, gr_name_dont_limit);
     bool limited = group_name != nullptr;
     if (limited) {
-        // the oil, gas, and water cases can be handled directly by
-        //  getRateWithGroupLimit_() above. However, for the liquid case
-        //  we must do some postprocessing. I chose to include it here
-        //  instead of cluttering up getRateWithGroupLimit_() with this
-        //  special case.
-        Scalar delta_water = new_water_rate - water_rate;
-        Scalar delta_oil = new_oil_rate - oil_rate;
-
-        Scalar gr_water_rate = this->group_info_.waterRate(*group_name);
-        Scalar gr_oil_rate = this->group_info_.oilRate(*group_name);
-
-        // NOTE: these rates are too large according to the limited liquid rate
-        //  but it does not matter since we are only using them to calculate
-        //  the fraction of the liquid corresponding to the oil phase
-        Scalar new_gr_water_rate = gr_water_rate + efficiency * delta_water;
-        Scalar new_gr_oil_rate = gr_oil_rate + efficiency * delta_oil;
-        Scalar new_gr_liquid_rate = new_gr_water_rate + new_gr_oil_rate;
-
-        Scalar oil_fraction = new_gr_oil_rate / new_gr_liquid_rate;
+        Scalar oil_fraction = oil_rate / liquid_rate;
         Scalar delta_liquid = liquid_rate_limited - liquid_rate;
         auto limited_oil_rate = oil_rate + oil_fraction * delta_liquid;
         auto limited_water_rate = water_rate + (1.0 - oil_fraction) * delta_liquid;
@@ -880,6 +901,7 @@ getInitialRatesWithLimit_() const
         auto temp_rates = getLimitedRatesFromRates_(*rates);
         BasicRates old_rates = getWellStateRates_();
         limited_rates = updateRatesToGroupLimits_(old_rates, temp_rates);
+
         initial_alq = alq;
     }
     return {limited_rates, initial_alq};
@@ -891,9 +913,10 @@ GasLiftSingleWellGeneric<Scalar>::
 getLimitedRatesFromRates_(const BasicRates& rates) const
 {
     auto [oil_rate, oil_limiting_target] = getOilRateWithLimit2_(rates);
+    bool oil_is_limited = oil_limiting_target.has_value();
     auto [gas_rate, gas_is_limited] = getGasRateWithLimit_(rates);
     auto [water_rate, water_limiting_target] = getWaterRateWithLimit2_(rates);
-    bool oil_is_limited = oil_limiting_target.has_value();
+   
     bool water_is_limited = water_limiting_target.has_value();
     return LimitedRates {oil_rate,
                          gas_rate,
@@ -1071,8 +1094,6 @@ maybeAdjustALQbeforeOptimizeLoop_(const LimitedRates& orig_rates,
             const std::string msg = fmt::format("adjusted ALQ to: {}", alq);
             displayDebugMessage_(msg);
         }
-        Scalar delta_alq = alq - orig_alq;
-        updateGroupRates_(orig_rates, rates, delta_alq);
     }
     return {rates, alq};
 }
@@ -1465,13 +1486,16 @@ updateRatesToGroupLimits_(const BasicRates& old_rates,
 {
     LimitedRates new_rates = rates;
     auto [new_oil_rate, oil_is_limited] = getOilRateWithGroupLimit_(new_rates.oil, old_rates.oil, gr_name);
+    auto mod_water_rate = new_rates.water;
     if (oil_is_limited) {
         new_rates.oil_limiting_target = Rate::oil;
+        mod_water_rate *=  (new_oil_rate / new_rates.oil);
     }
     auto [new_gas_rate, gas_is_limited] = getGasRateWithGroupLimit_(new_rates.gas, old_rates.gas, gr_name);
-    auto [new_water_rate, water_is_limited] = getWaterRateWithGroupLimit_(new_rates.water, old_rates.water, gr_name);
+    auto [new_water_rate, water_is_limited] = getWaterRateWithGroupLimit_(mod_water_rate, old_rates.water, gr_name);
     if (water_is_limited) {
         new_rates.water_limiting_target = Rate::water;
+        new_oil_rate *=  (new_water_rate / new_rates.water);
     }
     auto [new_oil_rate2, new_water_rate2, oil_is_limited2, water_is_limited2]
         = getLiquidRateWithGroupLimit_(new_oil_rate, old_rates.oil, new_water_rate, old_rates.water, gr_name);

@@ -532,22 +532,29 @@ getProducerWellRates_(const Well* well, int well_index)
 
     const auto controls = well->productionControls(this->summary_state_);
     Scalar oil_rate = oil_pot;
-    if (controls.hasControl(Well::ProducerCMode::ORAT)) {
-        oil_rate = std::min(static_cast<Scalar>(controls.oil_rate), oil_rate);
-    }
+    Scalar water_rate = water_pot;
     Scalar gas_rate = gas_pot;
+
+    if (controls.hasControl(Well::ProducerCMode::ORAT) && oil_rate > static_cast<Scalar>(controls.oil_rate)) {
+        water_rate *= (static_cast<Scalar>(controls.oil_rate) / oil_rate); 
+        oil_rate = static_cast<Scalar>(controls.oil_rate);
+    }
+    
     if (controls.hasControl(Well::ProducerCMode::GRAT)) {
         gas_rate = std::min(static_cast<Scalar>(controls.gas_rate), gas_rate);
     }
-    Scalar water_rate = water_pot;
-    if (controls.hasControl(Well::ProducerCMode::WRAT)) {
-        water_rate = std::min(static_cast<Scalar>(controls.water_rate), water_rate);
+    
+    if (controls.hasControl(Well::ProducerCMode::WRAT) && water_rate > static_cast<Scalar>(controls.water_rate)) {
+        oil_rate *= (static_cast<Scalar>(controls.water_rate) / water_rate); 
+        water_rate = static_cast<Scalar>(controls.water_rate);
     }
     if (controls.hasControl(Well::ProducerCMode::LRAT)) {
         Scalar liquid_rate = oil_rate + water_rate;
-        Scalar liquid_rate_lim = std::min(static_cast<Scalar>(controls.liquid_rate), liquid_rate);
-        water_rate = water_rate / liquid_rate * liquid_rate_lim;
-        oil_rate = oil_rate / liquid_rate * liquid_rate_lim;
+        Scalar liquid_rate_lim = static_cast<Scalar>(controls.liquid_rate);
+        if (liquid_rate > liquid_rate_lim) {
+            water_rate = water_rate / liquid_rate * liquid_rate_lim;
+            oil_rate = oil_rate / liquid_rate * liquid_rate_lim;
+        }
     }
 
     return {oil_rate, gas_rate, water_rate, oil_pot, gas_pot, water_pot};
@@ -639,19 +646,6 @@ initializeGroupRatesRecursive_(const Group& group)
     }
     if (oil_target || liquid_target || water_target || gas_target || max_total_gas || max_alq) {
         updateGroupIdxMap_(group.name());
-        if (oil_target)
-            oil_rate = std::min(oil_rate, *oil_target);
-        if (gas_target)
-            gas_rate = std::min(gas_rate, *gas_target);
-        if (water_target)
-            water_rate = std::min(water_rate, *water_target);
-        if (liquid_target) {
-            Scalar liquid_rate = oil_rate + water_rate;
-            Scalar liquid_rate_limited = std::min(liquid_rate, *liquid_target);
-            oil_rate = oil_rate / liquid_rate * liquid_rate_limited;
-            water_rate = water_rate / liquid_rate * liquid_rate_limited;
-        }
-
         this->group_rate_map_.try_emplace(group.name(),
             oil_rate, gas_rate, water_rate, alq,
             oil_potential, gas_potential, water_potential,
@@ -659,6 +653,25 @@ initializeGroupRatesRecursive_(const Group& group)
         if (this->debug) {
             debugDisplayUpdatedGroupRates(
                 group.name(), oil_rate, gas_rate, water_rate, alq);
+        }
+
+        if (oil_target && oil_rate > *oil_target)  {
+            water_rate *= (*oil_target/oil_rate);
+            oil_rate = *oil_target;
+        }
+        if (gas_target && gas_rate > *gas_target)
+            gas_rate = *gas_target;
+        if (water_target && water_rate > *water_target) {
+            oil_rate *= (*water_target/water_rate); 
+            water_rate = *water_target;
+        }
+        if (liquid_target) {
+            Scalar liquid_rate = oil_rate + water_rate;
+            Scalar liquid_rate_limited = *liquid_target;
+            if (liquid_rate > liquid_rate_limited) {
+                oil_rate = oil_rate / liquid_rate * liquid_rate_limited;
+                water_rate = water_rate / liquid_rate * liquid_rate_limited;
+            }
         }
     }
     return std::make_tuple(oil_rate, gas_rate, water_rate, oil_potential, gas_potential, water_potential, alq);
@@ -687,7 +700,9 @@ initializeWell2GroupMapRecursive_(const Group& group,
             // TODO: can the same well be memember of two different groups
             //  (on the same recursion level) ?
             assert(this->well_group_map_.count(well_name) == 0);
-            if (checkDoGasLiftOptimization_(well_name)) {
+            bool checkDoGasLift = checkDoGasLiftOptimization_(well_name);
+            checkDoGasLift = this->comm_.max(checkDoGasLift);
+            if (checkDoGasLift) {
                 const auto &well = this->schedule_.getWell(
                     well_name, this->report_step_idx_);
                 Scalar wfac = well.getEfficiencyFactor();
