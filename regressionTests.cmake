@@ -16,13 +16,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME 3d_tran_operator
-                         FILENAME 3D_TRAN_OPERATOR
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR parallel_fieldprops)
-
 add_test_compareECLFiles(CASENAME micp
                          FILENAME MICP
                          SIMULATOR flow
@@ -164,6 +157,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/msw.json"
         "tests/definitions/regression/network.json"
         "tests/definitions/regression/norne.json"
+        "tests/definitions/regression/parallel_fieldprops.json"
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/polymer_injectivity.json"
         "tests/definitions/regression/polymer_oilwater.json"
