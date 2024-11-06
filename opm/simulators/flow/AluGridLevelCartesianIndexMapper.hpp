@@ -43,6 +43,15 @@
 
 namespace Opm {
 
+// Interface class to access the local Cartesian grid of each level grid (when refinement).
+// Further documentation in opm/grid/common/LevelCartesianIndexMapper.hpp
+//
+// Adapter Design Pattern: In this case, LevelCartesianIndexMapper uses the Object Adapter variant, where it holds an instance
+// (here, a std::unique_ptr) of CartesianIndexMapper, the wrapped type. The goal is to provide a standardized interface, allowing
+// incompatible functionality (such as Cartesian indexing in the context of refinement that may not be supported - yet -for all
+// grid types, like CpGrid) to integrate smoothly within the existing conventions.
+//
+// Specialization for AluGrid
 template<>
 class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
 {
@@ -56,12 +65,10 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
  public:
     static constexpr int dimension = 3 ;
 
-    LevelCartesianIndexMapper(const Grid& grid,
-                              const Dune::CartesianIndexMapper<Grid>& cartesianIndexMapper)
-        : grid_{&grid}
-        , cartesianIndexMapper_{std::make_unique<Dune::CartesianIndexMapper<Grid>>(cartesianIndexMapper)}
+    explicit LevelCartesianIndexMapper(const Dune::CartesianIndexMapper<Grid>& cartesianIndexMapper)
+        : cartesianIndexMapper_{std::make_unique<Dune::CartesianIndexMapper<Grid>>(cartesianIndexMapper)}
     {}
-          
+
     const std::array<int,3>& cartesianDimensions(int level) const
     {
         throwIfLevelPositive(level);
@@ -93,7 +100,6 @@ class LevelCartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconform
     }
 
  private:
-    [[maybe_unused]] const Grid* grid_;
     std::unique_ptr<Dune::CartesianIndexMapper<Grid>> cartesianIndexMapper_;
     
     void throwIfLevelPositive(int level) const
