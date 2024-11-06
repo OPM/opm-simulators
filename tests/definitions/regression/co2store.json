@@ -1,0 +1,36 @@
+{
+    "abs_tol": 0.02,
+    "dir": "co2store",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "co2store",
+            "filename": "CO2STORE"
+        },
+        {
+            "casename": "co2store_diffusive",
+            "filename": "CO2STORE_DIFFUSIVE"
+        },
+        {
+            "casename": "co2store_drsdtcon",
+            "filename": "CO2STORE_DRSDTCON"
+        },
+        {
+            "casename": "co2store_energy",
+            "filename": "CO2STORE_ENERGY"
+        },
+        {
+            "casename": "co2store_gaswat",
+            "filename": "CO2STORE_GASWAT"
+        },
+        {
+            "casename": "co2store_gw",
+            "filename": "CO2STORE_GW"
+        },
+        {
+            "casename": "co2store_gw_dirichlet",
+            "filename": "CO2STORE_GW_DIRICHLET"
+        }
+    ]
+}

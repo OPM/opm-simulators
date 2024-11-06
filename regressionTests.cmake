@@ -169,61 +169,12 @@ add_test_compareECLFiles(CASENAME udq_undefined_2
                          REL_TOL ${rel_tol}
                          DIR actionx)
 
-add_test_compareECLFiles(CASENAME co2store
-                         FILENAME CO2STORE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_gw
-                         FILENAME CO2STORE_GW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_gw_dirichlet
-                         FILENAME CO2STORE_GW_DIRICHLET
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_gaswat
-                         FILENAME CO2STORE_GASWAT
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
 add_test_compareECLFiles(CASENAME ppcwmax
                          FILENAME PPCWMAX-01
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR ppcwmax)
-
-add_test_compareECLFiles(CASENAME co2store_diffusive
-                         FILENAME CO2STORE_DIFFUSIVE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_drsdtcon
-                         FILENAME CO2STORE_DRSDTCON
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_energy
-                         FILENAME CO2STORE_ENERGY
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
 
 add_test_compareECLFiles(CASENAME h2store
                          FILENAME H2STORE
@@ -577,6 +528,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
   set(JSON_FILES 
         "tests/definitions/regression/aquifer_num.json"
         "tests/definitions/regression/aquifers.json"
+        "tests/definitions/regression/co2store.json"
         "tests/definitions/regression/cskin.json"
         "tests/definitions/regression/editnnc.json"
         "tests/definitions/regression/flowexp_blackoil.json"
