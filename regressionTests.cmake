@@ -164,22 +164,6 @@ add_test_compareECLFiles(CASENAME fetkovich_2d
                          REL_TOL ${rel_tol}
                          DIR aquifer-fetkovich)
 
-add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
-                         FILENAME 3D_2AQU_NUM
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR aquifer-num
-                         TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
-
-add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
-                         FILENAME 3D_1AQU_3CELLS
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR aquifer-num
-                         TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
-
 add_test_compareECLFiles(CASENAME aquflux_01
                          FILENAME AQUFLUX-01
                          SIMULATOR flow
@@ -872,6 +856,7 @@ endfunction()
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
   set(JSON_FILES 
+        "tests/definitions/regression/aquifer_num.json"
         "tests/definitions/regression/cskin.json"
         "tests/definitions/regression/editnnc.json"
         "tests/definitions/regression/gridunit.json"
