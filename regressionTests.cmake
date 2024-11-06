@@ -142,14 +142,6 @@ add_test_compareECLFiles(CASENAME spe1_thermal_onephase
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
-add_test_compareECLFiles(CASENAME jfunc_01
-                         FILENAME JFUNC-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR jfunc
-                         TEST_ARGS --enable-tuning=true)
-
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
@@ -787,6 +779,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/cskin.json"
         "tests/definitions/regression/editnnc.json"
         "tests/definitions/regression/gridunit.json"
+        "tests/definitions/regression/jfunc.json"
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/mult.json"
