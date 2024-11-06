@@ -586,15 +586,6 @@ add_test_compareECLFiles(CASENAME 0b_rocktab_model6
                          REL_TOL ${rel_tol}
                          DIR model6)
 
-add_test_compareECLFiles(CASENAME base_wt_tracer
-                         FILENAME BASE_WT_TRACER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR tracer
-			 RESTART_STEP 1,3,7)
-
-
 add_test_compareECLFiles(CASENAME min_bhp_1
                          FILENAME MIN_BHP_1
                          SIMULATOR flow
@@ -865,6 +856,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/network.json"
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/radial_grid.json"
+        "tests/definitions/regression/tracer.json"
         "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
         "tests/definitions/regression/winjdam.json"
