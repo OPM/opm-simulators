@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "polymer_simple2D",
+    "rel_tol": 0.01,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "polymer_simple2D",
+            "filename": "2D_THREEPHASE_POLY_HETER",
+            "test_args": "--tolerance-mb=1.e-7 --tolerance-mb-relaxed=1.e-7"
+        }
+    ]
+}

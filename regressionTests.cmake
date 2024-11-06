@@ -6,13 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME polymer_simple2D
-                         FILENAME 2D_THREEPHASE_POLY_HETER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-mb-relaxed=1.e-7)
-
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
                          SIMULATOR flow
@@ -257,6 +250,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/polymer_injectivity.json"
         "tests/definitions/regression/polymer_oilwater.json"
+        "tests/definitions/regression/polymer_simple2D.json"
         "tests/definitions/regression/radial_grid.json"
         "tests/definitions/regression/spe1.json"
         "tests/definitions/regression/spe1_brine.json"
