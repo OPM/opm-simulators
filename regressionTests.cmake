@@ -13,78 +13,6 @@ add_test_compareECLFiles(CASENAME spe1flowexp
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
-add_test_compareECLFiles(CASENAME spe12
-                         FILENAME SPE1CASE2
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         RESTART_SCHED false
-                         RESTART_STEP 60
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1_2p
-                         FILENAME SPE1CASE2_2P
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1_oilgas
-                         FILENAME SPE1CASE2_OILGAS
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1_gaswater
-                         FILENAME SPE1CASE2_GASWATER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1
-                         FILENAME SPE1CASE1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
-
-add_test_compareECLFiles(CASENAME spe1_import
-                         FILENAME SPE1CASE1_IMPORT
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
-
-add_test_compareECLFiles(CASENAME spe1_nowells
-                         FILENAME SPE1CASE2_NOWELLS
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1_thermal
-                         FILENAME SPE1CASE2_THERMAL
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1_thermal_watvisc
-                         FILENAME SPE1CASE2_THERMAL_WATVISC
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1_rockcomp
-                         FILENAME SPE1CASE2_ROCK2DTR
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
 add_test_compareECLFiles(CASENAME spe1_brine
                          FILENAME SPE1CASE1_BRINE
                          SIMULATOR flow
@@ -127,20 +55,6 @@ add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR vfpprod_spe1)
-
-add_test_compareECLFiles(CASENAME spe1_water
-                         FILENAME SPE1CASE1_WATER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1_thermal_onephase
-                         FILENAME SPE1CASE2_THERMAL_ONEPHASE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
 
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
@@ -659,13 +573,6 @@ add_test_compareECLFiles(CASENAME wvfpexp_02
                          REL_TOL ${rel_tol}
                          DIR wvfpexp)
 
-add_test_compareECLFiles(CASENAME spe1case2_krnum
-                         FILENAME SPE1CASE2_KRNUM
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1)
-
 add_test_compareECLFiles(CASENAME 01_wgrupcon
                          FILENAME 01-WGRUPCON
                          SIMULATOR flow
@@ -740,6 +647,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/network.json"
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/radial_grid.json"
+        "tests/definitions/regression/spe1.json"
         "tests/definitions/regression/tracer.json"
         "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
