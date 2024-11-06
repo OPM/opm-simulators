@@ -164,20 +164,6 @@ add_test_compareECLFiles(CASENAME spe1_foam
                          REL_TOL ${rel_tol}
                          DIR spe1_foam)
 
-add_test_compareECLFiles(CASENAME spe1_solvent_foam
-                         FILENAME SPE1CASE2_SOLVENT_FOAM
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_solvent)
-
-add_test_compareECLFiles(CASENAME spe1_gaswater_solvent
-                         FILENAME SPE1CASE2_GASWATER_SOLVENT
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_solvent)
-
 add_test_compareECLFiles(CASENAME bc_lab
                          FILENAME BC_LAB
                          SIMULATOR flow
@@ -423,6 +409,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/spe1.json"
         "tests/definitions/regression/spe1_brine.json"
         "tests/definitions/regression/spe1_precsalt.json"
+        "tests/definitions/regression/spe1_solvent.json"
         "tests/definitions/regression/tracer.json"
         "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
