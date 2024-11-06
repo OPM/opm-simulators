@@ -1,0 +1,33 @@
+{
+    "abs_tol": 0.02,
+    "dir": "h2store",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "h2store",
+            "filename": "H2STORE",
+            "test_args": "--tolerance-cnv-relaxed=0.01"
+        },
+        {
+            "casename": "h2store_diffusive",
+            "filename": "H2STORE_DIFFUSIVE",
+            "test_args": "--tolerance-cnv-relaxed=0.01"
+        },
+        {
+            "casename": "h2store_energy",
+            "filename": "H2STORE_ENERGY",
+            "test_args": "--tolerance-cnv-relaxed=0.01"
+        },
+        {
+            "casename": "h2store_gaswat",
+            "filename": "H2STORE_GASWAT",
+            "test_args": "--tolerance-cnv-relaxed=0.01"
+        },
+        {
+            "casename": "h2store_gw",
+            "filename": "H2STORE_GW",
+            "test_args": "--tolerance-cnv-relaxed=0.01"
+        }
+    ]
+}
