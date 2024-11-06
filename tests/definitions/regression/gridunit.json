@@ -1,0 +1,32 @@
+{
+    "abs_tol": 0.02,
+    "dir": "gridunit",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "model_field_gridunit_cm",
+            "filename": "M_FIELD_GRID_CM"
+        },
+        {
+            "casename": "model_field_gridunit_feet",
+            "filename": "M_FIELD_GRID_FEET"
+        },
+        {
+            "casename": "model_field_gridunit_metres",
+            "filename": "M_FIELD_GRID_METRES"
+        },
+        {
+            "casename": "model_metric_gridunit_cm",
+            "filename": "M_METRIC_GRID_CM"
+        },
+        {
+            "casename": "model_metric_gridunit_feet",
+            "filename": "M_METRIC_GRID_FEET"
+        },
+        {
+            "casename": "model_metric_gridunit_metres",
+            "filename": "M_METRIC_GRID_METRES"
+        }
+    ]
+}

@@ -901,48 +901,6 @@ add_test_compareECLFiles(CASENAME spe1case2_krnum
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
-add_test_compareECLFiles(CASENAME model_field_gridunit_cm
-                         FILENAME M_FIELD_GRID_CM
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_field_gridunit_feet
-                         FILENAME M_FIELD_GRID_FEET
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_field_gridunit_metres
-                         FILENAME M_FIELD_GRID_METRES
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_metric_gridunit_cm
-                         FILENAME M_METRIC_GRID_CM
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_metric_gridunit_feet
-                         FILENAME M_METRIC_GRID_FEET
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_metric_gridunit_metres
-                         FILENAME M_METRIC_GRID_METRES
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
 add_test_compareECLFiles(CASENAME 01_wgrupcon
                          FILENAME 01-WGRUPCON
                          SIMULATOR flow
@@ -1094,6 +1052,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
   set(JSON_FILES 
         "tests/definitions/regression/cskin.json"
         "tests/definitions/regression/editnnc.json"
+        "tests/definitions/regression/gridunit.json"
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/network.json"
