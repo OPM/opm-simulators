@@ -6,13 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME spe1_metric_vfp1
-                         FILENAME SPE1CASE1_METRIC_VFP1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR vfpprod_spe1)
-
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
@@ -335,6 +328,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
         "tests/definitions/regression/vappars.json"
+        "tests/definitions/regression/vfpprod_spe1.json"
         "tests/definitions/regression/waghystr.json"
         "tests/definitions/regression/wgrupcon.json"
         "tests/definitions/regression/winjdam.json"
