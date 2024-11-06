@@ -115,23 +115,6 @@ add_test_compareECLFiles(CASENAME gpmaint11
                          REL_TOL ${rel_tol}
                          DIR gpmaint)
 
-foreach(templ_case RANGE 1 6)
-  add_test_compareECLFiles(CASENAME actionx_well_templ_0${templ_case}
-    FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol}
-    REL_TOL ${rel_tol}
-    DIR actionx
-  )
-endforeach()
-
-add_test_compareECLFiles(CASENAME udq_undefined_2
-                         FILENAME UDQ-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
 add_test_compareECLFiles(CASENAME ppcwmax
                          FILENAME PPCWMAX-01
                          SIMULATOR flow
@@ -223,29 +206,6 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR parallel_fieldprops)
-
-
-add_test_compareECLFiles(CASENAME actionx_gconprod
-                         FILENAME ACTIONX_GCONPROD
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
-
-add_test_compareECLFiles(CASENAME actionx_wefac
-                         FILENAME ACTIONX_WEFAC
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
-add_test_compareECLFiles(CASENAME actionx_udq
-                         FILENAME ACTIONX_UDQ
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
 
 add_test_compareECLFiles(CASENAME micp
                          FILENAME MICP
@@ -373,14 +333,6 @@ add_test_compareECLFiles(CASENAME fpr_nonhc
                          REL_TOL ${rel_tol}
                          DIR water-1ph)
 
-add_test_compareECLFiles(CASENAME actionx_wpimult
-                         FILENAME ACTIONX_WPIMULT
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx
-                         TEST_ARGS --enable-tuning=true)
-
 add_test_compareECLFiles(CASENAME wvfpexp_02
                          FILENAME WVFPEXP-02
                          SIMULATOR flow
@@ -449,6 +401,7 @@ endfunction()
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
   set(JSON_FILES 
+        "tests/definitions/regression/actionx.json"
         "tests/definitions/regression/aquifer_num.json"
         "tests/definitions/regression/aquifers.json"
         "tests/definitions/regression/co2store.json"
