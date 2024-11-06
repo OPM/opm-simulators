@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "compl_smry",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "compl_smry",
+            "filename": "COMPL_SMRY"
+        }
+    ]
+}
