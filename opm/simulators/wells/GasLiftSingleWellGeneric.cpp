@@ -666,10 +666,11 @@ getRateWithLimit_(Rate rate_type, const BasicRates& rates) const
     //   for why the rate was limited.
     std::optional<Rate> target_type;
 
-    Scalar rate2;
+    // we also need to limit the other rate (currently only for water and oil and not gas)
+    Scalar rate2 = 0.0;
     if (rate_type == Rate::oil) {
         rate2 = getRate_(Rate::water, rates);
-    } else {
+    } else if (rate_type == Rate::water) {
         rate2 = getRate_(Rate::oil, rates);
     }
 
