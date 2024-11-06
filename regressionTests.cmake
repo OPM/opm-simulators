@@ -108,29 +108,6 @@ add_test_compareECLFiles(CASENAME wecon_wtest
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol})
 
-add_test_compareECLFiles(CASENAME msw_model_1
-                         FILENAME MSW_MODEL_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model1
-                         TEST_ARGS --solver-max-time-step-in-days=5.0)
-
-add_test_compareECLFiles(CASENAME base_model_1
-                         FILENAME BASE_MODEL_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model1)
-
-add_test_compareECLFiles(CASENAME faults_model_1
-                         FILENAME FAULTS_MODEL_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model1
-                         TEST_ARGS --solver-max-time-step-in-days=5.0)
-
 add_test_compareECLFiles(CASENAME waghyst1
                          FILENAME WAGHYSTR-01
                          SIMULATOR flow
@@ -496,6 +473,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/h2store.json"
         "tests/definitions/regression/jfunc.json"
         "tests/definitions/regression/krnum.json"
+        "tests/definitions/regression/model1.json"
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/model4.json"
         "tests/definitions/regression/model6.json"
