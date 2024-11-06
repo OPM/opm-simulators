@@ -16,14 +16,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME micp
-                         FILENAME MICP
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR micp
-                         TEST_ARGS --linear-solver=ilu0)
-
 add_test_compareECLFiles(CASENAME max_gor_1
                          FILENAME MAX_GOR_1
                          SIMULATOR flow
@@ -147,6 +139,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/jfunc.json"
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/max_watercut.json"
+        "tests/definitions/regression/micp.json"
         "tests/definitions/regression/model1.json"
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/model4.json"
