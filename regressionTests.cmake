@@ -16,14 +16,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME max_gor_1
-                         FILENAME MAX_GOR_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_gor_max
-                         TEST_ARGS --enable-tuning=true)
-
 add_test_compareECLFiles(CASENAME min_gasrate_1
                          FILENAME MIN_GASRATE_1
                          SIMULATOR flow
@@ -182,6 +174,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/wsegvalv.json"
         "tests/definitions/regression/wtest_bhp.json"
         "tests/definitions/regression/wtest_thp.json"
+        "tests/definitions/regression/wtest_wecon_gor_max.json"
      )
   foreach(JSON_FILE ${JSON_FILES})
     AddJsonRegressionTests(${JSON_FILE})
