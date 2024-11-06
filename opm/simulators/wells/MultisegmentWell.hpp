@@ -157,7 +157,8 @@ namespace Opm {
         computeBhpAtThpLimitProdWithAlq(const Simulator& simulator,
                                         const SummaryState& summary_state,
                                         const Scalar alq_value,
-                                        DeferredLogger& deferred_logger) const override;
+                                        DeferredLogger& deferred_logger,
+                                        bool iterate_if_no_solution) const override;
 
         std::vector<Scalar> getPrimaryVars() const override;
 
