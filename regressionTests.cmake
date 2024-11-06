@@ -6,13 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME spe5
-                         FILENAME SPE5CASE1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --newton-max-iterations=20)
-
 add_test_compareECLFiles(CASENAME spe5_co2eor
                          FILENAME SPE5CASE1_DYN
                          SIMULATOR flow
@@ -257,6 +250,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/spe1_precsalt.json"
         "tests/definitions/regression/spe1_solvent.json"
         "tests/definitions/regression/spe3.json"
+        "tests/definitions/regression/spe5.json"
         "tests/definitions/regression/spe9.json"
         "tests/definitions/regression/spe9group.json"
         "tests/definitions/regression/tracer.json"
