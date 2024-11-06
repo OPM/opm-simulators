@@ -498,41 +498,6 @@ add_test_compareECLFiles(CASENAME udq_undefined_2
                          REL_TOL ${rel_tol}
                          DIR actionx)
 
-add_test_compareECLFiles(CASENAME cskin-01
-                         FILENAME CSKIN-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
-add_test_compareECLFiles(CASENAME cskin-02
-                         FILENAME CSKIN-02
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
-add_test_compareECLFiles(CASENAME cskin-03
-                         FILENAME CSKIN-03
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
-add_test_compareECLFiles(CASENAME cskin-04
-                         FILENAME CSKIN-04
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
-add_test_compareECLFiles(CASENAME cskin-05
-                         FILENAME CSKIN-05
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
 add_test_compareECLFiles(CASENAME co2store
                          FILENAME CO2STORE
                          SIMULATOR flow
@@ -1127,6 +1092,7 @@ endfunction()
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
   set(JSON_FILES 
+        "tests/definitions/regression/cskin.json"
         "tests/definitions/regression/editnnc.json"
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
