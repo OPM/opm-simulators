@@ -723,12 +723,6 @@ add_test_compareECLFiles(CASENAME 02_wgrupcon
                          REL_TOL ${rel_tol}
                          DIR wgrupcon
                          TEST_ARGS --enable-tuning=true)
-add_test_compareECLFiles(CASENAME 01_vappars
-                         FILENAME VAPPARS-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR vappars)
 
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
@@ -789,6 +783,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/tracer.json"
         "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
+        "tests/definitions/regression/vappars.json"
         "tests/definitions/regression/winjdam.json"
         "tests/definitions/regression/winjmult.json"
      )
