@@ -6,13 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME spe1_brine
-                         FILENAME SPE1CASE1_BRINE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_brine)
-
 add_test_compareECLFiles(CASENAME spe1_precsalt
                          FILENAME SPE1CASE1_PRECSALT
                          SIMULATOR flow
@@ -34,13 +27,6 @@ add_test_compareECLFiles(CASENAME gasoil_precsalt
                          REL_TOL ${rel_tol}
                          DIR spe1_precsalt
                          TEST_ARGS --solver-max-time-step-in-days=0.05)
-
-add_test_compareECLFiles(CASENAME spe1_brine_gaswater
-                         FILENAME SPE1CASE2_BRINE_GASWATER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_brine)
 
 add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          FILENAME SPE1CASE1_METRIC_VFP1
@@ -642,6 +628,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/radial_grid.json"
         "tests/definitions/regression/spe1.json"
+        "tests/definitions/regression/spe1_brine.json"
         "tests/definitions/regression/tracer.json"
         "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
