@@ -434,13 +434,6 @@ add_test_compareECLFiles(CASENAME model4_gefac
                          REL_TOL ${rel_tol}
                          DIR model4)
 
-add_test_compareECLFiles(CASENAME model6_msw
-                         FILENAME 1_MSW_MODEL6
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model6)
-
 add_test_compareECLFiles(CASENAME wsegsicd
 			  FILENAME TEST_WSEGSICD
 			  SIMULATOR flow
@@ -546,27 +539,6 @@ add_test_compareECLFiles(CASENAME micp
                          REL_TOL ${rel_tol}
                          DIR micp
                          TEST_ARGS --linear-solver=ilu0)
-
-add_test_compareECLFiles(CASENAME 0_base_model6
-                         FILENAME 0_BASE_MODEL6
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model6)
-
-add_test_compareECLFiles(CASENAME 0a_aquct_model6
-                         FILENAME 0A_AQUCT_MODEL6
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model6)
-
-add_test_compareECLFiles(CASENAME 0b_rocktab_model6
-                         FILENAME 0B_ROCKTAB_MODEL6
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model6)
 
 add_test_compareECLFiles(CASENAME min_bhp_1
                          FILENAME MIN_BHP_1
@@ -776,6 +748,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/jfunc.json"
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
+        "tests/definitions/regression/model6.json"
         "tests/definitions/regression/mult.json"
         "tests/definitions/regression/network.json"
         "tests/definitions/regression/pinch.json"
