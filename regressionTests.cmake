@@ -16,12 +16,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME wsegsicd
-			  FILENAME TEST_WSEGSICD
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol})
-
 add_test_compareECLFiles(CASENAME wsegaicd
 			  FILENAME BASE_MSW_WSEGAICD
 			  SIMULATOR flow
@@ -239,6 +233,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/wgrupcon.json"
         "tests/definitions/regression/winjdam.json"
         "tests/definitions/regression/winjmult.json"
+        "tests/definitions/regression/wsegsicd.json"
         "tests/definitions/regression/wtest_bhp.json"
         "tests/definitions/regression/wtest_thp.json"
      )
