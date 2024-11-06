@@ -34,6 +34,8 @@
 
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 #include <fmt/format.h>
 
 #include <algorithm>
@@ -66,6 +68,8 @@ struct TimeStepControlGrowthDampingFactor { static constexpr double value = 3.2;
 struct TimeStepControlFileName { static constexpr auto value = "timesteps"; };
 struct MinTimeStepBeforeShuttingProblematicWellsInDays { static constexpr double value = 0.01; };
 struct MinTimeStepBasedOnNewtonIterations { static constexpr double value = 0.0; };
+struct TimeStepChoppingFactor { static constexpr double value = 0.8; };
+struct TimeStepControlSafetyFactor { static constexpr double value = 0.8; };
 
 } // namespace Opm::Parameters
 
@@ -232,8 +236,9 @@ void registerAdaptiveParameters();
 
                 SimulatorReportSingle substepReport;
                 std::string causeOfFailure;
+                bool tooLargeTimeStep = false;
                 try {
-                    substepReport = solver.step(substepTimer);
+                    substepReport = solver.step(substepTimer, *timeStepControl_);
 
                     if (solverVerbose_) {
                         // report number of linear iterations
@@ -257,6 +262,13 @@ void registerAdaptiveParameters();
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
+                }
+                catch (const TimeSteppingBreakdown& e) {
+                    tooLargeTimeStep = true;
+                    substepReport = solver.failureReport();
+                    causeOfFailure = "Time step was too large";
+
+                    logException_(e, solverVerbose_);
                 }
                 catch (const NumericalProblem& e) {
                     substepReport = solver.failureReport();
@@ -304,19 +316,26 @@ void registerAdaptiveParameters();
                     OpmLog::problem(msg);
                 }
 
+                // create object to compute the time error, simply forwards the call to the model
+                SolutionTimeErrorSolverWrapper<Solver> relativeChange(solver);
+
                 if (substepReport.converged || continue_on_uncoverged_solution) {
+                    
+                    double RC = relativeChange.relativeChange();
+                    if (solver.model().simulator().gridView().comm().rank() == 0)
+                    {
+                        std::cout << "RC: " << RC << std::endl;
+                        std::cout << "T: " << boost::posix_time::to_iso_extended_string(substepTimer.currentDateTime()) << std::endl;
+                    }
 
                     // advance by current dt
                     ++substepTimer;
-
-                    // create object to compute the time error, simply forwards the call to the model
-                    SolutionTimeErrorSolverWrapper<Solver> relativeChange(solver);
 
                     // compute new time step estimate
                     const int iterations = useNewtonIteration_ ? substepReport.total_newton_iterations
                         : substepReport.total_linear_iterations;
                     double dtEstimate = timeStepControl_->computeTimeStepSize(dt, iterations, relativeChange,
-                                                                               substepTimer.simulationTimeElapsed());
+                                                                               substepTimer);
 
                     assert(dtEstimate > 0);
                     // limit the growth of the timestep size by the growth factor
@@ -364,6 +383,57 @@ void registerAdaptiveParameters();
                     report.success.converged = substepTimer.done();
                     substepTimer.setLastStepFailed(false);
 
+                }
+                else if (tooLargeTimeStep) {
+
+                    substepTimer.setLastStepFailed(true);
+
+                    // If we have restarted (i.e. cut the timestep) too
+                    // many times, we have failed and throw an exception.
+                    if (restarts >= solverRestartMax_) {
+                        const auto msg = fmt::format(
+                            "Solver failed to satisfy adaptive time stepping requirement."
+                        );
+                        if (solverVerbose_) {
+                            OpmLog::error(msg);
+                        }
+                        // Use throw directly to prevent file and line
+                        throw TimeSteppingBreakdown{msg};
+                    }
+
+                    // The new, chopped timestep.
+                    const double newTimeStep = timeStepChoppingFactor_ * dt * timeStepControlTolerance_ / relativeChange.relativeChange();
+
+                    // If we have restarted (i.e. cut the timestep) too
+                    // much, we have failed and throw an exception.
+                    if (newTimeStep < minTimeStep_) {
+                        const auto msg = fmt::format(
+                            "Solver failed to converge after cutting timestep to {}\n"
+                            "which is the minimum threshold given by option --solver-min-time-step\n",
+                            minTimeStep_
+                        );
+                        if (solverVerbose_) {
+                            OpmLog::error(msg);
+                        }
+                        // Use throw directly to prevent file and line
+                        throw TimeSteppingBreakdown{msg};
+                    }
+
+                    // Define utility function for chopping timestep.
+                    auto chopTimestep = [&]() {
+                        substepTimer.provideTimeStepEstimate(newTimeStep);
+                        if (solverVerbose_) {
+                            const auto msg = fmt::format(
+                                "{}\nTimestep chopped to {} days\n",
+                                causeOfFailure,
+                                std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day))
+                            );
+                            OpmLog::problem(msg);
+                        }
+                        ++restarts;
+                    };
+
+                    chopTimestep();
                 }
                 else { // in case of no convergence
                     substepTimer.setLastStepFailed(true);
@@ -481,6 +551,9 @@ void registerAdaptiveParameters();
         void setSuggestedNextStep(const double x)
         { suggestedNextTimestep_ = x; }
 
+        const TimeStepControlInterface& timeStepControl() const
+        { return *timeStepControl_; }
+
         void updateTUNING(double max_next_tstep, const Tuning& tuning)
         {
             restartFactor_ = tuning.TSFCNV;
@@ -516,6 +589,8 @@ void registerAdaptiveParameters();
             case TimeStepControlType::PID:
                 allocAndSerialize<PIDTimeStepControl>(serializer);
                 break;
+            case TimeStepControlType::General3rdOrder:
+                allocAndSerialize<General3rdOrderController>(serializer);
             }
             serializer(restartFactor_);
             serializer(growthFactor_);
@@ -553,6 +628,11 @@ void registerAdaptiveParameters();
             return serializationTestObject_<SimpleIterationCountTimeStepControl>();
         }
 
+        static AdaptiveTimeStepping<TypeTag> serializationTestObjectGeneral3rdOrder()
+        {
+            return serializationTestObject_<General3rdOrderController>();
+        }
+
         bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs)
         {
             if (timeStepControlType_ != rhs.timeStepControlType_ ||
@@ -574,6 +654,9 @@ void registerAdaptiveParameters();
                 break;
             case TimeStepControlType::PID:
                 result = castAndComp<PIDTimeStepControl>(rhs);
+                break;
+            case TimeStepControlType::General3rdOrder:
+                result = castAndComp<General3rdOrderController>(rhs);
                 break;
             }
 
@@ -640,16 +723,19 @@ void registerAdaptiveParameters();
             // valid are "pid" and "pid+iteration"
             std::string control = Parameters::Get<Parameters::TimeStepControl>(); // "pid"
 
-            const double tol =  Parameters::Get<Parameters::TimeStepControlTolerance>(); // 1e-1
+            timeStepControlTolerance_ =  Parameters::Get<Parameters::TimeStepControlTolerance>(); // 1e-1
+            timeStepChoppingFactor_ = Parameters::Get<Parameters::TimeStepChoppingFactor>(); // 0.8
+            timeStepControlSafetyFactor_ = Parameters::Get<Parameters::TimeStepControlSafetyFactor>(); // 0.8
+
             if (control == "pid") {
-                timeStepControl_ = std::make_unique<PIDTimeStepControl>(tol);
+                timeStepControl_ = std::make_unique<PIDTimeStepControl>(timeStepControlTolerance_);
                 timeStepControlType_ = TimeStepControlType::PID;
             }
             else if (control == "pid+iteration") {
                 const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetIterations>(); // 30
                 const double decayDampingFactor = Parameters::Get<Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
                 const double growthDampingFactor = Parameters::Get<Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
-                timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor, growthDampingFactor, tol);
+                timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor, growthDampingFactor, timeStepControlTolerance_);
                 timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
             }
             else if (control == "pid+newtoniteration") {
@@ -660,7 +746,7 @@ void registerAdaptiveParameters();
                 // the min time step can be reduced by the newton iteration numbers
                 double minTimeStepReducedByIterations = unitSystem.to_si(UnitSystem::measure::time, nonDimensionalMinTimeStepIterations);
                 timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor,
-                                                                                         growthDampingFactor, tol, minTimeStepReducedByIterations);
+                                                                                         growthDampingFactor, timeStepControlTolerance_, minTimeStepReducedByIterations);
                 timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
                 useNewtonIteration_ = true;
             }
@@ -684,6 +770,10 @@ void registerAdaptiveParameters();
                 timeStepControl_ = std::make_unique<HardcodedTimeStepControl>(filename);
                 timeStepControlType_ = TimeStepControlType::HardCodedTimeStep;
             }
+            else if (control == "general3rdorder") {
+                timeStepControl_ = std::make_unique<General3rdOrderController>(timeStepControlTolerance_, timeStepControlSafetyFactor_);
+                timeStepControlType_ = TimeStepControlType::General3rdOrder;
+            }
             else
                 OPM_THROW(std::runtime_error,
                           "Unsupported time step control selected " + control);
@@ -696,6 +786,7 @@ void registerAdaptiveParameters();
 
         TimeStepControlType timeStepControlType_; //!< type of time step control object
         TimeStepController timeStepControl_; //!< time step control object
+        double timeStepControlTolerance_;    //!< tolerance for the adaptive time stepping
         double restartFactor_;               //!< factor to multiply time step with when solver fails to converge
         double growthFactor_;                //!< factor to multiply time step when solver recovered from failed convergence
         double maxGrowth_;                   //!< factor that limits the maximum growth of a time step
@@ -710,6 +801,8 @@ void registerAdaptiveParameters();
         double timestepAfterEvent_;          //!< suggested size of timestep after an event
         bool useNewtonIteration_;            //!< use newton iteration count for adaptive time step control
         double minTimeStepBeforeShuttingProblematicWells_; //! < shut problematic wells when time step size in days are less than this
+        double timeStepChoppingFactor_;      //!< multiplicative factor for time step chopping after tolerance test fail
+        double timeStepControlSafetyFactor_; //!< factor multiplied with tolerance parameter in the adaptive time stepping controllers
     };
 }
 

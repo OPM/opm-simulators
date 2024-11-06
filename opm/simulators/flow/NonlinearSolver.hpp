@@ -36,6 +36,8 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
+#include <opm/simulators/timestepping/TimeStepControl.hpp>
 
 #include <memory>
 
@@ -83,6 +85,7 @@ void registerNonlinearParameters();
     class NonlinearSolver
     {
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using TimeStepper = AdaptiveTimeStepping<TypeTag>;
 
     public:
         // Solver parameters controlling nonlinear process.
@@ -161,7 +164,7 @@ void registerNonlinearParameters();
         }
 
 
-        SimulatorReportSingle step(const SimulatorTimerInterface& timer)
+        SimulatorReportSingle step(const SimulatorTimerInterface& timer, const TimeStepControlInterface& timeStepControl)
         {
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
@@ -206,6 +209,14 @@ void registerNonlinearParameters();
 
                 std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
                 OPM_THROW_NOLOG(TooManyIterations, msg);
+            }
+
+            if (!timeStepControl.timeStepAccepted(model_->relativeChange())) {
+                report.converged = false;
+                failureReport_ = report;
+
+                std::string msg = "Time step too large - Failed to satisfy the tolerance test.";
+                OPM_THROW_NOLOG(TimeSteppingBreakdown, msg);
             }
 
             // Do model-specific post-step actions.

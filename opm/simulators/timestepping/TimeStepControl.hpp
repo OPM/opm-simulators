@@ -22,6 +22,7 @@
 #define OPM_TIMESTEPCONTROL_HEADER_INCLUDED
 
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <string>
 #include <vector>
@@ -32,7 +33,8 @@ namespace Opm
       SimpleIterationCount,
       PID,
       PIDAndIterationCount,
-      HardCodedTimeStep
+      HardCodedTimeStep,
+      General3rdOrder
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,7 +61,9 @@ namespace Opm
         static SimpleIterationCountTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const double /*simulationTimeElapsed */ ) const;
+        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const SimulatorTimerInterface& /* substepTimer */ ) const;
+
+        bool timeStepAccepted(const double error) const { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -107,7 +111,9 @@ namespace Opm
         static PIDTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relativeChange, const double /*simulationTimeElapsed */ ) const;
+        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relativeChange, const SimulatorTimerInterface& /* substepTimer */ ) const;
+
+        bool timeStepAccepted(const double error) const { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -153,7 +159,9 @@ namespace Opm
         static PIDAndIterationCountTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange, const double /*simulationTimeElapsed */ ) const;
+        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange, const SimulatorTimerInterface& /* substepTimer */ ) const;
+
+        bool timeStepAccepted(const double error) const { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -196,7 +204,9 @@ namespace Opm
         static HardcodedTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& /*relativeChange */, const double simulationTimeElapsed) const;
+        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& /*relativeChange */, const SimulatorTimerInterface& substepTimer) const;
+
+        bool timeStepAccepted(const double error) const { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -209,6 +219,43 @@ namespace Opm
     protected:
         // store the time (in days) of the substeps the simulator should use
         std::vector<double> subStepTime_;
+    };
+
+    class General3rdOrderController : public TimeStepControlInterface
+    {
+    public:
+        static constexpr TimeStepControlType Type = TimeStepControlType::General3rdOrder;
+
+        General3rdOrderController( const double tolerance = 1e-3,
+                                   const double safetyFactor = 0.8,
+                                   const bool verbose = false );
+
+        static General3rdOrderController serializationTestObject();
+
+        double computeTimeStepSize(const double dt, const int /*iterations */, const RelativeChangeInterface& relChange, const SimulatorTimerInterface& /* substepTimer */) const;
+
+        bool timeStepAccepted(const double error) const;
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(tolerance_);
+            serializer(safetyFactor_);
+            serializer(errors_);
+            serializer(timeSteps_);
+            serializer(verbose_);
+        }
+
+        bool operator==(const General3rdOrderController&) const;
+
+
+    protected:
+        const double tolerance_ = 1e-3;
+        const double safetyFactor_ = 0.8;
+        mutable std::vector<double> errors_{};
+        mutable std::vector<double> timeSteps_{};
+        mutable bool stepFailed_ = false;
+        const bool verbose_ = false;
     };
 
 
