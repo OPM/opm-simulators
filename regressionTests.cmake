@@ -300,29 +300,6 @@ add_test_compareECLFiles(CASENAME faults_model_1
                          DIR model1
                          TEST_ARGS --solver-max-time-step-in-days=5.0)
 
-add_test_compareECLFiles(CASENAME udq_actionx
-                         FILENAME UDQ_ACTIONX
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR udq_actionx
-                         TEST_ARGS --solver-max-time-step-in-days=5)
-
-add_test_compareECLFiles(CASENAME udq_wconprod
-                         FILENAME UDQ_WCONPROD
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR udq_actionx)
-
-add_test_compareECLFiles(CASENAME actionx_m1
-                         FILENAME ACTIONX_M1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR udq_actionx
-                         TEST_ARGS --solver-max-time-step-in-days=0.2)
-
 add_test_compareECLFiles(CASENAME waghyst1
                          FILENAME WAGHYSTR-01
                          SIMULATOR flow
@@ -363,36 +340,6 @@ foreach(templ_case RANGE 1 6)
     DIR actionx
   )
 endforeach()
-
-add_test_compareECLFiles(CASENAME udq_uadd
-                         FILENAME UDQ_M1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR udq_actionx
-                         TEST_ARGS --tolerance-wells=1.e-8)
-
-add_test_compareECLFiles(CASENAME udq_undefined
-                         FILENAME UDQ_M2
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR udq_actionx)
-
-add_test_compareECLFiles(CASENAME udq_in_actionx
-                         FILENAME UDQ_M3
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR udq_actionx)
-
-add_test_compareECLFiles(CASENAME reg_smry_in_fld_udq
-                         FILENAME UDQ_REG-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR udq_actionx
-                         TEST_ARGS --enable-tuning=true)
 
 add_test_compareECLFiles(CASENAME udq_undefined_2
                          FILENAME UDQ-01
@@ -933,6 +880,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/network.json"
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/radial_grid.json"
+        "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
         "tests/definitions/regression/winjdam.json"
         "tests/definitions/regression/winjmult.json"
