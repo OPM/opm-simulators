@@ -16,13 +16,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME wsegvalv_2d_vert
-                         FILENAME  MSW-2D-VERT-02
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR msw)
-
 add_test_compareECLFiles(CASENAME spe1_foam
                          FILENAME SPE1FOAM
                          SIMULATOR flow
@@ -195,6 +188,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/msw_2d_h.json"
         "tests/definitions/regression/msw_3d_hfa.json"
         "tests/definitions/regression/mult.json"
+        "tests/definitions/regression/msw.json"
         "tests/definitions/regression/network.json"
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/polymer_injectivity.json"
