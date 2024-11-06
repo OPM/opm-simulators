@@ -819,20 +819,6 @@ add_test_compareECLFiles(CASENAME 02_wgrupcon
                          REL_TOL ${rel_tol}
                          DIR wgrupcon
                          TEST_ARGS --enable-tuning=true)
-add_test_compareECLFiles(CASENAME winjmult_stdw
-                         FILENAME WINJMULT_STDW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR winjmult
-                         TEST_ARGS --enable-tuning=true)
-add_test_compareECLFiles(CASENAME winjmult_msw
-                         FILENAME WINJMULT_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR winjmult
-                         TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME 01_vappars
                          FILENAME VAPPARS-01
                          SIMULATOR flow
@@ -949,6 +935,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/radial_grid.json"
         "tests/definitions/regression/udt.json"
         "tests/definitions/regression/winjdam.json"
+        "tests/definitions/regression/winjmult.json"
      )
   foreach(JSON_FILE ${JSON_FILES})
     AddJsonRegressionTests(${JSON_FILE})
