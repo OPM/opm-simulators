@@ -16,13 +16,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME spe1_foam
-                         FILENAME SPE1FOAM
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_foam)
-
 add_test_compareECLFiles(CASENAME bc_lab
                          FILENAME BC_LAB
                          SIMULATOR flow
@@ -198,6 +191,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/radial_grid.json"
         "tests/definitions/regression/spe1.json"
         "tests/definitions/regression/spe1_brine.json"
+        "tests/definitions/regression/spe1_foam.json"
         "tests/definitions/regression/spe1_precsalt.json"
         "tests/definitions/regression/spe1_solvent.json"
         "tests/definitions/regression/spe3.json"
