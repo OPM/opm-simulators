@@ -6,12 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME msw_2d_h
-                         FILENAME 2D_H__
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol})
-
 add_test_compareECLFiles(CASENAME msw_3d_hfa
                          FILENAME 3D_MSW
                          SIMULATOR flow
@@ -277,6 +271,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/model4.json"
         "tests/definitions/regression/model6.json"
+        "tests/definitions/regression/msw_2d_h.json"
         "tests/definitions/regression/mult.json"
         "tests/definitions/regression/network.json"
         "tests/definitions/regression/pinch.json"

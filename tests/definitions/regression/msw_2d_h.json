@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "msw_2d_h",
+    "rel_tol": 0.01,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "msw_2d_h",
+            "filename": "2D_H__"
+        }
+    ]
+}
