@@ -150,13 +150,6 @@ add_test_compareECLFiles(CASENAME jfunc_01
                          DIR jfunc
                          TEST_ARGS --enable-tuning=true)
 
-add_test_compareECLFiles(CASENAME pinch_nopinch_1x1x10
-                         FILENAME PINCH10_NOPINCH
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
@@ -330,34 +323,6 @@ add_test_compareECLFiles(CASENAME actionx_m1
                          DIR udq_actionx
                          TEST_ARGS --solver-max-time-step-in-days=0.2)
 
-add_test_compareECLFiles(CASENAME pinch_multz_all
-                         FILENAME PINCH_MULTZ_ALL
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
-add_test_compareECLFiles(CASENAME pinch_multzm_all
-                         FILENAME PINCH_MULTZ-_ALL
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
-add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
-                         FILENAME PINCH_MULTZ_ALL_BARRIER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
-add_test_compareECLFiles(CASENAME pinch_multzm_all_barrier
-                         FILENAME PINCH_MULTZ-_ALL_BARRIER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
 add_test_compareECLFiles(CASENAME waghyst1
                          FILENAME WAGHYSTR-01
                          SIMULATOR flow
@@ -378,36 +343,6 @@ add_test_compareECLFiles(CASENAME gpmaint11
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR gpmaint)
-
-set(_pinch_cases
-  T1A_GAP T1A_NOGAP T1A_NOPINCH
-  T1A1_NOGAP
-  T2A1_GAP
-  T2A_NOPINCH T2A_GAP
-  T1B_NOPINCH
-  T1B1_GAP
-  T1B2_GAP
-  T1B3_GAP
-  T1B4_GAP
-  T1B5_GAP
-  T1B6_GAP
-  T1B7_GAP
-  T1C_NOPINCH
-  T1C1_NOGAP T1C1_GAP
-  T1C2_GAP T1C2_NOGAP
-  T1C3_GAP T1C3_NOGAP
-  T1D_NOPINCH
-  T1D1_GAP T1D1_NOGAP)
-
-foreach(pinch_case ${_pinch_cases})
-  string(TOLOWER ${pinch_case} pinch_test)
-  add_test_compareECLFiles(CASENAME pinch_${pinch_test}
-    FILENAME ${pinch_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol}
-    REL_TOL ${rel_tol}
-    DIR pinch)
-endforeach()
 
 foreach(eqreg_case RANGE 1 6)
   add_test_compareECLFiles(CASENAME equalreg_multy_0${eqreg_case}
@@ -1024,6 +959,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/network.json"
+        "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/radial_grid.json"
         "tests/definitions/regression/udt.json"
      )
