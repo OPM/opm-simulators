@@ -108,20 +108,6 @@ add_test_compareECLFiles(CASENAME wecon_wtest
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol})
 
-add_test_compareECLFiles(CASENAME waghyst1
-                         FILENAME WAGHYSTR-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR waghystr)
-
-add_test_compareECLFiles(CASENAME waghyst2
-                         FILENAME WAGHYSTR-02
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR waghystr)
-
 add_test_compareECLFiles(CASENAME gpmaint11
                          FILENAME GPMAINT-11
                          SIMULATOR flow
@@ -488,6 +474,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
         "tests/definitions/regression/vappars.json"
+        "tests/definitions/regression/waghystr.json"
         "tests/definitions/regression/winjdam.json"
         "tests/definitions/regression/winjmult.json"
      )
