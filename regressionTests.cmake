@@ -201,14 +201,6 @@ add_test_compareECLFiles(CASENAME micp
                          DIR micp
                          TEST_ARGS --linear-solver=ilu0)
 
-add_test_compareECLFiles(CASENAME min_thp_1
-                         FILENAME MIN_THP_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/thp_min
-                         TEST_ARGS --enable-tuning=true)
-
 add_test_compareECLFiles(CASENAME max_gor_1
                          FILENAME MAX_GOR_1
                          SIMULATOR flow
@@ -394,6 +386,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/winjdam.json"
         "tests/definitions/regression/winjmult.json"
         "tests/definitions/regression/wtest_bhp.json"
+        "tests/definitions/regression/wtest_thp.json"
      )
   foreach(JSON_FILE ${JSON_FILES})
     AddJsonRegressionTests(${JSON_FILE})
