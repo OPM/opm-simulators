@@ -6,13 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME gpmaint11
-                         FILENAME GPMAINT-11
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gpmaint)
-
 add_test_compareECLFiles(CASENAME ppcwmax
                          FILENAME PPCWMAX-01
                          SIMULATOR flow
@@ -215,6 +208,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/editnnc.json"
         "tests/definitions/regression/flowexp_blackoil.json"
         "tests/definitions/regression/gridunit.json"
+        "tests/definitions/regression/gpmaint.json"
         "tests/definitions/regression/h2store.json"
         "tests/definitions/regression/jfunc.json"
         "tests/definitions/regression/krnum.json"
