@@ -29,6 +29,7 @@
 
 #include <memory>
 #include <vector>
+#include <numeric>
 
 namespace Dune {
 
@@ -68,7 +69,7 @@ public:
         HYPRE_BoomerAMGSetTol(solver_, 0.1);              // Convergence tolerance
 
 
-        // Create the vectors
+        // Create Hypre vectors
         const int N = A_.N();
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, N-1, &x_hypre_);
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, N-1, &b_hypre_);
@@ -76,7 +77,16 @@ public:
         HYPRE_IJVectorSetObjectType(b_hypre_, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(x_hypre_);
         HYPRE_IJVectorInitialize(b_hypre_);
+        // Create indices vector
+        indices_.resize(A_.N());
+        std::iota(indices_.begin(), indices_.end(), 0);
 
+        // Create Hypre matrix
+        HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, N-1, 0, N-1, &A_hypre_);
+        HYPRE_IJMatrixSetObjectType(A_hypre_, HYPRE_PARCSR);
+        HYPRE_IJMatrixInitialize(A_hypre_);
+
+        setupSparsityPattern();
         update();
     }
 
@@ -94,6 +104,7 @@ public:
     void update() override {
         OPM_TIMEBLOCK(prec_update);
         copyMatrixToHypre();
+        HYPRE_BoomerAMGSetup(solver_, parcsr_A_, par_b_, par_x_);
     }
 
     void pre(X& x, Y& b) override {
@@ -129,69 +140,57 @@ public:
     }
 
 private:
-    void copyMatrixToHypre() {
+    void setupSparsityPattern() {
         const int N = A_.N();
-        HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, N-1, 0, N-1, &A_hypre_);
-        HYPRE_IJMatrixSetObjectType(A_hypre_, HYPRE_PARCSR);
-        HYPRE_IJMatrixInitialize(A_hypre_);
+        const int nnz = A_.nonzeroes();
 
-        // Copy values from Dune matrix to Hypre matrix
+        // Allocate arrays required by Hypre
+        ncols_.resize(N);
+        rows_.resize(N);
+        cols_.resize(nnz);
+
+        // Setup arrays and fill column indices
+        int pos = 0;
         for (auto row = A_.begin(); row != A_.end(); ++row) {
-            int i = row.index();
-            std::vector<int> cols;
-            std::vector<double> vals;
+            const int rowIdx = row.index();
+            rows_[rowIdx] = rowIdx;
+            ncols_[rowIdx] = row->size();
 
             for (auto col = row->begin(); col != row->end(); ++col) {
-                cols.push_back(col.index());
-                vals.push_back(*col);
+                cols_[pos++] = col.index();
             }
-
-            int ncols = cols.size();
-            HYPRE_IJMatrixSetValues(A_hypre_, 1, &ncols, &i, cols.data(), vals.data());
         }
+    }
+
+    void copyMatrixToHypre() {
+        // Get pointer to matrix values array
+        const double* vals = &(A_[0][0][0][0]);  // Indexing explanation:
+                           // A_[row]              - First row of the matrix
+                           //     [0]              - First block in that row
+                           //        [0]           - First row within the 1x1 block
+                           //           [0]        - First column within the 1x1 block
+
+        // Set all values at once using stored sparsity pattern
+        HYPRE_IJMatrixSetValues(A_hypre_, A_.N(), ncols_.data(), rows_.data(), cols_.data(), vals);
 
         HYPRE_IJMatrixAssemble(A_hypre_);
         HYPRE_IJMatrixGetObject(A_hypre_, (void**)&parcsr_A_);
-
-        // Setup the solver with the new matrix
-        HYPRE_BoomerAMGSetup(solver_, parcsr_A_, par_b_, par_x_);
     }
 
     void copyVectorsToHypre(const X& v, const Y& d) {
-        const int N = A_.N();
+        const double* x_vals = &(v[0][0]);
+        const double* b_vals = &(d[0][0]);
 
-        // Copy values
-        std::vector<int> indices(N);
-        std::vector<double> x_vals(N);
-        std::vector<double> b_vals(N);
-
-        for (int i = 0; i < N; ++i) {
-            indices[i] = i;
-            x_vals[i] = v[i];
-            b_vals[i] = d[i];
-        }
-
-        HYPRE_IJVectorSetValues(x_hypre_, N, indices.data(), x_vals.data());
-        HYPRE_IJVectorSetValues(b_hypre_, N, indices.data(), b_vals.data());
+        HYPRE_IJVectorSetValues(x_hypre_, A_.N(), indices_.data(), x_vals);
+        HYPRE_IJVectorSetValues(b_hypre_, A_.N(), indices_.data(), b_vals);
 
         HYPRE_IJVectorGetObject(x_hypre_, (void**)&par_x_);
         HYPRE_IJVectorGetObject(b_hypre_, (void**)&par_b_);
     }
 
     void copyVectorFromHypre(X& v) {
-        const int N = A_.N();
-        std::vector<int> indices(N);
-        std::vector<double> vals(N);
-
-        for (int i = 0; i < N; ++i) {
-            indices[i] = i;
-        }
-
-        HYPRE_IJVectorGetValues(x_hypre_, N, indices.data(), vals.data());
-
-        for (int i = 0; i < N; ++i) {
-            v[i] = vals[i];
-        }
+        double* vals = &(v[0][0]);
+        HYPRE_IJVectorGetValues(x_hypre_, A_.N(), indices_.data(), vals);
     }
 
     const M& A_;
@@ -202,6 +201,14 @@ private:
     HYPRE_IJVector b_hypre_ = nullptr;
     HYPRE_ParVector par_x_ = nullptr;
     HYPRE_ParVector par_b_ = nullptr;
+
+    // Store sparsity pattern
+    std::vector<HYPRE_Int> ncols_;
+    std::vector<HYPRE_BigInt> rows_;
+    std::vector<HYPRE_BigInt> cols_;
+
+    // Store indices vector
+    std::vector<int> indices_;
 };
 
 } // namespace Dune
