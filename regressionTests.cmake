@@ -16,14 +16,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME norne_reperf
-                         FILENAME NORNE_ATW2013_B1H_RE-PERF
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR norne
-                         TEST_ARGS --tolerance-wells=1.e-8)
-
 add_test_compareECLFiles(CASENAME compl_smry
                          FILENAME COMPL_SMRY
                          SIMULATOR flow
@@ -177,6 +169,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/mult.json"
         "tests/definitions/regression/msw.json"
         "tests/definitions/regression/network.json"
+        "tests/definitions/regression/norne.json"
         "tests/definitions/regression/pinch.json"
         "tests/definitions/regression/polymer_injectivity.json"
         "tests/definitions/regression/polymer_oilwater.json"

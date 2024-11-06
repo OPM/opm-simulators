@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "norne",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "norne_reperf",
+            "filename": "NORNE_ATW2013_B1H_RE-PERF",
+            "test_args": "--tolerance-wells=1.e-8"
+        }
+    ]
+}
