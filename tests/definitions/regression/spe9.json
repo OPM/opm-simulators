@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "spe9",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "spe9",
+            "filename": "SPE9_CP_SHORT",
+            "restart_step": "10"
+        }
+    ]
+}
