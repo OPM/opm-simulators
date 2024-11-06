@@ -16,13 +16,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME bc_lab
-                         FILENAME BC_LAB
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR bc_lab)
-
 add_test_compareECLFiles(CASENAME norne_reperf
                          FILENAME NORNE_ATW2013_B1H_RE-PERF
                          SIMULATOR flow
@@ -164,6 +157,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/aquifer-fetkovich.json"
         "tests/definitions/regression/aquifer-oilwater.json"
         "tests/definitions/regression/aquifers.json"
+        "tests/definitions/regression/bc_lab.json"
         "tests/definitions/regression/co2store.json"
         "tests/definitions/regression/cskin.json"
         "tests/definitions/regression/editnnc.json"
