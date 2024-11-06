@@ -6,19 +6,6 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME spe9group
-                         FILENAME SPE9_CP_GROUP
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
-
-add_test_compareECLFiles(CASENAME spe9group_resv
-                         FILENAME SPE9_CP_GROUP_RESV
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe9group)
-
 add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
                          SIMULATOR flow
@@ -300,6 +287,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/spe1_solvent.json"
         "tests/definitions/regression/spe3.json"
         "tests/definitions/regression/spe9.json"
+        "tests/definitions/regression/spe9group.json"
         "tests/definitions/regression/tracer.json"
         "tests/definitions/regression/udq_actionx.json"
         "tests/definitions/regression/udt.json"
