@@ -224,7 +224,7 @@ applyActions(const int reportStep,
     auto non_triggered = 0;
     const auto simTime = asTimeT(now);
     for (const auto& action : actions.pending(this->actionState_, simTime)) {
-        auto actionResult = action->eval(context);
+        const auto actionResult = action->eval(context);
         if (! actionResult) {
             ++non_triggered;
             logInactiveAction(action->name(), ts);
@@ -243,7 +243,7 @@ applyActions(const int reportStep,
             .applyAction(reportStep, *action, matching_wells, wellpi);
 
         this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
-        this->actionState_.add_run(*action, simTime, std::move(actionResult));
+        this->actionState_.add_run(*action, simTime, actionResult);
     }
 
     if (non_triggered > 0) {
