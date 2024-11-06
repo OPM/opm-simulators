@@ -142,20 +142,6 @@ add_test_compareECLFiles(CASENAME spe1_thermal_onephase
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
-add_test_compareECLFiles(CASENAME spe1_spider
-                           FILENAME SPIDER_CAKESLICE
-                           SIMULATOR flow
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           DIR radial_grid)
-
-add_test_compareECLFiles(CASENAME spe1_radial
-                           FILENAME RADIAL_CAKESLICE
-                           SIMULATOR flow
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           DIR radial_grid)
-
 add_test_compareECLFiles(CASENAME jfunc_01
                          FILENAME JFUNC-01
                          SIMULATOR flow
@@ -1038,6 +1024,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
         "tests/definitions/regression/network.json"
+        "tests/definitions/regression/radial_grid.json"
         "tests/definitions/regression/udt.json"
      )
   foreach(JSON_FILE ${JSON_FILES})
