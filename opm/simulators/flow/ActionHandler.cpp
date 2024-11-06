@@ -289,14 +289,11 @@ void ActionHandler<Scalar>::
 evalUDQAssignments(const unsigned episodeIdx,
                    UDQState& udq_state)
 {
-    const auto& udq = schedule_[episodeIdx].udq();
-
-    udq.eval_assign(episodeIdx,
-                    this->schedule_,
-                    this->schedule_.wellMatcher(episodeIdx),
-                    this->schedule_.segmentMatcherFactory(episodeIdx),
-                    this->summaryState_,
-                    udq_state);
+    this->schedule_[episodeIdx].udq()
+        .eval_assign(this->schedule_.wellMatcher(episodeIdx),
+                     this->schedule_.segmentMatcherFactory(episodeIdx),
+                     this->summaryState_,
+                     udq_state);
 }
 
 template class ActionHandler<double>;
