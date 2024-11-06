@@ -420,20 +420,6 @@ if (opm-common_EMBEDDED_PYTHON)
                            TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
-add_test_compareECLFiles(CASENAME model4_udq_group
-                         FILENAME MOD4_UDQ_ACTIONX
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model4)
-
-add_test_compareECLFiles(CASENAME model4_gefac
-                         FILENAME MOD4_GRP_GEFAC
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model4)
-
 add_test_compareECLFiles(CASENAME wsegsicd
 			  FILENAME TEST_WSEGSICD
 			  SIMULATOR flow
@@ -748,6 +734,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
         "tests/definitions/regression/jfunc.json"
         "tests/definitions/regression/krnum.json"
         "tests/definitions/regression/model2.json"
+        "tests/definitions/regression/model4.json"
         "tests/definitions/regression/model6.json"
         "tests/definitions/regression/mult.json"
         "tests/definitions/regression/network.json"
