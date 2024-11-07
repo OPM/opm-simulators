@@ -2,8 +2,9 @@
 
 set -e
 
-VERSION_TAG=${1:-""}
-BUILD_JOBS=$2
+VERSION=${1:-"master"}
+BUILD_JOBS=${2:-16}
+VERSION_TAG=${3:-""}
 
 export CMAKE_GENERATOR=Ninja
 
@@ -25,9 +26,9 @@ done
 DIR=`pwd`
 
 # Setup opm modules
-git clone https://github.com/OPM/opm-common
-git clone https://github.com/OPM/opm-grid
-git clone https://github.com/OPM/opm-simulators
+git clone https://github.com/OPM/opm-common -b $VERSION
+git clone https://github.com/OPM/opm-grid -b $VERSION
+git clone https://github.com/OPM/opm-simulators -b $VERSION
 git clone https://github.com/OPM/opm-utilities
 
 ln -sf opm-utilities/opm-super/CMakeLists.txt CMakeLists.txt
