@@ -91,7 +91,8 @@ applyCleaning(const WellInterfaceGeneric<Scalar>& well,
         updateMultiplier(connection, perf);
         const Scalar rw = connection.getFilterCakeRadius();
         switch (filter_cake.geometry) {
-            case FilterCake::FilterCakeGeometry::LINEAR: {
+            case FilterCake::FilterCakeGeometry::LINEAR:
+            case FilterCake::FilterCakeGeometry::LINRAD: {
                 // Previous thickness adjusted to give correct cleaning multiplier at start of time step
                 thickness_[perf] *= factor;
                 break;
@@ -181,6 +182,15 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
 
                 const Scalar rc = std::sqrt(rw * rw + 2. * rw * thickness);
                 filtrate_data.thickness[perf] = rc - rw;
+                delta_skin_factor = K / perm * std::log(rc / rc_prev);
+                break;
+            }
+            case FilterCake::FilterCakeGeometry::LINRAD: {
+                const auto prev_thickness = thickness_[perf];
+                Scalar rc_prev = rw + prev_thickness;
+                thickness = thickness_[perf] + delta_thickness;
+                filtrate_data.thickness[perf] = thickness;
+                const Scalar rc = rw + thickness;
                 delta_skin_factor = K / perm * std::log(rc / rc_prev);
                 break;
             }
