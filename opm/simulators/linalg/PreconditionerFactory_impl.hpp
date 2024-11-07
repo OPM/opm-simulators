@@ -549,9 +549,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             });
             // Only add Hypre for scalar matrices
             if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1) {
-                F::addCreator("HypreBoomerAMG", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-                    DUNE_UNUSED_PARAMETER(prm);
-                    return std::make_shared<HyprePreconditioner<M, V, V>>(op.getmat());
+                F::addCreator("hypre", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+                    return std::make_shared<Hypre::HyprePreconditioner<M, V, V>>(op.getmat(), prm);
                 });
             }
         }

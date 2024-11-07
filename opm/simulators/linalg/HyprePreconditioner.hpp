@@ -31,11 +31,11 @@
 #include <vector>
 #include <numeric>
 
-namespace Dune {
+namespace Hypre {
 
 /// Wrapper for Hypre's BoomerAMG preconditioner
 template<class M, class X, class Y>
-class HyprePreconditioner : public PreconditionerWithUpdate<X,Y> {
+class HyprePreconditioner : public Dune::PreconditionerWithUpdate<X,Y> {
 public:
     //! \brief The matrix type the preconditioner is for
     using matrix_type = M;
@@ -47,8 +47,8 @@ public:
     using field_type = typename X::field_type;
 
     // Constructor
-    HyprePreconditioner (const M& A)
-        : A_(A)
+    HyprePreconditioner (const M& A, const Opm::PropertyTree& prm)
+        : A_(A), prm_(prm)
     {
         OPM_TIMEBLOCK(prec_construct);
 
@@ -129,8 +129,8 @@ public:
         DUNE_UNUSED_PARAMETER(x);
     }
 
-    SolverCategory::Category category() const override {
-        return SolverCategory::sequential;
+    Dune::SolverCategory::Category category() const override {
+        return Dune::SolverCategory::sequential;
     }
 
     bool hasPerfectUpdate() const override
@@ -194,6 +194,8 @@ private:
     }
 
     const M& A_;
+    const Opm::PropertyTree& prm_;
+
     HYPRE_Solver solver_ = nullptr;
     HYPRE_IJMatrix A_hypre_ = nullptr;
     HYPRE_ParCSRMatrix parcsr_A_ = nullptr;
