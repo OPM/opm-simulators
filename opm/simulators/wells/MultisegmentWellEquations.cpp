@@ -222,7 +222,7 @@ extract(WellContributions<Scalar>& wellContribs) const
     Cvals.reserve(BnumBlocks * numEq * numWellEq);
     for (auto rowC = duneC_.begin(); rowC != duneC_.end(); ++rowC) {
         for (auto colC = rowC->begin(), endC = rowC->end(); colC != endC; ++colC) {
-            Ccols.emplace_back(colC.index());
+            Ccols.emplace_back(cells_[colC.index()]);
             for (int i = 0; i < numWellEq; ++i) {
                 for (int j = 0; j < numEq; ++j) {
                     Cvals.emplace_back((*colC)[i][j]);
@@ -252,7 +252,7 @@ extract(WellContributions<Scalar>& wellContribs) const
         for (auto rowB = duneB_.begin(); rowB != duneB_.end(); ++rowB) {
             int sizeRow = 0;
             for (auto colB = rowB->begin(), endB = rowB->end(); colB != endB; ++colB) {
-                Bcols.emplace_back(colB.index());
+                Bcols.emplace_back(cells_[colB.index()]);
                 for (int i = 0; i < numWellEq; ++i) {
                     for (int j = 0; j < numEq; ++j) {
                         Bvals.emplace_back((*colB)[i][j]);

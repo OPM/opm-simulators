@@ -207,7 +207,7 @@ extract(const int numStaticWellEq,
     for (auto colC = duneC_[0].begin(),
               endC = duneC_[0].end(); colC != endC; ++colC )
     {
-        colIndices.emplace_back(colC.index());
+        colIndices.emplace_back(cells_[colC.index()]);
         for (int i = 0; i < numStaticWellEq; ++i) {
             for (int j = 0; j < numEq; ++j) {
                 nnzValues.emplace_back((*colC)[i][j]);
@@ -236,7 +236,7 @@ extract(const int numStaticWellEq,
     for (auto colB = duneB_[0].begin(),
               endB = duneB_[0].end(); colB != endB; ++colB )
     {
-        colIndices.emplace_back(colB.index());
+        colIndices.emplace_back(cells_[colB.index()]);
         for (int i = 0; i < numStaticWellEq; ++i) {
             for (int j = 0; j < numEq; ++j) {
                 nnzValues.emplace_back((*colB)[i][j]);
