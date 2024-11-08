@@ -84,22 +84,29 @@ GpuBuffer<T>::resize(size_t newSize)
     if (newSize < 1) {
         OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
     }
-    // Allocate memory for the new buffer
-    T* tmpBuffer = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * newSize));
 
-    // Move the data from the old to the new buffer with truncation
-    size_t sizeOfMove = std::min({m_numberOfElements, newSize});
-    OPM_GPU_SAFE_CALL(cudaMemcpy(tmpBuffer,
-                                  m_dataOnDevice,
-                                  sizeOfMove * sizeof(T),
-                                  cudaMemcpyDeviceToDevice));
+    if (m_numberOfElements == 0) {
+        // We have no data, so we can just allocate new memory
+        OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * newSize));
+    }
+    else {
+        // Allocate memory for temporary buffer
+        T* tmpBuffer = nullptr;
+        OPM_GPU_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * m_numberOfElements));
 
-    // free the old buffer
-    OPM_GPU_SAFE_CALL(cudaFree(m_dataOnDevice));
+        // Move the data from the old to the new buffer with truncation
+        size_t sizeOfMove = std::min({m_numberOfElements, newSize});
+        OPM_GPU_SAFE_CALL(cudaMemcpy(tmpBuffer,
+                                    m_dataOnDevice,
+                                    sizeOfMove * sizeof(T),
+                                    cudaMemcpyDeviceToDevice));
 
-    // swap the buffers
-    m_dataOnDevice = tmpBuffer;
+        // free the old buffer
+        OPM_GPU_SAFE_CALL(cudaFree(m_dataOnDevice));
+
+        // swap the buffers
+        m_dataOnDevice = tmpBuffer;
+    }
 
     // update size
     m_numberOfElements = newSize;
