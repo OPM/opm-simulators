@@ -55,6 +55,7 @@
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace {
     std::string formatActionDate(const Opm::TimeStampUTC& timePoint,
