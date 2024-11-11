@@ -60,13 +60,14 @@ public:
 
         // Set some default parameters
         HYPRE_BoomerAMGSetPrintLevel(solver_, 0);         // Reduce output
+        HYPRE_BoomerAMGSetMaxIter(solver_, 1);            // Only one V-cycle, as used as preconditioner
         HYPRE_BoomerAMGSetCoarsenType(solver_, 10);       // HMIS coarsening
         HYPRE_BoomerAMGSetStrongThreshold(solver_, 0.5);  // Strength threshold for 3D
         HYPRE_BoomerAMGSetAggNumLevels(solver_, 1);       // Aggressive coarsening on first level
         HYPRE_BoomerAMGSetAggTruncFactor(solver_, 0.3);   // Remove weak connections
         HYPRE_BoomerAMGSetInterpType(solver_, 6);         // ext+i interpolation
         HYPRE_BoomerAMGSetMaxLevels(solver_, 15);         // Maximum number of levels
-        HYPRE_BoomerAMGSetTol(solver_, 0.1);              // Convergence tolerance
+        HYPRE_BoomerAMGSetTol(solver_, 0);              // Convergence tolerance, 0 as used as preconditioner with one V-cycle
 
 
         // Create Hypre vectors
