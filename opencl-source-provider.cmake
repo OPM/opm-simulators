@@ -1,5 +1,5 @@
-set(BDA_DIR opm/simulators/linalg/bda)
-set(KERNELS_DIR ${BDA_DIR}/opencl/kernels)
+set(GPUBRIDGE_DIR opm/simulators/linalg/gpubridge)
+set(KERNELS_DIR ${GPUBRIDGE_DIR}/opencl/kernels)
 
 option(DEBUG_OPENCL_KERNELS_INTEL "Run ocloc to check kernel (works only on Intel)" OFF)
 if(DEBUG_OPENCL_KERNELS_INTEL)
@@ -14,7 +14,7 @@ endif()
 set(CL_SRC_FILE ${PROJECT_BINARY_DIR}/clSources.cpp)
 file(WRITE ${CL_SRC_FILE} "// This file is auto-generated. Do not edit!\n\n")
 file(APPEND ${CL_SRC_FILE} "#include <config.h>\n\n")
-file(APPEND ${CL_SRC_FILE} "#include <${BDA_DIR}/opencl/openclKernels.hpp>\n\n")
+file(APPEND ${CL_SRC_FILE} "#include <${GPUBRIDGE_DIR}/opencl/openclKernels.hpp>\n\n")
 file(APPEND ${CL_SRC_FILE} "namespace Opm\{\n\n")
 file(APPEND ${CL_SRC_FILE} "namespace Accelerator\{\n\n")
 

@@ -29,8 +29,8 @@
 
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
@@ -206,7 +206,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
 }
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 extract(WellContributions<Scalar>& wellContribs) const

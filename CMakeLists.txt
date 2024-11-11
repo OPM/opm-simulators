@@ -32,7 +32,7 @@ option(USE_CHOW_PATEL_ILU_GPU "Run iterative ILU decomposition on GPU? Requires 
 option(USE_CHOW_PATEL_ILU_GPU_PARALLEL "Try to use more parallelism on the GPU during the iterative ILU decomposition? Requires USE_CHOW_PATEL_ILU_GPU" OFF)
 option(BUILD_FLOW_ALU_GRID "Build flow blackoil with alu grid" OFF)
 option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
-option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
+option(USE_GPU_BRIDGE "Enable the GPU bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
 option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
@@ -141,8 +141,8 @@ if(USE_MPI)
   set(HDF5_PREFER_PARALLEL TRUE)
 endif()
 
-if(USE_BDA_BRIDGE)
-  set(COMPILE_BDA_BRIDGE 1)
+if(USE_GPU_BRIDGE)
+  set(COMPILE_GPU_BRIDGE 1)
 endif()
 
 # not the same location as most of the other projects? this hook overrides
@@ -381,7 +381,7 @@ macro (files_hook)
     set(HDF5_FOUND OFF)
     unset(HAVE_HDF5)
   endif()
-  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_BDA_BRIDGE) # unsure if this is the correct way to change this
+  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_GPU_BRIDGE) # unsure if this is the correct way to change this
     message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
     set(CUDA_FOUND OFF)
     unset(HAVE_CUDA)
@@ -654,7 +654,7 @@ if(CUDA_FOUND)
       target_link_libraries(${tgt} CUDA::cudart)
     endforeach()
   endif()
-  if(USE_BDA_BRIDGE)
+  if(USE_GPU_BRIDGE)
     set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
   endif()
 
@@ -686,7 +686,7 @@ if(CUDA_FOUND)
                        PROPERTIES LABELS ${gpu_label})
 endif()
 
-if(USE_BDA_BRIDGE)
+if(USE_GPU_BRIDGE)
   if(OpenCL_FOUND)
     target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
     set_tests_properties(openclSolver solvetransposed3x3 csrToCscOffsetMap

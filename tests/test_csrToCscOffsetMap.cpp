@@ -9,7 +9,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmarket.hh>
 
-#include <opm/simulators/linalg/bda/opencl/openclBISAI.hpp>
+#include <opm/simulators/linalg/gpubridge/opencl/openclBISAI.hpp>
 
 BOOST_AUTO_TEST_CASE(testcsrtocscoffsetmap){
 

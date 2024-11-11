@@ -88,7 +88,7 @@ struct EnableTerminalOutput { static constexpr bool value = true; };
 
 namespace Opm {
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
 
@@ -304,7 +304,7 @@ template<class Scalar> class WellContributions;
 
             void applyDomain(const BVector& x, BVector& Ax, const int domainIndex) const;
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
             // accumulate the contributions of all Wells in the WellContributions object
             void getWellContributions(WellContributions<Scalar>& x) const;
 #endif
