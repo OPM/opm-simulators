@@ -21,7 +21,7 @@
 
 #include <config.h>
 #include <opm/common/TimingMacros.hpp>
-#include <opm/simulators/linalg/ISTLSolverGpu.hpp>
+#include <opm/simulators/linalg/ISTLSolverGpuBridge.hpp>
 
 #include <dune/istl/schwarz.hh>
 

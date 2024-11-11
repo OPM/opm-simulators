@@ -312,7 +312,7 @@ if(USE_GPU_BRIDGE)
                                  opm/simulators/linalg/gpubridge/Misc.cpp
                                  opm/simulators/linalg/gpubridge/WellContributions.cpp
                                  opm/simulators/linalg/gpubridge/MultisegmentWellContribution.cpp
-                                 opm/simulators/linalg/ISTLSolverGpu.cpp)
+                                 opm/simulators/linalg/ISTLSolverGpuBridge.cpp)
   if(OPENCL_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/BlockedMatrix.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclBILU0.cpp)
@@ -1053,7 +1053,7 @@ if (USE_GPU_BRIDGE)
     opm/simulators/linalg/gpubridge/rocm/rocsparseWellContributions.hpp
     opm/simulators/linalg/gpubridge/rocm/rocsparseMatrix.hpp
     opm/simulators/linalg/gpubridge/WellContributions.hpp
-    opm/simulators/linalg/ISTLSolverGpu.hpp
+    opm/simulators/linalg/ISTLSolverGpuBridge.hpp
   )
 endif()
 

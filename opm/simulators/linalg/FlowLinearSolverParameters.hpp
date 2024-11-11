@@ -32,7 +32,7 @@
 namespace Opm {
 
 template <class TypeTag>
-class ISTLSolverGpu;
+class ISTLSolverGpuBridge;
 
 template <class TypeTag>
 class ISTLSolver;
@@ -52,7 +52,7 @@ template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams>
 {
 #if COMPILE_GPU_BRIDGE
-    using type = ISTLSolverGpu<TypeTag>;
+    using type = ISTLSolverGpuBridge<TypeTag>;
 #else
     using type = ISTLSolver<TypeTag>;
 #endif

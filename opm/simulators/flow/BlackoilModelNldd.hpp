@@ -39,7 +39,7 @@
 #include <opm/simulators/linalg/extractMatrix.hpp>
 
 #if COMPILE_GPU_BRIDGE
-#include <opm/simulators/linalg/ISTLSolverGpu.hpp>
+#include <opm/simulators/linalg/ISTLSolverGpuBridge.hpp>
 #else
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #endif
