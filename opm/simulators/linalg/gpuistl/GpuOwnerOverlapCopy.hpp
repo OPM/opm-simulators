@@ -40,6 +40,8 @@ public:
 
     GPUSender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
 
+    virtual ~GPUSender() = default;
+
     /**
      * @brief copyOwnerToAll will copy source to the CPU, then call OwnerOverlapCopyCommunicationType::copyOwnerToAll on
      * the copied data, and copy the result back to the GPU
