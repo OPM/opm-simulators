@@ -472,7 +472,7 @@ namespace Opm {
 
         const int reportStepIdx = simulator_.episodeIndex();
         this->updateAndCommunicateGroupData(reportStepIdx,
-                                            simulator_.model().newtonMethod().numIterations());
+                                            simulator_.model().newtonMethod().numIterations(), local_deferredLogger);
 
         this->wellState().updateWellsDefaultALQ(this->schedule(), reportStepIdx, this->summaryState());
         this->wellState().gliftTimeStepInit();
@@ -2176,7 +2176,7 @@ namespace Opm {
 
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const auto& comm = simulator_.vanguard().grid().comm();
-        this->updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+        this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, deferred_logger);
 
         // network related
         bool more_network_update = false;
@@ -2430,7 +2430,7 @@ namespace Opm {
                          const int iterationIdx,
                          DeferredLogger& deferred_logger)
     {
-        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
+        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, deferred_logger);
 
         // updateWellStateWithTarget might throw for multisegment wells hence we
         // have a parallel try catch here to thrown on all processes.
@@ -2442,7 +2442,7 @@ namespace Opm {
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
                                    simulator_.gridView().comm())
-        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
+        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, deferred_logger);
     }
 
     template<typename TypeTag>

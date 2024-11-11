@@ -75,14 +75,19 @@ namespace {
         return {oilRate, gasRate, waterRate};
     }
 
+} // namespace Anonymous
+
+namespace Opm {
+
     template<class Scalar>
-    Scalar sumWellPhaseRates(bool res_rates,
-                             const Opm::Group& group,
-                             const Opm::Schedule& schedule,
-                             const Opm::WellState<Scalar>& wellState,
-                             const int reportStepIdx,
-                             const int phasePos,
-                             const bool injector)
+    Scalar WellGroupHelpers<Scalar>::
+    sumWellPhaseRates(bool res_rates,
+                      const Opm::Group& group,
+                      const Opm::Schedule& schedule,
+                      const Opm::WellState<Scalar>& wellState,
+                      const int reportStepIdx,
+                      const int phasePos,
+                      const bool injector)
     {
 
         Scalar rate = 0.0;
@@ -128,9 +133,6 @@ namespace {
         }
         return rate;
     }
-} // namespace Anonymous
-
-namespace Opm {
 
 template<class Scalar>
 void WellGroupHelpers<Scalar>::

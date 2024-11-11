@@ -47,6 +47,15 @@ template<class Scalar>
 class WellGroupHelpers
 {
 public:
+
+    static Scalar sumWellPhaseRates(bool res_rates,
+                                    const Opm::Group& group,
+                                    const Opm::Schedule& schedule,
+                                    const Opm::WellState<Scalar>& wellState,
+                                    const int reportStepIdx,
+                                    const int phasePos,
+                                    const bool injector);
+
     static void setCmodeGroup(const Group& group,
                               const Schedule& schedule,
                               const SummaryState& summaryState,

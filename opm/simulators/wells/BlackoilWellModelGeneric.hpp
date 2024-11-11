@@ -376,7 +376,8 @@ protected:
                                      const int reportStepIdx);
 
     void updateAndCommunicateGroupData(const int reportStepIdx,
-                                       const int iterationIdx);
+                                       const int iterationIdx,
+                                       DeferredLogger& deferred_logger);
 
     void inferLocalShutWells();
 
