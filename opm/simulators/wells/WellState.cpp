@@ -499,10 +499,6 @@ WellState<Scalar>::report(const int* globalCellIdxMap,
     data::Wells res;
     for (std::size_t well_index = 0; well_index < this->size(); ++well_index) {
         const auto& ws = this->well(well_index);
-        if ((ws.status == Well::Status::SHUT) && !wasDynamicallyClosed(well_index))
-        {
-            continue;
-        }
 
         const auto& reservoir_rates = ws.reservoir_rates;
         const auto& well_potentials = ws.well_potentials;
@@ -842,6 +838,8 @@ void WellState<Scalar>::stopWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.stop();
+    if(ws.producer)
+        setALQ(this->name(well_index), 0.0);
 }
 
 template<class Scalar>
@@ -856,6 +854,8 @@ void WellState<Scalar>::shutWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.shut();
+    if(ws.producer)
+        setALQ(this->name(well_index), 0.0);
 }
 
 template<class Scalar>
