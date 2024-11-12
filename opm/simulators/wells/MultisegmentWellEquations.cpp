@@ -37,6 +37,7 @@
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
@@ -407,6 +408,16 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     } else {
         jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
     }
+}
+
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+sumDistributed(Parallel::Communication comm)
+{
+    // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
+    // we need to do this for all segments in the residual and on the diagonal of D 
+    for (int seg = 0; seg < well_.numberOfSegments(); ++seg)
+        Opm::wellhelpers::sumDistributedWellEntries(duneD_[seg][seg], resWell_[seg], comm);
 }
 
 #define INSTANTIATE(T, numWellEq, numEq)                                                       \
