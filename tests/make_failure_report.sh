@@ -28,4 +28,7 @@ do
   $SOURCE_DIR/plot_well_comparison.py -r $OPM_TESTS_ROOT/$dir_name/opm-simulation-reference/$binary/$file_name -s $RESULT_DIR/tests/results/$binary+$test_name/$file_name -c $test_name -o plot
 done
 
-$SOURCE_DIR/plot_well_comparison.py  -o rename
+if test -n "$FAILED_TESTS"
+then
+  $SOURCE_DIR/plot_well_comparison.py  -o rename
+fi
