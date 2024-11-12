@@ -22,6 +22,7 @@
 #ifndef OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
@@ -120,6 +121,9 @@ public:
                                   const WellInterfaceGeneric<Scalar>& well,
                                   const int seg_pressure_var_ind,
                                   const WellState<Scalar>& well_state) const;
+
+    //! \brief Sum with off-process contribution.
+    void sumDistributed(Parallel::Communication comm);
 
     //! \brief Returns a const reference to the residual.
     const BVectorWell& residual() const
