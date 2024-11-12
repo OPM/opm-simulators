@@ -26,9 +26,7 @@
 #include <cuda_runtime.h>
 #endif
 
-#if HAVE_SUITESPARSE_UMFPACK
-#include<umfpack.h>
-#endif
+#include <umfpack.h>
 #include <dune/common/version.hh>
 
 namespace Opm
