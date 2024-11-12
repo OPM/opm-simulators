@@ -17,29 +17,30 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef VALIDATION_FUNCTIONS_HPP
+#define VALIDATION_FUNCTIONS_HPP
+
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include <opm/simulators/flow/KeywordValidation.hpp>
+namespace Opm {
+class DeckKeyword;
+}
 
+namespace Opm::KeywordValidation {
 
-namespace Opm
-{
-namespace KeywordValidation
-{
+struct ValidationError;
 
-
-void validateBRINE(const DeckKeyword& keyword, std::vector<ValidationError>& errors);
-
-
+using ValidationFunction = std::function<void(const DeckKeyword&,
+                                              std::vector<ValidationError>&)>;
 
 // This is a mapping between keyword names and small functions
 // for validation of special keywords.
-std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<KeywordValidation::ValidationError>& errors)>> specialValidation() {
-    return {{"BRINE", validateBRINE}};
-};
+std::unordered_map<std::string, ValidationFunction>
+specialValidation();
 
-}
-}
+} // namespace Opm::KeywordValidation
+
+#endif // VALIDATION_FUNCTIONS_HPP

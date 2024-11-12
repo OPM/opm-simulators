@@ -21,6 +21,7 @@
 #define OPM_KEYWORDVALIDATION_HEADER_INCLUDED
 
 #include <opm/common/OpmLog/KeywordLocation.hpp>
+#include <opm/simulators/flow/ValidationFunctions.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -87,13 +88,6 @@ namespace KeywordValidation
                                  const bool include_noncritical,
                                  const bool include_critical);
 
-
-
-    // These are special case validation functions for keyword which do not fit nicely into the general
-    // validation framework. The validation function itself is void, but error conditions are signalled by
-    // appending ValidationError instances to the @errors vector.
-    void validateBRINE(const DeckKeyword& keyword, std::vector<ValidationError>& errors);
-
     class KeywordValidator
     {
     public:
@@ -101,7 +95,7 @@ namespace KeywordValidation
                          const PartiallySupportedKeywords<std::string>& string_items,
                          const PartiallySupportedKeywords<int>& int_items,
                          const PartiallySupportedKeywords<double>& double_items,
-                         const std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<ValidationError>& errors)>>& special_validation)
+                         const std::unordered_map<std::string, ValidationFunction>& special_validation)
             : m_keywords(keywords)
             , m_string_items(string_items)
             , m_int_items(int_items)
@@ -144,7 +138,7 @@ namespace KeywordValidation
         const PartiallySupportedKeywords<std::string> m_string_items;
         const PartiallySupportedKeywords<int> m_int_items;
         const PartiallySupportedKeywords<double> m_double_items;
-        const std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<ValidationError>& errors)>> m_special_validation;
+        const std::unordered_map<std::string, ValidationFunction> m_special_validation;
     };
 
 
