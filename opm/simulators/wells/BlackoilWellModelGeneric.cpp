@@ -1197,12 +1197,14 @@ updateAndCommunicateGroupData(const int reportStepIdx,
             const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
             for (Phase phase : all) {
                 if (this->groupState().has_injection_control(gr_name, phase)) {
-                    if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP) {
+                    if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP || 
+                        this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::REIN) {
+                        const bool is_vrep = this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP;
                         const Group& group = schedule().getGroup(gr_name, reportStepIdx);
                         const int np = this->wellState().numPhases();
-                        Scalar resv_nupcol = 0.0;
+                        Scalar gr_rate_nupcol = 0.0;
                         for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                            resv_nupcol += WellGroupHelpers<Scalar>::sumWellPhaseRates(true,
+                            gr_rate_nupcol += WellGroupHelpers<Scalar>::sumWellPhaseRates(is_vrep,
                                                     group,
                                                     schedule(),
                                                     this->nupcolWellState(),
@@ -1210,9 +1212,9 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                     phaseIdx,
                                                     /*isInjector*/ false);
                         }
-                        Scalar resv_wellstate = 0.0;
+                        Scalar gr_rate = 0.0;
                         for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                            resv_wellstate += WellGroupHelpers<Scalar>::sumWellPhaseRates(true,
+                            gr_rate += WellGroupHelpers<Scalar>::sumWellPhaseRates(is_vrep,
                                                     group,
                                                     schedule(),
                                                     this->wellState(),
@@ -1220,12 +1222,14 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                     phaseIdx,
                                                     /*isInjector*/ false);
                         }
-                        if ( std::abs( (resv_nupcol - resv_wellstate) / (0.5*resv_nupcol + 0.5*resv_wellstate)) > tol_nupcol) {
+                        Scalar rel_change = std::abs( (gr_rate_nupcol - gr_rate) / (0.5*gr_rate_nupcol + 0.5*gr_rate));
+                        if ( rel_change > tol_nupcol) {
                             this->updateNupcolWGState();
-                            const std::string msg = fmt::format("Group prodution relative change larger than tolerance {} "
-                                                    "at iteration {}. Update VREP for Group {} even if iteration is larger than {} given by NUPCOL." ,
-                                                    tol_nupcol, iterationIdx, gr_name, nupcol);
-                            deferred_logger.info(msg);
+                            const std::string control_str = is_vrep? "VREP" : "REIN";
+                            const std::string msg = fmt::format("Group prodution relative change {} larger than tolerance {} "
+                                                    "at iteration {}. Update {} for Group {} even if iteration is larger than {} given by NUPCOL." ,
+                                                    rel_change, tol_nupcol, iterationIdx, control_str, gr_name, nupcol);
+                            deferred_logger.debug(msg);
                         }
                     }
                 }
