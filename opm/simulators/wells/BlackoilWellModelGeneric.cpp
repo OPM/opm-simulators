@@ -1180,6 +1180,7 @@ template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 updateAndCommunicateGroupData(const int reportStepIdx,
                               const int iterationIdx,
+                              const Scalar tol_nupcol,
                               DeferredLogger& deferred_logger)
 {
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1192,7 +1193,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     if (iterationIdx <= nupcol) {
         this->updateNupcolWGState();
     } else {
-        Scalar tol_nupcol = 0.01;
         for (const auto& gr_name : schedule().groupNames(reportStepIdx)) {
             const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
             for (Phase phase : all) {
