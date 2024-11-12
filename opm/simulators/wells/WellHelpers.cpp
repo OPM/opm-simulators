@@ -133,9 +133,9 @@ Scalar computeHydrostaticCorrection(const Scalar well_ref_depth, const Scalar vf
     return dp;
 }
 
-template<typename Scalar, typename Comm>
-void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
-                               Dune::DynamicVector<Scalar>& vec,
+template<typename MatrixType, typename VectorType, typename Comm>
+void sumDistributedWellEntries(MatrixType& mat,
+                               VectorType& vec,
                                const Comm& comm)
 {
     // DynamicMatrix does not use one contiguous array for storing the data
@@ -145,7 +145,7 @@ void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
     {
         return;
     }
-    std::vector<Scalar> allEntries;
+    std::vector<typename MatrixType::value_type> allEntries;
     allEntries.reserve(mat.N()*mat.M()+vec.size());
     for(const auto& row: mat)
     {
@@ -154,7 +154,7 @@ void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
     allEntries.insert(allEntries.end(), vec.begin(), vec.end());
     comm.sum(allEntries.data(), allEntries.size());
     auto pos = allEntries.begin();
-    auto cols = mat.cols();
+    auto cols = mat.mat_cols();
     for(auto&& row: mat)
     {
         std::copy(pos, pos + cols, &(row[0]));
@@ -163,6 +163,13 @@ void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
     assert(std::size_t(allEntries.end() - pos) == vec.size());
     std::copy(pos, allEntries.end(), &(vec[0]));
 }
+
+template void Opm::wellhelpers::sumDistributedWellEntries<Dune::FieldMatrix<double, 2, 2>, Dune::FieldVector<double, 2>, Dune::Communication<ompi_communicator_t*>>(Dune::FieldMatrix<double, 2, 2>&, Dune::FieldVector<double, 2>&, Dune::Communication<ompi_communicator_t*> const&);
+template void Opm::wellhelpers::sumDistributedWellEntries<Dune::FieldMatrix<double, 3, 3>, Dune::FieldVector<double, 3>, Dune::Communication<ompi_communicator_t*>>(Dune::FieldMatrix<double, 3, 3>&, Dune::FieldVector<double, 3>&, Dune::Communication<ompi_communicator_t*> const&);
+template void Opm::wellhelpers::sumDistributedWellEntries<Dune::FieldMatrix<double, 4, 4>, Dune::FieldVector<double, 4>, Dune::Communication<ompi_communicator_t*>>(Dune::FieldMatrix<double, 4, 4>&, Dune::FieldVector<double, 4>&, Dune::Communication<ompi_communicator_t*> const&);
+template void Opm::wellhelpers::sumDistributedWellEntries<Dune::FieldMatrix<float, 2, 2>, Dune::FieldVector<float, 2>, Dune::Communication<ompi_communicator_t*>>(Dune::FieldMatrix<float, 2, 2>&, Dune::FieldVector<float, 2>&, Dune::Communication<ompi_communicator_t*> const&);
+template void Opm::wellhelpers::sumDistributedWellEntries<Dune::FieldMatrix<float, 3, 3>, Dune::FieldVector<float, 3>, Dune::Communication<ompi_communicator_t*>>(Dune::FieldMatrix<float, 3, 3>&, Dune::FieldVector<float, 3>&, Dune::Communication<ompi_communicator_t*> const&);
+template void Opm::wellhelpers::sumDistributedWellEntries<Dune::FieldMatrix<float, 4, 4>, Dune::FieldVector<float, 4>, Dune::Communication<ompi_communicator_t*>>(Dune::FieldMatrix<float, 4, 4>&, Dune::FieldVector<float, 4>&, Dune::Communication<ompi_communicator_t*> const&);
 
 template <class DenseMatrix>
 DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M)
