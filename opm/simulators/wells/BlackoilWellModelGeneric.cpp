@@ -612,6 +612,10 @@ checkGroupHigherConstraints(const Group& group,
         std::vector<Scalar> resv_coeff_inj(phase_usage_.num_phases, 0.0);
         calcInjResvCoeff(fipnum, pvtreg, resv_coeff_inj);
 
+        // checkGroupConstraintsInj considers 'available' rates (e.g., group rates minus reduction rates).
+        // So when checking constraints, current groups rate must also be subtracted it's reductioin rate
+        const std::vector<Scalar> reduction_rates = this->groupState().injection_reduction_rates(group.name());
+
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                                             schedule(),
@@ -620,7 +624,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                                             phasePos,
                                                                                             /* isInjector */ true);
             // Sum over all processes
-            rates[phasePos] = comm_.sum(local_current_rate);
+            rates[phasePos] = comm_.sum(local_current_rate) - reduction_rates[phasePos];
         }
         const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
         for (Phase phase : all) {
@@ -665,6 +669,10 @@ checkGroupHigherConstraints(const Group& group,
 
     if (!isField && group.isProductionGroup()) {
         // Obtain rates for group.
+        // checkGroupConstraintsProd considers 'available' rates (e.g., group rates minus reduction rates).
+        // So when checking constraints, current groups rate must also be subtracted it's reductioin rate
+        const std::vector<Scalar> reduction_rates = this->groupState().production_reduction_rates(group.name());
+
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                                             schedule(),
@@ -673,7 +681,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                                             phasePos,
                                                                                             /* isInjector */ false);
             // Sum over all processes
-            rates[phasePos] = -comm_.sum(local_current_rate);
+            rates[phasePos] = -comm_.sum(local_current_rate) - reduction_rates[phasePos];
         }
         std::vector<Scalar> resv_coeff(phase_usage_.num_phases, 0.0);
         calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
