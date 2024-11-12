@@ -1845,53 +1845,6 @@ namespace Opm
         const int nseg = this->numberOfSegments();
 
         for (int seg = 0; seg < nseg; ++seg) {
-            // calculating the accumulation term
-            // TODO: without considering the efficiency factor for now
-            {
-                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(simulator, seg);
-
-                // Add a regularization_factor to increase the accumulation term
-                // This will make the system less stiff and help convergence for
-                // difficult cases
-                const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
-                // for each component
-                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx)
-                                                     - segment_fluid_initial_[seg][comp_idx]) / dt;
-                    MultisegmentWellAssemble(*this).
-                        assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
-                }
-            }
-            // considering the contributions due to flowing out from the segment
-            {
-                const int seg_upwind = this->segments_.upwinding_segment(seg);
-                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const EvalWell segment_rate =
-                        this->primary_variables_.getSegmentRateUpwinding(seg,
-                                                                         seg_upwind,
-                                                                         comp_idx) *
-                        this->well_efficiency_factor_;
-                    MultisegmentWellAssemble(*this).
-                        assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
-                }
-            }
-
-            // considering the contributions from the inlet segments
-            {
-                for (const int inlet : this->segments_.inlets()[seg]) {
-                    const int inlet_upwind = this->segments_.upwinding_segment(inlet);
-                    for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                        const EvalWell inlet_rate =
-                            this->primary_variables_.getSegmentRateUpwinding(inlet,
-                                                                             inlet_upwind,
-                                                                             comp_idx) *
-                            this->well_efficiency_factor_;
-                        MultisegmentWellAssemble(*this).
-                            assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
-                    }
-                }
-            }
-
             // calculating the perforation rate for each perforation that belongs to this segment
             const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
             auto& perf_data = ws.perf_data;
@@ -1936,6 +1889,59 @@ namespace Opm
 
                     MultisegmentWellAssemble(*this).
                         assemblePerforationEq(seg, local_perf_index, comp_idx, cq_s_effective, this->linSys_);
+                }
+            }
+        }
+
+        if (this->parallel_well_info_.communication().size() > 1) {
+            // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
+            this->linSys_.sumDistributed(this->parallel_well_info_.communication());
+        }
+        for (int seg = 0; seg < nseg; ++seg) {
+            // calculating the accumulation term
+            // TODO: without considering the efficiency factor for now
+            {
+                const EvalWell segment_surface_volume = getSegmentSurfaceVolume(simulator, seg);
+
+                // Add a regularization_factor to increase the accumulation term
+                // This will make the system less stiff and help convergence for
+                // difficult cases
+                const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
+                // for each component
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx)
+                                                     - segment_fluid_initial_[seg][comp_idx]) / dt;
+                    MultisegmentWellAssemble(*this).
+                        assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
+                }
+            }
+            // considering the contributions due to flowing out from the segment
+            {
+                const int seg_upwind = this->segments_.upwinding_segment(seg);
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    const EvalWell segment_rate =
+                        this->primary_variables_.getSegmentRateUpwinding(seg,
+                                                                         seg_upwind,
+                                                                         comp_idx) *
+                        this->well_efficiency_factor_;
+                    MultisegmentWellAssemble(*this).
+                        assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
+                }
+            }
+
+            // considering the contributions from the inlet segments
+            {
+                for (const int inlet : this->segments_.inlets()[seg]) {
+                    const int inlet_upwind = this->segments_.upwinding_segment(inlet);
+                    for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                        const EvalWell inlet_rate =
+                            this->primary_variables_.getSegmentRateUpwinding(inlet,
+                                                                             inlet_upwind,
+                                                                             comp_idx) *
+                            this->well_efficiency_factor_;
+                        MultisegmentWellAssemble(*this).
+                            assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
+                    }
                 }
             }
 
