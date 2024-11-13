@@ -85,9 +85,10 @@ namespace {
         Opm::OpmLog::info("ACTION_TRIGGERED", message);
     }
 
-    void logActiveAction(const std::string&              actionName,
-                         const std::vector<std::string>& matchingWells,
-                         const std::string&              timeString)
+    template <typename WellNameRange>
+    void logActiveAction(const std::string&   actionName,
+                         const WellNameRange& matchingWells,
+                         const std::string&   timeString)
     {
         const auto wellString = matchingWells.empty()
             ? std::string{}
@@ -136,17 +137,17 @@ namespace {
 
     template <typename Scalar, class WellModel>
     std::unordered_map<std::string, Scalar>
-    fetchWellPI(const int                          reportStep,
-                const Opm::Schedule&               schedule,
-                const WellModel&                   wellModel,
-                const Opm::Action::ActionX&        action,
-                const std::vector<std::string>&    matching_wells,
-                const Opm::Parallel::Communication comm)
+    fetchWellPI(const int                                    reportStep,
+                const Opm::Schedule&                         schedule,
+                const WellModel&                             wellModel,
+                const Opm::Action::ActionX&                  action,
+                const Opm::Action::Result::MatchingEntities& matches,
+                const Opm::Parallel::Communication           comm)
     {
         auto wellpi = std::unordered_map<std::string, Scalar> {};
 
         const auto wellpi_wells = action.wellpi_wells
-            (schedule.wellMatcher(reportStep), matching_wells);
+            (schedule.wellMatcher(reportStep), matches);
 
         if (wellpi_wells.empty()) {
             return wellpi;
@@ -226,22 +227,22 @@ applyActions(const int reportStep,
     const auto simTime = asTimeT(now);
     for (const auto& action : actions.pending(this->actionState_, simTime)) {
         const auto actionResult = action->eval(context);
-        if (! actionResult) {
+        if (! actionResult.conditionSatisfied()) {
             ++non_triggered;
             logInactiveAction(action->name(), ts);
             continue;
         }
 
-        const auto& matching_wells = actionResult.wells();
+        const auto& matches = actionResult.matches();
 
-        logActiveAction(action->name(), matching_wells, ts);
+        logActiveAction(action->name(), matches.wells(), ts);
 
         const auto wellpi = fetchWellPI<Scalar>
             (reportStep, this->schedule_, this->wellModel_,
-             *action, matching_wells, this->comm_);
+             *action, matches, this->comm_);
 
         const auto sim_update = this->schedule_
-            .applyAction(reportStep, *action, matching_wells, wellpi);
+            .applyAction(reportStep, *action, matches, wellpi);
 
         this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
         this->actionState_.add_run(*action, simTime, actionResult);
