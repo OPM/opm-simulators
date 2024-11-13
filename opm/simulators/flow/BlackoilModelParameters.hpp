@@ -127,8 +127,8 @@ struct UseImplicitIpr { static constexpr bool value = true; };
 struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = true; };
 
 // Network solver parameters
-struct NetworkMaxStrictIterations { static constexpr int value = 100; };
-struct NetworkMaxIterations { static constexpr int value = 200; };
+struct NetworkMaxStrictIterations { static constexpr int value = 10; };
+struct NetworkMaxIterations { static constexpr int value = 20; };
 struct NonlinearSolver { static constexpr auto value = "newton"; };
 struct LocalSolveApproach { static constexpr auto value = "gauss-seidel"; };
 struct MaxLocalSolveIterations { static constexpr int value = 20; };
