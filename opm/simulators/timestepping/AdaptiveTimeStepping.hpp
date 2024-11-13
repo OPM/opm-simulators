@@ -426,24 +426,34 @@ void registerAdaptiveParameters();
                             // Found no wells to close, chop the timestep as above.
                             chopTimestep();
                         } else {
-                            // Close all consistently failing wells.
-                            int num_shut_wells = 0;
+                            // Close all consistently failing wells that are not under group control
+                            std::vector<std::string> shut_wells;
                             for (const auto& well : failing_wells) {
-                                bool was_shut = solver.model().wellModel().forceShutWellByName(well, substepTimer.simulationTimeElapsed());
+                                bool was_shut = solver.model().wellModel().forceShutWellByName(
+                                                            well, substepTimer.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ true);
                                 if (was_shut) {
-                                    ++num_shut_wells;
+                                    shut_wells.push_back(well);
                                 }
                             }
-                            if (num_shut_wells == 0) {
-                                // None of the problematic wells were shut.
-                                // We must fall back to chopping again.
+                            // If no wells are closed we also try to shut wells under group control
+                            if (shut_wells.empty()) {
+                                for (const auto& well : failing_wells) {
+                                    bool was_shut = solver.model().wellModel().forceShutWellByName(
+                                                            well, substepTimer.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ false);
+                                    if (was_shut) {
+                                        shut_wells.push_back(well);
+                                    }
+                                }
+                            }
+                            // If still no wells are closed we must fall back to chopping again
+                            if (shut_wells.empty()) {
                                 chopTimestep();
                             } else {
                                 substepTimer.provideTimeStepEstimate(dt);
                                 if (solverVerbose_) {
                                     std::string msg;
                                     msg = "\nProblematic well(s) were shut: ";
-                                    for (const auto& well : failing_wells) {
+                                    for (const auto& well : shut_wells) {
                                         msg += well;
                                         msg += " ";
                                     }
