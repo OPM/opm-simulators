@@ -1818,6 +1818,53 @@ namespace Opm
         const int nseg = this->numberOfSegments();
 
         for (int seg = 0; seg < nseg; ++seg) {
+            // calculating the perforation rate for each perforation that belongs to this segment
+            const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
+            auto& perf_data = ws.perf_data;
+            auto& perf_rates = perf_data.phase_rates;
+            auto& perf_press_state = perf_data.pressure;
+            for (const int perf : this->segments_.perforations()[seg]) {
+                const int cell_idx = this->well_cells_[perf];
+
+                const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+                std::vector<EvalWell> mob(this->num_components_, 0.0);
+                getMobility(simulator, perf, mob, deferred_logger);
+                const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quants, cell_idx);
+                const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+                const std::vector<Scalar> Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
+                std::vector<EvalWell> cq_s(this->num_components_, 0.0);
+                EvalWell perf_press;
+                PerforationRates<Scalar> perfRates;
+                computePerfRate(int_quants, mob, Tw, seg, perf, seg_pressure,
+                                allow_cf, cq_s, perf_press, perfRates, deferred_logger);
+
+                // updating the solution gas rate and solution oil rate
+                if (this->isProducer()) {
+                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
+                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
+                    perf_data.phase_mixing_rates[perf][ws.dissolved_gas] = perfRates.dis_gas;
+                    perf_data.phase_mixing_rates[perf][ws.vaporized_oil] = perfRates.vap_oil;
+                }
+
+                // store the perf pressure and rates
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    perf_rates[perf*this->number_of_phases_ + this->modelCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
+                }
+                perf_press_state[perf] = perf_press.value();
+
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    // the cq_s entering mass balance equations need to consider the efficiency factors.
+                    const EvalWell cq_s_effective = cq_s[comp_idx] * this->well_efficiency_factor_;
+
+                    this->connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
+
+                    MultisegmentWellAssemble(*this).
+                        assemblePerforationEq(seg, perf, comp_idx, cq_s_effective, this->linSys_);
+                }
+            }
+        }
+
+        for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term
             // TODO: without considering the efficiency factor for now
             {
@@ -1862,50 +1909,6 @@ namespace Opm
                         MultisegmentWellAssemble(*this).
                             assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
                     }
-                }
-            }
-
-            // calculating the perforation rate for each perforation that belongs to this segment
-            const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
-            auto& perf_data = ws.perf_data;
-            auto& perf_rates = perf_data.phase_rates;
-            auto& perf_press_state = perf_data.pressure;
-            for (const int perf : this->segments_.perforations()[seg]) {
-                const int cell_idx = this->well_cells_[perf];
-                const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-                std::vector<EvalWell> mob(this->num_components_, 0.0);
-                getMobility(simulator, perf, mob, deferred_logger);
-                const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quants, cell_idx);
-                const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
-                std::vector<EvalWell> cq_s(this->num_components_, 0.0);
-                EvalWell perf_press;
-                PerforationRates<Scalar> perfRates;
-                computePerfRate(int_quants, mob, Tw, seg, perf, seg_pressure,
-                                allow_cf, cq_s, perf_press, perfRates, deferred_logger);
-
-                // updating the solution gas rate and solution oil rate
-                if (this->isProducer()) {
-                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
-                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
-                    perf_data.phase_mixing_rates[perf][ws.dissolved_gas] = perfRates.dis_gas;
-                    perf_data.phase_mixing_rates[perf][ws.vaporized_oil] = perfRates.vap_oil;
-                }
-
-                // store the perf pressure and rates
-                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    perf_rates[perf*this->number_of_phases_ + this->modelCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
-                }
-                perf_press_state[perf] = perf_press.value();
-
-                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    // the cq_s entering mass balance equations need to consider the efficiency factors.
-                    const EvalWell cq_s_effective = cq_s[comp_idx] * this->well_efficiency_factor_;
-
-                    this->connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
-
-                    MultisegmentWellAssemble(*this).
-                        assemblePerforationEq(seg, perf, comp_idx, cq_s_effective, this->linSys_);
                 }
             }
 
