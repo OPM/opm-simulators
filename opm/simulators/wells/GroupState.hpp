@@ -31,8 +31,13 @@
 
 #include <map>
 #include <vector>
+#include <utility>
 
 namespace Opm {
+
+    class GConSump;
+    class Schedule;
+    class SummaryState;
 
 template<class Scalar>
 class GroupState {
@@ -94,6 +99,10 @@ public:
     bool has_injection_control(const std::string& gname, Phase phase) const;
     void injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode);
     Group::InjectionCMode injection_control(const std::string& gname, Phase phase) const;
+
+    void update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state);
+    const std::pair<Scalar, Scalar>& gconsump_rates(const std::string& gname) const;
+
 
     std::size_t data_size() const;
     std::size_t collect(Scalar* data) const;
@@ -189,6 +198,7 @@ public:
         serializer(m_gpmaint_target);
         serializer(injection_controls);
         serializer(gpmaint_state);
+        serializer(m_gconsump_rates);
     }
 
 private:
@@ -207,6 +217,8 @@ private:
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
     WellContainer<GPMaint::State> gpmaint_state;
+    std::map<std::string, std::pair<Scalar, Scalar>> m_gconsump_rates; // Pair with {consumption_rate, import_rate} for each group
+    static constexpr std::pair<Scalar, Scalar> zero_pair = {0.0, 0.0};
 };
 
 }

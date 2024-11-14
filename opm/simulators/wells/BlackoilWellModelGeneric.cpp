@@ -489,14 +489,12 @@ checkGconsaleLimits(const Group& group,
     Scalar production_target = gconsale.sales_target + injection_rate;
 
     // add import rate and subtract consumption rate for group for gas
-    if (schedule()[reportStepIdx].gconsump().has(group.name())) {
-        const auto& gconsump = schedule()[reportStepIdx].gconsump().get(group.name(), summaryState_);
-        if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
-            sales_rate += gconsump.import_rate;
-            sales_rate -= gconsump.consumption_rate;
-            production_target -= gconsump.import_rate;
-            production_target += gconsump.consumption_rate;
-        }
+    if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
+        const auto& [consumption_rate, import_rate] = this->groupState().gconsump_rates(group.name());
+        sales_rate += import_rate;
+        sales_rate -= consumption_rate;
+        production_target -= import_rate;
+        production_target += consumption_rate;
     }
 
     if (sales_rate > gconsale.max_sales_rate) {
@@ -1192,6 +1190,11 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
     const int nupcol = schedule()[reportStepIdx].nupcol();
 
+    // Update accumulated group consumption/import rates for current report step
+    if(iterationIdx == 0) {
+        this->groupState().update_gconsump(schedule(), reportStepIdx, this->summaryState_);
+    }
+
     // This builds some necessary lookup structures, so it must be called
     // before we copy to well_state_nupcol_.
     this->wellState().updateGlobalIsGrup(comm_);
@@ -1199,6 +1202,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     if (iterationIdx < nupcol) {
         this->updateNupcolWGState();
     }
+
 
     auto& well_state = this->wellState();
     const auto& well_state_nupcol = this->nupcolWellState();
