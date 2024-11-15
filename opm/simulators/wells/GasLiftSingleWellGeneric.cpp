@@ -170,6 +170,74 @@ runOptimize(const int iteration_idx)
     return state;
 }
 
+template<class Scalar>
+std::pair<Scalar, bool>
+GasLiftSingleWellGeneric<Scalar>::
+wellTestALQ()
+{
+    // If WLIFTOPT item 2 is NO we don't optimize
+    if (!this->optimize_) {
+        return {0.0, false};
+    }
+
+    Scalar temp_alq = std::max(this->min_alq_, 0.0);
+    auto cur_alq = temp_alq;
+    auto init_rates = computeLimitedWellRatesWithALQ_(temp_alq);
+    LimitedRates new_rates = *init_rates;
+    std::optional<LimitedRates> rates;
+    Scalar old_gradient = 0.0;
+    bool alq_is_limited = false;
+    bool increase = true;
+    OptimizeState state {*this, increase};
+    bool success = false;
+
+    while (!state.stop_iteration && (++state.it <= this->max_iterations_)) {
+        if (state.checkAlqOutsideLimits(temp_alq, new_rates.oil))
+            break;
+        std::optional<Scalar> alq_opt;
+        std::tie(alq_opt, alq_is_limited) = state.addOrSubtractAlqIncrement(temp_alq);
+        if (!alq_opt)
+            break;
+
+        temp_alq = *alq_opt;
+        if (this->debug)
+            state.debugShowIterationInfo(temp_alq);
+        rates = new_rates;
+        auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq);
+        if (!temp_rates)
+            temp_rates->oil = 0.0;
+        if (temp_rates->bhp_is_limited)
+            state.stop_iteration = true;
+
+        auto gradient = state.calcEcoGradient(rates->oil, temp_rates->oil, rates->gas, temp_rates->gas);
+        if (this->debug)
+            debugCheckNegativeGradient_(gradient,
+                                        cur_alq,
+                                        temp_alq,
+                                        rates->oil,
+                                        temp_rates->oil,
+                                        rates->gas,
+                                        temp_rates->gas,
+                                        increase);
+        if (!success && gradient != old_gradient) {
+            success = true;
+        }
+        if (success && gradient <= old_gradient) {
+            break;
+        }
+        cur_alq = temp_alq;
+        new_rates = *temp_rates;
+        old_gradient = gradient;
+    }
+    if (state.it > this->max_iterations_) {
+        warnMaxIterationsExceeded_();
+    }
+    if (success) {
+        this->well_state_.gliftUpdateAlqIncreaseCount(this->well_name_, increase);
+    }
+    return {cur_alq, success};
+}
+
 /****************************************
  * Protected methods in alphabetical order
  ****************************************/
