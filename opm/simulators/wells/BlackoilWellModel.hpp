@@ -500,13 +500,8 @@ template<class Scalar> class WellContributions;
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
 
-            void initializeWBPCalculationService();
-
             data::WellBlockAveragePressures
             computeWellBlockAveragePressures() const;
-
-            typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
-            makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
 
             void updateAverageFormationFactor();
 

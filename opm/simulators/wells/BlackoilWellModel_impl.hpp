@@ -2358,34 +2358,6 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    initializeWBPCalculationService()
-    {
-        this->wbpCalcMap_.clear();
-        this->wbpCalcMap_.resize(this->wells_ecl_.size());
-
-        this->registerOpenWellsForWBPCalculation();
-
-        auto wellID = std::size_t{0};
-        for (const auto& well : this->wells_ecl_) {
-            this->wbpCalcMap_[wellID].wbpCalcIdx_ = this->wbpCalculationService_
-                .createCalculator(well,
-                                  this->local_parallel_well_info_[wellID],
-                                  this->conn_idx_map_[wellID].local(),
-                                  this->makeWellSourceEvaluatorFactory(wellID));
-
-            ++wellID;
-        }
-
-        this->wbpCalculationService_.defineCommunication();
-    }
-
-
-
-
-
-    template <typename TypeTag>
     data::WellBlockAveragePressures
     BlackoilWellModel<TypeTag>::
     computeWellBlockAveragePressures() const
@@ -2425,61 +2397,6 @@ namespace Opm {
         }
 
         return wbpResult;
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    typename ParallelWBPCalculation<typename BlackoilWellModel<TypeTag>::Scalar>::EvaluatorFactory
-    BlackoilWellModel<TypeTag>::
-    makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
-    {
-        using Span = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
-        using Item = typename Span::Item;
-
-        return [wellIdx, this]() -> typename ParallelWBPCalculation<Scalar>::Evaluator
-        {
-            if (! this->wbpCalcMap_[wellIdx].openWellIdx_.has_value()) {
-                // Well is stopped/shut.  Return evaluator for stopped wells.
-                return []([[maybe_unused]] const int connIdx, Span sourceTerm)
-                {
-                    // Well/connection is stopped/shut.  Set all items to
-                    // zero.
-
-                    sourceTerm
-                        .set(Item::Pressure      , 0.0)
-                        .set(Item::PoreVol       , 0.0)
-                        .set(Item::MixtureDensity, 0.0)
-                        .set(Item::Depth         , 0.0)
-                        ;
-                };
-            }
-
-            // Well is open.  Return an evaluator for open wells/open connections.
-            return [this, wellPtr = this->well_container_[*this->wbpCalcMap_[wellIdx].openWellIdx_].get()]
-                (const int connIdx, Span sourceTerm)
-            {
-                // Note: The only item which actually matters for the WBP
-                // calculation at the well reservoir connection level is the
-                // mixture density.  Set other items to zero.
-
-                const auto& connIdxMap =
-                    this->conn_idx_map_[wellPtr->indexOfWell()];
-
-                const auto rho = wellPtr->
-                    connectionDensity(connIdxMap.global(connIdx),
-                                      connIdxMap.open(connIdx));
-
-                sourceTerm
-                    .set(Item::Pressure      , 0.0)
-                    .set(Item::PoreVol       , 0.0)
-                    .set(Item::MixtureDensity, rho)
-                    .set(Item::Depth         , 0.0)
-                    ;
-            };
-        };
     }
 
 

@@ -460,6 +460,11 @@ protected:
 
     void registerOpenWellsForWBPCalculation();
 
+    typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
+    makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
+
+    void initializeWBPCalculationService();
+
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
