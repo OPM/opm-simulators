@@ -358,11 +358,6 @@ public:
         return connectionRates_;
     }
 
-    virtual int setPrimaryVars(typename std::vector<Scalar>::const_iterator)
-    {
-        return 0;
-    }
-
     std::vector<Scalar> wellIndex(const int perf,
                                   const IntensiveQuantities& intQuants,
                                   const Scalar trans_mult,
