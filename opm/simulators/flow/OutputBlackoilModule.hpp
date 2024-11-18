@@ -233,11 +233,12 @@ public:
                     this->mechPotentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
                     this->mechPotentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
 
-                    this->dispX_[globalDofIdx] = model.disp(globalDofIdx, 0);
-                    this->dispY_[globalDofIdx] = model.disp(globalDofIdx, 1);
-                    this->dispZ_[globalDofIdx] = model.disp(globalDofIdx, 2);
+                    auto disp = model.disp(globalDofIdx,/*include_fracture*/true); 
+                    this->dispX_[globalDofIdx] = disp[0];
+                    this->dispY_[globalDofIdx] = disp[1];
+                    this->dispZ_[globalDofIdx] = disp[2];
                     //total stress is not stored but calulated result is voit notation
-                    auto stress = model.stress(globalDofIdx);
+                    auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
                     this->stressXX_[globalDofIdx] = stress[0];
                     this->stressYY_[globalDofIdx] = stress[1];
                     this->stressZZ_[globalDofIdx] = stress[2];
@@ -246,7 +247,7 @@ public:
                     this->stressXZ_[globalDofIdx] = stress[4];
                     this->stressYZ_[globalDofIdx] = stress[3];
                     
-                    auto strain = model.strain(globalDofIdx);
+                    auto strain = model.strain(globalDofIdx,/*include_fracture*/true);
                     this->strainXX_[globalDofIdx] = strain[0];
                     this->strainYY_[globalDofIdx] = strain[1];
                     this->strainZZ_[globalDofIdx] = strain[2];
@@ -255,7 +256,7 @@ public:
                     this->strainXZ_[globalDofIdx] = strain[4];
                     this->strainYZ_[globalDofIdx] = strain[3];
 
-                    auto delstress = model.delstress(globalDofIdx);
+                    auto delstress = model.delstress(globalDofIdx);//not including fracture
                     this->delstressXX_[globalDofIdx] = delstress[ 0];
                     this->delstressYY_[globalDofIdx] = delstress[ 1];
                     this->delstressZZ_[globalDofIdx] = delstress[ 2];
@@ -264,7 +265,7 @@ public:
                     this->delstressXZ_[globalDofIdx] = delstress[ 4];
                     this->delstressYZ_[globalDofIdx] = delstress[ 3];
 
-                    auto linstress = model.linstress(globalDofIdx);
+                    auto linstress = model.linstress(globalDofIdx);;
                     this->linstressXX_[globalDofIdx] = linstress[ 0];
                     this->linstressYY_[globalDofIdx] = linstress[ 1];
                     this->linstressZZ_[globalDofIdx] = linstress[ 2];
@@ -273,7 +274,7 @@ public:
                     this->linstressXZ_[globalDofIdx] = linstress[ 4];
                     this->linstressYZ_[globalDofIdx] = linstress[ 3];
 
-                    auto fracstress = model.fractureStress(globalDofIdx);
+                    auto fracstress = model.fractureStress(globalDofIdx);//is the tresagii stress which make rock fracture
                     this->fracstressXX_[globalDofIdx] = fracstress[ 0];
                     this->fracstressYY_[globalDofIdx] = fracstress[ 1];
                     this->fracstressZZ_[globalDofIdx] = fracstress[ 2];
