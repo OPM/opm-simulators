@@ -48,7 +48,7 @@ set (opm-simulators_DEPS
   # Look for MPI support
   "MPI"
   # Tim Davis' SuiteSparse archive
-  "SuiteSparse REQUIRED COMPONENTS umfpack"
+  "SuiteSparse REQUIRED COMPONENTS UMFPACK"
   # SuperLU direct solver
   "SuperLU"
   # ROCALUTION from ROCM framework
