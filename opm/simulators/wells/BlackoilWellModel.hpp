@@ -508,8 +508,6 @@ template<class Scalar> class WellContributions;
             typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
             makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
 
-            void registerOpenWellsForWBPCalculation();
-
             void updateAverageFormationFactor();
 
             void computePotentials(const std::size_t widx,
