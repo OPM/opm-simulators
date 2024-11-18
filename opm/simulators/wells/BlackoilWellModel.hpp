@@ -389,7 +389,7 @@ template<class Scalar> class WellContributions;
 
             void logPrimaryVars() const;
             std::vector<Scalar> getPrimaryVarsDomain(const int domainIdx) const;
-            void setPrimaryVarsDomain(const Domain& domain, const std::vector<Scalar>& vars);
+            void setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars);
 
             void setupDomains(const std::vector<Domain>& domains);
 
