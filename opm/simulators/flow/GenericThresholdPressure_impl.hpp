@@ -134,8 +134,8 @@ finishInit()
 
     /*
       If this is a restart run the ThresholdPressure object will be active,
-      but it will *not* be properly initialized with numerical values. The
-      values must instead come from the THPRES vector in the restart file.
+      and already properly initialized with numerical values from the restart.
+      Done using GenericThresholdPressure::setFromRestart() in EclWriter::beginRestart().
     */
     if (simConfig.getThresholdPressure().restart())
         return;
