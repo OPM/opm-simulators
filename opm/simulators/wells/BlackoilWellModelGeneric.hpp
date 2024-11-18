@@ -458,6 +458,8 @@ protected:
     void assignMassGasRate(data::Wells& wsrpt,
                            const Scalar& gasDensity) const;
 
+    void registerOpenWellsForWBPCalculation();
+
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;

@@ -2085,6 +2085,22 @@ setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
     assert(offset == vars.size());
 }
 
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+registerOpenWellsForWBPCalculation()
+{
+    assert (this->wbpCalcMap_.size() == this->wells_ecl_.size());
+
+    for (auto& wbpCalc : this->wbpCalcMap_) {
+        wbpCalc.openWellIdx_.reset();
+    }
+
+    auto openWellIdx = typename std::vector<WellInterfaceGeneric<Scalar>*>::size_type{0};
+    for (const auto* openWell : this->well_container_generic_) {
+        this->wbpCalcMap_[openWell->indexOfWell()].openWellIdx_ = openWellIdx++;
+    }
+}
+
 template class BlackoilWellModelGeneric<double>;
 
 #if FLOW_INSTANTIATE_FLOAT

@@ -2486,27 +2486,6 @@ namespace Opm {
 
 
 
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    registerOpenWellsForWBPCalculation()
-    {
-        assert (this->wbpCalcMap_.size() == this->wells_ecl_.size());
-
-        for (auto& wbpCalc : this->wbpCalcMap_) {
-            wbpCalc.openWellIdx_.reset();
-        }
-
-        auto openWellIdx = typename std::vector<WellInterfacePtr>::size_type{0};
-        for (const auto* openWell : this->well_container_generic_) {
-            this->wbpCalcMap_[openWell->indexOfWell()].openWellIdx_ = openWellIdx++;
-        }
-    }
-
-
-
-
-
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
