@@ -504,11 +504,14 @@ recalculateGradientAndUpdateData_(GradPairItr& grad_itr,
                 updateGradVector_(name, other_grads, grad->grad);
             }
             else {
-                for (auto it = other_grads.begin(); it != other_grads.end(); it++) {
-                    if (it->first == name) {
-                        other_grads.erase(it);
-                        deleteGrad_(name, !increase);
-                    }
+                auto new_end = std::remove_if(other_grads.begin(), other_grads.end(), [&name](const GradPair& pair)
+                                                                        {
+                                                                            return (name==pair.first);
+                                                                        }
+                            );
+                if (new_end != other_grads.end()) {
+                    this->deleteGrad_(name, !increase);
+                    other_grads.erase(new_end, other_grads.end());
                 }
             }
         }
