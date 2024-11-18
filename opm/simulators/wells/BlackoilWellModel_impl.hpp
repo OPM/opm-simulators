@@ -2357,52 +2357,6 @@ namespace Opm {
 
 
 
-    template <typename TypeTag>
-    data::WellBlockAveragePressures
-    BlackoilWellModel<TypeTag>::
-    computeWellBlockAveragePressures() const
-    {
-        auto wbpResult = data::WellBlockAveragePressures{};
-
-        using Calculated = typename PAvgCalculatorResult<Scalar>::WBPMode;
-        using Output = data::WellBlockAvgPress::Quantity;
-
-        this->wbpCalculationService_.collectDynamicValues();
-
-        const auto numWells = this->wells_ecl_.size();
-        for (auto wellID = 0*numWells; wellID < numWells; ++wellID) {
-            const auto calcIdx = this->wbpCalcMap_[wellID].wbpCalcIdx_;
-            const auto& well = this->wells_ecl_[wellID];
-
-            if (! well.hasRefDepth()) {
-                // Can't perform depth correction without at least a
-                // fall-back datum depth.
-                continue;
-            }
-
-            this->wbpCalculationService_
-                .inferBlockAveragePressures(calcIdx, well.pavg(),
-                                            this->gravity_,
-                                            well.getWPaveRefDepth());
-
-            const auto& result = this->wbpCalculationService_
-                .averagePressures(calcIdx);
-
-            auto& reported = wbpResult.values[well.name()];
-
-            reported[Output::WBP]  = result.value(Calculated::WBP);
-            reported[Output::WBP4] = result.value(Calculated::WBP4);
-            reported[Output::WBP5] = result.value(Calculated::WBP5);
-            reported[Output::WBP9] = result.value(Calculated::WBP9);
-        }
-
-        return wbpResult;
-    }
-
-
-
-
-
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::

@@ -465,6 +465,9 @@ protected:
 
     void initializeWBPCalculationService();
 
+    data::WellBlockAveragePressures
+    computeWellBlockAveragePressures(const Scalar gravity) const;
+
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
