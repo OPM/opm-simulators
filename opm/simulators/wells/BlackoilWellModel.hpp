@@ -425,14 +425,6 @@ template<class Scalar> class WellContributions;
             std::unique_ptr<RateConverterType> rateConverter_{};
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
 
-            struct WBPCalcID
-            {
-                std::optional<typename std::vector<WellInterfacePtr>::size_type> openWellIdx_{};
-                std::size_t wbpCalcIdx_{};
-            };
-
-            std::vector<WBPCalcID> wbpCalcMap_{};
-
             SimulatorReportSingle last_report_{};
 
             // Pre-step network solve at static reservoir conditions (group and well states might be updated)

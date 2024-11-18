@@ -581,6 +581,14 @@ protected:
     std::vector<WellProdIndexCalculator<Scalar>> prod_index_calc_;
     mutable ParallelWBPCalculation<Scalar> wbpCalculationService_;
 
+    struct WBPCalcID
+    {
+        std::optional<typename std::vector<WellInterfaceGeneric<Scalar>*>::size_type> openWellIdx_{};
+        std::size_t wbpCalcIdx_{};
+    };
+
+    std::vector<WBPCalcID> wbpCalcMap_{};
+
     std::vector<int> pvt_region_idx_;
 
     mutable std::unordered_set<std::string> closed_this_step_;
