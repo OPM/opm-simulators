@@ -815,7 +815,7 @@ private:
                            const SimulatorTimerInterface& timer,
                            const Domain& domain)
     {
-        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
+        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, false);
         local_report = res.first;
@@ -840,7 +840,7 @@ private:
                                 const SimulatorTimerInterface& timer,
                                 const Domain& domain)
     {
-        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
+        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, true);
         local_report = res.first;
