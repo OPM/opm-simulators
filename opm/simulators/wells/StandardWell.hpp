@@ -467,15 +467,6 @@ namespace Opm
                                   const std::vector<EvalWell>& cq_s,
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
-
-        template<class Value>
-        void gasOilPerfRateInj(const std::vector<Value>& cq_s,
-                               PerforationRates<Scalar>& perf_rates,
-                               const Value& rv,
-                               const Value& rs,
-                               const Value& pressure,
-                               const Value& rvw,
-                               DeferredLogger& deferred_logger) const;
     };
 
 }

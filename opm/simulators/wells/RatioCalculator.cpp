@@ -93,6 +93,53 @@ disOilVapWatVolumeRatio(Value& volumeRatio,
 template<class Value>
 void
 RatioCalculator<Value>::
+gasOilPerfRateInj(const std::vector<Value>& cq_s,
+                  PerforationRates<Scalar>& perf_rates,
+                  const Value& rv,
+                  const Value& rs,
+                  const Value& pressure,
+                  const Value& rvw,
+                  const bool waterActive,
+                  DeferredLogger& deferred_logger) const
+{
+    // TODO: the formulations here remain to be tested with cases with strong crossflow through production wells
+    // s means standard condition, r means reservoir condition
+    // q_os = q_or * b_o + rv * q_gr * b_g
+    // q_gs = q_gr * b_g + rs * q_or * b_o
+    // d = 1.0 - rs * rv
+    // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
+    // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
+
+    const Scalar d = 1.0 - getValue(rv) * getValue(rs);
+
+    if (d <= 0.0) {
+        deferred_logger.debug(dValueError(d, name_,
+                                          "gasOilPerfRateInj",
+                                          rs, rv, pressure));
+    } else {
+        // vaporized oil into gas
+        // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
+        perf_rates.vap_oil = getValue(rv) * (getValue(cq_s[gasComp_]) -
+                                             getValue(rs) * getValue(cq_s[oilComp_])) / d;
+        // dissolved of gas in oil
+        // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
+        perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilComp_]) -
+                                             getValue(rv) * getValue(cq_s[gasComp_])) / d;
+    }
+
+    if (waterActive) {
+        // q_ws = q_wr * b_w + rvw * q_gr * b_g
+        // q_wr = 1 / b_w * (q_ws - rvw * q_gr * b_g) = 1 / b_w * (q_ws - rvw * 1 / d  (q_gs - rs * q_os))
+        // vaporized water in gas
+        // rvw * q_gr * b_g = q_ws -q_wr *b_w = rvw * (q_gs -rs *q_os) / d
+        perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasComp_]) -
+                                              getValue(rs) * getValue(cq_s[oilComp_])) / d;
+    }
+}
+
+template<class Value>
+void
+RatioCalculator<Value>::
 gasOilPerfRateProd(std::vector<Value>& cq_s,
                    PerforationRates<Scalar>& perf_rates,
                    const Value& rv,
