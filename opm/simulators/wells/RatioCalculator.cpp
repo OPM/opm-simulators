@@ -64,6 +64,34 @@ RatioCalculator(unsigned gasCompIdx,
 template<class Value>
 void
 RatioCalculator<Value>::
+disOilVapWatVolumeRatio(Value& volumeRatio,
+                        const Value& rvw,
+                        const Value& rsw,
+                        const Value& pressure,
+                        const std::vector<Value>& cmix_s,
+                        const std::vector<Value>& b_perfcells_dense,
+                        DeferredLogger& deferred_logger) const
+{
+    // Incorporate RSW/RVW factors if both water and gas active
+    const Value d = 1.0 - rvw * rsw;
+
+    if (d <= 0.0) {
+        deferred_logger.debug(dValueError(d, name_,
+                                          "disOilVapWatVolumeRatio",
+                                          rsw, rvw, pressure));
+    }
+    const Value tmp_wat = d > 0.0 ? (cmix_s[waterComp_] - rvw * cmix_s[gasComp_]) / d
+                                  : cmix_s[waterComp_];
+    volumeRatio += tmp_wat / b_perfcells_dense[waterComp_];
+
+    const Value tmp_gas =  d > 0.0 ? (cmix_s[gasComp_] - rsw * cmix_s[waterComp_]) / d
+                                   : cmix_s[gasComp_];
+    volumeRatio += tmp_gas / b_perfcells_dense[gasComp_];
+}
+
+template<class Value>
+void
+RatioCalculator<Value>::
 gasOilVolumeRatio(Value& volumeRatio,
                   const Value& rv,
                   const Value& rs,

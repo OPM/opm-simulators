@@ -293,8 +293,8 @@ namespace Opm
             Value volumeRatio = bhp * 0.0; // initialize it with the correct type
 
             if (FluidSystem::enableVaporizedWater() && FluidSystem::enableDissolvedGasInWater()) {
-                disOilVapWatVolumeRatio(volumeRatio, rvw, rsw, pressure,
-                                        cmix_s, b_perfcells_dense, deferred_logger);
+                ratioCalc.disOilVapWatVolumeRatio(volumeRatio, rvw, rsw, pressure,
+                                                  cmix_s, b_perfcells_dense, deferred_logger);
                 // DISGASW only supported for gas-water CO2STORE/H2STORE case
                 // and the simulator will throw long before it reach to this point in the code
                 // For blackoil support of DISGASW we need to add the oil component here
@@ -2795,37 +2795,4 @@ namespace Opm
             perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterCompIdx]) - getValue(rvw) * getValue(cq_s[gasCompIdx])) / dw;
         }
     }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    disOilVapWatVolumeRatio(Value& volumeRatio,
-                            const Value& rvw,
-                            const Value& rsw,
-                            const Value& pressure,
-                            const std::vector<Value>& cmix_s,
-                            const std::vector<Value>& b_perfcells_dense,
-                            DeferredLogger& deferred_logger) const
-    {
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        // Incorporate RSW/RVW factors if both water and gas active
-        const Value d = 1.0 - rvw * rsw;
-
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "disOilVapWatVolumeRatio",
-                                              rsw, rvw, pressure));
-        }
-        const Value tmp_wat = d > 0.0 ? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d
-                                      : cmix_s[waterCompIdx];
-        volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
-
-        const Value tmp_gas =  d > 0.0 ? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d
-                                       : cmix_s[gasCompIdx];
-        volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
-    }
-
 } // namespace Opm
