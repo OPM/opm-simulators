@@ -220,6 +220,7 @@ public:
     bool wasDynamicallyShutThisTimeStep(const std::string& well_name) const;
 
     void logPrimaryVars() const;
+    std::vector<Scalar> getPrimaryVarsDomain(const int domainIdx) const;
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)

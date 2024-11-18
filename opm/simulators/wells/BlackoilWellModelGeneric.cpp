@@ -2056,6 +2056,21 @@ logPrimaryVars() const
     OpmLog::debug(os.str());
 }
 
+template<class Scalar>
+std::vector<Scalar>
+BlackoilWellModelGeneric<Scalar>::
+getPrimaryVarsDomain(const int domainIdx) const
+{
+    std::vector<Scalar> ret;
+    for (const auto& well : this->well_container_generic_) {
+        if (this->well_domain_.at(well->name()) == domainIdx) {
+            const auto& pv = well->getPrimaryVars();
+            ret.insert(ret.end(), pv.begin(), pv.end());
+        }
+    }
+    return ret;
+}
+
 template class BlackoilWellModelGeneric<double>;
 
 #if FLOW_INSTANTIATE_FLOAT

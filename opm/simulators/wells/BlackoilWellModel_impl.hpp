@@ -2986,23 +2986,6 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    std::vector<typename BlackoilWellModel<TypeTag>::Scalar>
-    BlackoilWellModel<TypeTag>::
-    getPrimaryVarsDomain(const int domainIdx) const
-    {
-        std::vector<Scalar> ret;
-        for (const auto& well : well_container_) {
-            if (this->well_domain_.at(well->name()) == domainIdx) {
-                const auto& pv = well->getPrimaryVars();
-                ret.insert(ret.end(), pv.begin(), pv.end());
-            }
-        }
-        return ret;
-    }
-
-
-
-    template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
