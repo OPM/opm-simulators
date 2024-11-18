@@ -2986,25 +2986,6 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    logPrimaryVars() const
-    {
-        std::ostringstream os;
-        for (const auto& w : well_container_) {
-            os << w->name() << ":";
-            auto pv = w->getPrimaryVars();
-            for (const Scalar v : pv) {
-                os << ' ' << v;
-            }
-            os << '\n';
-        }
-        OpmLog::debug(os.str());
-    }
-
-
-
-    template <typename TypeTag>
     std::vector<typename BlackoilWellModel<TypeTag>::Scalar>
     BlackoilWellModel<TypeTag>::
     getPrimaryVarsDomain(const int domainIdx) const

@@ -219,6 +219,8 @@ public:
     }
     bool wasDynamicallyShutThisTimeStep(const std::string& well_name) const;
 
+    void logPrimaryVars() const;
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {

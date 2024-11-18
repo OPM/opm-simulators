@@ -69,9 +69,8 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
-#include <stack>
 #include <stdexcept>
-#include <string_view>
+#include <sstream>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -2041,6 +2040,21 @@ updateFiltrationModelsPreStep(DeferredLogger& deferred_logger)
     }
 }
 
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+logPrimaryVars() const
+{
+    std::ostringstream os;
+    for (const auto& w : this->well_container_generic_) {
+        os << w->name() << ":";
+        auto pv = w->getPrimaryVars();
+        for (const Scalar v : pv) {
+            os << ' ' << v;
+        }
+        os << '\n';
+    }
+    OpmLog::debug(os.str());
+}
 
 template class BlackoilWellModelGeneric<double>;
 
