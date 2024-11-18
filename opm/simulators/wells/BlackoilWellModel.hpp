@@ -387,8 +387,6 @@ template<class Scalar> class WellContributions;
                                 const Domain& domain);
             void updateWellControlsDomain(DeferredLogger& deferred_logger, const Domain& domain);
 
-            void setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars);
-
             void setupDomains(const std::vector<Domain>& domains);
 
         protected:
