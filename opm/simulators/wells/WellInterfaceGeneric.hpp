@@ -189,6 +189,12 @@ public:
 
     void resetWellOperability();
 
+
+    virtual std::vector<Scalar> getPrimaryVars() const
+    {
+        return {};
+    }
+
 protected:
     bool getAllowCrossFlow() const;
 
