@@ -22,6 +22,7 @@
 #include <config.h>
 #include <opm/simulators/wells/StandardWellEval.hpp>
 
+#include <opm/material/densead/EvaluationFormat.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>
@@ -39,8 +40,9 @@
 #include <cmath>
 #include <cstddef>
 
-namespace Opm
-{
+#include <fmt/format.h>
+
+namespace Opm {
 
 template<class FluidSystem, class Indices>
 StandardWellEval<FluidSystem,Indices>::
@@ -208,7 +210,7 @@ init(std::vector<Scalar>& perf_depth,
 template<class Scalar>
 using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
 
-#define INSTANTIATE(T,...) \
+#define INSTANTIATE(T,...)                                                   \
     template class StandardWellEval<FS<T>,__VA_ARGS__>;
 
 #define INSTANTIATE_TYPE(T)                                                  \

@@ -25,6 +25,7 @@
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
+#include <opm/simulators/wells/RatioCalculator.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
@@ -505,15 +506,6 @@ namespace Opm
                                      const std::vector<Value>& cmix_s,
                                      const std::vector<Value>& b_perfcells_dense,
                                      DeferredLogger& deferred_logger) const;
-
-        template<class Value>
-        void gasOilVolumeRatio(Value& volumeRatio,
-                               const Value& rv,
-                               const Value& rs,
-                               const Value& pressure,
-                               const std::vector<Value>& cmix_s,
-                               const std::vector<Value>& b_perfcells_dense,
-                               DeferredLogger& deferred_logger) const;
     };
 
 }
