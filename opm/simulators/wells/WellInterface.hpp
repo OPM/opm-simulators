@@ -270,9 +270,6 @@ public:
                                          WellState<Scalar>& well_state,
                                          DeferredLogger& deferred_logger) const = 0;
 
-    virtual Scalar connectionDensity(const int globalConnIdx,
-                                     const int openConnIdx) const = 0;
-
     /// \brief Wether the Jacobian will also have well contributions in it.
     virtual bool jacobianContainsWellContributions() const
     {

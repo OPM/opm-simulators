@@ -200,6 +200,9 @@ public:
         return 0;
     }
 
+    virtual Scalar connectionDensity(const int globalConnIdx,
+                                     const int openConnIdx) const = 0;
+
 protected:
     bool getAllowCrossFlow() const;
 
