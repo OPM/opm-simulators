@@ -1111,7 +1111,8 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    doPreStepNetworkRebalance(DeferredLogger& deferred_logger) {
+    doPreStepNetworkRebalance(DeferredLogger& deferred_logger)
+    {
         const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
@@ -1209,7 +1210,9 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    updateWellControlsAndNetwork(const bool mandatory_network_balance, const double dt, DeferredLogger& local_deferredLogger)
+    updateWellControlsAndNetwork(const bool mandatory_network_balance,
+                                 const double dt,
+                                 DeferredLogger& local_deferredLogger)
     {
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
@@ -2166,7 +2169,9 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance)
+    updateWellControls(const bool mandatory_network_balance,
+                       DeferredLogger& deferred_logger,
+                       const bool relax_network_tolerance)
     {
         const int episodeIdx = simulator_.episodeIndex();
         const auto& network = this->schedule()[episodeIdx].network();
