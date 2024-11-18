@@ -476,13 +476,6 @@ namespace Opm
                                const Value& pressure,
                                const Value& rvw,
                                DeferredLogger& deferred_logger) const;
-
-        template<class Value>
-        void gasOilPerfRateProd(std::vector<Value>& cq_s,
-                                PerforationRates<Scalar>& perf_rates,
-                                const Value& rv,
-                                const Value& rs,
-                                const Value& rvw) const;
     };
 
 }

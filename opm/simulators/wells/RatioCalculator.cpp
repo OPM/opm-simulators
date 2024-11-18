@@ -93,6 +93,40 @@ disOilVapWatVolumeRatio(Value& volumeRatio,
 template<class Value>
 void
 RatioCalculator<Value>::
+gasOilPerfRateProd(std::vector<Value>& cq_s,
+                   PerforationRates<Scalar>& perf_rates,
+                   const Value& rv,
+                   const Value& rs,
+                   const Value& rvw,
+                   const bool waterActive,
+                   const bool isProducer) const
+{
+    const Value cq_sOil = cq_s[oilComp_];
+    const Value cq_sGas = cq_s[gasComp_];
+    const Value dis_gas = rs * cq_sOil;
+    const Value vap_oil = rv * cq_sGas;
+
+    cq_s[gasComp_] += dis_gas;
+    cq_s[oilComp_] += vap_oil;
+
+    // recording the perforation solution gas rate and solution oil rates
+    if (isProducer) {
+        perf_rates.dis_gas = getValue(dis_gas);
+        perf_rates.vap_oil = getValue(vap_oil);
+    }
+
+    if (waterActive) {
+        const Value vap_wat = rvw * cq_sGas;
+        cq_s[waterComp_] += vap_wat;
+        if (isProducer) {
+            perf_rates.vap_wat = getValue(vap_wat);
+        }
+    }
+}
+
+template<class Value>
+void
+RatioCalculator<Value>::
 gasOilVolumeRatio(Value& volumeRatio,
                   const Value& rv,
                   const Value& rs,
@@ -127,7 +161,6 @@ gasWaterPerfRateInj(const std::vector<Value>& cq_s,
                      const Value& rsw,
                      const Value& pressure,
                      DeferredLogger& deferred_logger) const
-
 {
     const Scalar dw = 1.0 - getValue(rvw) * getValue(rsw);
 

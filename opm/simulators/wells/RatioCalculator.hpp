@@ -52,6 +52,14 @@ public:
                                  const std::vector<Value>& b_perfcells_dense,
                                  DeferredLogger& deferred_logger) const;
 
+    void gasOilPerfRateProd(std::vector<Value>& cq_s,
+                            PerforationRates<Scalar>& perf_rates,
+                            const Value& rv,
+                            const Value& rs,
+                            const Value& rvw,
+                            const bool waterActive,
+                            const bool isProducer) const;
+
     void gasOilVolumeRatio(Value& volumeRatio,
                            const Value& rv,
                            const Value& rs,
