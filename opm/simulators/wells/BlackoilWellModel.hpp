@@ -296,7 +296,7 @@ template<class Scalar> class WellContributions;
 
             data::WellBlockAveragePressures wellBlockAveragePressures() const
             {
-                return this->computeWellBlockAveragePressures();
+                return this->computeWellBlockAveragePressures(this->gravity_);
             }
 
             // subtract B*inv(D)*C * x from A*x
@@ -499,9 +499,6 @@ template<class Scalar> class WellContributions;
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
-
-            data::WellBlockAveragePressures
-            computeWellBlockAveragePressures() const;
 
             void updateAverageFormationFactor();
 
