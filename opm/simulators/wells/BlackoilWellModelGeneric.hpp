@@ -221,6 +221,7 @@ public:
 
     void logPrimaryVars() const;
     std::vector<Scalar> getPrimaryVarsDomain(const int domainIdx) const;
+    void setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars);
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)

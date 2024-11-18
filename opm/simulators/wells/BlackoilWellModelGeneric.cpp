@@ -2071,6 +2071,20 @@ getPrimaryVarsDomain(const int domainIdx) const
     return ret;
 }
 
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
+{
+    std::size_t offset = 0;
+    for (auto& well : this->well_container_generic_) {
+        if (this->well_domain_.at(well->name()) == domainIdx) {
+            int num_pri_vars = well->setPrimaryVars(vars.begin() + offset);
+            offset += num_pri_vars;
+        }
+    }
+    assert(offset == vars.size());
+}
+
 template class BlackoilWellModelGeneric<double>;
 
 #if FLOW_INSTANTIATE_FLOAT

@@ -2988,23 +2988,6 @@ namespace Opm {
     template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
-    {
-        std::size_t offset = 0;
-        for (auto& well : well_container_) {
-            if (this->well_domain_.at(well->name()) == domainIdx) {
-                int num_pri_vars = well->setPrimaryVars(vars.begin() + offset);
-                offset += num_pri_vars;
-            }
-        }
-        assert(offset == vars.size());
-    }
-
-
-
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
     setupDomains(const std::vector<Domain>& domains)
     {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
