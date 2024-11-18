@@ -447,9 +447,6 @@ template<class Scalar> class WellContributions;
 
             std::vector<Scalar> B_avg_{};
 
-            // Keep track of the domain of each well, if using subdomains.
-            std::map<std::string, int> well_domain_;
-
             // Store the local index of the wells perforated cells in the domain, if using subdomains
             SparseTable<int> well_local_cells_;
 

@@ -613,6 +613,9 @@ protected:
     // Store map of group name and close offending well for output
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
 
+    // Keep track of the domain of each well, if using subdomains.
+    std::map<std::string, int> well_domain_;
+
 private:
     WellInterfaceGeneric<Scalar>* getGenWell(const std::string& well_name);
 

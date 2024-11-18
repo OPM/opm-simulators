@@ -273,7 +273,7 @@ namespace Opm {
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
         for (const auto& well: well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 // Modifiy the Jacobian with explicit Schur complement
                 // contributions if requested.
                 if (param_.matrix_add_well_contributions_) {
@@ -1772,7 +1772,7 @@ namespace Opm {
     assembleWellEqDomain(const double dt, const Domain& domain, DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 well->assembleWellEq(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
             }
         }
@@ -1842,7 +1842,7 @@ namespace Opm {
     {
         for (size_t well_index = 0; well_index < well_container_.size(); ++well_index) {
             auto& well = well_container_[well_index];
-            if (well_domain_.at(well->name()) == domainIndex) {
+            if (this->well_domain_.at(well->name()) == domainIndex) {
                 // Well equations B and C uses only the perforated cells, so need to apply on local vectors
                 // transfer global cells index to local subdomain cells index
                 const auto& local_cells = well_local_cells_[well_index];
@@ -2082,7 +2082,7 @@ namespace Opm {
         // parallel but for each individual domain of each rank.
         DeferredLogger local_deferredLogger;
         for (auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 const auto& cells = well->cells();
                 x_local_.resize(cells.size());
 
@@ -2119,7 +2119,7 @@ namespace Opm {
     initPrimaryVariablesEvaluationDomain(const Domain& domain) const
     {
         for (auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 well->initPrimaryVariablesEvaluation();
             }
         }
@@ -2142,7 +2142,7 @@ namespace Opm {
 
         ConvergenceReport report;
         for (const auto& well : well_container_) {
-            if ((well_domain_.at(well->name()) == domain.index)) {
+            if ((this->well_domain_.at(well->name()) == domain.index)) {
                 if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                     report += well->getWellConvergence(simulator_,
                                                        this->wellState(),
@@ -2346,7 +2346,7 @@ namespace Opm {
 
         // Check only individual well constraints and communicate.
         for (const auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
                 well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
             }
@@ -3011,7 +3011,7 @@ namespace Opm {
     {
         std::vector<Scalar> ret;
         for (const auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domainIdx) {
+            if (this->well_domain_.at(well->name()) == domainIdx) {
                 const auto& pv = well->getPrimaryVars();
                 ret.insert(ret.end(), pv.begin(), pv.end());
             }
@@ -3060,7 +3060,7 @@ namespace Opm {
                 if (cell_present(first_well_cell)) {
                     // Assuming that if the first well cell is found in a domain,
                     // then all of that well's cells are in that same domain.
-                    well_domain_[wellPtr->name()] = domain.index;
+                    this->well_domain_[wellPtr->name()] = domain.index;
 
                     // Verify that all of that well's cells are in that same domain.
                     for (int well_cell : wellPtr->cells()) {
@@ -3080,10 +3080,10 @@ namespace Opm {
         const Opm::Parallel::Communication& comm = grid().comm();
         const int rank = comm.rank();
         DeferredLogger local_log;
-        if (!well_domain_.empty()) {
+        if (!this->well_domain_.empty()) {
             std::ostringstream os;
             os << "Well name      Rank      Domain\n";
-            for (const auto& [wname, domain] : well_domain_) {
+            for (const auto& [wname, domain] : this->well_domain_) {
                 os << wname << std::setw(19 - wname.size()) << rank << std::setw(12) << domain << '\n';
             }
             local_log.debug(os.str());
@@ -3099,7 +3099,7 @@ namespace Opm {
         std::vector<int> local_cells;
         for (const auto& well : well_container_) {
             const auto& global_cells = well->cells();
-            const int domain_index = well_domain_.at(well->name());
+            const int domain_index = this->well_domain_.at(well->name());
             const auto& domain_cells = domains[domain_index].cells;
             local_cells.resize(global_cells.size());
 
