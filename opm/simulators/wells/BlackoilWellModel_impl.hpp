@@ -752,11 +752,11 @@ namespace Opm {
             for (const auto& [name, to] : this->switched_prod_groups_) {
                 const Group::ProductionCMode& oldControl = this->prevWGState().group_state.production_control(name);
                 std::string from = Group::ProductionCMode2String(oldControl);
-                if (to != from) {
+                if (to.back() != from) {
                     std::string msg = "    Production Group " + name
                     + " control mode changed from ";
                     msg += from;
-                    msg += " to " + to;
+                    msg += " to " + to.back();
                     local_deferredLogger.info(msg);
                 }
             }
@@ -2236,10 +2236,14 @@ namespace Opm {
         if (changed_well_to_group) {
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
             changed_well_group = true;
+            simulator_.gridView().comm());
         }
 
-        // Check individual well constraints and communicate.
-        bool changed_well_individual = false;
+        changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
+        if (changed_well_to_group) {
+            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
+            changed_well_group = true;
+        }        
         {
             // For MS Wells a linear solve is performed below and the matrix might be singular.
             // We need to communicate the exception thrown to the others and rethrow.
@@ -2262,7 +2266,7 @@ namespace Opm {
         }
 
         // update wsolvent fraction for REIN wells
-        const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
+        //const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
         this->updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
         return { changed_well_group, more_network_update };
@@ -2471,6 +2475,16 @@ namespace Opm {
                         const int reportStepIdx,
                         const int iterationIdx)
     {
+
+        if (this->switched_prod_groups_.count(group.name()) > 0) {
+            for (const auto& key : this->switched_prod_groups_[group.name()]) {
+                if (std::count(this->switched_prod_groups_[group.name()].begin(), this->switched_prod_groups_[group.name()].end(), key) >= 3) {
+                    std::cout << "group control osccilating " << group.name() << " keep at " << key << std::endl;
+                    return false;
+                }
+            }
+        }
+
         bool changed = false;
         bool changed_hc = this->checkGroupHigherConstraints( group, deferred_logger, reportStepIdx);
         if (changed_hc) {

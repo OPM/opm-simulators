@@ -74,7 +74,7 @@ public:
     bool updateGroupIndividualControl(const Group& group,
                                       const int reportStepIdx,
                                       std::map<std::pair<std::string,Phase>,std::string>& switched_inj,
-                                      std::map<std::string, std::string>& switched_prod,
+                                      std::map<std::string, std::vector<std::string>>& switched_prod,
                                       std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                                       GroupState<Scalar>& group_state,
                                       WellState<Scalar>& well_state,

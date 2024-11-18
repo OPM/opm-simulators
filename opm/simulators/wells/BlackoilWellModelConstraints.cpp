@@ -562,7 +562,7 @@ bool BlackoilWellModelConstraints<Scalar>::
 updateGroupIndividualControl(const Group& group,
                              const int reportStepIdx,
                              std::map<std::pair<std::string,Phase>,std::string>& switched_inj,
-                             std::map<std::string, std::string>& switched_prod,
+                             std::map<std::string, std::vector<std::string>>& switched_prod,
                              std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                              GroupState<Scalar>& group_state,
                              WellState<Scalar>& well_state,
@@ -612,7 +612,7 @@ updateGroupIndividualControl(const Group& group,
                                             group_state, deferred_logger);
 
             if(changed) {
-                switched_prod.insert_or_assign(group.name(),
+                switched_prod[group.name()].push_back(
                                     Group::ProductionCMode2String(changed_this.first));
                 WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                               group,

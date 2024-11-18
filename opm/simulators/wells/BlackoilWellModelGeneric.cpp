@@ -714,8 +714,7 @@ checkGroupHigherConstraints(const Group& group,
                                                   deferred_logger);
 
                 if (changed) {
-                    switched_prod_groups_.insert_or_assign(group.name(),
-                                                           Group::ProductionCMode2String(Group::ProductionCMode::FLD));
+                    switched_prod_groups_[group.name()].push_back(Group::ProductionCMode2String(Group::ProductionCMode::FLD));
                     WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(scaling_factor,
                                                                                   group,
                                                                                   schedule(),
