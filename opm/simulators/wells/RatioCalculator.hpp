@@ -22,6 +22,8 @@
 #ifndef RATIO_CALCULATOR_HPP
 #define RATIO_CALCULATOR_HPP
 
+#include <opm/material/densead/Math.hpp>
+
 #include <string>
 #include <string_view>
 #include <vector>
@@ -29,15 +31,26 @@
 namespace Opm {
 
 class DeferredLogger;
+template<class Scalar> struct PerforationRates;
 
 template<class Value>
 class RatioCalculator
 {
 public:
+    using Scalar = decltype(getValue(Value{}));
+
     RatioCalculator(unsigned gasCompIdx,
                     unsigned oilCompIdx,
                     unsigned waterCompIdx,
                     std::string_view name);
+
+    void disOilVapWatVolumeRatio(Value& volumeRatio,
+                                 const Value& rvw,
+                                 const Value& rsw,
+                                 const Value& pressure,
+                                 const std::vector<Value>& cmix_s,
+                                 const std::vector<Value>& b_perfcells_dense,
+                                 DeferredLogger& deferred_logger) const;
 
     void gasOilVolumeRatio(Value& volumeRatio,
                            const Value& rv,
@@ -47,13 +60,12 @@ public:
                            const std::vector<Value>& b_perfcells_dense,
                            DeferredLogger& deferred_logger) const;
 
-    void disOilVapWatVolumeRatio(Value& volumeRatio,
-                                 const Value& rvw,
-                                 const Value& rsw,
-                                 const Value& pressure,
-                                 const std::vector<Value>& cmix_s,
-                                 const std::vector<Value>& b_perfcells_dense,
-                                 DeferredLogger& deferred_logger) const;
+    void gasWaterPerfRateInj(const std::vector<Value>& cq_s,
+                             PerforationRates<Scalar>& perf_rates,
+                             const Value& rvw,
+                             const Value& rsw,
+                             const Value& pressure,
+                             DeferredLogger& deferred_logger) const;
 
 private:
     unsigned gasComp_;

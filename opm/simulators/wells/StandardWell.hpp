@@ -489,14 +489,6 @@ namespace Opm
                                   PerforationRates<Scalar>& perf_rates,
                                   const Value& rvw,
                                   const Value& rsw) const;
-
-        template<class Value>
-        void gasWaterPerfRateInj(const std::vector<Value>& cq_s,
-                                 PerforationRates<Scalar>& perf_rates,
-                                 const Value& rvw,
-                                 const Value& rsw,
-                                 const Value& pressure,
-                                 DeferredLogger& deferred_logger) const;
     };
 
 }

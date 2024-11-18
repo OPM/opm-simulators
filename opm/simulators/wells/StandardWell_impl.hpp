@@ -345,8 +345,8 @@ namespace Opm
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     //no oil
-                    gasWaterPerfRateInj(cq_s, perf_rates, rvw, rsw,
-                                        pressure, deferred_logger);
+                    ratioCalc.gasWaterPerfRateInj(cq_s, perf_rates, rvw, rsw,
+                                                  pressure, deferred_logger);
                 }
             }
         }
@@ -2764,35 +2764,4 @@ namespace Opm
         }
     }
 
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    gasWaterPerfRateInj(const std::vector<Value>& cq_s,
-                        PerforationRates<Scalar>& perf_rates,
-                        const Value& rvw,
-                        const Value& rsw,
-                        const Value& pressure,
-                        DeferredLogger& deferred_logger) const
-
-    {
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-
-        const Scalar dw = 1.0 - getValue(rvw) * getValue(rsw);
-
-        if (dw <= 0.0) {
-            deferred_logger.debug(dValueError(dw, this->name(),
-                                              "gasWaterPerfRateInj",
-                                              rsw, rvw, pressure));
-        } else {
-            // vaporized water into gas
-            // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
-            perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rsw) * getValue(cq_s[waterCompIdx])) / dw;
-            // dissolved gas in water
-            // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
-            perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterCompIdx]) - getValue(rvw) * getValue(cq_s[gasCompIdx])) / dw;
-        }
-    }
 } // namespace Opm

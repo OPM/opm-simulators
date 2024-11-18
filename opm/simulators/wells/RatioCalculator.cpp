@@ -26,6 +26,7 @@
 #include <opm/material/densead/EvaluationFormat.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 
 #include <fmt/format.h>
 
@@ -115,6 +116,35 @@ gasOilVolumeRatio(Value& volumeRatio,
     const Value tmp_gas =  d > 0.0 ? (cmix_s[gasComp_] - rs * cmix_s[oilComp_]) / d
                                    : cmix_s[gasComp_];
     volumeRatio += tmp_gas / b_perfcells_dense[gasComp_];
+}
+
+template<class Value>
+void
+RatioCalculator<Value>::
+gasWaterPerfRateInj(const std::vector<Value>& cq_s,
+                     PerforationRates<Scalar>& perf_rates,
+                     const Value& rvw,
+                     const Value& rsw,
+                     const Value& pressure,
+                     DeferredLogger& deferred_logger) const
+
+{
+    const Scalar dw = 1.0 - getValue(rvw) * getValue(rsw);
+
+    if (dw <= 0.0) {
+        deferred_logger.debug(dValueError(dw, name_,
+                                          "gasWaterPerfRateInj",
+                                          rsw, rvw, pressure));
+    } else {
+        // vaporized water into gas
+        // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
+        perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasComp_]) -
+                                              getValue(rsw) * getValue(cq_s[waterComp_])) / dw;
+        // dissolved gas in water
+        // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
+        perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterComp_]) -
+                                                       getValue(rvw) * getValue(cq_s[gasComp_])) / dw;
+    }
 }
 
 #define INSTANTIATE_TYPE(T)                                          \
