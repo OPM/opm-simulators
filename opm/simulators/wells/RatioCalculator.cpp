@@ -147,6 +147,27 @@ gasWaterPerfRateInj(const std::vector<Value>& cq_s,
     }
 }
 
+template<class Value>
+void
+RatioCalculator<Value>::
+gasWaterPerfRateProd(std::vector<Value>& cq_s,
+                     PerforationRates<Scalar>& perf_rates,
+                     const Value& rvw,
+                     const Value& rsw,
+                     const bool isProducer) const
+{
+    const Value cq_sWat = cq_s[waterComp_];
+    const Value cq_sGas = cq_s[gasComp_];
+    const Value vap_wat = rvw * cq_sGas;
+    const Value dis_gas_wat = rsw * cq_sWat;
+    cq_s[waterComp_] += vap_wat;
+    cq_s[gasComp_]   += dis_gas_wat;
+    if (isProducer) {
+        perf_rates.vap_wat = getValue(vap_wat);
+        perf_rates.dis_gas_in_water = getValue(dis_gas_wat);
+    }
+}
+
 #define INSTANTIATE_TYPE(T)                                          \
     template class RatioCalculator<T>;                               \
     template class RatioCalculator<DenseAd::Evaluation<T, -1, 4u>>;  \

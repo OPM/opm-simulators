@@ -67,6 +67,12 @@ public:
                              const Value& pressure,
                              DeferredLogger& deferred_logger) const;
 
+    void gasWaterPerfRateProd(std::vector<Value>& cq_s,
+                              PerforationRates<Scalar>& perf_rates,
+                              const Value& rvw,
+                              const Value& rsw,
+                              const bool isProducer) const;
+
 private:
     unsigned gasComp_;
     unsigned oilComp_;
