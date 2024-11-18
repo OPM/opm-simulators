@@ -195,6 +195,11 @@ public:
         return {};
     }
 
+    virtual int setPrimaryVars(typename std::vector<Scalar>::const_iterator)
+    {
+        return 0;
+    }
+
 protected:
     bool getAllowCrossFlow() const;
 
