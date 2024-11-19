@@ -2437,8 +2437,12 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         // if a well or group change control it affects all wells that are under the same group
         for (const auto& well : well_container_) {
-            well->updateWellStateWithTarget(simulator_, this->groupState(),
-                                            this->wellState(), deferred_logger);
+            // We only want to update wells under group-control here
+            auto& ws = this->wellState().well(well->indexOfWell());
+            if (ws.production_cmode ==  Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP) {
+                well->updateWellStateWithTarget(simulator_, this->groupState(),
+                                                this->wellState(), deferred_logger);
+            }
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
                                    simulator_.gridView().comm())
