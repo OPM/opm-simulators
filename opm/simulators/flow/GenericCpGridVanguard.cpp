@@ -158,7 +158,8 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                FlowGenericVanguard::ParallelWellStruct& parallelWells,
                const int                                numJacobiBlocks)
 {
-    if (partitionMethod == Dune::PartitionMethod::zoltan && !this->zoltanParams().empty())
+    if ((partitionMethod == Dune::PartitionMethod::zoltan
+         || partitionMethod == Dune::PartitionMethod::zoltanGoG) && !this->zoltanParams().empty())
         this->grid_->setPartitioningParams(setupZoltanParams(this->zoltanParams()));
     if (partitionMethod == Dune::PartitionMethod::metis && !this->metisParams().empty())
         this->grid_->setPartitioningParams(setupMetisParams(this->metisParams()));
