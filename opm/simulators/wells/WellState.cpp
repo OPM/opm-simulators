@@ -724,6 +724,12 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     n_activeperf++;
                 }
             }
+            // If perf_data does not contain all active perfs, the well is distributed or inactive
+            // For inactive wells there is no need for calculating an initial solution
+            // \todo{ Update the procedure below to work for actually distributed wells. }
+            if (static_cast<int>(ws.perf_data.size()) != n_activeperf)
+                continue;
+
 
             std::vector<std::vector<int>> segment_inlets(well_nseg);
             for (int seg = 0; seg < well_nseg; ++seg) {
