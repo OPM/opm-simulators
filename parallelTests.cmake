@@ -165,6 +165,16 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      DIR aquifer-num
                                      TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
 
+foreach(templ_case RANGE 1 6)
+  add_test_compare_parallel_simulation(CASENAME actionx_well_templ_0${templ_case}
+    FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol_parallel}
+    REL_TOL ${rel_tol_parallel}
+    DIR actionx
+  )
+endforeach()
+
 add_test_compare_parallel_simulation(CASENAME actionx_m1
                                      FILENAME ACTIONX_M1
                                      SIMULATOR flow

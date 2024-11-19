@@ -573,6 +573,16 @@ foreach(eqreg_case RANGE 1 6)
   )
 endforeach()
 
+foreach(templ_case RANGE 1 6)
+  add_test_compareECLFiles(CASENAME actionx_well_templ_0${templ_case}
+    FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    DIR actionx
+  )
+endforeach()
+
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
                          SIMULATOR flow
