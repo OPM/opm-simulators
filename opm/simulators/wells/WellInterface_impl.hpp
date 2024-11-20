@@ -1041,17 +1041,19 @@ namespace Opm
                                                         deferred_logger);
         auto [max_alq, success] = glift->wellTestALQ();
         std::string msg;
+        const auto& unit_system = schedule.getUnits();
         if (success) {
             well_state.setALQ(well_name, max_alq);
             msg = fmt::format(
                 "GLIFT WTEST: Well {} : Setting ALQ to optimized value = {}",
-                well_name, max_alq);
+                well_name, unit_system.from_si(UnitSystem::measure::gas_surface_rate, max_alq));
         }
         else {
             if (!gl_well.use_glo()) {
                 msg = fmt::format(
-                    "GLIFT WTEST: Well {} : Setting ALQ to WLIFTOPT item 3 = {}",
-                    well_name, well_state.getALQ(well_name));
+                    "GLIFT WTEST: Well {} : Gas lift optimization deactivated. Setting ALQ to WLIFTOPT item 3 = {}",
+                    well_name, 
+                    unit_system.from_si(UnitSystem::measure::gas_surface_rate, well_state.getALQ(well_name)));
                 
             }
             else {
