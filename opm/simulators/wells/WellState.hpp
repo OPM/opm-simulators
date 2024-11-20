@@ -348,12 +348,12 @@ public:
         for (auto& w : wells_) {
             serializer(w);
         }
-        serializer(inactive_well_names_);
+        serializer(permanently_inactive_well_names_);
     }
 
 private:
-    bool is_inactive_well(const std::string& wname) const {
-        return std::find(this->inactive_well_names_.begin(), this->inactive_well_names_.end(), wname) != this->inactive_well_names_.end();
+    bool is_permanently_inactive_well(const std::string& wname) const {
+        return std::find(this->permanently_inactive_well_names_.begin(), this->permanently_inactive_well_names_.end(), wname) != this->permanently_inactive_well_names_.end();
     }
 
     PhaseUsage phase_usage_;
@@ -377,8 +377,8 @@ private:
     // not.
     std::map<std::string, std::pair<bool, std::vector<Scalar>>> well_rates;
 
-    // Keep track of inactive well names
-    std::vector<std::string> inactive_well_names_;
+    // Keep track of permanently inactive well names
+    std::vector<std::string> permanently_inactive_well_names_;
 
     data::Segment
     reportSegmentResults(const int         well_id,

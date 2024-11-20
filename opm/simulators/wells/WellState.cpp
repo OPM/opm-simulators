@@ -273,7 +273,7 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
                                                                 report_step,
                                                                 wells_ecl);
     well_rates.clear();
-    this->inactive_well_names_ = schedule.getInactiveWellNamesAtEnd();
+    this->permanently_inactive_well_names_ = schedule.getInactiveWellNamesAtEnd();
     for (const auto& wname : schedule.wellNames(report_step))
     {
         well_rates.insert({wname, std::make_pair(false, std::vector<Scalar>(this->numPhases()))});
@@ -695,6 +695,9 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     // what we do here, is to set the segment rates and perforation rates
     for (int w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
+        if (this->is_permanently_inactive_well(well_ecl.name()))
+            continue;
+
         auto& ws = this->well(w);
 
         if (well_ecl.isMultiSegment()) {
@@ -725,14 +728,9 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     n_activeperf++;
                 }
             }
-            // If perf_data does not contain all active perfs, the well is distributed or inactive
-            // For inactive wells there is no need for calculating an initial solution
-            // \todo{ Update the procedure below to work for actually distributed wells. }
+            
             if (static_cast<int>(ws.perf_data.size()) != n_activeperf)
-                if (this->is_inactive_well(well_ecl.name()))
-                    continue;
-                else
-                    throw std::logic_error("Distributed multi-segment wells cannot be initialized properly yet.");
+                throw std::logic_error("Distributed multi-segment wells cannot be initialized properly yet.");
 
 
             std::vector<std::vector<int>> segment_inlets(well_nseg);
@@ -1061,7 +1059,7 @@ bool WellState<Scalar>::operator==(const WellState& rhs) const
     return this->alq_state == rhs.alq_state &&
            this->well_rates == rhs.well_rates &&
            this->wells_ == rhs.wells_ &&
-           this->inactive_well_names_ == rhs.inactive_well_names_;
+           this->permanently_inactive_well_names_ == rhs.permanently_inactive_well_names_;
 }
 
 template<class Scalar>
