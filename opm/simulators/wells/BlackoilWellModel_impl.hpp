@@ -2208,13 +2208,9 @@ namespace Opm {
 
         bool changed_well_group = false;
         // Check group individual constraints.
-        const int nupcol = this->schedule()[episodeIdx].nupcol();
-        // don't switch group control when iterationIdx > nupcol
-        // to avoid oscilations between group controls
-        if (iterationIdx <= nupcol) {
-            const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
-            changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
-        }
+        const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
+        changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
+
         // Check wells' group constraints and communicate.
         bool changed_well_to_group = false;
         {
@@ -2236,14 +2232,10 @@ namespace Opm {
         if (changed_well_to_group) {
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
             changed_well_group = true;
-            simulator_.gridView().comm());
         }
 
-        changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
-        if (changed_well_to_group) {
-            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-            changed_well_group = true;
-        }        
+        // Check individual well constraints and communicate.
+        bool changed_well_individual = false;
         {
             // For MS Wells a linear solve is performed below and the matrix might be singular.
             // We need to communicate the exception thrown to the others and rethrow.
@@ -2266,7 +2258,6 @@ namespace Opm {
         }
 
         // update wsolvent fraction for REIN wells
-        //const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
         this->updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
         return { changed_well_group, more_network_update };
@@ -2479,7 +2470,14 @@ namespace Opm {
         if (this->switched_prod_groups_.count(group.name()) > 0) {
             for (const auto& key : this->switched_prod_groups_[group.name()]) {
                 if (std::count(this->switched_prod_groups_[group.name()].begin(), this->switched_prod_groups_[group.name()].end(), key) >= 3) {
-                    std::cout << "group control osccilating " << group.name() << " keep at " << key << std::endl;
+                    if (std::count(this->switched_prod_groups_[group.name()].begin(), this->switched_prod_groups_[group.name()].end(), key) == 3) {
+                        const std::string msg =
+                            fmt::format("Group control for group {} is oscilating. Group control kept at {}.",
+                                        group.name(),
+                                        key);
+                        deferred_logger.info(msg);
+                        this->switched_prod_groups_[group.name()].push_back(key);
+                    }
                     return false;
                 }
             }
