@@ -1325,7 +1325,6 @@ namespace Opm {
         for (const std::string& nodeName : network.node_names()) {
             const bool has_choke = network.node(nodeName).as_choke();
             if (has_choke) {
-                // group_state.update_well_group_thp(nodeName, 0.0); //initialization
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
 
@@ -1342,7 +1341,8 @@ namespace Opm {
                 bool fld_none = false;
                 if (cmode_tmp == Group::ProductionCMode::FLD || cmode_tmp == Group::ProductionCMode::NONE) {
                     fld_none = true;
-                    //retrieve target from group guide rates
+                    // Target is set for an ancestor group. Target for autochoke group to be 
+                    // derived from via group guide rates
                     const Scalar efficiencyFactor = 1.0;
                     const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
                     auto target = WellGroupControls<Scalar>::getAutoChokeGroupProductionTargetRate(

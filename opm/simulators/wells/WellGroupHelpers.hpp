@@ -239,6 +239,7 @@ public:
     static int groupControlledWells(const Schedule& schedule,
                                     const WellState<Scalar>& well_state,
                                     const GroupState<Scalar>& group_state,
+                                    const SummaryState& summary_state,
                                     const int report_step,
                                     const std::string& group_name,
                                     const std::string& always_included_child,
@@ -267,6 +268,12 @@ public:
                      const std::string& top,
                      const Schedule& schedule,
                      const int report_step);
+
+    static std::string
+    control_group(const Group& group,
+                  const GroupState<Scalar>& group_state,
+                  const int reportStepIdx,
+                  const Schedule& schedule);
 
     static std::pair<bool, Scalar>
     checkGroupConstraintsProd(const std::string& name,
