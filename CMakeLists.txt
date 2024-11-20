@@ -649,8 +649,13 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 
 if(CUDA_FOUND)
   if (NOT USE_HIP)
-    target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
-    target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+    target_link_libraries(opmsimulators
+      PUBLIC
+      ${CUDA_cusparse_LIBRARY}
+      ${CUDA_cublas_LIBRARY}
+      ${CUDA_nvptxcompiler_static_LIBRARY}
+    )
+
     foreach(tgt test_gpu_safe_call test_cuda_check_last_error test_GpuVector)
       target_link_libraries(${tgt} CUDA::cudart)
     endforeach()

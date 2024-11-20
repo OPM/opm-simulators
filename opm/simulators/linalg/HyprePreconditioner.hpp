@@ -26,6 +26,7 @@
 #include <HYPRE.h>
 #include <HYPRE_parcsr_ls.h>
 #include <HYPRE_krylov.h>
+#include <_hypre_utilities.h>
 
 #include <memory>
 #include <vector>
@@ -52,38 +53,75 @@ public:
     {
         OPM_TIMEBLOCK(prec_construct);
 
-        // Initialize Hypre
-        HYPRE_Init();
+        use_gpu_ = prm_.get<bool>("use_gpu", false);
+
+        HYPRE_Initialize();
+
+        // Set memory location and execution policy
+        if (use_gpu_) {
+            HYPRE_SetMemoryLocation(HYPRE_MEMORY_DEVICE);
+            HYPRE_SetExecutionPolicy(HYPRE_EXEC_DEVICE);
+            // use hypre's SpGEMM instead of vendor implementation
+            HYPRE_SetSpGemmUseVendor(false);
+            // use cuRand for PMIS
+            HYPRE_SetUseGpuRand(1);
+            HYPRE_DeviceInitialize();
+            HYPRE_PrintDeviceInfo();
+        }
+        else {
+            HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
+            HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
+        }
 
         // Create the solver (BoomerAMG)
         HYPRE_BoomerAMGCreate(&solver_);
 
-        // Set some default parameters
-        HYPRE_BoomerAMGSetPrintLevel(solver_, 0);         // Reduce output
-        HYPRE_BoomerAMGSetMaxIter(solver_, 1);            // Only one V-cycle, as used as preconditioner
-        HYPRE_BoomerAMGSetCoarsenType(solver_, 10);       // HMIS coarsening
-        HYPRE_BoomerAMGSetStrongThreshold(solver_, 0.5);  // Strength threshold for 3D
-        HYPRE_BoomerAMGSetAggNumLevels(solver_, 1);       // Aggressive coarsening on first level
-        HYPRE_BoomerAMGSetAggTruncFactor(solver_, 0.3);   // Remove weak connections
-        HYPRE_BoomerAMGSetInterpType(solver_, 6);         // ext+i interpolation
-        HYPRE_BoomerAMGSetMaxLevels(solver_, 15);         // Maximum number of levels
-        HYPRE_BoomerAMGSetTol(solver_, 0);              // Convergence tolerance, 0 as used as preconditioner with one V-cycle
+        // Set parameters from property tree with defaults
+        HYPRE_BoomerAMGSetPrintLevel(solver_, prm_.get<int>("print_level", 0));
+        HYPRE_BoomerAMGSetMaxIter(solver_, prm_.get<int>("max_iter", 1));
+        HYPRE_BoomerAMGSetStrongThreshold(solver_, prm_.get<double>("strong_threshold", 0.5));
+        HYPRE_BoomerAMGSetAggTruncFactor(solver_, prm_.get<double>("agg_trunc_factor", 0.3));
+        HYPRE_BoomerAMGSetInterpType(solver_, prm_.get<int>("interp_type", 6));
+        HYPRE_BoomerAMGSetMaxLevels(solver_, prm_.get<int>("max_levels", 15));
+        HYPRE_BoomerAMGSetTol(solver_, prm_.get<double>("tolerance", 0.0));
 
+        if (use_gpu_) {
+            HYPRE_BoomerAMGSetRelaxType(solver_, 16);
+            HYPRE_BoomerAMGSetCoarsenType(solver_, 8);
+            HYPRE_BoomerAMGSetAggNumLevels(solver_, 0);
+            HYPRE_BoomerAMGSetAggInterpType(solver_, 6);
+            // Keep transpose to avoid SpMTV
+            HYPRE_BoomerAMGSetKeepTranspose(solver_, true);
+        }
+        else {
+            HYPRE_BoomerAMGSetRelaxType(solver_, prm_.get<int>("relax_type", 13));
+            HYPRE_BoomerAMGSetCoarsenType(solver_, prm_.get<int>("coarsen_type", 10));
+            HYPRE_BoomerAMGSetAggNumLevels(solver_, prm_.get<int>("agg_num_levels", 1));
+            HYPRE_BoomerAMGSetAggInterpType(solver_, prm_.get<int>("agg_interp_type", 4));
+        }
 
         // Create Hypre vectors
-        const int N = A_.N();
-        HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, N-1, &x_hypre_);
-        HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, N-1, &b_hypre_);
+        N_ = A_.N();
+        nnz_ = A_.nonzeroes();
+        HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, N_-1, &x_hypre_);
+        HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, N_-1, &b_hypre_);
         HYPRE_IJVectorSetObjectType(x_hypre_, HYPRE_PARCSR);
         HYPRE_IJVectorSetObjectType(b_hypre_, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(x_hypre_);
         HYPRE_IJVectorInitialize(b_hypre_);
         // Create indices vector
-        indices_.resize(A_.N());
+        indices_.resize(N_);
         std::iota(indices_.begin(), indices_.end(), 0);
+        if (use_gpu_) {
+            indices_device_ = hypre_CTAlloc(HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE);
+            hypre_TMemcpy(indices_device_, indices_.data(), HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            // Allocate device vectors
+            x_values_device_ = hypre_CTAlloc(HYPRE_Real, N_, HYPRE_MEMORY_DEVICE);
+            b_values_device_ = hypre_CTAlloc(HYPRE_Real, N_, HYPRE_MEMORY_DEVICE);
+        }
 
         // Create Hypre matrix
-        HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, N-1, 0, N-1, &A_hypre_);
+        HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, N_-1, 0, N_-1, &A_hypre_);
         HYPRE_IJMatrixSetObjectType(A_hypre_, HYPRE_PARCSR);
         HYPRE_IJMatrixInitialize(A_hypre_);
 
@@ -96,8 +134,26 @@ public:
         if (solver_) {
             HYPRE_BoomerAMGDestroy(solver_);
         }
-        if (parcsr_A_) {
+        if (A_hypre_) {
             HYPRE_IJMatrixDestroy(A_hypre_);
+        }
+        if (x_hypre_) {
+            HYPRE_IJVectorDestroy(x_hypre_);
+        }
+        if (b_hypre_) {
+            HYPRE_IJVectorDestroy(b_hypre_);
+        }
+        if (values_device_) {
+            hypre_TFree(values_device_, HYPRE_MEMORY_DEVICE);
+        }
+        if (x_values_device_) {
+            hypre_TFree(x_values_device_, HYPRE_MEMORY_DEVICE);
+        }
+        if (b_values_device_) {
+            hypre_TFree(b_values_device_, HYPRE_MEMORY_DEVICE);
+        }
+        if (indices_device_) {
+            hypre_TFree(indices_device_, HYPRE_MEMORY_DEVICE);
         }
         HYPRE_Finalize();
     }
@@ -142,13 +198,10 @@ public:
 
 private:
     void setupSparsityPattern() {
-        const int N = A_.N();
-        const int nnz = A_.nonzeroes();
-
         // Allocate arrays required by Hypre
-        ncols_.resize(N);
-        rows_.resize(N);
-        cols_.resize(nnz);
+        ncols_.resize(N_);
+        rows_.resize(N_);
+        cols_.resize(nnz_);
 
         // Setup arrays and fill column indices
         int pos = 0;
@@ -161,41 +214,80 @@ private:
                 cols_[pos++] = col.index();
             }
         }
+        if (use_gpu_) {
+            // Allocate device arrays
+            ncols_device_ = hypre_CTAlloc(HYPRE_Int, N_, HYPRE_MEMORY_DEVICE);
+            rows_device_ = hypre_CTAlloc(HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE);
+            cols_device_ = hypre_CTAlloc(HYPRE_BigInt, nnz_, HYPRE_MEMORY_DEVICE);
+            values_device_ = hypre_CTAlloc(HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE);
+
+            // Copy to device
+            hypre_TMemcpy(ncols_device_, ncols_.data(), HYPRE_Int, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            hypre_TMemcpy(rows_device_, rows_.data(), HYPRE_BigInt, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            hypre_TMemcpy(cols_device_, cols_.data(), HYPRE_BigInt, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+        }
     }
 
     void copyMatrixToHypre() {
+        OPM_TIMEBLOCK(prec_copy_matrix);
         // Get pointer to matrix values array
-        const double* vals = &(A_[0][0][0][0]);  // Indexing explanation:
-                           // A_[row]              - First row of the matrix
-                           //     [0]              - First block in that row
-                           //        [0]           - First row within the 1x1 block
-                           //           [0]        - First column within the 1x1 block
+        const HYPRE_Real* values = &(A_[0][0][0][0]);
+        // Indexing explanation:
+        // A_[row]           - First row of the matrix
+        //     [0]           - First block in that row
+        //        [0]        - First row within the 1x1 block
+        //           [0]     - First column within the 1x1 block
 
-        // Set all values at once using stored sparsity pattern
-        HYPRE_IJMatrixSetValues(A_hypre_, A_.N(), ncols_.data(), rows_.data(), cols_.data(), vals);
+        if (use_gpu_) {
+            hypre_TMemcpy(values_device_, values, HYPRE_Real, nnz_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_device_, rows_device_, cols_device_, values_device_);
+        }
+        else {
+            HYPRE_IJMatrixSetValues(A_hypre_, N_, ncols_.data(), rows_.data(), cols_.data(), values);
+        }
 
         HYPRE_IJMatrixAssemble(A_hypre_);
         HYPRE_IJMatrixGetObject(A_hypre_, (void**)&parcsr_A_);
     }
 
     void copyVectorsToHypre(const X& v, const Y& d) {
-        const double* x_vals = &(v[0][0]);
-        const double* b_vals = &(d[0][0]);
+        OPM_TIMEBLOCK(prec_copy_vectors_to_hypre);
+        const HYPRE_Real* x_vals = &(v[0][0]);
+        const HYPRE_Real* b_vals = &(d[0][0]);
 
-        HYPRE_IJVectorSetValues(x_hypre_, A_.N(), indices_.data(), x_vals);
-        HYPRE_IJVectorSetValues(b_hypre_, A_.N(), indices_.data(), b_vals);
+        if (use_gpu_) {
+            hypre_TMemcpy(x_values_device_, x_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+            hypre_TMemcpy(b_values_device_, b_vals, HYPRE_Real, N_, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
 
+            HYPRE_IJVectorSetValues(x_hypre_, N_, indices_device_, x_values_device_);
+            HYPRE_IJVectorSetValues(b_hypre_, N_, indices_device_, b_values_device_);
+        }
+        else {
+            HYPRE_IJVectorSetValues(x_hypre_, N_, indices_.data(), x_vals);
+            HYPRE_IJVectorSetValues(b_hypre_, N_, indices_.data(), b_vals);
+        }
+
+        HYPRE_IJVectorAssemble(x_hypre_);
+        HYPRE_IJVectorAssemble(b_hypre_);
         HYPRE_IJVectorGetObject(x_hypre_, (void**)&par_x_);
         HYPRE_IJVectorGetObject(b_hypre_, (void**)&par_b_);
     }
 
     void copyVectorFromHypre(X& v) {
-        double* vals = &(v[0][0]);
-        HYPRE_IJVectorGetValues(x_hypre_, A_.N(), indices_.data(), vals);
+        OPM_TIMEBLOCK(prec_copy_vector_from_hypre);
+        HYPRE_Real* values = &(v[0][0]);
+        if (use_gpu_) {
+            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_device_, x_values_device_);
+            hypre_TMemcpy(values, x_values_device_, HYPRE_Real, N_, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+        }
+        else {
+            HYPRE_IJVectorGetValues(x_hypre_, N_, indices_.data(), values);
+        }
     }
 
     const M& A_;
     const Opm::PropertyTree& prm_;
+    bool use_gpu_ = false;
 
     HYPRE_Solver solver_ = nullptr;
     HYPRE_IJMatrix A_hypre_ = nullptr;
@@ -209,11 +301,20 @@ private:
     std::vector<HYPRE_Int> ncols_;
     std::vector<HYPRE_BigInt> rows_;
     std::vector<HYPRE_BigInt> cols_;
-
+    HYPRE_Int* ncols_device_ = nullptr;
+    HYPRE_BigInt* rows_device_ = nullptr;
+    HYPRE_BigInt* cols_device_ = nullptr;
+    HYPRE_Real* values_device_ = nullptr;
     // Store indices vector
     std::vector<int> indices_;
+    HYPRE_BigInt* indices_device_ = nullptr;
+    HYPRE_Int N_ = -1;
+    HYPRE_Int nnz_ = -1;
+
+    HYPRE_Real* x_values_device_ = nullptr;
+    HYPRE_Real* b_values_device_ = nullptr;
 };
 
-} // namespace Dune
+} // namespace Hypre
 
 #endif
