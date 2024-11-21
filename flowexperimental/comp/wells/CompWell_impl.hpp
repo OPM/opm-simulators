@@ -17,27 +17,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_COMP_WELL_HPP
-#define OPM_COMP_WELL_HPP
-
-#include "CompWellInterface.hpp"
-
-#include <string>
-
 namespace Opm
 {
 
 template <typename TypeTag>
-class CompWell  : public CompWellInterface<TypeTag>
+CompWell<TypeTag>::
+CompWell(const Well& well,
+         int index_of_well)
+  : CompWellInterface<TypeTag>(well, index_of_well)
 {
-public:
-    CompWell(const Well& well,
-             int index_of_well);
-private:
-};
+}
 
 } // end of namespace Opm
-
-#include "CompWell_impl.hpp"
-
-#endif // OPM_COMPOSITIONAL_WELL_MODEL_HPP
