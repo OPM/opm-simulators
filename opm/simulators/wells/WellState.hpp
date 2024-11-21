@@ -348,9 +348,14 @@ public:
         for (auto& w : wells_) {
             serializer(w);
         }
+        serializer(permanently_inactive_well_names_);
     }
 
 private:
+    bool is_permanently_inactive_well(const std::string& wname) const {
+        return std::find(this->permanently_inactive_well_names_.begin(), this->permanently_inactive_well_names_.end(), wname) != this->permanently_inactive_well_names_.end();
+    }
+
     PhaseUsage phase_usage_;
 
     // The wells_ variable is essentially a map of all the wells on the current
@@ -371,6 +376,9 @@ private:
     // bool in the value pair is whether the current process owns the well or
     // not.
     std::map<std::string, std::pair<bool, std::vector<Scalar>>> well_rates;
+
+    // Keep track of permanently inactive well names
+    std::vector<std::string> permanently_inactive_well_names_;
 
     data::Segment
     reportSegmentResults(const int         well_id,
