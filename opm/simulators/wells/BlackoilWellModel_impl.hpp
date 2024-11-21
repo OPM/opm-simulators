@@ -49,18 +49,9 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
-<<<<<<< HEAD
-#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
-#include <opm/simulators/wells/WellGroupControls.hpp>
-#include <opm/input/eclipse/Schedule/Group/Group.hpp>//pjpe not needed?
 
 #if COMPILE_GPU_BRIDGE
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
-=======
-
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
->>>>>>> 914ef4d8a (rebasing)
 #endif
 
 #if HAVE_MPI
