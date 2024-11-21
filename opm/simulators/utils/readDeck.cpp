@@ -617,7 +617,10 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (*errorGuard) { // errors encountered
         parseSuccess = 0;
-        errorGuard->dump();
+        if (failureMessage.size()) {
+            failureMessage += std::string("\n");
+        }
+        failureMessage += errorGuard->dump();
         errorGuard->clear();
     }
 
