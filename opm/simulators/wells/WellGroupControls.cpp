@@ -628,7 +628,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     };
 
     auto localReduction = [&](const std::string& group_name) {
-        const std::vector<double>& groupTargetReductions = group_state.production_reduction_rates(group_name);
+        const std::vector<Scalar>& groupTargetReductions = group_state.production_reduction_rates(group_name);
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
@@ -643,7 +643,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     // std::cout << "fr_true: " << fr_true << " fr_false: " << fr_false << std::endl;
 
     const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<double>::groupChainTopBot(name, group.name(),
+    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(name, group.name(),
                                                                   schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
