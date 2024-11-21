@@ -1161,7 +1161,7 @@ groupControlledWells(const Schedule& schedule,
             if (group_state.has_grat_sales_target(control_group_name))
                 gratTargetFromSales = group_state.grat_sales_target(control_group_name);
 
-            std::vector<double> resv_coeff(pu.num_phases, 1.0);
+            std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
             WGHelpers::TargetCalculator tcalc(control_group_cmode,
                                               pu,
                                               resv_coeff,

@@ -600,7 +600,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
 
     // gconsale may adjust the grat target.
     // the adjusted rates is send to the targetCalculator
-    double gratTargetFromSales = 0.0;
+    Scalar gratTargetFromSales = 0.0;
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
