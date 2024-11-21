@@ -37,31 +37,54 @@ public:
     using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
     using MessageTag = ReservoirCoupling::MessageTag;
     using TimePoint = ReservoirCoupling::TimePoint;
-    ReservoirCouplingMaster(const Parallel::Communication &comm, const Schedule &schedule);
+    ReservoirCouplingMaster(
+        const Parallel::Communication &comm,
+        const Schedule &schedule,
+        int argc, char **argv
+    );
 
+    bool activated() { return this->numSlavesStarted() > 0; }
+    void addSlaveCommunicator(MPI_Comm_Ptr comm) {
+         this->master_slave_comm_.push_back(std::move(comm));
+    }
+    void addSlaveName(const std::string &name) { this->slave_names_.push_back(name); }
+    void addSlaveStartDate(std::time_t date) { this->slave_start_dates_.push_back(date); }
+    double getActivationDate() const { return this->activation_date_; }
+    int getArgc() const { return this->argc_; }
+    char *getArgv(int index) const { return this->argv_[index]; }
+    char **getArgv() const { return this->argv_; }
+    const Parallel::Communication &getComm() const { return this->comm_; }
+    double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
+    const MPI_Comm &getSlaveComm(int index) const { return *this->master_slave_comm_[index].get(); }
+    const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
+    const double *getSlaveStartDates() { return this->slave_start_dates_.data(); }
     double maybeChopSubStep(double suggested_timestep, double current_time) const;
-    void spawnSlaveProcesses(int argc, char **argv);
-    void receiveSimulationStartDateFromSlaves();
+    void maybeSpawnSlaveProcesses(int report_step);
+    std::size_t numSlavesStarted() const;
     void receiveNextReportDateFromSlaves();
+    void resizeSlaveStartDates(int size) { this->slave_start_dates_.resize(size); }
+    void resizeNextReportDates(int size) { this->slave_next_report_time_offsets_.resize(size); }
     void sendNextTimeStepToSlaves(double next_time_step);
 
 private:
-    std::vector<char *> getSlaveArgv(
-        int argc,
-        char **argv,
-        const std::filesystem::path &data_file,
-        const std::string &slave_name,
-        std::string &log_filename
-    );
+    double getMasterActivationDate_() const;
 
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
-    std::time_t start_date_;  // Master process' simulation start date
-    std::size_t num_slaves_ = 0;  // Initially zero, will be updated in spawnSlaveProcesses()
+    int argc_;
+    char **argv_;
     std::vector<MPI_Comm_Ptr> master_slave_comm_; // MPI communicators for the slave processes
     std::vector<std::string> slave_names_;
-    std::vector<std::time_t> slave_start_dates_;
-    std::vector<double> slave_next_report_time_offsets_;  // Elapsed time from the beginning of the simulation
+    // The start dates are in whole seconds since the epoch. We use a double to store the value
+    // since both schedule_.getStartTime() and schedule_.stepLength(report_step) returns
+    // a double value representing whole seconds.
+    // However, note that schedule_[report_step].start_time() returns a time_point
+    // which can include milliseconds. The double values are also convenient when we need to
+    // to add fractions of seconds for sub steps to the start date.
+    std::vector<double> slave_start_dates_;
+    // Elapsed time from the beginning of the simulation
+    std::vector<double> slave_next_report_time_offsets_;
+    double activation_date_{0.0};  // The date when SLAVES is encountered in the schedule
 };
 
 } // namespace Opm

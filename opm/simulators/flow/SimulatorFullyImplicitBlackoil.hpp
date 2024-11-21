@@ -30,6 +30,7 @@
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
 #include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
+#include <opm/common/Exceptions.hpp>
 #endif
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
@@ -201,6 +202,39 @@ public:
         return finalize();
     }
 
+#if HAVE_MPI
+    // This method should only be called if slave mode (i.e. Parameters::Get<Parameters::Slave>())
+    // is false. We try to determine if this is a normal flow simulation or a reservoir
+    // coupling master. It is a normal flow simulation if the schedule does not contain
+    // any SLAVES and GRUPMAST keywords.
+    bool checkRunningAsReservoirCouplingMaster()
+    {
+        for (std::size_t report_step = 0; report_step < this->schedule().size(); ++report_step) {
+            auto rescoup = this->schedule()[report_step].rescoup();
+            auto slave_count = rescoup.slaveCount();
+            auto master_group_count = rescoup.masterGroupCount();
+            // - GRUPMAST and SLAVES keywords need to be specified at the same report step
+            // - They can only occur once in the schedule
+            if (slave_count > 0 && master_group_count > 0) {
+                return true;
+            }
+            else if (slave_count > 0 && master_group_count == 0) {
+                throw ReservoirCouplingError(
+                    "Inconsistent reservoir coupling master schedule: "
+                    "Slave count is greater than 0 but master group count is 0"
+                );
+            }
+            else if (slave_count == 0 && master_group_count > 0) {
+                throw ReservoirCouplingError(
+                    "Inconsistent reservoir coupling master schedule: "
+                    "Master group count is greater than 0 but slave count is 0"
+                );
+            }
+        }
+        return false;
+    }
+#endif
+
     // NOTE: The argc and argv will be used when launching a slave process
     void init(SimulatorTimer &timer, int argc, char** argv)
     {
@@ -213,21 +247,19 @@ public:
                     FlowGenericVanguard::comm(),
                     this->schedule(), timer
                 );
+            this->reservoirCouplingSlave_->sendActivationDateToMasterProcess();
             this->reservoirCouplingSlave_->sendSimulationStartDateToMasterProcess();
+            this->reservoirCouplingSlave_->receiveMasterGroupNamesFromMasterProcess();
         }
         else {
-            // For now, we require that SLAVES and GRUPMAST are defined at the first
-            //  schedule step, so it is enough to check the first step. See the
-            //  keyword handlers in opm-common for more information.
-            auto master_mode = this->schedule()[0].rescoup().masterMode();
+            auto master_mode = checkRunningAsReservoirCouplingMaster();
             if (master_mode) {
                 this->reservoirCouplingMaster_ =
                     std::make_unique<ReservoirCouplingMaster>(
                         FlowGenericVanguard::comm(),
-                        this->schedule()
+                        this->schedule(),
+                        argc, argv
                     );
-                this->reservoirCouplingMaster_->spawnSlaveProcesses(argc, argv);
-                this->reservoirCouplingMaster_->receiveSimulationStartDateFromSlaves();
             }
         }
 #endif
@@ -254,10 +286,10 @@ public:
                 adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, max_next_tstep, terminalOutput_);
             }
 #if HAVE_MPI
-            if (slave_mode) {
+            if (this->reservoirCouplingSlave_) {
                 adaptiveTimeStepping_->setReservoirCouplingSlave(this->reservoirCouplingSlave_.get());
             }
-            else if (this->schedule()[0].rescoup().masterMode()) {
+            else if (this->reservoirCouplingMaster_) {
                 adaptiveTimeStepping_->setReservoirCouplingMaster(this->reservoirCouplingMaster_.get());
             }
 #endif
@@ -406,6 +438,14 @@ public:
             tuningUpdater(timer.simulationTimeElapsed(),
                           this->adaptiveTimeStepping_->suggestedNextStep(), 0);
 
+#if HAVE_MPI
+            if (this->reservoirCouplingMaster_) {
+                this->reservoirCouplingMaster_->maybeSpawnSlaveProcesses(timer.currentStepNum());
+            }
+            else if (this->reservoirCouplingSlave_) {
+                this->reservoirCouplingSlave_->maybeActivate(timer.currentStepNum());
+            }
+#endif
             const auto& events = schedule()[timer.currentStepNum()].events();
             bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
                 events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||

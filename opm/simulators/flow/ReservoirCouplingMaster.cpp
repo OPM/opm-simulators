@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
@@ -38,32 +39,54 @@
 
 namespace Opm {
 
-ReservoirCouplingMaster::ReservoirCouplingMaster(
+ReservoirCouplingMaster::
+ReservoirCouplingMaster(
     const Parallel::Communication &comm,
-    const Schedule &schedule
+    const Schedule &schedule,
+    int argc, char **argv
 ) :
     comm_{comm},
-    schedule_{schedule}
+    schedule_{schedule},
+    argc_{argc},
+    argv_{argv}
 {
-    this->start_date_ = this->schedule_.getStartTime();
+    this->activation_date_ = this->getMasterActivationDate_();
 }
 
 // ------------------
 // Public methods
 // ------------------
 
-double ReservoirCouplingMaster::maybeChopSubStep(
-        double suggested_timestep_original, double elapsed_time
-) const
+void
+ReservoirCouplingMaster::
+maybeSpawnSlaveProcesses(int report_step)
+{
+    if (this->numSlavesStarted() > 0) {  // We have already spawned the slave processes
+        return;
+    }
+    const auto& rescoup = this->schedule_[report_step].rescoup();
+    auto slave_count = rescoup.slaveCount();
+    auto master_group_count = rescoup.masterGroupCount();
+    if (slave_count > 0 && master_group_count > 0) {
+        ReservoirCouplingSpawnSlaves spawn_slaves{*this, rescoup, report_step};
+        spawn_slaves.spawn();
+    }
+}
+
+
+double
+ReservoirCouplingMaster::
+maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
 {
     // Check if the suggested timestep needs to be adjusted based on the slave processes'
     // next report step, or if the slave process has not started yet: the start of a slave process.
-    double start_date = static_cast<double>(this->start_date_);
+    double start_date = this->schedule_.getStartTime();
     TimePoint step_start_date{start_date + elapsed_time};
     TimePoint step_end_date{step_start_date + suggested_timestep_original};
     TimePoint suggested_timestep{suggested_timestep_original};
-    for (unsigned int i = 0; i < this->num_slaves_; i++) {
-        double slave_start_date = static_cast<double>(this->slave_start_dates_[i]);
+    auto num_slaves = this->numSlavesStarted();
+    for (std::size_t i = 0; i < num_slaves; i++) {
+        double slave_start_date = this->slave_start_dates_[i];
         TimePoint slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
         if (slave_start_date > step_end_date) {
             // The slave process has not started yet, and will not start during this timestep
@@ -89,7 +112,10 @@ double ReservoirCouplingMaster::maybeChopSubStep(
     return suggested_timestep.getTime();
 }
 
-void ReservoirCouplingMaster::sendNextTimeStepToSlaves(double timestep) {
+void
+ReservoirCouplingMaster::
+sendNextTimeStepToSlaves(double timestep)
+{
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
             MPI_Send(
@@ -98,7 +124,7 @@ void ReservoirCouplingMaster::sendNextTimeStepToSlaves(double timestep) {
                 /*datatype=*/MPI_DOUBLE,
                 /*dest_rank=*/0,
                 /*tag=*/static_cast<int>(MessageTag::SlaveNextTimeStep),
-                *this->master_slave_comm_[i].get()
+                this->getSlaveComm(i)
             );
             OpmLog::info(fmt::format(
                 "Sent next time step {} from master process rank 0 to slave process "
@@ -108,9 +134,15 @@ void ReservoirCouplingMaster::sendNextTimeStepToSlaves(double timestep) {
    }
 }
 
-void ReservoirCouplingMaster::receiveNextReportDateFromSlaves() {
+
+void
+ReservoirCouplingMaster::
+receiveNextReportDateFromSlaves()
+{
+    auto num_slaves = this->numSlavesStarted();
+    OpmLog::info("Receiving next report dates from slave processes");
     if (this->comm_.rank() == 0) {
-        for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
+        for (unsigned int i = 0; i < num_slaves; i++) {
             double slave_next_report_time_offset; // Elapsed time from the beginning of the simulation
             int result = MPI_Recv(
                 &slave_next_report_time_offset,
@@ -118,7 +150,7 @@ void ReservoirCouplingMaster::receiveNextReportDateFromSlaves() {
                 /*datatype=*/MPI_DOUBLE,
                 /*source_rank=*/0,
                 /*tag=*/static_cast<int>(MessageTag::SlaveNextReportDate),
-                *this->master_slave_comm_[i].get(),
+                this->getSlaveComm(i),
                 MPI_STATUS_IGNORE
             );
             if (result != MPI_SUCCESS) {
@@ -134,143 +166,41 @@ void ReservoirCouplingMaster::receiveNextReportDateFromSlaves() {
         }
     }
     this->comm_.broadcast(
-        this->slave_next_report_time_offsets_.data(), this->num_slaves_, /*emitter_rank=*/0
+        this->slave_next_report_time_offsets_.data(), /*count=*/num_slaves, /*emitter_rank=*/0
     );
     OpmLog::info("Broadcasted slave next report dates to all ranks");
 }
 
-void ReservoirCouplingMaster::receiveSimulationStartDateFromSlaves() {
-    if (this->comm_.rank() == 0) {
-        // Ensure that std::time_t is of type long since we are sending it over MPI with MPI_LONG
-        static_assert(std::is_same<std::time_t, long>::value, "std::time_t is not of type long");
-        for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
-            std::time_t slave_start_date;
-            int result = MPI_Recv(
-                &slave_start_date,
-                /*count=*/1,
-                /*datatype=*/MPI_LONG,
-                /*source_rank=*/0,
-                /*tag=*/static_cast<int>(MessageTag::SlaveSimulationStartDate),
-                *this->master_slave_comm_[i].get(),
-                MPI_STATUS_IGNORE
-            );
-            if (result != MPI_SUCCESS) {
-                OPM_THROW(std::runtime_error, "Failed to receive simulation start date from slave process");
-            }
-            if (slave_start_date < this->start_date_) {
-                OPM_THROW(std::runtime_error, "Slave process start date is before master process start date");
-            }
-            this->slave_start_dates_[i] = slave_start_date;
-            OpmLog::info(
-                fmt::format(
-                    "Received simulation start date from slave process with name: {}. "
-                    "Start date: {}", this->slave_names_[i], slave_start_date
-                )
-            );
-        }
-    }
-    this->comm_.broadcast(this->slave_start_dates_.data(), this->num_slaves_, /*emitter_rank=*/0);
-    OpmLog::info("Broadcasted slave start dates to all ranks");
-}
 
-// NOTE: This functions is executed for all ranks, but only rank 0 will spawn
-//   the slave processes
-void ReservoirCouplingMaster::spawnSlaveProcesses(int argc, char **argv) {
-    const auto& rescoup = this->schedule_[0].rescoup();
-    char *flow_program_name = argv[0];
-    for (const auto& [slave_name, slave] : rescoup.slaves()) {
-        auto master_slave_comm = MPI_Comm_Ptr(new MPI_Comm(MPI_COMM_NULL));
-        const auto& data_file_name = slave.dataFilename();
-        const auto& directory_path = slave.directoryPath();
-        // Concatenate the directory path and the data file name to get the full path
-        std::filesystem::path dir_path{directory_path};
-        std::filesystem::path data_file{data_file_name};
-        std::filesystem::path full_path = dir_path / data_file;
-        std::string log_filename; // the getSlaveArgv() function will set this
-        std::vector<char *> slave_argv = getSlaveArgv(
-            argc, argv, full_path, slave_name, log_filename
-        );
-        auto num_procs = slave.numprocs();
-        std::vector<int> errcodes(num_procs);
-        // TODO: We need to decide how to handle the output from the slave processes..
-        //    As far as I can tell, open MPI does not support redirecting the output
-        //    to a file, so we might need to implement a custom solution for this
-        int spawn_result = MPI_Comm_spawn(
-            flow_program_name,
-            slave_argv.data(),
-            /*maxprocs=*/num_procs,
-            /*info=*/MPI_INFO_NULL,
-            /*root=*/0,  // Rank 0 spawns the slave processes
-            /*comm=*/this->comm_,
-            /*intercomm=*/master_slave_comm.get(),
-            /*array_of_errcodes=*/errcodes.data()
-        );
-        if (spawn_result != MPI_SUCCESS || (*master_slave_comm == MPI_COMM_NULL)) {
-            for (unsigned int i = 0; i < num_procs; i++) {
-                if (errcodes[i] != MPI_SUCCESS) {
-                    char error_string[MPI_MAX_ERROR_STRING];
-                    int length_of_error_string;
-                    MPI_Error_string(errcodes[i], error_string, &length_of_error_string);
-                    OpmLog::info(fmt::format("Error spawning process {}: {}", i, error_string));
-                }
-            }
-            OPM_THROW(std::runtime_error, "Failed to spawn slave process");
-        }
-        OpmLog::info(
-            fmt::format(
-                "Spawned reservoir coupling slave simulation for slave with name: "
-                "{}. Standard output logfile name: {}.log", slave_name, slave_name
-            )
-        );
-        this->master_slave_comm_.push_back(std::move(master_slave_comm));
-        this->slave_names_.push_back(slave_name);
-        this->num_slaves_++;
-    }
-    this->slave_start_dates_.resize(this->num_slaves_);
-    this->slave_next_report_time_offsets_.resize(this->num_slaves_);
+std::size_t
+ReservoirCouplingMaster::
+numSlavesStarted() const
+{
+    return this->slave_names_.size();
 }
 
 // ------------------
 // Private methods
 // ------------------
 
-std::vector<char *> ReservoirCouplingMaster::getSlaveArgv(
-    int argc,
-    char **argv,
-    const std::filesystem::path &data_file,
-    const std::string &slave_name,
-    std::string &log_filename
-) {
-    // Calculate the size of the slave_argv vector like this:
-    // - We will not use the first argument in argv, as it is the program name
-    // - Replace the data file name in argv with the data_file path
-    // - Insert as first argument --slave-log-file=<slave_name>.log
-    // - Also add the argument "--slave=true" to the argv
-    // - Add a nullptr at the end of the argv
-    // So the size of the slave_argv vector will be argc + 2
-    //
-    // Assume: All parameters will be on the form --parameter=value (as a string without spaces)
-    //
-    // Important: The returned vector will have pointers to argv pointers,
-    //   data_file string buffer, and slave_name string buffer. So the caller
-    //   must ensure that these buffers are not deallocated before the slave_argv has
-    //   been used.
-    std::vector<char *> slave_argv(argc + 2);
-    log_filename = "--slave-log-file=" + slave_name;  // .log extension will be added by the slave process
-    slave_argv[0] = const_cast<char*>(log_filename.c_str());
-    for (int i = 1; i < argc; i++) {
-        // Check if the argument starts with "--", if not, we will assume it is a positional argument
-        //   and we will replace it with the data file path
-        if (std::string(argv[i]).substr(0, 2) == "--") {
-            slave_argv[i] = argv[i];
-        } else {
-            slave_argv[i] = const_cast<char*>(data_file.c_str());
+double
+ReservoirCouplingMaster::
+getMasterActivationDate_() const
+{
+    // Assume master mode is activated when the first SLAVES keyword is encountered in the schedule
+    double start_date = this->schedule_.getStartTime();
+    for (std::size_t report_step = 0; report_step < this->schedule_.size(); ++report_step) {
+        auto rescoup = this->schedule_[report_step].rescoup();
+        if (rescoup.slaveCount() > 0) {
+            return start_date + this->schedule_.seconds(report_step);
         }
     }
-    slave_argv[argc] = const_cast<char *>("--slave=true");
-    slave_argv[argc+1] = nullptr;
-    return slave_argv;
+    // NOTE: Consistency between SLAVES and GRUPMAST keywords has already been checked in
+    //       init() in SimulatorFullyImplicitBlackoil.hpp
+    OPM_THROW(std::runtime_error, "Reservoir coupling: Failed to find master activation time: "
+              "No SLAVES keyword found in schedule");
 }
+
 
 } // namespace Opm
 
