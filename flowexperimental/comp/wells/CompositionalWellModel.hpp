@@ -24,8 +24,12 @@
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
 #include <flowexperimental/comp/wells/CompWell.hpp>
+
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <vector>
 
@@ -46,7 +50,7 @@ class CompositionalWellModel : public BaseAuxiliaryModule<TypeTag>
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     // TODO: Scalar will probably to be TypeTag later
-    using CompWellPtr = std::shared_ptr<CompWell<Scalar> >;
+    using CompWellPtr = std::shared_ptr<CompWell<TypeTag> >;
     explicit CompositionalWellModel(Simulator& /*simulator*/);
 
     // No extra dofs are inserted for wells. (we use a Schur complement.)
@@ -69,7 +73,8 @@ public:
     {}
 
 
-    void beginEpisode() {}
+    void beginEpisode() { beginReportStep(simulator_.episodeIndex()); }
+    void beginReportStep(unsigned report_step);
     void beginTimeStep();
     void beginIteration() {}
 
@@ -95,10 +100,16 @@ public:
 
 private:
      Simulator& simulator_;
+     const Schedule& schedule_;
+     const EclipseState& eclState_;
+     const Parallel::Communication& comm_;
+
+     // this is needed for parallel running, not all the wells will be in the same process
+     std::vector<Well> wells_ecl_;
      // const Schedule& schedule_;
      std::vector<CompWellPtr> well_container_;
 
-     void createWellContainer(unsigned report_step);
+     void createWellContainer();
 
 };
 
