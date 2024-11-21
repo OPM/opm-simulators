@@ -488,10 +488,10 @@ AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 run()
 {
 #if HAVE_MPI
-    if (isReservoirCouplingSlave_()) {
+    if (isReservoirCouplingSlave_() && reservoirCouplingSlave_().activated()) {
         return runStepReservoirCouplingSlave_();
     }
-    else if (isReservoirCouplingMaster_()) {
+    else if (isReservoirCouplingMaster_() && reservoirCouplingMaster_().activated()) {
         return runStepReservoirCouplingMaster_();
     }
     else {
@@ -513,7 +513,7 @@ bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 isReservoirCouplingMaster_() const
 {
-    return adaptive_time_stepping_.reservoir_coupling_master_ != nullptr;
+    return this->adaptive_time_stepping_.reservoir_coupling_master_ != nullptr;
 }
 
 template<class TypeTag>
@@ -522,7 +522,7 @@ bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 isReservoirCouplingSlave_() const
 {
-    return adaptive_time_stepping_.reservoir_coupling_slave_ != nullptr;
+    return this->adaptive_time_stepping_.reservoir_coupling_slave_ != nullptr;
 }
 
 template<class TypeTag>
@@ -594,7 +594,7 @@ ReservoirCouplingSlave&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingSlave_()
 {
-    return *adaptive_time_stepping_.reservoir_coupling_slave_;
+    return *this->adaptive_time_stepping_.reservoir_coupling_slave_;
 }
 #endif
 
@@ -901,25 +901,34 @@ chopTimeStepOrCloseFailingWells_(const int new_time_step)
         // Found no wells to close, chop the timestep
         chopTimeStep_(new_time_step);
     } else {
-        // Close all consistently failing wells.
-        int num_shut_wells = 0;
+        // Close all consistently failing wells that are not under group control
+        std::vector<std::string> shut_wells;
         for (const auto& well : failing_wells) {
             bool was_shut = solver_().model().wellModel().forceShutWellByName(
-                                              well, this->substep_timer_.simulationTimeElapsed());
+                        well, this->substep_timer_.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ true);
             if (was_shut) {
-                ++num_shut_wells;
+                shut_wells.push_back(well);
             }
         }
-        if (num_shut_wells == 0) {
-            // None of the problematic wells were shut.
-            // We must fall back to chopping again.
+        // If no wells are closed we also try to shut wells under group control
+        if (shut_wells.empty()) {
+            for (const auto& well : failing_wells) {
+                bool was_shut = solver_().model().wellModel().forceShutWellByName(
+                        well, this->substep_timer_.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ false);
+                if (was_shut) {
+                    shut_wells.push_back(well);
+                }
+            }
+        }
+        // If still no wells are closed we must fall back to chopping again
+        if (shut_wells.empty()) {
             chopTimeStep_(new_time_step);
         } else {
             wells_shut = true;
             if (solverVerbose_()) {
                 std::string msg;
                 msg = "\nProblematic well(s) were shut: ";
-                for (const auto& well : failing_wells) {
+                for (const auto& well : shut_wells) {
                     msg += well;
                     msg += " ";
                 }
@@ -1252,7 +1261,7 @@ writeOutput_() const
     time::StopWatch perf_timer;
     perf_timer.start();
     auto& problem = solver_().model().simulator().problem();
-    problem.writeOutput();
+    problem.writeOutput(true);
     return perf_timer.secsSinceStart();
 }
 

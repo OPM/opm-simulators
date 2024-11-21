@@ -40,16 +40,26 @@ public:
     ReservoirCouplingSlave(
         const Parallel::Communication &comm, const Schedule &schedule, const SimulatorTimer &timer
     );
-    void sendSimulationStartDateToMasterProcess();
-    void sendNextReportDateToMasterProcess();
+    bool activated() const { return activated_; }
+    void maybeActivate(int report_step);
+    void sendActivationDateToMasterProcess() const;
+    void sendNextReportDateToMasterProcess() const;
+    void sendSimulationStartDateToMasterProcess() const;
+    void receiveMasterGroupNamesFromMasterProcess();
     double receiveNextTimeStepFromMaster();
 
 private:
+    void checkGrupSlavGroupNames_();
+    double getGrupSlavActivationDate_() const;
+    void saveMasterGroupNamesAsMap_(const std::vector<char>& group_names);
+
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
     const SimulatorTimer &timer_;
     // MPI parent communicator for a slave process
     MPI_Comm_Ptr slave_master_comm_{nullptr};
+    std::map<std::string, std::string> master_group_names_;
+    bool activated_{false};
 };
 
 } // namespace Opm
