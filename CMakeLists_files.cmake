@@ -109,8 +109,10 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/RegionPhasePVAverage.cpp
+  opm/simulators/flow/ReservoirCoupling.cpp
   opm/simulators/flow/ReservoirCouplingMaster.cpp
   opm/simulators/flow/ReservoirCouplingSlave.cpp
+  opm/simulators/flow/ReservoirCouplingSpawnSlaves.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
@@ -842,6 +844,9 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/RegionPhasePVAverage.hpp
+  opm/simulators/flow/ReservoirCouplingMaster.hpp
+  opm/simulators/flow/ReservoirCouplingSlave.hpp
+  opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp
   opm/simulators/flow/SimulatorReportBanners.hpp
   opm/simulators/flow/SimulatorSerializer.hpp

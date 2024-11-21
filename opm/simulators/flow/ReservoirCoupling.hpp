@@ -29,9 +29,12 @@ namespace ReservoirCoupling {
 
 enum class MessageTag : int {
     SlaveSimulationStartDate,
+    SlaveActivationDate,
     SlaveProcessTermination,
     SlaveNextReportDate,
     SlaveNextTimeStep,
+    MasterGroupNames,
+    MasterGroupNamesSize,
 };
 
 // Custom deleter for MPI_Comm
@@ -193,6 +196,10 @@ public:
         return os;
     }
 };
+
+// Helper functions
+void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg);
+void setErrhandler(MPI_Comm comm, bool is_master);
 
 } // namespace ReservoirCoupling
 } // namespace Opm
