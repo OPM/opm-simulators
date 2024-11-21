@@ -37,6 +37,7 @@
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
@@ -48,8 +49,9 @@ namespace Opm {
 
 template<class Scalar, int numWellEq, int numEq>
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::
-MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well)
+MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info)
     : well_(well)
+    , pw_info_(pw_info)
 {
 }
 
@@ -107,7 +109,10 @@ init(const int numPerfs,
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            row.insert(perf);
+            const int local_perf_index = pw_info_.globalToLocal(perf);
+            if (local_perf_index < 0) // then the perforation is not on this process
+                continue;
+            row.insert(local_perf_index);
         }
     }
 
@@ -116,7 +121,10 @@ init(const int numPerfs,
               end = duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            row.insert(perf);
+            const int local_perf_index = pw_info_.globalToLocal(perf);
+            if (local_perf_index < 0) // then the perforation is not on this process
+                continue;
+            row.insert(local_perf_index);
         }
     }
 
@@ -400,6 +408,16 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     } else {
         jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
     }
+}
+
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+sumDistributed(Parallel::Communication comm)
+{
+    // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
+    // we need to do this for all segments in the residual and on the diagonal of D 
+    for (int seg = 0; seg < well_.numberOfSegments(); ++seg)
+        Opm::wellhelpers::sumDistributedWellEntries(duneD_[seg][seg], resWell_[seg], comm);
 }
 
 #define INSTANTIATE(T, numWellEq, numEq)                                                       \

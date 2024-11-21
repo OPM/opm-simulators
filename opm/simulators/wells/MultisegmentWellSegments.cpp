@@ -60,9 +60,10 @@ namespace Opm
 template<class FluidSystem, class Indices>
 MultisegmentWellSegments<FluidSystem,Indices>::
 MultisegmentWellSegments(const int numSegments,
+                         const int num_perfs_whole_mswell,
                          WellInterfaceGeneric<Scalar>& well)
     : perforations_(numSegments)
-    , perforation_depth_diffs_(well.numPerfs(), 0.0)
+    , perforation_depth_diffs_(num_perfs_whole_mswell, 0.0)
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
     , densities_(numSegments, 0.0)
@@ -85,7 +86,8 @@ MultisegmentWellSegments(const int numSegments,
     // the current implementation is a temporary solution for now, it should be corrected from the parser
     // side
     int i_perf_wells = 0;
-    well.perfDepth().resize(well_.numPerfs(), 0.);
+    // The perfDepth vector will contain the depths of all perforations across all processes of this well!
+    well.perfDepth().resize(num_perfs_whole_mswell, 0.0);
     const auto& segment_set = well_.wellEcl().getSegments();
     for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
         const Connection& connection = completion_set.get(perf);

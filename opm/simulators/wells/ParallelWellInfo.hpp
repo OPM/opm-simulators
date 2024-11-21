@@ -161,8 +161,16 @@ public:
                            std::size_t num_components) const;
 
     int numGlobalPerfs() const;
+    int globalToLocal(const int globalIndex) const;
+    int localToGlobal(std::size_t localIndex) const;
 
 private:
+    void buildLocalToGlobalMap() const;
+    void buildGlobalToLocalMap() const;
+    mutable std::unordered_map<std::size_t, int> local_to_global_map_; // Cache for L2G mapping
+    mutable std::unordered_map<int, std::size_t> global_to_local_map_; // Cache for G2L mapping
+    mutable bool l2g_map_built_ = false;
+    mutable bool g2l_map_built_ = false;
     const IndexSet& local_indices_;
     Parallel::Communication comm_;
     int num_global_perfs_;
@@ -208,6 +216,8 @@ public:
     /// \brief Collectively decide which rank has first perforation.
     void communicateFirstPerforation(bool hasFirst);
 
+    int globalToLocal(const int globalIndex) const;
+    int localToGlobal(std::size_t localIndex) const;
 
     /// If the well does not have any open connections the member rankWithFirstPerf
     /// is not initialized, and no broadcast is performed. In this case the argument

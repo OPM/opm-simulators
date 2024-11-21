@@ -151,8 +151,9 @@ public:
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
                              const WellState* prev_well_state);
 
-    static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const
-                                      std::vector<std::vector<int>>&       segment_perforations,
+    static void calculateSegmentRates(const ParallelWellInfo<Scalar>&      pw_info,
+                                      const std::vector<std::vector<int>>& segment_inlets,
+                                      const std::vector<std::vector<int>>& segment_perforations,
                                       const std::vector<Scalar>&           perforation_rates,
                                       const int                            np,
                                       const int                            segment,
@@ -417,6 +418,15 @@ private:
                             Scalar temperature_first_connection,
                             const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
+
+    static void calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>&      pw_info,
+                                               const std::vector<std::vector<int>>& segment_inlets,
+                                               const std::vector<std::vector<int>>& segment_perforations,
+                                               const std::vector<Scalar>&           perforation_rates,
+                                               const int                            np,
+                                               const int                            segment,
+                                               std::vector<Scalar>&                 segment_rates);
+
 };
 
 } // namespace Opm
