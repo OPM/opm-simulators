@@ -81,7 +81,8 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
             }
 
             std::vector<Scalar> rates;
-            WellState<Scalar>::calculateSegmentRates(segment_inlets,
+            WellState<Scalar>::calculateSegmentRates(ws.parallel_info,
+                                                     segment_inlets,
                                                      segment_perforations,
                                                      perforation_rates,
                                                      num_single_phase, 0, rates);
