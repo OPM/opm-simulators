@@ -322,14 +322,13 @@ void FlowGenericVanguard::init()
             if (comm.rank() == 0)
             {
                 std::string message =
-                        std::string("Option --allow-distributed-wells=true is only allowed if model\n")
-                        + "only has only standard wells. You need to provide option \n"
-                        + " with --enable-multisegement-wells=false to treat existing \n"
+                        std::string("Option --allow-distributed-wells=true in a model with\n")
+                        + "multisegment wells. This feature is still experimental. You can\n"
+                        + "set --enable-multisegment-wells=false to treat the existing \n"
                         + "multisegment wells as standard wells.";
-                OpmLog::error(message);
+                OpmLog::info(message);
             }
             comm.barrier();
-            OPM_THROW(std::invalid_argument, "All wells need to be standard wells!");
         }
     }
 }

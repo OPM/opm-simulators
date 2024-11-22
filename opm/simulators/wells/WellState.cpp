@@ -264,11 +264,13 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
                              const int report_step,
                              const WellState* prevState,
                              const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
-                             const SummaryState& summary_state)
+                             const SummaryState& summary_state,
+                             const bool enableDistributedWells)
 {
     // call init on base class
     this->base_init(cellPressures, cellTemperatures, wells_ecl, parallel_well_info,
                     well_perf_data, summary_state);
+    this->enableDistributedWells_ = enableDistributedWells;
     this->global_well_info = std::make_optional<GlobalWellInfo>(schedule,
                                                                 report_step,
                                                                 wells_ecl);
@@ -439,7 +441,7 @@ void WellState<Scalar>::resize(const std::vector<Well>& wells_ecl,
                                const SummaryState& summary_state)
 {
     const std::vector<Scalar> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-    init(tmp, tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state);
+    init(tmp, tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state, this->enableDistributedWells_);
 
     if (handle_ms_well) {
         initWellStateMSWell(wells_ecl, nullptr);
@@ -728,8 +730,8 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     n_activeperf++;
                 }
             }
-            
-            if (static_cast<int>(ws.perf_data.size()) != n_activeperf)
+
+            if (!this->enableDistributedWells_ && static_cast<int>(ws.perf_data.size()) != n_activeperf)
                 throw std::logic_error("Distributed multi-segment wells cannot be initialized properly yet.");
 
 

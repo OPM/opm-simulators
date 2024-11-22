@@ -179,7 +179,8 @@ namespace {
 
         state.init(cpress, ctemp, setup.sched,
                    wells, ppinfos,
-                   timeStep, nullptr, setup.well_perf_data, setup.st);
+                   timeStep, nullptr, setup.well_perf_data, setup.st,
+                   false /*enableDistributedWells*/);
 
         state.initWellStateMSWell(setup.sched.getWells(timeStep),
                                   nullptr);
