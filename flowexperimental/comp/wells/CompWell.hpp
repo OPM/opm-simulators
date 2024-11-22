@@ -20,7 +20,11 @@
 #ifndef OPM_COMP_WELL_HPP
 #define OPM_COMP_WELL_HPP
 
+#include <opm/models/utils/propertysystem.hh>
+
+#include "CompWellEquations.hpp"
 #include "CompWellInterface.hpp"
+#include "CompWellPrimaryVariables.hpp"
 
 #include <string>
 
@@ -31,9 +35,20 @@ template <typename TypeTag>
 class CompWell  : public CompWellInterface<TypeTag>
 {
 public:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using PrimaryVariables = CompWellPrimaryVariables<FluidSystem>;
+    using WellEquations = CompWellEquations<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
+
     CompWell(const Well& well,
              int index_of_well);
 private:
+
+    // primary variables
+    PrimaryVariables primary_variables_;
+    WellEquations well_equations_;
+
 };
 
 } // end of namespace Opm
