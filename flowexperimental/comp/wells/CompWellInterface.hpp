@@ -34,6 +34,8 @@ class CompWellInterface
 {
 public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
     CompWellInterface(const Well& well,
                       const int index_of_well);
 
