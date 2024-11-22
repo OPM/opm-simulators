@@ -180,7 +180,7 @@ wellTestALQ()
         return {0.0, false};
     }
 
-    Scalar temp_alq = std::max(this->min_alq_, 0.0);
+    Scalar temp_alq = std::max(this->min_alq_, Scalar(0.0));
     auto cur_alq = temp_alq;
     auto init_rates = computeLimitedWellRatesWithALQ_(temp_alq);
     LimitedRates new_rates = *init_rates;
