@@ -28,6 +28,7 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <memory>
+#include <unordered_map>
 
 namespace Opm {
 
