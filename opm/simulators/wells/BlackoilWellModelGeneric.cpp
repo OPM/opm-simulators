@@ -1318,13 +1318,27 @@ needPreStepNetworkRebalance(const int report_step) const
 template<class Scalar>
 bool BlackoilWellModelGeneric<Scalar>::
 forceShutWellByName(const std::string& wellname,
-                    const double simulation_time)
+                    const double simulation_time,
+                    const bool dont_shut_grup_wells)
 {
     // Only add the well to the closed list on the
     // process that owns it.
     int well_was_shut = 0;
     for (const auto& well : well_container_generic_) {
         if (well->name() == wellname) {
+            // if one well on individuel control (typical thp/bhp) in a group strugles to converge
+            // it may lead to problems for the other wells in the group
+            // we dont want to shut all the wells in a group only the one creating the problems.
+            const auto& ws = this->wellState().well(well->indexOfWell());
+            if (dont_shut_grup_wells) {
+                if (well->isInjector()) {
+                    if (ws.injection_cmode == Well::InjectorCMode::GRUP)
+                        continue;
+                } else {
+                    if (ws.production_cmode == Well::ProducerCMode::GRUP)
+                        continue;
+                }
+            }
             wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
             well_was_shut = 1;
             break;

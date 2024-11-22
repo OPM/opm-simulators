@@ -191,7 +191,8 @@ public:
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.
     bool forceShutWellByName(const std::string& wellname,
-                             const double simulation_time);
+                             const double simulation_time,
+                             const bool dont_shut_grup_wells);
 
     const std::vector<PerforationData<Scalar>>& perfData(const int well_idx) const
     { return well_perf_data_[well_idx]; }
