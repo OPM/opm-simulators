@@ -323,7 +323,7 @@ macro (config_hook)
     CXX_STANDARD 17
   )
 
-  set(HAVE_FLOATING_POINT_FROM_CHARS 0)
+  unset(HAVE_FLOATING_POINT_FROM_CHARS)
   if(have_float_from_chars)
     set(HAVE_FLOATING_POINT_FROM_CHARS 1)
   endif()
