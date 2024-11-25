@@ -613,7 +613,7 @@ checkGroupHigherConstraints(const Group& group,
         calcInjResvCoeff(fipnum, pvtreg, resv_coeff_inj);
 
         // checkGroupConstraintsInj considers 'available' rates (e.g., group rates minus reduction rates).
-        // So when checking constraints, current groups rate must also be subtracted it's reductioin rate
+        // So when checking constraints, current groups rate must also be subtracted it's reduction rate
         const std::vector<Scalar> reduction_rates = this->groupState().injection_reduction_rates(group.name());
 
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
@@ -670,7 +670,7 @@ checkGroupHigherConstraints(const Group& group,
     if (!isField && group.isProductionGroup()) {
         // Obtain rates for group.
         // checkGroupConstraintsProd considers 'available' rates (e.g., group rates minus reduction rates).
-        // So when checking constraints, current groups rate must also be subtracted it's reductioin rate
+        // So when checking constraints, current groups rate must also be subtracted it's reduction rate
         const std::vector<Scalar> reduction_rates = this->groupState().production_reduction_rates(group.name());
 
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
