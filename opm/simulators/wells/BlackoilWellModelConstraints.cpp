@@ -561,7 +561,8 @@ template<class Scalar>
 bool BlackoilWellModelConstraints<Scalar>::
 updateGroupIndividualControl(const Group& group,
                              const int reportStepIdx,
-                             std::map<std::pair<std::string,Phase>,std::string>& switched_inj,
+                             const int max_number_of_group_switch,
+                             std::map<std::pair<std::string,Phase>,std::vector<std::string>>& switched_inj,
                              std::map<std::string, std::vector<std::string>>& switched_prod,
                              std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                              GroupState<Scalar>& group_state,
@@ -576,13 +577,43 @@ updateGroupIndividualControl(const Group& group,
             if (!group.hasInjectionControl(phase)) {
                 continue;
             }
+
+            bool group_is_oscillating = false;
+            if (switched_inj.count({group.name(), phase}) > 0) {
+                for (const auto& key : switched_inj[{group.name(), phase}]) {
+                    if (std::count(switched_inj[{group.name(), phase}].begin(), switched_inj[{group.name(), phase}].end(), key) >= max_number_of_group_switch) {
+                        const size_t sz = switched_inj[{group.name(), phase}].size();
+                        // only output if the two last keys are not the same.
+                        if (key !=  switched_inj[{group.name(), phase}][sz-2]) {
+                            if (wellModel_.comm().rank() == 0) {
+                                std::ostringstream os;
+                                os << phase;
+                                const std::string msg =
+                                    fmt::format("Group control for {} injector group {} is oscillating. Group control kept at {}.",
+                                                std::move(os).str(),
+                                                group.name(),
+                                                key);
+                                deferred_logger.info(msg);
+                            }
+                            switched_inj[{group.name(), phase}].push_back(key);
+                        }
+                        group_is_oscillating = true;
+                        break;
+                    }
+                }
+            }
+            if (group_is_oscillating) {
+                continue;
+            }
+
             const auto& changed_this = this->checkGroupInjectionConstraints(group,
                                                                             reportStepIdx,
                                                                             phase);
             if (changed_this.first != Group::InjectionCMode::NONE)
             {
-                switched_inj.insert_or_assign({group.name(), phase},
-                                     Group::InjectionCMode2String(changed_this.first));
+                switched_inj[{group.name(), phase}].push_back(
+                             Group::InjectionCMode2String(changed_this.first));
+
                 this->actionOnBrokenConstraints(group, changed_this.first, phase,
                                                 group_state, deferred_logger);
                 WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(changed_this.second,
@@ -597,6 +628,27 @@ updateGroupIndividualControl(const Group& group,
         }
     }
     if (group.isProductionGroup()) {
+
+        if (switched_prod.count(group.name()) > 0) {
+            for (const auto& key : switched_prod[group.name()]) {
+                if (std::count(switched_prod[group.name()].begin(), switched_prod[group.name()].end(), key) >= max_number_of_group_switch) {
+                    const size_t sz = switched_prod[group.name()].size();
+                    // only output on rank 0 and if the two last keys are not the same.
+                    if (key !=  switched_prod[group.name()][sz-2]) {
+                        if (wellModel_.comm().rank() == 0) {
+                            const std::string msg =
+                            fmt::format("Group control for production group {} is oscillating. Group control kept at {}.",
+                                        group.name(),
+                                        key);
+                            deferred_logger.info(msg);
+                        }
+                        switched_prod[group.name()].push_back(key);
+                    }
+                    return false;
+                }
+            }
+        }
+
         const auto& changed_this = this->checkGroupProductionConstraints(group,
                                                                          reportStepIdx,
                                                                          deferred_logger);

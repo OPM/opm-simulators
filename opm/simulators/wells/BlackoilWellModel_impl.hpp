@@ -766,11 +766,11 @@ namespace Opm {
 
                 const Group::InjectionCMode& oldControl = this->prevWGState().group_state.injection_control(name, phase);
                 std::string from = Group::InjectionCMode2String(oldControl);
-                if (to != from) {
+                if (to.back() != from) {
                     std::string msg = "    Injection Group " + name
                     + " control mode changed from ";
                     msg += from;
-                    msg += " to " + to;
+                    msg += " to " + to.back();
                     local_deferredLogger.info(msg);
                 }
             }
@@ -2466,25 +2466,11 @@ namespace Opm {
                         const int reportStepIdx,
                         const int iterationIdx)
     {
-
-        if (this->switched_prod_groups_.count(group.name()) > 0) {
-            for (const auto& key : this->switched_prod_groups_[group.name()]) {
-                if (std::count(this->switched_prod_groups_[group.name()].begin(), this->switched_prod_groups_[group.name()].end(), key) >= 3) {
-                    if (std::count(this->switched_prod_groups_[group.name()].begin(), this->switched_prod_groups_[group.name()].end(), key) == 3) {
-                        const std::string msg =
-                            fmt::format("Group control for group {} is oscilating. Group control kept at {}.",
-                                        group.name(),
-                                        key);
-                        deferred_logger.info(msg);
-                        this->switched_prod_groups_[group.name()].push_back(key);
-                    }
-                    return false;
-                }
-            }
-        }
-
         bool changed = false;
-        bool changed_hc = this->checkGroupHigherConstraints( group, deferred_logger, reportStepIdx);
+        // restrict the number of group switches but only after nupcol iterations.
+        const int nupcol = this->schedule()[reportStepIdx].nupcol();
+        const int max_number_of_group_switches = iterationIdx <= nupcol ? 9999 : param_.max_number_of_group_switches_;
+        bool changed_hc = this->checkGroupHigherConstraints( group, deferred_logger, reportStepIdx, max_number_of_group_switches);
         if (changed_hc) {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
@@ -2494,6 +2480,7 @@ namespace Opm {
             BlackoilWellModelConstraints(*this).
                 updateGroupIndividualControl(group,
                                              reportStepIdx,
+                                             max_number_of_group_switches,
                                              this->switched_inj_groups_,
                                              this->switched_prod_groups_,
                                              this->closed_offending_wells_,

@@ -333,7 +333,7 @@ public:
         nupcol_wgstate_ = WGState<double>::serializationTestObject(dummy);
         last_glift_opt_time_ = 5.0;
         switched_prod_groups_ = {{"test4", {"test5", "test6"}}};
-        switched_inj_groups_ = {{{"test4", Phase::SOLVENT}, "test5"}};
+        switched_inj_groups_ = {{{"test4", Phase::SOLVENT}, {"test5", "test6"}}};
         closed_offending_wells_ = {{"test4", {"test5", "test6"}}};
     }
 
