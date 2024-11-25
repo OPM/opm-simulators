@@ -33,6 +33,8 @@
 
 #include "CompConnectionData.hpp"
 
+#include "CompWellStates.hpp"
+
 #include <vector>
 
 namespace Opm {
@@ -118,6 +120,8 @@ private:
      void initWellConnectionData();
 
      std::size_t compressedIndexForInterior(std::size_t cartesian_cell_idx) const;
+
+     CompWellStates<Scalar> comp_well_states_;
 
 };
 
