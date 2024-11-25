@@ -448,7 +448,7 @@ update_gconsump(const Schedule& schedule, const int report_step, const SummarySt
             if (sched_state.groups.has(group_name)) {
                 for (const auto& child_gname : sched_state.groups(group_name).groups()) {
                     const auto gefac = sched_state.groups(child_gname).getGroupEfficiencyFactor();
-                    has_values = has_values || self(self, child_gname, rates, gefac);
+                    has_values = self(self, child_gname, rates, gefac) || has_values;
                 }
             }
 
@@ -461,11 +461,11 @@ update_gconsump(const Schedule& schedule, const int report_step, const SummarySt
             }
 
             // Update map if values are set
-            if (has_values) this->m_gconsump_rates[group_name] = rates;
+            if (has_values) this->m_gconsump_rates.insert_or_assign(group_name, rates);
             return has_values;
         };
 
-    std::pair<Scalar, Scalar> rates = {0.0, 0.0};
+    auto rates = std::pair { Scalar{0}, Scalar{0} };
     gcr_recursive(gcr_recursive, "FIELD", rates);
 }
 
