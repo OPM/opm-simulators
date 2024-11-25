@@ -31,6 +31,8 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include "CompConnectionData.hpp"
+
 #include <vector>
 
 namespace Opm {
@@ -106,10 +108,16 @@ private:
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;
+     std::vector<std::vector<CompConnectionData<Scalar> > > well_connection_data_;
      // const Schedule& schedule_;
      std::vector<CompWellPtr> well_container_;
 
      void createWellContainer();
+     void initWellContainer();
+
+     void initWellConnectionData();
+
+     std::size_t compressedIndexForInterior(std::size_t cartesian_cell_idx) const;
 
 };
 
