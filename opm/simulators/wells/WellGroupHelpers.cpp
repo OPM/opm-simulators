@@ -1181,6 +1181,8 @@ checkGroupConstraintsProd(const std::string& name,
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
 
+    // NOTE: if name is a group, the rates-argument is the portion of the 'full' group rates that
+    // is potentially available for control by an ancestor, i.e. full rates minus reduction rates
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
 
     if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
@@ -1263,7 +1265,7 @@ checkGroupConstraintsProd(const std::string& name,
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
-    const Scalar current_rate
+    const Scalar current_rate_available
         = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
@@ -1298,6 +1300,7 @@ checkGroupConstraintsProd(const std::string& name,
             }
         }
     }
+    // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || guideRate->has(chain[ii])) {
@@ -1309,18 +1312,18 @@ checkGroupConstraintsProd(const std::string& name,
             }
             // Add my reduction back at the level where it is included in the local reduction
             if (local_reduction_level == ii ) {
-                target += current_rate * efficiencyFactor;
+                target += current_rate_available * efficiencyFactor;
             }
         }
         target *= localFraction(chain[ii + 1]);
     }
     // Avoid negative target rates comming from too large local reductions.
-    const Scalar target_rate = std::max(Scalar(1e-12), target / efficiencyFactor);
+    const Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiencyFactor);
     Scalar scale = 1.0;
-    if (current_rate > 1e-12)
-        scale = target_rate / current_rate;
+    if (current_rate_available > 1e-12)
+        scale = target_rate_available / current_rate_available;
 
-    return std::make_pair(current_rate > target_rate, scale);
+    return std::make_pair(current_rate_available > target_rate_available, scale);
 }
 
 template<class Scalar>
@@ -1349,6 +1352,9 @@ checkGroupConstraintsInj(const std::string& name,
     // efficiencyfactor is the well efficiency factor for the first group the well is
     // part of. Later it is the accumulated factor including the group efficiency factor
     // of the child of group.
+
+    // NOTE: if name is a group, the rates-argument is the portion of the 'full' group rates that
+    // is potentially available for control by an ancestor, i.e. full rates minus reduction rates
 
     auto currentGroupControl = group_state.injection_control(group.name(), injectionPhase);
 
@@ -1435,7 +1441,7 @@ checkGroupConstraintsInj(const std::string& name,
     // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
     // Then ...
     // TODO finish explanation.
-    const Scalar current_rate
+    const Scalar current_rate_available
         = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
@@ -1473,6 +1479,7 @@ checkGroupConstraintsInj(const std::string& name,
         }
     }
 
+    // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || guideRate->has(chain[ii], injectionPhase)) {
@@ -1485,18 +1492,18 @@ checkGroupConstraintsInj(const std::string& name,
 
             // Add my reduction back at the level where it is included in the local reduction
             if (local_reduction_level == ii ) {
-                target += current_rate * efficiencyFactor;
+                target += current_rate_available * efficiencyFactor;
             }
         }
         target *= localFraction(chain[ii + 1]);
     }
     // Avoid negative target rates comming from too large local reductions.
-    const Scalar target_rate = std::max(Scalar(1e-12), target / efficiencyFactor);
+    const Scalar target_rate_available = std::max(Scalar(1e-12), target / efficiencyFactor);
     Scalar scale = 1.0;
-    if (current_rate > 1e-12)
-        scale = target_rate / current_rate;
+    if (current_rate_available > 1e-12)
+        scale = target_rate_available / current_rate_available;
 
-    return std::make_pair(current_rate > target_rate, scale);
+    return std::make_pair(current_rate_available > target_rate_available, scale);
 }
 
 template<class Scalar>
