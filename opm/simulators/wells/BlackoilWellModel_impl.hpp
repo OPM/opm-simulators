@@ -666,8 +666,11 @@ namespace Opm {
             }
 
             try {
+                GLiftEclWells ecl_well_map;
+                initGliftEclWellMap(ecl_well_map);
                 well->wellTesting(simulator_, simulationTime, this->wellState(),
-                                  this->groupState(), this->wellTestState(), deferred_logger);
+                                  this->groupState(), this->wellTestState(), this->phase_usage_, 
+                                  ecl_well_map, deferred_logger);
             } catch (const std::exception& e) {
                 const std::string msg = fmt::format("Exception during testing of well: {}. The well will not open.\n Exception message: {}", wellEcl.name(), e.what());
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
