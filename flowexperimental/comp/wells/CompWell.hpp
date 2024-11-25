@@ -25,6 +25,7 @@
 #include "CompWellEquations.hpp"
 #include "CompWellInterface.hpp"
 #include "CompWellPrimaryVariables.hpp"
+#include "CompConnectionData.hpp"
 
 #include <string>
 
@@ -35,6 +36,7 @@ template <typename TypeTag>
 class CompWell  : public CompWellInterface<TypeTag>
 {
 public:
+    using Base = CompWellInterface<TypeTag>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -42,7 +44,11 @@ public:
     using WellEquations = CompWellEquations<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
 
     CompWell(const Well& well,
-             int index_of_well);
+             int index_of_well,
+             const std::vector<CompConnectionData<Scalar>>& well_connection_data);
+
+    void init() override;
+
 private:
 
     // primary variables

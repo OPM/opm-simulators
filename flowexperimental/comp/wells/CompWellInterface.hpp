@@ -28,6 +28,8 @@
 
 namespace Opm
 {
+template <typename Scalar>
+class CompConnectionData;
 
 template <typename TypeTag> // TODO: do we need to use TypeTag here?
 class CompWellInterface
@@ -37,16 +39,27 @@ public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     CompWellInterface(const Well& well,
-                      const int index_of_well);
+                      const int index_of_well,
+                      const std::vector<CompConnectionData<Scalar>>& well_connection_data);
 
 protected:
 
     const Well& well_ecl_;
     int index_of_well_{-1};
 
+    int number_of_connection_ {};
     Scalar reference_depth_ {}; // TODO: we might not need it since it in well_ecl_.
 
+    // cell index for each well connection
+    // TODO: maybe it should be called connection_cells
+    std::vector<std::size_t> well_cells_;
+    // cell index for each well connection
+    // TODO: should it called trans_index
+    std::vector<Scalar> well_index_;
+    std::vector<int> saturation_table_number_;
+
     // std::string name_;
+    virtual void init();
 
 };
 
