@@ -1222,7 +1222,9 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                     phaseIdx,
                                                     /*isInjector*/ false);
                         }
-                        Scalar rel_change = std::abs( (gr_rate_nupcol - gr_rate) / (0.5*gr_rate_nupcol + 0.5*gr_rate));
+                        Scalar small_rate = 1e-12; // m3/s
+                        Scalar denominator = (0.5*gr_rate_nupcol + 0.5*gr_rate);
+                        Scalar rel_change = denominator > small_rate ? std::abs( (gr_rate_nupcol - gr_rate) / denominator) : 0.0;
                         if ( rel_change > tol_nupcol) {
                             this->updateNupcolWGState();
                             const std::string control_str = is_vrep? "VREP" : "REIN";
