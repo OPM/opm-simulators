@@ -17,25 +17,16 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
 namespace Opm
 {
 
-template <typename TypeTag>
-CompWell<TypeTag>::
-CompWell(const Well& well,
-         int index_of_well,
-         const std::vector<CompConnectionData<Scalar>>& well_connection_data)
-  : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
-{
-}
-
-template <typename TypeTag>
+template <typename FluidSystem>
 void
-CompWell<TypeTag>::
-init() {
-    Base::init();
-    primary_variables_.init();
-    well_equations_.init(this->number_of_connection_);
+CompWellPrimaryVariables<FluidSystem>::init()
+{
+    value_.resize(numWellEq, 0.);
+    evaluation_.resize(numWellEq, 0.);
 }
 
-} // end of namespace Opm
+}

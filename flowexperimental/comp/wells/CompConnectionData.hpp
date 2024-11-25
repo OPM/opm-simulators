@@ -17,25 +17,24 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-namespace Opm
-{
+#ifndef OPM_COMP_CONNECTION_DATA_HPP
+#define OPM_COMP_CONNECTION_DATA_HPP
 
-template <typename TypeTag>
-CompWell<TypeTag>::
-CompWell(const Well& well,
-         int index_of_well,
-         const std::vector<CompConnectionData<Scalar>>& well_connection_data)
-  : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
-{
-}
+#include <cstddef>
 
-template <typename TypeTag>
-void
-CompWell<TypeTag>::
-init() {
-    Base::init();
-    primary_variables_.init();
-    well_equations_.init(this->number_of_connection_);
-}
+namespace Opm {
 
-} // end of namespace Opm
+template<typename Scalar>
+struct CompConnectionData {
+    std::size_t cell_index{};
+    Scalar connection_transmissibility_factor{};
+    Scalar connection_d_factor{};
+    int satnum_id{};
+
+    /// \brief The original index of the connection in ECL Schedule
+    std::size_t ecl_index{};
+};
+
+} // namespace Opm
+
+#endif // OPM_COMP_CONNECTION_DATA_HPP

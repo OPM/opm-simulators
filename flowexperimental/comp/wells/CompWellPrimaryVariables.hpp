@@ -44,11 +44,15 @@ public:
     // TODO: we can try to use DyanmicEvaluation here
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq>;
 
+    void init();
+
 private:
     std::vector<Scalar> value_;
     std::vector<EvalWell> evaluation_;
 };
 
 } // end of namespace Opm
+
+#include "CompWellPrimaryVariables_impl.hpp"
 
 #endif // OPM_COMP_WELL_PRIMARY_VARIABLES_HPP
