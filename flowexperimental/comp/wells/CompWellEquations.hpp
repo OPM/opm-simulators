@@ -53,6 +53,8 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar, numWellEq, numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
+    void init(const int num_conn);
+
 private:
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
@@ -66,7 +68,7 @@ private:
     BVectorWell resWell_;
 
 
-    // Store the global index of the well perforated cells
+    // Store the global index of the well connection cells
     std::vector<unsigned int> cells_;
 };
 
@@ -74,5 +76,7 @@ private:
 
 
 } // end of namespace Opm
+
+#include "CompWellEquations_impl.hpp"
 
 #endif // OPM_COMP_WELL_EQUATIONS_HPP
