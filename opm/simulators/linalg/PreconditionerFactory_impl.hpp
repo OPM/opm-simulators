@@ -547,12 +547,14 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                     return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
                 }
             });
+#if HAVE_HYPRE
             // Only add Hypre for scalar matrices
             if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1) {
                 F::addCreator("hypre", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
                     return std::make_shared<Hypre::HyprePreconditioner<M, V, V>>(op.getmat(), prm);
                 });
             }
+#endif
         }
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
             F::addCreator(
