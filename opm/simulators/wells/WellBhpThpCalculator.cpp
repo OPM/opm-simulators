@@ -270,9 +270,9 @@ computeBhpAtThpLimitProd(const std::function<std::vector<Scalar>(const Scalar)>&
 
     // could not solve for the bhp-point, we could not continue to find the bhp
     if (!bhp_max.has_value()) {
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                "Robust bhp(thp) solve failed due to not being able to "
-                                "find bhp-point where production becomes non-zero for well " + well_.name());
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                              "Robust bhp(thp) solve failed due to not being able to "
+                              "find bhp-point where production becomes non-zero for well " + well_.name());
         return std::nullopt;
     }
     const std::array<Scalar, 2> range {static_cast<Scalar>(controls.bhp_limit), *bhp_max};
@@ -558,8 +558,8 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
         catch (...) {
             // Use previous value (or max value if at start) if we failed.
             bhp_samples.push_back(bhp_samples.empty() ? low : bhp_samples.back());
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
-                                    "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + well_.name());
+            deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
+                                  "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + well_.name());
         }
     }
 
@@ -616,7 +616,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
         // We are in the high flow regime where the bhp_samples
         // are all equal to the bhp_limit.
         assert(low == controls.bhp_limit);
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + well_.name());
         return std::nullopt;
     }
@@ -630,7 +630,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
         return solved_bhp;
     }
     catch (...) {
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + well_.name());
         return std::nullopt;
     }
@@ -672,8 +672,8 @@ bhpMax(const std::function<Scalar(const Scalar)>& fflo,
             // Even at the BHP limit, we are injecting.
             // There will be no solution here, return an
             // empty optional.
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                    "Robust bhp(thp) solve failed due to inoperability for well " + well_.name());
+            deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                  "Robust bhp(thp) solve failed due to inoperability for well " + well_.name());
             return std::nullopt;
         } else {
             // Still producing, even at high bhp.
@@ -701,8 +701,8 @@ bhpMax(const std::function<Scalar(const Scalar)>& fflo,
         if (it < maxit) {
             bhp_max = low;
         } else {
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                    "Bisect did not find the bhp-point where we produce for well " + well_.name());
+            deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                  "Bisect did not find the bhp-point where we produce for well " + well_.name());
             return std::nullopt;
         }
     }
@@ -765,7 +765,7 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
     }
 
     if (!finding_bracket) {
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
                                 "Robust bhp(thp) solve failed due to not being able to "
                                 "bracket the bhp solution with the brute force search for " + well_.name());
         return std::nullopt;
@@ -781,7 +781,7 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
         return solved_bhp;
     }
     catch (...) {
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + well_.name());
         return std::nullopt;
     }
@@ -847,13 +847,13 @@ bisectBracket(const std::function<Scalar(const Scalar)>& eq,
             const Scalar limit = 0.1 * unit::barsa;
             if (std::min(abs_low, abs_high) < limit) {
                 // Return the least bad solution if less off than 0.1 bar.
-                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                        "Robust bhp(thp) not solved precisely for well " + well_.name());
+                deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
+                                      "Robust bhp(thp) not solved precisely for well " + well_.name());
                 approximate_solution = abs_low < abs_high ? low : high;
             } else {
                     // Return failure.
-                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                         "Robust bhp(thp) solve failed due to bracketing failure for well " +
+                deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
+                                      "Robust bhp(thp) solve failed due to bracketing failure for well " +
                                          well_.name());
             }
         }
