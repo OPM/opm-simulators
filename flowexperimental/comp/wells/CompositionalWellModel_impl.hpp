@@ -10,10 +10,14 @@ CompositionalWellModel<TypeTag>::
 CompositionalWellModel(Simulator& simulator)
     : simulator_(simulator)
     , schedule_(simulator.vanguard().schedule())
-    , eclState_(simulator.vanguard().eclState())
+    , summary_state_(simulator.vanguard().summaryState())
+    , ecl_state_(simulator.vanguard().eclState())
     , comm_(simulator.gridView().comm())
-      //, schedule_(schedule)
+    , phase_usage_(phaseUsageFromDeck(ecl_state_))
+    , comp_config_(ecl_state_.compositionalConfig())
+    , comp_well_states_(phase_usage_, comp_config_)
 {
+    local_num_cells_ = simulator.gridView().size(0);
 }
 
 template <typename TypeTag>
@@ -24,6 +28,7 @@ beginReportStep(unsigned report_step)
     // TODO: not considering the parallel running yet
     wells_ecl_ = schedule_.getWells(report_step);
     initWellConnectionData();
+    initWellState(report_step);
 }
 
 template <typename TypeTag>
@@ -91,6 +96,48 @@ initWellConnectionData()
     }
 
 }
+
+template <typename TypeTag>
+void CompositionalWellModel<TypeTag>::
+initWellState(const std::size_t report_step)
+{
+    // TODO: not sure the following is correct
+    const auto pressIx = [this]()
+    {
+        if (phase_usage_.phase_used[FluidSystem::oilPhaseIdx]) {
+            return FluidSystem::oilPhaseIdx;
+        }
+        if (phase_usage_.phase_used[FluidSystem::gasPhaseIdx]) {
+            return FluidSystem::gasPhaseIdx;
+        }
+        assert(false && "the usage of oil and gas phase is not correct");
+        return FluidSystem::gasPhaseIdx;
+    }();
+
+    auto cell_pressure = std::vector<Scalar>(this->local_num_cells_, Scalar{0.});
+
+    auto elemCtx = ElementContext { this->simulator_ };
+    const auto& gridView = this->simulator_.vanguard().gridView();
+
+    OPM_BEGIN_PARALLEL_TRY_CATCH();
+    for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+        elemCtx.updatePrimaryStencil(elem);
+        elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+        const auto ix = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+        const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
+
+        cell_pressure[ix] = fs.pressure(pressIx).value();
+    }
+    OPM_END_PARALLEL_TRY_CATCH("ComposotionalWellModel::initializeWellState() failed: ",
+                           this->simulator_.vanguard().grid().comm());
+
+    /* TODO: no prev well state for now */
+    this->comp_well_states_.init(this->schedule_, this->wells_ecl_,
+                                 cell_pressure, this->well_connection_data_,
+                                 this->summary_state_);
+}
+
 
 template <typename TypeTag>
 std::size_t CompositionalWellModel<TypeTag>::
