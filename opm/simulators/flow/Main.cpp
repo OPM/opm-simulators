@@ -201,6 +201,7 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool keepKeywords,
                     const std::size_t numThreads,
                     const int output_param,
+                    const bool slaveMode,
                     const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp)
@@ -236,7 +237,8 @@ void Main::readDeck(const std::string& deckFilename,
                   init_from_restart_file,
                   outputCout_,
                   keepKeywords,
-                  outputInterval);
+                  outputInterval,
+                  slaveMode);
 
     verifyValidCellGeometry(FlowGenericVanguard::comm(), *this->eclipseState_);
 
