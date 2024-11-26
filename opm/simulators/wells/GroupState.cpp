@@ -24,8 +24,10 @@
 #include <iterator>
 
 #include <opm/json/JsonObject.hpp>
-
+#include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
+
 
 namespace Opm {
 
@@ -50,6 +52,7 @@ GroupState<Scalar> GroupState<Scalar>::serializationTestObject()
     result.m_gpmaint_target = {{"test11", 15.0}};
     result.injection_controls = {{{Phase::FOAM, "test12"}, Group::InjectionCMode::REIN}};
     result.gpmaint_state.add("foo", GPMaint::State::serializationTestObject());
+    result.m_gconsump_rates = {{"testA", {0.2, 0.1}}};
 
     return result;
 }
@@ -67,7 +70,8 @@ bool GroupState<Scalar>::operator==(const GroupState& other) const
            this->inj_surface_rates == other.inj_surface_rates &&
            this->m_grat_sales_target == other.m_grat_sales_target &&
            this->injection_controls == other.injection_controls &&
-           this->gpmaint_state == other.gpmaint_state;
+           this->gpmaint_state == other.gpmaint_state &&
+           this->m_gconsump_rates == other.m_gconsump_rates;
 }
 
 //-------------------------------------------------------------------------
@@ -418,6 +422,63 @@ has_gpmaint_target(const std::string& gname) const
 {
     return (this->m_gpmaint_target.count(gname) > 0);
 }
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state) {
+    this->m_gconsump_rates.clear();
+    const auto& sched_state = schedule[report_step];
+    const auto& gconsump = sched_state.gconsump();
+    auto gcr_recursive =
+        [this, &sched_state, &gconsump, &summary_state](auto self,
+                                                        const std::string& group_name,
+                                                        std::pair<Scalar, Scalar>& rates,
+                                                        const double parent_gefac = 1.0) -> bool
+        {
+            // If group already has been computed, update parent rates and return true
+            const auto it = this->m_gconsump_rates.find(group_name);
+            if (it != this->m_gconsump_rates.end()) {
+                rates.first += static_cast<Scalar>(it->second.first * parent_gefac);
+                rates.second += static_cast<Scalar>(it->second.second * parent_gefac);
+                return true;
+            }
+
+            // Accumulate from sub-groups and keep track of any updates in 'has_values'
+            bool has_values = false;
+            if (sched_state.groups.has(group_name)) {
+                for (const auto& child_gname : sched_state.groups(group_name).groups()) {
+                    const auto gefac = sched_state.groups(child_gname).getGroupEfficiencyFactor();
+                    has_values = self(self, child_gname, rates, gefac) || has_values;
+                }
+            }
+
+            // Add consumption/import rates at current level
+            if (gconsump.has(group_name)) {
+                const auto& group_gc = gconsump.get(group_name, summary_state);
+                rates.first += static_cast<Scalar>(group_gc.consumption_rate);
+                rates.second += static_cast<Scalar>(group_gc.import_rate);
+                has_values = true;
+            }
+
+            // Update map if values are set
+            if (has_values) this->m_gconsump_rates.insert_or_assign(group_name, rates);
+            return has_values;
+        };
+
+    auto rates = std::pair { Scalar{0}, Scalar{0} };
+    gcr_recursive(gcr_recursive, "FIELD", rates);
+}
+
+template<class Scalar>
+const std::pair<Scalar, Scalar>& GroupState<Scalar>::
+gconsump_rates(const std::string& gname) const {
+    const auto it = this->m_gconsump_rates.find(gname);
+    if (it != this->m_gconsump_rates.end()) {
+        return it->second;
+    }
+    return zero_pair;
+}
+
 
 template class GroupState<double>;
 

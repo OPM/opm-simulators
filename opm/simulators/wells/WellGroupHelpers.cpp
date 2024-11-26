@@ -700,12 +700,10 @@ updateREINForGroups(const Group& group,
 
     // add import rate and subtract consumption rate for group for gas
     if (sum_rank) {
-        if (schedule[reportStepIdx].gconsump().has(group.name())) {
-            const auto& gconsump = schedule[reportStepIdx].gconsump().get(group.name(), st);
-            if (pu.phase_used[BlackoilPhases::Vapour]) {
-                rein[pu.phase_pos[BlackoilPhases::Vapour]] += gconsump.import_rate;
-                rein[pu.phase_pos[BlackoilPhases::Vapour]] -= gconsump.consumption_rate;
-            }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const auto& [consumption_rate, import_rate] = group_state.gconsump_rates(group.name());
+            rein[pu.phase_pos[BlackoilPhases::Vapour]] += import_rate;
+            rein[pu.phase_pos[BlackoilPhases::Vapour]] -= consumption_rate;
         }
     }
 
