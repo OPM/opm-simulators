@@ -55,8 +55,6 @@ public:
 
         use_gpu_ = prm_.get<bool>("use_gpu", false);
 
-        HYPRE_Initialize();
-
         // Set memory location and execution policy
         if (use_gpu_) {
             HYPRE_SetMemoryLocation(HYPRE_MEMORY_DEVICE);
@@ -155,7 +153,6 @@ public:
         if (indices_device_) {
             hypre_TFree(indices_device_, HYPRE_MEMORY_DEVICE);
         }
-        HYPRE_Finalize();
     }
 
     void update() override {

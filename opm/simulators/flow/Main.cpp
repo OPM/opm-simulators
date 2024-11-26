@@ -35,6 +35,10 @@
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
 #endif
 
+#if HAVE_HYPRE
+#include <HYPRE_utilities.h>
+#endif
+
 namespace Opm {
 
 Main::Main(int argc, char** argv, bool ownMPI)
@@ -87,6 +91,10 @@ Main::~Main()
         }
     }
 #endif // HAVE_MPI
+
+#if HAVE_HYPRE
+    HYPRE_Finalize();
+#endif
 
     if (ownMPI_) {
         FlowGenericVanguard::setCommunication(nullptr);
@@ -163,6 +171,10 @@ void Main::initMPI()
 #endif
 
 #endif // HAVE_MPI
+
+#if HAVE_HYPRE
+    HYPRE_Initialize();
+#endif
 }
 
 void Main::handleVersionCmdLine_(int argc, char** argv,
