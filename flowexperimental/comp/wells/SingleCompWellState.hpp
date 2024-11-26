@@ -1,5 +1,5 @@
 /*
-Copyright 2024, SINTEF Digital
+  Copyright 2024, SINTEF Digital
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -27,19 +27,40 @@ Copyright 2024, SINTEF Digital
 
 namespace Opm {
 
-template <class Scalar>
+template <typename Scalar>
 class ConnectionData {
 public:
-   Scalar pressure {};
-   std::vector<Scalar> phase_rates; // surface rates
-   std::vector<Scalar> reservoir_rates; // phase rates
-   std::vector<Scalar> total_molar_fractions;
+    ConnectionData() = default;
+    ConnectionData(std::size_t num_connection,
+                   std::size_t num_phases,
+                   std::size_t num_components);
+
+    ConnectionData(const std::vector<CompConnectionData<Scalar>>& connections,
+                   const PhaseUsage& phase_usage,
+                   const CompositionalConfig& comp_config);
+
+    std::vector<Scalar> pressure {};
+    std::vector<Scalar> phase_rates {}; // surface rates
+    std::vector<Scalar> reservoir_rates {}; // phase rates
+    std::vector<Scalar> total_molar_fractions {};
+
+    // connection_tranmissibility_factor
+    std::vector<Scalar> tranmissibility_factor {};
+    std::vector<int> satnum_id {};
+    std::vector<std::size_t> ecl_index {};
 };
 
-template <class Scalar>
+template <typename Scalar>
 class SingleCompWellState {
 public:
+    SingleCompWellState(const std::string& name,
+                        const CompositionalConfig& comp_config,
+                        const PhaseUsage& phase_usage,
+                        const std::vector<CompConnectionData<Scalar> >& connections,
+                        bool is_producer);
+
     std::string name;
+    PhaseUsage pu;
     bool producer;
 
     WellStatus status{WellStatus::OPEN};
@@ -55,10 +76,20 @@ public:
     // TODO: to do phase_molar_fractions
     std::vector<std::vector<Scalar> > phase_molar_fractions;
 
-    std::vector<ConnectionData<Scalar>> connection_data;
+    ConnectionData<Scalar> connection_data;
 
+    WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
+    WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
+
+    // TODO: the function can be reorgnized so that we do not need to have initSingleInjector
+    // and initSingleProducer, but we split when update the targets
+    // so we have a funciton update_targets() to split between injector and producer
+    void update_producer_targets(const Well& well, const SummaryState& st);
+    void update_injector_targets(const Well& well, const SummaryState& st);
 };
 
 } // namespace Opm
+
+#include "SingleCompWellState_impl.hpp"
 
 #endif // OPM_SINGLE_COMP_WELL_STATE_HPP

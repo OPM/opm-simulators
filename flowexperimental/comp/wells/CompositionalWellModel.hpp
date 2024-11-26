@@ -33,7 +33,7 @@
 
 #include "CompConnectionData.hpp"
 
-#include "CompWellStates.hpp"
+#include "CompWellState.hpp"
 
 #include <vector>
 
@@ -44,9 +44,11 @@ class Schedule;
 template<typename TypeTag>
 class CompositionalWellModel : public BaseAuxiliaryModule<TypeTag>
 {
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
     using NeighborSet = typename BaseAuxiliaryModule<TypeTag>::NeighborSet;
@@ -105,8 +107,19 @@ public:
 private:
      Simulator& simulator_;
      const Schedule& schedule_;
-     const EclipseState& eclState_;
+     const SummaryState& summary_state_;
+     const EclipseState& ecl_state_;
      const Parallel::Communication& comm_;
+
+     // TODO: this is a blackoil phase usage, we need to evaluate whether we
+     // continue to use it
+     const PhaseUsage phase_usage_;
+
+     // we might need something lighter
+     const CompositionalConfig& comp_config_;
+
+     // we will need two to handle the changes between time stepping
+     CompWellState<Scalar> comp_well_states_;
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;
@@ -114,14 +127,16 @@ private:
      // const Schedule& schedule_;
      std::vector<CompWellPtr> well_container_;
 
+     std::size_t local_num_cells_{0};
+
      void createWellContainer();
      void initWellContainer();
 
      void initWellConnectionData();
+     void initWellState(std::size_t report_step);
 
      std::size_t compressedIndexForInterior(std::size_t cartesian_cell_idx) const;
 
-     CompWellStates<Scalar> comp_well_states_;
 
 };
 
