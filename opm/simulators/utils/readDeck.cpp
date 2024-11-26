@@ -151,7 +151,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), lowActionParsingStrictness,
+                 std::move(python), lowActionParsingStrictness, /*slave_mode=*/false,
                  keepKeywords, outputInterval, init_state);
         }
 
