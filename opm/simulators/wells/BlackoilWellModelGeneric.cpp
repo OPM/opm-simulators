@@ -1396,7 +1396,7 @@ inferLocalShutWells()
 
 template<class Scalar>
 Scalar BlackoilWellModelGeneric<Scalar>::
-updateNetworkPressures(const int reportStepIdx)
+updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor)
 {
     // Get the network and return if inactive (no wells in network at this time)
     const auto& network = schedule()[reportStepIdx].network();
@@ -1436,7 +1436,6 @@ updateNetworkPressures(const int reportStepIdx)
             // TODO: the following parameters are subject to adjustment for optimization purpose
             constexpr Scalar upper_update_bound = 5.0 * unit::barsa;
             // relative dampening factor based on update value
-            constexpr Scalar damping_factor = 0.1;
             const Scalar damped_change = std::min(damping_factor * std::abs(change), upper_update_bound);
             const Scalar sign = change > 0 ? 1. : -1.;
             node_pressures_[name] = pressure + sign * damped_change;

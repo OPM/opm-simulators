@@ -2187,12 +2187,18 @@ namespace Opm {
             const double dt = this->simulator_.timeStepSize();
             // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
             computeWellGroupThp(dt, deferred_logger);
-            const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx);
-            const Scalar network_imbalance = comm.max(local_network_imbalance);
-            const auto& balance = this->schedule()[episodeIdx].network_balance();
-            constexpr Scalar relaxation_factor = 10.0;
-            const Scalar tolerance = relax_network_tolerance ? relaxation_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
-            more_network_update = this->networkActive() && network_imbalance > tolerance;
+            constexpr int max_number_of_sub_iterations = 20;
+            constexpr Scalar damping_factor = 0.1;
+            for (int i = 0; i < max_number_of_sub_iterations; i++) {
+                const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx, damping_factor);
+                const Scalar network_imbalance = comm.max(local_network_imbalance);
+                const auto& balance = this->schedule()[episodeIdx].network_balance();
+                constexpr Scalar relaxation_factor = 10.0;
+                const Scalar tolerance = relax_network_tolerance ? relaxation_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
+                more_network_update = this->networkActive() && network_imbalance > tolerance;
+                if (!more_network_update)
+                    break;
+            }
         }
 
         bool changed_well_group = false;
