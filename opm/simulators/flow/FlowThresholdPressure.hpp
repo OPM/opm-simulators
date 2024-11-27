@@ -85,7 +85,7 @@ public:
     void finishInit()
     {
         this->BaseType::finishInit();
-        if (this->enableThresholdPressure_ && !this->thpresDefault_.empty()) {
+        if (this->enableThresholdPressure_ && !this->thpresDefault_.empty() && !this->restart_) {
             this->computeDefaultThresholdPressures_();
             this->applyExplicitThresholdPressures_();
         }
