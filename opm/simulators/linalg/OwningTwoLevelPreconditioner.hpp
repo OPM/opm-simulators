@@ -183,28 +183,24 @@ private:
                                                                FlexibleSolver<CoarseOperator>,
                                                                LevelTransferPolicy>;
     using TwoLevelMethod
-        = Dune::Amg::TwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::Preconditioner<VectorType, VectorType>>;
+        = Dune::Amg::TwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::PreconditionerWithUpdate<VectorType, VectorType>>;
 
     // Handling parallel vs serial instantiation of preconditioner factory.
     template <class Comm>
     void updateImpl(const Comm*)
     {
         // Parallel case.
-        auto child = prm_.get_child_optional("finesmoother");
-        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : Opm::PropertyTree(), *comm_);
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
     void updateImpl(const Dune::Amg::SequentialInformation*)
     {
         // Serial case.
-        auto child = prm_.get_child_optional("finesmoother");
-        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : Opm::PropertyTree());
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
     const OperatorType& linear_operator_;
-    std::shared_ptr<Dune::Preconditioner<VectorType, VectorType>> finesmoother_;
+    std::shared_ptr<PreconditionerWithUpdate<VectorType, VectorType>> finesmoother_;
     const Communication* comm_;
     std::function<VectorType()> weightsCalculator_;
     VectorType weights_;
