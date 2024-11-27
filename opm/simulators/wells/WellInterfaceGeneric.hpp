@@ -311,7 +311,7 @@ protected:
     // well index for each perforation
     std::vector<Scalar> well_index_;
 
-    // number of the perforations for this well
+    // number of the perforations for this well on this process
     int number_of_perforations_;
 
     // depth for each perforation

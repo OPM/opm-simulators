@@ -133,9 +133,9 @@ Scalar computeHydrostaticCorrection(const Scalar well_ref_depth, const Scalar vf
     return dp;
 }
 
-template<typename Scalar, typename Comm>
-void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
-                               Dune::DynamicVector<Scalar>& vec,
+template<typename MatrixType, typename VectorType, typename Comm>
+void sumDistributedWellEntries(MatrixType& mat,
+                               VectorType& vec,
                                const Comm& comm)
 {
     // DynamicMatrix does not use one contiguous array for storing the data
@@ -145,7 +145,7 @@ void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
     {
         return;
     }
-    std::vector<Scalar> allEntries;
+    std::vector<typename MatrixType::value_type> allEntries;
     allEntries.reserve(mat.N()*mat.M()+vec.size());
     for(const auto& row: mat)
     {
@@ -154,7 +154,7 @@ void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
     allEntries.insert(allEntries.end(), vec.begin(), vec.end());
     comm.sum(allEntries.data(), allEntries.size());
     auto pos = allEntries.begin();
-    auto cols = mat.cols();
+    auto cols = mat.mat_cols();
     for(auto&& row: mat)
     {
         std::copy(pos, pos + cols, &(row[0]));
@@ -223,28 +223,36 @@ template<class Scalar>
 using DMatrix = Dune::DynamicMatrix<Scalar>;
 using Comm = Parallel::Communication;
 
-#define INSTANTIATE(T,Dim)                       \
-    template void ParallelStandardWellB<T>::     \
-        mv(const Vec<T,Dim>&,DynVec<T>&) const;  \
-    template void ParallelStandardWellB<T>::     \
+#define INSTANTIATE(T,Dim)                                                      \
+    template void ParallelStandardWellB<T>::                                    \
+        mv(const Vec<T,Dim>&,DynVec<T>&) const;                                 \
+    template void ParallelStandardWellB<T>::                                    \
         mmv(const Vec<T,Dim>&,DynVec<T>&) const;
 
-#define INSTANTIATE_TYPE(T)                                               \
-    template class ParallelStandardWellB<T>;                              \
-    template void sumDistributedWellEntries(Dune::DynamicMatrix<T>& mat,  \
-                                            Dune::DynamicVector<T>& vec,  \
-                                            const Comm& comm);            \
-    template DMatrix<T> transposeDenseDynMatrix(const DMatrix<T>&);       \
-    template T computeHydrostaticCorrection(const T,                      \
-                                            const T,                      \
-                                            const T,                      \
-                                            const T);                     \
-    INSTANTIATE(T,1)                                                      \
-    INSTANTIATE(T,2)                                                      \
-    INSTANTIATE(T,3)                                                      \
-    INSTANTIATE(T,4)                                                      \
-    INSTANTIATE(T,5)                                                      \
-    INSTANTIATE(T,6)
+#define INSTANTIATE_WE(T,Dim)                                                   \
+    template void sumDistributedWellEntries(Dune::FieldMatrix<T,Dim,Dim>& mat,  \
+                                            Dune::FieldVector<T,Dim>& vec,      \
+                                            const Comm& comm);
+
+#define INSTANTIATE_TYPE(T)                                                     \
+    template class ParallelStandardWellB<T>;                                    \
+    template void sumDistributedWellEntries(Dune::DynamicMatrix<T>& mat,        \
+                                            Dune::DynamicVector<T>& vec,        \
+                                            const Comm& comm);                  \
+    template DMatrix<T> transposeDenseDynMatrix(const DMatrix<T>&);             \
+    template T computeHydrostaticCorrection(const T,                            \
+                                            const T,                            \
+                                            const T,                            \
+                                            const T);                           \
+    INSTANTIATE(T,1)                                                            \
+    INSTANTIATE(T,2)                                                            \
+    INSTANTIATE(T,3)                                                            \
+    INSTANTIATE(T,4)                                                            \
+    INSTANTIATE(T,5)                                                            \
+    INSTANTIATE(T,6)                                                            \
+    INSTANTIATE_WE(T,2)                                                         \
+    INSTANTIATE_WE(T,3)                                                         \
+    INSTANTIATE_WE(T,4)
 
 INSTANTIATE_TYPE(double)
 

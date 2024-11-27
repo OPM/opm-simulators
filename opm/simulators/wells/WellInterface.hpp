@@ -84,7 +84,8 @@ public:
     using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
     using GLiftOptWells = typename BlackoilWellModel<TypeTag>::GLiftOptWells;
     using GLiftProdWells = typename BlackoilWellModel<TypeTag>::GLiftProdWells;
-    using GLiftWellStateMap =
+    using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
+    using GLiftWellStateMap = 
         typename BlackoilWellModel<TypeTag>::GLiftWellStateMap;
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
 
@@ -190,7 +191,8 @@ public:
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
                                     const SummaryState& summary_state,
                                     const Scalar alq_value,
-                                    DeferredLogger& deferred_logger) const = 0;
+                                    DeferredLogger& deferred_logger,
+                                    bool iterate_if_no_solution) const = 0;
 
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
@@ -297,6 +299,8 @@ public:
                      /* const */ WellState<Scalar>& well_state,
                      const GroupState<Scalar>& group_state,
                      WellTestState& welltest_state,
+                     const PhaseUsage& phase_usage,
+                     GLiftEclWells& ecl_well_map,
                      DeferredLogger& deferred_logger);
 
     void checkWellOperability(const Simulator& simulator,
@@ -311,6 +315,9 @@ public:
 
     void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& simulator,
                                              WellState<Scalar>& well_state,
+                                             const GroupState<Scalar>& group_state,
+                                             const PhaseUsage& phase_usage,
+                                             GLiftEclWells& ecl_well_map,
                                              DeferredLogger& deferred_logger);
 
     // check whether the well is operable under the current reservoir condition
@@ -473,6 +480,15 @@ protected:
                              WellState<Scalar>& well_state,
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger);
+    
+
+    template<class GasLiftSingleWell>
+    std::unique_ptr<GasLiftSingleWell> initializeGliftWellTest_(const Simulator& simulator,
+                                                                WellState<Scalar>& well_state,
+                                                                const GroupState<Scalar>& group_state,
+                                                                const PhaseUsage& phase_usage,
+                                                                GLiftEclWells& ecl_well_map,
+                                                                DeferredLogger& deferred_logger);
 
     Eval getPerfCellPressure(const FluidState& fs) const;
 

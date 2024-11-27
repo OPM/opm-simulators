@@ -151,8 +151,9 @@ public:
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
                              const WellState* prev_well_state);
 
-    static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const
-                                      std::vector<std::vector<int>>&       segment_perforations,
+    static void calculateSegmentRates(const ParallelWellInfo<Scalar>&      pw_info,
+                                      const std::vector<std::vector<int>>& segment_inlets,
+                                      const std::vector<std::vector<int>>& segment_perforations,
                                       const std::vector<Scalar>&           perforation_rates,
                                       const int                            np,
                                       const int                            segment,
@@ -348,9 +349,14 @@ public:
         for (auto& w : wells_) {
             serializer(w);
         }
+        serializer(permanently_inactive_well_names_);
     }
 
 private:
+    bool is_permanently_inactive_well(const std::string& wname) const {
+        return std::find(this->permanently_inactive_well_names_.begin(), this->permanently_inactive_well_names_.end(), wname) != this->permanently_inactive_well_names_.end();
+    }
+
     PhaseUsage phase_usage_;
 
     // The wells_ variable is essentially a map of all the wells on the current
@@ -370,6 +376,9 @@ private:
     // The well_rates_for_guiderate variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or not.
     std::map<std::string, std::pair<bool, std::vector<Scalar>>> well_rates_for_guiderate;
+
+    // Keep track of permanently inactive well names
+    std::vector<std::string> permanently_inactive_well_names_;
 
     data::Segment
     reportSegmentResults(const int         well_id,
@@ -408,6 +417,15 @@ private:
                             Scalar temperature_first_connection,
                             const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
+
+    static void calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>&      pw_info,
+                                               const std::vector<std::vector<int>>& segment_inlets,
+                                               const std::vector<std::vector<int>>& segment_perforations,
+                                               const std::vector<Scalar>&           perforation_rates,
+                                               const int                            np,
+                                               const int                            segment,
+                                               std::vector<Scalar>&                 segment_rates);
+
 };
 
 } // namespace Opm

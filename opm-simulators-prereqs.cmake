@@ -5,7 +5,7 @@ set (opm-simulators_CONFIG_VAR
   HAVE_EWOMS
   HAVE_MPI
   HAVE_PETSC
-  COMPILE_BDA_BRIDGE
+  COMPILE_GPU_BRIDGE
   HAVE_CUDA
   HAVE_OPENCL
   HAVE_OPENCL_HPP
@@ -48,7 +48,7 @@ set (opm-simulators_DEPS
   # Look for MPI support
   "MPI"
   # Tim Davis' SuiteSparse archive
-  "SuiteSparse REQUIRED COMPONENTS umfpack"
+  "SuiteSparse REQUIRED COMPONENTS UMFPACK"
   # SuperLU direct solver
   "SuperLU"
   # ROCALUTION from ROCM framework

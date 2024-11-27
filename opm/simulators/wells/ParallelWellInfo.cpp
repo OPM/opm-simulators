@@ -23,6 +23,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <fmt/format.h>
 #include <cassert>
 #include <iterator>
 #include <numeric>
@@ -117,6 +118,50 @@ GlobalPerfContainerFactory(const IndexSet& local_indices,
     {
         num_global_perfs_ = num_local_perfs;
     }
+}
+
+template<class Scalar>
+void GlobalPerfContainerFactory<Scalar>::buildLocalToGlobalMap() const {
+    local_to_global_map_.clear();
+    for (const auto& index : local_indices_) {
+        local_to_global_map_[index.local()] = index.global();
+    }
+    l2g_map_built_ = true;
+}
+
+
+template<class Scalar>
+int GlobalPerfContainerFactory<Scalar>::localToGlobal(std::size_t localIndex) const {
+    if (local_indices_.size() == 0)
+        return localIndex;
+    if (!l2g_map_built_)
+        buildLocalToGlobalMap();
+    auto it = local_to_global_map_.find(localIndex);
+    if (it == local_to_global_map_.end())
+        OPM_THROW(std::logic_error, fmt::format("There is no global index for the localIndex {}.", localIndex));
+    return it->second;
+}
+
+template<class Scalar>
+void GlobalPerfContainerFactory<Scalar>::buildGlobalToLocalMap() const {
+    global_to_local_map_.clear();
+    for (const auto& index : local_indices_) {
+        global_to_local_map_[index.global()] = index.local().local();
+    }
+    g2l_map_built_ = true;
+}
+
+template<class Scalar>
+int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) const {
+    if (local_indices_.size() == 0)
+        return globalIndex;
+    if (!g2l_map_built_) {
+        buildGlobalToLocalMap();
+    }
+    auto it = global_to_local_map_.find(globalIndex);
+    if (it == global_to_local_map_.end())
+        return -1; // Global index not found
+    return it->second;
 }
 
 template<class Scalar>
@@ -475,6 +520,22 @@ ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& w
 #endif
     commAboveBelow_.reset(new CommunicateAboveBelow<Scalar>(*comm_));
     isOwner_ = (comm_->rank() == 0);
+}
+
+template<class Scalar>
+int ParallelWellInfo<Scalar>::localToGlobal(std::size_t localIndex) const {
+    if(globalPerfCont_)
+        return globalPerfCont_->localToGlobal(localIndex);
+    else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
+        return localIndex;
+}
+
+template<class Scalar>
+int ParallelWellInfo<Scalar>::globalToLocal(const int globalIndex) const {
+    if(globalPerfCont_)
+        return globalPerfCont_->globalToLocal(globalIndex);
+    else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
+        return globalIndex;
 }
 
 template<class Scalar>

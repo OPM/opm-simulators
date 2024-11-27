@@ -151,7 +151,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), lowActionParsingStrictness,
+                 std::move(python), lowActionParsingStrictness, /*slave_mode=*/false,
                  keepKeywords, outputInterval, init_state);
         }
 
@@ -617,7 +617,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (*errorGuard) { // errors encountered
         parseSuccess = 0;
-        errorGuard->dump();
+        failureMessage += errorGuard->formattedErrors();
         errorGuard->clear();
     }
 
@@ -625,7 +625,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (! parseSuccess) {
         if (comm.rank() == 0) {
-            OpmLog::error(fmt::format("Unrecoverable errors while loading input: {}", failureMessage));
+            OpmLog::error(fmt::format("Unrecoverable errors while loading input:\n{}", failureMessage));
         }
 
 #if HAVE_MPI

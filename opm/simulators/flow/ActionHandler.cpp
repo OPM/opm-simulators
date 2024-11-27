@@ -55,6 +55,7 @@
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace {
     std::string formatActionDate(const Opm::TimeStampUTC& timePoint,
@@ -84,9 +85,10 @@ namespace {
         Opm::OpmLog::info("ACTION_TRIGGERED", message);
     }
 
-    void logActiveAction(const std::string&              actionName,
-                         const std::vector<std::string>& matchingWells,
-                         const std::string&              timeString)
+    template <typename WellNameRange>
+    void logActiveAction(const std::string&   actionName,
+                         const WellNameRange& matchingWells,
+                         const std::string&   timeString)
     {
         const auto wellString = matchingWells.empty()
             ? std::string{}
@@ -135,54 +137,33 @@ namespace {
 
     template <typename Scalar, class WellModel>
     std::unordered_map<std::string, Scalar>
-    fetchWellPI(const int                          reportStep,
-                const Opm::Schedule&               schedule,
-                const WellModel&                   wellModel,
-                const Opm::Action::ActionX&        action,
-                const std::vector<std::string>&    matching_wells,
-                const Opm::Parallel::Communication comm)
+    fetchWellPI(const int                                    reportStep,
+                const Opm::Schedule&                         schedule,
+                const WellModel&                             wellModel,
+                const Opm::Action::ActionX&                  action,
+                const Opm::Action::Result::MatchingEntities& matches,
+                const Opm::Parallel::Communication           comm)
     {
         auto wellpi = std::unordered_map<std::string, Scalar> {};
 
         const auto wellpi_wells = action.wellpi_wells
-            (schedule.wellMatcher(reportStep), matching_wells);
+            (schedule.wellMatcher(reportStep), matches);
 
         if (wellpi_wells.empty()) {
             return wellpi;
         }
 
-        const auto num_wells = schedule[reportStep].well_order().size();
-
-        std::vector<Scalar> wellpi_vector(num_wells);
-        for (const auto& wname : wellpi_wells) {
-            if (wellModel.hasWell(wname)) {
-                const auto& well = schedule.getWell(wname, reportStep);
-                wellpi_vector[well.seqIndex()] = wellModel.wellPI(wname);
+        auto wellPI = std::vector<Scalar>(wellpi_wells.size());
+        for (auto i = 0*wellpi_wells.size(); i < wellpi_wells.size(); ++i) {
+            if (wellModel.hasWell(wellpi_wells[i])) {
+                wellPI[i] = wellModel.wellPI(wellpi_wells[i]);
             }
         }
 
-        if (comm.size() > 1) {
-            std::vector<Scalar> wellpi_buffer(num_wells * comm.size());
-            comm.gather(wellpi_vector.data(), wellpi_buffer.data(), num_wells, 0);
+        comm.max(wellPI.data(), wellPI.size());
 
-            if (comm.rank() == 0) {
-                for (int rank = 1; rank < comm.size(); ++rank) {
-                    for (std::size_t well_index = 0; well_index < num_wells; ++well_index) {
-                        const auto global_index = rank*num_wells + well_index;
-                        const auto value = wellpi_buffer[global_index];
-                        if (value != Scalar{0}) {
-                            wellpi_vector[well_index] = value;
-                        }
-                    }
-                }
-            }
-
-            comm.broadcast(wellpi_vector.data(), wellpi_vector.size(), 0);
-        }
-
-        for (const auto& wname : wellpi_wells) {
-            const auto& well = schedule.getWell(wname, reportStep);
-            wellpi.insert_or_assign(wname, wellpi_vector[well.seqIndex()]);
+        for (auto i = 0*wellpi_wells.size(); i < wellpi_wells.size(); ++i) {
+            wellpi.emplace(wellpi_wells[i], wellPI[i]);
         }
 
         return wellpi;
@@ -245,26 +226,26 @@ applyActions(const int reportStep,
     auto non_triggered = 0;
     const auto simTime = asTimeT(now);
     for (const auto& action : actions.pending(this->actionState_, simTime)) {
-        auto actionResult = action->eval(context);
-        if (! actionResult) {
+        const auto actionResult = action->eval(context);
+        if (! actionResult.conditionSatisfied()) {
             ++non_triggered;
             logInactiveAction(action->name(), ts);
             continue;
         }
 
-        const auto& matching_wells = actionResult.wells();
+        const auto& matches = actionResult.matches();
 
-        logActiveAction(action->name(), matching_wells, ts);
+        logActiveAction(action->name(), matches.wells(), ts);
 
         const auto wellpi = fetchWellPI<Scalar>
             (reportStep, this->schedule_, this->wellModel_,
-             *action, matching_wells, this->comm_);
+             *action, matches, this->comm_);
 
         const auto sim_update = this->schedule_
-            .applyAction(reportStep, *action, matching_wells, wellpi);
+            .applyAction(reportStep, *action, matches, wellpi);
 
         this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
-        this->actionState_.add_run(*action, simTime, std::move(actionResult));
+        this->actionState_.add_run(*action, simTime, actionResult);
     }
 
     if (non_triggered > 0) {
@@ -310,14 +291,11 @@ void ActionHandler<Scalar>::
 evalUDQAssignments(const unsigned episodeIdx,
                    UDQState& udq_state)
 {
-    const auto& udq = schedule_[episodeIdx].udq();
-
-    udq.eval_assign(episodeIdx,
-                    this->schedule_,
-                    this->schedule_.wellMatcher(episodeIdx),
-                    this->schedule_.segmentMatcherFactory(episodeIdx),
-                    this->summaryState_,
-                    udq_state);
+    this->schedule_[episodeIdx].udq()
+        .eval_assign(this->schedule_.wellMatcher(episodeIdx),
+                     this->schedule_.segmentMatcherFactory(episodeIdx),
+                     this->summaryState_,
+                     udq_state);
 }
 
 template class ActionHandler<double>;

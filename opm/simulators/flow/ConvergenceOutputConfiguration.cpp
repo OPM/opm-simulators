@@ -30,6 +30,7 @@
 #include <vector>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace {
     std::vector<std::string> tokenizeOptionValues(std::string_view options)

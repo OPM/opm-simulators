@@ -40,6 +40,8 @@ public:
 
     GPUSender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
 
+    virtual ~GPUSender() = default;
+
     /**
      * @brief copyOwnerToAll will copy source to the CPU, then call OwnerOverlapCopyCommunicationType::copyOwnerToAll on
      * the copied data, and copy the result back to the GPU
@@ -278,7 +280,6 @@ private:
         std::vector<int> commpairIndicesOwnerCPU;
 
         for(auto process : ri) {
-            int size = 0;
             m_im[process.first] = std::pair(std::vector<int>(), std::vector<int>());
             for(int send = 0; send < 2; ++send) {
                 auto remoteEnd = send ? process.second.first->end()
@@ -289,7 +290,6 @@ private:
                 while(remote != remoteEnd) {
                     if (send ? (remote->localIndexPair().local().attribute() == 1)
                              : (remote->attribute() == 1)) {
-                        ++size;
                         if (send) {
                             m_im[process.first].first.push_back(remote->localIndexPair().local().local()); 
                         } else {

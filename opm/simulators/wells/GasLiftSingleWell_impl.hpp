@@ -143,7 +143,8 @@ computeBhpAtThpLimit_(Scalar alq, bool debug_output) const
         this->simulator_,
         this->summary_state_,
         alq,
-        this->deferred_logger_);
+        this->deferred_logger_,
+        /*iterate_if_no_solution */ false);
     if (bhp_at_thp_limit) {
         if (*bhp_at_thp_limit < this->controls_.bhp_limit) {
             if (debug_output && this->debug) {

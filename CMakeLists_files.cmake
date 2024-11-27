@@ -306,47 +306,47 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg set_device.hpp)
 endif()
 
-if(USE_BDA_BRIDGE)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp
-                                 opm/simulators/linalg/bda/CprCreation.cpp
-                                 opm/simulators/linalg/bda/Misc.cpp
-                                 opm/simulators/linalg/bda/WellContributions.cpp
-                                 opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
-                                 opm/simulators/linalg/ISTLSolverBda.cpp)
+if(USE_GPU_BRIDGE)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/GpuBridge.cpp
+                                 opm/simulators/linalg/gpubridge/CprCreation.cpp
+                                 opm/simulators/linalg/gpubridge/Misc.cpp
+                                 opm/simulators/linalg/gpubridge/WellContributions.cpp
+                                 opm/simulators/linalg/gpubridge/MultisegmentWellContribution.cpp
+                                 opm/simulators/linalg/ISTLSolverGpuBridge.cpp)
   if(OPENCL_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclBILU0.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Reorder.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/ChowPatelIlu.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclBISAI.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclCPR.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/opencl.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclKernels.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/OpenclMatrix.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclPreconditioner.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclSolverBackend.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclWellContributions.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/BlockedMatrix.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclBILU0.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/Reorder.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/ChowPatelIlu.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclBISAI.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclCPR.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/opencl.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclKernels.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/OpenclMatrix.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclPreconditioner.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/opencl/openclWellContributions.cpp)
   endif()
   if(ROCALUTION_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/rocalutionSolverBackend.cpp)
   endif()
   if(rocsparse_FOUND AND rocblas_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseCPR.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseBILU0.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseWellContributions.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/hipKernels.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseMatrix.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/rocsparseCPR.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/rocsparseBILU0.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/rocsparsePreconditioner.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/rocsparseSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/rocsparseWellContributions.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/hipKernels.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/rocm/rocsparseMatrix.cpp)
   endif()
   if(CUDA_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cusparseSolverBackend.cu)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cuWellContributions.cu)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/cuda/cusparseSolverBackend.cu)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/cuda/cuWellContributions.cu)
   endif()
   if(amgcl_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/amgclSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/amgclSolverBackend.cpp)
     if(CUDA_FOUND)
-      list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/amgclSolverBackend.cu)
+      list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/gpubridge/cuda/amgclSolverBackend.cu)
     endif()
   endif()
 endif()
@@ -430,7 +430,7 @@ if(MPI_FOUND)
 endif()
 
 if(CUDA_FOUND)
-  if(USE_BDA_BRIDGE)
+  if(USE_GPU_BRIDGE)
     list(APPEND TEST_SOURCE_FILES tests/test_cusparseSolver.cpp)
   endif()
 endif()
@@ -457,12 +457,14 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_solver_adapter.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ad.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_linear_two_phase_material.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuPvt.cu)
 
   # for loop providing the flag --expt-relaxed-constexpr to fix some cuda issues with constexpr
   if(NOT CONVERT_CUDA_TO_HIP)
     set(CU_FILES_NEEDING_RELAXED_CONSTEXPR
       tests/gpuistl/test_gpu_ad.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
+      tests/gpuistl/test_gpuPvt.cu
     )
 
     foreach(file ${CU_FILES_NEEDING_RELAXED_CONSTEXPR})
@@ -471,7 +473,7 @@ if (HAVE_CUDA)
   endif()
 endif()
 
-if(USE_BDA_BRIDGE)
+if(USE_GPU_BRIDGE)
   if(OPENCL_FOUND)
     list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
     list(APPEND TEST_SOURCE_FILES tests/test_solvetransposed3x3.cpp)
@@ -1019,41 +1021,41 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WGState.hpp
   )
-if (USE_BDA_BRIDGE)
+if (USE_GPU_BRIDGE)
   list (APPEND PUBLIC_HEADER_FILES
-    opm/simulators/linalg/bda/amgclSolverBackend.hpp
-    opm/simulators/linalg/bda/BdaBridge.hpp
-    opm/simulators/linalg/bda/BdaResult.hpp
-    opm/simulators/linalg/bda/BdaSolver.hpp
-    opm/simulators/linalg/bda/CprCreation.hpp
-    opm/simulators/linalg/bda/Preconditioner.hpp
-    opm/simulators/linalg/bda/Misc.hpp
-    opm/simulators/linalg/bda/opencl/openclBILU0.hpp
-    opm/simulators/linalg/bda/BlockedMatrix.hpp
-    opm/simulators/linalg/bda/opencl/openclCPR.hpp
-    opm/simulators/linalg/bda/cuda/cuda_header.hpp
-    opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp
-    opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
-    opm/simulators/linalg/bda/opencl/openclBISAI.hpp
-    opm/simulators/linalg/bda/Reorder.hpp
-    opm/simulators/linalg/bda/opencl/opencl.hpp
-    opm/simulators/linalg/bda/opencl/openclKernels.hpp
-    opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp
-    opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp
-    opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp
-    opm/simulators/linalg/bda/opencl/openclWellContributions.hpp
-    opm/simulators/linalg/bda/Matrix.hpp
-    opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
-    opm/simulators/linalg/bda/rocm/hipKernels.hpp
-    opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.hpp
-    opm/simulators/linalg/bda/rocm/rocsparseBILU0.hpp
-    opm/simulators/linalg/bda/rocm/rocsparseCPR.hpp
-    opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.hpp
-    opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp
-    opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp
-    opm/simulators/linalg/bda/rocm/rocsparseMatrix.hpp
-    opm/simulators/linalg/bda/WellContributions.hpp
-    opm/simulators/linalg/ISTLSolverBda.hpp
+    opm/simulators/linalg/gpubridge/amgclSolverBackend.hpp
+    opm/simulators/linalg/gpubridge/GpuBridge.hpp
+    opm/simulators/linalg/gpubridge/GpuResult.hpp
+    opm/simulators/linalg/gpubridge/GpuSolver.hpp
+    opm/simulators/linalg/gpubridge/CprCreation.hpp
+    opm/simulators/linalg/gpubridge/Preconditioner.hpp
+    opm/simulators/linalg/gpubridge/Misc.hpp
+    opm/simulators/linalg/gpubridge/opencl/openclBILU0.hpp
+    opm/simulators/linalg/gpubridge/BlockedMatrix.hpp
+    opm/simulators/linalg/gpubridge/opencl/openclCPR.hpp
+    opm/simulators/linalg/gpubridge/cuda/cuda_header.hpp
+    opm/simulators/linalg/gpubridge/cuda/cusparseSolverBackend.hpp
+    opm/simulators/linalg/gpubridge/opencl/ChowPatelIlu.hpp
+    opm/simulators/linalg/gpubridge/opencl/openclBISAI.hpp
+    opm/simulators/linalg/gpubridge/Reorder.hpp
+    opm/simulators/linalg/gpubridge/opencl/opencl.hpp
+    opm/simulators/linalg/gpubridge/opencl/openclKernels.hpp
+    opm/simulators/linalg/gpubridge/opencl/OpenclMatrix.hpp
+    opm/simulators/linalg/gpubridge/opencl/openclPreconditioner.hpp
+    opm/simulators/linalg/gpubridge/opencl/openclSolverBackend.hpp
+    opm/simulators/linalg/gpubridge/opencl/openclWellContributions.hpp
+    opm/simulators/linalg/gpubridge/Matrix.hpp
+    opm/simulators/linalg/gpubridge/MultisegmentWellContribution.hpp
+    opm/simulators/linalg/gpubridge/rocm/hipKernels.hpp
+    opm/simulators/linalg/gpubridge/rocm/rocalutionSolverBackend.hpp
+    opm/simulators/linalg/gpubridge/rocm/rocsparseBILU0.hpp
+    opm/simulators/linalg/gpubridge/rocm/rocsparseCPR.hpp
+    opm/simulators/linalg/gpubridge/rocm/rocsparsePreconditioner.hpp
+    opm/simulators/linalg/gpubridge/rocm/rocsparseSolverBackend.hpp
+    opm/simulators/linalg/gpubridge/rocm/rocsparseWellContributions.hpp
+    opm/simulators/linalg/gpubridge/rocm/rocsparseMatrix.hpp
+    opm/simulators/linalg/gpubridge/WellContributions.hpp
+    opm/simulators/linalg/ISTLSolverGpuBridge.hpp
   )
 endif()
 

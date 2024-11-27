@@ -81,9 +81,9 @@ public:
     explicit GpuBuffer(const std::vector<T>& data);
 
     /**
-     * @brief Default constructor that will initialize cublas and allocate 0 bytes of memory
+     * @brief Default constructor not allocating any memory
      */
-    explicit GpuBuffer();
+    GpuBuffer() = default;
 
     /**
      * @brief GpuBuffer allocates new GPU memory of size numberOfElements * sizeof(T)
@@ -265,7 +265,7 @@ public:
 
 private:
     T* m_dataOnDevice = nullptr;
-    size_t m_numberOfElements;
+    size_t m_numberOfElements = 0;
 
     void assertSameSize(const GpuBuffer<T>& other) const;
     void assertSameSize(size_t size) const;

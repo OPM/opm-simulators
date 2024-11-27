@@ -212,8 +212,8 @@ class Co2InjectionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { liquidPhaseIdx = FluidSystem::liquidPhaseIdx };
     enum { CO2Idx = FluidSystem::CO2Idx };
     enum { BrineIdx = FluidSystem::BrineIdx };
-    enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { contiCO2EqIdx = conti0EqIdx + CO2Idx };
+    static constexpr int conti0EqIdx = Indices::conti0EqIdx;
+    static constexpr int contiCO2EqIdx = conti0EqIdx + CO2Idx;
 
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;

@@ -27,8 +27,8 @@
 #define BOOST_TEST_MODULE OPM_test_rocsparseSolver
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/linalg/bda/BdaBridge.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/simulators/linalg/gpubridge/GpuBridge.hpp>
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
@@ -92,7 +92,7 @@ getDuneSolution(Matrix<bz>& matrix, Vector<bz>& rhs)
 
 template <int bz>
 void
-createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >& bridge)
+createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> >& bridge)
 {
     const int linear_solver_verbosity = prm.get<int>("verbosity");
     const int maxit = prm.get<int>("maxiter");
@@ -104,7 +104,7 @@ createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBri
     const std::string linsolver("ilu0");
 
     try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
+        bridge = std::make_unique<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
                                                                                linear_solver_verbosity,
                                                                                maxit,
                                                                                tolerance,
@@ -123,7 +123,7 @@ createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBri
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
-testRocsparseSolver(std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
+testRocsparseSolver(std::unique_ptr<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> >& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
 {
     Dune::InverseOperatorResult result;
     Vector<bz> x(rhs.size());
@@ -138,7 +138,7 @@ testRocsparseSolver(std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
-testRocsparseSolverJacobi(std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
+testRocsparseSolverJacobi(std::unique_ptr<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> >& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
 {
     Dune::InverseOperatorResult result;
     Vector<bz> x(rhs.size());
@@ -169,7 +169,7 @@ void test3(const pt::ptree& prm)
     // if not present, no memory is allocated, and subsequent calls
     // with a jacobi matrix will cause nans
     {
-        std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
+        std::unique_ptr<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
         createBridge(prm, bridge); // create bridge with rocsparseSolver
 
         // test rocsparseSolver without Jacobi matrix
@@ -183,7 +183,7 @@ void test3(const pt::ptree& prm)
     }
 
     {
-        std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
+        std::unique_ptr<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
         createBridge(prm, bridge); // create bridge with rocsparseSolver
 
         // test rocsparseSolver with Jacobi matrix

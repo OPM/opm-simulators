@@ -24,8 +24,8 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
@@ -192,7 +192,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     invDuneD_.mv(resWell, xw);
 }
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
 extract(const int numStaticWellEq,
@@ -207,7 +207,7 @@ extract(const int numStaticWellEq,
     for (auto colC = duneC_[0].begin(),
               endC = duneC_[0].end(); colC != endC; ++colC )
     {
-        colIndices.emplace_back(colC.index());
+        colIndices.emplace_back(cells_[colC.index()]);
         for (int i = 0; i < numStaticWellEq; ++i) {
             for (int j = 0; j < numEq; ++j) {
                 nnzValues.emplace_back((*colC)[i][j]);
@@ -236,7 +236,7 @@ extract(const int numStaticWellEq,
     for (auto colB = duneB_[0].begin(),
               endB = duneB_[0].end(); colB != endB; ++colB )
     {
-        colIndices.emplace_back(colB.index());
+        colIndices.emplace_back(cells_[colB.index()]);
         for (int i = 0; i < numStaticWellEq; ++i) {
             for (int j = 0; j < numEq; ++j) {
                 nnzValues.emplace_back((*colB)[i][j]);

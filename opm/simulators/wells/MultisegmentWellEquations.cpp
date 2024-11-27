@@ -29,14 +29,15 @@
 
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
@@ -48,8 +49,9 @@ namespace Opm {
 
 template<class Scalar, int numWellEq, int numEq>
 MultisegmentWellEquations<Scalar,numWellEq,numEq>::
-MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well)
+MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info)
     : well_(well)
+    , pw_info_(pw_info)
 {
 }
 
@@ -107,7 +109,10 @@ init(const int numPerfs,
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            row.insert(perf);
+            const int local_perf_index = pw_info_.globalToLocal(perf);
+            if (local_perf_index < 0) // then the perforation is not on this process
+                continue;
+            row.insert(local_perf_index);
         }
     }
 
@@ -116,7 +121,10 @@ init(const int numPerfs,
               end = duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            row.insert(perf);
+            const int local_perf_index = pw_info_.globalToLocal(perf);
+            if (local_perf_index < 0) // then the perforation is not on this process
+                continue;
+            row.insert(local_perf_index);
         }
     }
 
@@ -206,7 +214,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
 }
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 extract(WellContributions<Scalar>& wellContribs) const
@@ -222,7 +230,7 @@ extract(WellContributions<Scalar>& wellContribs) const
     Cvals.reserve(BnumBlocks * numEq * numWellEq);
     for (auto rowC = duneC_.begin(); rowC != duneC_.end(); ++rowC) {
         for (auto colC = rowC->begin(), endC = rowC->end(); colC != endC; ++colC) {
-            Ccols.emplace_back(colC.index());
+            Ccols.emplace_back(cells_[colC.index()]);
             for (int i = 0; i < numWellEq; ++i) {
                 for (int j = 0; j < numEq; ++j) {
                     Cvals.emplace_back((*colC)[i][j]);
@@ -252,7 +260,7 @@ extract(WellContributions<Scalar>& wellContribs) const
         for (auto rowB = duneB_.begin(); rowB != duneB_.end(); ++rowB) {
             int sizeRow = 0;
             for (auto colB = rowB->begin(), endB = rowB->end(); colB != endB; ++colB) {
-                Bcols.emplace_back(colB.index());
+                Bcols.emplace_back(cells_[colB.index()]);
                 for (int i = 0; i < numWellEq; ++i) {
                     for (int j = 0; j < numEq; ++j) {
                         Bvals.emplace_back((*colB)[i][j]);
@@ -400,6 +408,16 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     } else {
         jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
     }
+}
+
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+sumDistributed(Parallel::Communication comm)
+{
+    // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
+    // we need to do this for all segments in the residual and on the diagonal of D 
+    for (int seg = 0; seg < well_.numberOfSegments(); ++seg)
+        Opm::wellhelpers::sumDistributedWellEntries(duneD_[seg][seg], resWell_[seg], comm);
 }
 
 #define INSTANTIATE(T, numWellEq, numEq)                                                       \

@@ -78,11 +78,11 @@ function(add_test_compareECLFiles)
                   -t ${PARAM_REL_TOL}
                   -c ${COMPARE_ECL_COMMAND}
                   -d ${RST_DECK_COMMAND})
-   if(PARAM_RESTART_STEP)
-     list(APPEND DRIVER_ARGS -s ${PARAM_RESTART_STEP})
-   endif()
-  if(PARAM_RESTART_SCHED)
-   list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
+  if(PARAM_RESTART_STEP)
+    list(APPEND DRIVER_ARGS -s ${PARAM_RESTART_STEP})
+  endif()
+  if(PARAM_RESTART_SCHED STREQUAL "false" OR PARAM_RESTART_SCHED STREQUAL "true")
+    list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}

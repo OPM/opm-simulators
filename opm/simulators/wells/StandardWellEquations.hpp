@@ -36,7 +36,7 @@ namespace Opm
 
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar, int numEq> class StandardWellEquationAccess;
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
 template<class Scalar> class WellInterfaceGeneric;
@@ -97,7 +97,7 @@ public:
     //! \details xw = inv(D)*(rw - C*x)
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
     //! \brief Add the matrices of this well to the WellContributions object.
     void extract(const int numStaticWellEq,
                  WellContributions<Scalar>& wellContribs) const;

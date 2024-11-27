@@ -489,14 +489,12 @@ checkGconsaleLimits(const Group& group,
     Scalar production_target = gconsale.sales_target + injection_rate;
 
     // add import rate and subtract consumption rate for group for gas
-    if (schedule()[reportStepIdx].gconsump().has(group.name())) {
-        const auto& gconsump = schedule()[reportStepIdx].gconsump().get(group.name(), summaryState_);
-        if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
-            sales_rate += gconsump.import_rate;
-            sales_rate -= gconsump.consumption_rate;
-            production_target -= gconsump.import_rate;
-            production_target += gconsump.consumption_rate;
-        }
+    if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
+        const auto& [consumption_rate, import_rate] = this->groupState().gconsump_rates(group.name());
+        sales_rate += import_rate;
+        sales_rate -= consumption_rate;
+        production_target -= import_rate;
+        production_target += consumption_rate;
     }
 
     if (sales_rate > gconsale.max_sales_rate) {
@@ -612,6 +610,10 @@ checkGroupHigherConstraints(const Group& group,
         std::vector<Scalar> resv_coeff_inj(phase_usage_.num_phases, 0.0);
         calcInjResvCoeff(fipnum, pvtreg, resv_coeff_inj);
 
+        // checkGroupConstraintsInj considers 'available' rates (e.g., group rates minus reduction rates).
+        // So when checking constraints, current groups rate must also be subtracted it's reduction rate
+        const std::vector<Scalar> reduction_rates = this->groupState().injection_reduction_rates(group.name());
+
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                                             schedule(),
@@ -620,7 +622,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                                             phasePos,
                                                                                             /* isInjector */ true);
             // Sum over all processes
-            rates[phasePos] = comm_.sum(local_current_rate);
+            rates[phasePos] = comm_.sum(local_current_rate) - reduction_rates[phasePos];
         }
         const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
         for (Phase phase : all) {
@@ -665,6 +667,10 @@ checkGroupHigherConstraints(const Group& group,
 
     if (!isField && group.isProductionGroup()) {
         // Obtain rates for group.
+        // checkGroupConstraintsProd considers 'available' rates (e.g., group rates minus reduction rates).
+        // So when checking constraints, current groups rate must also be subtracted it's reduction rate
+        const std::vector<Scalar> reduction_rates = this->groupState().production_reduction_rates(group.name());
+
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                                             schedule(),
@@ -673,7 +679,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                                             phasePos,
                                                                                             /* isInjector */ false);
             // Sum over all processes
-            rates[phasePos] = -comm_.sum(local_current_rate);
+            rates[phasePos] = -comm_.sum(local_current_rate) - reduction_rates[phasePos];
         }
         std::vector<Scalar> resv_coeff(phase_usage_.num_phases, 0.0);
         calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
@@ -1184,6 +1190,11 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
     const int nupcol = schedule()[reportStepIdx].nupcol();
 
+    // Update accumulated group consumption/import rates for current report step
+    if(iterationIdx == 0) {
+        this->groupState().update_gconsump(schedule(), reportStepIdx, this->summaryState_);
+    }
+
     // This builds some necessary lookup structures, so it must be called
     // before we copy to well_state_nupcol_.
     this->wellState().updateGlobalIsGrup(comm_);
@@ -1192,6 +1203,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     if (update_nupcol) {
         this->updateNupcolWGState();
     }
+
     auto& well_state = this->wellState();
 
     if (iterationIdx == 0) {
@@ -1324,13 +1336,27 @@ needPreStepNetworkRebalance(const int report_step) const
 template<class Scalar>
 bool BlackoilWellModelGeneric<Scalar>::
 forceShutWellByName(const std::string& wellname,
-                    const double simulation_time)
+                    const double simulation_time,
+                    const bool dont_shut_grup_wells)
 {
     // Only add the well to the closed list on the
     // process that owns it.
     int well_was_shut = 0;
     for (const auto& well : well_container_generic_) {
         if (well->name() == wellname) {
+            // if one well on individuel control (typical thp/bhp) in a group strugles to converge
+            // it may lead to problems for the other wells in the group
+            // we dont want to shut all the wells in a group only the one creating the problems.
+            const auto& ws = this->wellState().well(well->indexOfWell());
+            if (dont_shut_grup_wells) {
+                if (well->isInjector()) {
+                    if (ws.injection_cmode == Well::InjectorCMode::GRUP)
+                        continue;
+                } else {
+                    if (ws.production_cmode == Well::ProducerCMode::GRUP)
+                        continue;
+                }
+            }
             wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
             well_was_shut = 1;
             break;

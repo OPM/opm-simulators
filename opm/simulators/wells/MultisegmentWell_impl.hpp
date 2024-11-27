@@ -46,8 +46,8 @@
 #include <cstddef>
 #include <string>
 
-#if COMPILE_BDA_BRIDGE && (HAVE_CUDA || HAVE_OPENCL)
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE && (HAVE_CUDA || HAVE_OPENCL)
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 namespace Opm
@@ -67,7 +67,7 @@ namespace Opm
                      const int index_of_well,
                      const std::vector<PerforationData<Scalar>>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, perf_data)
-    , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices>&>(*this))
+    , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices>&>(*this), pw_info)
     , regularize_(false)
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<Scalar>(this->num_components_, 0.0))
     {
@@ -136,9 +136,11 @@ namespace Opm
         this->initMatrixAndVectors();
 
         // calculate the depth difference between the perforations and the perforated grid block
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-            const int cell_idx = this->well_cells_[perf];
-            this->cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - this->perf_depth_[perf];
+        for (int local_perf_index = 0; local_perf_index < this->number_of_perforations_; ++local_perf_index) {
+            // This variable loops over the number_of_perforations_ of *this* process, hence it is *local*.
+            const int cell_idx = this->well_cells_[local_perf_index];
+            // Here we need to access the perf_depth_ at the global perforation index though!
+            this->cell_perforation_depth_diffs_[local_perf_index] = depth_arg[cell_idx] - this->perf_depth_[this->pw_info_.localToGlobal(local_perf_index)];
         }
     }
 
@@ -358,14 +360,17 @@ namespace Opm
         const auto& segment_pressure = segments_copy.pressure;
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int cell_idx = this->well_cells_[perf];
+                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                if (local_perf_index < 0) // then the perforation is not on this process
+                    continue;
+                const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 // flux for each perforation
                 std::vector<Scalar> mob(this->num_components_, 0.);
-                getMobility(simulator, perf, mob, deferred_logger);
+                getMobility(simulator, local_perf_index, mob, deferred_logger);
                 const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(intQuants, cell_idx);
                 const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
+                const std::vector<Scalar> Tw = this->wellIndex(local_perf_index, intQuants, trans_mult, wellstate_nupcol);
                 const Scalar seg_pressure = segment_pressure[seg];
                 std::vector<Scalar> cq_s(this->num_components_, 0.);
                 Scalar perf_press = 0.0;
@@ -780,6 +785,10 @@ namespace Opm
             };
 
             std::vector<Scalar> mob(this->num_components_, 0.0);
+            // The subsetPerfID loops over 0 .. this->perf_data_->size().
+            // *(this->perf_data_) contains info about the local processes only,
+            // hence subsetPerfID is a local perf id and we can call getMobility
+            // directly with that.
             getMobility(simulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
@@ -797,6 +806,12 @@ namespace Opm
 
             ++subsetPerfID;
             connPI += np;
+        }
+
+        // Sum with communication in case of distributed well.
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1) {
+            comm.sum(wellPI, np);
         }
 
         assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
@@ -878,11 +893,15 @@ namespace Opm
                     PerforationRates<Scalar>& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
+        const int local_perf_index = this->pw_info_.globalToLocal(perf);
+        if (local_perf_index < 0) // then the perforation is not on this process
+            return;
+
         // pressure difference between the segment and the perforation
         const Value perf_seg_press_diff = this->gravity() * segment_density *
                                           this->segments_.perforation_depth_diff(perf);
         // pressure difference between the perforation and the grid cell
-        const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
+        const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
 
         // perforation pressure is the wellbore pressure corrected to perforation depth
         // (positive sign due to convention in segments_.perforation_depth_diff() )
@@ -1114,7 +1133,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     getMobility(const Simulator& simulator,
-                const int perf,
+                const int local_perf_index,
                 std::vector<Value>& mob,
                 DeferredLogger& deferred_logger) const
     {
@@ -1128,10 +1147,10 @@ namespace Opm
                           }
                       };
 
-        WellInterface<TypeTag>::getMobility(simulator, perf, mob, obtain, deferred_logger);
+        WellInterface<TypeTag>::getMobility(simulator, local_perf_index, mob, obtain, deferred_logger);
 
         if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE) {
-            const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+            const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
             const Connection& con = this->well_ecl_.getConnections()[perf_ecl_index];
             const int seg = this->segmentNumberToIndex(con.segment());
             // from the reference results, it looks like MSW uses segment pressure instead of BHP here
@@ -1139,9 +1158,9 @@ namespace Opm
             // we can change this depending on what we want
             const Scalar segment_pres = this->primary_variables_.getSegmentPressure(seg).value();
             const Scalar perf_seg_press_diff = this->gravity() * this->segments_.density(seg).value()
-                                                               * this->segments_.perforation_depth_diff(perf);
+                                                               * this->segments_.perforation_depth_diff(local_perf_index);
             const Scalar perf_press = segment_pres + perf_seg_press_diff;
-            const Scalar multiplier = this->getInjMult(perf, segment_pres, perf_press, deferred_logger);
+            const Scalar multiplier = this->getInjMult(local_perf_index, segment_pres, perf_press, deferred_logger);
             for (std::size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= multiplier;
             }
@@ -1244,18 +1263,21 @@ namespace Opm
                                                  seg_dp);
             seg_dp[seg] = dp;
             for (const int perf : this->segments_.perforations()[seg]) {
+                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                if (local_perf_index < 0) // then the perforation is not on this process
+                    continue;
                 std::vector<Scalar> mob(this->num_components_, 0.0);
 
                 // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
-                getMobility(simulator, perf, mob, deferred_logger);
+                getMobility(simulator, local_perf_index, mob, deferred_logger);
 
-                const int cell_idx = this->well_cells_[perf];
+                const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quantities = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 const auto& fs = int_quantities.fluidState();
                 // pressure difference between the segment and the perforation
                 const Scalar perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
                 // pressure difference between the perforation and the grid cell
-                const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
+                const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
                 const Scalar pressure_cell = this->getPerfCellPressure(fs).value();
 
                 // calculating the b for the connection
@@ -1281,7 +1303,7 @@ namespace Opm
                 // the well index associated with the connection
                 const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quantities, cell_idx);
                 const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);  
+                const std::vector<Scalar> tw_perf = this->wellIndex(local_perf_index, int_quantities, trans_mult, wellstate_nupcol);  
                 std::vector<Scalar> ipr_a_perf(this->ipr_a_.size());
                 std::vector<Scalar> ipr_b_perf(this->ipr_b_.size());
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
@@ -1316,6 +1338,8 @@ namespace Opm
                 }
             }
         }
+        this->parallel_well_info_.communication().sum(this->ipr_a_.data(), this->ipr_a_.size());
+        this->parallel_well_info_.communication().sum(this->ipr_b_.data(), this->ipr_b_.size());
     }
 
     template<typename TypeTag>
@@ -1678,6 +1702,9 @@ namespace Opm
 
             const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             converged = report.converged();
+            if (this->parallel_well_info_.communication().size() > 1 && converged != this->parallel_well_info_.communication().min(converged)) {
+                OPM_THROW(std::runtime_error, fmt::format("Misalignment of the parallel simulation run in iterateWellEqWithSwitching - the well calculation succeeded on rank {} but failed on other ranks.", this->parallel_well_info_.communication().rank()));
+            }
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
                 // in this case, make sure all constraints are satisfied before returning
@@ -1818,6 +1845,59 @@ namespace Opm
         const int nseg = this->numberOfSegments();
 
         for (int seg = 0; seg < nseg; ++seg) {
+            // calculating the perforation rate for each perforation that belongs to this segment
+            const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
+            auto& perf_data = ws.perf_data;
+            auto& perf_rates = perf_data.phase_rates;
+            auto& perf_press_state = perf_data.pressure;
+            for (const int perf : this->segments_.perforations()[seg]) {
+                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                if (local_perf_index < 0) // then the perforation is not on this process
+                    continue;
+                const int cell_idx = this->well_cells_[local_perf_index];
+                const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+                std::vector<EvalWell> mob(this->num_components_, 0.0);
+                getMobility(simulator, local_perf_index, mob, deferred_logger);
+                const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quants, cell_idx);
+                const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+                const std::vector<Scalar> Tw = this->wellIndex(local_perf_index, int_quants, trans_mult, wellstate_nupcol);
+                std::vector<EvalWell> cq_s(this->num_components_, 0.0);
+                EvalWell perf_press;
+                PerforationRates<Scalar> perfRates;
+                computePerfRate(int_quants, mob, Tw, seg, perf, seg_pressure,
+                                allow_cf, cq_s, perf_press, perfRates, deferred_logger);
+
+                // updating the solution gas rate and solution oil rate
+                if (this->isProducer()) {
+                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
+                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
+                    perf_data.phase_mixing_rates[local_perf_index][ws.dissolved_gas] = perfRates.dis_gas;
+                    perf_data.phase_mixing_rates[local_perf_index][ws.vaporized_oil] = perfRates.vap_oil;
+                }
+
+                // store the perf pressure and rates
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    perf_rates[local_perf_index*this->number_of_phases_ + this->modelCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
+                }
+                perf_press_state[local_perf_index] = perf_press.value();
+
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    // the cq_s entering mass balance equations need to consider the efficiency factors.
+                    const EvalWell cq_s_effective = cq_s[comp_idx] * this->well_efficiency_factor_;
+
+                    this->connectionRates_[local_perf_index][comp_idx] = Base::restrictEval(cq_s_effective);
+
+                    MultisegmentWellAssemble(*this).
+                        assemblePerforationEq(seg, local_perf_index, comp_idx, cq_s_effective, this->linSys_);
+                }
+            }
+        }
+
+        if (this->parallel_well_info_.communication().size() > 1) {
+            // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
+            this->linSys_.sumDistributed(this->parallel_well_info_.communication());
+        }
+        for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term
             // TODO: without considering the efficiency factor for now
             {
@@ -1865,50 +1945,6 @@ namespace Opm
                 }
             }
 
-            // calculating the perforation rate for each perforation that belongs to this segment
-            const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
-            auto& perf_data = ws.perf_data;
-            auto& perf_rates = perf_data.phase_rates;
-            auto& perf_press_state = perf_data.pressure;
-            for (const int perf : this->segments_.perforations()[seg]) {
-                const int cell_idx = this->well_cells_[perf];
-                const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-                std::vector<EvalWell> mob(this->num_components_, 0.0);
-                getMobility(simulator, perf, mob, deferred_logger);
-                const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quants, cell_idx);
-                const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
-                std::vector<EvalWell> cq_s(this->num_components_, 0.0);
-                EvalWell perf_press;
-                PerforationRates<Scalar> perfRates;
-                computePerfRate(int_quants, mob, Tw, seg, perf, seg_pressure,
-                                allow_cf, cq_s, perf_press, perfRates, deferred_logger);
-
-                // updating the solution gas rate and solution oil rate
-                if (this->isProducer()) {
-                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
-                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
-                    perf_data.phase_mixing_rates[perf][ws.dissolved_gas] = perfRates.dis_gas;
-                    perf_data.phase_mixing_rates[perf][ws.vaporized_oil] = perfRates.vap_oil;
-                }
-
-                // store the perf pressure and rates
-                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    perf_rates[perf*this->number_of_phases_ + this->modelCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
-                }
-                perf_press_state[perf] = perf_press.value();
-
-                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    // the cq_s entering mass balance equations need to consider the efficiency factors.
-                    const EvalWell cq_s_effective = cq_s[comp_idx] * this->well_efficiency_factor_;
-
-                    this->connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
-
-                    MultisegmentWellAssemble(*this).
-                        assemblePerforationEq(seg, perf, comp_idx, cq_s_effective, this->linSys_);
-                }
-            }
-
             // the fourth equation, the pressure drop equation
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = simulator.vanguard().summaryState();
@@ -1933,6 +1969,7 @@ namespace Opm
             }
         }
 
+        this->parallel_well_info_.communication().sum(this->ipr_a_.data(), this->ipr_a_.size());
         this->linSys_.createSolver();
     }
 
@@ -1959,15 +1996,18 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             const EvalWell segment_pressure = this->primary_variables_.getSegmentPressure(seg);
             for (const int perf : this->segments_.perforations()[seg]) {
+                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                if (local_perf_index < 0) // then the perforation is not on this process
+                    continue;
 
-                const int cell_idx = this->well_cells_[perf];
+                const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 const auto& fs = intQuants.fluidState();
 
                 // pressure difference between the segment and the perforation
                 const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
                 // pressure difference between the perforation and the grid cell
-                const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
+                const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
 
                 const Scalar pressure_cell = this->getPerfCellPressure(fs).value();
                 const Scalar perf_press = pressure_cell - cell_perf_press_diff;
@@ -1984,6 +2024,12 @@ namespace Opm
                     break;
                 }
             }
+        }
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            all_drawdown_wrong_direction =
+                (comm.min(all_drawdown_wrong_direction ? 1 : 0) == 1);
         }
 
         return all_drawdown_wrong_direction;
@@ -2042,7 +2088,8 @@ namespace Opm
                                                simulator,
                                                summary_state,
                                                this->getALQ(well_state),
-                                               deferred_logger);
+                                               deferred_logger,
+                                               /*iterate_if_no_solution */ true);
     }
 
 
@@ -2053,7 +2100,8 @@ namespace Opm
     computeBhpAtThpLimitProdWithAlq(const Simulator& simulator,
                                     const SummaryState& summary_state,
                                     const Scalar alq_value,
-                                    DeferredLogger& deferred_logger) const
+                                    DeferredLogger& deferred_logger,
+                                    bool iterate_if_no_solution) const
     {
         // Make the frates() function.
         auto frates = [this, &simulator, &deferred_logger](const Scalar bhp) {
@@ -2078,6 +2126,9 @@ namespace Opm
 
        if (bhpAtLimit)
            return bhpAtLimit;
+
+        if (!iterate_if_no_solution)
+            return std::nullopt;
 
        auto fratesIter = [this, &simulator, &deferred_logger](const Scalar bhp) {
            // Solver the well iterations to see if we are
@@ -2161,7 +2212,11 @@ namespace Opm
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int cell_idx = this->well_cells_[perf];
+                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                if (local_perf_index < 0) // then the perforation is not on this process
+                    continue;
+
+                const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 const auto& fs = int_quants.fluidState();
                 Scalar pressure_cell = this->getPerfCellPressure(fs).value();
@@ -2189,13 +2244,17 @@ namespace Opm
             // calculating the perforation rate for each perforation that belongs to this segment
             const Scalar seg_pressure = getValue(this->primary_variables_.getSegmentPressure(seg));
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int cell_idx = this->well_cells_[perf];
+                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                if (local_perf_index < 0) // then the perforation is not on this process
+                    continue;
+
+                const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<Scalar> mob(this->num_components_, 0.0);
-                getMobility(simulator, perf, mob, deferred_logger);
+                getMobility(simulator, local_perf_index, mob, deferred_logger);
                 const Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quants, cell_idx);
                 const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const std::vector<Scalar> Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
+                const std::vector<Scalar> Tw = this->wellIndex(local_perf_index, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<Scalar> cq_s(this->num_components_, 0.0);
                 Scalar perf_press = 0.0;
                 PerforationRates<Scalar> perf_rates;
@@ -2205,6 +2264,11 @@ namespace Opm
                     well_q_s[comp] += cq_s[comp];
                 }
             }
+        }
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            comm.sum(well_q_s.data(), well_q_s.size());
         }
         return well_q_s;
     }

@@ -462,9 +462,12 @@ public:
                 .applyActions(episodeIdx, simulator.time() + simulator.timeStepSize(),
                               [this](const bool global)
             {
-                using TransUpdateQuantities = typename Vanguard::TransmissibilityType::TransUpdateQuantities;
+                using TransUpdateQuantities = typename
+                    Vanguard::TransmissibilityType::TransUpdateQuantities;
+
                 this->transmissibilities_
-                    .update(global,  TransUpdateQuantities::All, [&vg = this->simulator().vanguard()]
+                    .update(global, TransUpdateQuantities::All,
+                            [&vg = this->simulator().vanguard()]
                             (const unsigned int i)
                     {
                         return vg.gridIdxToEquilGridIdx(i);
@@ -482,15 +485,15 @@ public:
                 MICPModule::checkCloggingMICP(model, phi, globalDofIdx);
             }
         }
-
     }
+
     /*!
      * \brief Called by the simulator after the end of an episode.
      */
     void endEpisode() override
     {
         OPM_TIMEBLOCK(endEpisode);
-        const int episodeIdx = this->episodeIndex();
+
         // Rerun UDQ assignents following action processing on the final
         // time step of this episode to make sure that any UDQ ASSIGN
         // operations triggered in action blocks take effect.  This is
@@ -502,14 +505,15 @@ public:
         // assignment would be dropped and the rest of the simulator will
         // never see its effect without this hack.
         this->actionHandler_
-                .evalUDQAssignments(episodeIdx, this->simulator().vanguard().udqState());
+            .evalUDQAssignments(this->episodeIndex(), this->simulator().vanguard().udqState());
 
         FlowProblemType::endEpisode();
     }
 
-    void writeReports(const SimulatorTimer& timer) {
-        if (enableEclOutput_){
-            eclWriter_->writeReports(timer);
+    void writeReports(const SimulatorTimer& timer)
+    {
+        if (this->enableEclOutput_) {
+            this->eclWriter_->writeReports(timer);
         }
     }
 

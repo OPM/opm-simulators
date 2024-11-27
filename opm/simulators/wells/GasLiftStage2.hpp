@@ -127,7 +127,6 @@ protected:
                           std::vector<GradPair>& dec_grads);
 
     void removeSurplusALQ_(const Group& group,
-                           std::vector<GradPair>& inc_grads,
                            std::vector<GradPair>& dec_grads);
 
     void saveGrad_(GradMap& map, const std::string& name, GradInfo& grad);
@@ -145,6 +144,10 @@ protected:
     void mpiSyncGlobalGradVector_(std::vector<GradPair>& grads_global) const;
     void mpiSyncLocalToGlobalGradVector_(const std::vector<GradPair>& grads_local,
                                          std::vector<GradPair>& grads_global) const;
+
+    std::array<Scalar, 4> computeDelta(const std::string& name, bool add);
+    void updateGroupInfo(const std::string& name, bool add);
+
 
     GLiftProdWells& prod_wells_;
     GLiftOptWells& stage1_wells_;

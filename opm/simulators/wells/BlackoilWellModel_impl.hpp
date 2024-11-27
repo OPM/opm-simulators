@@ -49,8 +49,8 @@
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 #if HAVE_MPI
@@ -666,8 +666,11 @@ namespace Opm {
             }
 
             try {
+                GLiftEclWells ecl_well_map;
+                initGliftEclWellMap(ecl_well_map);
                 well->wellTesting(simulator_, simulationTime, this->wellState(),
-                                  this->groupState(), this->wellTestState(), deferred_logger);
+                                  this->groupState(), this->wellTestState(), this->phase_usage_, 
+                                  ecl_well_map, deferred_logger);
             } catch (const std::exception& e) {
                 const std::string msg = fmt::format("Exception during testing of well: {}. The well will not open.\n Exception message: {}", wellEcl.name(), e.what());
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
@@ -1786,7 +1789,7 @@ namespace Opm {
         }
     }
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -2438,8 +2441,12 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         // if a well or group change control it affects all wells that are under the same group
         for (const auto& well : well_container_) {
-            well->updateWellStateWithTarget(simulator_, this->groupState(),
-                                            this->wellState(), deferred_logger);
+            // We only want to update wells under group-control here
+            auto& ws = this->wellState().well(well->indexOfWell());
+            if (ws.production_cmode ==  Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP) {
+                well->updateWellStateWithTarget(simulator_, this->groupState(),
+                                                this->wellState(), deferred_logger);
+            }
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
                                    simulator_.gridView().comm())

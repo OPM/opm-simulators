@@ -307,8 +307,10 @@ namespace Opm
                     
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
-
-                    changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                    bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP; 
+                    if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
+                        changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                    }
                     if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
                         changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
                     }
@@ -378,6 +380,8 @@ namespace Opm
                 /* const */ WellState<Scalar>& well_state,
                 const GroupState<Scalar>& group_state,
                 WellTestState& well_test_state,
+                const PhaseUsage& phase_usage,
+                GLiftEclWells& ecl_well_map,
                 DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + this->name() + " is being tested");
@@ -395,7 +399,12 @@ namespace Opm
             const auto report_step = simulator.episodeIndex();
             const auto& glo = schedule.glo(report_step);
             if (glo.active()) {
-                gliftBeginTimeStepWellTestUpdateALQ(simulator, well_state_copy, deferred_logger);
+                gliftBeginTimeStepWellTestUpdateALQ(simulator, 
+                                                    well_state_copy, 
+                                                    group_state,
+                                                    phase_usage, 
+                                                    ecl_well_map, 
+                                                    deferred_logger);
             }
         }
 
@@ -700,13 +709,11 @@ namespace Opm
         bool converged;
         if (has_thp_limit) {
             well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
-            converged = gliftBeginTimeStepWellTestIterateWellEquations(
-                simulator, dt, well_state, group_state, deferred_logger);
         }
         else {
             well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
-            converged = iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
         }
+        converged = iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
             return true;
@@ -999,8 +1006,11 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     gliftBeginTimeStepWellTestUpdateALQ(const Simulator& simulator,
-                          WellState<Scalar>& well_state,
-                          DeferredLogger& deferred_logger)
+                                        WellState<Scalar>& well_state,
+                                        const GroupState<Scalar>& group_state,
+                                        const PhaseUsage& phase_usage,
+                                        GLiftEclWells& ecl_well_map,
+                                        DeferredLogger& deferred_logger)
     {
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto& well_name = this->name();
@@ -1014,28 +1024,44 @@ namespace Opm
         const auto& glo = schedule.glo(report_step_idx);
         if (!glo.has_well(well_name)) {
             const std::string msg = fmt::format(
-                "GLIFT WTEST: Well {} : Gas Lift not activated: "
+                "GLIFT WTEST: Well {} : Gas lift not activated: "
                 "WLIFTOPT is probably missing. Skipping.", well_name);
             deferred_logger.info(msg);
             return;
         }
         const auto& gl_well = glo.well(well_name);
-        auto& max_alq_optional = gl_well.max_rate();
-        Scalar max_alq;
-        if (max_alq_optional) {
-            max_alq = *max_alq_optional;
+
+        // Use gas lift optimization to get ALQ for well test
+        std::unique_ptr<GasLiftSingleWell> glift =
+            initializeGliftWellTest_<GasLiftSingleWell>(simulator,
+                                                        well_state,
+                                                        group_state,
+                                                        phase_usage,
+                                                        ecl_well_map,
+                                                        deferred_logger);
+        auto [wtest_alq, success] = glift->wellTestALQ();
+        std::string msg;
+        const auto& unit_system = schedule.getUnits();
+        if (success) {
+            well_state.setALQ(well_name, wtest_alq);
+            msg = fmt::format(
+                "GLIFT WTEST: Well {} : Setting ALQ to optimized value = {}",
+                well_name, unit_system.from_si(UnitSystem::measure::gas_surface_rate, wtest_alq));
         }
         else {
-            const auto& well_ecl = this->wellEcl();
-            const auto& controls = well_ecl.productionControls(summary_state);
-            const auto& table = this->vfpProperties()->getProd()->getTable(controls.vfp_table_number);
-            const auto& alq_values = table.getALQAxis();
-            max_alq = alq_values.back();
+            if (!gl_well.use_glo()) {
+                msg = fmt::format(
+                    "GLIFT WTEST: Well {} : Gas lift optimization deactivated. Setting ALQ to WLIFTOPT item 3 = {}",
+                    well_name, 
+                    unit_system.from_si(UnitSystem::measure::gas_surface_rate, well_state.getALQ(well_name)));
+                
+            }
+            else {
+                msg = fmt::format(
+                    "GLIFT WTEST: Well {} : Gas lift optimization failed, no ALQ set.",
+                    well_name);
+            }
         }
-        well_state.setALQ(well_name, max_alq);
-        const std::string msg = fmt::format(
-            "GLIFT WTEST: Well {} : Setting ALQ to max value: {}",
-            well_name, max_alq);
         deferred_logger.info(msg);
     }
 
@@ -1625,7 +1651,9 @@ namespace Opm
     {
         // Add a Forchheimer term to the gas phase CTF if the run uses
         // either of the WDFAC or the WDFACCOR keywords.
-
+        if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
+            OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly wellIndex was called with a global instead of a local perforation index!");
+        }
         auto wi = std::vector<Scalar>
             (this->num_components_, this->well_index_[perf] * trans_mult);
 
@@ -1816,6 +1844,9 @@ namespace Opm
                                     return std::array<Eval,3>{};
                                 }
                             };
+        if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
+            OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly getMobility was called with a global instead of a local perforation index!");
+        }
         const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == this->num_components_);
         const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
@@ -1884,7 +1915,7 @@ namespace Opm
         const auto& summary_state = simulator.vanguard().summaryState();
 
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
-            simulator, summary_state, this->getALQ(well_state), deferred_logger);
+            simulator, summary_state, this->getALQ(well_state), deferred_logger, /*iterate_if_no_solution */ true);
         if (bhp_at_thp_limit) {
             std::vector<Scalar> rates(this->number_of_phases_, 0.0);
             if (thp_update_iterations) {
@@ -1972,6 +2003,50 @@ namespace Opm
 
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), 0.0);
         connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToModelPhaseIdx(phase_pos)).value());
+    }
+
+    template<typename TypeTag>
+    template<class GasLiftSingleWell>
+    std::unique_ptr<GasLiftSingleWell> 
+    WellInterface<TypeTag>::
+    initializeGliftWellTest_(const Simulator& simulator,
+                             WellState<Scalar>& well_state,
+                             const GroupState<Scalar>& group_state,
+                             const PhaseUsage& phase_usage,
+                             GLiftEclWells& ecl_well_map,
+                             DeferredLogger& deferred_logger)
+    {
+        // Instantiate group info object (without initialization) since it is needed in GasLiftSingleWell
+        auto& comm = simulator.vanguard().grid().comm();
+        ecl_well_map.try_emplace(this->name(),  &(this->wellEcl()), this->indexOfWell());
+        GasLiftGroupInfo<Scalar> group_info {
+                ecl_well_map,
+                simulator.vanguard().schedule(),
+                simulator.vanguard().summaryState(),
+                simulator.episodeIndex(),
+                simulator.model().newtonMethod().numIterations(),
+                phase_usage,
+                deferred_logger,
+                well_state,
+                group_state,
+                comm,
+                false
+        };
+
+        // Return GasLiftSingleWell object to use the wellTestALQ() function
+        std::set<int> sync_groups;
+        const auto& summary_state = simulator.vanguard().summaryState();
+        return std::make_unique<GasLiftSingleWell>(*this, 
+                                                    simulator, 
+                                                    summary_state,
+                                                    deferred_logger, 
+                                                    well_state, 
+                                                    group_state,
+                                                    group_info, 
+                                                    sync_groups, 
+                                                    comm, 
+                                                    false);
+        
     }
 
 } // namespace Opm
