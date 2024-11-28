@@ -70,7 +70,19 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 initMatrixAndVectors()
 {
+    int num_perfs_this_process = baseif_.numPerfs();
+    int num_perfs_whole_mswell = this->pw_info_.communication().sum(num_perfs_this_process);
+
+    std::vector<int> cells_for_perfs_whole_well(num_perfs_whole_mswell, 0.0);
+    for (int perf = 0; perf < num_perfs_this_process; perf++) {
+        cells_for_perfs_whole_well[this->pw_info_.localToGlobal(perf)] = baseif_.cells_global()[perf];
+    }
+    this->pw_info_.communication().sum(cells_for_perfs_whole_well.data(), num_perfs_whole_mswell);
+
     linSys_.init(baseif_.numPerfs(),
+                 1000,
+                 num_perfs_whole_mswell,
+                 cells_for_perfs_whole_well,
                  baseif_.cells(), segments_.inlets(),
                  segments_.perforations());
     primary_variables_.resize(this->numberOfSegments());
