@@ -37,6 +37,8 @@ public:
     //[A C^T    [x       =  [ res
     // B  D ]   x_well]      res_well]
 
+    CompWellEquations();
+
     // the vector type for the res_well and x_well
     using VectorBlockWellType = Dune::FieldVector<Scalar, numWellEq>;
     using BVectorWell = Dune::BlockVector<VectorBlockWellType>;
