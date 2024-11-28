@@ -50,7 +50,7 @@ class TestBasic(unittest.TestCase):
 
     def test_all(self):
         with pushd(self.data_dir):
-            sim = BlackOilSimulator("SPE1CASE1.DATA")
+            sim = BlackOilSimulator(args=['--linear-solver=ilu0'], filename="SPE1CASE1.DATA")
             sim.step_init()
             sim.step()
             dt = sim.get_dt()

@@ -40,7 +40,8 @@ private:
     using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
 public:
-    PyBlackOilSimulator( const std::string& deckFilename);
+    PyBlackOilSimulator(const std::string& deckFilename,
+                        const std::vector<std::string>& args);
     PyBlackOilSimulator(
         std::shared_ptr<Opm::Deck> deck,
         std::shared_ptr<Opm::EclipseState> state,
@@ -92,6 +93,7 @@ private:
     std::shared_ptr<Opm::EclipseState> eclipse_state_;
     std::shared_ptr<Opm::Schedule> schedule_;
     std::shared_ptr<Opm::SummaryConfig> summary_config_;
+    std::vector<std::string> args_;
 };
 
 } // namespace Opm::Pybind
