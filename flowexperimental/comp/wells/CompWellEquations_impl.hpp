@@ -21,6 +21,17 @@ namespace Opm
 {
 
 template <typename Scalar, int numWellEq, int numEq>
+CompWellEquations<Scalar, numWellEq, numEq>::
+CompWellEquations()
+{
+    duneB_.setBuildMode(OffDiagMatWell::row_wise);
+    duneC_.setBuildMode(OffDiagMatWell::row_wise),
+    duneD_.setBuildMode(DiagMatWell::row_wise);
+    invDuneD_.setBuildMode(DiagMatWell::row_wise);
+}
+
+
+template <typename Scalar, int numWellEq, int numEq>
 void
 CompWellEquations<Scalar, numWellEq, numEq>::
 init(const int num_conn)

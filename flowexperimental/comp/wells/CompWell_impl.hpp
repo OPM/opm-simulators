@@ -34,8 +34,38 @@ void
 CompWell<TypeTag>::
 init() {
     Base::init();
-    primary_variables_.init();
+    // primary_variables_.init();
     well_equations_.init(this->number_of_connection_);
 }
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+calculateExplitQuantities(const Simulator& simulator,
+                          const SingleCompWellState<Scalar>& well_state)
+{
+    updatePrimaryVariables(simulator, well_state);
+    updatePrimaryVariableEvaluation();
+    assert(false && " calculateExplitQuantities is not implemented yet");
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updatePrimaryVariables(const Simulator& /* simulator */,
+                       const SingleCompWellState<Scalar>& well_state)
+{
+    this->primary_variables_.update(well_state);
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updatePrimaryVariableEvaluation()
+{
+    this->primary_variables_.updateEvaluation();
+}
+
+
 
 } // end of namespace Opm

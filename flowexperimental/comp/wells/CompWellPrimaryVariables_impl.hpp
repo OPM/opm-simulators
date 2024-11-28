@@ -17,16 +17,44 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "SingleCompWellState.hpp"
 
 namespace Opm
 {
 
-template <typename FluidSystem>
+// template <typename FluidSystem, typename Indices>
+// void
+// CompWellPrimaryVariables<FluidSystem, Indices>::
+// init()
+// {
+//     // the following code looks like a resize function
+//     value_.resize(numWellEq, 0.);
+//     evaluation_.resize(numWellEq, 0.);
+// }
+
+template <typename FluidSystem, typename Indices>
 void
-CompWellPrimaryVariables<FluidSystem>::init()
+CompWellPrimaryVariables<FluidSystem, Indices>::
+update(const SingleCompWellState<Scalar>& well_state)
 {
-    value_.resize(numWellEq, 0.);
-    evaluation_.resize(numWellEq, 0.);
+    value_[QTotal] = well_state.get_total_surface_rate();
+    for (int i = 0; i < numWellConservationEq; ++i) { // should be the same with numComponents
+        value_[i + 1] = well_state.total_molar_fractions[i];
+    }
+    value_[Bhp] = well_state.bhp;
 }
+
+template <typename FluidSystem, typename Indices>
+void
+CompWellPrimaryVariables<FluidSystem, Indices>::
+updateEvaluation()
+{
+    for (std::size_t idx = 0; idx < numWellEq; ++idx) {
+        evaluation_[idx] = 0.;
+        evaluation_[idx].setValue(value_[idx]);
+        evaluation_[idx].setDerivative(idx + numResEq, 1.);
+    }
+}
+
 
 }

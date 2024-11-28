@@ -26,6 +26,8 @@
 
 #include <string>
 
+#include "SingleCompWellState.hpp"
+
 namespace Opm
 {
 template <typename Scalar>
@@ -36,11 +38,20 @@ class CompWellInterface
 {
 public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     CompWellInterface(const Well& well,
                       const int index_of_well,
                       const std::vector<CompConnectionData<Scalar>>& well_connection_data);
+
+    const std::string& name() const;
+
+    virtual void calculateExplitQuantities(const Simulator& simulator,
+                                           const SingleCompWellState<Scalar>& well_state) = 0;
+
+    virtual void updatePrimaryVariables(const Simulator& simulator,
+                                        const SingleCompWellState<Scalar>& well_state) = 0;
 
 protected:
 

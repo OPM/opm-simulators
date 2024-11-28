@@ -56,4 +56,13 @@ init() {
     // more things to add here
 }
 
+template <typename TypeTag>
+const std::string&
+CompWellInterface<TypeTag>::
+name() const
+{
+    return this->well_ecl_.name();
+}
+
+
 } // end of namespace Opm

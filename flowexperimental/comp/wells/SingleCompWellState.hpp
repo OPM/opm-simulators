@@ -25,6 +25,8 @@
 #include <string>
 #include <vector>
 
+#include "CompConnectionData.hpp"
+
 namespace Opm {
 
 template <typename Scalar>
@@ -40,8 +42,8 @@ public:
                    const CompositionalConfig& comp_config);
 
     std::vector<Scalar> pressure {};
-    std::vector<Scalar> phase_rates {}; // surface rates
-    std::vector<Scalar> reservoir_rates {}; // phase rates
+    std::vector<Scalar> surface_phase_rates {}; // surface phase rates
+    std::vector<Scalar> reservoir_phase_rates {}; // phase rates
     std::vector<Scalar> total_molar_fractions {};
 
     // connection_tranmissibility_factor
@@ -60,12 +62,13 @@ public:
                         bool is_producer);
 
     std::string name;
-    PhaseUsage pu;
+    const PhaseUsage&  phase_usage;
     bool producer;
 
     WellStatus status{WellStatus::OPEN};
     Scalar bhp{0};
     Scalar temperature{0};
+
     std::vector<Scalar> surface_phase_rates;
     std::vector<Scalar> phase_fractions; // V or L
     std::vector<Scalar> reservoir_phase_rates;
@@ -86,6 +89,8 @@ public:
     // so we have a funciton update_targets() to split between injector and producer
     void update_producer_targets(const Well& well, const SummaryState& st);
     void update_injector_targets(const Well& well, const SummaryState& st);
+
+    Scalar get_total_surface_rate() const;
 };
 
 } // namespace Opm
