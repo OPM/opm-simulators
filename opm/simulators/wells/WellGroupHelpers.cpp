@@ -626,15 +626,15 @@ updateSurfaceRatesInjectionGroups(const Group& group,
 
 template<class Scalar>
 void WellGroupHelpers<Scalar>::
-updateWellRates(const Group& group,
+updateWellRatesForGuideRate(const Group& group,
                 const Schedule& schedule,
                 const int reportStepIdx,
-                const WellState<Scalar>& wellStateNupcol,
+                const WellState<Scalar>& guiderateWellState,
                 WellState<Scalar>& wellState)
 {
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-        updateWellRates(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
+        updateWellRatesForGuideRate(groupTmp, schedule, reportStepIdx, guiderateWellState, wellState);
     }
     const int np = wellState.numPhases();
     for (const std::string& wellName : group.wells()) {
@@ -643,16 +643,16 @@ updateWellRates(const Group& group,
         if (well_index.has_value()) { // the well is found on this node
             const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
             int sign = 1;
-            // production wellRates are negative. The users of currentWellRates uses the convention in
-            // opm-common that production and injection rates are positive.
+            // production wellRates are negative. The users of wellRatesForGuideRate use
+            // the convention in opm-common that production and injection rates are positive.
             if (!wellTmp.isInjector())
                 sign = -1;
-            const auto& ws = wellStateNupcol.well(well_index.value());
+            const auto& ws = guiderateWellState.well(well_index.value());
             for (int phase = 0; phase < np; ++phase) {
                 rates[phase] = sign * ws.surface_rates[phase];
             }
         }
-        wellState.setCurrentWellRates(wellName, rates);
+        wellState.setWellRatesForGuideRate(wellName, rates);
     }
 }
 
@@ -955,17 +955,17 @@ computeNetworkPressures(const Network::ExtNetwork& network,
 template<class Scalar>
 GuideRate::RateVector
 WellGroupHelpers<Scalar>::
-getWellRateVector(const WellState<Scalar>& well_state,
+getWellGuideRateVector(const WellState<Scalar>& well_state,
                   const PhaseUsage& pu,
                   const std::string& name)
 {
-    return getGuideRateVector(well_state.currentWellRates(name), pu);
+    return getGuideRateVector(well_state.getWellRatesForGuideRate(name), pu);
 }
 
 template<class Scalar>
 GuideRate::RateVector
 WellGroupHelpers<Scalar>::
-getProductionGroupRateVector(const GroupState<Scalar>& group_state,
+getProductionGroupGuideRateVector(const GroupState<Scalar>& group_state,
                              const PhaseUsage& pu,
                              const std::string& group_name)
 {
@@ -985,14 +985,14 @@ getGuideRate(const std::string& name,
 {
     if (schedule.hasWell(name, reportStepIdx)) {
         if (guideRate->has(name) || guideRate->hasPotentials(name)) {
-            return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
+            return guideRate->get(name, target, getWellGuideRateVector(wellState, pu, name));
         } else {
             return 0.0;
         }
     }
 
     if (guideRate->has(name)) {
-        return guideRate->get(name, target, getProductionGroupRateVector(group_state, pu, name));
+        return guideRate->get(name, target, getProductionGroupGuideRateVector(group_state, pu, name));
     }
 
     Scalar totalGuideRate = 0.0;
@@ -1074,7 +1074,7 @@ getGuideRateInj(const std::string& name,
         if (!wellState.isInjectionGrup(wellName))
             continue;
 
-        totalGuideRate += guideRate->get(wellName, target, getWellRateVector(wellState, pu, wellName));
+        totalGuideRate += guideRate->get(wellName, target, getWellGuideRateVector(wellState, pu, wellName));
     }
     return totalGuideRate;
 }

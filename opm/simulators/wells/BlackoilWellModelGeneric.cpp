@@ -271,7 +271,7 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool handle_ms_w
                                  this->well_perf_data_, this->summaryState_);
 
     }
-    this->wellState().clearWellRates();
+    this->wellState().clearWellRatesForGuideRate();
     this->commitWGState();
     this->updateNupcolWGState();
 }
@@ -1199,13 +1199,66 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     // before we copy to well_state_nupcol_.
     this->wellState().updateGlobalIsGrup(comm_);
 
-    if (iterationIdx < nupcol) {
+    const bool update_nupcol = iterationIdx < nupcol;
+    if (update_nupcol) {
         this->updateNupcolWGState();
     }
 
-
     auto& well_state = this->wellState();
-    const auto& well_state_nupcol = this->nupcolWellState();
+
+    if (iterationIdx == 0) {
+    // We use the rates from the previous time-step to reduce oscillations
+    WellGroupHelpers<Scalar>::updateWellRatesForGuideRate(fieldGroup,
+                                            schedule(),
+                                            reportStepIdx,
+                                            this->prevWellState(),
+                                            well_state);
+
+        // Set ALQ for off-process wells to zero
+        for (const auto& wname : schedule().wellNames(reportStepIdx)) {
+            const bool is_producer = schedule().getWell(wname, reportStepIdx).isProducer();
+            const bool not_on_this_process = !well_state.has(wname);
+            if (is_producer && not_on_this_process) {
+                well_state.setALQ(wname, 0.0);
+            }
+        }
+
+        well_state.communicateWellRatesForGuideRate(comm_);
+    }
+
+    if (update_nupcol) {
+        WellGroupHelpers<Scalar>::updateREINForGroups(fieldGroup,
+                                                    schedule(),
+                                                    reportStepIdx,
+                                                    phase_usage_,
+                                                    summaryState_,
+                                                    well_state,
+                                                    this->groupState(),
+                                                    comm_.rank() == 0);
+        WellGroupHelpers<Scalar>::updateVREPForGroups(fieldGroup,
+                                                    schedule(),
+                                                    reportStepIdx,
+                                                    well_state,
+                                                    this->groupState());
+
+        WellGroupHelpers<Scalar>::updateReservoirRatesInjectionGroups(fieldGroup,
+                                                                    schedule(),
+                                                                    reportStepIdx,
+                                                                    well_state,
+                                                                    this->groupState());
+        WellGroupHelpers<Scalar>::updateSurfaceRatesInjectionGroups(fieldGroup,
+                                                                    schedule(),
+                                                                    reportStepIdx,
+                                                                    well_state,
+                                                                    this->groupState());
+
+        WellGroupHelpers<Scalar>::updateGroupProductionRates(fieldGroup,
+                                                            schedule(),
+                                                            reportStepIdx,
+                                                            well_state,
+                                                            this->groupState());
+    }
+
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
     // The group target reduction does not honor NUPCOL.
     std::vector<Scalar> groupTargetReduction(numPhases(), 0.0);
@@ -1229,55 +1282,8 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                          this->groupState(),
                                                          groupTargetReductionInj);
 
-    WellGroupHelpers<Scalar>::updateREINForGroups(fieldGroup,
-                                                  schedule(),
-                                                  reportStepIdx,
-                                                  phase_usage_,
-                                                  summaryState_,
-                                                  well_state_nupcol,
-                                                  this->groupState(),
-                                                  comm_.rank() == 0);
-    WellGroupHelpers<Scalar>::updateVREPForGroups(fieldGroup,
-                                                  schedule(),
-                                                  reportStepIdx,
-                                                  well_state_nupcol,
-                                                  this->groupState());
-
-    WellGroupHelpers<Scalar>::updateReservoirRatesInjectionGroups(fieldGroup,
-                                                                  schedule(),
-                                                                  reportStepIdx,
-                                                                  well_state_nupcol,
-                                                                  this->groupState());
-    WellGroupHelpers<Scalar>::updateSurfaceRatesInjectionGroups(fieldGroup,
-                                                                schedule(),
-                                                                reportStepIdx,
-                                                                well_state_nupcol,
-                                                                this->groupState());
-
-    WellGroupHelpers<Scalar>::updateGroupProductionRates(fieldGroup,
-                                                         schedule(),
-                                                         reportStepIdx,
-                                                         well_state_nupcol,
-                                                         this->groupState());
-
-    // We use the rates from the previous time-step to reduce oscillations
-    WellGroupHelpers<Scalar>::updateWellRates(fieldGroup,
-                                              schedule(),
-                                              reportStepIdx,
-                                              this->prevWellState(),
-                                              well_state);
-
-    // Set ALQ for off-process wells to zero
-    for (const auto& wname : schedule().wellNames(reportStepIdx)) {
-        const bool is_producer = schedule().getWell(wname, reportStepIdx).isProducer();
-        const bool not_on_this_process = !well_state.has(wname);
-        if (is_producer && not_on_this_process) {
-            well_state.setALQ(wname, 0.0);
-        }
-    }
-
-    well_state.communicateGroupRates(comm_);
-    this->groupState().communicate_rates(comm_);
+    // well_state.communicateGroupRates(comm_);
+    this->groupState().communicate_rates(comm_, update_nupcol);
 }
 
 template<class Scalar>

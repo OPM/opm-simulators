@@ -114,24 +114,24 @@ public:
                 const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                 const SummaryState& summary_state);
 
-    void setCurrentWellRates(const std::string& wellName,
+    void setWellRatesForGuideRate(const std::string& wellName,
                              const std::vector<Scalar>& new_rates)
     {
-        auto& [owner, rates] = this->well_rates.at(wellName);
+        auto& [owner, rates] = this->well_rates_for_guiderate.at(wellName);
         if (owner)
             rates = new_rates;
     }
 
-    const std::vector<Scalar>& currentWellRates(const std::string& wellName) const;
+    const std::vector<Scalar>& getWellRatesForGuideRate(const std::string& wellName) const;
 
-    bool hasWellRates(const std::string& wellName) const
+    bool hasWellRatesForGuideRate(const std::string& wellName) const
     {
-        return this->well_rates.find(wellName) != this->well_rates.end();
+        return this->well_rates_for_guiderate.find(wellName) != this->well_rates_for_guiderate.end();
     }
 
-    void clearWellRates()
+    void clearWellRatesForGuideRate()
     {
-        this->well_rates.clear();
+        this->well_rates_for_guiderate.clear();
     }
 
     void gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
@@ -160,7 +160,7 @@ public:
                                       std::vector<Scalar>&                 segment_rates);
 
 
-    void communicateGroupRates(const Parallel::Communication& comm);
+    void communicateWellRatesForGuideRate(const Parallel::Communication& comm);
 
     void updateGlobalIsGrup(const Parallel::Communication& comm);
 
@@ -336,7 +336,7 @@ public:
     void serializeOp(Serializer& serializer)
     {
         serializer(alq_state);
-        serializer(well_rates);
+        serializer(well_rates_for_guiderate);
         if (serializer.isSerializing()) {
             serializer(wells_.size());
         } else {
@@ -364,7 +364,7 @@ private:
     // well might appear in the WellContainer on different processes.
     WellContainer<SingleWellState<Scalar>> wells_;
 
-    // The members alq_state, global_well_info and well_rates are map like
+    // The members alq_state, global_well_info and well_rates_for_guiderate are map like
     // structures which will have entries for *all* the wells in the system.
 
     // Use of std::optional<> here is a technical crutch, the
@@ -373,10 +373,9 @@ private:
     std::optional<GlobalWellInfo> global_well_info;
     ALQState<Scalar> alq_state;
 
-    // The well_rates variable is defined for all wells on all processors. The
-    // bool in the value pair is whether the current process owns the well or
-    // not.
-    std::map<std::string, std::pair<bool, std::vector<Scalar>>> well_rates;
+    // The well_rates_for_guiderate variable is defined for all wells on all processors. The
+    // bool in the value pair is whether the current process owns the well or not.
+    std::map<std::string, std::pair<bool, std::vector<Scalar>>> well_rates_for_guiderate;
 
     // Keep track of permanently inactive well names
     std::vector<std::string> permanently_inactive_well_names_;

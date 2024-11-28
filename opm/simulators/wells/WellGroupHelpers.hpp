@@ -168,10 +168,10 @@ public:
                                                   const WellState<Scalar>& wellState,
                                                   GroupState<Scalar>& group_state);
 
-    static void updateWellRates(const Group& group,
+    static void updateWellRatesForGuideRate(const Group& group,
                                 const Schedule& schedule,
                                 const int reportStepIdx,
-                                const WellState<Scalar>& wellStateNupcol,
+                                const WellState<Scalar>& guiderateWellState,
                                 WellState<Scalar>& wellState);
 
     static void updateGroupProductionRates(const Group& group,
@@ -207,12 +207,12 @@ public:
                             const int report_time_step);
 
     static GuideRate::RateVector
-    getWellRateVector(const WellState<Scalar>& well_state,
+    getWellGuideRateVector(const WellState<Scalar>& well_state,
                       const PhaseUsage& pu,
                       const std::string& name);
 
     static GuideRate::RateVector
-    getProductionGroupRateVector(const GroupState<Scalar>& group_state,
+    getProductionGroupGuideRateVector(const GroupState<Scalar>& group_state,
                                  const PhaseUsage& pu,
                                  const std::string& group_name);
 

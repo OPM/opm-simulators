@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(GroupStateCreate)
     auto gs2 = gs;
     BOOST_CHECK(gs2 == gs);
     TestCommunicator comm;
-    gs.communicate_rates(comm);
+    gs.communicate_rates(comm, true);
     BOOST_CHECK(gs2 == gs);
 }
 
