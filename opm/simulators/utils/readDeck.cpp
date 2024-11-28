@@ -640,10 +640,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (*errorGuard) { // errors encountered
         parseSuccess = 0;
-        if (failureMessage.size()) {
-            failureMessage += std::string("\n");
-        }
-        failureMessage += errorGuard->dump();
+        failureMessage += errorGuard->formattedErrors();
         errorGuard->clear();
     }
 
@@ -651,7 +648,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (! parseSuccess) {
         if (comm.rank() == 0) {
-            OpmLog::error(fmt::format("Unrecoverable errors while loading input: {}", failureMessage));
+            OpmLog::error(fmt::format("Unrecoverable errors while loading input:\n{}", failureMessage));
         }
 
 #if HAVE_MPI
