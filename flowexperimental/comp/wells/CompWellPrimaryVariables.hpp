@@ -22,33 +22,42 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <vector>
+#include <array>
 
 namespace Opm {
 
-template <typename FluidSystem>
+template <typename Scalar>
+class SingleCompWellState;
+
+template <typename FluidSystem, typename Indices>
 class CompWellPrimaryVariables {
 public:
     static constexpr int numWellConservationEq = FluidSystem::numComponents;
     static constexpr int numWellControlEq = 1;
     static constexpr int numWellEq = numWellConservationEq + numWellControlEq;
     // the indices for the primary variables
-    // the first primary variable will be the total mass rate
+    // the first primary variable will be the total surface rate
     // the last primary variable will be the BHP
     // the one in the middle with will the mole fractions for the numWellEq - 1 components
-    static constexpr int QTotalMass = 0;
+    // this can be changed based on the implementation itself
+    static constexpr int QTotal = 0;
     static constexpr int Bhp = numWellEq - numWellControlEq;
 
     using Scalar = typename FluidSystem::Scalar;
+
+    // this is the number of the equations for the reservoir conservation equations
+    static constexpr int numResEq = Indices::numEq;
     // we use hard-coded Evaluation type for now
     // TODO: we can try to use DyanmicEvaluation here
-    using EvalWell = DenseAd::Evaluation<Scalar, numWellEq>;
+    using EvalWell = DenseAd::Evaluation<Scalar, numWellEq + numResEq>;
 
-    void init();
+    // void init();
+    void update(const SingleCompWellState<Scalar>& well_state);
+    void updateEvaluation();
 
 private:
-    std::vector<Scalar> value_;
-    std::vector<EvalWell> evaluation_;
+    std::array<Scalar, numWellEq> value_;
+    std::array<EvalWell, numWellEq> evaluation_;
 };
 
 } // end of namespace Opm

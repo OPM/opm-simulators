@@ -37,6 +37,9 @@ beginTimeStep()
 {
     createWellContainer();
     initWellContainer();
+    for (auto& well : well_container_) {
+        well->calculateExplitQuantities(simulator_, comp_well_states_[well->name()]);
+    }
 }
 
 template <typename TypeTag>

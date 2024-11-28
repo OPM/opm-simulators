@@ -38,9 +38,10 @@ class CompWell  : public CompWellInterface<TypeTag>
 public:
     using Base = CompWellInterface<TypeTag>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using PrimaryVariables = CompWellPrimaryVariables<FluidSystem>;
+    using PrimaryVariables = CompWellPrimaryVariables<FluidSystem, Indices>;
     using WellEquations = CompWellEquations<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
 
     CompWell(const Well& well,
@@ -48,6 +49,14 @@ public:
              const std::vector<CompConnectionData<Scalar>>& well_connection_data);
 
     void init() override;
+
+    void calculateExplitQuantities(const Simulator& simulator,
+                                   const SingleCompWellState<Scalar>& well_state) override;
+
+    void updatePrimaryVariables(const Simulator& simulator,
+                                const SingleCompWellState<Scalar>& well_state) override;
+
+    void updatePrimaryVariableEvaluation();
 
 private:
 

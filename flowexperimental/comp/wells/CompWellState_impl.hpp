@@ -82,7 +82,7 @@ initSingleWell(const Well& well,
 template <typename Scalar>
 void CompWellState<Scalar>::
 initSingleInjector(const Well& well,
-                   const std::vector<Scalar>& cell_pressures,
+                   const std::vector<Scalar>& /* cell_pressures */,
                    const std::vector<CompConnectionData<Scalar> >& conn_data,
                    const SummaryState& summary_state)
 {
@@ -98,7 +98,7 @@ initSingleInjector(const Well& well,
 template <typename Scalar>
 void CompWellState<Scalar>::
 initSingleProducer(const Well& well,
-                   const std::vector<Scalar>& cell_pressures,
+                   const std::vector<Scalar>& /* cell_pressures */,
                    const std::vector<CompConnectionData<Scalar> >& conn_data,
                    const SummaryState& summary_state)
 {
@@ -109,6 +109,14 @@ initSingleProducer(const Well& well,
                                     conn_data,
                                     true) );
     ws.update_producer_targets(well, summary_state);
+}
+
+template <typename Scalar>
+const SingleCompWellState<Scalar>&
+CompWellState<Scalar>::
+operator[](const std::string& well_name) const
+{
+    return this->wells_[well_name];
 }
 
 

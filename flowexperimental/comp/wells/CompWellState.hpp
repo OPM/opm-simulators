@@ -46,6 +46,8 @@ public:
               const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
               const SummaryState& sumary_state,
               const CompWellState* prev_well_state = nullptr);
+
+    const SingleCompWellState<Scalar>& operator[](const std::string& well_name) const;
 private:
     WellContainer<SingleCompWellState<Scalar>> wells_;
 
