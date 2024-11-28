@@ -88,6 +88,7 @@ public:
         if (this->enableThresholdPressure_ && !this->thpresDefault_.empty() && !this->restart_) {
             this->computeDefaultThresholdPressures_();
             this->applyExplicitThresholdPressures_();
+            simulator_.vanguard().gridView().comm().max(&this->thpres_[0], this->thpres_.size());
         }
     }
 
