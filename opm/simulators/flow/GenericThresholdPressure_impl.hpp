@@ -227,6 +227,12 @@ getRestartVector() const
         return {};
 
     std::vector<Scalar> result(numEquilRegions_ * numEquilRegions_, 0.0);
+
+    if (this->restart_) {
+        result = this->thpres_;
+        return result;
+    }
+
     const auto& simConfig = eclState_.getSimulationConfig();
     const auto& thpres = simConfig.getThresholdPressure();
 
