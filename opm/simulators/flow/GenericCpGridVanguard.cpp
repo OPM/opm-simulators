@@ -470,17 +470,6 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
 
-    // --- Add LGRs and update Leaf Grid View ---
-    // Check if input file contains Lgrs.
-    const auto& lgrs = eclState.getLgrs();
-    const auto lgrsSize = lgrs.size();
-    // If there are lgrs, create the grid with them, and update the leaf grid view.
-    if (lgrsSize)
-    {
-        OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
-        this->addLgrsUpdateLeafView(lgrs, lgrsSize);
-    }
-
 #if HAVE_MPI
     {
         const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
@@ -516,7 +505,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     }
 #endif
 
-    // --- Copy grid with LGRs to equilGrid_ ---
+    // --- Copy grid to equilGrid_ ---
     // We use separate grid objects: one for the calculation of the initial
     // condition via EQUIL and one for the actual simulation. The reason is
     // that the EQUIL code is allergic to distributed grids and the
