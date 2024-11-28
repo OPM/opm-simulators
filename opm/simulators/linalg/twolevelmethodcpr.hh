@@ -472,8 +472,9 @@ public:
   void updatePreconditioner(std::shared_ptr<SmootherType> smoother,
                             CoarseLevelSolverPolicy& coarsePolicy)
   {
-    //assume new matrix is not reallocated the new precondition should anyway be made
     smoother_ = smoother;
+    // We assume the matrix has the same sparsity structure and memory locations throughout, only the values are changed.
+    smoother_->update();
     if (coarseSolver_) {
       policy_->calculateCoarseEntries(*operator_);
       coarsePolicy.setCoarseOperator(*policy_);

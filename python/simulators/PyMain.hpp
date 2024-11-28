@@ -34,6 +34,31 @@ class PyMain : public Main
 public:
     using Main::Main;
 
+    void setArguments(const std::vector<std::string>& args)
+    {
+        if (args.empty()) {
+            return;
+        }
+
+        // We have the two arguments previously setup
+        // (binary name and input case name) by the main
+        // class plus whichever args are in the parameter
+        // that was passed from the python side.
+        this->argc_ = 2 + args.size();
+
+        // Setup our vector of char*'s
+        argv_python_.resize(2 + args.size());
+        argv_python_[0] = argv_[0];
+        argv_python_[1] = argv_[1];
+        for (std::size_t i = 0; i < args.size(); ++i) {
+            argv_python_[i+2] = const_cast<char*>(args[i].c_str());
+        }
+
+        // Finally set the main class' argv pointer to
+        // the combined parameter list.
+        this->argv_ = argv_python_.data();
+    }
+
     using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
     // To be called from the Python interface code. Only do the
     // initialization and then return a pointer to the FlowMain
@@ -53,6 +78,9 @@ public:
             return std::unique_ptr<FlowMainType>(); // nullptr
         }
     }
+
+private:
+    std::vector<char*> argv_python_{};
 };
 
 } // namespace Opm
