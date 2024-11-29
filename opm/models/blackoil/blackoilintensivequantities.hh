@@ -38,6 +38,7 @@
 #include "blackoildiffusionmodule.hh"
 #include "blackoildispersionmodule.hh"
 #include "blackoilmicpmodules.hh"
+#include "blackoilconvectivemixingmodule.hh"
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -77,6 +78,7 @@ class BlackOilIntensiveQuantities
     , public BlackOilBrineIntensiveQuantities<TypeTag>
     , public BlackOilEnergyIntensiveQuantities<TypeTag>
     , public BlackOilMICPIntensiveQuantities<TypeTag>
+    , public BlackOilConvectiveMixingIntensiveQuantities<TypeTag>
 {
     using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
@@ -104,6 +106,7 @@ class BlackOilIntensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
+    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -598,6 +601,9 @@ public:
         }
         if constexpr (enableBrine) {
             asImp_().saltPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+        if constexpr (enableConvectiveMixing) {
+            asImp_().updateSaturatedDissolutionFactor_();
         }
 
         // update the quantities which are required by the chosen
