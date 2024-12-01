@@ -743,7 +743,9 @@ private:
     // To demonstrate run with non_world_comm
     bool test_split_comm_ = false;
     bool isSimulationRank_ = true;
+#if HAVE_MPI
     std::string reservoirCouplingSlaveOutputFilename_{};
+#endif
 #if HAVE_DAMARIS
     bool enableDamarisOutput_ = false;
 #endif
