@@ -33,6 +33,9 @@
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 
 #if HAVE_MPI
+#define RESERVOIR_COUPLING_ENABLED
+#endif
+#ifdef RESERVOIR_COUPLING_ENABLED
 #include <opm/simulators/flow/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
 #include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
@@ -92,8 +95,9 @@ class AdaptiveTimeStepping
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+#ifdef RESERVOIR_COUPLING_ENABLED
     using TimePoint = ReservoirCoupling::TimePoint;
-
+#endif
     template <class Solver>
     class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
     {
@@ -131,10 +135,10 @@ private:
         void maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double originalTimeStep);
         bool maybeUpdateTuning_() const;
         double maxTimeStep_() const;
+        SimulatorReport runStepOriginal_();
+#ifdef RESERVOIR_COUPLING_ENABLED
         ReservoirCouplingMaster& reservoirCouplingMaster_();
         ReservoirCouplingSlave& reservoirCouplingSlave_();
-        SimulatorReport runStepOriginal_();
-#if HAVE_MPI
         SimulatorReport runStepReservoirCouplingMaster_();
         SimulatorReport runStepReservoirCouplingSlave_();
 #endif
@@ -221,8 +225,10 @@ public:
     bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs);
 
     static void registerParameters();
+#ifdef RESERVOIR_COUPLING_ENABLED
     void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master);
     void setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave);
+#endif
     void setSuggestedNextStep(const double x);
     double suggestedNextStep() const;
 
@@ -280,7 +286,7 @@ protected:
 
     //! < shut problematic wells when time step size in days are less than this
     double min_time_step_before_shutting_problematic_wells_;
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
     ReservoirCouplingMaster *reservoir_coupling_master_ = nullptr;
     ReservoirCouplingSlave *reservoir_coupling_slave_ = nullptr;
 #endif

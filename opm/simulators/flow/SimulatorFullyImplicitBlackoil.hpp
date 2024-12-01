@@ -25,6 +25,9 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #if HAVE_MPI
+#define RESERVOIR_COUPLING_ENABLED
+#endif
+#ifdef RESERVOIR_COUPLING_ENABLED
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
@@ -206,9 +209,15 @@ public:
     /// \param[in,out] timer       governs the requested reporting timesteps
     /// \param[in,out] state       state of reservoir: pressure, fluxes
     /// \return                    simulation report, with timing data
+#ifdef RESERVOIR_COUPLING_ENABLED
     SimulatorReport run(SimulatorTimer& timer, int argc, char** argv)
     {
         init(timer, argc, argv);
+#else
+    SimulatorReport run(SimulatorTimer& timer)
+    {
+        init(timer);
+#endif
         // Make cache up to date. No need for updating it in elementCtx.
         // NB! Need to be at the correct step in case of restart
         simulator_.setEpisodeIndex(timer.currentStepNum());
@@ -223,7 +232,7 @@ public:
         return finalize();
     }
 
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
     // This method should only be called if slave mode (i.e. Parameters::Get<Parameters::Slave>())
     // is false. We try to determine if this is a normal flow simulation or a reservoir
     // coupling master. It is a normal flow simulation if the schedule does not contain
@@ -256,12 +265,11 @@ public:
     }
 #endif
 
+#ifdef RESERVOIR_COUPLING_ENABLED
     // NOTE: The argc and argv will be used when launching a slave process
     void init(SimulatorTimer &timer, int argc, char** argv)
     {
-#if HAVE_MPI
         auto slave_mode = Parameters::Get<Parameters::Slave>();
-        FlowGenericVanguard::comm().barrier();
         if (slave_mode) {
             this->reservoirCouplingSlave_ =
                 std::make_unique<ReservoirCouplingSlave>(
@@ -283,6 +291,9 @@ public:
                     );
             }
         }
+#else
+    void init(SimulatorTimer &timer)
+    {
 #endif
         simulator_.setEpisodeIndex(-1);
 
@@ -306,7 +317,7 @@ public:
             else {
                 adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, max_next_tstep, terminalOutput_);
             }
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
             if (this->reservoirCouplingSlave_) {
                 adaptiveTimeStepping_->setReservoirCouplingSlave(this->reservoirCouplingSlave_.get());
             }
@@ -424,7 +435,7 @@ public:
                 return false;
             };
             tuningUpdater();
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
             if (this->reservoirCouplingMaster_) {
                 this->reservoirCouplingMaster_->maybeSpawnSlaveProcesses(timer.currentStepNum());
             }
@@ -696,7 +707,7 @@ protected:
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
 
 
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
     bool slaveMode_{false};
     std::unique_ptr<ReservoirCouplingMaster> reservoirCouplingMaster_{nullptr};
     std::unique_ptr<ReservoirCouplingSlave> reservoirCouplingSlave_{nullptr};

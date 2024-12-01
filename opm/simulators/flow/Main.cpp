@@ -52,7 +52,9 @@ namespace Opm {
 Main::Main(int argc, char** argv, bool ownMPI)
     : argc_(argc), argv_(argv), ownMPI_(ownMPI)
 {
+#if HAVE_MPI
     maybeSaveReservoirCouplingSlaveLogFilename_();
+#endif
     if (ownMPI_) {
         initMPI();
     }
@@ -128,6 +130,7 @@ Main::~Main()
 #endif
 }
 
+#if HAVE_MPI
 void Main::maybeSaveReservoirCouplingSlaveLogFilename_()
 {
     // If first command line argument is "--slave-log-file=<filename>",
@@ -150,7 +153,8 @@ void Main::maybeSaveReservoirCouplingSlaveLogFilename_()
         }
     }
 }
-
+#endif
+#if HAVE_MPI
 void Main::maybeRedirectReservoirCouplingSlaveOutput_() {
     if (!this->reservoirCouplingSlaveOutputFilename_.empty()) {
         std::string filename = this->reservoirCouplingSlaveOutputFilename_
@@ -171,6 +175,7 @@ void Main::maybeRedirectReservoirCouplingSlaveOutput_() {
         close(fd);
     }
 }
+#endif
 
 void Main::setArgvArgc_(const std::string& filename)
 {
@@ -204,9 +209,9 @@ void Main::initMPI()
     FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
 
     handleTestSplitCommunicatorCmdLine_();
-    maybeRedirectReservoirCouplingSlaveOutput_();
 
 #if HAVE_MPI
+    maybeRedirectReservoirCouplingSlaveOutput_();
     if (test_split_comm_ && FlowGenericVanguard::comm().size() > 1) {
         int world_rank = FlowGenericVanguard::comm().rank();
         int color = (world_rank == 0);

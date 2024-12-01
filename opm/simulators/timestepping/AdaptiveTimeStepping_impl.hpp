@@ -146,6 +146,7 @@ registerParameters()
     detail::registerAdaptiveParameters();
 }
 
+#ifdef RESERVOIR_COUPLING_ENABLED
 template<class TypeTag>
 void
 AdaptiveTimeStepping<TypeTag>::
@@ -161,6 +162,7 @@ setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave)
 {
     this->reservoir_coupling_slave_ = reservoir_coupling_slave;
 }
+#endif
 
 /** \brief  step method that acts like the solver::step method
             in a sub cycle of time steps
@@ -487,7 +489,7 @@ SimulatorReport
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 run()
 {
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
     if (isReservoirCouplingSlave_() && reservoirCouplingSlave_().activated()) {
         return runStepReservoirCouplingSlave_();
     }
@@ -576,7 +578,7 @@ runStepOriginal_()
     return substepIteration.run();
 }
 
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
 ReservoirCouplingMaster&
@@ -587,7 +589,7 @@ reservoirCouplingMaster_()
 }
 #endif
 
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
 ReservoirCouplingSlave&
@@ -598,7 +600,7 @@ reservoirCouplingSlave_()
 }
 #endif
 
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
 SimulatorReport
@@ -645,7 +647,7 @@ runStepReservoirCouplingMaster_()
 }
 #endif
 
-#if HAVE_MPI
+#ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
 template <class Solver>
 SimulatorReport
