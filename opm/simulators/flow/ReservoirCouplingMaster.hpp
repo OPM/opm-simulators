@@ -34,7 +34,6 @@ namespace Opm {
 
 class ReservoirCouplingMaster {
 public:
-    using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
     using MessageTag = ReservoirCoupling::MessageTag;
     using TimePoint = ReservoirCoupling::TimePoint;
     ReservoirCouplingMaster(
@@ -44,8 +43,8 @@ public:
     );
 
     bool activated() { return this->numSlavesStarted() > 0; }
-    void addSlaveCommunicator(MPI_Comm_Ptr comm) {
-         this->master_slave_comm_.push_back(std::move(comm));
+    void addSlaveCommunicator(MPI_Comm comm) {
+         this->master_slave_comm_.push_back(comm);
     }
     void addSlaveName(const std::string &name) { this->slave_names_.push_back(name); }
     void addSlaveStartDate(std::time_t date) { this->slave_start_dates_.push_back(date); }
@@ -55,7 +54,7 @@ public:
     char **getArgv() const { return this->argv_; }
     const Parallel::Communication &getComm() const { return this->comm_; }
     double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
-    const MPI_Comm &getSlaveComm(int index) const { return *this->master_slave_comm_[index].get(); }
+    MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
     const double *getSlaveStartDates() { return this->slave_start_dates_.data(); }
     double maybeChopSubStep(double suggested_timestep, double current_time) const;
@@ -73,7 +72,8 @@ private:
     const Schedule& schedule_;
     int argc_;
     char **argv_;
-    std::vector<MPI_Comm_Ptr> master_slave_comm_; // MPI communicators for the slave processes
+    // NOTE: MPI_Comm is just an integer handle, so we can just copy it into the vector
+    std::vector<MPI_Comm> master_slave_comm_; // MPI communicators for the slave processes
     std::vector<std::string> slave_names_;
     // The start dates are in whole seconds since the epoch. We use a double to store the value
     // since both schedule_.getStartTime() and schedule_.stepLength(report_step) returns

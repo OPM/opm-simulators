@@ -34,7 +34,6 @@ namespace Opm {
 
 class ReservoirCouplingSlave {
 public:
-    using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
     using MessageTag = ReservoirCoupling::MessageTag;
 
     ReservoirCouplingSlave(
@@ -57,7 +56,7 @@ private:
     const Schedule& schedule_;
     const SimulatorTimer &timer_;
     // MPI parent communicator for a slave process
-    MPI_Comm_Ptr slave_master_comm_{nullptr};
+    MPI_Comm slave_master_comm_{MPI_COMM_NULL};
     std::map<std::string, std::string> master_group_names_;
     bool activated_{false};
 };

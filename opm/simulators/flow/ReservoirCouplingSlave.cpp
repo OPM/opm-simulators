@@ -43,12 +43,12 @@ ReservoirCouplingSlave(
     schedule_{schedule},
     timer_{timer}
 {
-    this->slave_master_comm_ = MPI_Comm_Ptr(new MPI_Comm(MPI_COMM_NULL));
-    MPI_Comm_get_parent(this->slave_master_comm_.get());
-    if (*(this->slave_master_comm_) == MPI_COMM_NULL) {
+    this->slave_master_comm_ = MPI_COMM_NULL;
+    MPI_Comm_get_parent(&this->slave_master_comm_);
+    if (this->slave_master_comm_ == MPI_COMM_NULL) {
         OPM_THROW(std::runtime_error, "Slave process is not spawned by a master process");
     }
-    ReservoirCoupling::setErrhandler(*this->slave_master_comm_, /*is_master=*/false);
+    ReservoirCoupling::setErrhandler(this->slave_master_comm_, /*is_master=*/false);
 }
 
 double
@@ -62,7 +62,7 @@ receiveNextTimeStepFromMaster() {
             /*datatype=*/MPI_DOUBLE,
             /*source_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::SlaveNextTimeStep),
-            *this->slave_master_comm_,
+            this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
         if (result != MPI_SUCCESS) {
@@ -90,7 +90,7 @@ receiveMasterGroupNamesFromMasterProcess() {
             /*datatype=*/MPI_AINT,
             /*source_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::MasterGroupNamesSize),
-            *this->slave_master_comm_,
+            this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
         OpmLog::info("Received master group names size from master process rank 0");
@@ -108,7 +108,7 @@ receiveMasterGroupNamesFromMasterProcess() {
             /*datatype=*/MPI_CHAR,
             /*source_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::MasterGroupNames),
-            *this->slave_master_comm_,
+            this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
         if (result2 != MPI_SUCCESS) {
@@ -142,7 +142,7 @@ sendNextReportDateToMasterProcess() const
             /*datatype=*/MPI_DOUBLE,
             /*dest_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::SlaveNextReportDate),
-            *this->slave_master_comm_
+            this->slave_master_comm_
         );
         OpmLog::info("Sent next report date to master process from rank 0");
    }
@@ -161,7 +161,7 @@ sendActivationDateToMasterProcess() const
             /*datatype=*/MPI_DOUBLE,
             /*dest_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::SlaveActivationDate),
-            *this->slave_master_comm_
+            this->slave_master_comm_
         );
         OpmLog::info("Sent simulation start date to master process from rank 0");
    }
@@ -180,7 +180,7 @@ sendSimulationStartDateToMasterProcess() const
             /*datatype=*/MPI_DOUBLE,
             /*dest_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::SlaveSimulationStartDate),
-            *this->slave_master_comm_
+            this->slave_master_comm_
         );
         OpmLog::info("Sent simulation start date to master process from rank 0");
    }

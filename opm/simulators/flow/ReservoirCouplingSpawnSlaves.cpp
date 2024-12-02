@@ -275,7 +275,7 @@ spawnSlaveProcesses_()
 {
     char *flow_program_name = this->master_.getArgv(0);
     for (const auto& [slave_name, slave] : this->rescoup_.slaves()) {
-        auto master_slave_comm = MPI_Comm_Ptr(new MPI_Comm(MPI_COMM_NULL));
+        MPI_Comm master_slave_comm = MPI_COMM_NULL;
         const auto& data_file_name = slave.dataFilename();
         const auto& directory_path = slave.directoryPath();
         // Concatenate the directory path and the data file name to get the full path
@@ -298,10 +298,10 @@ spawnSlaveProcesses_()
             /*info=*/MPI_INFO_NULL,
             /*root=*/0,  // Rank 0 spawns the slave processes
             /*comm=*/this->comm_,
-            /*intercomm=*/master_slave_comm.get(),
+            /*intercomm=*/&master_slave_comm,
             /*array_of_errcodes=*/errcodes.data()
         );
-        if (spawn_result != MPI_SUCCESS || (*master_slave_comm == MPI_COMM_NULL)) {
+        if (spawn_result != MPI_SUCCESS || (master_slave_comm == MPI_COMM_NULL)) {
             for (unsigned int i = 0; i < num_procs; i++) {
                 if (errcodes[i] != MPI_SUCCESS) {
                     char error_string[MPI_MAX_ERROR_STRING];
@@ -312,14 +312,14 @@ spawnSlaveProcesses_()
             }
             OPM_THROW(std::runtime_error, "Failed to spawn slave process");
         }
-        ReservoirCoupling::setErrhandler(*master_slave_comm, /*is_master=*/true);
+        ReservoirCoupling::setErrhandler(master_slave_comm, /*is_master=*/true);
         OpmLog::info(
             fmt::format(
                 "Spawned reservoir coupling slave simulation for slave with name: "
                 "{}. Standard output logfile name: {}.log", slave_name, slave_name
             )
         );
-        this->master_.addSlaveCommunicator(std::move(master_slave_comm));
+        this->master_.addSlaveCommunicator(master_slave_comm);
         this->master_.addSlaveName(slave_name);
     }
 }

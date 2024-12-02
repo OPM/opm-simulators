@@ -37,18 +37,6 @@ enum class MessageTag : int {
     MasterGroupNamesSize,
 };
 
-// Custom deleter for MPI_Comm
-struct MPI_Comm_Deleter {
-    void operator()(MPI_Comm* comm) const {
-        if (*comm != MPI_COMM_NULL) {
-            MPI_Comm_free(comm);
-        }
-        delete comm;
-    }
-};
-
-using MPI_Comm_Ptr = std::unique_ptr<MPI_Comm, MPI_Comm_Deleter>;
-
 // This class represents a time point.
 // It is currently used to represent an epoch time (a double value in seconds since the epoch),
 // or an elapsed time (a double value in seconds since the start of the simulation).
