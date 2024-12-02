@@ -226,24 +226,7 @@ getRestartVector() const
     if (!enableThresholdPressure_)
         return {};
 
-    std::vector<Scalar> result(numEquilRegions_ * numEquilRegions_, 0.0);
-    const auto& simConfig = eclState_.getSimulationConfig();
-    const auto& thpres = simConfig.getThresholdPressure();
-
-    std::size_t idx = 0;
-    for (unsigned j = 1; j <= numEquilRegions_; ++j) {
-        for (unsigned i = 1; i <= numEquilRegions_; ++i, ++idx) {
-            if (thpres.hasRegionBarrier(i, j)) {
-                if (thpres.hasThresholdPressure(i, j)) {
-                    result[idx] = thpres.getThresholdPressure(i, j);
-                } else {
-                    result[idx] = this->thpresDefault_[idx];
-                }
-            }
-        }
-    }
-
-    return result;
+    return this->thpres_;
 }
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
