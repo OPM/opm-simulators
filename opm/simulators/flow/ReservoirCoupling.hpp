@@ -37,157 +37,38 @@ enum class MessageTag : int {
     MasterGroupNamesSize,
 };
 
-// This class represents a time point.
-// It is currently used to represent an epoch time (a double value in seconds since the epoch),
-// or an elapsed time (a double value in seconds since the start of the simulation).
-// To avoid numerical issues when adding or subtracting time points and then later comparing
-// for equality with for example a given report date, we use a tolerance value.
-class TimePoint {
-private:
-    double time;
-    // TODO: Epoch values often lies in the range of [1e9,1e11], so a tolerance value of 1e-10
-    //     might be a little too small. However, for elapsed time values, the range is often
-    //     in the range of [0, 1e8], so a tolerance value of 1e-10 should be sufficient.
-    // NOTE: 1 nano-second = 1e-9 seconds
-    static constexpr double tol = 1e-10; // Tolerance value
-
-public:
-    TimePoint() : time(0.0) {}
-    explicit TimePoint(double t) : time(t) {}
-    TimePoint(const TimePoint& other) : time(other.time) {}
-
-    // Assignment operator for double
-    TimePoint& operator=(double t) {
-        time = t;
-        return *this;
-    }
-
-    // Copy assignment operator
-    TimePoint& operator=(const TimePoint& other) {
-        if (this != &other) {
-            time = other.time;
-        }
-        return *this;
-    }
-
-    double getTime() const { return time; }
-
-    // Equality operator
-    bool operator==(const TimePoint& other) const {
-        return std::abs(time - other.time) < tol;
-    }
-
-    // Inequality operator
-    bool operator!=(const TimePoint& other) const {
-        return !(*this == other);
-    }
-
-    // Less than operator
-    bool operator<(const TimePoint& other) const {
-        return (time < other.time) && !(*this == other);
-    }
-
-    // Comparison operator: double < TimePoint
-    friend bool operator<(double lhs, const TimePoint& rhs) {
-        return lhs < rhs.time;
-    }
-
-   // Comparison operator: TimePoint < double
-    bool operator<(double rhs) const {
-        return time < rhs;
-    }
-
-    // Less than or equal to operator
-    bool operator<=(const TimePoint& other) const {
-        return (time < other.time) || (*this == other);
-    }
-
-    // Comparison operator: double <= TimePoint
-    friend bool operator<=(double lhs, const TimePoint& rhs) {
-        return lhs <= rhs.time;
-    }
-
-    // Comparison operator: TimePoint <= double
-    bool operator<=(double rhs) const {
-        return time <= rhs;
-    }
-
-    // Greater than operator
-    bool operator>(const TimePoint& other) const {
-        return (time > other.time) && !(*this == other);
-    }
-
-    // Comparison operator: double > TimePoint
-    friend bool operator>(double lhs, const TimePoint& rhs) {
-        return lhs > rhs.time;
-    }
-
-    // Comparison operator: TimePoint > double
-    bool operator>(double rhs) const {
-        return time > rhs;
-    }
-
-    // Greater than or equal to operator
-    bool operator>=(const TimePoint& other) const {
-        return (time > other.time) || (*this == other);
-    }
-
-    // Comparison operator: TimePoint >= double
-    bool operator>=(double rhs) const {
-        return time >= rhs;
-    }
-
-    // Comparison operator: double >= TimePoint
-    friend bool operator>=(double lhs, const TimePoint& rhs) {
-        return lhs >= rhs.time;
-    }
-
-    // Addition operator: TimePoint + TimePoint (summing their times)
-    TimePoint operator+(const TimePoint& other) const {
-        return TimePoint(time + other.time);
-    }
-
-    // Addition operator: TimePoint + double
-    TimePoint operator+(double delta) const {
-        return TimePoint(time + delta);
-    }
-
-    // Friend addition operator: double + TimePoint
-    friend TimePoint operator+(double lhs, const TimePoint& rhs) {
-        return TimePoint(lhs + rhs.time);
-    }
-
-    // Overload += operator for adding a double
-    TimePoint& operator+=(double delta) {
-        time += delta;
-        return *this;
-    }
-
-    // Subtraction operator: TimePoint - TimePoint (resulting in a new TimePoint)
-    TimePoint operator-(const TimePoint& other) const {
-        return TimePoint(time - other.time);
-    }
-
-    // Subtraction operator: TimePoint - double
-    TimePoint operator-(double delta) const {
-        return TimePoint(time - delta);
-    }
-
-    // Friend subtraction operator: double - TimePoint
-    friend TimePoint operator-(double lhs, const TimePoint& rhs) {
-        return TimePoint(lhs - rhs.time);
-    }
-
-    // Stream insertion operator for easy printing
-    friend std::ostream& operator<<(std::ostream& os, const TimePoint& tp) {
-        os << tp.time;
-        return os;
-    }
-};
-
 // Helper functions
 void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg);
 void setErrhandler(MPI_Comm comm, bool is_master);
+
+// Utility class for comparing double values representing epoch dates (seconds since
+// unix epoch) or elapsed time (seconds since the start of the simulation).
+// NOTE: It is important that when comparing against start of a report step or similar, that
+//   that we do not miss these due to numerical issues. This is because communication between
+//   master and slave processes are based on these points in time.
+// NOTE: Epoch values in this century (2000-2100) lies in the range of [1e9,4e9], and a double variable cannot
+//  represent such large values with high precision. For example, the date 01-01-2020 is equal
+//  to 1.5778368e9 seconds and adding 1e-7 seconds to this value will not change the value.
+//  So microseconds (1e-6) is approximately the smallest time unit we can represent for such a number.
+// NOTE: Report steps seems to have a maximum resolution of whole seconds, see stepLength() in
+//   Schedule.cpp in opm-common, which returns the step length in seconds.
+struct Seconds {
+    static constexpr double abstol = 1e-15;
+    static constexpr double reltol = 1e-15;
+    // We will will use the following expression to determine if two values a and b are equal:
+    //   |a - b| <= tol = abstol + reltol * max(|a|, |b|)
+    // For example, assume abstol = reltol = 1e-15, then the following holds:
+    // - If |a| and |b| are below 1, then the absolute tolerance applies.
+    // - If a and b are above 1, then the relative tolerance applies.
+    // For example, for dates in the range 01-01-2000 to 01-01-2100, epoch values will be in the range
+    //  [1e9, 4e9]. And we have 1e-15 * 1e9 = 1e-6, so numbers differing below one microsecond will
+    // be considered equal.
+    // NOTE: The above is not true for numbers close to zero, but we do not expect to compare such numbers.
+    static bool compare_eq(double a, double b);
+    static bool compare_gt(double a, double b);
+    static bool compare_gt_or_eq(double a, double b);
+    static bool compare_lt_or_eq(double a, double b);
+};
 
 } // namespace ReservoirCoupling
 } // namespace Opm

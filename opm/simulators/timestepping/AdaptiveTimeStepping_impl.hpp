@@ -610,8 +610,8 @@ runStepReservoirCouplingMaster_()
     bool substep_done = false;
     int iteration = 0;
     const double original_time_step = this->simulator_timer_.currentStepLength();
-    TimePoint current_time{this->simulator_timer_.simulationTimeElapsed()};
-    TimePoint step_end_time = current_time + original_time_step;
+    double current_time{this->simulator_timer_.simulationTimeElapsed()};
+    double step_end_time = current_time + original_time_step;
     auto current_step_length = original_time_step;
     SimulatorReport report;
     while(!substep_done) {
@@ -620,7 +620,7 @@ runStepReservoirCouplingMaster_()
             maybeUpdateTuning_();
         }
         current_step_length = reservoirCouplingMaster_().maybeChopSubStep(
-                                          current_step_length, current_time.getTime());
+                                          current_step_length, current_time);
         reservoirCouplingMaster_().sendNextTimeStepToSlaves(current_step_length);
         if (iteration == 0) {
             maybeModifySuggestedTimeStepAtBeginningOfReportStep_(current_step_length);
@@ -628,12 +628,14 @@ runStepReservoirCouplingMaster_()
         AdaptiveSimulatorTimer substep_timer{
             this->simulator_timer_.startDateTime(),
             /*stepLength=*/current_step_length,
-            /*elapsedTime=*/current_time.getTime(),
+            /*elapsedTime=*/current_time,
             /*timeStepEstimate=*/suggestedNextTimestep_(),
             this->simulator_timer_.reportStepNum(),
             maxTimeStep_()
         };
-        bool final_step = (current_time + current_step_length) >= step_end_time;
+        bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
+            current_time + current_step_length, step_end_time
+        );
         SubStepIteration substepIteration{*this, substep_timer, current_step_length, final_step};
         auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
@@ -657,8 +659,8 @@ runStepReservoirCouplingSlave_()
     bool substep_done = false;
     int iteration = 0;
     const double original_time_step = this->simulator_timer_.currentStepLength();
-    TimePoint current_time{this->simulator_timer_.simulationTimeElapsed()};
-    TimePoint step_end_time = current_time + original_time_step;
+    double current_time{this->simulator_timer_.simulationTimeElapsed()};
+    double step_end_time = current_time + original_time_step;
     SimulatorReport report;
     while(!substep_done) {
         reservoirCouplingSlave_().sendNextReportDateToMasterProcess();
@@ -670,12 +672,14 @@ runStepReservoirCouplingSlave_()
         AdaptiveSimulatorTimer substep_timer{
             this->simulator_timer_.startDateTime(),
             /*step_length=*/timestep,
-            /*elapsed_time=*/current_time.getTime(),
+            /*elapsed_time=*/current_time,
             /*time_step_estimate=*/suggestedNextTimestep_(),
             this->simulator_timer_.reportStepNum(),
             maxTimeStep_()
         };
-        bool final_step = (current_time + timestep) >= step_end_time;
+        bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
+            current_time + timestep, step_end_time
+        );
         SubStepIteration substepIteration{*this, substep_timer, timestep, final_step};
         auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;

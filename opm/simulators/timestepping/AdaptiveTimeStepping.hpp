@@ -91,9 +91,6 @@ class AdaptiveTimeStepping
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-#ifdef RESERVOIR_COUPLING_ENABLED
-    using TimePoint = ReservoirCoupling::TimePoint;
-#endif
     template <class Solver>
     class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
     {

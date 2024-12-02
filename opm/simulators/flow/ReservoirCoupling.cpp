@@ -74,5 +74,35 @@ void setErrhandler(MPI_Comm comm, bool is_master)
     MPI_Comm_set_errhandler(comm, errhandler);
 }
 
+bool Seconds::compare_eq(double a, double b)
+{
+    // Are a and b equal?
+    return std::abs(a - b) < std::max(abstol, reltol * std::max(std::abs(a), std::abs(b)));
+}
+
+bool Seconds::compare_gt_or_eq(double a, double b)
+{
+    // Is a greater than or equal to b?
+    if (compare_eq(a, b)) {
+        return true;
+    }
+    return a > b;
+}
+
+bool Seconds::compare_gt(double a, double b)
+{
+    // Is a greater than b?
+    return !compare_eq(a, b) && a > b;
+}
+
+bool Seconds::compare_lt_or_eq(double a, double b)
+{
+    // Is a less than or equal to b?
+    if (compare_eq(a, b)) {
+        return true;
+    }
+    return a < b;
+}
+
 } // namespace ReservoirCoupling
 } // namespace Opm
