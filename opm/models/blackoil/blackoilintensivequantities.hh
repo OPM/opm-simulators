@@ -122,6 +122,7 @@ class BlackOilIntensiveQuantities
     static constexpr bool waterEnabled = Indices::waterEnabled;
     static constexpr bool gasEnabled = Indices::gasEnabled;
     static constexpr bool oilEnabled = Indices::oilEnabled;
+    static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
 
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
@@ -143,7 +144,7 @@ public:
                                           enableBrine,
                                           enableSaltPrecipitation,
                                           has_disgas_in_water,
-                                          true,
+                                          enableConvectiveMixing,
                                           Indices::numPhases>;
     using ScalarFluidState = BlackOilFluidState<Scalar,
                                                 FluidSystem,
@@ -154,7 +155,7 @@ public:
                                                 enableBrine,
                                                 enableSaltPrecipitation,
                                                 has_disgas_in_water,
-                                                true,
+                                                enableConvectiveMixing,
                                                 Indices::numPhases>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
@@ -311,6 +312,14 @@ public:
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
             const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRs(Rs);
+            if (enableConvectiveMixing) {
+                const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
+                FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                    oilPhaseIdx,
+                                                    pvtRegionIdx,
+                                                    SoMax);
+                fluidState_.setRsSat(RsSat);
+            }
         } else {
             if (FluidSystem::enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
                 const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
@@ -319,6 +328,9 @@ public:
                                                         pvtRegionIdx,
                                                         SoMax);
                 fluidState_.setRs(min(RsMax, RsSat));
+                if (enableConvectiveMixing) {
+                    fluidState_.setRsSat(RsSat);
+                }
             }
             else if constexpr (compositionSwitchEnabled)
                 fluidState_.setRs(0.0);
@@ -354,12 +366,21 @@ public:
         if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw) {
             const auto& Rsw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
             fluidState_.setRsw(Rsw);
+            if (enableConvectiveMixing) {
+                const Evaluation& RswSat = FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                        waterPhaseIdx,
+                                                        pvtRegionIdx);
+                fluidState_.setRswSat(RswSat);
+            }
         } else {
             if (FluidSystem::enableDissolvedGasInWater()) {
                 const Evaluation& RswSat = FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             waterPhaseIdx,
                                                             pvtRegionIdx);
                 fluidState_.setRsw(min(RswMax, RswSat));
+                if (enableConvectiveMixing) {
+                    fluidState_.setRswSat(RswSat);
+                }
             }
         }
 

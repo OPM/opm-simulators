@@ -73,6 +73,10 @@ struct EnableDiffusion<TypeTag, TTag::FlowGasOilEnergyProblem> { static constexp
 template<class TypeTag>
 struct EnableDispersion<TypeTag, TTag::FlowGasOilEnergyProblem> { static constexpr bool value = true; };
 
+// Enable Convective Mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowGasOilEnergyProblem> { static constexpr bool value = true; };
+
 }}
 
 namespace Opm {

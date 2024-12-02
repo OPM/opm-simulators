@@ -289,15 +289,12 @@ public:
         const auto& liquidPhaseIdx = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
             FluidSystem::waterPhaseIdx :
             FluidSystem::oilPhaseIdx;
-        const Evaluation SoMax = 0.0;
-
         //interiour
         const auto& t_in = intQuantsIn.fluidState().temperature(liquidPhaseIdx);
         const auto& p_in = intQuantsIn.fluidState().pressure(liquidPhaseIdx);
-        const auto& rssat_in = FluidSystem::saturatedDissolutionFactor(intQuantsIn.fluidState(),
-                                                            liquidPhaseIdx,
-                                                            intQuantsIn.pvtRegionIndex(),
-                                                            SoMax);
+        const auto& rssat_in = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+            intQuantsIn.fluidState().RswSat():intQuantsIn.fluidState().RsSat();
+
         const auto& salt_in = intQuantsIn.fluidState().saltSaturation();
 
         const auto bLiquidSatIn = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
@@ -315,10 +312,8 @@ public:
         //exteriour
         const auto t_ex = Opm::getValue(intQuantsEx.fluidState().temperature(liquidPhaseIdx));
         const auto p_ex = Opm::getValue(intQuantsEx.fluidState().pressure(liquidPhaseIdx));
-        const auto rssat_ex = Opm::getValue(FluidSystem::saturatedDissolutionFactor(intQuantsEx.fluidState(),
-                                                            liquidPhaseIdx,
-                                                            intQuantsEx.pvtRegionIndex(),
-                                                            SoMax));
+        const auto rssat_ex = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+            Opm::getValue(intQuantsEx.fluidState().RswSat()):Opm::getValue(intQuantsEx.fluidState().RsSat());
         const auto salt_ex = Opm::getValue(intQuantsEx.fluidState().saltSaturation());
         const auto bLiquidSatEx = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
             FluidSystem::waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(), t_ex, p_ex, rssat_ex, salt_ex):

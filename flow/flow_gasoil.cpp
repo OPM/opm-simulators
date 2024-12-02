@@ -45,6 +45,10 @@ struct LocalResidual<TypeTag, TTag::FlowGasOilProblem> { using type = BlackOilLo
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowGasOilProblem> { static constexpr bool value = false; };
 
+// Enable Convective Mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowGasOilProblem> { static constexpr bool value = true; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowGasOilProblem>

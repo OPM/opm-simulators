@@ -47,6 +47,10 @@ struct EnableDiffusion<TypeTag, TTag::FlowGasOilDiffuseProblem> { static constex
 template<class TypeTag>
 struct EnableDispersion<TypeTag, TTag::FlowGasOilDiffuseProblem> { static constexpr bool value = true; };
 
+// Enable Convective Mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowGasOilDiffuseProblem> { static constexpr bool value = true; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowGasOilDiffuseProblem>
