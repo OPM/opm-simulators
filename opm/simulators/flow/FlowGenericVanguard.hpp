@@ -261,7 +261,7 @@ public:
     bool addCorners() const
     { return addCorners_; }
 
-    bool numOverlap() const
+    int numOverlap() const
     { return numOverlap_; }
 
     /*!
