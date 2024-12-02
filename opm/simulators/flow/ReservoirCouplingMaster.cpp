@@ -81,21 +81,21 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
     // Check if the suggested timestep needs to be adjusted based on the slave processes'
     // next report step, or if the slave process has not started yet: the start of a slave process.
     double start_date = this->schedule_.getStartTime();
-    TimePoint step_start_date{start_date + elapsed_time};
-    TimePoint step_end_date{step_start_date + suggested_timestep_original};
-    TimePoint suggested_timestep{suggested_timestep_original};
+    double step_start_date{start_date + elapsed_time};
+    double step_end_date{step_start_date + suggested_timestep_original};
+    double suggested_timestep{suggested_timestep_original};
     auto num_slaves = this->numSlavesStarted();
     for (std::size_t i = 0; i < num_slaves; i++) {
         double slave_start_date = this->slave_start_dates_[i];
-        TimePoint slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
-        if (slave_start_date > step_end_date) {
+        double slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
+        if (Seconds::compare_gt_or_eq(slave_start_date, step_end_date)) {
             // The slave process has not started yet, and will not start during this timestep
             continue;
         }
-        TimePoint slave_elapsed_time;
-        if (slave_start_date <= step_start_date) {
+        double slave_elapsed_time;
+        if (Seconds::compare_lt_or_eq(slave_start_date,step_start_date)) {
             // The slave process has already started, and will continue during this timestep
-            if (slave_next_report_date > step_end_date) {
+            if (Seconds::compare_gt(slave_next_report_date, step_end_date)) {
                 // The slave process will not report during this timestep
                 continue;
             }
@@ -109,7 +109,7 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
         suggested_timestep = slave_elapsed_time;
         step_end_date = step_start_date + suggested_timestep;
     }
-    return suggested_timestep.getTime();
+    return suggested_timestep;
 }
 
 void
