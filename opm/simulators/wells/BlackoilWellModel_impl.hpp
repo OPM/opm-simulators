@@ -1132,9 +1132,12 @@ namespace Opm {
                 break;
             }
             ++iter;
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
             for (auto& well : this->well_container_) {
                 well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
             }
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
+                                       this->simulator_.vanguard().grid().comm());
             this->initPrimaryVariablesEvaluation();
         } while (iter < max_iter);
 
