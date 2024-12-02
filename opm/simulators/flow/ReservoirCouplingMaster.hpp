@@ -35,7 +35,7 @@ namespace Opm {
 class ReservoirCouplingMaster {
 public:
     using MessageTag = ReservoirCoupling::MessageTag;
-    using TimePoint = ReservoirCoupling::TimePoint;
+    using Seconds = ReservoirCoupling::Seconds;
     ReservoirCouplingMaster(
         const Parallel::Communication &comm,
         const Schedule &schedule,
