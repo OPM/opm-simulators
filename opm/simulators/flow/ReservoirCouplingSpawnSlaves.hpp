@@ -37,7 +37,6 @@ namespace Opm {
 
 class ReservoirCouplingSpawnSlaves {
 public:
-    using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
     using MessageTag = ReservoirCoupling::MessageTag;
 
     ReservoirCouplingSpawnSlaves(
