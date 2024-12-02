@@ -1185,7 +1185,9 @@ groupAndNetworkData(const int reportStepIdx) const
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 updateAndCommunicateGroupData(const int reportStepIdx,
-                              const int iterationIdx)
+                              const int iterationIdx,
+                              const Scalar tol_nupcol,
+                              DeferredLogger& deferred_logger)
 {
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
     const int nupcol = schedule()[reportStepIdx].nupcol();
@@ -1199,8 +1201,53 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     // before we copy to well_state_nupcol_.
     this->wellState().updateGlobalIsGrup(comm_);
 
-    if (iterationIdx < nupcol) {
+    if (iterationIdx <= nupcol) {
         this->updateNupcolWGState();
+    } else {
+        for (const auto& gr_name : schedule().groupNames(reportStepIdx)) {
+            const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
+            for (Phase phase : all) {
+                if (this->groupState().has_injection_control(gr_name, phase)) {
+                    if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP || 
+                        this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::REIN) {
+                        const bool is_vrep = this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP;
+                        const Group& group = schedule().getGroup(gr_name, reportStepIdx);
+                        const int np = this->wellState().numPhases();
+                        Scalar gr_rate_nupcol = 0.0;
+                        for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+                            gr_rate_nupcol += WellGroupHelpers<Scalar>::sumWellPhaseRates(is_vrep,
+                                                    group,
+                                                    schedule(),
+                                                    this->nupcolWellState(),
+                                                    reportStepIdx,
+                                                    phaseIdx,
+                                                    /*isInjector*/ false);
+                        }
+                        Scalar gr_rate = 0.0;
+                        for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+                            gr_rate += WellGroupHelpers<Scalar>::sumWellPhaseRates(is_vrep,
+                                                    group,
+                                                    schedule(),
+                                                    this->wellState(),
+                                                    reportStepIdx,
+                                                    phaseIdx,
+                                                    /*isInjector*/ false);
+                        }
+                        Scalar small_rate = 1e-12; // m3/s
+                        Scalar denominator = (0.5*gr_rate_nupcol + 0.5*gr_rate);
+                        Scalar rel_change = denominator > small_rate ? std::abs( (gr_rate_nupcol - gr_rate) / denominator) : 0.0;
+                        if ( rel_change > tol_nupcol) {
+                            this->updateNupcolWGState();
+                            const std::string control_str = is_vrep? "VREP" : "REIN";
+                            const std::string msg = fmt::format("Group prodution relative change {} larger than tolerance {} "
+                                                    "at iteration {}. Update {} for Group {} even if iteration is larger than {} given by NUPCOL." ,
+                                                    rel_change, tol_nupcol, iterationIdx, control_str, gr_name, nupcol);
+                            deferred_logger.debug(msg);
+                        }
+                    }
+                }
+            }
+        }
     }
 
 

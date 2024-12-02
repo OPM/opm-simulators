@@ -102,6 +102,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     convergence_monitoring_ = Parameters::Get<Parameters::ConvergenceMonitoring>();
     convergence_monitoring_cutoff_ = Parameters::Get<Parameters::ConvergenceMonitoringCutOff>();
     convergence_monitoring_decay_factor_ = Parameters::Get<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>();
+
+    nupcol_group_rate_tolerance_ = Parameters::Get<Parameters::NupcolGroupRateTolerance<Scalar>>();
 }
 
 template<class Scalar>
@@ -250,6 +252,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Cut off limit for convergence monitoring");
     Parameters::Register<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>
         ("Decay factor for convergence monitoring");
+
+    Parameters::Register<Parameters::NupcolGroupRateTolerance<Scalar>>
+        ("Tolerance for acceptable changes in VREP/RAIN group rates");
 
     Parameters::Hide<Parameters::DebugEmitCellPartition>();
 

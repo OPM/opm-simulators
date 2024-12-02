@@ -152,6 +152,9 @@ struct ConvergenceMonitoringCutOff { static constexpr int value = 6; };
 template<class Scalar>
 struct ConvergenceMonitoringDecayFactor { static constexpr Scalar value = 0.75; };
 
+template<class Scalar>
+struct NupcolGroupRateTolerance { static constexpr Scalar value = 0.001; };
+
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -314,6 +317,10 @@ public:
     int convergence_monitoring_cutoff_;
     /// Decay factor used in convergence monitoring
     Scalar convergence_monitoring_decay_factor_;
+
+    // Relative tolerance of group rates (VREP, REIN)
+    // If violated the nupcol wellstate is updated
+    Scalar nupcol_group_rate_tolerance_;
 
     /// Construct from user parameters or defaults.
     BlackoilModelParameters();
