@@ -132,6 +132,9 @@ public:
         AMGX_SAFE_CALL(AMGX_config_create(&cfg_, config.toString().c_str()));
         AMGX_SAFE_CALL(AMGX_resources_create_simple(&rsrc_, cfg_));
 
+        // Setup frequency is set in the property tree
+        setup_frequency_ = prm.get<int>("setup_frequency", 30);
+
         // Create solver and matrix/vector handles
         AMGX_SAFE_CALL(AMGX_solver_create(&solver_, rsrc_, AMGX_mode_dDDI, cfg_));
         AMGX_SAFE_CALL(AMGX_matrix_create(&A_amgx_, rsrc_, AMGX_mode_dDDI));
@@ -236,7 +239,16 @@ public:
     {
         OPM_TIMEBLOCK(prec_update);
         copyMatrixToAmgx();
-        AMGX_SAFE_CALL(AMGX_solver_setup(solver_, A_amgx_));
+        if (update_counter_ == 0) {
+            AMGX_SAFE_CALL(AMGX_solver_setup(solver_, A_amgx_));
+        } else {
+            AMGX_SAFE_CALL(AMGX_solver_resetup(solver_, A_amgx_));
+        }
+
+        ++update_counter_;
+        if (update_counter_ >= setup_frequency_) {
+            update_counter_ = 0;
+        }
     }
 
     /**
@@ -256,8 +268,9 @@ public:
      */
     bool hasPerfectUpdate() const override
     {
-        // The Amgx preconditioner can depend on the values of the matrix, so it must be recreated
-        return false;
+        // The AMG hierarchy of the Amgx preconditioner can depend on the values of the matrix, so it must be recreated
+        // when the matrix values change, at given frequency. Since this is handled internally, we return true.
+        return true;
     }
 
 private:
@@ -304,6 +317,9 @@ private:
     const M& A_; //!< The matrix for which the preconditioner is constructed.
     const int N_; //!< Number of rows in the matrix.
     const int nnz_; //!< Number of non-zero elements in the matrix.
+    // Internal variables to control AMGX setup and reuse frequency
+    int setup_frequency_ = -1; //!< Frequency of updating the AMG hierarchy
+    int update_counter_ = 0; //!< Counter for setup updates.
 
     AMGX_config_handle cfg_ = nullptr; //!< The AMGX configuration handle.
     AMGX_resources_handle rsrc_ = nullptr; //!< The AMGX resources handle.
