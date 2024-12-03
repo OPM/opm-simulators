@@ -88,6 +88,9 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
     double step_end_date{step_start_date + suggested_timestep_original};
     double suggested_timestep{suggested_timestep_original};
     auto num_slaves = this->numSlavesStarted();
+    // Determine the minimum step_end_date and the corresponding suggested_timestep such that no
+    // slave process will report or start during the timestep [step_start_date, step_end_date]
+    // where suggested_timestep = step_end_date - step_start_date
     for (std::size_t i = 0; i < num_slaves; i++) {
         double slave_start_date = this->slave_start_dates_[i];
         double slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
