@@ -48,6 +48,9 @@ ReservoirCouplingSlave(
     if (this->slave_master_comm_ == MPI_COMM_NULL) {
         OPM_THROW(std::runtime_error, "Slave process is not spawned by a master process");
     }
+    // NOTE: By installing a custom error handler for all slave-master communicators, which
+    //   eventually will call MPI_Abort(), there is no need to check the return value of any
+    //   MPI_Recv() or MPI_Send() calls as errors will be caught by the error handler.
     ReservoirCoupling::setErrhandler(this->slave_master_comm_, /*is_master=*/false);
 }
 
@@ -56,7 +59,10 @@ ReservoirCouplingSlave::
 receiveNextTimeStepFromMaster() {
     double timestep;
     if (this->comm_.rank() == 0) {
-        int result = MPI_Recv(
+        // NOTE: All slave-master communicators have set a custom error handler, which eventually
+        //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+        //   or MPI_Send() calls.
+        MPI_Recv(
             &timestep,
             /*count=*/1,
             /*datatype=*/MPI_DOUBLE,
@@ -65,9 +71,6 @@ receiveNextTimeStepFromMaster() {
             this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
-        if (result != MPI_SUCCESS) {
-            OPM_THROW(std::runtime_error, "Failed to receive next time step from master");
-        }
         OpmLog::info(
             fmt::format("Slave rank 0 received next timestep {} from master.", timestep)
         );
@@ -84,7 +87,10 @@ receiveMasterGroupNamesFromMasterProcess() {
     std::vector<char> group_names;
     if (this->comm_.rank() == 0) {
         MPI_Aint asize = 0;
-        int result = MPI_Recv(
+        // NOTE: All slave-master communicators have set a custom error handler, which eventually
+        //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+        //   or MPI_Send() calls.
+        MPI_Recv(
             &asize,
             /*count=*/1,
             /*datatype=*/MPI_AINT,
@@ -94,15 +100,11 @@ receiveMasterGroupNamesFromMasterProcess() {
             MPI_STATUS_IGNORE
         );
         OpmLog::info("Received master group names size from master process rank 0");
-        if (result != MPI_SUCCESS) {
-            OPM_THROW(std::runtime_error,
-                      "Failed to receive master group names (size) from master process");
-        }
         // NOTE: MPI_Aint and std::size_t should be compatible on most systems, but we will
         //     cast it to std::size_t to avoid any potential issues
         size = static_cast<std::size_t>(asize);
         group_names.resize(size);
-        int result2 = MPI_Recv(
+        MPI_Recv(
             group_names.data(),
             /*count=*/size,
             /*datatype=*/MPI_CHAR,
@@ -111,10 +113,6 @@ receiveMasterGroupNamesFromMasterProcess() {
             this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
-        if (result2 != MPI_SUCCESS) {
-            OPM_THROW(std::runtime_error,
-                      "Failed to receive master group names from master process");
-        }
         OpmLog::info("Received master group names from master process rank 0");
     }
     this->comm_.broadcast(&size, /*count=*/1, /*emitter_rank=*/0);
@@ -136,6 +134,9 @@ sendNextReportDateToMasterProcess() const
         // NOTE: This is an offset in seconds from the start date, so it will be 0 if the next report
         //      would be the start date. In general, it should be a positive number.
         double next_report_time_offset = elapsed_time + current_step_length;
+        // NOTE: All slave-master communicators have set a custom error handler, which eventually
+        //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+        //   or MPI_Send() calls.
         MPI_Send(
             &next_report_time_offset,
             /*count=*/1,
@@ -155,6 +156,9 @@ sendActivationDateToMasterProcess() const
     if (this->comm_.rank() == 0) {
         // NOTE: The master process needs the s
         double activation_date = this->getGrupSlavActivationDate_();
+        // NOTE: All slave-master communicators have set a custom error handler, which eventually
+        //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+        //   or MPI_Send() calls.
         MPI_Send(
             &activation_date,
             /*count=*/1,
@@ -174,6 +178,9 @@ sendSimulationStartDateToMasterProcess() const
     if (this->comm_.rank() == 0) {
         // NOTE: The master process needs the s
         double start_date = this->schedule_.getStartTime();
+        // NOTE: All slave-master communicators have set a custom error handler, which eventually
+        //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+        //   or MPI_Send() calls.
         MPI_Send(
             &start_date,
             /*count=*/1,
