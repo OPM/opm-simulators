@@ -80,6 +80,9 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
 {
     // Check if the suggested timestep needs to be adjusted based on the slave processes'
     // next report step, or if the slave process has not started yet: the start of a slave process.
+    // NOTE: getStartTime() returns a std::time_t value, which is typically a long integer. It should
+    //     be possible to represent reasonable epoch values within a double. See comment for
+    //     getMasterActivationDate_() for more information.
     double start_date = this->schedule_.getStartTime();
     double step_start_date{start_date + elapsed_time};
     double step_end_date{step_start_date + suggested_timestep_original};
@@ -188,6 +191,11 @@ ReservoirCouplingMaster::
 getMasterActivationDate_() const
 {
     // Assume master mode is activated when the first SLAVES keyword is encountered in the schedule
+    // NOTE: getStartTime() returns a std::time_t value, which is typically a long integer representing
+    //     the number of seconds since the epoch (1970-01-01 00:00:00 UTC)
+    //     The maximum integer that can be represented by a double is 2^53 - 1, which is approximately
+    //     9e15. This corresponds to a date in the year 2.85e8 or 285 million years into the future.
+    //     So we should be able to represent reasonable epoch values within a double.
     double start_date = this->schedule_.getStartTime();
     for (std::size_t report_step = 0; report_step < this->schedule_.size(); ++report_step) {
         auto rescoup = this->schedule_[report_step].rescoup();
