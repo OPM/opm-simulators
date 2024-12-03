@@ -64,18 +64,11 @@ public:
     return codim == 0;
   }
 
-#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
-  bool fixedsize(int /* dim */, int /* codim */) const
-  {
-    return true;
-  }
-#else
-
   bool fixedSize(int /* dim */, int /* codim */) const
   {
     return true;
   }
-#endif
+
   template<class EntityType>
   std::size_t size(const EntityType /* entity */) const
   {
