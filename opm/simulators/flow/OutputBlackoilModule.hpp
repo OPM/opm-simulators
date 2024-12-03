@@ -152,7 +152,7 @@ public:
         this->forceDisableFipresvOutput_ =
             Parameters::Get<Parameters::ForceDisableResvFluidInPlaceOutput>();
 
-        if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
+        if (!Parameters::Get<Parameters::OwnerCellsFirst>()){// && !Parameters::Get<Parameters::EnableEclOutput>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectToIORank.isIORank()) {
                 OpmLog::error(msg);
@@ -882,6 +882,42 @@ public:
                         else if (FluidSystem::phaseIsActive(waterPhaseIdx))
                             val.second = getValue(fs.temperature(waterPhaseIdx));
                     }
+                    else if (key.first == "BSTRSSXX")
+                        {
+                            const auto& model = problem.geoMechModel();
+                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
+                            val.second = stress[0];
+                        }
+                    else if (key.first == "BSTRSSYY")
+                        {
+                            const auto& model = problem.geoMechModel();
+                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
+                            val.second = stress[1];
+                        }
+                    else if (key.first == "BSTRSSZZ")
+                        {
+                            const auto& model = problem.geoMechModel();
+                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
+                            val.second = stress[2];
+                        }
+                    else if (key.first == "BSTRSSXY")
+                        {
+                            const auto& model = problem.geoMechModel();
+                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
+                            val.second = stress[5];
+                        }
+                    else if (key.first == "BSTRSSXZ")
+                        {
+                            const auto& model = problem.geoMechModel();
+                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
+                            val.second = stress[4];
+                        }
+                    else if (key.first == "BSTRSSYZ")
+                        {
+                            const auto& model = problem.geoMechModel();
+                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
+                            val.second = stress[3];
+                        }
                     else if (key.first == "BWKR" || key.first == "BKRW")
                         val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
                     else if (key.first == "BGKR" || key.first == "BKRG")
