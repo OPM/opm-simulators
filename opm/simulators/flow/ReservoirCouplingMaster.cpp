@@ -150,7 +150,10 @@ receiveNextReportDateFromSlaves()
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < num_slaves; i++) {
             double slave_next_report_time_offset; // Elapsed time from the beginning of the simulation
-            int result = MPI_Recv(
+            // NOTE: All slave-master communicators have set a custom error handler, which eventually
+            //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+            //   or MPI_Send() calls.
+            MPI_Recv(
                 &slave_next_report_time_offset,
                 /*count=*/1,
                 /*datatype=*/MPI_DOUBLE,
@@ -159,9 +162,6 @@ receiveNextReportDateFromSlaves()
                 this->getSlaveComm(i),
                 MPI_STATUS_IGNORE
             );
-            if (result != MPI_SUCCESS) {
-                OPM_THROW(std::runtime_error, "Failed to receive next report date from slave process");
-            }
             this->slave_next_report_time_offsets_[i] = slave_next_report_time_offset;
             OpmLog::info(
                 fmt::format(

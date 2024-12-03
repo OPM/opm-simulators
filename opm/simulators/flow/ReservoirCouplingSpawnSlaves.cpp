@@ -154,7 +154,10 @@ receiveActivationDateFromSlaves_()
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < num_slaves; i++) {
             double slave_activation_date;
-            int result = MPI_Recv(
+            // NOTE: All slave-master communicators have set a custom error handler, which eventually
+            //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+            //   or MPI_Send() calls.
+            MPI_Recv(
                 &slave_activation_date,
                 /*count=*/1,
                 /*datatype=*/MPI_DOUBLE,
@@ -163,9 +166,6 @@ receiveActivationDateFromSlaves_()
                 this->master_.getSlaveComm(i),
                 MPI_STATUS_IGNORE
             );
-            if (result != MPI_SUCCESS) {
-                OPM_THROW(std::runtime_error, "Failed to receive activation date from slave process");
-            }
             if (slave_activation_date < this->master_.getActivationDate()) {
                 OPM_THROW(std::runtime_error, "Slave process start date is earlier than "
                                               "the master process' activation date");
@@ -188,7 +188,10 @@ receiveSimulationStartDateFromSlaves_()
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < num_slaves; i++) {
             double slave_start_date;
-            int result = MPI_Recv(
+            // NOTE: All slave-master communicators have set a custom error handler, which eventually
+            //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+            //   or MPI_Send() calls.
+            MPI_Recv(
                 &slave_start_date,
                 /*count=*/1,
                 /*datatype=*/MPI_DOUBLE,
@@ -197,9 +200,6 @@ receiveSimulationStartDateFromSlaves_()
                 this->master_.getSlaveComm(i),
                 MPI_STATUS_IGNORE
             );
-            if (result != MPI_SUCCESS) {
-                OPM_THROW(std::runtime_error, "Failed to receive start date from slave process");
-            }
             this->master_.addSlaveStartDate(slave_start_date);
             OpmLog::info(
                 fmt::format(
@@ -227,6 +227,9 @@ sendMasterGroupNamesToSlaves_()
         for (unsigned int i = 0; i < num_slaves; i++) {
             auto slave_name = this->master_.getSlaveName(i);
             auto [group_names, size] = this->getMasterGroupNamesForSlave_(slave_name);
+            // NOTE: All slave-master communicators have set a custom error handler, which eventually
+            //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+            //   or MPI_Send() calls.
             // NOTE: size should be of type std::size_t, so we can safely cast it to MPI_AINT
             MPI_Send(
                 &size,
@@ -312,6 +315,9 @@ spawnSlaveProcesses_()
             }
             OPM_THROW(std::runtime_error, "Failed to spawn slave process");
         }
+        // NOTE: By installing a custom error handler for all slave-master communicators, which
+        //   eventually will call MPI_Abort(), there is no need to check the return value of any
+        //   MPI_Recv() or MPI_Send() calls as errors will be caught by the error handler.
         ReservoirCoupling::setErrhandler(master_slave_comm, /*is_master=*/true);
         OpmLog::info(
             fmt::format(
