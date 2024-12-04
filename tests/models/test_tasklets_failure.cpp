@@ -26,10 +26,9 @@
  * \brief This file serves as an example of how to use the tasklet mechanism for
  *        asynchronous work, especially for tasklets that fail.
  */
-#define BOOST_TEST_MODULE TASKLETS_FAILURE
 
-//#include <boost/test/unit_test.hpp>
-#include <boost/test/included/unit_test.hpp>
+// Note: we do not use boost.test as it does not cleanly combine with fork() usage
+
 #include <chrono>
 #include <iostream>
 #include <mutex>
@@ -91,8 +90,8 @@ void execute () {
     runner = std::make_unique<Opm::TaskletRunner>(numWorkers);
 
     // the master thread is not a worker thread
-    BOOST_REQUIRE_LT(runner->workerThreadIndex(), 0);
-    BOOST_REQUIRE_EQUAL(runner->numWorkerThreads(), numWorkers);
+    assert(runner->workerThreadIndex() < 0);
+    assert(runner->numWorkerThreads() == numWorkers);
 
     // Dispatch some successful tasklets
     for (int i = 0; i < 5; ++i) {
@@ -127,11 +126,12 @@ void execute () {
     std::cout << "before barrier" << std::endl;
     runner->barrier();
 }
-BOOST_AUTO_TEST_SUITE(Tasklets)
-BOOST_AUTO_TEST_CASE(TASKLETS_FAILURE) {
+
+int main()
+{
     pid_t pid = fork(); // Create a new process, such that this child process can call exit(EXIT_FAILURE)
     if (pid == -1) {
-        BOOST_FAIL("Fork failed");
+        assert(0 && "Fork failed");
     } else if (pid == 0) {
         // Child process
         execute();
@@ -141,8 +141,7 @@ BOOST_AUTO_TEST_CASE(TASKLETS_FAILURE) {
         std::cout << "Checking failure of child process with parent process, process id " << pid << std::endl;
         int status;
         waitpid(pid, &status, 0);
-        BOOST_CHECK(WIFEXITED(status));  // Check if the child process exited
-        BOOST_CHECK_EQUAL(WEXITSTATUS(status), EXIT_FAILURE);  // Check if the exit status is EXIT_FAILURE
+        assert(WIFEXITED(status));  // Check if the child process exited
+        assert(WEXITSTATUS(status) == EXIT_FAILURE);  // Check if the exit status is EXIT_FAILURE
     }
 }
-BOOST_AUTO_TEST_SUITE_END()
