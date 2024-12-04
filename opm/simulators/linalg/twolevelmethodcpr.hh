@@ -495,6 +495,12 @@ public:
   {
   }
 
+  bool hasPerfectUpdate() const
+  {
+    // The two-level method has perfect update if both the finesmoother and coarse solver do.
+    return smoother_->hasPerfectUpdate() && coarseSolver_->hasPerfectUpdate();
+  }
+
   void apply(FineDomainType& v, const FineRangeType& d)
   {
     FineDomainType u(v);
