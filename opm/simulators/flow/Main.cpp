@@ -36,6 +36,7 @@
 #endif
 
 #if HAVE_HYPRE
+#include <HYPRE_config.h>
 #include <HYPRE_utilities.h>
 #endif
 
@@ -173,7 +174,11 @@ void Main::initMPI()
 #endif // HAVE_MPI
 
 #if HAVE_HYPRE
+#if HYPRE_RELEASE_NUMBER >= 22900
     HYPRE_Initialize();
+#else
+    HYPRE_Init();
+#endif
 #endif
 }
 

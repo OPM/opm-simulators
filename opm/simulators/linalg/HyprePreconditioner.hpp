@@ -56,6 +56,7 @@ public:
         use_gpu_ = prm_.get<bool>("use_gpu", false);
 
         // Set memory location and execution policy
+#if HYPRE_USING_CUDA || HYPRE_USING_HIP
         if (use_gpu_) {
             HYPRE_SetMemoryLocation(HYPRE_MEMORY_DEVICE);
             HYPRE_SetExecutionPolicy(HYPRE_EXEC_DEVICE);
@@ -66,7 +67,9 @@ public:
             HYPRE_DeviceInitialize();
             HYPRE_PrintDeviceInfo();
         }
-        else {
+        else
+#endif
+        {
             HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
             HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
         }
