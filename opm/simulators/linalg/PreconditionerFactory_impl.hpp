@@ -549,7 +549,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             });
 #if HAVE_HYPRE
             // Only add Hypre for scalar matrices
-            if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1) {
+            if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1 &&
+                          std::is_same_v<HYPRE_Real, typename V::field_type>) {
                 F::addCreator("hypre", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
                     return std::make_shared<Hypre::HyprePreconditioner<M, V, V>>(op.getmat(), prm);
                 });
