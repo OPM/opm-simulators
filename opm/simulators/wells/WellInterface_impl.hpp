@@ -213,8 +213,10 @@ namespace Opm
             from = WellProducerCMode2String(ws.production_cmode);
         }
         bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
-
-        if (oscillating) {
+        const int episodeIdx = simulator.episodeIndex();
+        const int iterationIdx = simulator.model().newtonMethod().numIterations();
+        const int nupcol = schedule[episodeIdx].nupcol();
+        if (oscillating && iterationIdx > nupcol) {
             // only output frist time
             bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
             if (output) {
