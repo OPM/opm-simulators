@@ -1,14 +1,19 @@
 /*
   Copyright 2024 SINTEF AS
+  Copyright 2024 Equinor ASA
+
   This file is part of the Open Porous Media project (OPM).
+
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
+
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
+
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -19,6 +24,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -28,7 +34,6 @@
 #include <HYPRE_krylov.h>
 #include <_hypre_utilities.h>
 
-#include <memory>
 #include <vector>
 #include <numeric>
 
@@ -48,10 +53,16 @@ public:
     using field_type = typename X::field_type;
 
     // Constructor
-    HyprePreconditioner (const M& A, const Opm::PropertyTree& prm)
+    HyprePreconditioner (const M& A, const Opm::PropertyTree prm)
         : A_(A), prm_(prm)
     {
         OPM_TIMEBLOCK(prec_construct);
+
+        int size;
+        MPI_Comm_size(MPI_COMM_WORLD, &size);
+        if (size > 1) {
+            OPM_THROW(std::runtime_error, "HyprePreconditioner is currently only implemented for sequential runs");
+        }
 
         use_gpu_ = prm_.get<bool>("use_gpu", false);
 
@@ -104,8 +115,8 @@ public:
         // Create Hypre vectors
         N_ = A_.N();
         nnz_ = A_.nonzeroes();
-        HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, N_-1, &x_hypre_);
-        HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, N_-1, &b_hypre_);
+        HYPRE_IJVectorCreate(MPI_COMM_SELF, 0, N_-1, &x_hypre_);
+        HYPRE_IJVectorCreate(MPI_COMM_SELF, 0, N_-1, &b_hypre_);
         HYPRE_IJVectorSetObjectType(x_hypre_, HYPRE_PARCSR);
         HYPRE_IJVectorSetObjectType(b_hypre_, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(x_hypre_);
@@ -122,7 +133,7 @@ public:
         }
 
         // Create Hypre matrix
-        HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, N_-1, 0, N_-1, &A_hypre_);
+        HYPRE_IJMatrixCreate(MPI_COMM_SELF, 0, N_-1, 0, N_-1, &A_hypre_);
         HYPRE_IJMatrixSetObjectType(A_hypre_, HYPRE_PARCSR);
         HYPRE_IJMatrixInitialize(A_hypre_);
 
@@ -164,9 +175,7 @@ public:
         HYPRE_BoomerAMGSetup(solver_, parcsr_A_, par_b_, par_x_);
     }
 
-    void pre(X& x, Y& b) override {
-        DUNE_UNUSED_PARAMETER(x);
-        DUNE_UNUSED_PARAMETER(b);
+    void pre(X& /*x*/, Y& /*b*/) override {
     }
 
     void apply(X& v, const Y& d) override {
@@ -182,8 +191,7 @@ public:
         copyVectorFromHypre(v);
     }
 
-    void post(X& x) override {
-        DUNE_UNUSED_PARAMETER(x);
+    void post(X& /*x*/) override {
     }
 
     Dune::SolverCategory::Category category() const override {
