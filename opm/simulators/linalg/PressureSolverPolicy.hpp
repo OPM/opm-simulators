@@ -88,6 +88,11 @@ namespace Amg
                 return linsolver_->category();
             }
 
+            bool hasPerfectUpdate() const
+            {
+                return linsolver_->preconditioner().hasPerfectUpdate();
+            }
+
             void apply(X& x, X& b, double reduction, Dune::InverseOperatorResult& res) override
             {
                 linsolver_->apply(x, b, reduction, res);

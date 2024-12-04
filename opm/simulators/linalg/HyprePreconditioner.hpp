@@ -192,8 +192,10 @@ public:
 
     bool hasPerfectUpdate() const override
     {
-        // The Hypre preconditioner can depend on the values of the matrix, so it must be recreated
-        return false;
+        // The Hypre preconditioner can depend on the values of the matrix so it does not have perfect update.
+        // However, copying the matrix to Hypre requires to setup the solver again, so this is handled internally.
+        // So for ISTLSolver, we can return true.
+        return true;
     }
 
 private:
