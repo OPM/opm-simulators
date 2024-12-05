@@ -327,6 +327,14 @@ outputInjLog(std::size_t reportStepNum)
 
 template<class FluidSystem>
 Inplace GenericOutputBlackoilModule<FluidSystem>::
+calc_initial_inplace(const Parallel::Communication& comm)
+{
+    // calling accumulateRegionSums() updates InitialInplace_ as a side effect
+    return this->accumulateRegionSums(comm);
+}
+
+template<class FluidSystem>
+Inplace GenericOutputBlackoilModule<FluidSystem>::
 calc_inplace(std::map<std::string, double>& miscSummaryData,
              std::map<std::string, std::vector<double>>& regionData,
              const Parallel::Communication& comm)
