@@ -56,7 +56,7 @@ public:
     void updatePrimaryVariables(const Simulator& simulator,
                                 const SingleCompWellState<Scalar>& well_state) override;
 
-    void updatePrimaryVariableEvaluation();
+    void updatePrimaryVariableEvaluation(); // override;
 
 private:
 
@@ -64,6 +64,12 @@ private:
     PrimaryVariables primary_variables_;
     WellEquations well_equations_;
 
+    // the following varialbes are temporary and remain to be cleaned up and re-organized
+    // some are testing variables, and some are secondary variables might be kept
+    // anyway, they are very rough prototype code for testing and will be changed
+    constexpr static Scalar wellbore_volume_ {21.6}; // m^3, it is rather big, will come with different design when the working flow is established
+
+    // following are some secondary property or variables to be used for later
 };
 
 } // end of namespace Opm
