@@ -350,12 +350,6 @@ public:
     //! \brief Writes the initial FIP report as configured in RPTSOL.
     void writeInitialFIPReport()
     {
-        const auto& fip = simulator_.vanguard().eclState().getEclipseConfig().fip();
-        if (!fip.output(FIPConfig::OutputField::FIELD) &&
-            !fip.output(FIPConfig::OutputField::RESV)) {
-            return;
-        }
-
         const auto& gridView = simulator_.vanguard().gridView();
         const int num_interior = detail::
             countLocalInteriorCellsGridView(gridView);
@@ -373,17 +367,20 @@ public:
             this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
         }
 
-        std::map<std::string, double> miscSummaryData;
-        std::map<std::string, std::vector<double>> regionData;
-        Inplace inplace;
+        // We always calculate the initial fip values as it may be used by various
+        // keywords in the Schedule, e.g. FIP=2 in RPTSCHED but no FIP in RPTSOL
+        const Inplace inplace = outputModule_->calc_initial_inplace(simulator_.gridView().comm());
+
+        // check if RPTSOL entry has FIP output
+        const auto& fip = simulator_.vanguard().eclState().getEclipseConfig().fip();
+        if (fip.output(FIPConfig::OutputField::FIELD) ||
+            fip.output(FIPConfig::OutputField::RESV))
         {
             OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
-            
-            boost::posix_time::ptime start_time = boost::posix_time::from_time_t(simulator_.vanguard().schedule().getStartTime());
+            boost::posix_time::ptime start_time =
+                boost::posix_time::from_time_t(simulator_.vanguard().schedule().getStartTime());
 
-            inplace = outputModule_->calc_inplace(miscSummaryData, regionData, simulator_.gridView().comm());
-
-            if (this->collectOnIORank_.isIORank()){
+            if (this->collectOnIORank_.isIORank()) {
                 inplace_ = inplace;
                 
                 outputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time,
