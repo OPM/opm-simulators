@@ -39,22 +39,30 @@
 
 namespace Hypre {
 
-/// Wrapper for Hypre's BoomerAMG preconditioner
+/**
+ * @brief Wrapper for Hypre's BoomerAMG preconditioner.
+ *
+ * This class provides an interface to the BoomerAMG preconditioner from the Hypre library.
+ * It is designed to work with matrices, update vectors, and defect vectors specified by the template parameters.
+ *
+ * @tparam M The matrix type the preconditioner is for.
+ * @tparam X The type of the update vector.
+ * @tparam Y The type of the defect vector.
+ */
 template<class M, class X, class Y>
 class HyprePreconditioner : public Dune::PreconditionerWithUpdate<X,Y> {
 public:
-    //! \brief The matrix type the preconditioner is for
-    using matrix_type = M;
-    //! \brief The domain type of the preconditioner
-    using domain_type = X;
-    //! \brief The range type of the preconditioner
-    using range_type = Y;
-    //! \brief The field type of the preconditioner
-    using field_type = typename X::field_type;
 
-    // Constructor
+    /**
+     * @brief Constructor for the HyprePreconditioner class.
+     *
+     * Initializes the preconditioner with the given matrix and property tree.
+     *
+     * @param A The matrix for which the preconditioner is constructed.
+     * @param prm The property tree containing configuration parameters.
+     */
     HyprePreconditioner (const M& A, const Opm::PropertyTree prm)
-        : A_(A), prm_(prm)
+        : A_(A)
     {
         OPM_TIMEBLOCK(prec_construct);
 
@@ -64,7 +72,7 @@ public:
             OPM_THROW(std::runtime_error, "HyprePreconditioner is currently only implemented for sequential runs");
         }
 
-        use_gpu_ = prm_.get<bool>("use_gpu", false);
+        use_gpu_ = prm.get<bool>("use_gpu", false);
 
         // Set memory location and execution policy
 #if HYPRE_USING_CUDA || HYPRE_USING_HIP
@@ -89,13 +97,13 @@ public:
         HYPRE_BoomerAMGCreate(&solver_);
 
         // Set parameters from property tree with defaults
-        HYPRE_BoomerAMGSetPrintLevel(solver_, prm_.get<int>("print_level", 0));
-        HYPRE_BoomerAMGSetMaxIter(solver_, prm_.get<int>("max_iter", 1));
-        HYPRE_BoomerAMGSetStrongThreshold(solver_, prm_.get<double>("strong_threshold", 0.5));
-        HYPRE_BoomerAMGSetAggTruncFactor(solver_, prm_.get<double>("agg_trunc_factor", 0.3));
-        HYPRE_BoomerAMGSetInterpType(solver_, prm_.get<int>("interp_type", 6));
-        HYPRE_BoomerAMGSetMaxLevels(solver_, prm_.get<int>("max_levels", 15));
-        HYPRE_BoomerAMGSetTol(solver_, prm_.get<double>("tolerance", 0.0));
+        HYPRE_BoomerAMGSetPrintLevel(solver_, prm.get<int>("print_level", 0));
+        HYPRE_BoomerAMGSetMaxIter(solver_, prm.get<int>("max_iter", 1));
+        HYPRE_BoomerAMGSetStrongThreshold(solver_, prm.get<double>("strong_threshold", 0.5));
+        HYPRE_BoomerAMGSetAggTruncFactor(solver_, prm.get<double>("agg_trunc_factor", 0.3));
+        HYPRE_BoomerAMGSetInterpType(solver_, prm.get<int>("interp_type", 6));
+        HYPRE_BoomerAMGSetMaxLevels(solver_, prm.get<int>("max_levels", 15));
+        HYPRE_BoomerAMGSetTol(solver_, prm.get<double>("tolerance", 0.0));
 
         if (use_gpu_) {
             HYPRE_BoomerAMGSetRelaxType(solver_, 16);
@@ -106,10 +114,10 @@ public:
             HYPRE_BoomerAMGSetKeepTranspose(solver_, true);
         }
         else {
-            HYPRE_BoomerAMGSetRelaxType(solver_, prm_.get<int>("relax_type", 13));
-            HYPRE_BoomerAMGSetCoarsenType(solver_, prm_.get<int>("coarsen_type", 10));
-            HYPRE_BoomerAMGSetAggNumLevels(solver_, prm_.get<int>("agg_num_levels", 1));
-            HYPRE_BoomerAMGSetAggInterpType(solver_, prm_.get<int>("agg_interp_type", 4));
+            HYPRE_BoomerAMGSetRelaxType(solver_, prm.get<int>("relax_type", 13));
+            HYPRE_BoomerAMGSetCoarsenType(solver_, prm.get<int>("coarsen_type", 10));
+            HYPRE_BoomerAMGSetAggNumLevels(solver_, prm.get<int>("agg_num_levels", 1));
+            HYPRE_BoomerAMGSetAggInterpType(solver_, prm.get<int>("agg_interp_type", 4));
         }
 
         // Create Hypre vectors
@@ -141,7 +149,11 @@ public:
         update();
     }
 
-    // Destructor
+    /**
+     * @brief Destructor for the HyprePreconditioner class.
+     *
+     * Cleans up resources allocated by the preconditioner.
+     */
     ~HyprePreconditioner() {
         if (solver_) {
             HYPRE_BoomerAMGDestroy(solver_);
@@ -169,15 +181,36 @@ public:
         }
     }
 
+    /**
+     * @brief Updates the preconditioner with the current matrix values.
+     *
+     * This method should be called whenever the matrix values change.
+     */
     void update() override {
         OPM_TIMEBLOCK(prec_update);
         copyMatrixToHypre();
         HYPRE_BoomerAMGSetup(solver_, parcsr_A_, par_b_, par_x_);
     }
 
-    void pre(X& /*x*/, Y& /*b*/) override {
+    /**
+     * @brief Pre-processing step before applying the preconditioner.
+     *
+     * This method is currently a no-op.
+     *
+     * @param v The update vector.
+     * @param d The defect vector.
+     */
+    void pre(X& /*v*/, Y& /*d*/) override {
     }
 
+    /**
+     * @brief Applies the preconditioner to a vector.
+     *
+     * Performs one AMG V-cycle to solve the system.
+     *
+     * @param v The update vector.
+     * @param d The defect vector.
+     */
     void apply(X& v, const Y& d) override {
         OPM_TIMEBLOCK(prec_apply);
 
@@ -191,13 +224,30 @@ public:
         copyVectorFromHypre(v);
     }
 
-    void post(X& /*x*/) override {
+    /**
+     * @brief Post-processing step after applying the preconditioner.
+     *
+     * This method is currently a no-op.
+     *
+     * @param v The update vector.
+     */
+    void post(X& /*v*/) override {
     }
 
+    /**
+     * @brief Returns the solver category.
+     *
+     * @return The solver category, which is sequential.
+     */
     Dune::SolverCategory::Category category() const override {
         return Dune::SolverCategory::sequential;
     }
 
+    /**
+     * @brief Checks if the preconditioner has a perfect update.
+     *
+     * @return True, indicating that the preconditioner can be perfectly updated.
+     */
     bool hasPerfectUpdate() const override
     {
         // The Hypre preconditioner can depend on the values of the matrix so it does not have perfect update.
@@ -207,6 +257,11 @@ public:
     }
 
 private:
+    /**
+     * @brief Sets up the sparsity pattern for the Hypre matrix.
+     *
+     * Allocates and initializes arrays required by Hypre.
+     */
     void setupSparsityPattern() {
         // Allocate arrays required by Hypre
         ncols_.resize(N_);
@@ -238,12 +293,19 @@ private:
         }
     }
 
+    /**
+     * @brief Copies the matrix values to the Hypre matrix.
+     *
+     * This method transfers the matrix data from the host to the Hypre matrix.
+     * It assumes that the values of the matrix are stored in a contiguous array.
+     * If GPU is used, the data is transferred to the device.
+     */
     void copyMatrixToHypre() {
         OPM_TIMEBLOCK(prec_copy_matrix);
         // Get pointer to matrix values array
         const HYPRE_Real* values = &(A_[0][0][0][0]);
         // Indexing explanation:
-        // A_[row]           - First row of the matrix
+        // A_[0]             - First row of the matrix
         //     [0]           - First block in that row
         //        [0]        - First row within the 1x1 block
         //           [0]     - First column within the 1x1 block
@@ -260,6 +322,15 @@ private:
         HYPRE_IJMatrixGetObject(A_hypre_, (void**)&parcsr_A_);
     }
 
+    /**
+     * @brief Copies vectors to the Hypre format.
+     *
+     * Transfers the update and defect vectors to Hypre.
+     * If GPU is used, the data is transferred from the host to the device.
+     *
+     * @param v The update vector.
+     * @param d The defect vector.
+     */
     void copyVectorsToHypre(const X& v, const Y& d) {
         OPM_TIMEBLOCK(prec_copy_vectors_to_hypre);
         const HYPRE_Real* x_vals = &(v[0][0]);
@@ -283,6 +354,14 @@ private:
         HYPRE_IJVectorGetObject(b_hypre_, (void**)&par_b_);
     }
 
+    /**
+     * @brief Copies the solution vector from Hypre.
+     *
+     * Transfers the solution vector from Hypre back to the host.
+     * If GPU is used, the data is transferred from the device to the host.
+     *
+     * @param v The update vector.
+     */
     void copyVectorFromHypre(X& v) {
         OPM_TIMEBLOCK(prec_copy_vector_from_hypre);
         HYPRE_Real* values = &(v[0][0]);
@@ -295,34 +374,32 @@ private:
         }
     }
 
-    const M& A_;
-    const Opm::PropertyTree& prm_;
-    bool use_gpu_ = false;
+    const M& A_; //!< The matrix for which the preconditioner is constructed.
+    bool use_gpu_ = false; //!< Flag indicating whether to use GPU acceleration.
 
-    HYPRE_Solver solver_ = nullptr;
-    HYPRE_IJMatrix A_hypre_ = nullptr;
-    HYPRE_ParCSRMatrix parcsr_A_ = nullptr;
-    HYPRE_IJVector x_hypre_ = nullptr;
-    HYPRE_IJVector b_hypre_ = nullptr;
-    HYPRE_ParVector par_x_ = nullptr;
-    HYPRE_ParVector par_b_ = nullptr;
+    HYPRE_Solver solver_ = nullptr; //!< The Hypre solver object.
+    HYPRE_IJMatrix A_hypre_ = nullptr; //!< The Hypre matrix object.
+    HYPRE_ParCSRMatrix parcsr_A_ = nullptr; //!< The parallel CSR matrix object.
+    HYPRE_IJVector x_hypre_ = nullptr; //!< The Hypre solution vector.
+    HYPRE_IJVector b_hypre_ = nullptr; //!< The Hypre right-hand side vector.
+    HYPRE_ParVector par_x_ = nullptr; //!< The parallel solution vector.
+    HYPRE_ParVector par_b_ = nullptr; //!< The parallel right-hand side vector.
 
-    // Store sparsity pattern
-    std::vector<HYPRE_Int> ncols_;
-    std::vector<HYPRE_BigInt> rows_;
-    std::vector<HYPRE_BigInt> cols_;
-    HYPRE_Int* ncols_device_ = nullptr;
-    HYPRE_BigInt* rows_device_ = nullptr;
-    HYPRE_BigInt* cols_device_ = nullptr;
-    HYPRE_Real* values_device_ = nullptr;
-    // Store indices vector
-    std::vector<int> indices_;
-    HYPRE_BigInt* indices_device_ = nullptr;
-    HYPRE_Int N_ = -1;
-    HYPRE_Int nnz_ = -1;
+    std::vector<HYPRE_Int> ncols_; //!< Number of columns per row.
+    std::vector<HYPRE_BigInt> rows_; //!< Row indices.
+    std::vector<HYPRE_BigInt> cols_; //!< Column indices.
+    HYPRE_Int* ncols_device_ = nullptr; //!< Device array for number of columns per row.
+    HYPRE_BigInt* rows_device_ = nullptr; //!< Device array for row indices.
+    HYPRE_BigInt* cols_device_ = nullptr; //!< Device array for column indices.
+    HYPRE_Real* values_device_ = nullptr; //!< Device array for matrix values.
 
-    HYPRE_Real* x_values_device_ = nullptr;
-    HYPRE_Real* b_values_device_ = nullptr;
+    std::vector<int> indices_; //!< Indices vector for copying vectors to/from Hypre.
+    HYPRE_BigInt* indices_device_ = nullptr; //!< Device array for indices.
+    HYPRE_Int N_ = -1; //!< Number of rows in the matrix.
+    HYPRE_Int nnz_ = -1; //!< Number of non-zero elements in the matrix.
+
+    HYPRE_Real* x_values_device_ = nullptr; //!< Device array for solution vector values.
+    HYPRE_Real* b_values_device_ = nullptr; //!< Device array for right-hand side vector values.
 };
 
 } // namespace Hypre
