@@ -172,7 +172,6 @@ public:
     using BaseType::shouldWriteOutput;
     using BaseType::shouldWriteRestartFile;
     using BaseType::rockCompressibility;
-    using BaseType::rockReferencePressure;
     using BaseType::porosity;
 
     /*!
@@ -719,7 +718,28 @@ public:
     Scalar rockReferencePressure(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return this->rockReferencePressure(globalSpaceIdx);
+        return rockReferencePressure(globalSpaceIdx);
+    }
+
+    /*!
+    * \copydoc BlackoilProblem::rockReferencePressure
+    */
+    Scalar rockReferencePressure(unsigned globalSpaceIdx) const
+    {
+        const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
+        if (rock_config.store()) {
+            return asImp_().initialFluidState(globalSpaceIdx).pressure(refPressurePhaseIdx_());
+        }
+        else {
+            if (this->rockParams_.empty())
+                return 1e5;
+
+            unsigned tableIdx = 0;
+            if (!this->rockTableIdx_.empty()) {
+                tableIdx = this->rockTableIdx_[globalSpaceIdx];
+            }
+            return this->rockParams_[tableIdx].referencePressure;
+        }
     }
 
     /*!
@@ -1063,6 +1083,7 @@ public:
 
         const auto& fs = intQuants.fluidState();
         LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
+        const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
         if (!this->minRefPressure_.empty())
             // The pore space change is irreversible
             effectivePressure =
@@ -1072,6 +1093,9 @@ public:
         if (!this->overburdenPressure_.empty())
             effectivePressure -= this->overburdenPressure_[elementIdx];
 
+        if (rock_config.store()) {
+            effectivePressure -= asImp_().initialFluidState(elementIdx).pressure(refPressurePhaseIdx_());
+        }
 
         if (!this->rockCompPoroMult_.empty()) {
             return this->rockCompPoroMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
@@ -1628,7 +1652,7 @@ protected:
 
         const auto& fs = intQuants.fluidState();
         LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
-
+        const auto& rock_config = this->simulator().vanguard().eclState().getSimulationConfig().rock_config();
         if (!this->minRefPressure_.empty())
             // The pore space change is irreversible
             effectivePressure =
@@ -1637,6 +1661,10 @@ protected:
 
         if (!this->overburdenPressure_.empty())
             effectivePressure -= this->overburdenPressure_[elementIdx];
+        
+        if (rock_config.store()) {
+            effectivePressure -= asImp_().initialFluidState(elementIdx).pressure(refPressurePhaseIdx_());
+        }
 
         if (!this->rockCompTransMult_.empty())
             return this->rockCompTransMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
