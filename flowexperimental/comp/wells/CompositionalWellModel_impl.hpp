@@ -2,6 +2,8 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
+
 namespace Opm
 {
 
