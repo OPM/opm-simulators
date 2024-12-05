@@ -446,6 +446,9 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
         const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int);                                      \
     template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);                 \
     template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);
+    // template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);       \
+    // template void solveUpperLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);            \
+    // template void solveLowerLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int, cudaStream_t);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);
