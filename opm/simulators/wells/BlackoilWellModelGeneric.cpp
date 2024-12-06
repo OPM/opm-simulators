@@ -1263,6 +1263,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                          phase_usage_,
                                                          guideRate_,
                                                          well_state,
+                                                         summaryState_,
                                                          this->groupState(),
                                                          groupTargetReduction);
     std::vector<Scalar> groupTargetReductionInj(numPhases(), 0.0);
@@ -1273,6 +1274,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                          phase_usage_,
                                                          guideRate_,
                                                          well_state,
+                                                         summaryState_,
                                                          this->groupState(),
                                                          groupTargetReductionInj);
 
