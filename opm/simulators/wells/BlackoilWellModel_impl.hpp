@@ -33,6 +33,7 @@
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Well/PAvgDynamicSourceData.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
@@ -177,6 +178,11 @@ namespace Opm {
         const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
         for (auto& wellPtr : this->well_container_) {
             const bool well_opened_this_step = this->report_step_starts_ && events.hasEvent(wellPtr->name(), effective_events_mask);
+            if (well_opened_this_step && this->wellState().well(wellPtr->name()).status == Well::Status::OPEN) {
+                this->well_open_times_.insert_or_assign(wellPtr->name(),
+                                                        WCYCLE::WellTimeInfo{this->simulator_.time(), false});
+            }
+
             wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, well_opened_this_step);
         }
     }
@@ -517,6 +523,7 @@ namespace Opm {
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginTimeStep() failed: ",
                                         this->terminal_output_, simulator_.vanguard().grid().comm());
 
+
         for (auto& well : well_container_) {
             well->setVFPProperties(this->vfp_properties_.get());
             well->setGuideRate(&this->guideRate_);
@@ -648,7 +655,8 @@ namespace Opm {
             // some preparation before the well can be used
             well->init(&this->phase_usage_, depth_, gravity_, B_avg_, true);
 
-            Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor();
+            Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
+                                            this->wellState()[well_name].efficiency_scaling_factor;
             WellGroupHelpers<Scalar>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
                                                                                                 timeStepIdx),
                                                                       this->schedule(),
@@ -956,6 +964,8 @@ namespace Opm {
                         if (!closed_this_step) {
                             this->wellTestState().open_well(well_name);
                             this->wellTestState().open_completions(well_name);
+                            this->well_open_times_.insert_or_assign(well_name,
+                                                                    WCYCLE::WellTimeInfo{this->simulator_.time(), false});
                         }
                         events.clearEvent(ScheduleEvents::REQUEST_OPEN_WELL);
                     }
@@ -1005,6 +1015,28 @@ namespace Opm {
 
                 if (wellIsStopped)
                     well_container_.back()->stopWell();
+            }
+
+            const auto& wcycle = this->schedule()[report_step].wcycle.get();
+            const auto& wmatcher = this->schedule().wellMatcher(report_step);
+            for (const auto& wname : wcycle.closeWells(this->simulator_.time(),
+                                                       wmatcher, well_open_times_, well_close_times_))
+            {
+                this->wellState().shutWell(*this->wellState().index(wname));
+            }
+
+            for (const auto& wname : wcycle.openWells(this->simulator_.time(),
+                                                      wmatcher, well_open_times_, well_close_times_))
+            {
+                this->wellState().openWell(*this->wellState().index(wname));
+            }
+
+            for (const auto& [wname, wscale] : wcycle.efficiencyScale(this->simulator_.time() +
+                                                                      this->simulator_.timeStepSize(),
+                                                                      wmatcher, well_open_times_))
+            {
+                this->wellState()[wname].efficiency_scaling_factor = wscale;
+                this->schedule_.add_event(ScheduleEvents::WELLGROUP_EFFICIENCY_UPDATE, report_step);
             }
         }
 

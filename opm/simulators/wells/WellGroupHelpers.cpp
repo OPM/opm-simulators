@@ -115,7 +115,8 @@ namespace Opm {
             if (wellEcl.getStatus() == Opm::Well::Status::SHUT)
                 continue;
 
-            Scalar factor = wellEcl.getEfficiencyFactor();
+            const Scalar factor = wellEcl.getEfficiencyFactor() *
+                                  wellState[wellEcl.name()].efficiency_scaling_factor;
             const auto& ws = wellState.well(well_index.value());
             if (res_rates) {
                 const auto& well_rates = ws.reservoir_rates;
@@ -265,7 +266,8 @@ sumSolventRates(const Group& group,
             continue;
 
         const auto& ws = wellState.well(well_index.value());
-        const Scalar factor = wellEcl.getEfficiencyFactor();
+        const Scalar factor = wellEcl.getEfficiencyFactor() *
+                              wellState[wellEcl.name()].efficiency_scaling_factor;
         if (injector)
             rate += factor * ws.sum_solvent_rates();
         else
@@ -455,8 +457,10 @@ updateGroupTargetReduction(const Group& group,
             continue;
         }
 
-        const Scalar efficiency = wellTmp.getEfficiencyFactor();
-        // add contributino from wells not under group control
+        const Scalar efficiency = wellTmp.getEfficiencyFactor() *
+                                  wellState[wellTmp.name()].efficiency_scaling_factor;
+
+        // add contribution from wells not under group control
         const auto& ws = wellState.well(well_index.value());
         if (isInjector) {
             if (ws.injection_cmode != Well::InjectorCMode::GRUP)
@@ -868,7 +872,8 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     //    - Making the wells' maximum flows (i.e. not time-averaged by using a efficiency factor)
                     //      available and using those (for wells with WEFAC(3) true only) when accumulating group
                     //      rates, but ONLY for network calculations.
-                    const Scalar efficiency = well.getEfficiencyFactor();
+                    const Scalar efficiency = well.getEfficiencyFactor() *
+                                              well_state[well.name()].efficiency_scaling_factor;
                     node_inflows[node][BlackoilPhases::Vapour] += well_state.getALQ(wellname) * efficiency;
                 }
             }

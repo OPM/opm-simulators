@@ -318,7 +318,8 @@ zeroGroupRateTarget(const SummaryState& summary_state,
 {
     const auto& well = this->well_ecl_;
     const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-    const Scalar efficiencyFactor = well.getEfficiencyFactor();
+    const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                    well_state[well.name()].efficiency_scaling_factor;
     if (this->isInjector()) {
         // Check injector under group control
         const auto& controls = well.injectionControls(summary_state);

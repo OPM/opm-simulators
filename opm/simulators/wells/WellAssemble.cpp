@@ -66,7 +66,8 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
 {
     const auto current = well_state.well(well_.indexOfWell()).production_cmode;
     const auto& pu = well_.phaseUsage();
-    const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor();
+    const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
+                                    well_state[well_.name()].efficiency_scaling_factor;
 
     switch (current) {
     case Well::ProducerCMode::ORAT: {
@@ -208,7 +209,8 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
     auto current = well_state.well(well_.indexOfWell()).injection_cmode;
     const InjectorType injectorType = controls.injector_type;
     const auto& pu = well_.phaseUsage();
-    const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor();
+    const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
+                                    well_state[well_.name()].efficiency_scaling_factor;
 
     switch (current) {
     case Well::InjectorCMode::RATE: {

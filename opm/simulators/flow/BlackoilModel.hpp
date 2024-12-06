@@ -510,12 +510,13 @@ namespace Opm {
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
-        SimulatorReportSingle afterStep(const SimulatorTimerInterface&)
+        SimulatorReportSingle afterStep(const SimulatorTimerInterface& timer)
         {
             SimulatorReportSingle report;
             Dune::Timer perfTimer;
             perfTimer.start();
             simulator_.problem().endTimeStep();
+            simulator_.setTime(timer.simulationTimeElapsed());
             simulator_.problem().setConvData(rst_conv_.getData());
             report.pre_post_time += perfTimer.stop();
             return report;

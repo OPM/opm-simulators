@@ -38,6 +38,7 @@
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/WCYCLE.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
@@ -393,6 +394,9 @@ template<class Scalar> class WellContributions;
 
             void setupDomains(const std::vector<Domain>& domains);
 
+            const WCYCLE::WellTimeMap& wellOpenTimes() const { return well_open_times_; }
+            const WCYCLE::WellTimeMap& wellCloseTimes() const { return well_close_times_; }
+
         protected:
             Simulator& simulator_;
 
@@ -450,8 +454,14 @@ template<class Scalar> class WellContributions;
             // Keep track of the domain of each well, if using subdomains.
             std::map<std::string, int> well_domain_;
 
-            // Store the local index of the wells perforated cells in the domain, if using sumdomains
+            // Store the local index of the wells perforated cells in the domain, if using subdomains
             SparseTable<int> well_local_cells_;
+
+            // Store times at which wells were opened and if wells were opened by cycling (for WCYCLE)
+            WCYCLE::WellTimeMap well_open_times_;
+
+            // Store times at which wells were shut (for WCYCLE)
+            WCYCLE::WellTimeMap well_close_times_;
 
             const Grid& grid() const
             { return simulator_.vanguard().grid(); }
