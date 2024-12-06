@@ -72,6 +72,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     check_well_operability_ = Parameters::Get<Parameters::EnableWellOperabilityCheck>();
     check_well_operability_iter_ = Parameters::Get<Parameters::EnableWellOperabilityCheckIter>();
     max_number_of_well_switches_ = Parameters::Get<Parameters::MaximumNumberOfWellSwitches>();
+    max_number_of_group_switches_ = Parameters::Get<Parameters::MaximumNumberOfGroupSwitches>();
     use_average_density_ms_wells_ = Parameters::Get<Parameters::UseAverageDensityMsWells>();
     local_well_solver_control_switching_ = Parameters::Get<Parameters::LocalWellSolveControlSwitching>();
     use_implicit_ipr_ = Parameters::Get<Parameters::UseImplicitIpr>();
@@ -205,6 +206,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Enable the well operability checking during iterations");
     Parameters::Register<Parameters::MaximumNumberOfWellSwitches>
         ("Maximum number of times a well can switch to the same control");
+    Parameters::Register<Parameters::MaximumNumberOfGroupSwitches>
+        ("Maximum number of times a group can switch to the same control");
     Parameters::Register<Parameters::UseAverageDensityMsWells>
         ("Approximate segment densitities by averaging over segment and its outlet");
     Parameters::Register<Parameters::LocalWellSolveControlSwitching>

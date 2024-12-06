@@ -121,6 +121,7 @@ template<class Scalar>
 struct RelaxedPressureTolMsw { static constexpr Scalar value = 1e4; };
 
 struct MaximumNumberOfWellSwitches { static constexpr int value = 3; };
+struct MaximumNumberOfGroupSwitches { static constexpr int value = 3; };
 struct UseAverageDensityMsWells { static constexpr bool value = false; };
 struct LocalWellSolveControlSwitching { static constexpr bool value = true; };
 struct UseImplicitIpr { static constexpr bool value = true; };
@@ -272,8 +273,11 @@ public:
     /// Whether to check well operability during iterations
     bool check_well_operability_iter_;
 
-    /// Maximum number of times a well can switch to the same controt
+    /// Maximum number of times a well can switch to the same control
     int max_number_of_well_switches_;
+
+    /// Maximum number of times group can switch to the same control
+    int max_number_of_group_switches_;
 
     /// Whether to approximate segment densities by averaging over segment and its outlet
     bool use_average_density_ms_wells_;

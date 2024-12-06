@@ -749,10 +749,11 @@ namespace Opm {
         // report group switching
         if (this->terminal_output_) {
 
-            for (const auto& [name, to] : this->switched_prod_groups_) {
+            for (const auto& [name, ctrls] : this->switched_prod_groups_) {
                 const Group::ProductionCMode& oldControl = this->prevWGState().group_state.production_control(name);
                 std::string from = Group::ProductionCMode2String(oldControl);
-                if (to != from) {
+                std::string to = Group::ProductionCMode2String(ctrls.back());
+                if (ctrls.back() != oldControl) {
                     std::string msg = "    Production Group " + name
                     + " control mode changed from ";
                     msg += from;
@@ -760,18 +761,30 @@ namespace Opm {
                     local_deferredLogger.info(msg);
                 }
             }
-            for (const auto& [key, to] : this->switched_inj_groups_) {
-                const std::string& name = key.first;
-                const Opm::Phase& phase = key.second;
 
-                const Group::InjectionCMode& oldControl = this->prevWGState().group_state.injection_control(name, phase);
-                std::string from = Group::InjectionCMode2String(oldControl);
-                if (to != from) {
-                    std::string msg = "    Injection Group " + name
-                    + " control mode changed from ";
-                    msg += from;
-                    msg += " to " + to;
-                    local_deferredLogger.info(msg);
+            for (const auto& [grname, grdata] : this->switched_inj_groups_) {
+                //const std::string& name = key.first;
+                //const Opm::Phase& phase = key.second;
+                const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
+                for (Phase phase : all) {
+                    const auto& ctrls = grdata[static_cast<std::underlying_type_t<Phase>>(phase)];
+
+                    if (ctrls.empty()) {
+                        continue;
+                    }
+                    if ( !this->prevWGState().group_state.has_injection_control(grname, phase))
+                        continue;
+
+                    const Group::InjectionCMode& oldControl = this->prevWGState().group_state.injection_control(grname, phase);
+                    std::string from = Group::InjectionCMode2String(oldControl);
+                    std::string to = Group::InjectionCMode2String(ctrls.back());
+                    if (ctrls.back() != oldControl) {
+                        std::string msg = "    Injection Group " + grname
+                        + " control mode changed from ";
+                        msg += from;
+                        msg += " to " + to;
+                        local_deferredLogger.info(msg);
+                    }
                 }
             }
         }
@@ -2208,13 +2221,9 @@ namespace Opm {
 
         bool changed_well_group = false;
         // Check group individual constraints.
-        const int nupcol = this->schedule()[episodeIdx].nupcol();
-        // don't switch group control when iterationIdx > nupcol
-        // to avoid oscilations between group controls
-        if (iterationIdx <= nupcol) {
-            const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
-            changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
-        }
+        const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
+        changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
+
         // Check wells' group constraints and communicate.
         bool changed_well_to_group = false;
         {
@@ -2262,7 +2271,6 @@ namespace Opm {
         }
 
         // update wsolvent fraction for REIN wells
-        const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
         this->updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
         return { changed_well_group, more_network_update };
@@ -2472,7 +2480,10 @@ namespace Opm {
                         const int iterationIdx)
     {
         bool changed = false;
-        bool changed_hc = this->checkGroupHigherConstraints( group, deferred_logger, reportStepIdx);
+        // restrict the number of group switches but only after nupcol iterations.
+        const int nupcol = this->schedule()[reportStepIdx].nupcol();
+        const int max_number_of_group_switches = iterationIdx <= nupcol ? 9999 : param_.max_number_of_group_switches_;
+        bool changed_hc = this->checkGroupHigherConstraints( group, deferred_logger, reportStepIdx, max_number_of_group_switches);
         if (changed_hc) {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
@@ -2482,6 +2493,7 @@ namespace Opm {
             BlackoilWellModelConstraints(*this).
                 updateGroupIndividualControl(group,
                                              reportStepIdx,
+                                             max_number_of_group_switches,
                                              this->switched_inj_groups_,
                                              this->switched_prod_groups_,
                                              this->closed_offending_wells_,
