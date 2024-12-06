@@ -887,7 +887,7 @@ namespace Opm {
         this->wellState().init(cellPressures, cellTemperatures, this->schedule(), this->wells_ecl_,
                                this->local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), this->well_perf_data_,
-                               this->summaryState());
+                               this->summaryState(), simulator_.vanguard().enableDistributedWells());
     }
 
 

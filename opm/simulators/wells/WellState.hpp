@@ -104,7 +104,8 @@ public:
               const int report_step,
               const WellState* prevState,
               const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
-              const SummaryState& summary_state);
+              const SummaryState& summary_state,
+              const bool enableDistributedWells);
 
     void resize(const std::vector<Well>& wells_ecl,
                 const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
@@ -353,6 +354,8 @@ public:
     }
 
 private:
+    bool enableDistributedWells_ = false;
+
     bool is_permanently_inactive_well(const std::string& wname) const {
         return std::find(this->permanently_inactive_well_names_.begin(), this->permanently_inactive_well_names_.end(), wname) != this->permanently_inactive_well_names_.end();
     }
