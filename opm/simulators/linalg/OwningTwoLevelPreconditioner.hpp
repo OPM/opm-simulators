@@ -174,7 +174,7 @@ public:
     }
 
     virtual bool hasPerfectUpdate() const override {
-        return false;
+        return twolevel_method_.hasPerfectUpdate();
     }
 
 private:

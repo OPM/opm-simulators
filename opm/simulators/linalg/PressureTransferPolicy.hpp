@@ -74,16 +74,24 @@ public:
     {
         using CoarseMatrix = typename CoarseOperator::matrix_type;
         const auto& fineLevelMatrix = fineOperator.getmat();
-        coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), CoarseMatrix::row_wise));
-        auto createIter = coarseLevelMatrix_->createbegin();
+        const std::size_t average_elements_per_row
+            = static_cast<std::size_t>(std::ceil(fineLevelMatrix.nonzeroes() / fineLevelMatrix.N()));
+        const double overflow_fraction = 1.2;
 
+        // construct coarse matrix with implicit compression, to ensure values are continuous in memory
+        coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N(),
+                                                    fineLevelMatrix.M(),
+                                                    average_elements_per_row,
+                                                    overflow_fraction,
+                                                    CoarseMatrix::implicit));
+        int rownum = 0;
         for (const auto& row : fineLevelMatrix) {
             for (auto col = row.begin(), cend = row.end(); col != cend; ++col) {
-                createIter.insert(col.index());
+                coarseLevelMatrix_->entry(rownum, col.index()) = 0.0;
             }
-            ++createIter;
+            ++rownum;
         }
-
+        coarseLevelMatrix_->compress();
         calculateCoarseEntries(fineOperator);
         coarseLevelCommunication_.reset(communication_, [](Communication*) {});
 

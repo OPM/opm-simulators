@@ -121,10 +121,10 @@ namespace Opm
             using CoarseMatrix = typename CoarseOperator::matrix_type;
             const auto& fineLevelMatrix = fineOperator.getmat();
             const auto& nw = fineOperator.getNumberOfExtraEquations();
+            const std::size_t average_elements_per_row
+                = static_cast<std::size_t>(std::ceil(fineLevelMatrix.nonzeroes() / fineLevelMatrix.N()));
+            const double overflow_fraction = 1.2;
             if (prm_.get<bool>("add_wells")) {
-                const std::size_t average_elements_per_row
-                    = static_cast<std::size_t>(std::ceil(fineLevelMatrix.nonzeroes() / fineLevelMatrix.N()));
-                const double overflow_fraction = 1.2;
                 coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N() + nw,
                                                           fineLevelMatrix.M() + nw,
                                                           average_elements_per_row,
@@ -138,14 +138,17 @@ namespace Opm
                     ++rownum;
                 }
             } else {
-                coarseLevelMatrix_.reset(
-                    new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), CoarseMatrix::row_wise));
-                auto createIter = coarseLevelMatrix_->createbegin();
+                coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N(),
+                                                            fineLevelMatrix.M(),
+                                                            average_elements_per_row,
+                                                            overflow_fraction,
+                                                            CoarseMatrix::implicit));
+                int rownum = 0;
                 for (const auto& row : fineLevelMatrix) {
                     for (auto col = row.begin(), cend = row.end(); col != cend; ++col) {
-                        createIter.insert(col.index());
+                        coarseLevelMatrix_->entry(rownum, col.index()) = 0.0;
                     }
-                    ++createIter;
+                    ++rownum;
                 }
             }
         if constexpr (std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
@@ -156,11 +159,11 @@ namespace Opm
         }
         if (prm_.get<bool>("add_wells")) {
             fineOperator.addWellPressureEquationsStruct(*coarseLevelMatrix_);
-            coarseLevelMatrix_->compress(); // all elemenst should be set
             if constexpr (!std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
                 extendCommunicatorWithWells(*communication_, coarseLevelCommunication_, nw);
             }
         }
+        coarseLevelMatrix_->compress(); // all elemenst should be set
         calculateCoarseEntries(fineOperator);
 
         this->lhs_.resize(this->coarseLevelMatrix_->M());
