@@ -815,7 +815,7 @@ private:
                            const SimulatorTimerInterface& timer,
                            const Domain& domain)
     {
-        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
+        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, false);
         local_report = res.first;
@@ -825,7 +825,7 @@ private:
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         } else {
-            model_.wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+            model_.wellModel().setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
@@ -840,7 +840,7 @@ private:
                                 const SimulatorTimerInterface& timer,
                                 const Domain& domain)
     {
-        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
+        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, true);
         local_report = res.first;
@@ -881,7 +881,7 @@ private:
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
         } else {
-            model_.wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+            model_.wellModel().setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
