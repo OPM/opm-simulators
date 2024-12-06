@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "vappars",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "01_vappars",
+            "filename": "VAPPARS-01"
+        }
+    ]
+}

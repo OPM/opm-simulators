@@ -1,0 +1,25 @@
+{
+    "abs_tol": 0.02,
+    "dir": "udt",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_args": "--enable-tuning=true",
+    "test_cases": [
+        {
+            "casename": "udt_1d-01",
+            "filename": "UDT-1D-01"
+        },
+        {
+            "casename": "udt_1d-01b",
+            "filename": "UDT-1D-01B"
+        },
+        {
+            "casename": "udt_1d-02",
+            "filename": "UDT-1D-02"
+        },
+        {
+            "casename": "udt_1d-03",
+            "filename": "UDT-1D-03"
+        }
+    ]
+}

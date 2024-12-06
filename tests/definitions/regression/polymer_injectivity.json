@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "polymer_injectivity",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "polymer_injectivity",
+            "filename": "2D_POLYMER_INJECTIVITY",
+            "test_args": "--tolerance-mb=1.e-7 --tolerance-wells=1.e-6 --linear-solver=ilu0"
+        }
+    ]
+}

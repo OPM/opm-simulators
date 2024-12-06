@@ -1,0 +1,18 @@
+{
+    "abs_tol": 0.02,
+    "dir": "wgrupcon",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "01_wgrupcon",
+            "filename": "01-WGRUPCON",
+            "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "02_wgrupcon",
+            "filename": "02-WGRUPCON",
+            "test_args": "--enable-tuning=true"
+        }
+    ]
+}

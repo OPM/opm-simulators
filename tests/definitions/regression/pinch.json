@@ -1,0 +1,128 @@
+{
+    "abs_tol": 0.02,
+    "dir": "pinch",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "pinch_multz_all",
+            "filename": "PINCH_MULTZ_ALL"
+        },
+        {
+            "casename": "pinch_multz_all_barrier",
+            "filename": "PINCH_MULTZ_ALL_BARRIER"
+        },
+        {
+            "casename": "pinch_multzm_all",
+            "filename": "PINCH_MULTZ-_ALL"
+        },
+        {
+            "casename": "pinch_multzm_all_barrier",
+            "filename": "PINCH_MULTZ-_ALL_BARRIER"
+        },
+        {
+            "casename": "pinch_nopinch_1x1x10",
+            "filename": "PINCH10_NOPINCH"
+        },
+        {
+            "casename": "pinch_t1a_gap",
+            "filename": "T1A_GAP"
+        },
+        {
+            "casename": "pinch_t1a_nogap",
+            "filename": "T1A_NOGAP"
+        },
+        {
+            "casename": "pinch_t1a_nopinch",
+            "filename": "T1A_NOPINCH"
+        },
+        {
+            "casename": "pinch_t1a1_nogap",
+            "filename": "T1A1_NOGAP"
+        },
+        {
+            "casename": "pinch_t1b_nopinch",
+            "filename": "T1B_NOPINCH"
+        },
+        {
+            "casename": "pinch_t1b1_gap",
+            "filename": "T1B1_GAP"
+        },
+        {
+            "casename": "pinch_t1b2_gap",
+            "filename": "T1B2_GAP"
+        },
+        {
+            "casename": "pinch_t1b3_gap",
+            "filename": "T1B3_GAP"
+        },
+        {
+            "casename": "pinch_t1b4_gap",
+            "filename": "T1B4_GAP"
+        },
+        {
+            "casename": "pinch_t1b5_gap",
+            "filename": "T1B5_GAP"
+        },
+        {
+            "casename": "pinch_t1b6_gap",
+            "filename": "T1B6_GAP"
+        },
+        {
+            "casename": "pinch_t1b7_gap",
+            "filename": "T1B7_GAP"
+        },
+        {
+            "casename": "pinch_t1c_nopinch",
+            "filename": "T1C_NOPINCH"
+        },
+        {
+            "casename": "pinch_t1c1_nogap",
+            "filename": "T1C1_NOGAP"
+        },
+        {
+            "casename": "pinch_t1c1_gap",
+            "filename": "T1C1_GAP"
+        },
+        {
+            "casename": "pinch_t1c2_gap",
+            "filename": "T1C2_GAP"
+        },
+        {
+            "casename": "pinch_t1c2_nogap",
+            "filename": "T1C2_NOGAP"
+        },
+        {
+            "casename": "pinch_t1c3_gap",
+            "filename": "T1C3_GAP"
+        },
+        {
+            "casename": "pinch_t1c3_nogap",
+            "filename": "T1C3_NOGAP"
+        },
+        {
+            "casename": "pinch_t1d_nopinch",
+            "filename": "T1D_NOPINCH"
+        },
+        {
+            "casename": "pinch_t1d1_gap",
+            "filename": "T1D1_GAP"
+        },
+        {
+            "casename": "pinch_t1d1_nogap",
+            "filename": "T1D1_NOGAP"
+        },
+        {
+            "casename": "pinch_t2a1_gap",
+            "filename": "T2A1_GAP"
+        },
+        {
+            "casename": "pinch_t2a_gap",
+            "filename": "T2A_GAP"
+        },
+        {
+            "casename": "pinch_t2a_nopinch",
+            "filename": "T2A_NOPINCH"
+        }
+    ]
+}

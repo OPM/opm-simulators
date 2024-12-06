@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "spe3",
+    "rel_tol": 0.01,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "spe3",
+            "filename": "SPE3CASE1",
+            "test_args": "--tolerance-wells=1e-6 --newton-max-iterations=20"
+        }
+    ]
+}

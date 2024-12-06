@@ -1,0 +1,28 @@
+{
+    "abs_tol": 0.02,
+    "dir": "cskin",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "cskin-01",
+            "filename": "CSKIN-01"
+        },
+        {
+            "casename": "cskin-02",
+            "filename": "CSKIN-02"
+        },
+        {
+            "casename": "cskin-03",
+            "filename": "CSKIN-03"
+        },
+        {
+            "casename": "cskin-04",
+            "filename": "CSKIN-04"
+        },
+        {
+            "casename": "cskin-05",
+            "filename": "CSKIN-05"
+        }
+    ]
+}

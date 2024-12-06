@@ -1,0 +1,22 @@
+{
+    "abs_tol": 0.02,
+    "dir": "model1",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "base_model_1",
+            "filename": "BASE_MODEL_1"
+        },
+        {
+            "casename": "faults_model_1",
+            "filename": "FAULTS_MODEL_1",
+            "test_args": "--solver-max-time-step-in-days=5.0"
+        },
+        {
+            "casename": "msw_model_1",
+            "filename": "MSW_MODEL_1",
+            "test_args": "--solver-max-time-step-in-days=5.0"
+        }
+    ]
+}
