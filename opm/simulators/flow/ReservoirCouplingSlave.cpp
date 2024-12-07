@@ -25,8 +25,9 @@
 #include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
 #include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/common/ErrorMacros.hpp>
-
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <dune/common/parallel/mpitraits.hh>
 
 #include <vector>
 #include <fmt/format.h>
@@ -86,23 +87,20 @@ receiveMasterGroupNamesFromMasterProcess() {
     std::size_t size;
     std::vector<char> group_names;
     if (this->comm_.rank() == 0) {
-        MPI_Aint asize = 0;
+        auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
         // NOTE: All slave-master communicators have set a custom error handler, which eventually
         //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
         //   or MPI_Send() calls.
         MPI_Recv(
-            &asize,
+            &size,
             /*count=*/1,
-            /*datatype=*/MPI_AINT,
+            /*datatype=*/MPI_SIZE_T_TYPE,
             /*source_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::MasterGroupNamesSize),
             this->slave_master_comm_,
             MPI_STATUS_IGNORE
         );
         OpmLog::info("Received master group names size from master process rank 0");
-        // NOTE: MPI_Aint and std::size_t should be compatible on most systems, but we will
-        //     cast it to std::size_t to avoid any potential issues
-        size = static_cast<std::size_t>(asize);
         group_names.resize(size);
         MPI_Recv(
             group_names.data(),
