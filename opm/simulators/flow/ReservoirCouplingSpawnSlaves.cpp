@@ -30,6 +30,7 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
+#include <dune/common/parallel/mpitraits.hh>
 
 #include <filesystem>
 #include <vector>
@@ -230,11 +231,12 @@ sendMasterGroupNamesToSlaves_()
             // NOTE: All slave-master communicators have set a custom error handler, which eventually
             //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
             //   or MPI_Send() calls.
-            // NOTE: size should be of type std::size_t, so we can safely cast it to MPI_AINT
+            static_assert(std::is_same_v<decltype(size), std::size_t>, "size must be of type std::size_t");
+            auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
             MPI_Send(
                 &size,
                 /*count=*/1,
-                /*datatype=*/MPI_AINT,
+                /*datatype=*/MPI_SIZE_T_TYPE,
                 /*dest_rank=*/0,
                 /*tag=*/static_cast<int>(MessageTag::MasterGroupNamesSize),
                 this->master_.getSlaveComm(i)
