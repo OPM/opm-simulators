@@ -71,7 +71,15 @@ void setErrhandler(MPI_Comm comm, bool is_master)
     else {
         MPI_Comm_create_errhandler(custom_error_handler_slave_, &errhandler);
     }
+    // NOTE: The errhandler is a handle (an integer) that is associated with the communicator
+    //   that is why we pass this by value below. And it is safe to free the errhandler after it has
+    //   been associated with the communicator.
     MPI_Comm_set_errhandler(comm, errhandler);
+    // Mark the error handler for deletion. According to the documentation: "The error handler will
+    //  be deallocated after all the objects associated with it (communicator, window, or file) have
+    // been deallocated." So the error handler will still be in effect until the communicator is
+    // deallocated.
+    MPI_Errhandler_free(&errhandler);
 }
 
 bool Seconds::compare_eq(double a, double b)
