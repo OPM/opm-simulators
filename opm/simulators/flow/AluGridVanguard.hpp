@@ -238,9 +238,10 @@ public:
     /*!
      * \brief Returns the object which maps a global element index of the simulation grid
      *        to the corresponding element index of the level logically Cartesian index.
+     *        No refinement is supported for AluGrid so it coincides with CartesianIndexMapper.
      */
     const LevelCartesianIndexMapper levelCartesianIndexMapper() const
-    { return LevelCartesianIndexMapper(*grid_, *cartesianIndexMapper_); }
+    { return LevelCartesianIndexMapper(*cartesianIndexMapper_); }
 
     /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
