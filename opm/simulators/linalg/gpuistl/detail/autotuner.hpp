@@ -83,7 +83,7 @@ tuneThreadBlockSize(func& f, std::string descriptionOfFunction)
     }
 
     OpmLog::info(
-        fmt::format("{}: Tuned Blocksize: {} (fastest runtime: {}).", descriptionOfFunction, bestBlockSize, bestTime));
+        fmt::format("[Kernel tuning completed] {}: Tuned Blocksize = {}, Fastest Runtime = {}ms.", descriptionOfFunction, bestBlockSize, bestTime));
 
     return bestBlockSize;
 }

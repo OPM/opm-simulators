@@ -270,12 +270,12 @@ GpuDILU<M, X, Y, l>::tuneThreadBlockSizes()
     auto tuneMoveThreadBlockSizeInUpdate = [this](int moveThreadBlockSize){
         this->update(moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
     };
-    m_moveThreadBlockSize = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate, "Kernel moving data to reordered matrix");
+    m_moveThreadBlockSize = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate, "(in DILU update) Move data to reordered matrix");
 
     auto tuneFactorizationThreadBlockSizeInUpdate = [this](int factorizationThreadBlockSize){
         this->update(m_moveThreadBlockSize, factorizationThreadBlockSize);
     };
-    m_DILUFactorizationThreadBlockSize = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "Kernel computing DILU factorization");
+    m_DILUFactorizationThreadBlockSize = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "(in DILU update) DILU factorization");
 
     // tune the thread-block size of the apply
     GpuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
@@ -285,12 +285,12 @@ GpuDILU<M, X, Y, l>::tuneThreadBlockSizes()
     auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize){
         this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
     };
-    m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply, "Kernel computing a lower triangular solve for a level set");
+    m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply, "(in DILU apply) Triangular lower solve");
 
     auto tuneUpperSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int upperSolveThreadBlockSize){
-        this->apply(tmpV, tmpD, m_moveThreadBlockSize, upperSolveThreadBlockSize);
+        this->apply(tmpV, tmpD, m_lowerSolveThreadBlockSize, upperSolveThreadBlockSize);
     };
-    m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneUpperSolveThreadBlockSizeInApply, "Kernel computing an upper triangular solve for a level set");
+    m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneUpperSolveThreadBlockSizeInApply, "(in DILU apply) Triangular upper solve");
 }
 
 } // namespace Opm::gpuistl
