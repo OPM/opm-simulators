@@ -73,8 +73,9 @@ public:
     //! \brief Update the individual controls for wells in a group. Return true if a group control is changed
     bool updateGroupIndividualControl(const Group& group,
                                       const int reportStepIdx,
-                                      std::map<std::pair<std::string,Phase>,std::string>& switched_inj,
-                                      std::map<std::string, std::string>& switched_prod,
+                                      const int max_number_of_group_switch,
+                                      std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>>& switched_inj,
+                                      std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
                                       std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                                       GroupState<Scalar>& group_state,
                                       WellState<Scalar>& well_state,

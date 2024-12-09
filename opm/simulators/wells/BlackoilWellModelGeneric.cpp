@@ -574,7 +574,8 @@ template<class Scalar>
 bool BlackoilWellModelGeneric<Scalar>::
 checkGroupHigherConstraints(const Group& group,
                             DeferredLogger& deferred_logger,
-                            const int reportStepIdx)
+                            const int reportStepIdx,
+                            const int max_number_of_group_switch)
 {
     // Set up coefficients for RESV <-> surface rate conversion.
     // Use the pvtRegionIdx from the top cell of the first well.
@@ -626,6 +627,36 @@ checkGroupHigherConstraints(const Group& group,
         }
         const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
         for (Phase phase : all) {
+            bool group_is_oscillating = false;
+            if (auto groupPos = switched_inj_groups_.find(group.name()); groupPos != switched_inj_groups_.end()) {
+                auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
+                for (const auto& ctrl : ctrls) {
+                    if (std::count(ctrls.begin(), ctrls.end(), ctrl) < max_number_of_group_switch) {
+                        continue;
+                    }
+
+                    if (ctrls.back() != *(ctrls.end() - 2)) {
+                        if (comm_.rank() == 0 ) {
+                            std::ostringstream os;
+                            os << phase;
+                            const std::string msg =
+                                fmt::format("Group control for {} injector group {} is oscillating. Group control kept at {}.",
+                                            std::move(os).str(),
+                                            group.name(),
+                                            Group::InjectionCMode2String(ctrl));
+                            deferred_logger.info(msg);
+                        }
+                        ctrls.push_back(ctrl);
+                    }
+                    group_is_oscillating = true;
+                    break;
+                }
+            }
+
+            if (group_is_oscillating) {
+                continue;
+            }
+
             // Check higher up only if under individual (not FLD) control.
             auto currentControl = this->groupState().injection_control(group.name(), phase);
             if (currentControl != Group::InjectionCMode::FLD && group.injectionGroupControlAvailable(phase)) {
@@ -647,7 +678,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                        resv_coeff_inj,
                                                                        deferred_logger);
                 if (is_changed) {
-                    switched_inj_groups_.insert_or_assign({group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD));
+                    switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(Group::InjectionCMode::FLD);
                     BlackoilWellModelConstraints(*this).
                         actionOnBrokenConstraints(group, Group::InjectionCMode::FLD,
                                                   phase, this->groupState(),
@@ -671,6 +702,26 @@ checkGroupHigherConstraints(const Group& group,
         // So when checking constraints, current groups rate must also be subtracted it's reduction rate
         const std::vector<Scalar> reduction_rates = this->groupState().production_reduction_rates(group.name());
 
+        if (auto groupPos = switched_prod_groups_.find(group.name()); groupPos != switched_prod_groups_.end()) {
+            auto& ctrls = groupPos->second;
+            for (const auto& ctrl : ctrls) {
+                if (std::count(ctrls.begin(), ctrls.end(), ctrl) < max_number_of_group_switch) {
+                    continue;
+                }
+
+                if (ctrls.back() != *(ctrls.end() - 2)) {
+                    if (comm_.rank() == 0) {
+                        const std::string msg =
+                        fmt::format("Group control for production group {} is oscillating. Group control kept at {}.",
+                                    group.name(),
+                                    Group::ProductionCMode2String(ctrl));
+                        deferred_logger.info(msg);
+                    }
+                    ctrls.push_back(ctrl);
+                }
+                return false;
+            }
+        }
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                                             schedule(),
@@ -714,8 +765,7 @@ checkGroupHigherConstraints(const Group& group,
                                                   deferred_logger);
 
                 if (changed) {
-                    switched_prod_groups_.insert_or_assign(group.name(),
-                                                           Group::ProductionCMode2String(Group::ProductionCMode::FLD));
+                    switched_prod_groups_[group.name()].push_back(Group::ProductionCMode::FLD);
                     WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(scaling_factor,
                                                                                   group,
                                                                                   schedule(),
