@@ -1,0 +1,17 @@
+{
+    "abs_tol": 0.02,
+    "dir": "winjmult",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_args": "--enable-tuning=true",
+    "test_cases": [
+        {
+            "casename": "winjmult_msw",
+            "filename": "WINJMULT_MSW"
+        },
+        {
+            "casename": "winjmult_stdw",
+            "filename": "WINJMULT_STDW"
+        }
+    ]
+}

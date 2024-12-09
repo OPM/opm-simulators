@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "jfunc",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "jfunc_01",
+            "filename": "JFUNC-01",
+            "test_args": "--enable-tuning=true"
+        }
+    ]
+}

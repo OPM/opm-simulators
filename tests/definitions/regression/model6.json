@@ -1,0 +1,24 @@
+{
+    "abs_tol": 0.02,
+    "dir": "model6",
+    "simulator": "flow",
+    "rel_tol": 1e-05,
+    "test_cases": [
+        {
+            "casename": "0_base_model6",
+            "filename": "0_BASE_MODEL6"
+        },
+        {
+            "casename": "0a_aquct_model6",
+            "filename": "0A_AQUCT_MODEL6"
+        },
+        {
+            "casename": "0b_rocktab_model6",
+            "filename": "0B_ROCKTAB_MODEL6"
+        },
+        {
+            "casename": "model6_msw",
+            "filename": "1_MSW_MODEL6"
+        }
+    ]
+}

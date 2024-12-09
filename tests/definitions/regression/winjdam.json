@@ -1,0 +1,17 @@
+{
+    "abs_tol": 0.02,
+    "dir": "winjdam",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_args": "--enable-tuning=true",
+    "test_cases": [
+        {
+            "casename": "winjdam_msw",
+            "filename": "WINJDAM_MSW"
+        },
+        {
+            "casename": "winjdam_stdw",
+            "filename": "WINJDAM_STDW"
+        }
+    ]
+}

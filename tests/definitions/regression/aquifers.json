@@ -1,0 +1,18 @@
+{
+    "abs_tol": 0.02,
+    "dir": "aquifers",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "aquflux_01",
+            "filename": "AQUFLUX-01",
+            "test_args": "--solver-max-time-step-in-days=1"
+        },
+        {
+            "casename": "aquflux_02",
+            "filename": "AQUFLUX-02",
+            "test_args": "--solver-max-time-step-in-days=1"
+        }
+    ]
+}

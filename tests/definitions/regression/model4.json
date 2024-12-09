@@ -1,0 +1,16 @@
+{
+    "abs_tol": 0.02,
+    "dir": "model4",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "model4_gefac",
+            "filename": "MOD4_GRP_GEFAC"
+        },
+        {
+            "casename": "model4_udq_group",
+            "filename": "MOD4_UDQ_ACTIONX"
+        }
+    ]
+}

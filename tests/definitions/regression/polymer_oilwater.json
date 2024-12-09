@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "polymer_oilwater",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "polymer_oilwater",
+            "filename": "2D_OILWATER_POLYMER",
+            "test_args": "--solver-max-time-step-in-days=10 --tolerance-mb=1.e-7"
+        }
+    ]
+}

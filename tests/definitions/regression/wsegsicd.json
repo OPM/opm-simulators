@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "wsegsicd",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "wsegsicd",
+            "filename": "TEST_WSEGSICD"
+        }
+    ]
+}

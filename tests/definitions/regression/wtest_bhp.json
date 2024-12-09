@@ -1,0 +1,23 @@
+{
+    "abs_tol": 0.02,
+    "dir": "wtest/bhp_min",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "min_bhp_1",
+            "filename": "MIN_BHP_1",
+            "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "min_bhp_2",
+            "filename": "MIN_BHP_2",
+            "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "min_bhp_3",
+            "filename": "MIN_BHP_3",
+            "test_args": "--enable-tuning=true"
+        }
+    ]
+}

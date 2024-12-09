@@ -1,0 +1,53 @@
+{
+    "abs_tol": 0.02,
+    "dir": "actionx",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "actionx_gconprod",
+            "filename": "ACTIONX_GCONPROD"
+        },
+        {
+            "casename": "actionx_udq",
+            "filename": "ACTIONX_UDQ"
+        },
+        {
+            "casename": "actionx_wefac",
+            "filename": "ACTIONX_WEFAC"
+        },
+        {
+            "casename": "actionx_well_templ_01",
+            "filename": "ACTIONX_WELL_TEMPL-01"
+        },
+        {
+            "casename": "actionx_well_templ_02",
+            "filename": "ACTIONX_WELL_TEMPL-02"
+        },
+        {
+            "casename": "actionx_well_templ_03",
+            "filename": "ACTIONX_WELL_TEMPL-03"
+        },
+        {
+            "casename": "actionx_well_templ_04",
+            "filename": "ACTIONX_WELL_TEMPL-04"
+        },
+        {
+            "casename": "actionx_well_templ_05",
+            "filename": "ACTIONX_WELL_TEMPL-05"
+        },
+        {
+            "casename": "actionx_well_templ_06",
+            "filename": "ACTIONX_WELL_TEMPL-06"
+        },
+        {
+            "casename": "actionx_wpimult",
+            "filename": "ACTIONX_WPIMULT",
+            "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "udq_undefined_2",
+            "filename": "UDQ-01"
+        }
+    ]
+}

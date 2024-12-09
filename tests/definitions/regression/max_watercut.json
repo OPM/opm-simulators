@@ -1,0 +1,28 @@
+{
+    "abs_tol": 0.02,
+    "dir": "wtest/wecon_wct_max",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "max_watercut_1",
+            "filename": "MAX_WATERCUT_1",
+            "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "max_watercut_2",
+            "filename": "MAX_WATERCUT_2",
+            "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "max_watercut_3",
+            "filename": "MAX_WATERCUT_3",
+            "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "max_watercut_4",
+            "filename": "MAX_WATERCUT_4",
+            "test_args": "--enable-tuning=true"
+        }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "vfpprod_spe1",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "spe1_metric_vfp1",
+            "filename": "SPE1CASE1_METRIC_VFP1"
+        }
+    ]
+}

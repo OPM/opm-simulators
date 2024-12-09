@@ -1,0 +1,16 @@
+{
+    "dir": "editnnc",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "nnc",
+            "filename": "NNC_AND_EDITNNC"
+        },
+        {
+            "casename": "nonnc",
+            "filename": "NONNC"
+        }
+    ]
+}
