@@ -45,16 +45,11 @@
 #endif
 
 #include <iostream>
+// NOTE: There is no C++ header replacement for these C posix headers (as of C++17)
 #include <fcntl.h>  // for open()
 #include <unistd.h> // for dup2(), close()
 
 #include <iostream>
-#include <fcntl.h>  // for open()
-#include <unistd.h> // for dup2(), close()
-
-#include <iostream>
-#include <fcntl.h>  // for open()
-#include <unistd.h> // for dup2(), close()
 
 namespace Opm {
 
