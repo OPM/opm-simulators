@@ -30,39 +30,17 @@
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
-#include <opm/material/densead/EvaluationFormat.hpp>
-
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/StandardWellAssemble.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 
-#include <fmt/format.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <numeric>
 
-namespace {
-
-template<class dValue, class Value>
-auto dValueError(const dValue& d,
-                 const std::string& name,
-                 const std::string& methodName,
-                 const Value& Rs,
-                 const Value& Rv,
-                 const Value& pressure)
-{
-    return fmt::format("Problematic d value {} obtained for well {}"
-                       " during {} calculations with rs {}"
-                       ", rv {} and pressure {}."
-                       " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                       " for this connection.", d, name, methodName, Rs, Rv, pressure);
-}
-
-}
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -246,6 +224,19 @@ namespace Opm
             drawdown += skin_pressure;
         }
 
+        RatioCalculator<Value> ratioCalc{
+            FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+                ? Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)
+                : -1,
+            FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                ? Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx)
+                : -1,
+            FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+                ? Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)
+                : -1,
+            this->name()
+        };
+
         // producing perforations
         if (drawdown > 0)  {
             // Do nothing if crossflow is not allowed
@@ -259,10 +250,16 @@ namespace Opm
                 cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
             }
 
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                gasOilPerfRateProd(cq_s, perf_rates, rv, rs, rvw);
-            } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                gasWaterPerfRateProd(cq_s, perf_rates, rvw, rsw);
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+            {
+                ratioCalc.gasOilPerfRateProd(cq_s, perf_rates, rv, rs, rvw,
+                                             FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
+                                             this->isProducer());
+            } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
+                       FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+            {
+                ratioCalc.gasWaterPerfRateProd(cq_s, perf_rates, rvw, rsw, this->isProducer());
             }
         } else {
             // Do nothing if crossflow is not allowed
@@ -280,8 +277,8 @@ namespace Opm
             Value volumeRatio = bhp * 0.0; // initialize it with the correct type
 
             if (FluidSystem::enableVaporizedWater() && FluidSystem::enableDissolvedGasInWater()) {
-                disOilVapWatVolumeRatio(volumeRatio, rvw, rsw, pressure,
-                                        cmix_s, b_perfcells_dense, deferred_logger);
+                ratioCalc.disOilVapWatVolumeRatio(volumeRatio, rvw, rsw, pressure,
+                                                  cmix_s, b_perfcells_dense, deferred_logger);
                 // DISGASW only supported for gas-water CO2STORE/H2STORE case
                 // and the simulator will throw long before it reach to this point in the code
                 // For blackoil support of DISGASW we need to add the oil component here
@@ -299,9 +296,12 @@ namespace Opm
                     volumeRatio += cmix_s[Indices::contiSolventEqIdx] / b_perfcells_dense[Indices::contiSolventEqIdx];
                 }
 
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    gasOilVolumeRatio(volumeRatio, rv, rs, pressure,
-                                      cmix_s, b_perfcells_dense, deferred_logger);
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                    FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+                {
+                    ratioCalc.gasOilVolumeRatio(volumeRatio, rv, rs, pressure,
+                                                cmix_s, b_perfcells_dense,
+                                                deferred_logger);
                 } else {
                     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                         const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
@@ -323,14 +323,20 @@ namespace Opm
 
             // calculating the perforation solution gas rate and solution oil rates
             if (this->isProducer()) {
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    gasOilPerfRateInj(cq_s, perf_rates,
-                                      rv, rs, pressure, rvw, deferred_logger);
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                    FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+                {
+                    ratioCalc.gasOilPerfRateInj(cq_s, perf_rates,
+                                                rv, rs, pressure, rvw,
+                                                FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
+                                                deferred_logger);
                 }
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+                    FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
+                {
                     //no oil
-                    gasWaterPerfRateInj(cq_s, perf_rates, rvw, rsw,
-                                        pressure, deferred_logger);
+                    ratioCalc.gasWaterPerfRateInj(cq_s, perf_rates, rvw, rsw,
+                                                  pressure, deferred_logger);
                 }
             }
         }
@@ -2639,207 +2645,4 @@ namespace Opm
 
         return result * this->well_efficiency_factor_;
     }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    gasOilPerfRateInj(const std::vector<Value>& cq_s,
-                      PerforationRates<Scalar>& perf_rates,
-                      const Value& rv,
-                      const Value& rs,
-                      const Value& pressure,
-                      const Value& rvw,
-                      DeferredLogger& deferred_logger) const
-    {
-        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        // TODO: the formulations here remain to be tested with cases with strong crossflow through production wells
-        // s means standard condition, r means reservoir condition
-        // q_os = q_or * b_o + rv * q_gr * b_g
-        // q_gs = q_gr * b_g + rs * q_or * b_o
-        // d = 1.0 - rs * rv
-        // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
-        // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
-
-        const Scalar d = 1.0 - getValue(rv) * getValue(rs);
-
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "gasOilPerfRateInj",
-                                              rs, rv, pressure));
-        } else {
-            // vaporized oil into gas
-            // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-            perf_rates.vap_oil = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
-            // dissolved of gas in oil
-            // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-            perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            // q_ws = q_wr * b_w + rvw * q_gr * b_g
-            // q_wr = 1 / b_w * (q_ws - rvw * q_gr * b_g) = 1 / b_w * (q_ws - rvw * 1 / d  (q_gs - rs * q_os))
-            // vaporized water in gas
-            // rvw * q_gr * b_g = q_ws -q_wr *b_w = rvw * (q_gs -rs *q_os) / d
-            perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
-        }
-    }
-
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    gasOilPerfRateProd(std::vector<Value>& cq_s,
-                       PerforationRates<Scalar>& perf_rates,
-                       const Value& rv,
-                       const Value& rs,
-                       const Value& rvw) const
-    {
-        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        const Value cq_sOil = cq_s[oilCompIdx];
-        const Value cq_sGas = cq_s[gasCompIdx];
-        const Value dis_gas = rs * cq_sOil;
-        const Value vap_oil = rv * cq_sGas;
-
-        cq_s[gasCompIdx] += dis_gas;
-        cq_s[oilCompIdx] += vap_oil;
-
-        // recording the perforation solution gas rate and solution oil rates
-        if (this->isProducer()) {
-            perf_rates.dis_gas = getValue(dis_gas);
-            perf_rates.vap_oil = getValue(vap_oil);
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            const Value vap_wat = rvw * cq_sGas;
-            cq_s[waterCompIdx] += vap_wat;
-            if (this->isProducer())
-                perf_rates.vap_wat = getValue(vap_wat);
-        }
-    }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    gasWaterPerfRateProd(std::vector<Value>& cq_s,
-                         PerforationRates<Scalar>& perf_rates,
-                         const Value& rvw,
-                         const Value& rsw) const
-    {
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        const Value cq_sWat = cq_s[waterCompIdx];
-        const Value cq_sGas = cq_s[gasCompIdx];
-        const Value vap_wat = rvw * cq_sGas;
-        const Value dis_gas_wat = rsw * cq_sWat;
-        cq_s[waterCompIdx] += vap_wat;
-        cq_s[gasCompIdx]   += dis_gas_wat;
-        if (this->isProducer()) {
-            perf_rates.vap_wat = getValue(vap_wat);
-            perf_rates.dis_gas_in_water = getValue(dis_gas_wat);
-        }
-    }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    gasWaterPerfRateInj(const std::vector<Value>& cq_s,
-                        PerforationRates<Scalar>& perf_rates,
-                        const Value& rvw,
-                        const Value& rsw,
-                        const Value& pressure,
-                        DeferredLogger& deferred_logger) const
-
-    {
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-
-        const Scalar dw = 1.0 - getValue(rvw) * getValue(rsw);
-
-        if (dw <= 0.0) {
-            deferred_logger.debug(dValueError(dw, this->name(),
-                                              "gasWaterPerfRateInj",
-                                              rsw, rvw, pressure));
-        } else {
-            // vaporized water into gas
-            // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
-            perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rsw) * getValue(cq_s[waterCompIdx])) / dw;
-            // dissolved gas in water
-            // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
-            perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterCompIdx]) - getValue(rvw) * getValue(cq_s[gasCompIdx])) / dw;
-        }
-    }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    disOilVapWatVolumeRatio(Value& volumeRatio,
-                            const Value& rvw,
-                            const Value& rsw,
-                            const Value& pressure,
-                            const std::vector<Value>& cmix_s,
-                            const std::vector<Value>& b_perfcells_dense,
-                            DeferredLogger& deferred_logger) const
-    {
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        // Incorporate RSW/RVW factors if both water and gas active
-        const Value d = 1.0 - rvw * rsw;
-
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "disOilVapWatVolumeRatio",
-                                              rsw, rvw, pressure));
-        }
-        const Value tmp_wat = d > 0.0 ? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d
-                                      : cmix_s[waterCompIdx];
-        volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
-
-        const Value tmp_gas =  d > 0.0 ? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d
-                                       : cmix_s[gasCompIdx];
-        volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
-    }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    gasOilVolumeRatio(Value& volumeRatio,
-                      const Value& rv,
-                      const Value& rs,
-                      const Value& pressure,
-                      const std::vector<Value>& cmix_s,
-                      const std::vector<Value>& b_perfcells_dense,
-                      DeferredLogger& deferred_logger) const
-    {
-        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        // Incorporate RS/RV factors if both oil and gas active
-        const Value d = 1.0 - rv * rs;
-
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "gasOilVolumeRatio",
-                                              rs, rv, pressure));
-        }
-        const Value tmp_oil = d > 0.0? (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d : cmix_s[oilCompIdx];
-        volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
-
-        const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d : cmix_s[gasCompIdx];
-        volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
-    }
-
 } // namespace Opm
