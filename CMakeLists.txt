@@ -35,6 +35,7 @@ option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
 option(USE_GPU_BRIDGE "Enable the GPU bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
 option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
+option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
 set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
 
 # Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
@@ -648,8 +649,13 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 
 if(CUDA_FOUND)
   if (NOT USE_HIP)
-    target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
-    target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+    target_link_libraries(opmsimulators
+      PUBLIC
+      ${CUDA_cusparse_LIBRARY}
+      ${CUDA_cublas_LIBRARY}
+      ${CUDA_nvptxcompiler_static_LIBRARY}
+    )
+
     foreach(tgt test_gpu_safe_call test_cuda_check_last_error test_GpuVector)
       target_link_libraries(${tgt} CUDA::cudart)
     endforeach()
@@ -715,3 +721,19 @@ endif()
 
 install(DIRECTORY doc/man1 DESTINATION ${CMAKE_INSTALL_MANDIR}
   FILES_MATCHING PATTERN "*.1")
+
+if(USE_HYPRE)
+  find_package(HYPRE)
+  if(HYPRE_FOUND)
+    set(HAVE_HYPRE 1)
+    target_link_libraries(opmsimulators PUBLIC HYPRE::HYPRE)
+    if (HYPRE_USING_CUDA)
+      set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_cuda)
+    elseif (HYPRE_USING_HIP)
+      set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_hip)
+    endif()
+  else()
+    message(WARNING "Hypre requested but not found. Continuing without Hypre support.")
+    set(USE_HYPRE OFF)
+  endif()
+endif()

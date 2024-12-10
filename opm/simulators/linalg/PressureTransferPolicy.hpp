@@ -74,7 +74,7 @@ public:
     {
         using CoarseMatrix = typename CoarseOperator::matrix_type;
         const auto& fineLevelMatrix = fineOperator.getmat();
-        coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), CoarseMatrix::row_wise));
+        coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), fineLevelMatrix.nonzeroes(), CoarseMatrix::row_wise));
         auto createIter = coarseLevelMatrix_->createbegin();
 
         for (const auto& row : fineLevelMatrix) {
