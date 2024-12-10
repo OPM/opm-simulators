@@ -761,10 +761,7 @@ namespace Opm {
                     local_deferredLogger.info(msg);
                 }
             }
-
             for (const auto& [grname, grdata] : this->switched_inj_groups_) {
-                //const std::string& name = key.first;
-                //const Opm::Phase& phase = key.second;
                 const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
                 for (Phase phase : all) {
                     const auto& ctrls = grdata[static_cast<std::underlying_type_t<Phase>>(phase)];
