@@ -581,7 +581,7 @@ updateGroupIndividualControl(const Group& group,
             if (auto groupPos = switched_inj.find(group.name()); groupPos != switched_inj.end()) {
                 auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
                 for (const auto& ctrl : ctrls) {
-                    if (std::count(ctrls.begin(), ctrls.end(), ctrl) < max_number_of_group_switch) {
+                    if (std::count(ctrls.begin(), ctrls.end(), ctrl) <= max_number_of_group_switch) {
                         continue;
                     }
 
@@ -633,7 +633,7 @@ updateGroupIndividualControl(const Group& group,
         if (auto groupPos = switched_prod.find(group.name()); groupPos != switched_prod.end()) {
             auto& ctrls = groupPos->second;
             for (const auto& ctrl : ctrls) {
-                if (std::count(ctrls.begin(), ctrls.end(), ctrl) < max_number_of_group_switch) {
+                if (std::count(ctrls.begin(), ctrls.end(), ctrl) <= max_number_of_group_switch) {
                     continue;
                 }
 

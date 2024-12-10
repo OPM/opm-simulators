@@ -631,7 +631,7 @@ checkGroupHigherConstraints(const Group& group,
             if (auto groupPos = switched_inj_groups_.find(group.name()); groupPos != switched_inj_groups_.end()) {
                 auto& ctrls = groupPos->second[static_cast<std::underlying_type_t<Phase>>(phase)];
                 for (const auto& ctrl : ctrls) {
-                    if (std::count(ctrls.begin(), ctrls.end(), ctrl) < max_number_of_group_switch) {
+                    if (std::count(ctrls.begin(), ctrls.end(), ctrl) <= max_number_of_group_switch) {
                         continue;
                     }
 
@@ -705,7 +705,7 @@ checkGroupHigherConstraints(const Group& group,
         if (auto groupPos = switched_prod_groups_.find(group.name()); groupPos != switched_prod_groups_.end()) {
             auto& ctrls = groupPos->second;
             for (const auto& ctrl : ctrls) {
-                if (std::count(ctrls.begin(), ctrls.end(), ctrl) < max_number_of_group_switch) {
+                if (std::count(ctrls.begin(), ctrls.end(), ctrl) <= max_number_of_group_switch) {
                     continue;
                 }
 
