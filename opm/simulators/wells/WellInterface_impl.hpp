@@ -1240,7 +1240,8 @@ namespace Opm
             {
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-                const Scalar efficiencyFactor = well.getEfficiencyFactor();
+                const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                                well_state[well.name()].efficiency_scaling_factor;
                 std::optional<Scalar> target =
                         this->getGroupInjectionTargetRate(group,
                                                           well_state,
@@ -1464,7 +1465,8 @@ namespace Opm
             {
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-                const Scalar efficiencyFactor = well.getEfficiencyFactor();
+                const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                                well_state[well.name()].efficiency_scaling_factor;
                 Scalar scale = this->getGroupProductionTargetRate(group,
                                                                   well_state,
                                                                   group_state,

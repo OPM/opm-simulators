@@ -181,10 +181,10 @@ void registerAdaptiveParameters();
                              Solver& solver,
                              const bool isEvent,
                              const std::vector<int>* fipnum = nullptr,
-                             const std::function<bool()> tuningUpdater = [](){return false;})
+                             const std::function<bool(const double, const double)> tuningUpdater = [](){return false;})
         {
             // Maybe update tuning
-            tuningUpdater();
+            tuningUpdater(simulatorTimer.simulationTimeElapsed(), suggestedNextTimestep_);
             SimulatorReport report;
             const double timestep = simulatorTimer.currentStepLength();
 
@@ -216,7 +216,7 @@ void registerAdaptiveParameters();
                 // Maybe update tuning
                 // get current delta t
                 auto oldValue = suggestedNextTimestep_;
-                if (tuningUpdater()) {
+                if (tuningUpdater(substepTimer.simulationTimeElapsed(), substepTimer.currentStepLength())) {
                     // Use provideTimeStepEstimate to make we sure don't simulate longer than the report step is.
                     substepTimer.provideTimeStepEstimate(suggestedNextTimestep_);
                     suggestedNextTimestep_ = oldValue;

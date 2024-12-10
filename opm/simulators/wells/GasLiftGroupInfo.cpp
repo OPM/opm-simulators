@@ -584,7 +584,8 @@ initializeGroupRatesRecursive_(const Group& group)
                 if (well->isProducer()) {
                     auto [sw_oil_rate, sw_gas_rate, sw_water_rate, sw_oil_pot, sw_gas_pot, sw_water_pot] = getProducerWellRates_(well, index);
                     auto sw_alq = this->well_state_.getALQ(well_name);
-                    Scalar factor = well->getEfficiencyFactor();
+                    const Scalar factor = well->getEfficiencyFactor() *
+                                          this->well_state_[well_name].efficiency_scaling_factor;
                     oil_rate += (factor * sw_oil_rate);
                     gas_rate += (factor * sw_gas_rate);
                     water_rate += (factor * sw_water_rate);
@@ -705,7 +706,8 @@ initializeWell2GroupMapRecursive_(const Group& group,
             if (checkDoGasLift) {
                 const auto &well = this->schedule_.getWell(
                     well_name, this->report_step_idx_);
-                Scalar wfac = well.getEfficiencyFactor();
+                const Scalar wfac = well.getEfficiencyFactor() *
+                                    this->well_state_[well_name].efficiency_scaling_factor;
                 auto [itr, success] = this->well_group_map_.insert(
                       {well_name, /*empty vector*/ {}});
                 assert(success);

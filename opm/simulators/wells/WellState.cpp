@@ -519,6 +519,7 @@ WellState<Scalar>::report(const int* globalCellIdxMap,
         well.bhp = ws.bhp;
         well.thp = ws.thp;
         well.temperature = ws.temperature;
+        well.efficiency_scaling_factor = ws.efficiency_scaling_factor;
         well.filtrate.rate = ws.sum_filtrate_rate();
         well.filtrate.total = ws.sum_filtrate_total();
         well.filtrate.concentration = ws.filtrate_conc;

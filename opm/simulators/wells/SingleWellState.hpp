@@ -60,6 +60,7 @@ public:
         serializer(bhp);
         serializer(thp);
         serializer(temperature);
+        serializer(efficiency_scaling_factor);
         serializer(phase_mixing_rates);
         serializer(well_potentials);
         serializer(productivity_index);
@@ -88,6 +89,7 @@ public:
     Scalar bhp{0};
     Scalar thp{0};
     Scalar temperature{0};
+    Scalar efficiency_scaling_factor{1.0};
 
     // filtration injection concentration
     Scalar filtrate_conc{0};
@@ -113,7 +115,6 @@ public:
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
-
 
     /// Special purpose method to support dynamically rescaling a well's
     /// CTFs through WELPI.

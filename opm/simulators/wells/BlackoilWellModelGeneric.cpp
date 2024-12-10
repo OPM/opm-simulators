@@ -1575,7 +1575,8 @@ calculateEfficiencyFactors(const int reportStepIdx)
 {
     for (auto& well : well_container_generic_) {
         const Well& wellEcl = well->wellEcl();
-        Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor();
+        Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
+                                        wellState()[well->name()].efficiency_scaling_factor;
         WellGroupHelpers<Scalar>::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(),
                                                                                       reportStepIdx),
                                                                   schedule(),
