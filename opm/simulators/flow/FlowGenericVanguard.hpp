@@ -74,6 +74,7 @@ struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 /// 0: simple, 1: Zoltan, 2: METIS, 3: Zoltan with a all cells of a well
 /// represented by one vertex in the graph, see GridEnums.hpp
 struct PartitionMethod { static constexpr int value = 3; };
+struct EdgeConformal { static constexpr bool value = false; };    
 
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
@@ -255,6 +256,8 @@ public:
     { return ownersFirst_; }
 
 #if HAVE_MPI
+    bool edgeConformal() const
+    { return edgeConformal_; }
     /*!
      * \brief Parameter deciding which partition method to use
      */
@@ -350,6 +353,7 @@ protected:
 
     bool ownersFirst_;
 #if HAVE_MPI
+    bool edgeConformal_;
     Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
     double imbalanceTol_;

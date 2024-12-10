@@ -208,7 +208,7 @@ protected:
 
     void allocCartMapper();
 
-    void doCreateGrids_(EclipseState& eclState);
+    void doCreateGrids_(EclipseState& eclState, bool edge_conformal);
     void addLgrsUpdateLeafView(const LgrCollection& lgrCollection,
                                const int lgrsSize,
                                Dune::CpGrid& grid);
