@@ -334,6 +334,13 @@ namespace Opm {
                     (sched_state.vfpinj(), sched_state.vfpprod(), this->wellState());
             }
         }
+
+        const auto& wcycle = this->schedule()[timeStepIdx].wcycle.get();
+        if (!wcycle.empty()) {
+            const auto& wmatcher = this->schedule().wellMatcher(timeStepIdx);
+            wcycle.start(simulator_.time(), wmatcher, well_open_times_);
+        }
+
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "beginReportStep() failed: ",
                                        this->terminal_output_, comm)
@@ -1018,25 +1025,25 @@ namespace Opm {
             }
 
             const auto& wcycle = this->schedule()[report_step].wcycle.get();
-            const auto& wmatcher = this->schedule().wellMatcher(report_step);
-            for (const auto& wname : wcycle.closeWells(this->simulator_.time(),
-                                                       wmatcher, well_open_times_, well_close_times_))
-            {
-                this->wellState().shutWell(*this->wellState().index(wname));
-            }
+            if (!wcycle.empty()) {
+                const auto& wmatcher = this->schedule().wellMatcher(report_step);
+                for (const auto& winfo : wcycle.wellStatus(this->simulator_.time(),
+                                                           wmatcher, well_open_times_, well_close_times_))
+                {
+                    if (winfo.open) {
+                        this->wellState().openWell(*this->wellState().index(winfo.name));
+                    } else {
+                        this->wellState().shutWell(*this->wellState().index(winfo.name));
+                    }
+                }
 
-            for (const auto& wname : wcycle.openWells(this->simulator_.time(),
-                                                      wmatcher, well_open_times_, well_close_times_))
-            {
-                this->wellState().openWell(*this->wellState().index(wname));
-            }
-
-            for (const auto& [wname, wscale] : wcycle.efficiencyScale(this->simulator_.time() +
-                                                                      this->simulator_.timeStepSize(),
-                                                                      wmatcher, well_open_times_))
-            {
-                this->wellState()[wname].efficiency_scaling_factor = wscale;
-                this->schedule_.add_event(ScheduleEvents::WELLGROUP_EFFICIENCY_UPDATE, report_step);
+                for (const auto& [wname, wscale] : wcycle.efficiencyScale(this->simulator_.time(),
+                                                                          this->simulator_.timeStepSize(),
+                                                                          wmatcher, well_open_times_))
+                {
+                    this->wellState()[wname].efficiency_scaling_factor = wscale;
+                    this->schedule_.add_event(ScheduleEvents::WELLGROUP_EFFICIENCY_UPDATE, report_step);
+                }
             }
         }
 
