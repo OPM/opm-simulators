@@ -44,9 +44,12 @@ namespace Opm
         ///  \param timer          in case of sub stepping this is the outer timer
         ///  \param lastStepTaken  last suggested time step
         ///  \param maxTimeStep    maximum time step allowed
-        AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer,
-                                const double lastStepTaken,
-                                const double maxTimeStep = std::numeric_limits<double>::max() );
+        AdaptiveSimulatorTimer( const boost::posix_time::ptime simulation_start_time,
+                                const double step_length,
+                                const double elapsed_time,
+                                const double last_step_taken,
+                                const int report_step,
+                                const double max_time_step = std::numeric_limits<double>::max() );
 
         /// \brief advance time by currentStepLength
         AdaptiveSimulatorTimer& operator++ ();
@@ -101,10 +104,10 @@ namespace Opm
         boost::posix_time::ptime startDateTime() const;
 
         /// \brief Return true if last time step failed
-        bool lastStepFailed() const {return lastStepFailed_;}
+        bool lastStepFailed() const {return last_step_failed_;}
 
         /// \brief tell the timestepper whether timestep failed or not
-        void setLastStepFailed(bool lastStepFailed) {lastStepFailed_ = lastStepFailed;}
+        void setLastStepFailed(bool last_step_failed) {last_step_failed_ = last_step_failed;}
 
         /// return copy of object
         virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
@@ -121,7 +124,7 @@ namespace Opm
         int current_step_;
 
         std::vector< double > steps_;
-        bool lastStepFailed_;
+        bool last_step_failed_;
 
     };
 
