@@ -42,6 +42,7 @@
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
@@ -1335,8 +1336,7 @@ namespace Opm {
             if (has_choke) {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
-                const auto ctrl = group.productionControls(summary_state);
-                const auto cmode = ctrl.cmode;
+
                 const auto pu = this->phase_usage_;
                 //TODO: Auto choke combined with RESV control is not supported
                 std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
@@ -1344,10 +1344,43 @@ namespace Opm {
                 if (group_state.has_grat_sales_target(group.name()))
                     gratTargetFromSales = group_state.grat_sales_target(group.name());
 
+                const auto ctrl = group.productionControls(summary_state);
+                auto cmode_tmp = ctrl.cmode;
+                Scalar target_tmp{0.0};
+                bool fld_none = false;
+                if (cmode_tmp == Group::ProductionCMode::FLD || cmode_tmp == Group::ProductionCMode::NONE) {
+                    fld_none = true;
+                    // Target is set for an ancestor group. Target for autochoke group to be 
+                    // derived from via group guide rates
+                    const Scalar efficiencyFactor = 1.0;
+                    const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
+                    auto target = WellGroupControls<Scalar>::getAutoChokeGroupProductionTargetRate(
+                                                            group.name(),
+                                                            parentGroup,
+                                                            well_state,
+                                                            group_state,
+                                                            this->schedule(),
+                                                            summary_state,
+                                                            resv_coeff,
+                                                            efficiencyFactor,
+                                                            reportStepIdx,
+                                                            pu,
+                                                            &this->guideRate_,
+                                                            local_deferredLogger);
+                    target_tmp = target.first;
+                    cmode_tmp = target.second;
+                }
+                const auto cmode = cmode_tmp;
                 WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
                                                   gratTargetFromSales, nodeName, group_state,
                                                   group.has_gpmaint_control(cmode));
-                const Scalar orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
+                if (!fld_none)
+                {
+                    target_tmp = tcalc.groupTarget(ctrl, local_deferredLogger);
+                }
+
+                const Scalar orig_target = target_tmp;
+                std::cout<< "Group: " << group.name() << " orig_target: " << orig_target*86400 << std::endl;
 
                 auto mismatch = [&] (auto group_thp) {
                     Scalar group_rate(0.0);
