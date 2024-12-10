@@ -275,7 +275,7 @@ public:
 protected:
     void createGrids_()
     {
-        this->doCreateGrids_(this->eclState());
+        this->doCreateGrids_(this->eclState(),this->edgeConformal());
     }
 
     void allocTrans() override

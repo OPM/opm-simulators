@@ -77,6 +77,7 @@ struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 struct PartitionMethod { static constexpr int value = 3; };
 struct AddCorners { static constexpr bool value = false; };
 struct NumOverlap { static constexpr int value = 1; };
+struct EdgeConformal { static constexpr bool value = false; };    
 
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
@@ -264,6 +265,9 @@ public:
     int numOverlap() const
     { return numOverlap_; }
 
+    bool edgeConformal() const
+    { return edgeConformal_; }
+
     /*!
      * \brief Parameter deciding which partition method to use
      */
@@ -373,6 +377,7 @@ protected:
 #if HAVE_MPI
     bool addCorners_;
     int numOverlap_;
+    bool edgeConformal_;
     Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
     double imbalanceTol_;
