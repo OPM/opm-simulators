@@ -492,6 +492,13 @@ if(HDF5_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_HDF5Serializer.cpp)
 endif()
 
+if(HYPRE_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_HyprePreconditionerCPU.cpp)
+  if(HYPRE_USING_CUDA OR HYPRE_USING_HIP)
+    list(APPEND TEST_SOURCE_FILES tests/test_HyprePreconditionerGPU.cpp)
+  endif()
+endif()
+
 list (APPEND TEST_DATA_FILES
   tests/equil_base.DATA
   tests/equil_capillary.DATA
@@ -1154,5 +1161,11 @@ if(dune-alugrid_FOUND)
     examples/finger_immiscible_ecfv.cpp
     examples/finger_immiscible_vcfv.cpp
     examples/fracture_discretefracture.cpp
+  )
+endif()
+
+if(HYPRE_FOUND)
+  list(APPEND PUBLIC_HEADER_FILES
+    opm/simulators/linalg/HyprePreconditioner.hpp
   )
 endif()
