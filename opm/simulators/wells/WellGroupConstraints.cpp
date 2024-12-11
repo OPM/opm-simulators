@@ -150,7 +150,8 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // check, skipping over only the single group parent whose
             // control is the active one for the well (if any).
             const auto& group = schedule.getGroup(well.groupName(), well_.currentStep());
-            const Scalar efficiencyFactor = well.getEfficiencyFactor();
+            const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                            well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
                 this->checkGroupConstraintsInj(group, well_state,
                                                group_state, efficiencyFactor,
@@ -181,7 +182,8 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // check, skipping over only the single group parent whose
             // control is the active one for the well (if any).
             const auto& group = schedule.getGroup(well.groupName(), well_.currentStep());
-            const Scalar efficiencyFactor = well.getEfficiencyFactor();
+            const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                            well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
                 this->checkGroupConstraintsProd(group, well_state,
                                                 group_state, efficiencyFactor,

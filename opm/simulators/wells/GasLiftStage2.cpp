@@ -658,13 +658,13 @@ removeSurplusALQ_(const Group& group,
             alq, max_glift_str);
         displayDebugMessage_(msg);
     }
-    SurplusState state {*this, group, oil_rate, gas_rate, water_rate, alq,
+    SurplusState state {*this, group, this->well_state_, oil_rate, gas_rate, water_rate, alq,
                         static_cast<Scalar>(min_eco_grad),
                         static_cast<Scalar>(controls.oil_target),
                         static_cast<Scalar>(controls.gas_target),
                         static_cast<Scalar>(controls.water_target),
                         static_cast<Scalar>(controls.liquid_target),
-                        max_glift, max_totalgas };
+                        max_glift, max_totalgas};
 
     while (!stop_iteration) {
         if (dec_grads.size() >= 2) {
@@ -831,7 +831,8 @@ computeDelta(const std::string& well_name, bool add)
         // only get deltas for wells owned by this rank
         if (this->well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
             const auto& well_ecl = well.wellEcl();
-            Scalar factor = well_ecl.getEfficiencyFactor();
+            Scalar factor = well_ecl.getEfficiencyFactor() *
+                            this->well_state_[well_name].efficiency_scaling_factor;
             auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
             delta_oil = factor * (gi.new_oil_rate - state.oilRate());
             delta_gas = factor * (gi.new_gas_rate - state.gasRate());
@@ -1081,7 +1082,7 @@ checkGasTarget(Scalar delta_gas)
         // the change in gas rate is added to the gas rate to make sure the
         // group still can produce its target
         // i.e. we want to find the solution that optimize gas lift while still
-        // producing the given group limit     
+        // producing the given group limit
         if (this->gas_target < (this->gas_rate + delta_gas) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
@@ -1177,7 +1178,8 @@ computeDelta(const std::string& well_name)
         // only get deltas for wells owned by this rank
         if (this->parent.well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
             const auto& well_ecl = well.wellEcl();
-            Scalar factor = well_ecl.getEfficiencyFactor();
+            Scalar factor = well_ecl.getEfficiencyFactor() *
+                            this->well_state[well_name].efficiency_scaling_factor;
             auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
             delta_oil = factor * (gi.new_oil_rate - state.oilRate());
             delta_gas = factor * (gi.new_gas_rate - state.gasRate());

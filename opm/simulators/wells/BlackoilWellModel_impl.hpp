@@ -648,7 +648,8 @@ namespace Opm {
             // some preparation before the well can be used
             well->init(&this->phase_usage_, depth_, gravity_, B_avg_, true);
 
-            Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor();
+            Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
+                                            this->wellState()[well_name].efficiency_scaling_factor;
             WellGroupHelpers<Scalar>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
                                                                                                 timeStepIdx),
                                                                       this->schedule(),
