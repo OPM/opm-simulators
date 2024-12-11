@@ -57,8 +57,6 @@ set (opm-simulators_DEPS
   # packages from ROCm framework
   "rocblas"
   "rocsparse"
-  # HYPRE solver library
-  "HYPRE"
   # OPM dependency
   "opm-common REQUIRED"
   "opm-grid REQUIRED"
