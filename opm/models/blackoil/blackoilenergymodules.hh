@@ -397,9 +397,17 @@ public:
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-
-            const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
-            fs.setEnthalpy(phaseIdx, h);
+            if constexpr (is_a_blackoil_system<FluidSystem>()) {
+                const auto& fluidSystem = FluidSystem::getNonStatic();
+                const auto h = fluidSystem.enthalpy(fs, paramCache, phaseIdx);
+                fs.setEnthalpy(phaseIdx, h);
+            }
+            else {
+                const auto h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+                fs.setEnthalpy(phaseIdx, h);
+            }
+            // const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+            // fs.setEnthalpy(phaseIdx, h);
         }
 
         const auto& solidEnergyLawParams = elemCtx.problem().solidEnergyLawParams(elemCtx, dofIdx, timeIdx);

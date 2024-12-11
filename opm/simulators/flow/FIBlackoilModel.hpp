@@ -103,6 +103,7 @@ public:
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
         this->invalidateIntensiveQuantitiesCache(timeIdx);
+        //const auto& fluidSystemInstance = FluidSystem::getNonStaticInstance();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if constexpr (gridIsUnchanging) {
             const int num_chunks = grid_chunk_iterators_.size() - 1;
