@@ -176,7 +176,9 @@ public:
     /*!
      * \copydoc IntensiveQuantities::update
      */
-    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    //TODO: avoid functions being compiled for the void* instantiation
+    template <class FluidSystem = void*>
+    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const FluidSystem& fluidSystem = nullptr)
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
         OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
@@ -482,7 +484,7 @@ public:
         asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().zPvtUpdate_();
         asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
-        asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache);
+        asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache, fluidSystem);
         asImp_().foamPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().MICPPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().saltPropertiesUpdate_(elemCtx, dofIdx, timeIdx);

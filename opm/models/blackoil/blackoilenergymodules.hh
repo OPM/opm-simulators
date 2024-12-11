@@ -384,10 +384,12 @@ public:
      * \brief Compute the intensive quantities needed to handle energy conservation
      *
      */
+    template <class FluidSystemT>
     void updateEnergyQuantities_(const ElementContext& elemCtx,
                                  unsigned dofIdx,
                                  unsigned timeIdx,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
+                                 const typename FluidSystem::template ParameterCache<Evaluation>& paramCache,
+                                 const FluidSystemT& FluidSystem)
     {
         auto& fs = asImp_().fluidState_;
 
@@ -397,9 +399,10 @@ public:
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
+            // TODO: in actuality we only want to use the dynamic version of the blackoilfluidsystem when using GPUs.
             if constexpr (is_a_blackoil_system<FluidSystem>()) {
-                const auto& fluidSystem = FluidSystem::getNonStatic();
-                const auto h = fluidSystem.enthalpy(fs, paramCache, phaseIdx);
+                // const auto& fluidSystem = FluidSystem::getNonStatic();
+                const auto h = FluidSystem.enthalpy(fs, paramCache, phaseIdx);
                 fs.setEnthalpy(phaseIdx, h);
             }
             else {
