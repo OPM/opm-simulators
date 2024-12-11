@@ -317,11 +317,14 @@ public:
         // \Note: The report steps are met in any case
         // \Note: The sub stepping will require a copy of the state variables
         if (adaptiveTimeStepping_) {
-            auto tuningUpdater = [enableTUNING, this, reportStep = timer.currentStepNum()]()
+            auto tuningUpdater = [enableTUNING, this,
+                                  reportStep = timer.currentStepNum()](const double curr_time,
+                                                                       double dt, const int timeStep)
             {
                 auto& schedule = this->simulator_.vanguard().schedule();
                 auto& events = this->schedule()[reportStep].events();
 
+                bool result = false;
                 if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
                     // Unset the event to not trigger it again on the next sub step
                     schedule.clear_event(ScheduleEvents::TUNING_CHANGE, reportStep);
@@ -335,14 +338,46 @@ public:
                         // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
                         solver_->model().updateTUNING(tuning);
                         this->updateTUNING(tuning);
+                        dt = this->adaptiveTimeStepping_->suggestedNextStep();
                     } else {
+                        dt = max_next_tstep;
                         this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
                     }
-                    return max_next_tstep >0;
+                    result = max_next_tstep > 0;
                 }
-                return false;
+
+                const auto& wcycle = schedule[reportStep].wcycle.get();
+                if (wcycle.empty()) {
+                    return result;
+                }
+
+                const auto& wmatcher = schedule.wellMatcher(reportStep);
+                double wcycle_time_step =
+                    wcycle.nextTimeStep(curr_time,
+                                        dt,
+                                        wmatcher,
+                                        this->wellModel_().wellOpenTimes(),
+                                        this->wellModel_().wellCloseTimes(),
+                                        [this, reportStep, schedule, timeStep](const std::string& name)
+                                        {
+                                            if (timeStep != 0) {
+                                                return false;
+                                            }
+                                            const auto& wg_events = schedule[reportStep].wellgroup_events();
+                                            return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
+                                        });
+
+                if (dt != wcycle_time_step) {
+                    this->adaptiveTimeStepping_->updateNEXTSTEP(wcycle_time_step);
+                    return true;
+                }
+
+                return result;
             };
-            tuningUpdater();
+
+            tuningUpdater(timer.simulationTimeElapsed(),
+                          this->adaptiveTimeStepping_->suggestedNextStep(), 0);
+
             const auto& events = schedule()[timer.currentStepNum()].events();
             bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
                 events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||

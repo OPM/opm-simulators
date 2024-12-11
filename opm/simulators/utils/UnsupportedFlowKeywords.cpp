@@ -672,7 +672,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"WCONINJP", {true, std::nullopt}},
         {"WCUTBACK", {true, std::nullopt}},
         {"WCUTBACT", {true, std::nullopt}},
-        {"WCYCLE", {true, std::nullopt}},
         {"WDRILTIM", {true, std::nullopt}},
         {"WDRILPRI", {true, std::nullopt}},
         {"WDRILRES", {true, std::nullopt}},
