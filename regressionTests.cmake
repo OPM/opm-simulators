@@ -256,6 +256,13 @@ add_test_compareECLFiles(CASENAME spe3
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS --tolerance-wells=1e-6 --newton-max-iterations=20)
 
+add_test_compareECLFiles(CASENAME spe3_partitionmethod3
+                         FILENAME SPE3CASE1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         TEST_ARGS --partition-method=3)
+
 add_test_compareECLFiles(CASENAME spe9
                          FILENAME SPE9_CP_SHORT
                          SIMULATOR flow
