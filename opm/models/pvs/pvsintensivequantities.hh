@@ -105,7 +105,8 @@ public:
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::update
      */
-    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    template <class DynamicFluidSystem = void*>
+    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = nullptr)
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
         EnergyIntensiveQuantities::updateTemperatures_(fluidState_, elemCtx, dofIdx, timeIdx);

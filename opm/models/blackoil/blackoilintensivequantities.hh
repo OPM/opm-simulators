@@ -177,8 +177,8 @@ public:
      * \copydoc IntensiveQuantities::update
      */
     //TODO: avoid functions being compiled for the void* instantiation
-    template <class FluidSystem = void*>
-    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const FluidSystem& fluidSystem = nullptr)
+    template <class DynamicFluidSystem = void*>
+    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = nullptr)
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
         OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);

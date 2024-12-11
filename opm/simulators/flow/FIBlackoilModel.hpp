@@ -55,7 +55,7 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using LocalFluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     enum {
@@ -107,7 +107,7 @@ public:
         // TODO: add something here so that the existing code will not be made any slower or cause copies
         // maybe through a static assert on the type of the fluidsystem
         // TODO: ensure that this will be an updated version if the static version has changed
-        const auto& FSystem = FluidSystem::getNonStaticInstance();
+        constexpr bool use_dynamic_fluidsystem = is_a_blackoil_system<LocalFluidSystem>();
 
         this->invalidateIntensiveQuantitiesCache(timeIdx);
         //const auto& fluidSystemInstance = FluidSystem::getNonStaticInstance();
@@ -134,7 +134,11 @@ public:
             for (; it != end; ++it) {
                 const Element& elem = *it;
                 elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(timeIdx, FSystem);
+                if constexpr (use_dynamic_fluidsystem) {
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem::getNonStatic());
+                } else {
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, nullptr);
+                }
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("InvalideAndUpdateIntensiveQuantities: state error", this->simulator_.vanguard().grid().comm());

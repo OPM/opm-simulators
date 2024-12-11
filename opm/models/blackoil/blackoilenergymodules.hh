@@ -384,12 +384,12 @@ public:
      * \brief Compute the intensive quantities needed to handle energy conservation
      *
      */
-    template <class FluidSystemT>
+    template <class FluidSystemT = void*>
     void updateEnergyQuantities_(const ElementContext& elemCtx,
                                  unsigned dofIdx,
                                  unsigned timeIdx,
                                  const typename FluidSystem::template ParameterCache<Evaluation>& paramCache,
-                                 const FluidSystemT& FluidSystem)
+                                 const FluidSystemT& fluidSystem = nullptr)
     {
         auto& fs = asImp_().fluidState_;
 
@@ -400,9 +400,9 @@ public:
                 continue;
             }
             // TODO: in actuality we only want to use the dynamic version of the blackoilfluidsystem when using GPUs.
-            if constexpr (is_a_blackoil_system<FluidSystem>()) {
+            if constexpr (is_a_blackoil_system<FluidSystemT>()) {
                 // const auto& fluidSystem = FluidSystem::getNonStatic();
-                const auto h = FluidSystem.enthalpy(fs, paramCache, phaseIdx);
+                const auto h = fluidSystem.enthalpy(fs, paramCache, phaseIdx);
                 fs.setEnthalpy(phaseIdx, h);
             }
             else {
@@ -490,10 +490,12 @@ public:
         }
     }
 
+    template <class FluidSystemT = void*>
     void updateEnergyQuantities_(const ElementContext&,
                                  unsigned,
                                  unsigned,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+                                 const typename FluidSystem::template ParameterCache<Evaluation>&,
+                                 const FluidSystemT&)
     { }
 
     const Evaluation& rockInternalEnergy() const
