@@ -300,14 +300,14 @@ updateGuideRatesForInjectionGroups(const Group& group,
         if(!group.hasInjectionControl(phase))
             continue;
 
-        Scalar guideRateValue = 0.0;
+        std::optional<Scalar> guideRateValue;
         const auto& controls = group.injectionControls(phase, summaryState);
         switch (controls.guide_rate_def){
         case Group::GuideRateInjTarget::RATE:
             break;
         case Group::GuideRateInjTarget::VOID:
         {
-            guideRateValue = group_state.injection_vrep_rate(group.name());
+            guideRateValue = std::max(Scalar(0.0), group_state.injection_vrep_rate(group.name()));
             break;
         }
         case Group::GuideRateInjTarget::NETV:
@@ -315,17 +315,16 @@ updateGuideRatesForInjectionGroups(const Group& group,
             guideRateValue = group_state.injection_vrep_rate(group.name());
             const std::vector<Scalar>& injRES = group_state.injection_reservoir_rates(group.name());
             if (phase != Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
-                guideRateValue -= injRES[pu.phase_pos[BlackoilPhases::Liquid]];
+                guideRateValue = *guideRateValue - injRES[pu.phase_pos[BlackoilPhases::Liquid]];
             if (phase != Phase::GAS && pu.phase_used[BlackoilPhases::Vapour])
-                guideRateValue -= injRES[pu.phase_pos[BlackoilPhases::Vapour]];
+                guideRateValue = *guideRateValue - injRES[pu.phase_pos[BlackoilPhases::Vapour]];
             if (phase != Phase::WATER && pu.phase_used[BlackoilPhases::Aqua])
-                guideRateValue -= injRES[pu.phase_pos[BlackoilPhases::Aqua]];
+                guideRateValue = *guideRateValue - injRES[pu.phase_pos[BlackoilPhases::Aqua]];
+
+            guideRateValue = std::max(Scalar(0.0), *guideRateValue);
             break;
         }
         case Group::GuideRateInjTarget::RESV:
-            OPM_DEFLOG_THROW(std::runtime_error, "GUIDE PHASE RESV not implemented. Group " + group.name(), deferred_logger);
-        case Group::GuideRateInjTarget::POTN:
-            break;
         case Group::GuideRateInjTarget::NO_GUIDE_RATE:
             break;
         default:
@@ -335,7 +334,9 @@ updateGuideRatesForInjectionGroups(const Group& group,
         }
 
         const UnitSystem& unit_system = schedule.getUnits();
-        guideRateValue = unit_system.from_si(UnitSystem::measure::rate, guideRateValue);
+        if (guideRateValue) {
+            guideRateValue = unit_system.from_si(UnitSystem::measure::rate, *guideRateValue);
+        }
         guideRate->compute(group.name(), phase, reportStepIdx, guideRateValue);
     }
 }
