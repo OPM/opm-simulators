@@ -2331,7 +2331,7 @@ namespace Opm {
     {
         auto wbpResult = data::WellBlockAveragePressures{};
 
-        using Calculated = typename PAvgCalculator<Scalar>::Result::WBPMode;
+        using Calculated = typename PAvgCalculatorResult<Scalar>::WBPMode;
         using Output = data::WellBlockAvgPress::Quantity;
 
         this->wbpCalculationService_.collectDynamicValues();

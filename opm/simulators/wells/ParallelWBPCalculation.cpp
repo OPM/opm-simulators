@@ -186,15 +186,15 @@ evalCellSource(Evaluator evalCellSrc)
 
 template<class Scalar>
 std::size_t Opm::ParallelWBPCalculation<Scalar>::
-createCalculator(const Well&             well,
+createCalculator(const Well&                     well,
                  const ParallelWellInfo<Scalar>& parallelWellInfo,
-                 const std::vector<int>& localConnIdx,
-                 EvaluatorFactory        makeWellSourceEvaluator)
+                 const std::vector<int>&         localConnIdx,
+                 EvaluatorFactory                makeWellSourceEvaluator)
 {
     assert (this->wellConnSrc_.size() == this->localConnSet_.size());
 
     const auto ix = this->calculators_
-                    .setCalculator(well.seqIndex(), std::make_unique<ParallelPAvgCalculator<Scalar>>
+        .setCalculator(well.seqIndex(), std::make_unique<ParallelPAvgCalculator<Scalar>>
                        (parallelWellInfo.communication(),
                         this->cellIndexMap_, well.getConnections()));
 
@@ -259,7 +259,7 @@ inferBlockAveragePressures(const std::size_t calcIndex,
 }
 
 template<class Scalar>
-const typename Opm::PAvgCalculator<Scalar>::Result&
+const Opm::PAvgCalculatorResult<Scalar>&
 Opm::ParallelWBPCalculation<Scalar>::
 averagePressures(const std::size_t calcIndex) const
 {
