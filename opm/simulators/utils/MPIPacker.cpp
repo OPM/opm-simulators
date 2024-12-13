@@ -118,7 +118,7 @@ unpack(std::string& data,
 std::size_t Packing<false,time_point>::
 packSize(const time_point&, Opm::Parallel::MPIComm comm)
 {
-    return Packing<true,std::time_t>::packSize(std::time_t(), comm);
+    return Packing<true, time_point::duration::rep>::packSize(time_point::duration::rep(), comm);
 }
 
 void Packing<false,time_point>::
@@ -127,8 +127,7 @@ pack(const time_point& data,
      std::size_t& position,
      Parallel::MPIComm comm)
 {
-    Packing<true,std::time_t>::pack(TimeService::to_time_t(data),
-                                    buffer, position, comm);
+    Packing<true, time_point::duration::rep>::pack(data.time_since_epoch().count(), buffer, position, comm);
 }
 
 void Packing<false,time_point>::
@@ -137,9 +136,9 @@ unpack(time_point& data,
        std::size_t& position,
        Parallel::MPIComm comm)
 {
-    std::time_t res;
-    Packing<true,std::time_t>::unpack(res, buffer, position, comm);
-    data = TimeService::from_time_t(res);
+    time_point::duration::rep res;
+    Packing<true, time_point::duration::rep>::unpack(res, buffer, position, comm);
+    data = time_point(time_point::duration(res));
 }
 
 template struct Packing<false,std::bitset<3>>;
