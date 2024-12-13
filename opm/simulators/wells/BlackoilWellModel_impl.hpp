@@ -2875,15 +2875,10 @@ namespace Opm {
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             const Well& well = this->wells_ecl_[wellID];
             auto& ws = this->wellState().well(wellID);
-            if (well.isInjector()){
-                if( !(ws.status == WellStatus::STOP)){
-                    this->wellState().well(wellID).temperature = well.inj_temperature();
-                    continue;
-                }
-            }
 
-            std::array<Scalar,2> weighted{0.0,0.0};
-            auto& [weighted_temperature, total_weight] = weighted;
+            std::array<Scalar,4> weighted{0.0,0.0,0.0,0.0};
+            auto& [total_weight_prod, total_weight_inj, weighted_temp_prod, weighted_temp_inj] = weighted;
+            const Scalar injectionTemperature = well.isInjector() ? well.inj_temperature() : 0.0;
 
             auto& well_info = this->local_parallel_well_info_[wellID].get();
             auto& perf_data = ws.perf_data;
@@ -2896,9 +2891,8 @@ namespace Opm {
                 const auto& fs = intQuants.fluidState();
 
                 // we on only have one temperature pr cell any phaseIdx will do
-                Scalar cellTemperatures = fs.temperature(/*phaseIdx*/0).value();
+                const Scalar cellTemperature = fs.temperature(/*phaseIdx*/0).value();
 
-                Scalar weight_factor = 0.0;
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
                 {
                     if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2908,14 +2902,20 @@ namespace Opm {
                     cellBinv = fs.invB(phaseIdx).value();
                     cellDensity = fs.density(phaseIdx).value();
                     perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];
-                    weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
+                    const Scalar vol_heatcap = cellDensity/cellBinv * cellInternalEnergy/cellTemperature;
+                    const Scalar heatcap_rate_prod = -std::min(perfPhaseRate, 0.0)*vol_heatcap;
+                    const Scalar heatcap_rate_inj = perfPhaseRate*vol_heatcap;
+                    total_weight_prod += heatcap_rate_prod;
+                    total_weight_inj += heatcap_rate_inj;
+                    weighted_temp_prod += (heatcap_rate_prod * cellTemperature);
+                    weighted_temp_inj += (heatcap_rate_inj * injectionTemperature);
                 }
-                weight_factor = std::abs(weight_factor)+1e-13;
-                total_weight += weight_factor;
-                weighted_temperature += weight_factor * cellTemperatures;
             }
-            well_info.communication().sum(weighted.data(), 2);
-            this->wellState().well(wellID).temperature = weighted_temperature/total_weight;
+            well_info.communication().sum(weighted.data(), 4);
+            const Scalar well_temp = well.isInjector() ?
+                                        (weighted_temp_inj + weighted_temp_prod) / (total_weight_prod + total_weight_inj + 1.0e-16)
+                                        : weighted_temp_prod / (total_weight_prod + 1.0e-16);
+            this->wellState().well(wellID).temperature = well_temp;
         }
     }
 
