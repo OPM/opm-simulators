@@ -2903,7 +2903,7 @@ namespace Opm {
                     cellDensity = fs.density(phaseIdx).value();
                     perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];
                     const Scalar vol_heatcap = cellDensity/cellBinv * cellInternalEnergy/cellTemperature;
-                    const Scalar heatcap_rate_prod = -std::min(perfPhaseRate, 0.0)*vol_heatcap;
+                    const Scalar heatcap_rate_prod = -std::min(perfPhaseRate, Scalar(0.0))*vol_heatcap;
                     const Scalar heatcap_rate_inj = perfPhaseRate*vol_heatcap;
                     total_weight_prod += heatcap_rate_prod;
                     total_weight_inj += heatcap_rate_inj;
