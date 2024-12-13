@@ -71,8 +71,9 @@ struct OwnerCellsFirst { static constexpr bool value = true; };
 struct ParsingStrictness { static constexpr auto value = "normal"; };
 struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 
- // 0: simple, 1: Zoltan, 2: METIS, see GridEnums.hpp
-struct PartitionMethod { static constexpr int value = 1; };
+/// 0: simple, 1: Zoltan, 2: METIS, 3: Zoltan with a all cells of a well
+/// represented by one vertex in the graph, see GridEnums.hpp
+struct PartitionMethod { static constexpr int value = 3; };
 
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
