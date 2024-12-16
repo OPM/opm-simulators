@@ -194,7 +194,7 @@ endfunction()
 #   - This test class compares the output from a parallel simulation
 #     to the output from the serial instance of the same model.
 function(add_test_compare_parallel_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS ONLY_SMRY)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -211,21 +211,7 @@ function(add_test_compare_parallel_simulation)
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
 
-  # Handle ONLY_SMRY flag (defaults to 0 if not provided)
-  if(PARAM_ONLY_SMRY)
-    if(${PARAM_ONLY_SMRY} EQUAL 1)
-      set(DRIVER_ARGS -s)
-    elseif(${PARAM_ONLY_SMRY} EQUAL 0)
-      set(DRIVER_ARGS "")
-    else()
-      message(FATAL_ERROR "ONLY_SMRY must be either 0 or 1.")
-    endif()
-  else()
-    set(DRIVER_ARGS "")
-  endif()
-
-  set(DRIVER_ARGS ${DRIVER_ARGS}
-                  -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
                   -b ${PROJECT_BINARY_DIR}/bin
                   -f ${PARAM_FILENAME}
