@@ -844,6 +844,7 @@ public:
             return;
 
         const auto& problem = elemCtx.simulator().problem();
+
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             // Adding block data
             const auto globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
@@ -882,42 +883,28 @@ public:
                         else if (FluidSystem::phaseIsActive(waterPhaseIdx))
                             val.second = getValue(fs.temperature(waterPhaseIdx));
                     }
-                    else if (key.first == "BSTRSSXX")
-                        {
-                            const auto& model = problem.geoMechModel();
-                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
-                            val.second = stress[0];
+                    else if ((key.first == "BSTRSSXX") ||
+                             (key.first == "BSTRSSYY") ||
+                             (key.first == "BSTRSSZZ") ||
+                             (key.first == "BSTRSSXY") ||
+                             (key.first == "BSTRSSXZ") ||
+                             (key.first == "BSTRSSYZ"))
+                    {
+                        if constexpr (HasGeoMech<RemoveCVR<decltype(problem)>>::value) {
+                            const auto stress = problem.geoMechModel()
+                                .stress(globalDofIdx, /*include_fracture*/ true);
+
+                            if      (key.first == "BSTRSSXX") { val.second = stress[0]; }
+                            else if (key.first == "BSTRSSYY") { val.second = stress[1]; }
+                            else if (key.first == "BSTRSSZZ") { val.second = stress[2]; }
+                            else if (key.first == "BSTRSSXY") { val.second = stress[5]; }
+                            else if (key.first == "BSTRSSXZ") { val.second = stress[4]; }
+                            else                              { val.second = stress[3]; }
                         }
-                    else if (key.first == "BSTRSSYY")
-                        {
-                            const auto& model = problem.geoMechModel();
-                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
-                            val.second = stress[1];
+                        else {
+                            val.second = 0.0;
                         }
-                    else if (key.first == "BSTRSSZZ")
-                        {
-                            const auto& model = problem.geoMechModel();
-                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
-                            val.second = stress[2];
-                        }
-                    else if (key.first == "BSTRSSXY")
-                        {
-                            const auto& model = problem.geoMechModel();
-                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
-                            val.second = stress[5];
-                        }
-                    else if (key.first == "BSTRSSXZ")
-                        {
-                            const auto& model = problem.geoMechModel();
-                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
-                            val.second = stress[4];
-                        }
-                    else if (key.first == "BSTRSSYZ")
-                        {
-                            const auto& model = problem.geoMechModel();
-                            auto stress = model.stress(globalDofIdx,/*include_fracture*/true);
-                            val.second = stress[3];
-                        }
+                    }
                     else if (key.first == "BWKR" || key.first == "BKRW")
                         val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
                     else if (key.first == "BGKR" || key.first == "BKRG")
@@ -1311,6 +1298,17 @@ public:
     }
 
 private:
+    template <typename T>
+    using RemoveCVR = std::remove_cv_t<std::remove_reference_t<T>>;
+
+    template <typename, class = void>
+    struct HasGeoMech : public std::false_type {};
+
+    template <typename Problem>
+    struct HasGeoMech<
+        Problem, std::void_t<decltype(std::declval<Problem>().geoMechModel())>
+    > : public std::true_type {};
+
     bool isDefunctParallelWell(std::string wname) const override
     {
         if (simulator_.gridView().comm().size() == 1)
