@@ -350,7 +350,7 @@ public:
                 events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::INJECTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
-            auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr, tuningUpdater);
+            auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, tuningUpdater);
             report_ += stepReport;
             //Pass simulation report to eclwriter for summary output
             simulator_.problem().setSimulationReport(report_);

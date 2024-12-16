@@ -180,8 +180,7 @@ void registerAdaptiveParameters();
         SimulatorReport step(const SimulatorTimer& simulatorTimer,
                              Solver& solver,
                              const bool isEvent,
-                             const std::vector<int>* fipnum = nullptr,
-                             const std::function<bool()> tuningUpdater = [](){return false;})
+                             const std::function<bool()> tuningUpdater)
         {
             // Maybe update tuning
             tuningUpdater();
@@ -336,9 +335,6 @@ void registerAdaptiveParameters();
                     // to write it as this will be done by the simulator
                     // anyway.
                     if (!substepTimer.done()) {
-                        if (fipnum) {
-                            solver.computeFluidInPlace(*fipnum);
-                        }
                         time::StopWatch perfTimer;
                         perfTimer.start();
 
