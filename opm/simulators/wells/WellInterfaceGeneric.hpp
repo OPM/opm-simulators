@@ -203,6 +203,7 @@ public:
                                      const int openConnIdx) const = 0;
 
     void addPerforations(const std::vector<std::tuple<int,double,double>>& perfs);
+
 protected:
     bool getAllowCrossFlow() const;
 
