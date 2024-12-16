@@ -579,9 +579,40 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
+  flow/flow_blackoil.hpp
+  flow/flow_blackoil_legacyassembly.hpp
+  flow/flow_brine.hpp
+  flow/flow_brine_precsalt_vapwat.hpp
+  flow/flow_brine_saltprecipitation.hpp
+  flow/flow_energy.hpp
+  flow/flow_extbo.hpp
+  flow/flow_foam.hpp
+  flow/flow_gasoil.hpp
+  flow/flow_gasoil_energy.hpp
+  flow/flow_gasoildiffuse.hpp
+  flow/flow_gaswater.hpp
+  flow/flow_gaswater_brine.hpp
+  flow/flow_gaswater_dissolution.hpp
+  flow/flow_gaswater_dissolution_diffuse.hpp
+  flow/flow_gaswater_energy.hpp
+  flow/flow_gaswater_saltprec_energy.hpp
+  flow/flow_gaswater_saltprec_vapwat.hpp
+  flow/flow_gaswater_solvent.hpp
+  flow/flow_micp.hpp
+  flow/flow_oilwater.hpp
+  flow/flow_oilwater_brine.hpp
+  flow/flow_oilwater_polymer.hpp
+  flow/flow_oilwater_polymer_injectivity.hpp
+  flow/flow_onephase.hpp
+  flow/flow_onephase_energy.hpp
+  flow/flow_polymer.hpp
+  flow/flow_solvent.hpp
+  flow/flow_solvent_foam.hpp
+
   opm/models/blackoil/blackoilboundaryratevector.hh
   opm/models/blackoil/blackoilbrinemodules.hh
   opm/models/blackoil/blackoilbrineparams.hpp
+  opm/models/blackoil/blackoilconvectivemixingmodule.hh
   opm/models/blackoil/blackoildarcyfluxmodule.hh
   opm/models/blackoil/blackoildiffusionmodule.hh
   opm/models/blackoil/blackoildispersionmodule.hh
@@ -914,6 +945,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/overlaptypes.hh
   opm/simulators/linalg/OwningBlockPreconditioner.hpp
   opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp
+  opm/simulators/linalg/MILU.hpp
   opm/simulators/linalg/parallelamgbackend.hh
   opm/simulators/linalg/parallelbasebackend.hh
   opm/simulators/linalg/parallelbicgstabbackend.hh
@@ -921,10 +953,13 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ParallelIstlInformation.hpp
   opm/simulators/linalg/ParallelOverlappingILU0.hpp
   opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp
+  opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp
+  opm/simulators/linalg/PreconditionerFactory.hpp
+  opm/simulators/linalg/PreconditionerFactory_impl.hpp
+  opm/simulators/linalg/PreconditionerWithUpdate.hpp
+  opm/simulators/linalg/PressureBhpTransferPolicy.hpp
   opm/simulators/linalg/PressureSolverPolicy.hpp
   opm/simulators/linalg/PressureTransferPolicy.hpp
-  opm/simulators/linalg/PreconditionerFactory.hpp
-  opm/simulators/linalg/PreconditionerWithUpdate.hpp
   opm/simulators/linalg/PropertyTree.hpp
   opm/simulators/linalg/residreductioncriterion.hh
   opm/simulators/linalg/SmallDenseMatrixUtils.hpp
@@ -962,6 +997,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/utils/phaseUsageFromDeck.hpp
+  opm/simulators/utils/ParallelCommunication.hpp
+  opm/simulators/utils/ParallelSerialization.hpp
   opm/simulators/utils/readDeck.hpp
   opm/simulators/utils/satfunc/RelpermDiagnostics.hpp
   opm/simulators/wells/ALQState.hpp
@@ -1029,14 +1066,16 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellGroupControls.hpp
   opm/simulators/wells/WellGroupHelpers.hpp
   opm/simulators/wells/WellHelpers.hpp
-  opm/simulators/wells/WellInterface.hpp
+  opm/simulators/wells/WellInterfaceFluidSystem.hpp
   opm/simulators/wells/WellInterfaceGeneric.hpp
+  opm/simulators/wells/WellInterface.hpp
   opm/simulators/wells/WellInterface_impl.hpp
+  opm/simulators/wells/WellInterfaceIndices.hpp
   opm/simulators/wells/WellProdIndexCalculator.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WGState.hpp
-  )
+)
 if (USE_GPU_BRIDGE)
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/linalg/gpubridge/amgclSolverBackend.hpp
