@@ -256,9 +256,10 @@ public:
     bool ownersFirst() const
     { return ownersFirst_; }
 
-#if HAVE_MPI
     bool edgeConformal() const
     { return edgeConformal_; }
+
+#if HAVE_MPI
     /*!
      * \brief Parameter deciding which partition method to use
      */
@@ -359,8 +360,9 @@ protected:
 #endif
 
     bool ownersFirst_;
-#if HAVE_MPI
     bool edgeConformal_;
+
+#if HAVE_MPI
     Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
     double imbalanceTol_;
