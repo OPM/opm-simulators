@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "gpmaint",
+    "simulator": "flow",
+    "rel_tol": 1e-05,
+    "test_cases": [
+        {
+            "casename": "gpmaint11",
+            "filename": "GPMAINT-11"
+        }
+    ]
+}

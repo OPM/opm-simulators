@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "wtest/thp_min",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "min_thp_1",
+            "filename": "MIN_THP_1",
+            "test_args": "--enable-tuning=true"
+        }
+    ]
+}

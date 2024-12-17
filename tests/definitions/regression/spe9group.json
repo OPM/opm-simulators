@@ -1,0 +1,16 @@
+{
+    "abs_tol": 0.02,
+    "dir": "spe9group",
+    "simulator": "flow",
+    "rel_tol": 1e-05,
+    "test_cases": [
+        {
+            "casename": "spe9group",
+            "filename": "SPE9_CP_GROUP"
+        },
+        {
+            "casename": "spe9group_resv",
+            "filename": "SPE9_CP_GROUP_RESV"
+        }
+    ]
+}

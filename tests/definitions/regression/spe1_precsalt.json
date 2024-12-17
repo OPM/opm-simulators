@@ -1,0 +1,21 @@
+{
+    "abs_tol": 0.02,
+    "dir": "spe1_precsalt",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "gas_precsalt",
+            "filename": "GASWATER_VAPWAT_PRECSALT"
+        },
+        {
+            "casename": "gasoil_precsalt",
+            "filename": "GASCONDENSATE_VAPWAT_PRECSALT_REGRESSION",
+            "test_args": "--solver-max-time-step-in-days=0.05"
+        },
+        {
+            "casename": "spe1_precsalt",
+            "filename": "SPE1CASE1_PRECSALT"
+        }
+    ]
+}

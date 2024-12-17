@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "spe1",
+    "rel_tol": 1e-05,
+    "simulator": "flowexp_blackoil",
+    "test_cases": [
+        {
+            "casename": "spe1flowexp",
+            "filename": "SPE1CASE2"
+        }
+    ]
+}

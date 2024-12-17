@@ -1,0 +1,16 @@
+{
+    "abs_tol": 0.02,
+    "dir": "spe1_brine",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "spe1_brine",
+            "filename": "SPE1CASE1_BRINE"
+        },
+        {
+            "casename": "spe1_brine_gaswater",
+            "filename": "SPE1CASE2_BRINE_GASWATER"
+        }
+    ]
+}

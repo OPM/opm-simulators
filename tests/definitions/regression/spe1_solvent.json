@@ -1,0 +1,16 @@
+{
+    "abs_tol": 0.02,
+    "dir": "spe1_solvent",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "spe1_gaswater_solvent",
+            "filename": "SPE1CASE2_GASWATER_SOLVENT"
+        },
+        {
+            "casename": "spe1_solvent_foam",
+            "filename": "SPE1CASE2_SOLVENT_FOAM"
+        }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "aquifer-fetkovich",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "fetkovich_2d",
+            "filename": "2D_FETKOVICHAQUIFER"
+        }
+    ]
+}

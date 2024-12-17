@@ -1,0 +1,40 @@
+{
+    "abs_tol": 0.02,
+    "dir": "udq_actionx",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "actionx_m1",
+            "filename": "ACTIONX_M1",
+            "test_args": "--solver-max-time-step-in-days=0.2"
+        },
+        {
+            "casename": "reg_smry_in_fld_udq",
+            "filename": "UDQ_REG-01",
+            "test_args": "--enable-tuning=true"
+        },
+        {
+            "casename": "udq_actionx",
+            "filename": "UDQ_ACTIONX",
+            "test_args": "--solver-max-time-step-in-days=5"
+        },
+        {
+            "casename": "udq_in_actionx",
+            "filename": "UDQ_M3"
+        },
+        {
+            "casename": "udq_uadd",
+            "filename": "UDQ_M1",
+            "test_args": "--tolerance-wells=1.e-8"
+        },
+        {
+            "casename": "udq_undefined",
+            "filename": "UDQ_M2"
+        },
+        {
+            "casename": "udq_wconprod",
+            "filename": "UDQ_WCONPROD"
+        }
+    ]
+}

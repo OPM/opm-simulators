@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "tracer",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "base_wt_tracer",
+            "filename": "BASE_WT_TRACER",
+            "restart_step": "1,3,7"
+        }
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "abs_tol": 0.02,
+    "dir": "wtest/wecon_gor_max",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "max_gor_1",
+            "filename": "MAX_GOR_1",
+            "test_args": "--enable-tuning=true"
+        }
+    ]
+}

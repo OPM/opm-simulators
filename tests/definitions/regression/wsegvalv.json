@@ -1,0 +1,12 @@
+{
+    "abs_tol": 0.02,
+    "dir": "wsegvalv",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "wsegvalv",
+            "filename": "BASE_MSW_WSEGVALV"
+        }
+    ]
+}

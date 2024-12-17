@@ -1,0 +1,65 @@
+{
+    "abs_tol": 0.02,
+    "dir": "spe1",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "spe1",
+            "filename": "SPE1CASE1"
+        },
+        {
+            "casename": "spe12",
+            "filename": "SPE1CASE2",
+            "restart_sched": "false",
+            "restart_step": "60",
+            "rel_tol": 0.01
+        },
+        {
+            "casename": "spe1case2_krnum",
+            "filename": "SPE1CASE2_KRNUM"
+        },
+        {
+            "casename": "spe1_2p",
+            "filename": "SPE1CASE2_2P"
+        },
+        {
+            "casename": "spe1_gaswater",
+            "filename": "SPE1CASE2_GASWATER",
+            "rel_tol": 0.01
+        },
+        {
+            "casename": "spe1_import",
+            "filename": "SPE1CASE1_IMPORT"
+        },
+        {
+            "casename": "spe1_nowells",
+            "filename": "SPE1CASE2_NOWELLS"
+        },
+        {
+            "casename": "spe1_oilgas",
+            "filename": "SPE1CASE2_OILGAS",
+            "rel_tol": 0.01
+        },
+        {
+            "casename": "spe1_rockcomp",
+            "filename": "SPE1CASE2_ROCK2DTR"
+        },
+        {
+            "casename": "spe1_thermal",
+            "filename": "SPE1CASE2_THERMAL"
+        },
+        {
+            "casename": "spe1_thermal_onephase",
+            "filename": "SPE1CASE2_THERMAL_ONEPHASE"
+        },
+        {
+            "casename": "spe1_thermal_watvisc",
+            "filename": "SPE1CASE2_THERMAL_WATVISC"
+        },
+        {
+            "casename": "spe1_water",
+            "filename": "SPE1CASE1_WATER"
+        }
+    ]
+}

@@ -1,0 +1,16 @@
+{
+    "abs_tol": 0.02,
+    "dir": "waghystr",
+    "rel_tol": 1e-05,
+    "simulator": "flow",
+    "test_cases": [
+        {
+            "casename": "waghyst1",
+            "filename": "WAGHYSTR-01"
+        },
+        {
+            "casename": "waghyst2",
+            "filename": "WAGHYSTR-02"
+        }
+    ]
+}
