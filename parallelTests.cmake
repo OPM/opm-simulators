@@ -57,6 +57,15 @@ add_test_compare_parallel_simulation(CASENAME msw-3d
                                      MPI_PROCS 4
                                      TEST_ARGS --allow-distributed-wells=true)
 
+add_test_compare_parallel_simulation(CASENAME msw-3d-two-producers
+                                     FILENAME MSW-3D-TWO-PRODUCERS # this file contains two Multisegment wells with branches that are distributed across several processes
+                                     DIR msw
+                                     SIMULATOR flow_distribute_z
+                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
+                                     REL_TOL 1e-4
+                                     MPI_PROCS 4
+                                     TEST_ARGS --allow-distributed-wells=true)
+
 add_test_compare_parallel_simulation(CASENAME spe9group
                                      FILENAME SPE9_CP_GROUP
                                      SIMULATOR flow
