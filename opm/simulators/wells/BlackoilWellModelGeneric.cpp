@@ -82,6 +82,61 @@
 
 #include <fmt/format.h>
 
+// #include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractor.hpp>
+// #include <external/resinsight/ReservoirDataModel/RigWellLogExtractionTools.h>
+// #include <external/resinsight/ReservoirDataModel/RigWellPath.h>
+// #include <external/resinsight/ReservoirDataModel/cvfGeometryTools.h>
+// #include <external/resinsight/ReservoirDataModel/RigWellLogExtractor.h>
+// #include <external/resinsight/ReservoirDataModel/RigCellGeometryTools.h>
+// #include <external/resinsight/CommonCode/cvfStructGrid.h>
+// #include <external/resinsight/LibGeometry/cvfBoundingBox.h>
+// #include <opm/grid/common/CartesianIndexMapper.hpp>
+// #include <dune/geometry/referenceelements.hh>
+// #include <dune/grid/common/mcmgmapper.hh>
+// #include <dune/grid/common/gridenums.hh>
+
+#include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractorGrid.hpp>
+#include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractorGrid_impl.hpp>
+
+namespace external {
+   void buildBoundingBoxTree(cvf::ref<cvf::BoundingBoxTree>& m_cellSearchTree, const ::Dune::CpGrid& grid);
+}
+//     using Grid = ::Dune::CpGrid;
+//         //using GridView = typename Grid::LeafGridView;
+// 	using GridView = typename Grid::LeafGridView;
+//         const auto& gv = grid.leafGridView();
+//         size_t cellCount = gv.size(0);
+//         std::vector<size_t>           cellIndicesForBoundingBoxes;
+//         std::vector<cvf::BoundingBox> cellBoundingBoxes;
+
+//         std::array<double, 3> cornerPointArray;
+//         cvf::Vec3d cornerPoint;
+//         using ElementMapper = ::Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+//         ElementMapper mapper(gv, ::Dune::mcmgElementLayout()); // used id sets interally
+// 	for (const auto& element : ::Dune::elements(gv))
+//         {
+//             int index = mapper.index(element);
+//             auto geom = element.geometry();
+//             cvf::BoundingBox cellBB;
+//             cvf::Vec3d cornerPoint;
+//             //NB order should not matter when adding to bounding box: dune ordring and resinsight ordering is different
+//             // dune 0 1 2 3 4 5 6 7 is resinsight 0 1 3 2 4 5 7 6 (i think)
+//             for (std::size_t l = 0; l < geom.corners(); l++) {
+//                 auto cornerPointArray = geom.corner(l);
+//                 cornerPoint = cvf::Vec3d(cornerPointArray[0], cornerPointArray[1], cornerPointArray[2]);     
+//                 cellBB.add(cornerPoint);
+//             }
+//             cellIndicesForBoundingBoxes.emplace_back(index);
+//             cellBoundingBoxes.emplace_back( cellBB);
+//         }
+//         m_cellSearchTree = new cvf::BoundingBoxTree;
+//         m_cellSearchTree->buildTreeFromBoundingBoxes( cellBoundingBoxes, &cellIndicesForBoundingBoxes );
+//     }
+
+// }
+
+
+
 namespace Opm {
 
 template<class Scalar>
@@ -334,7 +389,7 @@ initializeWellProdIndCalculators()
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
-initializeWellPerfData()
+initializeWellPerfData(Dune::CpGrid* cpgrid)
 {
     well_perf_data_.resize(wells_ecl_.size());
 
@@ -342,12 +397,21 @@ initializeWellPerfData()
     this->conn_idx_map_.reserve(wells_ecl_.size());
 
     int well_index = 0;
-    for (const auto& well : wells_ecl_) {
+    for (auto& well : wells_ecl_) {
         int connection_index = 0;
 
         // INVALID_ECL_INDEX marks no above perf available
         int connection_index_above = ParallelWellInfo<Scalar>::INVALID_ECL_INDEX;
-
+	bool recalculated = false;
+	auto& connections = well.getConnections();
+	if( ! (cpgrid == NULL) && connections.hasTraj()){
+	  // recalculate connections
+	  external::cvf::ref<external::cvf::BoundingBoxTree> cellSearchTree;
+	  external::buildBoundingBoxTree(cellSearchTree, *cpgrid);
+	  
+	  connections.recomputeConnections(*cpgrid,cellSearchTree);
+	  recalculated = true;
+	} 
         well_perf_data_[well_index].clear();
         well_perf_data_[well_index].reserve(well.getConnections().size());
 
@@ -365,9 +429,13 @@ initializeWellPerfData()
         parallelWellInfo.beginReset();
 
         for (const auto& connection : well.getConnections()) {
-            const auto active_index =
-                this->compressedIndexForInterior(connection.global_index());
-
+	  int active_index;
+	  if(!recalculated){
+            active_index =
+	      this->compressedIndexForInterior(connection.global_index()); // completly strang for LGR
+	  } else {
+	    active_index = connection.global_index();
+	  }
             const auto connIsOpen =
                 connection.state() == Connection::State::OPEN;
 
