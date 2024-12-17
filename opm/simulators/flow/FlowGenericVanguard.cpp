@@ -454,6 +454,8 @@ void FlowGenericVanguard::registerParameters_()
 
     Parameters::Register<Parameters::OwnerCellsFirst>
         ("Order cells owned by rank before ghost/overlap cells.");
+    Parameters::Register<Parameters::EdgeConformal>
+        ("Edge conformal cornerpoint processing.");
 #if HAVE_MPI
     Parameters::Register<Parameters::PartitionMethod>
         ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS, 3=Zoltan with all cells of well represented by one vertex.");

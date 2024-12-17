@@ -567,9 +567,10 @@ public:
 
         using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
         constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
+
         // Skip - for now -  calculate the initial fip values for CpGrid with LGRs.
         if (!isCpGrid || (grid.maxLevel() == 0)) {
-            if (this->simulator().episodeIndex() == 0) {
+            if ((this->simulator().episodeIndex() == 0) && this->enableEclOutput_) {
                 eclWriter_->writeInitialFIPReport();
             }
         }
