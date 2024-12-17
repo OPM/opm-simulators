@@ -432,6 +432,9 @@ macro (tests_hook)
       list(APPEND tests_SOURCES tests/test_HyprePreconditionerGPU.cpp)
     endif()
   endif()
+  if(AMGX_FOUND)
+    list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
+  endif()
 endmacro (tests_hook)
 
 
@@ -734,6 +737,10 @@ if(HYPRE_FOUND)
   elseif (HYPRE_USING_HIP)
     set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_hip)
   endif()
+endif()
+
+if(AMGX_FOUND)
+  set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
 endif()
 
 if(USE_GPU_BRIDGE)
