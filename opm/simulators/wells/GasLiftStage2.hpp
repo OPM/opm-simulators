@@ -209,6 +209,7 @@ protected:
     {
         SurplusState(GasLiftStage2& parent_,
                      const Group& group_,
+                     const WellState<Scalar>& well_state_,
                      Scalar oil_rate_,
                      Scalar gas_rate_,
                      Scalar water_rate_,
@@ -222,6 +223,7 @@ protected:
                      std::optional<Scalar> max_total_gas_)
             : parent{parent_}
             , group{group_}
+            , well_state(well_state_)
             , oil_rate{oil_rate_}
             , gas_rate{gas_rate_}
             , water_rate{water_rate_}
@@ -238,6 +240,7 @@ protected:
 
         GasLiftStage2 &parent;
         const Group &group;
+        const WellState<Scalar>& well_state;
         Scalar oil_rate;
         Scalar gas_rate;
         Scalar water_rate;

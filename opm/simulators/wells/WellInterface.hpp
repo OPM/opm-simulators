@@ -301,6 +301,7 @@ public:
                      WellTestState& welltest_state,
                      const PhaseUsage& phase_usage,
                      GLiftEclWells& ecl_well_map,
+                     std::map<std::string, double>& open_times,
                      DeferredLogger& deferred_logger);
 
     void checkWellOperability(const Simulator& simulator,

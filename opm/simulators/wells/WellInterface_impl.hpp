@@ -384,6 +384,7 @@ namespace Opm
                 WellTestState& well_test_state,
                 const PhaseUsage& phase_usage,
                 GLiftEclWells& ecl_well_map,
+                std::map<std::string, double>& open_times,
                 DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + this->name() + " is being tested");
@@ -480,6 +481,7 @@ namespace Opm
             // set the status of the well_state to open
             ws.open();
             well_state = well_state_copy;
+            open_times.try_emplace(this->name(), well_test_state.lastTestTime(this->name()));
         }
     }
 
@@ -1240,7 +1242,8 @@ namespace Opm
             {
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-                const Scalar efficiencyFactor = well.getEfficiencyFactor();
+                const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                                well_state[well.name()].efficiency_scaling_factor;
                 std::optional<Scalar> target =
                         this->getGroupInjectionTargetRate(group,
                                                           well_state,
@@ -1464,7 +1467,8 @@ namespace Opm
             {
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-                const Scalar efficiencyFactor = well.getEfficiencyFactor();
+                const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                                well_state[well.name()].efficiency_scaling_factor;
                 Scalar scale = this->getGroupProductionTargetRate(group,
                                                                   well_state,
                                                                   group_state,

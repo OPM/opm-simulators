@@ -205,6 +205,9 @@ public:
 
     const GuideRate& guideRate() const { return guideRate_; }
 
+    const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
+    const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
+
     bool reportStepStarts() const { return report_step_starts_; }
 
     bool shouldBalanceNetwork(const int reportStepIndex,
@@ -467,6 +470,12 @@ protected:
 
     std::vector<Well> wells_ecl_;
     std::vector<std::vector<PerforationData<Scalar>>> well_perf_data_;
+
+    // Times at which wells were opened (for WCYCLE)
+    std::map<std::string, double> well_open_times_;
+
+    // Times at which wells were shut (for WCYCLE)
+    std::map<std::string, double> well_close_times_;
 
     /// Connection index mappings
     class ConnectionIndexMap

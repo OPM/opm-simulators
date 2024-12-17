@@ -583,6 +583,17 @@ foreach(templ_case RANGE 1 6)
   )
 endforeach()
 
+foreach(wcycle_case RANGE 0 7)
+  add_test_compareECLFiles(CASENAME WCYCLE-${wcycle_case}
+    FILENAME WCYCLE-${wcycle_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    DIR wcycle
+    TEST_ARGS --enable-tuning=true
+  )
+endforeach()
+
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
                          SIMULATOR flow
