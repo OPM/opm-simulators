@@ -238,7 +238,7 @@ public:
 protected:
     void createGrids_()
     {
-        grid_ = std::make_unique<Grid>(this->eclState().getInputGrid(), this->eclState().fieldProps().porv(true));
+        grid_ = std::make_unique<Grid>(this->eclState().getInputGrid(), this->eclState().fieldProps().porv(true), this->edgeConformal());
         cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
         this->updateGridView_();
         this->updateCartesianToCompressedMapping_();
