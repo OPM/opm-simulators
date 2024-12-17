@@ -258,15 +258,15 @@ public:
     bool ownersFirst() const
     { return ownersFirst_; }
 
+    bool edgeConformal() const
+    { return edgeConformal_; }
+
 #if HAVE_MPI
     bool addCorners() const
     { return addCorners_; }
 
     int numOverlap() const
     { return numOverlap_; }
-
-    bool edgeConformal() const
-    { return edgeConformal_; }
 
     /*!
      * \brief Parameter deciding which partition method to use
@@ -378,6 +378,8 @@ protected:
     bool addCorners_;
     int numOverlap_;
     bool edgeConformal_;
+
+#if HAVE_MPI
     Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
     double imbalanceTol_;
