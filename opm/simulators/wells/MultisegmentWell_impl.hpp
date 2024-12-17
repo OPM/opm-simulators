@@ -1892,6 +1892,11 @@ namespace Opm
                 }
             }
         }
+        // Accumulate dissolved gas and vaporized oil flow rates across all ranks sharing this well.
+        {
+            const auto& comm = this->parallel_well_info_.communication();
+            comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
+        }
 
         if (this->parallel_well_info_.communication().size() > 1) {
             // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
