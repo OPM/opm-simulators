@@ -78,6 +78,15 @@ add_test_compare_parallel_simulation(CASENAME spe3
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7)
 
+add_test_compare_parallel_simulation(CASENAME spe3
+                                     FILENAME SPE3CASE1
+                                     PREFIX partition_method_3
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=3)
+
+
 add_test_compare_parallel_simulation(CASENAME spe1_solvent
                                      FILENAME SPE1CASE2_SOLVENT
                                      SIMULATOR flow
