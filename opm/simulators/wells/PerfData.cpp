@@ -83,6 +83,7 @@ PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
     result.skin_pressure = {27.0, 28.0};
     result.water_velocity = {29.0, 30.0};
     result.filtrate_data = ConnFiltrateData<Scalar>::serializationTestObject();
+    result.connFracStatistics.assign(3, ConnFracStatistics<Scalar>::serializationTestObject());
 
     return result;
 }
@@ -124,6 +125,7 @@ bool PerfData<Scalar>::try_assign(const PerfData& other)
     this->skin_pressure = other.skin_pressure;
     this->water_velocity = other.water_velocity;
     this->filtrate_data = other.filtrate_data;
+    this->connFracStatistics = other.connFracStatistics;
 
     return true;
 }
@@ -152,6 +154,7 @@ bool PerfData<Scalar>::operator==(const PerfData& rhs) const
         && (this->skin_pressure == rhs.skin_pressure)
         && (this->water_velocity == rhs.water_velocity)
         && (this->filtrate_data == rhs.filtrate_data)
+        && (this->connFracStatistics == rhs.connFracStatistics)
         ;
 }
 
