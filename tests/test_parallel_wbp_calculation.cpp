@@ -213,14 +213,36 @@ namespace {
                     });
             }
 
-            void cellSource(const int                                          cell,
+            double depth(const int cell)
+            {
+                return fieldValue(cell, {
+                        // K=2
+                        2002.5, 2002.5, 2002.5,
+                        2002.5, 2002.5, 2002.5,
+                        2002.5, 2002.5, 2002.5,
+
+                        // K=3
+                        2003.5, 2003.5, 2003.5,
+                        2003.5, 2003.5, 2003.5,
+                        2003.5, 2003.5, 2003.5,
+
+                        // K=4
+                        2004.5, 2004.5, 2004.5,
+                        2004.5, 2004.5, 2004.5,
+                        2004.5, 2004.5, 2004.5,
+                    });
+            }
+
+            void cellSource(const int                                                  cell,
                             Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
             {
                 using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                 src .set(Item::Pressure      , pressure(cell))
                     .set(Item::PoreVol       , porevol (cell))
-                    .set(Item::MixtureDensity, density (cell));
+                    .set(Item::MixtureDensity, density (cell))
+                    .set(Item::Depth         , depth   (cell))
+                    ;
             }
 
             std::vector<int> localConnIdx()
@@ -246,7 +268,9 @@ namespace {
 
                         src .set(Item::Pressure      , 1222.0)
                             .set(Item::PoreVol       ,    1.25)
-                            .set(Item::MixtureDensity, rho[connIx]);
+                            .set(Item::MixtureDensity, rho[connIx])
+                            .set(Item::Depth         ,    0.0) // Unused
+                            ;
                     };
                 };
             }
@@ -353,6 +377,27 @@ namespace {
                     });
             }
 
+            // Octave: 0.1 + round(0.1 * rand([3, 3, 6]), 2) -- bottom half
+            double depth(const int cell)
+            {
+                return fieldValue(cell, {
+                        // K=5
+                        2005.5, 2005.5, 2005.5,
+                        2005.5, 2005.5, 2005.5,
+                        2005.5, 2005.5, 2005.5,
+
+                        // K=6
+                        2006.5, 2006.5, 2006.5,
+                        2006.5, 2006.5, 2006.5,
+                        2006.5, 2006.5, 2006.5,
+
+                        // K=7
+                        2007.5, 2007.5, 2007.5,
+                        2007.5, 2007.5, 2007.5,
+                        2007.5, 2007.5, 2007.5,
+                    });
+            }
+
             void cellSource(const int                                                  cell,
                             Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
             {
@@ -360,7 +405,9 @@ namespace {
 
                 src .set(Item::Pressure      , pressure(cell))
                     .set(Item::PoreVol       , porevol (cell))
-                    .set(Item::MixtureDensity, density (cell));
+                    .set(Item::MixtureDensity, density (cell))
+                    .set(Item::Depth         , depth   (cell))
+                    ;
             }
 
             std::vector<int> localConnIdx()
@@ -386,7 +433,9 @@ namespace {
 
                         src .set(Item::Pressure      , 1222.0)
                             .set(Item::PoreVol       ,    1.25)
-                            .set(Item::MixtureDensity, rho[connIx]);
+                            .set(Item::MixtureDensity, rho[connIx])
+                            .set(Item::Depth         ,    0.0) // Unused
+                            ;
                     };
                 };
             }

@@ -111,8 +111,10 @@ namespace Opm {
                     .cachedIntensiveQuantities(localCell, /*timeIndex = */0);
                 const auto& fs = intQuants->fluidState();
 
-                sourceTerms.set(Item::PoreVol, intQuants->porosity().value() *
-                                this->simulator_.model().dofTotalVolume(localCell));
+                sourceTerms
+                    .set(Item::PoreVol, intQuants->porosity().value() *
+                         this->simulator_.model().dofTotalVolume(localCell))
+                    .set(Item::Depth, this->depth_[localCell]);
 
                 constexpr auto io = FluidSystem::oilPhaseIdx;
                 constexpr auto ig = FluidSystem::gasPhaseIdx;
@@ -2449,7 +2451,9 @@ namespace Opm {
                     sourceTerm
                         .set(Item::Pressure      , 0.0)
                         .set(Item::PoreVol       , 0.0)
-                        .set(Item::MixtureDensity, 0.0);
+                        .set(Item::MixtureDensity, 0.0)
+                        .set(Item::Depth         , 0.0)
+                        ;
                 };
             }
 
@@ -2471,7 +2475,9 @@ namespace Opm {
                 sourceTerm
                     .set(Item::Pressure      , 0.0)
                     .set(Item::PoreVol       , 0.0)
-                    .set(Item::MixtureDensity, rho);
+                    .set(Item::MixtureDensity, rho)
+                    .set(Item::Depth         , 0.0)
+                    ;
             };
         };
     }
