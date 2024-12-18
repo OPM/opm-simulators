@@ -832,7 +832,7 @@ computeDelta(const std::string& well_name, bool add)
         if (this->well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
             const auto& well_ecl = well.wellEcl();
             Scalar factor = well_ecl.getEfficiencyFactor() *
-                            this->well_state_[well_name].efficiency_scaling_factor;
+                            this->well_state_.getGlobalEfficiencyScalingFactor(well_name);
             auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
             delta_oil = factor * (gi.new_oil_rate - state.oilRate());
             delta_gas = factor * (gi.new_gas_rate - state.gasRate());
@@ -1179,7 +1179,7 @@ computeDelta(const std::string& well_name)
         if (this->parent.well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
             const auto& well_ecl = well.wellEcl();
             Scalar factor = well_ecl.getEfficiencyFactor() *
-                            this->well_state[well_name].efficiency_scaling_factor;
+                            this->well_state.getGlobalEfficiencyScalingFactor(well_name);
             auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
             delta_oil = factor * (gi.new_oil_rate - state.oilRate());
             delta_gas = factor * (gi.new_gas_rate - state.gasRate());

@@ -873,7 +873,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     //      available and using those (for wells with WEFAC(3) true only) when accumulating group
                     //      rates, but ONLY for network calculations.
                     const Scalar efficiency = well.getEfficiencyFactor() *
-                                              well_state[well.name()].efficiency_scaling_factor;
+                                              well_state.getGlobalEfficiencyScalingFactor(wellname);
                     node_inflows[node][BlackoilPhases::Vapour] += well_state.getALQ(wellname) * efficiency;
                 }
             }
