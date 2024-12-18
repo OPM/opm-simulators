@@ -1162,3 +1162,9 @@ if(HYPRE_FOUND)
     opm/simulators/linalg/HyprePreconditioner.hpp
   )
 endif()
+
+if(AMGX_FOUND)
+  list(APPEND PUBLIC_HEADER_FILES
+    opm/simulators/linalg/AmgxPreconditioner.hpp
+  )
+endif()

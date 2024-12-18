@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/DILU.hpp>
 #include <opm/simulators/linalg/ExtraSmoothers.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/OwningBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
@@ -53,6 +54,9 @@
 #include <opm/simulators/linalg/HyprePreconditioner.hpp>
 #endif
 
+#if HAVE_AMGX
+#include <opm/simulators/linalg/AmgxPreconditioner.hpp>
+#endif
 
 namespace Opm {
 
@@ -547,6 +551,18 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                     return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
                 }
             });
+
+#if HAVE_AMGX
+            // Only add AMGX for scalar matrices
+            if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1) {
+                F::addCreator("amgx", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+                    auto prm_copy = prm;
+                    prm_copy.put("setup_frequency", Opm::Parameters::Get<Opm::Parameters::CprReuseInterval>());
+                    return std::make_shared<Amgx::AmgxPreconditioner<M, V, V>>(op.getmat(), prm_copy);
+                });
+            }
+#endif
+
 #if HAVE_HYPRE
             // Only add Hypre for scalar matrices
             if constexpr (M::block_type::rows == 1 && M::block_type::cols == 1 &&
