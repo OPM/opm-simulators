@@ -204,6 +204,8 @@ function(add_test_compare_parallel_simulation)
 
   if(NOT PARAM_POSTFIX)
     set(PARAM_POSTFIX "")
+  else()
+    set(PARAM_POSTFIX +${PARAM_POSTFIX})
   endif()
 
   if(PARAM_MPI_PROCS)
@@ -225,11 +227,11 @@ function(add_test_compare_parallel_simulation)
                   -n ${MPI_PROCS})
 
   # Add test that runs flow_mpi and outputs the results to file
-  opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}+${PARAM_POSTFIX} NO_COMPILE
+  opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
-  set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}+${PARAM_POSTFIX}
+  set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
                        PROPERTIES PROCESSORS ${MPI_PROCS})
 endfunction()
 
