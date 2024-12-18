@@ -423,6 +423,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_region_phase_pvaverage.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_RestartSerialization.cpp
+  tests/test_RunningStatistics.cpp
   tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
   tests/test_SymmTensor.cpp
@@ -1018,6 +1019,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/BlackoilWellModelWBP.hpp
   opm/simulators/wells/ConnectionIndexMap.hpp
   opm/simulators/wells/ConnFiltrateData.hpp
+  opm/simulators/wells/ConnFracStatistics.hpp
   opm/simulators/wells/FractionCalculator.hpp
   opm/simulators/wells/GasLiftCommon.hpp
   opm/simulators/wells/GasLiftGroupInfo.hpp
@@ -1048,6 +1050,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/RatioCalculator.hpp
   opm/simulators/wells/RegionAttributeHelpers.hpp
   opm/simulators/wells/RegionAverageCalculator.hpp
+  opm/simulators/wells/RunningStatistics.hpp
   opm/simulators/wells/RuntimePerforation.hpp
   opm/simulators/wells/SingleWellState.hpp
   opm/simulators/wells/StandardWell.hpp
