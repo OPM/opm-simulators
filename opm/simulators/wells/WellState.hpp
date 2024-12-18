@@ -40,6 +40,9 @@
 #include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <optional>
@@ -61,7 +64,10 @@ template<class Scalar>
 class WellState
 {
 public:
-    static const uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE + ScheduleEvents::PRODUCTION_UPDATE + ScheduleEvents::INJECTION_UPDATE;
+    static const std::uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE
+        | ScheduleEvents::PRODUCTION_UPDATE
+        | ScheduleEvents::INJECTION_UPDATE;
+
     // TODO: same definition with WellInterface, eventually they should go to a common header file.
     static const int Water = BlackoilPhases::Aqua;
     static const int Oil = BlackoilPhases::Liquid;
@@ -441,6 +447,15 @@ private:
                                                const int                            segment,
                                                std::vector<Scalar>&                 segment_rates);
 
+    void reportConnectionFactors(const std::size_t well_index,
+                                 std::vector<data::Connection>& connections) const;
+
+    void reportConnectionPressuresAndRates(const std::size_t well_index,
+                                           const PhaseUsage& pu,
+                                           std::vector<data::Connection>& connections) const;
+
+    void reportConnectionFilterCake(const std::size_t well_index,
+                                    std::vector<data::Connection>& connections) const;
 };
 
 } // namespace Opm
