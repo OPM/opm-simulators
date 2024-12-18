@@ -31,8 +31,10 @@
 
 #include <opm/output/data/Wells.hpp>
 
+#include <opm/simulators/wells/ConnFracStatistics.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/RunningStatistics.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -639,6 +641,11 @@ void WellState<Scalar>::reportConnections(std::vector<data::Connection>& connect
     if (! ws.producer) {
         this->reportConnectionFilterCake(well_index, connections);
     }
+
+    if (! perf_data.connFracStatistics.empty()) {
+        this->reportFractureStatistics(perf_data.connFracStatistics,
+                                       connections);
+    }
 }
 
 template<class Scalar>
@@ -1131,6 +1138,43 @@ reportConnectionFilterCake(const std::size_t well_index,
         filtrate.perm = filtrate_data.perm[i];
         filtrate.radius = filtrate_data.radius[i];
         filtrate.area_of_flow = filtrate_data.area_of_flow[i];
+    }
+}
+
+template <class Scalar>
+void WellState<Scalar>::
+reportFractureStatistics(const std::vector<ConnFracStatistics<Scalar>>& stats,
+                         std::vector<data::Connection>& connections) const
+{
+    using Quantity = typename ConnFracStatistics<Scalar>::Quantity;
+    using StatResult = data::ConnectionFracturing;
+
+    auto connIx = 0*connections.size();
+    for (auto& connection : connections) {
+        for (const auto& [q, result] : {
+                std::pair { Quantity::Pressure, &StatResult::press },
+                std::pair { Quantity::FlowRate, &StatResult::rate  },
+                std::pair { Quantity::Width   , &StatResult::width },
+            })
+        {
+            const auto& stat = stats[connIx].statistics(q);
+
+            if (stat.sampleSize() > 0) {
+                auto& x = connection.fract.*result;
+
+                x.avg = stat.mean();
+                x.min = stat.min();
+                x.max = stat.max();
+
+                if (const auto stdev = stat.stdev(); stdev.has_value()) {
+                    x.stdev = *stdev;
+                }
+
+                connection.fract.numCells = stat.sampleSize();
+            }
+        }
+
+        ++connIx;
     }
 }
 
