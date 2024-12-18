@@ -29,14 +29,17 @@
 
 namespace Opm {
 
-
-
-GlobalWellInfo::GlobalWellInfo(const Schedule& sched, std::size_t report_step, const std::vector<Well>& local_wells)
+template<class Scalar>
+GlobalWellInfo<Scalar>::
+GlobalWellInfo(const Schedule& sched,
+               std::size_t report_step,
+               const std::vector<Well>& local_wells)
 {
     auto num_wells = sched.numWells(report_step);
     this->m_in_injecting_group.resize(num_wells);
     this->m_in_producing_group.resize(num_wells);
     this->m_is_open.resize(num_wells);
+    this->m_efficiency_scaling_factors.resize(num_wells);
     for (const auto& wname : sched.wellNames(report_step)) {
         const auto& well = sched.getWell(wname, report_step);
         auto global_well_index = well.seqIndex();
@@ -47,24 +50,36 @@ GlobalWellInfo::GlobalWellInfo(const Schedule& sched, std::size_t report_step, c
         this->local_map.push_back( well.seqIndex() );
 }
 
-
-bool GlobalWellInfo::in_injecting_group(const std::string& wname) const {
+template<class Scalar>
+bool GlobalWellInfo<Scalar>::
+in_injecting_group(const std::string& wname) const
+{
     auto global_well_index = this->name_map.at(wname);
     return this->m_in_injecting_group[global_well_index];
 }
 
-
-bool GlobalWellInfo::in_producing_group(const std::string& wname) const {
+template<class Scalar>
+bool GlobalWellInfo<Scalar>::
+in_producing_group(const std::string& wname) const
+{
     auto global_well_index = this->name_map.at(wname);
     return this->m_in_producing_group[global_well_index];
 }
 
-bool GlobalWellInfo::is_open(const std::string& wname) const {
+template<class Scalar>
+bool GlobalWellInfo<Scalar>::
+is_open(const std::string& wname) const
+{
     auto global_well_index = this->name_map.at(wname);
     return this->m_is_open[global_well_index];
 }
 
-void GlobalWellInfo::update_injector(std::size_t well_index, Well::Status well_status, Well::InjectorCMode injection_cmode) {
+template<class Scalar>
+void GlobalWellInfo<Scalar>::
+update_injector(std::size_t well_index,
+                Well::Status well_status,
+                Well::InjectorCMode injection_cmode)
+{
     if (well_status == Well::Status::OPEN) {
         this->m_is_open[this->local_map[well_index]] = 1;
         if (injection_cmode == Well::InjectorCMode::GRUP) {
@@ -73,7 +88,12 @@ void GlobalWellInfo::update_injector(std::size_t well_index, Well::Status well_s
     }
 }
 
-void GlobalWellInfo::update_producer(std::size_t well_index, Well::Status well_status, Well::ProducerCMode production_cmode) {
+template<class Scalar>
+void GlobalWellInfo<Scalar>::
+update_producer(std::size_t well_index,
+                Well::Status well_status,
+                Well::ProducerCMode production_cmode)
+{
     if (well_status == Well::Status::OPEN) {
         this->m_is_open[this->local_map[well_index]] = 1;
         if (production_cmode == Well::ProducerCMode::GRUP) {
@@ -82,22 +102,53 @@ void GlobalWellInfo::update_producer(std::size_t well_index, Well::Status well_s
     }
 }
 
-void GlobalWellInfo::clear() {
+template<class Scalar>
+void GlobalWellInfo<Scalar>::
+update_efficiency_scaling_factor(std::size_t well_index,
+                                 const Scalar efficiency_scaling_factor)
+{
+    this->m_efficiency_scaling_factors[this->local_map[well_index]] = efficiency_scaling_factor;
+}
+
+template<class Scalar>
+void GlobalWellInfo<Scalar>::clear()
+{
     this->m_in_injecting_group.assign(this->name_map.size(), 0);
     this->m_in_producing_group.assign(this->name_map.size(), 0);
     this->m_is_open.assign(this->name_map.size(), 0);
+    this->m_efficiency_scaling_factors.assign(this->name_map.size(), 1.0);
 }
 
+template<class Scalar>
+Scalar GlobalWellInfo<Scalar>::
+efficiency_scaling_factor(const std::string& wname) const
+{
+    auto global_well_index = this->name_map.at(wname);
+    return this->m_efficiency_scaling_factors[global_well_index];
+}
 
-std::size_t GlobalWellInfo::well_index(const std::string& wname) const {
+template<class Scalar>
+std::size_t GlobalWellInfo<Scalar>::
+well_index(const std::string& wname) const
+{
     return this->name_map.at(wname);
 }
 
-const std::string& GlobalWellInfo::well_name(std::size_t well_index) const {
+template<class Scalar>
+const std::string& GlobalWellInfo<Scalar>::
+well_name(std::size_t well_index) const
+{
     for (const auto& [name, index] : this->name_map) {
         if (index == well_index)
             return name;
     }
     throw std::logic_error("No well with index: " + std::to_string(well_index));
 }
+
+template class GlobalWellInfo<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class GlobalWellInfo<float>;
+#endif
+
 }
