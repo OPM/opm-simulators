@@ -20,6 +20,7 @@
 #define OPM_ILU0_KERNELS_HPP
 #include <cstddef>
 #include <vector>
+#include <opm/simulators/linalg/gpuistl/detail/kernelEnums.hpp>
 namespace Opm::gpuistl::detail::ILU0
 {
 
@@ -89,14 +90,14 @@ void solveLowerLevelSet(T* reorderedMat,
  * solve
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
-template <int blocksize, class LinearSolverScalar, class MatrixScalar>
+template <int blocksize, class LinearSolverScalar, class MatrixScalar, class DiagonalScalar>
 void solveUpperLevelSetSplit(MatrixScalar* reorderedMat,
                              int* rowIndices,
                              int* colIndices,
                              int* indexConversion,
                              int startIdx,
                              int rowsInLevelSet,
-                             const MatrixScalar* dInv,
+                             const DiagonalScalar* dInv,
                              LinearSolverScalar* v,
                              int threadBlockSize);
 
@@ -176,7 +177,7 @@ void LUFactorization(T* reorderedMat,
  * function
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
-template <int blocksize, class InputScalar, class OutputScalar, bool copyResultToOtherMatrix>
+template <int blocksize, class InputScalar, class OutputScalar, MixedPrecisionScheme mixedPrecisionScheme>
 void LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                           int* lowerRowIndices,
                           int* lowerColIndices,
