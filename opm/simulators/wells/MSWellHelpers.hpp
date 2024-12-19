@@ -31,11 +31,43 @@ template<class Matrix> class UMFPack;
 
 namespace Opm {
 
+template<class Scalar> class ParallelWellInfo;
 class DeferredLogger;
 class SICD;
 
 namespace mswellhelpers
 {
+
+    /// \brief A wrapper around the B matrix for distributed wells
+    ///
+    /// For standard wells the B matrix, is basically a multiplication
+    /// of the equation of the perforated cells followed by a reduction
+    /// (summation) of these to the well equations.
+    ///
+    /// This class does that in the functions mv and mmv (from the DUNE
+    /// matrix interface.
+    ///
+    /// \tparam Scalar The scalar used for the computation.
+    template<class MatrixType>
+    class ParallellMSWellB
+    {
+    public:
+        using Scalar = typename MatrixType::field_type;
+        ParallellMSWellB(const MatrixType& B,
+                         const ParallelWellInfo<Scalar>& parallel_well_info);
+
+        //! y = A x
+        template<class X, class Y>
+        void mv (const X& x, Y& y) const;
+
+        //! y = A x
+        template<class X, class Y>
+        void mmv (const X& x, Y& y) const;
+
+    private:
+        const MatrixType& B_;
+        const ParallelWellInfo<Scalar>& parallel_well_info_;
+    };
 
     /// Applies umfpack and checks for singularity
     template <typename MatrixType, typename VectorType>

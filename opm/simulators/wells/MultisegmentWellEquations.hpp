@@ -24,6 +24,7 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -153,6 +154,9 @@ public:
     std::vector<int> cells_;
 
     const ParallelWellInfo<Scalar>& pw_info_;
+
+    // Wrapper for the parallel application of B for distributed wells
+    mswellhelpers::ParallellMSWellB<OffDiagMatWell> parallelB_;
 };
 
 }
