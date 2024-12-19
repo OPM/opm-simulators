@@ -180,7 +180,7 @@ public:
         return this->global_well_info.value().is_open(name);
     }
 
-    bool getGlobalEfficiencyScalingFactor(const std::string& name) const
+    Scalar getGlobalEfficiencyScalingFactor(const std::string& name) const
     {
         return this->global_well_info.value().efficiency_scaling_factor(name);
     }
