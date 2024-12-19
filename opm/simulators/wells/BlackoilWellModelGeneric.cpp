@@ -69,9 +69,8 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
-#include <stack>
 #include <stdexcept>
-#include <string_view>
+#include <sstream>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -2041,6 +2040,182 @@ updateFiltrationModelsPreStep(DeferredLogger& deferred_logger)
     }
 }
 
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+logPrimaryVars() const
+{
+    std::ostringstream os;
+    for (const auto& w : this->well_container_generic_) {
+        os << w->name() << ":";
+        auto pv = w->getPrimaryVars();
+        for (const Scalar v : pv) {
+            os << ' ' << v;
+        }
+        os << '\n';
+    }
+    OpmLog::debug(os.str());
+}
+
+template<class Scalar>
+std::vector<Scalar>
+BlackoilWellModelGeneric<Scalar>::
+getPrimaryVarsDomain(const int domainIdx) const
+{
+    std::vector<Scalar> ret;
+    for (const auto& well : this->well_container_generic_) {
+        if (this->well_domain_.at(well->name()) == domainIdx) {
+            const auto& pv = well->getPrimaryVars();
+            ret.insert(ret.end(), pv.begin(), pv.end());
+        }
+    }
+    return ret;
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
+{
+    std::size_t offset = 0;
+    for (auto& well : this->well_container_generic_) {
+        if (this->well_domain_.at(well->name()) == domainIdx) {
+            int num_pri_vars = well->setPrimaryVars(vars.begin() + offset);
+            offset += num_pri_vars;
+        }
+    }
+    assert(offset == vars.size());
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+registerOpenWellsForWBPCalculation()
+{
+    assert (this->wbpCalcMap_.size() == this->wells_ecl_.size());
+
+    for (auto& wbpCalc : this->wbpCalcMap_) {
+        wbpCalc.openWellIdx_.reset();
+    }
+
+    auto openWellIdx = typename std::vector<WellInterfaceGeneric<Scalar>*>::size_type{0};
+    for (const auto* openWell : this->well_container_generic_) {
+        this->wbpCalcMap_[openWell->indexOfWell()].openWellIdx_ = openWellIdx++;
+    }
+}
+
+template<class Scalar>
+typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
+BlackoilWellModelGeneric<Scalar>::
+makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
+{
+    using Span = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
+    using Item = typename Span::Item;
+
+    return [wellIdx, this]() -> typename ParallelWBPCalculation<Scalar>::Evaluator
+    {
+        if (! this->wbpCalcMap_[wellIdx].openWellIdx_.has_value()) {
+            // Well is stopped/shut.  Return evaluator for stopped wells.
+            return []([[maybe_unused]] const int connIdx, Span sourceTerm)
+            {
+                // Well/connection is stopped/shut.  Set all items to
+                // zero.
+
+                sourceTerm
+                    .set(Item::Pressure      , 0.0)
+                    .set(Item::PoreVol       , 0.0)
+                    .set(Item::MixtureDensity, 0.0)
+                    .set(Item::Depth         , 0.0)
+                    ;
+            };
+        }
+
+        // Well is open.  Return an evaluator for open wells/open connections.
+        return [this, wellPtr = this->well_container_generic_[*this->wbpCalcMap_[wellIdx].openWellIdx_]]
+            (const int connIdx, Span sourceTerm)
+        {
+            // Note: The only item which actually matters for the WBP
+            // calculation at the well reservoir connection level is the
+            // mixture density.  Set other items to zero.
+
+            const auto& connIdxMap =
+                this->conn_idx_map_[wellPtr->indexOfWell()];
+
+            const auto rho = wellPtr->
+                connectionDensity(connIdxMap.global(connIdx),
+                                  connIdxMap.open(connIdx));
+
+            sourceTerm
+                .set(Item::Pressure      , 0.0)
+                .set(Item::PoreVol       , 0.0)
+                .set(Item::MixtureDensity, rho)
+                .set(Item::Depth         , 0.0)
+                ;
+        };
+    };
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+initializeWBPCalculationService()
+{
+    this->wbpCalcMap_.clear();
+    this->wbpCalcMap_.resize(this->wells_ecl_.size());
+
+    this->registerOpenWellsForWBPCalculation();
+
+    auto wellID = std::size_t{0};
+    for (const auto& well : this->wells_ecl_) {
+        this->wbpCalcMap_[wellID].wbpCalcIdx_ = this->wbpCalculationService_
+            .createCalculator(well,
+                              this->local_parallel_well_info_[wellID],
+                              this->conn_idx_map_[wellID].local(),
+                              this->makeWellSourceEvaluatorFactory(wellID));
+
+        ++wellID;
+    }
+
+    this->wbpCalculationService_.defineCommunication();
+}
+
+template<class Scalar>
+data::WellBlockAveragePressures
+BlackoilWellModelGeneric<Scalar>::
+computeWellBlockAveragePressures(const Scalar gravity) const
+{
+    auto wbpResult = data::WellBlockAveragePressures{};
+
+    using Calculated = typename PAvgCalculatorResult<Scalar>::WBPMode;
+    using Output = data::WellBlockAvgPress::Quantity;
+
+    this->wbpCalculationService_.collectDynamicValues();
+
+    const auto numWells = this->wells_ecl_.size();
+    for (auto wellID = 0*numWells; wellID < numWells; ++wellID) {
+        const auto calcIdx = this->wbpCalcMap_[wellID].wbpCalcIdx_;
+        const auto& well = this->wells_ecl_[wellID];
+
+        if (! well.hasRefDepth()) {
+            // Can't perform depth correction without at least a
+            // fall-back datum depth.
+            continue;
+        }
+
+        this->wbpCalculationService_
+            .inferBlockAveragePressures(calcIdx, well.pavg(),
+                                        gravity,
+                                        well.getWPaveRefDepth());
+
+        const auto& result = this->wbpCalculationService_
+            .averagePressures(calcIdx);
+
+        auto& reported = wbpResult.values[well.name()];
+
+        reported[Output::WBP]  = result.value(Calculated::WBP);
+        reported[Output::WBP4] = result.value(Calculated::WBP4);
+        reported[Output::WBP5] = result.value(Calculated::WBP5);
+        reported[Output::WBP9] = result.value(Calculated::WBP9);
+    }
+
+    return wbpResult;
+}
 
 template class BlackoilWellModelGeneric<double>;
 

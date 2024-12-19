@@ -189,6 +189,20 @@ public:
 
     void resetWellOperability();
 
+
+    virtual std::vector<Scalar> getPrimaryVars() const
+    {
+        return {};
+    }
+
+    virtual int setPrimaryVars(typename std::vector<Scalar>::const_iterator)
+    {
+        return 0;
+    }
+
+    virtual Scalar connectionDensity(const int globalConnIdx,
+                                     const int openConnIdx) const = 0;
+
 protected:
     bool getAllowCrossFlow() const;
 

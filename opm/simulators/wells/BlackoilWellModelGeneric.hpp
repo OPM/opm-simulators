@@ -219,6 +219,10 @@ public:
     }
     bool wasDynamicallyShutThisTimeStep(const std::string& well_name) const;
 
+    void logPrimaryVars() const;
+    std::vector<Scalar> getPrimaryVarsDomain(const int domainIdx) const;
+    void setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars);
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -454,6 +458,16 @@ protected:
     void assignMassGasRate(data::Wells& wsrpt,
                            const Scalar& gasDensity) const;
 
+    void registerOpenWellsForWBPCalculation();
+
+    typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
+    makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
+
+    void initializeWBPCalculationService();
+
+    data::WellBlockAveragePressures
+    computeWellBlockAveragePressures(const Scalar gravity) const;
+
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
@@ -577,6 +591,14 @@ protected:
     std::vector<WellProdIndexCalculator<Scalar>> prod_index_calc_;
     mutable ParallelWBPCalculation<Scalar> wbpCalculationService_;
 
+    struct WBPCalcID
+    {
+        std::optional<typename std::vector<WellInterfaceGeneric<Scalar>*>::size_type> openWellIdx_{};
+        std::size_t wbpCalcIdx_{};
+    };
+
+    std::vector<WBPCalcID> wbpCalcMap_{};
+
     std::vector<int> pvt_region_idx_;
 
     mutable std::unordered_set<std::string> closed_this_step_;
@@ -612,6 +634,9 @@ protected:
     std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>> switched_inj_groups_;
     // Store map of group name and close offending well for output
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
+
+    // Keep track of the domain of each well, if using subdomains.
+    std::map<std::string, int> well_domain_;
 
 private:
     WellInterfaceGeneric<Scalar>* getGenWell(const std::string& well_name);

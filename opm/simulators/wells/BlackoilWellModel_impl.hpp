@@ -273,7 +273,7 @@ namespace Opm {
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
         for (const auto& well: well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 // Modifiy the Jacobian with explicit Schur complement
                 // contributions if requested.
                 if (param_.matrix_add_well_contributions_) {
@@ -1187,7 +1187,8 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    doPreStepNetworkRebalance(DeferredLogger& deferred_logger) {
+    doPreStepNetworkRebalance(DeferredLogger& deferred_logger)
+    {
         const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
@@ -1288,7 +1289,9 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    updateWellControlsAndNetwork(const bool mandatory_network_balance, const double dt, DeferredLogger& local_deferredLogger)
+    updateWellControlsAndNetwork(const bool mandatory_network_balance,
+                                 const double dt,
+                                 DeferredLogger& local_deferredLogger)
     {
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
@@ -1772,7 +1775,7 @@ namespace Opm {
     assembleWellEqDomain(const double dt, const Domain& domain, DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 well->assembleWellEq(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
             }
         }
@@ -1842,7 +1845,7 @@ namespace Opm {
     {
         for (size_t well_index = 0; well_index < well_container_.size(); ++well_index) {
             auto& well = well_container_[well_index];
-            if (well_domain_.at(well->name()) == domainIndex) {
+            if (this->well_domain_.at(well->name()) == domainIndex) {
                 // Well equations B and C uses only the perforated cells, so need to apply on local vectors
                 // transfer global cells index to local subdomain cells index
                 const auto& local_cells = well_local_cells_[well_index];
@@ -2082,7 +2085,7 @@ namespace Opm {
         // parallel but for each individual domain of each rank.
         DeferredLogger local_deferredLogger;
         for (auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 const auto& cells = well->cells();
                 x_local_.resize(cells.size());
 
@@ -2119,7 +2122,7 @@ namespace Opm {
     initPrimaryVariablesEvaluationDomain(const Domain& domain) const
     {
         for (auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 well->initPrimaryVariablesEvaluation();
             }
         }
@@ -2142,7 +2145,7 @@ namespace Opm {
 
         ConvergenceReport report;
         for (const auto& well : well_container_) {
-            if ((well_domain_.at(well->name()) == domain.index)) {
+            if ((this->well_domain_.at(well->name()) == domain.index)) {
                 if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                     report += well->getWellConvergence(simulator_,
                                                        this->wellState(),
@@ -2245,7 +2248,9 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance)
+    updateWellControls(const bool mandatory_network_balance,
+                       DeferredLogger& deferred_logger,
+                       const bool relax_network_tolerance)
     {
         const int episodeIdx = simulator_.episodeIndex();
         const auto& network = this->schedule()[episodeIdx].network();
@@ -2346,160 +2351,10 @@ namespace Opm {
 
         // Check only individual well constraints and communicate.
         for (const auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
+            if (this->well_domain_.at(well->name()) == domain.index) {
                 const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
                 well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
             }
-        }
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    initializeWBPCalculationService()
-    {
-        this->wbpCalcMap_.clear();
-        this->wbpCalcMap_.resize(this->wells_ecl_.size());
-
-        this->registerOpenWellsForWBPCalculation();
-
-        auto wellID = std::size_t{0};
-        for (const auto& well : this->wells_ecl_) {
-            this->wbpCalcMap_[wellID].wbpCalcIdx_ = this->wbpCalculationService_
-                .createCalculator(well,
-                                  this->local_parallel_well_info_[wellID],
-                                  this->conn_idx_map_[wellID].local(),
-                                  this->makeWellSourceEvaluatorFactory(wellID));
-
-            ++wellID;
-        }
-
-        this->wbpCalculationService_.defineCommunication();
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    data::WellBlockAveragePressures
-    BlackoilWellModel<TypeTag>::
-    computeWellBlockAveragePressures() const
-    {
-        auto wbpResult = data::WellBlockAveragePressures{};
-
-        using Calculated = typename PAvgCalculatorResult<Scalar>::WBPMode;
-        using Output = data::WellBlockAvgPress::Quantity;
-
-        this->wbpCalculationService_.collectDynamicValues();
-
-        const auto numWells = this->wells_ecl_.size();
-        for (auto wellID = 0*numWells; wellID < numWells; ++wellID) {
-            const auto calcIdx = this->wbpCalcMap_[wellID].wbpCalcIdx_;
-            const auto& well = this->wells_ecl_[wellID];
-
-            if (! well.hasRefDepth()) {
-                // Can't perform depth correction without at least a
-                // fall-back datum depth.
-                continue;
-            }
-
-            this->wbpCalculationService_
-                .inferBlockAveragePressures(calcIdx, well.pavg(),
-                                            this->gravity_,
-                                            well.getWPaveRefDepth());
-
-            const auto& result = this->wbpCalculationService_
-                .averagePressures(calcIdx);
-
-            auto& reported = wbpResult.values[well.name()];
-
-            reported[Output::WBP]  = result.value(Calculated::WBP);
-            reported[Output::WBP4] = result.value(Calculated::WBP4);
-            reported[Output::WBP5] = result.value(Calculated::WBP5);
-            reported[Output::WBP9] = result.value(Calculated::WBP9);
-        }
-
-        return wbpResult;
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    typename ParallelWBPCalculation<typename BlackoilWellModel<TypeTag>::Scalar>::EvaluatorFactory
-    BlackoilWellModel<TypeTag>::
-    makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
-    {
-        using Span = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
-        using Item = typename Span::Item;
-
-        return [wellIdx, this]() -> typename ParallelWBPCalculation<Scalar>::Evaluator
-        {
-            if (! this->wbpCalcMap_[wellIdx].openWellIdx_.has_value()) {
-                // Well is stopped/shut.  Return evaluator for stopped wells.
-                return []([[maybe_unused]] const int connIdx, Span sourceTerm)
-                {
-                    // Well/connection is stopped/shut.  Set all items to
-                    // zero.
-
-                    sourceTerm
-                        .set(Item::Pressure      , 0.0)
-                        .set(Item::PoreVol       , 0.0)
-                        .set(Item::MixtureDensity, 0.0)
-                        .set(Item::Depth         , 0.0)
-                        ;
-                };
-            }
-
-            // Well is open.  Return an evaluator for open wells/open connections.
-            return [this, wellPtr = this->well_container_[*this->wbpCalcMap_[wellIdx].openWellIdx_].get()]
-                (const int connIdx, Span sourceTerm)
-            {
-                // Note: The only item which actually matters for the WBP
-                // calculation at the well reservoir connection level is the
-                // mixture density.  Set other items to zero.
-
-                const auto& connIdxMap =
-                    this->conn_idx_map_[wellPtr->indexOfWell()];
-
-                const auto rho = wellPtr->
-                    connectionDensity(connIdxMap.global(connIdx),
-                                      connIdxMap.open(connIdx));
-
-                sourceTerm
-                    .set(Item::Pressure      , 0.0)
-                    .set(Item::PoreVol       , 0.0)
-                    .set(Item::MixtureDensity, rho)
-                    .set(Item::Depth         , 0.0)
-                    ;
-            };
-        };
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    registerOpenWellsForWBPCalculation()
-    {
-        assert (this->wbpCalcMap_.size() == this->wells_ecl_.size());
-
-        for (auto& wbpCalc : this->wbpCalcMap_) {
-            wbpCalc.openWellIdx_.reset();
-        }
-
-        auto openWellIdx = typename std::vector<WellInterfacePtr>::size_type{0};
-        for (const auto* openWell : this->well_container_generic_) {
-            this->wbpCalcMap_[openWell->indexOfWell()].openWellIdx_ = openWellIdx++;
         }
     }
 
@@ -2988,59 +2843,6 @@ namespace Opm {
     template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    logPrimaryVars() const
-    {
-        std::ostringstream os;
-        for (const auto& w : well_container_) {
-            os << w->name() << ":";
-            auto pv = w->getPrimaryVars();
-            for (const Scalar v : pv) {
-                os << ' ' << v;
-            }
-            os << '\n';
-        }
-        OpmLog::debug(os.str());
-    }
-
-
-
-    template <typename TypeTag>
-    std::vector<typename BlackoilWellModel<TypeTag>::Scalar>
-    BlackoilWellModel<TypeTag>::
-    getPrimaryVarsDomain(const Domain& domain) const
-    {
-        std::vector<Scalar> ret;
-        for (const auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
-                const auto& pv = well->getPrimaryVars();
-                ret.insert(ret.end(), pv.begin(), pv.end());
-            }
-        }
-        return ret;
-    }
-
-
-
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    setPrimaryVarsDomain(const Domain& domain, const std::vector<Scalar>& vars)
-    {
-        std::size_t offset = 0;
-        for (auto& well : well_container_) {
-            if (well_domain_.at(well->name()) == domain.index) {
-                int num_pri_vars = well->setPrimaryVars(vars.begin() + offset);
-                offset += num_pri_vars;
-            }
-        }
-        assert(offset == vars.size());
-    }
-
-
-
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
     setupDomains(const std::vector<Domain>& domains)
     {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -3060,7 +2862,7 @@ namespace Opm {
                 if (cell_present(first_well_cell)) {
                     // Assuming that if the first well cell is found in a domain,
                     // then all of that well's cells are in that same domain.
-                    well_domain_[wellPtr->name()] = domain.index;
+                    this->well_domain_[wellPtr->name()] = domain.index;
 
                     // Verify that all of that well's cells are in that same domain.
                     for (int well_cell : wellPtr->cells()) {
@@ -3080,10 +2882,10 @@ namespace Opm {
         const Opm::Parallel::Communication& comm = grid().comm();
         const int rank = comm.rank();
         DeferredLogger local_log;
-        if (!well_domain_.empty()) {
+        if (!this->well_domain_.empty()) {
             std::ostringstream os;
             os << "Well name      Rank      Domain\n";
-            for (const auto& [wname, domain] : well_domain_) {
+            for (const auto& [wname, domain] : this->well_domain_) {
                 os << wname << std::setw(19 - wname.size()) << rank << std::setw(12) << domain << '\n';
             }
             local_log.debug(os.str());
@@ -3099,7 +2901,7 @@ namespace Opm {
         std::vector<int> local_cells;
         for (const auto& well : well_container_) {
             const auto& global_cells = well->cells();
-            const int domain_index = well_domain_.at(well->name());
+            const int domain_index = this->well_domain_.at(well->name());
             const auto& domain_cells = domains[domain_index].cells;
             local_cells.resize(global_cells.size());
 

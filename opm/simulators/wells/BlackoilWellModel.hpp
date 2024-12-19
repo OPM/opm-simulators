@@ -296,7 +296,7 @@ template<class Scalar> class WellContributions;
 
             data::WellBlockAveragePressures wellBlockAveragePressures() const
             {
-                return this->computeWellBlockAveragePressures();
+                return this->computeWellBlockAveragePressures(this->gravity_);
             }
 
             // subtract B*inv(D)*C * x from A*x
@@ -387,10 +387,6 @@ template<class Scalar> class WellContributions;
                                 const Domain& domain);
             void updateWellControlsDomain(DeferredLogger& deferred_logger, const Domain& domain);
 
-            void logPrimaryVars() const;
-            std::vector<Scalar> getPrimaryVarsDomain(const Domain& domain) const;
-            void setPrimaryVarsDomain(const Domain& domain, const std::vector<Scalar>& vars);
-
             void setupDomains(const std::vector<Domain>& domains);
 
         protected:
@@ -429,14 +425,6 @@ template<class Scalar> class WellContributions;
             std::unique_ptr<RateConverterType> rateConverter_{};
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
 
-            struct WBPCalcID
-            {
-                std::optional<typename std::vector<WellInterfacePtr>::size_type> openWellIdx_{};
-                std::size_t wbpCalcIdx_{};
-            };
-
-            std::vector<WBPCalcID> wbpCalcMap_{};
-
             SimulatorReportSingle last_report_{};
 
             // Pre-step network solve at static reservoir conditions (group and well states might be updated)
@@ -446,9 +434,6 @@ template<class Scalar> class WellContributions;
             mutable BVector scaleAddRes_{};
 
             std::vector<Scalar> B_avg_{};
-
-            // Keep track of the domain of each well, if using subdomains.
-            std::map<std::string, int> well_domain_;
 
             // Store the local index of the wells perforated cells in the domain, if using subdomains
             SparseTable<int> well_local_cells_;
@@ -514,16 +499,6 @@ template<class Scalar> class WellContributions;
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
-
-            void initializeWBPCalculationService();
-
-            data::WellBlockAveragePressures
-            computeWellBlockAveragePressures() const;
-
-            typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
-            makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
-
-            void registerOpenWellsForWBPCalculation();
 
             void updateAverageFormationFactor();
 
