@@ -1322,9 +1322,12 @@ protected:
     fieldPropDoubleOnLeafAssigner_()
     {
         const auto& lookup = this->lookUpData_;
+        const auto& grid = this->simulator().vanguard().gridView().grid();
+        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
+      
         return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString)
         {
-            return lookup.assignFieldPropsDoubleOnLeaf(fieldPropManager, propString);
+            return lookup.template assignFieldPropsDoubleOnLeaf<GridType>(fieldPropManager, propString);
         };
     }
 
@@ -1408,7 +1411,7 @@ protected:
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(dofIdx);
             Scalar poreVolume = porvData[dofIdx];
-
+            
             // we define the porosity as the accumulated pore volume divided by the
             // geometric volume of the element. Note that -- in pathetic cases -- it can
             // be larger than 1.0!
