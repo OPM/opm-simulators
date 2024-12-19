@@ -26,6 +26,7 @@
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
@@ -35,6 +36,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/RegionAverageCalculator.hpp>
@@ -347,6 +349,7 @@ updateGroupTargetReduction(const Group& group,
                            const PhaseUsage& pu,
                            const GuideRate& guide_rate,
                            const WellState<Scalar>& wellState,
+                           const SummaryState& summaryState,
                            GroupState<Scalar>& group_state,
                            std::vector<Scalar>& groupTargetReduction)
 {
@@ -361,6 +364,7 @@ updateGroupTargetReduction(const Group& group,
                                    pu,
                                    guide_rate,
                                    wellState,
+                                   summaryState,
                                    group_state,
                                    subGroupTargetReduction);
 
@@ -402,7 +406,7 @@ updateGroupTargetReduction(const Group& group,
                 const bool individual_control = (currentGroupControl != Group::InjectionCMode::FLD
                         && currentGroupControl != Group::InjectionCMode::NONE);
                 const int num_group_controlled_wells
-                        = groupControlledWells(schedule, wellState, group_state, reportStepIdx, subGroupName, "", !isInjector, phase);
+                        = groupControlledWells(schedule, wellState, group_state, summaryState, &guide_rate, reportStepIdx, subGroupName, "", !isInjector, phase);
                 if (individual_control || num_group_controlled_wells == 0) {
                     groupTargetReduction[phase_pos]
                         += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase_pos, isInjector);
@@ -418,7 +422,7 @@ updateGroupTargetReduction(const Group& group,
             const bool individual_control = (currentGroupControl != Group::ProductionCMode::FLD
                                              && currentGroupControl != Group::ProductionCMode::NONE);
             const int num_group_controlled_wells
-                = groupControlledWells(schedule, wellState, group_state, reportStepIdx, subGroupName, "", !isInjector, /*injectionPhaseNotUsed*/Phase::OIL);
+                = groupControlledWells(schedule, wellState, group_state, summaryState, &guide_rate, reportStepIdx, subGroupName, "", !isInjector, /*injectionPhaseNotUsed*/Phase::OIL);
             if (individual_control || num_group_controlled_wells == 0) {
                 for (int phase = 0; phase < np; phase++) {
                     groupTargetReduction[phase]
@@ -468,10 +472,13 @@ updateGroupTargetReduction(const Group& group,
                     groupTargetReduction[phase] += ws.surface_rates[phase] * efficiency;
                 }
         } else {
-            if (ws.production_cmode != Well::ProducerCMode::GRUP)
-                for (int phase = 0; phase < np; phase++) {
-                    groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
+                if ((ws.production_cmode != Well::ProducerCMode::GRUP)){
+                    if (!group.as_choke()) {
+                        for (int phase = 0; phase < np; phase++) {
+                            groupTargetReduction[phase] -= ws.surface_rates[phase] * efficiency;
+                        }
                 }
+            }
         }
     }
     if (isInjector)
@@ -1091,6 +1098,8 @@ int WellGroupHelpers<Scalar>::
 groupControlledWells(const Schedule& schedule,
                      const WellState<Scalar>& well_state,
                      const GroupState<Scalar>& group_state,
+                     const SummaryState& summary_state,
+                     const GuideRate* guideRate,
                      const int report_step,
                      const std::string& group_name,
                      const std::string& always_included_child,
@@ -1112,16 +1121,81 @@ groupControlledWells(const Schedule& schedule,
 
         if (included) {
             num_wells
-                += groupControlledWells(schedule, well_state, group_state, report_step, child_group, always_included_child, is_production_group, injection_phase);
+                += groupControlledWells(schedule, well_state, group_state, summary_state, guideRate, report_step, child_group, always_included_child, is_production_group, injection_phase);
         }
     }
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_production_group) {
-            included = included || well_state.isProductionGrup(child_well);
+                included = included || well_state.isProductionGrup(child_well) || group.as_choke();
         } else {
             included = included || well_state.isInjectionGrup(child_well);
         }
+        const auto ctrl1 = group_state.production_control(group.name());
+        if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
+            // The auto choke group has not own group control but inherits control from an ancestor group.
+            // Number of wells should be calculated as zero when wells of auto choke group do not deliver target.
+            // This behaviour is then similar to no-autochoke group with wells not on GRUP control.
+            // The rates of these wells are summed up. The parent group target is reduced with this rate.
+            // This reduced target becomes the target of the other child group of this parent.
+            const PhaseUsage& pu = well_state.phaseUsage();
+            std::vector<Scalar> rates(pu.num_phases, 0.0);
+            for (int phase_pos = 0; phase_pos < pu.num_phases; ++phase_pos) {
+                 rates[phase_pos] = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
+                                                                                  schedule,
+                                                                                  well_state,
+                                                                                  report_step,
+                                                                                  phase_pos,
+                                                                                  false);
+            }
+
+            // Get the ancestor of the auto choke group that has group control (cmode != FLD, NONE)
+            const auto& control_group_name = control_group(group, group_state, report_step, schedule);
+            const auto& control_group = schedule.getGroup(control_group_name, report_step);
+            const auto& ctrl = control_group.productionControls(summary_state);
+            const auto& control_group_cmode = ctrl.cmode;
+
+            const auto& group_guide_rate = group.productionControls(summary_state).guide_rate;
+
+            if (group_guide_rate > 0) {
+                // Guide rate is not default for the auto choke group
+                Scalar gratTargetFromSales = 0.0;
+                if (group_state.has_grat_sales_target(control_group_name))
+                    gratTargetFromSales = group_state.grat_sales_target(control_group_name);
+
+                std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
+                WGHelpers::TargetCalculator tcalc(control_group_cmode,
+                                                pu,
+                                                resv_coeff,
+                                                gratTargetFromSales,
+                                                group.name(),
+                                                group_state,
+                                                group.has_gpmaint_control(control_group_cmode));
+                auto deferred_logger = Opm::DeferredLogger();
+                const auto& control_group_target = tcalc.groupTarget(ctrl, deferred_logger);
+
+                // Calculates the guide rate of the parent group with control. 
+                // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups 
+                const auto& control_group_guide_rate = getGuideRate(control_group_name,
+                                                    schedule,
+                                                    well_state,
+                                                    group_state,
+                                                    report_step,
+                                                    guideRate,
+                                                    tcalc.guideTargetMode(),
+                                                    pu);
+
+                if (control_group_guide_rate > 0) {
+                    // Target rate for the auto choke group
+                    const Scalar target_rate = control_group_target * group_guide_rate / control_group_guide_rate;
+                    const Scalar current_rate = tcalc.calcModeRateFromRates(rates);
+
+                    if (current_rate < target_rate)
+                        included = false;
+                }
+            }
+        }
+
         if (included) {
             ++num_wells;
         }
@@ -1158,6 +1232,27 @@ groupChainTopBot(const std::string& bottom,
     // Reverse order and return.
     std::reverse(chain.begin(), chain.end());
     return chain;
+}
+
+template<class Scalar>
+std::string
+WellGroupHelpers<Scalar>::
+control_group(const Group& group,
+              const GroupState<Scalar>& group_state,
+              const int reportStepIdx,
+              const Schedule& schedule)
+{
+    const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
+
+    if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
+        const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
+        return control_group(parent,
+                             group_state,
+                             reportStepIdx,
+                             schedule);
+    }
+
+    return group.name();
 }
 
 template<class Scalar>
@@ -1239,6 +1334,7 @@ checkGroupConstraintsProd(const std::string& name,
     WGHelpers::FractionCalculator fcalc(schedule,
                                         wellState,
                                         group_state,
+                                        summaryState,
                                         reportStepIdx,
                                         guideRate,
                                         tcalc.guideTargetMode(),
@@ -1281,6 +1377,8 @@ checkGroupConstraintsProd(const std::string& name,
         const int num_gr_ctrl = groupControlledWells(schedule,
                                                      wellState,
                                                      group_state,
+                                                     summaryState,
+                                                     guideRate,
                                                      reportStepIdx,
                                                      chain[ii],
                                                      "",
@@ -1414,6 +1512,7 @@ checkGroupConstraintsInj(const std::string& name,
     WGHelpers::FractionCalculator fcalc(schedule,
                                         wellState,
                                         group_state,
+                                        summaryState,
                                         reportStepIdx,
                                         guideRate,
                                         tcalc.guideTargetMode(),
@@ -1456,12 +1555,14 @@ checkGroupConstraintsInj(const std::string& name,
     for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
         const int num_gr_ctrl = groupControlledWells(schedule,
                                                      wellState,
-                                                             group_state,
-                                                             reportStepIdx,
-                                                             chain[ii],
-                                                             "",
-                                                             /*is_producer*/ false,
-                                                             injectionPhase);
+                                                     group_state,
+                                                     summaryState,
+                                                     guideRate,
+                                                     reportStepIdx,
+                                                     chain[ii],
+                                                     "",
+                                                     /*is_producer*/ false,
+                                                     injectionPhase);
         if (guideRate->has(chain[ii], injectionPhase) && num_gr_ctrl > 0) {
             local_reduction_level = ii;
         }

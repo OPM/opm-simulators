@@ -41,6 +41,7 @@ public:
     FractionCalculator(const Schedule& schedule,
                        const WellState<Scalar>& well_state,
                        const GroupState<Scalar>& group_state,
+                       const SummaryState& summary_state,
                        const int report_step,
                        const GuideRate* guide_rate,
                        const GuideRateModel::Target target,
@@ -65,6 +66,7 @@ private:
     const Schedule& schedule_;
     const WellState<Scalar>& well_state_;
     const GroupState<Scalar>& group_state_;
+    const SummaryState& summary_state_;
     int report_step_;
     const GuideRate* guide_rate_;
     GuideRateModel::Target target_;
