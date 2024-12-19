@@ -1061,8 +1061,7 @@ namespace Opm {
                                                                           this->well_open_times_,
                                                                           schedule_open))
                 {
-                    if (this->wellState().has(wname))
-                        this->wellState()[wname].efficiency_scaling_factor = wscale;
+                    this->wellState()[wname].efficiency_scaling_factor = wscale;
                     this->schedule_.add_event(ScheduleEvents::WELLGROUP_EFFICIENCY_UPDATE, report_step);
                 }
             }
