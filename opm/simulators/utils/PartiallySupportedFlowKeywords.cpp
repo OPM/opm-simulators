@@ -204,7 +204,6 @@ partiallySupported()
             "ROCKOPTS",
             {
                {1,{true, allow_values<std::string> {"PRESSURE"}, "ROCKOPTS: only the PRESSURE options are supported"}}, 
-               {2,{true, allow_values<std::string> {"NOSTORE"}, "ROCKOPTS: only the NOSTORE options are supported"}}, 
                {3,{true, allow_values<std::string> {"PVTNUM", "ROCKNUM"}, "ROCKOPTS: only PVTNUM and ROCKNUM are supported"}}, 
             },
          },

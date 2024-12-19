@@ -246,15 +246,6 @@ public:
     Scalar rockCompressibility(unsigned globalSpaceIdx) const;
 
     /*!
-     * Direct access to rock reference pressure.
-     *
-     * While the above overload could be implemented in terms of this method,
-     * that would require always looking up the global space index, which
-     * is not always needed.
-     */
-    Scalar rockReferencePressure(unsigned globalSpaceIdx) const;
-
-    /*!
      * \brief Direct indexed access to the porosity.
      *
      * For the FlowProblem, this method is identical to referencePorosity(). The intensive

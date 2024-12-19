@@ -116,6 +116,11 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
         }
     }
 
+    // Warn that ROCK and ROCKOPTS item 2 = STORE is used together
+    if (rock_config.store()) {
+        OpmLog::warning("ROCKOPTS item 2 set to STORE, ROCK item 1 replaced with initial (equilibrated) pressures");
+    }
+
     // read the parameters for water-induced rock compaction
     readRockCompactionParameters_();
 
@@ -152,7 +157,7 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
 
     // Store overburden pressure pr element
     const auto& overburdTables = eclState_.getTableManager().getOverburdTables();
-    if (!overburdTables.empty()) {
+    if (!overburdTables.empty() && !rock_config.store()) {
         overburdenPressure_.resize(numElem,0.0);
         std::size_t numRocktabTables = rock_config.num_rock_tables();
 
@@ -174,6 +179,9 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
                 overburdenTables[tableIdx].eval(cellCenterDepths[elemIdx], /*extrapolation=*/true);
         }
     }
+    else if (!overburdTables.empty() && rock_config.store()) {
+        OpmLog::warning("ROCKOPTS item 2 set to STORE, OVERBURD ignored!");
+    } 
 }
 
 template<class GridView, class FluidSystem>
@@ -282,21 +290,6 @@ rockCompressibility(unsigned globalSpaceIdx) const
         tableIdx = this->rockTableIdx_[globalSpaceIdx];
     }
     return this->rockParams_[tableIdx].compressibility;
-}
-
-template<class GridView, class FluidSystem>
-typename FlowGenericProblem<GridView,FluidSystem>::Scalar
-FlowGenericProblem<GridView,FluidSystem>::
-rockReferencePressure(unsigned globalSpaceIdx) const
-{
-    if (this->rockParams_.empty())
-        return 1e5;
-
-    unsigned tableIdx = 0;
-    if (!this->rockTableIdx_.empty()) {
-        tableIdx = this->rockTableIdx_[globalSpaceIdx];
-    }
-    return this->rockParams_[tableIdx].referencePressure;
 }
 
 template<class GridView, class FluidSystem>
