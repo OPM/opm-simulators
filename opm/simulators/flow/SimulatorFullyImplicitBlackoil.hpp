@@ -367,6 +367,7 @@ public:
                                             return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
                                         });
 
+                wcycle_time_step = this->grid().comm().min(wcycle_time_step);
                 if (dt != wcycle_time_step) {
                     this->adaptiveTimeStepping_->updateNEXTSTEP(wcycle_time_step);
                     return true;
