@@ -35,6 +35,8 @@
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
+
 #include <dune/istl/preconditioners.hh>
 #include <dune/istl/solvers.hh>
 
@@ -96,6 +98,45 @@ ValueType OIWEmulsionViscosity(const ValueType& water_viscosity,
 }
 
 namespace Opm::mswellhelpers {
+
+template<class MatrixType>
+ParallellMSWellB<MatrixType>::
+ParallellMSWellB(const MatrixType& B,
+                 const ParallelWellInfo<Scalar>& parallel_well_info)
+    : B_(B), parallel_well_info_(parallel_well_info)
+{}
+
+template<class MatrixType>
+template<class X, class Y>
+void ParallellMSWellB<MatrixType>::
+mv (const X& x, Y& y) const
+{
+    B_.mv(x, y);
+
+    if (this->parallel_well_info_.communication().size() > 1)
+    {
+        // Communicate here to get the contributions from all segments
+        this->parallel_well_info_.communication().sum(y.data(), y.size());
+    }
+}
+
+template<class MatrixType>
+template<class X, class Y>
+void ParallellMSWellB<MatrixType>::
+mmv (const X& x, Y& y) const
+{
+    if (this->parallel_well_info_.communication().size() == 1)
+    {
+        // Do the same thing as before. The else branch
+        // produces different rounding errors and results
+        // slightly different iteration counts / well curves
+        B_.mmv(x, y);
+    } else {
+        Y temp(y);
+        mv(x, temp); // includes parallel reduction
+        y -= temp;
+    }
+}
 
     /// Applies umfpack and checks for singularity
 template <typename MatrixType, typename VectorType>
@@ -308,8 +349,24 @@ ValueType emulsionViscosity(const ValueType& water_fraction,
 
 template<class Scalar, int Dim>
 using Vec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
-template<class Scalar, int Dim>
-using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,Dim,Dim>>;
+template<class Scalar, int M, int N = M>
+using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,M,N>>;
+
+#define INSTANTIATE_PARALLELLMSWELLB(T, M, N)                                                                                                                                                                                                                                      \
+    template class ParallellMSWellB<Mat<T,M,N>>;                                                                                                                                                                                                 \
+    template void ParallellMSWellB<Mat<T,M,N>>::mv(Vec<T,N> const&,Vec<T,M>& ) const; \
+    template void ParallellMSWellB<Mat<T,M,N>>::mmv(Vec<T,N> const&,Vec<T,M>& ) const;
+
+#define INSTANTIATE_ALL_PARALLELLMSWELLB(T) \
+    INSTANTIATE_PARALLELLMSWELLB(T, 2, 1)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 2, 2)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 2, 6)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 3, 2)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 3, 3)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 3, 4)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 4, 3)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 4, 4)   \
+    INSTANTIATE_PARALLELLMSWELLB(T, 4, 5)
 
 #define INSTANTIATE_UMF(T,Dim)                                             \
     template Vec<T,Dim> applyUMFPack(Dune::UMFPack<Mat<T,Dim>>&,           \
@@ -353,7 +410,8 @@ using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,Dim,Dim>>;
     INSTANTIATE_EVAL(T,6)   \
     INSTANTIATE_EVAL(T,7)   \
     INSTANTIATE_EVAL(T,8)   \
-    INSTANTIATE_EVAL(T,9)
+    INSTANTIATE_EVAL(T,9)   \
+    INSTANTIATE_ALL_PARALLELLMSWELLB(T)
 
 INSTANTIATE_TYPE(double)
 

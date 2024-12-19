@@ -38,7 +38,6 @@
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 
 #include <opm/simulators/wells/WellHelpers.hpp>
-#include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
@@ -52,6 +51,7 @@ MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info)
     : well_(well)
     , pw_info_(pw_info)
+    , parallelB_(duneB_, pw_info)
 {
 }
 
@@ -150,12 +150,7 @@ apply(const BVector& x, BVector& Ax) const
 {
     BVectorWell Bx(duneB_.N());
 
-    duneB_.mv(x, Bx);
-
-    if (this->pw_info_.communication().size() > 1) {
-        // We need to communicate here to get the contributions from all segments
-        this->pw_info_.communication().sum(Bx.data(), Bx.size());
-    }
+    parallelB_.mv(x, Bx);
 
     // It is ok to do this on each process instead of only on one,
     // because the other processes would remain idle while waiting for
@@ -224,19 +219,9 @@ template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
-    // resWell = resWell - B * x
     BVectorWell resWell = resWell_;
-    if (this->pw_info_.communication().size() == 1) {
-        duneB_.mmv(x, resWell);
-    } else {
-        BVectorWell Bx(duneB_.N());
-        duneB_.mv(x, Bx);
-
-        // We need to communicate here to get the contributions from all segments
-        this->pw_info_.communication().sum(Bx.data(), Bx.size());
-
-        resWell -= Bx;
-    }
+    // resWell = resWell - B * x
+    parallelB_.mmv(x, resWell);
 
     // xw = D^-1 * resWell
     // It is ok to do this on each process instead of only on one,
