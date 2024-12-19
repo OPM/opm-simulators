@@ -481,7 +481,7 @@ template<class Scalar> class WellContributions;
                                               DeferredLogger& local_deferredLogger);
             
             double computeWellGroupTarget(DeferredLogger& local_deferredLogger);
-            void computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
+            bool computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
 
             /// Update rank's notion of intersecting wells and their
             /// associate solution variables.

@@ -1318,7 +1318,7 @@ namespace Opm {
     // The wells of such group should have a common THP and total phase rate(s) obeying (if possible)
     // the well group constraint set by GCONPROD
     template <typename TypeTag>
-    void
+    bool
     BlackoilWellModel<TypeTag>::
     computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     {
@@ -1328,12 +1328,13 @@ namespace Opm {
         const Scalar thp_tolerance = balance.thp_tolerance();
 
         if (!network.active()) {
-            return;
+            return false;
         }
 
         auto& well_state = this->wellState();
         auto& group_state = this->groupState();
 
+        bool well_group_thp_updated = false;
         for (const std::string& nodeName : network.node_names()) {
             const bool has_choke = network.node(nodeName).as_choke();
             if (has_choke) {
@@ -1354,7 +1355,7 @@ namespace Opm {
                 if (cmode_tmp == Group::ProductionCMode::FLD || cmode_tmp == Group::ProductionCMode::NONE) {
                     fld_none = true;
                     // Target is set for an ancestor group. Target for autochoke group to be 
-                    // derived from via group guide rates
+                    // derived via group guide rates
                     const Scalar efficiencyFactor = 1.0;
                     const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
                     auto target = WellGroupControls<Scalar>::getAutoChokeGroupProductionTargetRate(
@@ -1379,11 +1380,11 @@ namespace Opm {
                                                   group.has_gpmaint_control(cmode));
                 if (!fld_none)
                 {
+                    // Target is set for the autochoke group itself
                     target_tmp = tcalc.groupTarget(ctrl, local_deferredLogger);
                 }
 
                 const Scalar orig_target = target_tmp;
-                std::cout<< "Group: " << group.name() << " orig_target: " << orig_target*86400 << std::endl;
 
                 auto mismatch = [&] (auto group_thp) {
                     Scalar group_rate(0.0);
@@ -1479,9 +1480,14 @@ namespace Opm {
                 }
 
                 // Use the group THP in computeNetworkPressures().
-                group_state.update_well_group_thp(nodeName, well_group_thp);
+                const auto& current_well_group_thp = group_state.is_autochoke_group(nodeName) ? group_state.well_group_thp(nodeName) : 1e30;
+                if (std::abs(current_well_group_thp - well_group_thp) > balance.pressure_tolerance()) {
+                    well_group_thp_updated = true;
+                    group_state.update_well_group_thp(nodeName, well_group_thp);
+                }
             }
         }
+        return well_group_thp_updated;
     }
 
     template<typename TypeTag>
@@ -2237,19 +2243,21 @@ namespace Opm {
         if (this->shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
             const double dt = this->simulator_.timeStepSize();
             // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
-            computeWellGroupThp(dt, deferred_logger);
+            bool well_group_thp_updated = computeWellGroupThp(dt, deferred_logger);
             constexpr int max_number_of_sub_iterations = 20;
             constexpr Scalar damping_factor = 0.1;
+            bool more_network_sub_update = false;
             for (int i = 0; i < max_number_of_sub_iterations; i++) {
                 const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx, damping_factor);
                 const Scalar network_imbalance = comm.max(local_network_imbalance);
                 const auto& balance = this->schedule()[episodeIdx].network_balance();
                 constexpr Scalar relaxation_factor = 10.0;
                 const Scalar tolerance = relax_network_tolerance ? relaxation_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
-                more_network_update = this->networkActive() && network_imbalance > tolerance;
-                if (!more_network_update)
+                more_network_sub_update = this->networkActive() && network_imbalance > tolerance;
+                if (!more_network_sub_update)
                     break;
             }
+            more_network_update = more_network_sub_update || well_group_thp_updated;
         }
 
         bool changed_well_group = false;

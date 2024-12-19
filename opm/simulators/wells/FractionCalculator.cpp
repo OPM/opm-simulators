@@ -150,7 +150,7 @@ guideRate(const std::string& name,
         return WellGroupHelpers<Scalar>::getGuideRate(name, schedule_, well_state_, group_state_,
                                                       report_step_, guide_rate_, target_, pu_);
     } else {
-        if ((groupControlledWells(name, always_included_child) > 0)) {
+        if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name)) {
                 return guide_rate_->get(name, target_, getGroupRateVector(name));
             } else if (!is_producer_ && guide_rate_->has(name, injection_phase_)) {
@@ -178,6 +178,7 @@ groupControlledWells(const std::string& group_name,
                                                           well_state_,
                                                           this->group_state_,
                                                           this->summary_state_,
+                                                          this->guide_rate_,
                                                           report_step_,
                                                           group_name,
                                                           always_included_child,

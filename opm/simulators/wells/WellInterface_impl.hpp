@@ -1482,7 +1482,6 @@ namespace Opm
                 } else {
                     ws.trivial_target = true;
                 }
-                    
                 break;
             }
             case Well::ProducerCMode::CMODE_UNDEFINED:

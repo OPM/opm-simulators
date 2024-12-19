@@ -249,6 +249,7 @@ public:
                                     const WellState<Scalar>& well_state,
                                     const GroupState<Scalar>& group_state,
                                     const SummaryState& summary_state,
+                                    const GuideRate* guideRate,
                                     const int report_step,
                                     const std::string& group_name,
                                     const std::string& always_included_child,
