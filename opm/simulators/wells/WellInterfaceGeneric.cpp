@@ -20,6 +20,7 @@
 */
 
 #include <config.h>
+
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -33,7 +34,9 @@
 #include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
@@ -45,10 +48,13 @@
 
 #include <fmt/format.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -667,6 +673,35 @@ template<class Scalar>
 void WellInterfaceGeneric<Scalar>::resetWellOperability()
 {
     this->operability_status_.resetOperability();
+}
+
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::addPerforations(const std::vector<std::tuple<int,double,double>>& perfs)
+{
+    for (const auto& [cell, WI, depth] : perfs) {
+        auto it = std::find(well_cells_.begin(), well_cells_.end(), cell);
+        if (it != well_cells_.end()) {
+            // If perforation to cell already exists, just add contribution.
+            const auto ind = std::distance(well_cells_.begin(), it);
+            well_index_[ind] += WI;
+        }
+        else {
+            well_cells_.push_back(cell);
+            well_index_.push_back(WI);
+            perf_depth_.push_back(depth);
+
+            // Not strictly needed.
+            const double nan = std::nan("1");
+            perf_rep_radius_.push_back(nan);
+            perf_length_.push_back(nan);
+            bore_diameters_.push_back(nan);
+
+            // For now use the saturation table for the first cell.
+            saturation_table_number_.push_back(saturation_table_number_[0]);
+
+            number_of_perforations_ += 1;
+        }
+    }
 }
 
 template<class Scalar>
