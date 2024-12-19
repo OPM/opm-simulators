@@ -49,6 +49,7 @@
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/common/directionalmobility.hh>
 
 #include <opm/utility/CopyablePtr.hpp>
@@ -78,6 +79,7 @@ class BlackOilIntensiveQuantitiesGlobalIndex
     , public BlackOilBrineIntensiveQuantities<TypeTag>
     , public BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag>
     , public BlackOilMICPIntensiveQuantities<TypeTag>
+    , public BlackOilConvectiveMixingIntensiveQuantities<TypeTag>
 {
     using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
@@ -103,6 +105,7 @@ class BlackOilIntensiveQuantitiesGlobalIndex
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -381,6 +384,10 @@ public:
         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
         rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
+
+        if constexpr (enableConvectiveMixing) {
+            asImp_().updateSaturatedDissolutionFactor_();
+        }
 
 #ifndef NDEBUG
         // some safety checks in debug mode
