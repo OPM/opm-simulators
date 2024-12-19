@@ -186,6 +186,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/PerfData.cpp
   opm/simulators/wells/RateConverter.cpp
+  opm/simulators/wells/RatioCalculator.cpp
   opm/simulators/wells/SegmentState.cpp
   opm/simulators/wells/SingleWellState.cpp
   opm/simulators/wells/StandardWellAssemble.cpp
@@ -988,6 +989,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
+  opm/simulators/wells/RatioCalculator.hpp
   opm/simulators/wells/RegionAttributeHelpers.hpp
   opm/simulators/wells/RegionAverageCalculator.hpp
   opm/simulators/wells/SingleWellState.hpp
