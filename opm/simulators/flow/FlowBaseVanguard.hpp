@@ -126,6 +126,7 @@ public:
 
         ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
 #if HAVE_MPI
+        edgeConformal_ = Parameters::Get<Parameters::EdgeConformal>();
         partitionMethod_   = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
         serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
         imbalanceTol_ = Parameters::Get<Parameters::ImbalanceTol<Scalar>>();
