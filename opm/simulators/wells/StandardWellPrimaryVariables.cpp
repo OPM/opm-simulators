@@ -382,7 +382,7 @@ copyToWellState(WellState<Scalar>& well_state,
         if (scal > 0) {
             F[p] /= scal ;
         } else {
-            // this should only happens to injection wells
+            // this should only happen to injection wells
             F[p] = 0.;
         }
     }
