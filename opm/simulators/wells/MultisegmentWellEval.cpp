@@ -368,9 +368,7 @@ assembleICDPressureEq(const int seg,
     MultisegmentWellAssemble(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure,
-                           linSys_,
-                           FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
-                           FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+                           linSys_);
 
     assembleAccelerationAndHydroPressureLosses(seg, well_state, use_average_density);
 }

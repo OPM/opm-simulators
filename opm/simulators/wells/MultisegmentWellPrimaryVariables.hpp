@@ -53,19 +53,12 @@ public:
     //
     //         WOG     OG     WG     WO    W/O/G (single phase)
     // WQTotal   0      0      0      0                       0
-    // WFrac     1  -1000      1      1                   -1000
-    // GFrac     2      1  -1000  -1000                   -1000
+    // WFrac     1  -1000  -1000      1                   -1000
+    // GFrac     2      1      1  -1000                   -1000
     // Spres     3      2      2      2                       1
 
-    static constexpr bool has_water = (Indices::waterSwitchIdx >= 0);
-    static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
-    static constexpr bool has_oil = (Indices::numPhases - has_gas - has_water) > 0;
-
-    // In the implementation, one should use has_wfrac_variable
-    // rather than has_water to check if you should do something
-    // with the variable at the WFrac location, similar for GFrac.
-    static constexpr bool has_wfrac_variable = has_water && Indices::numPhases > 1;
-    static constexpr bool has_gfrac_variable = has_gas && has_oil;
+    static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
+    static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
 
     static constexpr int WQTotal = 0;
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
