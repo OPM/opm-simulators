@@ -393,7 +393,7 @@ private:
     HYPRE_BigInt* cols_device_ = nullptr; //!< Device array for column indices.
     HYPRE_Real* values_device_ = nullptr; //!< Device array for matrix values.
 
-    std::vector<int> indices_; //!< Indices vector for copying vectors to/from Hypre.
+    std::vector<HYPRE_BigInt> indices_; //!< Indices vector for copying vectors to/from Hypre.
     HYPRE_BigInt* indices_device_ = nullptr; //!< Device array for indices.
     HYPRE_Int N_ = -1; //!< Number of rows in the matrix.
     HYPRE_Int nnz_ = -1; //!< Number of non-zero elements in the matrix.
