@@ -153,7 +153,8 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                const Schedule&                          schedule,
                EclipseState&                            eclState1,
                FlowGenericVanguard::ParallelWellStruct& parallelWells,
-               const int                                numJacobiBlocks)
+               const int                                numJacobiBlocks,
+               const bool                               enableEclOutput)
 {
     if ((partitionMethod == Dune::PartitionMethod::zoltan
          || partitionMethod == Dune::PartitionMethod::zoltanGoG) && !this->zoltanParams().empty())
@@ -167,16 +168,6 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         (numJacobiBlocks > 1) && (mpiSize == 1);
 
     if ((mpiSize > 1) || (numJacobiBlocks > 1)) {
-        if (this->grid_->size(0) > 0) {
-            // Generally needed in parallel runs both when there is and when
-            // there is not an externally defined load-balancing function.
-            // In addition to being used in CpGrid::loadBalance(), the
-            // transmissibilities are also output to the .INIT file.  Thus,
-            // transmissiblity values must exist on the I/O rank for derived
-            // classes such as EclCpGridVanguard<>.
-            this->allocTrans();
-        }
-
         // CpGrid's loadBalance() method uses transmissibilities as edge
         // weights.  This is arguably a layering violation and extracting
         // the per-face transmissibilities as a linear array is relatively
@@ -184,6 +175,10 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         // the values are actually needed.
         auto loadBalancerSet = static_cast<int>(externalLoadBalancer.has_value());
         this->grid_->comm().broadcast(&loadBalancerSet, 1, 0);
+
+        if ((this->grid_->size(0) > 0) && (enableEclOutput || loadBalancerSet == 0 || partitionJacobiBlocks)) {
+            this->allocTrans();
+        }
 
         std::vector<double> faceTrans;
         {

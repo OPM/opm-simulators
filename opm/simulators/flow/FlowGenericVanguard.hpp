@@ -53,6 +53,7 @@ struct AllowSplittingInactiveWells { static constexpr bool value = true; };
 struct EclOutputInterval { static constexpr int value = -1; };
 struct EdgeWeightsMethod  { static constexpr int value = 1; };
 struct EnableDryRun { static constexpr auto value = "auto"; };
+struct EnableEclOutput { static constexpr auto value = true; };
 struct EnableOpmRstFile { static constexpr bool value = false; };
 struct ExternalPartition { static constexpr auto* value = ""; };
 
@@ -293,6 +294,12 @@ public:
     { return enableDistributedWells_; }
 
     /*!
+     * \brief Wheter to write binary output which is compatible with the commercial Eclipse simulator.
+     */
+    bool enableEclOutput() const
+    { return enableEclOutput_; }
+
+    /*!
      * \brief Returns vector with name and whether the has local perforated cells
      *        for all wells.
      *
@@ -363,6 +370,7 @@ protected:
     std::string externalPartitionFile_{};
 #endif
     bool enableDistributedWells_;
+    bool enableEclOutput_;
     bool allow_splitting_inactive_wells_;
 
     std::string ignoredKeywords_;
