@@ -331,13 +331,13 @@ OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
     auto tuneMoveThreadBlockSizeInUpdate
         = [this](int moveThreadBlockSize) { this->update(moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize); };
     m_moveThreadBlockSize
-        = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate, "Kernel moving data to reordered matrix");
+        = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate, "(in ILU update) Move data to reordered matrix");
 
     auto tuneFactorizationThreadBlockSizeInUpdate = [this](int factorizationThreadBlockSize) {
         this->update(m_moveThreadBlockSize, factorizationThreadBlockSize);
     };
     m_ILU0FactorizationThreadBlockSize
-        = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "Kernel computing ILU0 factorization");
+        = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "(in ILU update) ILU factorization");
 
     // tune the thread-block size of the apply
     GpuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
@@ -348,13 +348,13 @@ OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
         this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
     };
     m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(
-        tuneLowerSolveThreadBlockSizeInApply, "Kernel computing a lower triangular solve for a level set");
+        tuneLowerSolveThreadBlockSizeInApply, "(in ILU apply) Triangular lower solve");
 
     auto tuneUpperSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int upperSolveThreadBlockSize) {
-        this->apply(tmpV, tmpD, m_moveThreadBlockSize, upperSolveThreadBlockSize);
+        this->apply(tmpV, tmpD, m_lowerSolveThreadBlockSize, upperSolveThreadBlockSize);
     };
     m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(
-        tuneUpperSolveThreadBlockSizeInApply, "Kernel computing an upper triangular solve for a level set");
+        tuneUpperSolveThreadBlockSizeInApply, "(in ILU apply) Triangular upper solve");
 }
 
 } // namespace Opm::gpuistl
