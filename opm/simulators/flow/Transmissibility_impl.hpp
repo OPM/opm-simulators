@@ -171,7 +171,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
     unsigned numElements = elemMapper.size();
     // get the ntg values, the ntg values are modified for the cells merged with minpv
-    const std::vector<double>& ntg = this->lookUpData_.assignFieldPropsDoubleOnLeaf(eclState_.fieldProps(), "NTG");
+    const std::vector<double>& ntg = this->lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(eclState_.fieldProps(), "NTG");
     const bool updateDiffusivity = eclState_.getSimulationConfig().isDiffusive();
     const bool updateDispersivity = eclState_.getSimulationConfig().rock_config().dispersion();
 
@@ -576,17 +576,17 @@ extractPermeability_()
     // over several processes.)
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PERMX")) {
-        const std::vector<double>& permxData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp, "PERMX");
+        const std::vector<double>& permxData = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp, "PERMX");
 
         std::vector<double> permyData;
         if (fp.has_double("PERMY"))
-            permyData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMY");
+            permyData = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"PERMY");
         else
             permyData = permxData;
 
         std::vector<double> permzData;
         if (fp.has_double("PERMZ"))
-            permzData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMZ");
+            permzData = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"PERMZ");
         else
             permzData = permxData;
 
@@ -618,17 +618,17 @@ extractPermeability_(const std::function<unsigned int(unsigned int)>& map)
     // over several processes.)
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PERMX")) {
-        const std::vector<double>& permxData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMX");
+        const std::vector<double>& permxData = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"PERMX");
 
         std::vector<double> permyData;
         if (fp.has_double("PERMY"))
-            permyData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMY");
+            permyData = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"PERMY");
         else
             permyData = permxData;
 
         std::vector<double> permzData;
         if (fp.has_double("PERMZ"))
-            permzData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMZ");
+            permzData = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"PERMZ");
         else
             permzData = permxData;
 
@@ -659,9 +659,9 @@ extractPorosity_()
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PORO")) {
         if constexpr (std::is_same_v<Scalar,double>) {
-            porosity_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO");
+            porosity_ = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"PORO");
         } else {
-            const auto por = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO");
+            const auto por = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"PORO");
             porosity_.resize(por.size());
             std::copy(por.begin(), por.end(), porosity_.begin());
         }
@@ -681,9 +681,9 @@ extractDispersion_()
     }
     const auto& fp = eclState_.fieldProps();
     if constexpr (std::is_same_v<Scalar,double>) {
-        dispersion_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC");
+        dispersion_ = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"DISPERC");
     } else {
-        const auto disp = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC");
+        const auto disp = this-> lookUpData_.template assignFieldPropsDoubleOnLeaf<Grid>(fp,"DISPERC");
         dispersion_.resize(disp.size());
         std::copy(disp.begin(), disp.end(), dispersion_.begin());
     }
