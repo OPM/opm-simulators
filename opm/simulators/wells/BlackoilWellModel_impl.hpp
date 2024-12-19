@@ -657,7 +657,7 @@ namespace Opm {
             well->init(&this->phase_usage_, depth_, gravity_, B_avg_, true);
 
             Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor() *
-                                            this->wellState()[well_name].efficiency_scaling_factor;
+                                            this->wellState().getGlobalEfficiencyScalingFactor(well_name);
             WellGroupHelpers<Scalar>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
                                                                                                 timeStepIdx),
                                                                       this->schedule(),
@@ -1063,7 +1063,7 @@ namespace Opm {
                                                                           this->well_open_times_,
                                                                           schedule_open))
                 {
-                    this->wellState()[wname].efficiency_scaling_factor = wscale;
+                    this->wellState().updateEfficiencyScalingFactor(wname, wscale);
                     this->schedule_.add_event(ScheduleEvents::WELLGROUP_EFFICIENCY_UPDATE, report_step);
                 }
             }

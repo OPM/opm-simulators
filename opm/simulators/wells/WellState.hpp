@@ -164,6 +164,8 @@ public:
     void communicateGroupRates(const Parallel::Communication& comm);
 
     void updateGlobalIsGrup(const Parallel::Communication& comm);
+    void updateEfficiencyScalingFactor(const std::string& wellName,
+                                       const Scalar value);
 
     bool isInjectionGrup(const std::string& name) const
     {
@@ -178,6 +180,11 @@ public:
     bool isOpen(const std::string& name) const
     {
         return this->global_well_info.value().is_open(name);
+    }
+
+    Scalar getGlobalEfficiencyScalingFactor(const std::string& name) const
+    {
+        return this->global_well_info.value().efficiency_scaling_factor(name);
     }
 
     Scalar getALQ(const std::string& name) const
@@ -373,7 +380,7 @@ private:
     // Use of std::optional<> here is a technical crutch, the
     // WellStateFullyImplicitBlackoil class should be default constructible,
     // whereas the GlobalWellInfo is not.
-    std::optional<GlobalWellInfo> global_well_info;
+    std::optional<GlobalWellInfo<Scalar>> global_well_info;
     ALQState<Scalar> alq_state;
 
     // The well_rates variable is defined for all wells on all processors. The
