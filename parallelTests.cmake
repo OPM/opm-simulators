@@ -212,6 +212,14 @@ foreach(templ_case RANGE 1 6)
   )
 endforeach()
 
+add_test_compare_parallel_simulation(CASENAME WCYCLE-0
+                                     FILENAME WCYCLE-0
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${rel_tol_parallel}
+                                     DIR wcycle
+                                     TEST_ARGS --enable-tuning=true)
+
 add_test_compare_parallel_simulation(CASENAME actionx_m1
                                      FILENAME ACTIONX_M1
                                      SIMULATOR flow
