@@ -65,16 +65,16 @@ public:
     /*! \brief Constructor gets all parameters to operate the prec.
        \param A The matrix to operate on.
     */
-    MultithreadDILU(const M& A)
-        : A_(A)
+    MultithreadDILU(const M& A, bool split_matrix = true)
+        : A_(A), split_matrix_(split_matrix)
     {
         OPM_TIMEBLOCK(prec_construct);
         // TODO: rewrite so this value is set by an argument to the constructor
 #if HAVE_OPENMP
         use_multithreading = omp_get_max_threads() > 1;
 #endif
-
         if (use_multithreading) {
+            assert(!split_matrix_);
             A_reordered_.emplace(A_.N(), A_.N(), A_.nonzeroes(), M::row_wise);
 
             //! Assuming symmetric matrices using a lower triangular coloring to construct
@@ -99,6 +99,27 @@ public:
             }
         }
 
+        if (split_matrix_) {
+            assert(!use_multithreading);
+            A_lower_.emplace(A_.N(), A_.N(), (A_.nonzeroes()-A_.N())/2, M::row_wise);
+            A_upper_.emplace(A_.N(), A_.N(), (A_.nonzeroes()-A_.N())/2, M::row_wise);
+
+            for (auto lowerIt = A_lower_.value().createbegin(), upperIt = A_upper_.value().createbegin();
+                lowerIt != A_lower_.value().createend();
+                ++lowerIt, ++upperIt) {
+
+                auto srcRow = A.begin() + lowerIt.index();
+
+                for (auto elem = srcRow->begin(); elem != srcRow->end(); ++elem) {
+                    if (elem.index() < srcRow.index()) { // add index to lower matrix if under the diagonal
+                        lowerIt.insert(elem.index());
+                    } else if (elem.index() > srcRow.index()) { // add element to upper matrix if above the diagonal
+                        upperIt.insert(elem.index());
+                    }
+                }
+            }
+        }
+
         Dinv_.resize(A_.N());
         update();
     }
@@ -113,7 +134,11 @@ public:
         if (use_multithreading) {
             parallelUpdate();
         } else {
-            serialUpdate();
+            if (split_matrix_) {
+                serialSplitUpdate();
+            } else {
+                serialUpdate();
+            }
         }
     }
 
@@ -138,7 +163,13 @@ public:
         if (use_multithreading) {
             parallelApply(v, d);
         } else {
-            serialApply(v, d);
+
+            // serialApply(v, d);
+            if (split_matrix_) {
+                serialSplitApply(v, d);
+            } else {
+                serialApply(v, d);
+            }
         }
     }
 
@@ -169,6 +200,8 @@ public:
 private:
     //! \brief The matrix we operate on.
     const M& A_;
+    std::optional<M> A_lower_;
+    std::optional<M> A_upper_;
     //! \brief Copy of A_ that is reordered to store rows that can be computed simultaneously next to each other to
     //! increase cache usage when multithreading
     std::optional<M> A_reordered_;
@@ -182,9 +215,11 @@ private:
     std::vector<std::size_t> natural_to_reorder_;
     //! \brief Boolean value describing whether or not to use multithreaded version of functions
     bool use_multithreading{false};
+    bool split_matrix_{false};
 
     void serialUpdate()
     {
+        OPM_TIMEBLOCK(dilu_prec_update);
         for (std::size_t row = 0; row < A_.N(); ++row) {
             Dinv_[row] = A_[row][row];
         }
@@ -197,6 +232,34 @@ private:
                 // if A[i, j] != 0 and A[j, i] != 0
                 if (a_ji != A_[col_j].end()) {
                     // Dinv_temp -= A[i, j] * d[j] * A[j, i]
+                    Dinv_temp -= (*a_ij) * Dune::FieldMatrix(Dinv_[col_j]) * (*a_ji);
+                }
+            }
+            Dinv_temp.invert();
+            Dinv_[row_i] = Dinv_temp;
+        }
+    }
+
+    void serialSplitUpdate(){
+
+        OPM_TIMEBLOCK(dilu_prec_update);
+
+        for (std::size_t row = 0; row < A_.N(); ++row) {
+            Dinv_[row] = A_[row][row];
+        }
+
+        for (auto row = A_lower_->begin(); row != A_lower_->end(); ++row) {
+            const auto row_i = row.index();
+            auto Dinv_temp = Dinv_[row_i];
+            for (auto a_ij = row->begin(); a_ij != row->end(); ++a_ij) {
+                const auto col_j = a_ij.index();
+                const auto a_ji = A_upper_.value()[col_j].find(row_i);
+                // if A_lower[i, j] != 0 and A_upper[j, i] != 0
+                if (a_ji != A_upper_.value()[col_j].end()) {
+                    // Dinv_temp -= A_lower[i, j] * d[j] * A_upper[j, i]
+                    // ensure the values are moved from A_ into A_lower_ and A_upper_ before use
+                    *a_ij = A_[row_i][col_j];
+                    *a_ji = A_[col_j][row_i];
                     Dinv_temp -= (*a_ij) * Dune::FieldMatrix(Dinv_[col_j]) * (*a_ji);
                 }
             }
@@ -291,6 +354,57 @@ private:
                 for (auto a_ij = (*row).beforeEnd(); a_ij.index() > row_i; --a_ij) {
                     // if A[i][j] != 0
                     // rhs += A[i][j]*v[j]
+                    const auto col_j = a_ij.index();
+                    a_ij->umv(v[col_j], rhs);
+                }
+                // calculate update v = M^-1*d
+                // v_i = y_i - Dinv_i*rhs
+                // before update v_i is y_i
+                Dinv_[row_i].mmv(rhs, v[row_i]);
+            }
+        }
+    }
+
+    void serialSplitApply(X& v, const Y& d)
+    {
+        // M = (D + L_A) D^-1 (D + U_A)   (a LU decomposition of M)
+        // where L_A and U_A are the strictly lower and upper parts of A and M has the properties:
+        // diag(A) = diag(M)
+        // Working with defect d = b - Ax and update v = x_{n+1} - x_n
+        // solving the product M^-1(d) using upper and lower triangular solve
+        // v = M^{-1}*d = (D + U_A)^{-1} D (D + L_A)^{-1} * d
+        // lower triangular solve: (D + L_A) y = d
+        using Xblock = typename X::block_type;
+        using Yblock = typename Y::block_type;
+        {
+            OPM_TIMEBLOCK(lower_solve);
+            auto endi = A_lower_.value().end();
+            for (auto row = A_lower_.value().begin(); row != endi; ++row) {
+                const auto row_i = row.index();
+                Yblock rhs = d[row_i];
+                for (auto a_ij = (*row).begin(); a_ij != (*row).end(); ++a_ij) {
+                    // if  A_lower[i][j] != 0
+                    // rhs -= A_lower[i][j]* y[j], where v_j stores y_j
+                    const auto col_j = a_ij.index();
+                    a_ij->mmv(v[col_j], rhs);
+                }
+                // y_i = Dinv_i * rhs
+                // storing y_i in v_i
+                Dinv_[row_i].mv(rhs, v[row_i]); // (D + L_A)_ii = D_i
+            }
+        }
+
+        {
+            OPM_TIMEBLOCK(upper_solve);
+            // upper triangular solve: (D + U_A) v = Dy
+            auto rendi = A_upper_.value().beforeBegin();
+            for (auto row = A_upper_.value().beforeEnd(); row != rendi; --row) {
+                const auto row_i = row.index();
+                // rhs = 0
+                Xblock rhs(0.0);
+                for (auto a_ij = (*row).beforeEnd(); a_ij != (*row).beforeBegin(); --a_ij) {
+                    // if A_upper[i][j] != 0
+                    // rhs += A_upper[i][j]*v[j]
                     const auto col_j = a_ij.index();
                     a_ij->umv(v[col_j], rhs);
                 }
