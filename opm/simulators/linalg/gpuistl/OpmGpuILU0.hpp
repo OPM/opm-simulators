@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/kernelEnums.hpp>
 #include <optional>
 #include <type_traits>
 #include <vector>
@@ -64,7 +65,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernels, bool storeFactorizationAsFloat);
+    explicit OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -143,9 +144,8 @@ private:
     bool m_splitMatrix;
     //! \brief Bool storing whether or not we will tune the threadblock sizes. Only used for AMD cards
     bool m_tuneThreadBlockSizes;
-    //! \brief Bool storing whether or not we should store the ILU factorization in a float datastructure.
-    //! This uses a mixed precision preconditioner to trade numerical accuracy for memory transfer speed.
-    bool m_storeFactorizationAsFloat;
+    //! \brief Bool storing whether or not we will store the factorization as float. Only used for mixed precision
+    MixedPrecisionScheme m_mixedPrecisionScheme;
     //! \brief variables storing the threadblocksizes to use if using the tuned sizes and AMD cards
     //! The default value of -1 indicates that we have not calibrated and selected a value yet
     int m_upperSolveThreadBlockSize = -1;
