@@ -562,8 +562,16 @@ public:
         // the initial solution.
         this->thresholdPressures_.finishInit();
 
-        if (this->simulator().episodeIndex() == 0) {
-            eclWriter_->writeInitialFIPReport();
+        // For CpGrid with LGRs, ecl-output is not supported yet.
+        const auto& grid = this->simulator().vanguard().gridView().grid();
+
+        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
+        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
+        // Skip - for now -  calculate the initial fip values for CpGrid with LGRs.
+        if (!isCpGrid || (grid.maxLevel() == 0)) {
+            if (this->simulator().episodeIndex() == 0) {
+                eclWriter_->writeInitialFIPReport();
+            }
         }
     }
 
