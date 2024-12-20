@@ -289,15 +289,11 @@ public:
         const auto& liquidPhaseIdx = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
             FluidSystem::waterPhaseIdx :
             FluidSystem::oilPhaseIdx;
-        const Evaluation SoMax = 0.0;
 
         //interiour
         const auto& t_in = intQuantsIn.fluidState().temperature(liquidPhaseIdx);
         const auto& p_in = intQuantsIn.fluidState().pressure(liquidPhaseIdx);
-        const auto& rssat_in = FluidSystem::saturatedDissolutionFactor(intQuantsIn.fluidState(),
-                                                            liquidPhaseIdx,
-                                                            intQuantsIn.pvtRegionIndex(),
-                                                            SoMax);
+        const auto& rssat_in = intQuantsIn.saturatedDissolutionFactor();
         const auto& salt_in = intQuantsIn.fluidState().saltSaturation();
 
         const auto bLiquidSatIn = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
@@ -315,10 +311,7 @@ public:
         //exteriour
         const auto t_ex = Opm::getValue(intQuantsEx.fluidState().temperature(liquidPhaseIdx));
         const auto p_ex = Opm::getValue(intQuantsEx.fluidState().pressure(liquidPhaseIdx));
-        const auto rssat_ex = Opm::getValue(FluidSystem::saturatedDissolutionFactor(intQuantsEx.fluidState(),
-                                                            liquidPhaseIdx,
-                                                            intQuantsEx.pvtRegionIndex(),
-                                                            SoMax));
+        const auto rssat_ex = Opm::getValue(intQuantsEx.saturatedDissolutionFactor());
         const auto salt_ex = Opm::getValue(intQuantsEx.fluidState().saltSaturation());
         const auto bLiquidSatEx = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
             FluidSystem::waterPvt().inverseFormationVolumeFactor(intQuantsEx.pvtRegionIndex(), t_ex, p_ex, rssat_ex, salt_ex):
@@ -380,6 +373,53 @@ public:
             }
         }
     }
+};
+
+/*!
+ * \ingroup BlackOil
+ * \class Opm::BlackOilConvectiveMixingIntensiveQuantities
+ *
+ * \brief Provides the volumetric quantities required for the equations needed by the
+ *        convective mixing (DRSDTCON) model.
+ */
+template <class TypeTag, bool enableConvectiveMixingV = getPropValue<TypeTag, Properties::EnableConvectiveMixing>()>
+class BlackOilConvectiveMixingIntensiveQuantities
+{
+    using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
+public:
+    /*!
+     * \brief Compute the intensive quantities needed to handle convective dissolution
+     *
+     */
+    void updateSaturatedDissolutionFactor_()
+    {
+        auto& fs = asImp_().fluidState();
+        const auto& liquidPhaseIdx = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+            FluidSystem::waterPhaseIdx :
+            FluidSystem::oilPhaseIdx;
+        const Evaluation SoMax = 0.0;
+        saturatedDissolutionFactor_ = FluidSystem::saturatedDissolutionFactor(fs,
+                                                                              liquidPhaseIdx,
+                                                                              asImp_().pvtRegionIndex(),
+                                                                              SoMax);
+    }
+
+    const Evaluation& saturatedDissolutionFactor() const
+    { return saturatedDissolutionFactor_; }
+
+protected:
+    Implementation& asImp_()
+    { return *static_cast<Implementation*>(this); }
+
+    Evaluation saturatedDissolutionFactor_;
+};
+
+template <class TypeTag>
+class BlackOilConvectiveMixingIntensiveQuantities<TypeTag, false>
+{
 };
 
 }
