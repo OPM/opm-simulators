@@ -208,6 +208,11 @@ public:
     const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
     const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
 
+    const std::map<std::string, int>& well_domain() const
+    {
+        return well_domain_;
+    }
+
     bool reportStepStarts() const { return report_step_starts_; }
 
     bool shouldBalanceNetwork(const int reportStepIndex,

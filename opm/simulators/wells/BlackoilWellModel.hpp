@@ -389,6 +389,14 @@ template<class Scalar> class WellContributions;
 
             void setupDomains(const std::vector<Domain>& domains);
 
+            const SparseTable<int>& well_local_cells() const
+            {
+                return well_local_cells_;
+            }
+            auto begin() const { return well_container_.begin(); }
+            auto end() const { return well_container_.end(); }
+            bool empty() const { return well_container_.empty(); }
+
         protected:
             Simulator& simulator_;
 
@@ -411,8 +419,9 @@ template<class Scalar> class WellContributions;
             createTypedWellPointer(const int wellID,
                                    const int time_step) const;
 
-            WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, DeferredLogger& deferred_logger) const;
-
+            WellInterfacePtr createWellForWellTest(const std::string& well_name,
+                                                   const int report_step,
+                                                   DeferredLogger& deferred_logger) const;
 
             const ModelParameters param_;
             std::size_t global_num_cells_{};
