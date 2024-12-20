@@ -73,6 +73,7 @@ struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 
  // 0: simple, 1: Zoltan, 2: METIS, see GridEnums.hpp
 struct PartitionMethod { static constexpr int value = 1; };
+struct EdgeConformal { static constexpr bool value = false; };    
 
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
@@ -253,6 +254,9 @@ public:
     bool ownersFirst() const
     { return ownersFirst_; }
 
+    bool edgeConformal() const
+    { return edgeConformal_; }
+
 #if HAVE_MPI
     /*!
      * \brief Parameter deciding which partition method to use
@@ -348,6 +352,8 @@ protected:
 #endif
 
     bool ownersFirst_;
+    bool edgeConformal_;
+
 #if HAVE_MPI
     Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
