@@ -124,6 +124,13 @@ GroupState::well_group_thp(const std::string& gname) const
     return group_iter->second;
 }
 
+template<class Scalar>
+bool GroupState<Scalar>::
+GroupState::is_autochoke_group(const std::string& gname) const
+{
+    return (this->group_thp.count(gname) > 0);
+}
+
 //-------------------------------------------------------------------------
 
 template<class Scalar>

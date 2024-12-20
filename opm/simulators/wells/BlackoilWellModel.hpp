@@ -464,8 +464,9 @@ template<class Scalar> class WellContributions;
             bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
                                               const double dt,
                                               DeferredLogger& local_deferredLogger);
-
-            void computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
+            
+            double computeWellGroupTarget(DeferredLogger& local_deferredLogger);
+            bool computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
 
             /// Update rank's notion of intersecting wells and their
             /// associate solution variables.
