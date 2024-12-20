@@ -228,19 +228,16 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
         return ctrl->target_reinj_fraction * production_rate;
     }
     case Group::InjectionCMode::VREP: {
-        const std::vector<Scalar>& group_injection_reductions = this->group_state_.injection_reduction_rates(this->group_name_);
+        // We use the injection_reservoir_rates directly instead of the reduction rates here to account for the
+        // possibility that the group in question has both a VREP control and another injection control for a different phase.
+        const std::vector<Scalar>& group_injection_reservoir_rates = this->group_state_.injection_reservoir_rates(this->group_name_);
         Scalar voidage_rate = group_state_.injection_vrep_rate(ctrl->voidage_group) * ctrl->target_void_fraction;
-        Scalar inj_reduction = 0.0;
         if (ctrl->phase != Phase::WATER)
-            inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Aqua]]
-                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Aqua]];
+            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Aqua]];
         if (ctrl->phase != Phase::OIL)
-            inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Liquid]]
-                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Liquid]];
+            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Liquid]];
         if (ctrl->phase != Phase::GAS)
-            inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Vapour]]
-                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Vapour]];
-        voidage_rate -= inj_reduction;
+            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Vapour]];
         return voidage_rate / resv_coeff_[pos_];
     }
     case Group::InjectionCMode::SALE: {
