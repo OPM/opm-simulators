@@ -107,9 +107,7 @@ public:
                             const int outlet_segment_index,
                             const EvalWell& pressure_equation,
                             const EvalWell& outlet_pressure,
-                            Equations& eqns,
-                            bool wfrac = has_wfrac_variable,
-                            bool gfrac = has_gfrac_variable) const;
+                            Equations& eqns) const;
 
     //! \brief Assembles a trivial equation.
     void assembleTrivialEq(const int seg,
