@@ -63,6 +63,9 @@ init()
             evaluation_[seg][eq_idx].setDerivative(eq_idx + Indices::numEq, 1.0);
         }
     }
+    std::cout << "MultisegmentWellPrimaryVariables::init() called for well " << well_.name() << std::endl;
+    std::cout << " the primary variables are " << std::endl;
+    this->output();
 }
 
 template<class FluidSystem, class Indices>
@@ -152,6 +155,8 @@ update(const WellState<Scalar>& well_state,
             }
         }
     }
+    std::cout << "MultisegmentWellPrimaryVariables::update() called for well " << this->well_.name() << std::endl;
+    this->output();
 }
 
 template<class FluidSystem, class Indices>
@@ -208,6 +213,8 @@ updateNewton(const BVectorWell& dwells,
     if (stop_or_zero_rate_target) {
         value_[0][WQTotal] = 0.;
     }
+    std::cout << "MultisegmentWellPrimaryVariables::updateNewton() called for well " << this->well_.name() << std::endl;
+    this->output();
 }
 
 template<class FluidSystem, class Indices>
