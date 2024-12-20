@@ -512,41 +512,36 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     //
     // After loadbalance, grid_ will contain a global and distribute view.
     // equilGrid_ being a shallow copy only the global view.
-    if (mpiRank == 0)
+    //
+    // --- Add LGRs  ---
+    // Check if input file contains Lgrs.
+    const auto& lgrs = eclState.getLgrs();
+    const auto lgrsSize = lgrs.size();
+    if (lgrsSize == 0)
     {
+        if (mpiRank == 0)
+        {
+            equilGrid_.reset(new Dune::CpGrid(*grid_));
+            equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
+
+            eclState.reset_actnum(UgGridHelpers::createACTNUM(*grid_));
+            eclState.set_active_indices(this->grid_->globalCell());
+        }
+    }
+    else { // If there are lgrs, create the grid with them, and update the leaf grid view.
         equilGrid_.reset(new Dune::CpGrid(*grid_));
-        // --- Add LGRs  ---
-        // Check if input file contains Lgrs.
-        const auto& lgrs = eclState.getLgrs();
-        const auto lgrsSize = lgrs.size();
-        // If there are lgrs, create the grid with them, and update the leaf grid view.
         if (lgrsSize)
         {
             OpmLog::info("\nAdding LGRs to the equilGrid and updating its leaf grid view");
-
-            std::vector<std::array<int,3>> cells_per_dim_vec;
-            std::vector<std::array<int,3>> startIJK_vec;
-            std::vector<std::array<int,3>> endIJK_vec;
-            std::vector<std::string> lgrName_vec;
-            cells_per_dim_vec.reserve(lgrsSize);
-            startIJK_vec.reserve(lgrsSize);
-            endIJK_vec.reserve(lgrsSize);
-            lgrName_vec.reserve(lgrsSize);
-            for (int lgr = 0; lgr < static_cast<int>(lgrsSize); ++lgr)
-            {
-                const auto lgrCarfin = lgrs.getLgr(lgr);
-                cells_per_dim_vec.push_back({lgrCarfin.NX()/(lgrCarfin.I2() +1 - lgrCarfin.I1()),
-                        lgrCarfin.NY()/(lgrCarfin.J2() +1 - lgrCarfin.J1()), lgrCarfin.NZ()/(lgrCarfin.K2() +1 - lgrCarfin.K1())});
-                startIJK_vec.push_back({lgrCarfin.I1(), lgrCarfin.J1(), lgrCarfin.K1()});
-                endIJK_vec.push_back({lgrCarfin.I2()+1, lgrCarfin.J2()+1, lgrCarfin.K2()+1});
-                lgrName_vec.emplace_back(lgrCarfin.NAME());
-            }
-            this->equilGrid_->addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
+           
+            addLgrsUpdateLeafView(lgrs, lgrsSize, equilGrid_);
         }
         equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
-        eclState.reset_actnum(UgGridHelpers::createACTNUM(*equilGrid_));
-        eclState.set_active_indices(this->equilGrid_->globalCell());
+        
+        eclState.reset_actnum(UgGridHelpers::createACTNUM(*grid_));
+        eclState.set_active_indices(this->grid_->globalCell());
     }
+    
 
     {
         auto size = removed_cells.size();
@@ -568,7 +563,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 template<class ElementMapper, class GridView, class Scalar>
 void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView(const LgrCollection& lgrCollection,
                                                                                  const int lgrsSize,
-                                                                                 Dune::CpGrid grid)
+                                                                                 const std::unique_ptr<Dune::CpGrid>& grid)
 {
     std::vector<std::array<int,3>> cells_per_dim_vec;
     std::vector<std::array<int,3>> startIJK_vec;

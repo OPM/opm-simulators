@@ -244,7 +244,7 @@ public:
         if (lgrsSize)
         {
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
-            this->addLgrsUpdateLeafView(lgrs, lgrsSize);
+            this->addLgrsUpdateLeafView(lgrs, lgrsSize, this->grid_);
         }
 
         this->updateGridView_();
