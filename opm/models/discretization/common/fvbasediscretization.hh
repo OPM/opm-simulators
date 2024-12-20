@@ -498,8 +498,7 @@ public:
 
                 Scalar dofVolume = stencil.subControlVolume(dofIdx).volume();
                 dofTotalVolume_[globalIdx] += dofVolume;
-                if (isInteriorElement)
-                    gridTotalVolume_ += dofVolume;
+                gridTotalVolume_ += dofVolume;
             }
         }
 
