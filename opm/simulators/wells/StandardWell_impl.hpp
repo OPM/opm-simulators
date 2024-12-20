@@ -1758,7 +1758,10 @@ namespace Opm
         }
 
         bool converged_implicit = false;
-        if (this->param_.local_well_solver_control_switching_) {
+        // for newly opened wells we dont compute the potentials implicit
+        // group controlled wells with defaulted guiderates will have zero targets as
+        // the potentials are used to compute the well fractions.
+        if (this->param_.local_well_solver_control_switching_ && !(this->changed_to_open_this_step_ && this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger))) {
             converged_implicit = computeWellPotentialsImplicit(simulator, well_potentials, deferred_logger);
         }
         if (!converged_implicit) {
