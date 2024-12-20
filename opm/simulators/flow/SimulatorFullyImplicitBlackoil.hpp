@@ -358,12 +358,11 @@ public:
                                         wmatcher,
                                         this->wellModel_().wellOpenTimes(),
                                         this->wellModel_().wellCloseTimes(),
-                                        [this, reportStep, schedule, timeStep](const std::string& name)
+                                        [timeStep, &wg_events = schedule[reportStep].wellgroup_events()](const std::string& name)
                                         {
                                             if (timeStep != 0) {
                                                 return false;
                                             }
-                                            const auto& wg_events = schedule[reportStep].wellgroup_events();
                                             return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
                                         });
 
