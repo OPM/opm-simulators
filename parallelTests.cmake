@@ -44,7 +44,7 @@ add_test_compare_parallel_simulation(CASENAME msw-simple
                                      ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
                                      REL_TOL 1e-5
                                      MPI_PROCS 4
-                                     TEST_ARGS --solver-max-time-step-in-days=10 --allow-distributed-wells=true)
+                                     TEST_ARGS --solver-max-time-step-in-days=15 --allow-distributed-wells=true)
 
 add_test_compare_parallel_simulation(CASENAME msw-3d
                                      FILENAME MSW-3D # this file contains one Multisegment well with branches that is distributed across several processes
