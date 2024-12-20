@@ -476,7 +476,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     if (lgrsSize)
     {
         OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
-        this->addLgrsUpdateLeafView(lgrs, lgrsSize);
+        this->addLgrsUpdateLeafView(lgrs, lgrsSize, *(this->grid_));
     }
 
 #if HAVE_MPI
@@ -550,7 +550,9 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 }
 
 template<class ElementMapper, class GridView, class Scalar>
-void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView(const LgrCollection& lgrCollection, const int lgrsSize)
+void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView(const LgrCollection& lgrCollection,
+                                                                                 const int lgrsSize,
+                                                                                 Dune::CpGrid& grid)
 {
     std::vector<std::array<int,3>> cells_per_dim_vec;
     std::vector<std::array<int,3>> startIJK_vec;
@@ -569,7 +571,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView
         endIJK_vec.push_back({lgrCarfin.I2()+1, lgrCarfin.J2()+1, lgrCarfin.K2()+1});
         lgrName_vec.emplace_back(lgrCarfin.NAME());
     }
-    this->grid_->addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
+    grid.addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
 };
 
 template<class ElementMapper, class GridView, class Scalar>
