@@ -24,13 +24,11 @@
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
-#include <opm/common/OpmLog/OpmLog.hpp>
+#include <dune/common/fmatrix.hh>
+#include <dune/istl/bcrsmatrix.hh>
+#include <dune/istl/matrixmatrix.hh>
 
-#include <cstddef>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/grid/utility/SparseTable.hpp>
 
@@ -39,13 +37,18 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
-#include <opm/models/discretization/common/baseauxiliarymodule.hh>
+#include <opm/material/densead/Math.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
+
+#include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
@@ -63,22 +66,18 @@
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/simulators/wells/WGState.hpp>
+#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
-#include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
-
-#include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/matrixmatrix.hh>
-
-#include <opm/material/densead/Math.hpp>
-
-#include <opm/simulators/utils/DeferredLogger.hpp>
+#include <cstddef>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -88,7 +87,7 @@ template<class Scalar> class WellContributions;
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class BlackoilWellModel : public BaseAuxiliaryModule<TypeTag>
+        class BlackoilWellModel : public WellConnectionAuxiliaryModule<TypeTag, BlackoilWellModel<TypeTag>>
                                 , public BlackoilWellModelGeneric<GetPropType<TypeTag,
                                                                               Properties::Scalar>>
         {
@@ -106,8 +105,9 @@ template<class Scalar> class WellContributions;
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
             using ModelParameters = BlackoilModelParameters<Scalar>;
 
+            using WellConnectionModule = WellConnectionAuxiliaryModule<TypeTag, BlackoilWellModel<TypeTag>>;
+
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
-            typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
@@ -138,51 +138,6 @@ template<class Scalar> class WellContributions;
 
             void init();
             void initWellContainer(const int reportStepIdx) override;
-
-            /////////////
-            // <eWoms auxiliary module stuff>
-            /////////////
-            unsigned numDofs() const override
-            // No extra dofs are inserted for wells. (we use a Schur complement.)
-            { return 0; }
-
-            void addNeighbors(std::vector<NeighborSet>& neighbors) const override;
-
-            void applyInitial() override
-            {}
-
-            void linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res) override;
-            void linearizeDomain(const Domain& domain, SparseMatrixAdapter& jacobian, GlobalEqVector& res);
-
-            void postSolve(GlobalEqVector& deltaX) override
-            {
-                recoverWellSolutionAndUpdateWellState(deltaX);
-            }
-
-            void postSolveDomain(GlobalEqVector& deltaX, const Domain& domain)
-            {
-                recoverWellSolutionAndUpdateWellStateDomain(deltaX, domain);
-            }
-
-            /////////////
-            // </ eWoms auxiliary module stuff>
-            /////////////
-
-            template <class Restarter>
-            void deserialize(Restarter& /* res */)
-            {
-                // TODO (?)
-            }
-
-            /*!
-             * \brief This method writes the complete state of the well
-             *        to the harddisk.
-             */
-            template <class Restarter>
-            void serialize(Restarter& /* res*/)
-            {
-                // TODO (?)
-            }
 
             void beginEpisode()
             {
@@ -371,6 +326,22 @@ template<class Scalar> class WellContributions;
             auto end() const { return well_container_.end(); }
             bool empty() const { return well_container_.empty(); }
 
+            bool addMatrixContributions() const { return param_.matrix_add_well_contributions_; }
+
+            int compressedIndexForInterior(int cartesian_cell_idx) const override
+            {
+                return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
+            }
+
+            // using the solution x to recover the solution xw for wells and applying
+            // xw to update Well State
+            void recoverWellSolutionAndUpdateWellState(const BVector& x);
+
+            // using the solution x to recover the solution xw for wells and applying
+            // xw to update Well State
+            void recoverWellSolutionAndUpdateWellStateDomain(const BVector& x,
+                                                             const Domain& domain);
+
         protected:
             Simulator& simulator_;
 
@@ -470,14 +441,6 @@ template<class Scalar> class WellContributions;
             // called at the end of a report step
             void endReportStep();
 
-            // using the solution x to recover the solution xw for wells and applying
-            // xw to update Well State
-            void recoverWellSolutionAndUpdateWellState(const BVector& x);
-
-            // using the solution x to recover the solution xw for wells and applying
-            // xw to update Well State
-            void recoverWellSolutionAndUpdateWellStateDomain(const BVector& x, const Domain& domain);
-
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
 
@@ -529,10 +492,6 @@ template<class Scalar> class WellContributions;
 
             void computeWellTemperature();
 
-            int compressedIndexForInterior(int cartesian_cell_idx) const override {
-                return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
-            }
-
         private:
             BlackoilWellModel(Simulator& simulator, const PhaseUsage& pu);
 
@@ -543,8 +502,6 @@ template<class Scalar> class WellContributions;
             // Their state is not relevant between function calls, so they can
             // (and must) be mutable, as the functions using them are const.
             mutable BVector x_local_;
-            mutable BVector res_local_;
-            mutable GlobalEqVector linearize_res_local_;
         };
 
 
