@@ -468,17 +468,6 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
 
-    // --- Add LGRs and update Leaf Grid View ---
-    // Check if input file contains Lgrs.
-    const auto& lgrs = eclState.getLgrs();
-    const auto lgrsSize = lgrs.size();
-    // If there are lgrs, create the grid with them, and update the leaf grid view.
-    if (lgrsSize)
-    {
-        OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
-        this->addLgrsUpdateLeafView(lgrs, lgrsSize);
-    }
-
 #if HAVE_MPI
     {
         const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
@@ -514,7 +503,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     }
 #endif
 
-    // --- Copy grid with LGRs to equilGrid_ ---
+    // --- Copy grid to equilGrid_ ---
     // We use separate grid objects: one for the calculation of the initial
     // condition via EQUIL and one for the actual simulation. The reason is
     // that the EQUIL code is allergic to distributed grids and the
@@ -523,14 +512,36 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     //
     // After loadbalance, grid_ will contain a global and distribute view.
     // equilGrid_ being a shallow copy only the global view.
-    if (mpiRank == 0)
+    //
+    // --- Add LGRs  ---
+    // Check if input file contains Lgrs.
+    const auto& lgrs = eclState.getLgrs();
+    const auto lgrsSize = lgrs.size();
+    if (lgrsSize == 0)
     {
-        equilGrid_.reset(new Dune::CpGrid(*grid_));
-        equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
+        if (mpiRank == 0)
+        {
+            equilGrid_.reset(new Dune::CpGrid(*grid_));
+            equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
 
+            eclState.reset_actnum(UgGridHelpers::createACTNUM(*grid_));
+            eclState.set_active_indices(this->grid_->globalCell());
+        }
+    }
+    else { // If there are lgrs, create the grid with them, and update the leaf grid view.
+        equilGrid_.reset(new Dune::CpGrid(*grid_));
+        if (lgrsSize)
+        {
+            OpmLog::info("\nAdding LGRs to the equilGrid and updating its leaf grid view");
+           
+            addLgrsUpdateLeafView(lgrs, lgrsSize, *equilGrid_);
+        }
+        equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
+        
         eclState.reset_actnum(UgGridHelpers::createACTNUM(*grid_));
         eclState.set_active_indices(this->grid_->globalCell());
     }
+    
 
     {
         auto size = removed_cells.size();
@@ -550,7 +561,9 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 }
 
 template<class ElementMapper, class GridView, class Scalar>
-void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView(const LgrCollection& lgrCollection, const int lgrsSize)
+void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView(const LgrCollection& lgrCollection,
+                                                                                 const int lgrsSize,
+                                                                                 Dune::CpGrid& grid)
 {
     std::vector<std::array<int,3>> cells_per_dim_vec;
     std::vector<std::array<int,3>> startIJK_vec;
@@ -569,7 +582,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView
         endIJK_vec.push_back({lgrCarfin.I2()+1, lgrCarfin.J2()+1, lgrCarfin.K2()+1});
         lgrName_vec.emplace_back(lgrCarfin.NAME());
     }
-    this->grid_->addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
+    grid.addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
 };
 
 template<class ElementMapper, class GridView, class Scalar>

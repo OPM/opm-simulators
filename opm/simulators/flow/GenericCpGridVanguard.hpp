@@ -209,7 +209,9 @@ protected:
     void allocCartMapper();
 
     void doCreateGrids_(EclipseState& eclState);
-    void addLgrsUpdateLeafView(const LgrCollection& lgrCollection, const int lgrsSize);
+    void addLgrsUpdateLeafView(const LgrCollection& lgrCollection,
+                               const int lgrsSize,
+                               Dune::CpGrid& grid);
 
     virtual void allocTrans() = 0;
     virtual double getTransmissibility(unsigned I, unsigned J) const = 0;
