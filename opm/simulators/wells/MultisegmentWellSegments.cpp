@@ -933,10 +933,10 @@ mixtureDensity(const int seg) const
             continue;
         }
 
-        const auto compIdx = Indices::
-            canonicalToActiveComponentIndex(phIdx);
+        const auto active_comp_index = Indices::
+             canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phIdx));
 
-        mixDens += q[compIdx].value() * rho[compIdx].value();
+        mixDens += q[active_comp_index].value() * rho[active_comp_index].value();
     }
 
     return mixDens;
@@ -977,7 +977,7 @@ mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
     for (const auto& [fsPhaseIdx, densityExponent] : densityExponents) {
         if (FluidSystem::phaseIsActive(fsPhaseIdx)) {
             const auto compIdx = Indices::
-                canonicalToActiveComponentIndex(fsPhaseIdx);
+                canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(fsPhaseIdx));
 
             // exp = (aicd.*densityExponent)() in native syntax.
             const auto exp = std::invoke(densityExponent, aicd);
