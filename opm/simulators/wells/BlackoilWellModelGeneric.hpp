@@ -213,6 +213,8 @@ public:
         return well_domain_;
     }
 
+    std::vector<int> getCellsForConnections(const Well& well) const;
+
     bool reportStepStarts() const { return report_step_starts_; }
 
     bool shouldBalanceNetwork(const int reportStepIndex,
@@ -448,7 +450,6 @@ protected:
     /// \brief get compressed index for interior cells (-1, otherwise
     virtual int compressedIndexForInterior(int cartesian_cell_idx) const = 0;
 
-    std::vector<int> getCellsForConnections(const Well& well) const;
     std::vector<std::vector<int>> getMaxWellConnections() const;
 
     std::vector<std::string> getWellsForTesting(const int timeStepIdx,
