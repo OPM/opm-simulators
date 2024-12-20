@@ -84,14 +84,43 @@ public:
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
-        wellMod_.apply(x, y);
+        for (const auto& well : this->wellMod_) {
+            // Well equations B and C uses only the perforated cells, so need to apply on local vectors
+            const auto& cells = well->cells();
+            x_local_.resize(cells.size());
+            Ax_local_.resize(cells.size());
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                x_local_[i] = x[cells[i]];
+                Ax_local_[i] = y[cells[i]];
+            }
+
+            well->apply(x_local_, Ax_local_);
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                // only need to update Ax
+                y[cells[i]] = Ax_local_[i];
+            }
+        }
     }
 
     //! apply operator to x, scale and add:  \f$ y = y + \alpha A(x) \f$
     void applyscaleadd(field_type alpha, const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(applyscaleadd);
-        wellMod_.applyScaleAdd(alpha, x, y);
+        if (this->wellMod_.empty()) {
+            return;
+        }
+
+        if (scaleAddRes_.size() != y.size()) {
+            scaleAddRes_.resize(y.size());
+        }
+
+        scaleAddRes_ = 0.0;
+        // scaleAddRes_  = - C D^-1 B x
+        apply(x, scaleAddRes_);
+        // Ax = Ax + alpha * scaleAddRes_
+        y.axpy(alpha, scaleAddRes_);
     }
 
     /// Category for operator.
@@ -125,8 +154,14 @@ public:
 
 protected:
     const WellModel& wellMod_;
-};
 
+    // These members are used to avoid reallocation.
+    // Their state is not relevant between function calls, so they can
+    // (and must) be mutable, as the functions using them are const.
+    mutable X x_local_{};
+    mutable Y Ax_local_{};
+    mutable Y scaleAddRes_{};
+};
 
 template <class WellModel, class X, class Y>
 class DomainWellModelAsLinearOperator : public WellModelAsLinearOperator<WellModel, X, Y>
@@ -142,13 +177,47 @@ public:
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
-        this->wellMod_.applyDomain(x, y, domainIndex_);
+        std::size_t well_index = 0;
+        for (const auto& well : this->wellMod_) {
+            if (this->wellMod_.well_domain().at(well->name()) == domainIndex_) {
+                // Well equations B and C uses only the perforated cells, so need to apply on local vectors
+                // transfer global cells index to local subdomain cells index
+                const auto& local_cells = this->wellMod_.well_local_cells()[well_index];
+                this->x_local_.resize(local_cells.size());
+                this->Ax_local_.resize(local_cells.size());
+
+                for (size_t i = 0; i < local_cells.size(); ++i) {
+                    this->x_local_[i] = x[local_cells[i]];
+                    this->Ax_local_[i] = y[local_cells[i]];
+                }
+
+                well->apply(this->x_local_, this->Ax_local_);
+
+                for (size_t i = 0; i < local_cells.size(); ++i) {
+                    // only need to update Ax
+                    y[local_cells[i]] = this->Ax_local_[i];
+                }
+            }
+            ++well_index;
+        }
     }
 
     void applyscaleadd(field_type alpha, const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(applyscaleadd);
-        this->wellMod_.applyScaleAddDomain(alpha, x, y, domainIndex_);
+        if (this->wellMod_.empty()) {
+            return;
+        }
+
+        if (this->scaleAddRes_.size() != y.size()) {
+            this->scaleAddRes_.resize(y.size());
+        }
+
+        this->scaleAddRes_ = 0.0;
+        // scaleAddRes_  = - C D^-1 B x
+        this->apply(x, this->scaleAddRes_);
+        // Ax = Ax + alpha * scaleAddRes_
+        y.axpy(alpha, this->scaleAddRes_);
     }
 
     void addWellPressureEquations(PressureMatrix& jacobian,

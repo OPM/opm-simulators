@@ -1850,62 +1850,6 @@ namespace Opm {
 
     }
 
-    // Ax = A x - C D^-1 B x
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    apply(const BVector& x, BVector& Ax) const
-    {
-        for (auto& well : well_container_) {
-            // Well equations B and C uses only the perforated cells, so need to apply on local vectors
-            const auto& cells = well->cells();
-            x_local_.resize(cells.size());
-            Ax_local_.resize(cells.size());
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                x_local_[i] = x[cells[i]];
-                Ax_local_[i] = Ax[cells[i]];
-            }
-
-            well->apply(x_local_, Ax_local_);
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                // only need to update Ax
-                Ax[cells[i]] = Ax_local_[i];
-            }
-        }
-    }
-
-    // Ax = A x - C D^-1 B x
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    applyDomain(const BVector& x, BVector& Ax, const int domainIndex) const
-    {
-        for (size_t well_index = 0; well_index < well_container_.size(); ++well_index) {
-            auto& well = well_container_[well_index];
-            if (this->well_domain_.at(well->name()) == domainIndex) {
-                // Well equations B and C uses only the perforated cells, so need to apply on local vectors
-                // transfer global cells index to local subdomain cells index
-                const auto& local_cells = well_local_cells_[well_index];
-                x_local_.resize(local_cells.size());
-                Ax_local_.resize(local_cells.size());
-
-                for (size_t i = 0; i < local_cells.size(); ++i) {
-                    x_local_[i] = x[local_cells[i]];
-                    Ax_local_[i] = Ax[local_cells[i]];
-                }
-
-                well->apply(x_local_, Ax_local_);
-
-                for (size_t i = 0; i < local_cells.size(); ++i) {
-                    // only need to update Ax
-                    Ax[local_cells[i]] = Ax_local_[i];
-                }
-            }
-        }
-    }
-
 #if COMPILE_GPU_BRIDGE
     template<typename TypeTag>
     void
@@ -1943,48 +1887,6 @@ namespace Opm {
         }
     }
 #endif
-
-    // Ax = Ax - alpha * C D^-1 B x
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
-    {
-        if (this->well_container_.empty()) {
-            return;
-        }
-
-        if( scaleAddRes_.size() != Ax.size() ) {
-            scaleAddRes_.resize( Ax.size() );
-        }
-
-        scaleAddRes_ = 0.0;
-        // scaleAddRes_  = - C D^-1 B x
-        apply( x, scaleAddRes_ );
-        // Ax = Ax + alpha * scaleAddRes_
-        Ax.axpy( alpha, scaleAddRes_ );
-    }
-
-    // Ax = Ax - alpha * C D^-1 B x
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    applyScaleAddDomain(const Scalar alpha, const BVector& x, BVector& Ax, const int domainIndex) const
-    {
-        if (this->well_container_.empty()) {
-            return;
-        }
-
-        if( scaleAddRes_.size() != Ax.size() ) {
-            scaleAddRes_.resize( Ax.size() );
-        }
-
-        scaleAddRes_ = 0.0;
-        // scaleAddRes_  = - C D^-1 B x
-        applyDomain(x, scaleAddRes_, domainIndex);
-        // Ax = Ax + alpha * scaleAddRes_
-        Ax.axpy( alpha, scaleAddRes_ );
-    }
 
     template<typename TypeTag>
     void

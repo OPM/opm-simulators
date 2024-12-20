@@ -299,20 +299,10 @@ template<class Scalar> class WellContributions;
                 return this->computeWellBlockAveragePressures(this->gravity_);
             }
 
-            // subtract B*inv(D)*C * x from A*x
-            void apply(const BVector& x, BVector& Ax) const;
-
-            void applyDomain(const BVector& x, BVector& Ax, const int domainIndex) const;
-
 #if COMPILE_GPU_BRIDGE
             // accumulate the contributions of all Wells in the WellContributions object
             void getWellContributions(WellContributions<Scalar>& x) const;
 #endif
-
-            // apply well model with scaling of alpha
-            void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
-
-            void applyScaleAddDomain(const Scalar alpha, const BVector& x, BVector& Ax, const int domainIndex) const;
 
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false) const;
@@ -438,9 +428,6 @@ template<class Scalar> class WellContributions;
 
             // Pre-step network solve at static reservoir conditions (group and well states might be updated)
             void doPreStepNetworkRebalance(DeferredLogger& deferred_logger);
-
-            // used to better efficiency of calcuation
-            mutable BVector scaleAddRes_{};
 
             std::vector<Scalar> B_avg_{};
 
@@ -583,11 +570,10 @@ template<class Scalar> class WellContributions;
             BlackoilWellModel(Simulator& simulator, const PhaseUsage& pu);
 
             // These members are used to avoid reallocation in specific functions
-            // (e.g., apply, applyDomain) instead of using local variables.
+            // instead of using local variables.
             // Their state is not relevant between function calls, so they can
             // (and must) be mutable, as the functions using them are const.
             mutable BVector x_local_;
-            mutable BVector Ax_local_;
             mutable BVector res_local_;
             mutable GlobalEqVector linearize_res_local_;
         };
