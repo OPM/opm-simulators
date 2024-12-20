@@ -102,26 +102,7 @@ public:
     {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& well : model_) {
-            // Modifiy the Jacobian with explicit Schur complement
-            // contributions if requested.
-            if (model_.addMatrixContributions()) {
-                well->addWellContributions(jacobian);
-            }
-            // Apply as Schur complement the well residual to reservoir residuals:
-            // r = r - duneC_^T * invDuneD_ * resWell_
-            // Well equations B and C uses only the perforated cells, so need to apply on local residual
-            const auto& cells = well->cells();
-            linearize_res_local_.resize(cells.size());
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                linearize_res_local_[i] = res[cells[i]];
-            }
-
-            well->apply(linearize_res_local_);
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                res[cells[i]] = linearize_res_local_[i];
-            }
+            this->linearizeSingleWell(jacobian, res, well);
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ", lin_comm_);
     }
@@ -140,26 +121,7 @@ public:
         // parallel but for each individual domain of each rank.
         for (const auto& well : model_) {
             if (model_.well_domain().at(well->name()) == domain.index) {
-                // Modifiy the Jacobian with explicit Schur complement
-                // contributions if requested.
-                if (model_.addMatrixContributions()) {
-                    well->addWellContributions(jacobian);
-                }
-                // Apply as Schur complement the well residual to reservoir residuals:
-                // r = r - duneC_^T * invDuneD_ * resWell_
-                // Well equations B and C uses only the perforated cells, so need to apply on local residual
-                const auto& cells = well->cells();
-                linearize_res_local_.resize(cells.size());
-
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    linearize_res_local_[i] = res[cells[i]];
-                }
-
-                well->apply(linearize_res_local_);
-
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    res[cells[i]] = linearize_res_local_[i];
-                }
+                this->linearizeSingleWell(jacobian, res, well);
             }
         }
     }
@@ -186,6 +148,29 @@ public:
     }
 
 private:
+    template<class WellType>
+    void linearizeSingleWell(SparseMatrixAdapter& jacobian,
+                             GlobalEqVector& res,
+                             const WellType& well)
+    {
+        if (model_.addMatrixContributions()) {
+            well->addWellContributions(jacobian);
+        }
+
+        const auto& cells = well->cells();
+        linearize_res_local_.resize(cells.size());
+
+        for (size_t i = 0; i < cells.size(); ++i) {
+           linearize_res_local_[i] = res[cells[i]];
+        }
+
+        well->apply(linearize_res_local_);
+
+        for (size_t i = 0; i < cells.size(); ++i) {
+            res[cells[i]] = linearize_res_local_[i];
+        }
+    }
+
     Model& model_;
     GlobalEqVector linearize_res_local_{};
     Parallel::Communication lin_comm_;
