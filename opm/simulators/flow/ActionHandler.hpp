@@ -99,7 +99,6 @@ public:
     void evalUDQAssignments(const unsigned episodeIdx,
                             UDQState& udq_state);
 
-private:
     /// Convey dynamic updates triggered by an action block back to the
     /// running simulator.
     ///
@@ -125,6 +124,7 @@ private:
                               const TransFunc& updateTrans,
                               bool& commit_wellstate);
 
+private:
     /// Static properties such as permeability and transmissibility.
     EclipseState& ecl_state_;
 

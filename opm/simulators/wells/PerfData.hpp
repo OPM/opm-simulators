@@ -21,6 +21,7 @@
 #define OPM_PERFDATA_HEADER_INCLUDED
 
 #include <opm/simulators/wells/ConnFiltrateData.hpp>
+#include <opm/simulators/wells/ConnFracStatistics.hpp>
 
 #include <cstddef>
 #include <vector>
@@ -71,6 +72,7 @@ public:
         serializer(skin_pressure);
         serializer(water_velocity);
         serializer(filtrate_data);
+        serializer(connFracStatistics);
     }
 
     bool operator==(const PerfData&) const;
@@ -105,6 +107,7 @@ public:
     std::vector<Scalar> water_velocity{};
 
     ConnFiltrateData<Scalar> filtrate_data{};
+    std::vector<ConnFracStatistics<Scalar>> connFracStatistics{};
 };
 
 } // namespace Opm
