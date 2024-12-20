@@ -194,24 +194,6 @@ public:
         }
     }
 
-    void applyscaleadd(field_type alpha, const X& x, Y& y) const override
-    {
-        OPM_TIMEBLOCK(applyscaleadd);
-        if (this->wellMod_.empty()) {
-            return;
-        }
-
-        if (this->scaleAddRes_.size() != y.size()) {
-            this->scaleAddRes_.resize(y.size());
-        }
-
-        this->scaleAddRes_ = 0.0;
-        // scaleAddRes_  = - C D^-1 B x
-        this->apply(x, this->scaleAddRes_);
-        // Ax = Ax + alpha * scaleAddRes_
-        y.axpy(alpha, this->scaleAddRes_);
-    }
-
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const X& weights,
                                   const bool use_well_weights) const override
