@@ -155,6 +155,25 @@ public:
     //! output the segments with pressure close to lower pressure limit for debugging purpose
     void outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const;
 
+    void output() const {
+        std::cout << " value_ " << std::endl;
+        for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+            std::cout << "segment " << seg << " : ";
+            for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+                std::cout << value_[seg][eq_idx] << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << " evaluation_ " << std::endl;
+        for (std::size_t seg = 0; seg < evaluation_.size(); ++seg) {
+            std::cout << "segment " << seg << " : ";
+            for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+                std::cout << evaluation_[seg][eq_idx] << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+
 private:
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions(const int seg);
