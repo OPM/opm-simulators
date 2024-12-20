@@ -42,9 +42,6 @@ void registerFlowProblemParameters()
     Parameters::Register<Parameters::EnableWriteAllSolutions>
        ("Write all solutions to disk instead of only the ones for the "
         "report steps");
-    Parameters::Register<Parameters::EnableEclOutput>
-        ("Write binary output which is compatible with the commercial "
-         "Eclipse simulator");
 #if HAVE_DAMARIS
     Parameters::Register<Parameters::EnableDamarisOutput>
         ("Write a specific variable using Damaris in a separate core");
