@@ -534,7 +534,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         {
             OpmLog::info("\nAdding LGRs to the equilGrid and updating its leaf grid view");
            
-            addLgrsUpdateLeafView(lgrs, lgrsSize, equilGrid_);
+            addLgrsUpdateLeafView(lgrs, lgrsSize, *equilGrid_);
         }
         equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
         
