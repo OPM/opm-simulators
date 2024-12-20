@@ -32,19 +32,9 @@ namespace Opm
 
 class Schedule;
 
-class WellConnectionAuxiliaryModuleGeneric
-{
-protected:
-    WellConnectionAuxiliaryModuleGeneric(const Schedule& schedule,
-                                         const Dune::CpGrid& grid);
-
-    std::vector<std::vector<int> > wells_;
-};
-
 template<class TypeTag>
 class WellConnectionAuxiliaryModule
     : public BaseAuxiliaryModule<TypeTag>
-    , private WellConnectionAuxiliaryModuleGeneric
 {
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
@@ -56,7 +46,6 @@ public:
 
     WellConnectionAuxiliaryModule(const Schedule& schedule,
                                   const Dune::CpGrid& grid)
-        : WellConnectionAuxiliaryModuleGeneric(schedule, grid)
     {
     }
 
@@ -68,12 +57,6 @@ public:
 
     void addNeighbors(std::vector<NeighborSet>& neighbors) const
     {
-        for (const auto& well_perforations : wells_)
-        {
-            for (const auto& perforation : well_perforations)
-                neighbors[perforation].insert(well_perforations.begin(),
-                                              well_perforations.end());
-        }
     }
 
     void applyInitial()
