@@ -85,22 +85,7 @@ public:
     {
         OPM_TIMEBLOCK(apply);
         for (const auto& well : this->wellMod_) {
-            // Well equations B and C uses only the perforated cells, so need to apply on local vectors
-            const auto& cells = well->cells();
-            x_local_.resize(cells.size());
-            Ax_local_.resize(cells.size());
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                x_local_[i] = x[cells[i]];
-                Ax_local_[i] = y[cells[i]];
-            }
-
-            well->apply(x_local_, Ax_local_);
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                // only need to update Ax
-                y[cells[i]] = Ax_local_[i];
-            }
+            this->applySingleWell(x, y, well, well->cells());
         }
     }
 
@@ -155,6 +140,29 @@ public:
 protected:
     const WellModel& wellMod_;
 
+    template<class WellType, class ArrayType>
+    void applySingleWell(const X& x, Y& y,
+                         const WellType& well,
+                         const ArrayType& cells) const
+    {
+        // Well equations B and C uses only the perforated cells, so need to apply on local vectors
+        x_local_.resize(cells.size());
+        Ax_local_.resize(cells.size());
+
+        for (size_t i = 0; i < cells.size(); ++i) {
+            x_local_[i] = x[cells[i]];
+            Ax_local_[i] = y[cells[i]];
+        }
+
+        well->apply(x_local_, Ax_local_);
+
+        for (size_t i = 0; i < cells.size(); ++i) {
+            // only need to update Ax
+            y[cells[i]] = Ax_local_[i];
+        }
+
+    }
+
     // These members are used to avoid reallocation.
     // Their state is not relevant between function calls, so they can
     // (and must) be mutable, as the functions using them are const.
@@ -180,23 +188,7 @@ public:
         std::size_t well_index = 0;
         for (const auto& well : this->wellMod_) {
             if (this->wellMod_.well_domain().at(well->name()) == domainIndex_) {
-                // Well equations B and C uses only the perforated cells, so need to apply on local vectors
-                // transfer global cells index to local subdomain cells index
-                const auto& local_cells = this->wellMod_.well_local_cells()[well_index];
-                this->x_local_.resize(local_cells.size());
-                this->Ax_local_.resize(local_cells.size());
-
-                for (size_t i = 0; i < local_cells.size(); ++i) {
-                    this->x_local_[i] = x[local_cells[i]];
-                    this->Ax_local_[i] = y[local_cells[i]];
-                }
-
-                well->apply(this->x_local_, this->Ax_local_);
-
-                for (size_t i = 0; i < local_cells.size(); ++i) {
-                    // only need to update Ax
-                    y[local_cells[i]] = this->Ax_local_[i];
-                }
+                this->applySingleWell(x, y, well, this->wellMod_.well_local_cells()[well_index]);
             }
             ++well_index;
         }
