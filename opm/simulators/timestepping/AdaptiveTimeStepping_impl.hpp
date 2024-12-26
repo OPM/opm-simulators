@@ -174,13 +174,16 @@ template <class Solver>
 SimulatorReport
 AdaptiveTimeStepping<TypeTag>::
 step(const SimulatorTimer& simulator_timer,
-                                    Solver& solver,
-                                    const bool is_event,
-                                    const std::vector<int>* fipnum,
-                                    const std::function<bool()> tuning_updater)
+     Solver& solver,
+     const bool is_event,
+     const std::function<bool(const double /*current_time*/,
+                              const double /*dt*/,
+                              const int    /*substep_number*/
+                             )> tuning_updater
+)
 {
     SubStepper sub_stepper{
-        *this, simulator_timer, solver, is_event, fipnum, tuning_updater,
+        *this, simulator_timer, solver, is_event, tuning_updater,
     };
     return sub_stepper.run();
 }
@@ -462,14 +465,16 @@ SubStepper(
     const SimulatorTimer& simulator_timer,
     Solver& solver,
     const bool is_event,
-    const std::vector<int>* fipnum,
-    const std::function<bool()>& tuning_updater
+    const std::function<bool(const double /*current_time*/,
+                             const double /*dt*/,
+                             const int    /*substep_number*/
+                            )>& tuning_updater
+
 )
     : adaptive_time_stepping_{adaptive_time_stepping}
     , simulator_timer_{simulator_timer}
     , solver_{solver}
     , is_event_{is_event}
-    , fipnum_{fipnum}
     , tuning_updater_{tuning_updater}
 {
 }
@@ -538,13 +543,16 @@ maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_
     );
 }
 
+// The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicitBlackoil::runStep()
+// It has to be called for each substep since TUNING might have been changed for next sub step due
+// to ACTIONX (via NEXTSTEP) or WCYCLE keywords.
 template<class TypeTag>
 template<class Solver>
 bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
-maybeUpdateTuning_() const
+maybeUpdateTuning_(double elapsed, double dt, int sub_step_number) const
 {
-    return this->tuning_updater_();
+    return this->tuning_updater_(elapsed, dt, sub_step_number);
 }
 
 template<class TypeTag>
@@ -562,16 +570,18 @@ SimulatorReport
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 runStepOriginal_()
 {
-    maybeUpdateTuning_();
-    const double original_time_step = this->simulator_timer_.currentStepLength();
+    auto elapsed = this->simulator_timer_.simulationTimeElapsed();
+    auto original_time_step = this->simulator_timer_.currentStepLength();
+    auto report_step = this->simulator_timer_.reportStepNum();
+    maybeUpdateTuning_(elapsed, original_time_step, report_step);
     maybeModifySuggestedTimeStepAtBeginningOfReportStep_(original_time_step);
 
     AdaptiveSimulatorTimer substep_timer{
         this->simulator_timer_.startDateTime(),
         original_time_step,
-        this->simulator_timer_.simulationTimeElapsed(),
+        elapsed,
         suggestedNextTimestep_(),
-        this->simulator_timer_.reportStepNum(),
+        report_step,
         maxTimeStep_()
     };
     SubStepIteration substepIteration{*this, substep_timer, original_time_step, /*final_step=*/true};
@@ -617,7 +627,7 @@ runStepReservoirCouplingMaster_()
     while(!substep_done) {
         reservoirCouplingMaster_().receiveNextReportDateFromSlaves();
         if (iteration == 0) {
-            maybeUpdateTuning_();
+            maybeUpdateTuning_(current_time, current_step_length, /*substep=*/0);
         }
         current_step_length = reservoirCouplingMaster_().maybeChopSubStep(
                                           current_step_length, current_time);
@@ -630,7 +640,7 @@ runStepReservoirCouplingMaster_()
             /*stepLength=*/current_step_length,
             /*elapsedTime=*/current_time,
             /*timeStepEstimate=*/suggestedNextTimestep_(),
-            this->simulator_timer_.reportStepNum(),
+            /*reportStep=*/this->simulator_timer_.reportStepNum(),
             maxTimeStep_()
         };
         bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
@@ -666,7 +676,7 @@ runStepReservoirCouplingSlave_()
         reservoirCouplingSlave_().sendNextReportDateToMasterProcess();
         auto timestep = reservoirCouplingSlave_().receiveNextTimeStepFromMaster();
         if (iteration == 0) {
-            maybeUpdateTuning_();
+            maybeUpdateTuning_(current_time, original_time_step, /*substep=*/0);
             maybeModifySuggestedTimeStepAtBeginningOfReportStep_(timestep);
         }
         AdaptiveSimulatorTimer substep_timer{
@@ -685,6 +695,7 @@ runStepReservoirCouplingSlave_()
         report += sub_steps_report;
         current_time += timestep;
         if (final_step) {
+            substep_done = true;
             break;
         }
         iteration++;
@@ -740,12 +751,7 @@ run()
 
     // sub step time loop
     while (!this->substep_timer_.done()) {
-        auto old_value = suggestedNextTimestep_();
-        if (maybeUpdateTuning_()) {
-            setTimeStep_(suggestedNextTimestep_());
-            // maybeUpdateTuning() might change the suggested time step
-            setSuggestedNextStep_(old_value);
-        }
+        maybeUpdateTuningAndTimeStep_();
         const double dt = this->substep_timer_.currentStepLength();
         if (timeStepVerbose_()) {
             detail::logTimer(this->substep_timer_);
@@ -957,15 +963,6 @@ currentDateTime_() const
 
 template<class TypeTag>
 template<class Solver>
-const std::vector<int> *
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-fipnum_() const
-{
-    return this->substepper_.fipnum_;
-}
-
-template<class TypeTag>
-template<class Solver>
 int
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
 getNumIterations_(const SimulatorReportSingle &substep_report) const
@@ -1032,23 +1029,37 @@ maybeRestrictTimeStepGrowth_(const double dt, double dt_estimate, const int rest
         dt_estimate = std::min(growthFactor_() * dt, dt_estimate);
     }
 
-    // Further restrict time step size if we are in
-    // prediction mode with THP constraints.
-    if (solver_().model().wellModel().hasTHPConstraints()) {
-        const double max_prediction_thp_timestep = 16.0 * unit::day;
-        dt_estimate = std::min(dt_estimate, max_prediction_thp_timestep);
-    }
-    assert(dt_estimate > 0);
     return dt_estimate;
 }
 
+// The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicitBlackoil::runStep()
+// It has to be called for each substep since TUNING might have been changed for next sub step due
+// to ACTIONX (via NEXTSTEP) or WCYCLE keywords.
 template<class TypeTag>
 template<class Solver>
-bool
+void
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-maybeUpdateTuning_() const
+maybeUpdateTuningAndTimeStep_()
 {
-    return this->substepper_.maybeUpdateTuning_();
+    // TODO: This function is currently only called if NEXTSTEP is activated from ACTIONX or
+    // if the WCYCLE keyword needs to modify the current timestep. So this method should rather
+    // be named maybeUpdateTimeStep_() or similar, since it should not update the tuning. However,
+    // the current definition of the maybeUpdateTuning_() callback is actually calling
+    // adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning) which is updating the tuning
+    // see SimulatorFullyImplicitBlackoil::runStep() for more details.
+    auto old_value = suggestedNextTimestep_();
+    if (this->substepper_.maybeUpdateTuning_(this->substep_timer_.simulationTimeElapsed(),
+                                                this->substep_timer_.currentStepLength(),
+                                                this->substep_timer_.currentStepNum()))
+    {
+        // Either NEXTSTEP and WCYCLE wants to change the current time step, but they cannot
+        // change the current time step directly. Instead, they change the suggested next time step
+        // by calling updateNEXTSTEP() via the maybeUpdateTuning() callback. We now need to update
+        // the current time step to the new suggested time step and reset the suggested time step
+        // to the old value.
+        setTimeStep_(suggestedNextTimestep_());
+        setSuggestedNextStep_(old_value);
+    }
 }
 
 template<class TypeTag>
@@ -1226,6 +1237,13 @@ timeStepVerbose_() const
     return this->adaptive_time_stepping_.timestep_verbose_;
 }
 
+// The suggested time step is the stepsize that will be used as a first try for
+// the next sub step. It is updated at the end of each substep. It can also be
+// updated by the TUNING or NEXTSTEP keywords at the beginning of each report step or
+// at the beginning of each substep by the ACTIONX keyword (via NEXTSTEP), this is
+// done by the maybeUpdateTuning_() method which is called at the beginning of each substep
+// (and the begginning of each report step). Note that the WCYCLE keyword can also update the
+// suggested time step via the maybeUpdateTuning_() method.
 template <class TypeTag>
 template <class Solver>
 void
@@ -1261,9 +1279,6 @@ double
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
 writeOutput_() const
 {
-    if (fipnum_()) {
-        solver_().computeFluidInPlace(*(fipnum_()));
-    }
     time::StopWatch perf_timer;
     perf_timer.start();
     auto& problem = solver_().model().simulator().problem();
