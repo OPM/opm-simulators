@@ -5,6 +5,16 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
 set(abs_tol 1e+5)
 set(rel_tol 2e-5)
 set(coarse_rel_tol 1e-2)
+add_test_compareSeparateECLFiles(CASENAME pyaction_GLIFTOPT_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_GLIFTOPT_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_GLIFTOPT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
 add_test_compareSeparateECLFiles(CASENAME pyaction_gconprod_insert_kw
                                  DIR1 pyaction
                                  FILENAME1 PYACTION_GCONPROD_INSERT_KW
