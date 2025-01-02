@@ -82,11 +82,6 @@ struct EnableDisgasInWater { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableBioeffects { using type = UndefinedProperty; };
 
-//! Allow the spatial and temporal domains to exhibit non-constant temperature
-//! in the black-oil model
-template<class TypeTag, class MyTypeTag>
-struct EnableTemperature { using type = UndefinedProperty; };
-
 template<class TypeTag, class MyTypeTag>
 struct EnableMech { using type = UndefinedProperty; };
     

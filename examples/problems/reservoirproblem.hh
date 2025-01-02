@@ -504,6 +504,18 @@ public:
                        unsigned /*timeIdx*/) const
     { return temperature_; }
 
+   /*!
+     * \copydoc FvBaseMultiPhaseProblem::temperature
+     *
+     * The black-oil model assumes constant temperature to define its
+     * parameters. Although temperature is thus not really used by the
+     * model, it gets written to the VTK output. Who nows, maybe we
+     * will need it one day?
+     */
+    Scalar temperature(unsigned /*globalDofIdx*/,
+                       unsigned /*timeIdx*/) const
+    { return temperature_; }
+
     // \}
 
     /*!
