@@ -24,6 +24,18 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#if HAVE_MPI
+#define RESERVOIR_COUPLING_ENABLED
+#endif
+#ifdef RESERVOIR_COUPLING_ENABLED
+#include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
+#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
+#include <opm/common/Exceptions.hpp>
+#endif
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/grid/utility/StopWatch.hpp>
@@ -65,6 +77,7 @@ struct SaveStep { static constexpr auto* value = ""; };
 struct SaveFile { static constexpr auto* value = ""; };
 struct LoadFile { static constexpr auto* value = ""; };
 struct LoadStep { static constexpr int value = -1; };
+struct Slave { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
@@ -74,6 +87,8 @@ namespace Opm {
 template<class TypeTag>
 class SimulatorFullyImplicitBlackoil : private SerializableSim
 {
+protected:
+    struct MPI_Comm_Deleter;
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;
@@ -183,6 +198,9 @@ public:
             ("FileName for .OPMRST file used to load serialized state. "
              "If empty, CASENAME.OPMRST is used.");
         Parameters::Hide<Parameters::LoadFile>();
+        Parameters::Register<Parameters::Slave>
+            ("Specify if the simulation is a slave simulation in a master-slave simulation");
+        Parameters::Hide<Parameters::Slave>();
     }
 
     /// Run the simulation.
@@ -191,9 +209,15 @@ public:
     /// \param[in,out] timer       governs the requested reporting timesteps
     /// \param[in,out] state       state of reservoir: pressure, fluxes
     /// \return                    simulation report, with timing data
+#ifdef RESERVOIR_COUPLING_ENABLED
+    SimulatorReport run(SimulatorTimer& timer, int argc, char** argv)
+    {
+        init(timer, argc, argv);
+#else
     SimulatorReport run(SimulatorTimer& timer)
     {
         init(timer);
+#endif
         // Make cache up to date. No need for updating it in elementCtx.
         // NB! Need to be at the correct step in case of restart
         simulator_.setEpisodeIndex(timer.currentStepNum());
@@ -208,8 +232,69 @@ public:
         return finalize();
     }
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+    // This method should only be called if slave mode (i.e. Parameters::Get<Parameters::Slave>())
+    // is false. We try to determine if this is a normal flow simulation or a reservoir
+    // coupling master. It is a normal flow simulation if the schedule does not contain
+    // any SLAVES and GRUPMAST keywords.
+    bool checkRunningAsReservoirCouplingMaster()
+    {
+        for (std::size_t report_step = 0; report_step < this->schedule().size(); ++report_step) {
+            auto rescoup = this->schedule()[report_step].rescoup();
+            auto slave_count = rescoup.slaveCount();
+            auto master_group_count = rescoup.masterGroupCount();
+            // - GRUPMAST and SLAVES keywords need to be specified at the same report step
+            // - They can only occur once in the schedule
+            if (slave_count > 0 && master_group_count > 0) {
+                return true;
+            }
+            else if (slave_count > 0 && master_group_count == 0) {
+                throw ReservoirCouplingError(
+                    "Inconsistent reservoir coupling master schedule: "
+                    "Slave count is greater than 0 but master group count is 0"
+                );
+            }
+            else if (slave_count == 0 && master_group_count > 0) {
+                throw ReservoirCouplingError(
+                    "Inconsistent reservoir coupling master schedule: "
+                    "Master group count is greater than 0 but slave count is 0"
+                );
+            }
+        }
+        return false;
+    }
+#endif
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+    // NOTE: The argc and argv will be used when launching a slave process
+    void init(SimulatorTimer &timer, int argc, char** argv)
+    {
+        auto slave_mode = Parameters::Get<Parameters::Slave>();
+        if (slave_mode) {
+            this->reservoirCouplingSlave_ =
+                std::make_unique<ReservoirCouplingSlave>(
+                    FlowGenericVanguard::comm(),
+                    this->schedule(), timer
+                );
+            this->reservoirCouplingSlave_->sendActivationDateToMasterProcess();
+            this->reservoirCouplingSlave_->sendSimulationStartDateToMasterProcess();
+            this->reservoirCouplingSlave_->receiveMasterGroupNamesFromMasterProcess();
+        }
+        else {
+            auto master_mode = checkRunningAsReservoirCouplingMaster();
+            if (master_mode) {
+                this->reservoirCouplingMaster_ =
+                    std::make_unique<ReservoirCouplingMaster>(
+                        FlowGenericVanguard::comm(),
+                        this->schedule(),
+                        argc, argv
+                    );
+            }
+        }
+#else
     void init(SimulatorTimer &timer)
     {
+#endif
         simulator_.setEpisodeIndex(-1);
 
         // Create timers and file for writing timing info.
@@ -232,7 +317,14 @@ public:
             else {
                 adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, max_next_tstep, terminalOutput_);
             }
-
+#ifdef RESERVOIR_COUPLING_ENABLED
+            if (this->reservoirCouplingSlave_) {
+                adaptiveTimeStepping_->setReservoirCouplingSlave(this->reservoirCouplingSlave_.get());
+            }
+            else if (this->reservoirCouplingMaster_) {
+                adaptiveTimeStepping_->setReservoirCouplingMaster(this->reservoirCouplingMaster_.get());
+            }
+#endif
             if (isRestart()) {
                 // For restarts the simulator may have gotten some information
                 // about the next timestep size from the OPMEXTRA field
@@ -378,6 +470,14 @@ public:
             tuningUpdater(timer.simulationTimeElapsed(),
                           this->adaptiveTimeStepping_->suggestedNextStep(), 0);
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+            if (this->reservoirCouplingMaster_) {
+                this->reservoirCouplingMaster_->maybeSpawnSlaveProcesses(timer.currentStepNum());
+            }
+            else if (this->reservoirCouplingSlave_) {
+                this->reservoirCouplingSlave_->maybeActivate(timer.currentStepNum());
+            }
+#endif
             const auto& events = schedule()[timer.currentStepNum()].events();
             bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
                 events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||
@@ -640,6 +740,13 @@ protected:
     std::unique_ptr<time::StopWatch> solverTimer_;
     std::unique_ptr<time::StopWatch> totalTimer_;
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
+
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+    bool slaveMode_{false};
+    std::unique_ptr<ReservoirCouplingMaster> reservoirCouplingMaster_{nullptr};
+    std::unique_ptr<ReservoirCouplingSlave> reservoirCouplingSlave_{nullptr};
+#endif
 
     std::optional<ConvergenceReportQueue> convergenceOutputQueue_{};
     std::optional<ConvergenceOutputThread> convergenceOutputObject_{};
