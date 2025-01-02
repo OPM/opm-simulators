@@ -1974,16 +1974,16 @@ namespace Opm {
     {
         int nw =  this->numLocalWellsEnd();
         int rdofs = local_num_cells_;
-        for(int i=0; i < nw; i++){
+        for (int i = 0; i < nw; ++i) {
             int wdof = rdofs + i;
             jacobian.entry(wdof,wdof) = 1.0;// better scaling ?
         }
-        std::vector<std::vector<int>> wellconnections = this->getMaxWellConnections();
-        for(int i=0; i < nw; i++){
+        const auto wellconnections = this->getMaxWellConnections();
+        for (int i = 0; i < nw; ++i) {
             const auto& perfcells = wellconnections[i];
-            for(int perfcell : perfcells){
+            for (int perfcell : perfcells) {
                 int wdof = rdofs + i;
-                jacobian.entry(wdof,perfcell) = 0.0;
+                jacobian.entry(wdof, perfcell) = 0.0;
                 jacobian.entry(perfcell, wdof) = 0.0;
             }
         }
