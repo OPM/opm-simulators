@@ -352,13 +352,10 @@ step(const SimulatorTimer& simulatorTimer,
                     } else {
                         substepTimer.provideTimeStepEstimate(dt);
                         if (solverVerbose_) {
-                            std::string msg;
-                            msg = "\nProblematic well(s) were shut: ";
-                            for (const auto& well : shut_wells) {
-                                msg += well;
-                                msg += " ";
-                            }
-                            msg += "(retrying timestep)\n";
+                            const std::string msg =
+                                fmt::format("\nProblematic well(s) were shut: {}"
+                                            "(retrying timestep)\n",
+                                            fmt::join(shut_wells, " "));
                             OpmLog::problem(msg);
                         }
                     }
