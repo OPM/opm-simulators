@@ -28,6 +28,7 @@
 #include <flow/flow_blackoil.hpp>
 #include <flow/flow_blackoil_legacyassembly.hpp>
 #include <flow/flow_blackoil_nohyst.hpp>
+#include <flow/flow_blackoil_temp.hpp>
 #include <flow/flow_brine.hpp>
 #include <flow/flow_brine_precsalt_vapwat.hpp>
 #include <flow/flow_brine_saltprecipitation.hpp>
@@ -75,6 +76,7 @@ int Opm::Main::dispatchDynamic_()
     // TODO: make sure that no illegal combinations like thermal and
     //       twophase are requested.
     const bool thermal = eclipseState_->getSimulationConfig().isThermal();
+    const bool temp = eclipseState_->getSimulationConfig().isTemp();
 
     // Single-phase case
     if (rspec.micp()) {
@@ -129,6 +131,11 @@ int Opm::Main::dispatchDynamic_()
     // Energy case
     else if (thermal) {
         return this->runThermal(phases);
+    }
+
+    // Blackoil case with temperature
+    else if (phases.size() == 4 && temp) {
+        return this->runBlackOilTemp();
     }
 
     // Blackoil case
@@ -430,4 +437,11 @@ int Opm::Main::runBlackOil()
         // Use variant without hysteresis support to save memory.
         return flowBlackoilTpfaNohystMain(argc_, argv_, outputCout_, outputFiles_);
     }
+}
+
+int Opm::Main::runBlackOilTemp()
+{
+    // TEMP is used. Energy equation is solved seperatly
+    // Only 3p-blackoil supported with TEMP option
+    return flowBlackoilTempMain(argc_, argv_, outputCout_, outputFiles_);
 }

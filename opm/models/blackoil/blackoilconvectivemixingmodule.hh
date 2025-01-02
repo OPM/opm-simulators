@@ -138,7 +138,7 @@ class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
     enum { dimWorld = GridView::dimensionworld };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
-    static constexpr bool enableEnergy = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
+    static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
 public:
@@ -384,7 +384,7 @@ public:
                 flux[conti0EqIdx + activeGasCompIdx] += Opm::getValue(convectiveFlux);
             }
 
-            if constexpr (enableEnergy) {
+            if constexpr (enableFullyImplicitThermal) {
                 const auto& h = up.fluidState().enthalpy(liquidPhaseIdx) *
                                 FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, up.pvtRegionIndex());
                 if (globalUpIndex == globalIndexIn) {

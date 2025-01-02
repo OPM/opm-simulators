@@ -208,7 +208,7 @@ protected:
         static constexpr bool enableExtbo = Indices::zFractionIdx >= 0;
         static constexpr bool enablePolymer = Indices::polymerConcentrationIdx >= 0;
         static constexpr bool enablePolymerWeight = Indices::polymerMoleWeightIdx >= 0;
-        static constexpr bool enableEnergy = Indices::temperatureIdx >= 0;
+        static constexpr bool enableFullyImplicitThermal = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
         static constexpr bool enableBioeffects = Indices::biofilmVolumeFractionIdx >= 0;
@@ -318,7 +318,7 @@ protected:
                 delta = sign * std::min(std::abs(delta), maxMolarWeightChange);
                 delta *= satAlpha;
             }
-            else if (enableEnergy && pvIdx == Indices::temperatureIdx) {
+            else if (enableFullyImplicitThermal && pvIdx == Indices::temperatureIdx) {
                 const double sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), bparams_.maxTempChange_);
             }
@@ -380,7 +380,7 @@ protected:
             }
 
             // keep the temperature within given values
-            if (enableEnergy && pvIdx == Indices::temperatureIdx) {
+            if (enableFullyImplicitThermal && pvIdx == Indices::temperatureIdx) {
                 nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.tempMin_, bparams_.tempMax_);
             }
 

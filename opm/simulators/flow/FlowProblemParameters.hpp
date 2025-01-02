@@ -58,8 +58,12 @@ struct RestartWritingInterval { static constexpr int value = 0xffffff; }; // dis
 
 // Path to the config file containing all Hybrid Newton parameters
 struct HybridNewtonConfigFile { static constexpr auto value = "hybridNewtonConfig.json"; };
+
 // Wheter or not to use Hybrid Newton nonlinear preconditioning
 struct UseHybridNewton { static constexpr bool value = false; };
+
+// Conserve inner energy instead of enthalpy even if THERMAL is used
+struct ConserveInnerEnergyThermal { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 

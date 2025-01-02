@@ -106,7 +106,7 @@ private:
     using FlowProblemType::enableConvectiveMixing;
     using FlowProblemType::enableDiffusion;
     using FlowProblemType::enableDispersion;
-    using FlowProblemType::enableEnergy;
+    using FlowProblemType::energyModuleType;
     using FlowProblemType::enableExperiments;
     using FlowProblemType::enableExtbo;
     using FlowProblemType::enableFoam;
@@ -115,7 +115,6 @@ private:
     using FlowProblemType::enablePolymerMolarWeight;
     using FlowProblemType::enableSaltPrecipitation;
     using FlowProblemType::enableSolvent;
-    using FlowProblemType::enableTemperature;
     using FlowProblemType::enableThermalFluxBoundaries;
 
     using FlowProblemType::gasPhaseIdx;
@@ -354,6 +353,13 @@ public:
             this->maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
         }
 
+        // conserve inner energy instead of enthalpy if TEMP is used
+        // or THERMAL and parameter ConserveInnerEnergyThermal is true (default false)
+        bool isThermal = eclState.getSimulationConfig().isThermal();
+        bool isTemp = eclState.getSimulationConfig().isTemp();
+        bool conserveInnerEnergy = isTemp || (isThermal && Parameters::Get<Parameters::ConserveInnerEnergyThermal>());
+        FluidSystem::setEnergyEqualEnthalpy(conserveInnerEnergy);
+
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
@@ -387,7 +393,7 @@ public:
         else {
             this->readInitialCondition_();
         }
-
+        this->temperatureModel_.init();
         this->tracerModel_.prepareTracerBatches();
 
         this->updatePffDofData_();
@@ -651,7 +657,7 @@ public:
                 rate[Indices::oxygenConcentrationIdx] += source.rate(ijk, SourceComponent::OXYG) / this->model().dofTotalVolume(globalDofIdx);
                 rate[Indices::ureaConcentrationIdx] += source.rate(ijk, SourceComponent::UREA) / (this->model().dofTotalVolume(globalDofIdx));
             }
-            if constexpr (enableEnergy) {
+            if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
                 for (unsigned i = 0; i < phidx_map.size(); ++i) {
                     const auto phaseIdx = phidx_map[i];
                     if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -817,7 +823,7 @@ public:
                         //single (water) phase
                         fluidState.setPressure(phaseIdx, pressure);
                 }
-                if constexpr (enableEnergy || enableTemperature) {
+                if constexpr (energyModuleType != EnergyModules::NoTemperature) {
                     double temperature = initialFluidStates_[globalDofIdx].temperature(0); // we only have one temperature
                     const auto temperature_input = bc.temperature;
                     if(temperature_input)
@@ -850,7 +856,7 @@ public:
 
                     const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
                     fluidState.setDensity(phaseIdx, rho);
-                    if constexpr (enableEnergy) {
+                    if constexpr (energyModuleType == EnergyModules::SequentialImplicitThermal || energyModuleType == EnergyModules::FullyImplicitThermal) {
                         const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, pvtRegionIdx);
                         fluidState.setEnthalpy(phaseIdx, h);
                     }
@@ -981,7 +987,7 @@ public:
         if (!context.intersection(spaceIdx).boundary())
             return;
 
-        if constexpr (!enableEnergy || !enableThermalFluxBoundaries)
+        if constexpr (energyModuleType != EnergyModules::FullyImplicitThermal || !enableThermalFluxBoundaries)
             values.setNoFlow();
         else {
             // in the energy case we need to specify a non-trivial boundary condition
@@ -1073,7 +1079,7 @@ public:
             }
 
             // For CO2STORE and H2STORE we need to set the initial temperature for isothermal simulations
-            if constexpr (enableTemperature) {
+            if constexpr (energyModuleType != EnergyModules::NoTemperature) {
                 bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
                 if (needTemperature) {
                     const auto& fp = simulator.vanguard().eclState().fieldProps();
@@ -1393,7 +1399,7 @@ protected:
             //////
             // set temperature
             //////
-            if constexpr (enableEnergy || enableTemperature) {
+            if constexpr (energyModuleType != EnergyModules::NoTemperature) {
                 Scalar temperatureLoc = tempiData[dofIdx];
                 if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0)
                     temperatureLoc = FluidSystem::surfaceTemperature;

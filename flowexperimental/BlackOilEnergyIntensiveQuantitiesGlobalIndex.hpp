@@ -103,6 +103,68 @@ public:
 };
 
 template <class TypeTag>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::SequentialImplicitThermal>
+    : public BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::SequentialImplicitThermal>
+{
+    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::SequentialImplicitThermal>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using SolidEnergyLaw = GetPropType<TypeTag, Properties::SolidEnergyLaw>;
+    using ThermalConductionLaw  = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
+    using ParamCache = typename FluidSystem::template ParameterCache<Evaluation>;
+
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
+    static constexpr unsigned numPhases = FluidSystem::numPhases;
+public:
+    void updateTemperature_([[maybe_unused]] const Problem& problem,
+                            [[maybe_unused]] const PrimaryVariables& priVars,
+                            [[maybe_unused]] unsigned globalSpaceIndex,
+                            [[maybe_unused]] unsigned timeIdx)
+    {
+        auto& fs = this->asImp_().fluidState_;
+        Evaluation T = Evaluation::createVariable(problem.temperature(globalSpaceIndex, timeIdx), Indices::temperatureIdx);
+        fs.setTemperature(T);
+    }
+
+    void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
+                                 [[maybe_unused]] const PrimaryVariables& priVars,
+                                 [[maybe_unused]] unsigned globalSpaceIndex,
+                                 [[maybe_unused]] unsigned timeIdx,
+                                 const ParamCache& paramCache)
+    {
+        auto& fs = Parent::asImp_().fluidState_;
+
+        // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
+        // and the thermal conductivity coefficients
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+            fs.setEnthalpy(phaseIdx, h);
+        }
+
+        const auto& solidEnergyLawParams = problem().solidEnergyLawParams(globalSpaceIndex, timeIdx);
+        this->rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs);
+
+        const auto& thermalConductionLawParams = problem.thermalConductionLawParams(globalSpaceIndex, timeIdx);
+        this->totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs);
+
+        // Retrieve the rock fraction from the problem
+        // Usually 1 - porosity, but if pvmult is used to modify porosity
+        // we will apply the same multiplier to the rock fraction
+        // i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
+        // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
+        this->rockFraction_ = problem.rockFraction(globalSpaceIndex, timeIdx);
+    }
+};
+
+template <class TypeTag>
 class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, EnergyModules::ConstantTemperature>
     : public BlackOilEnergyIntensiveQuantities<TypeTag, EnergyModules::ConstantTemperature>
 {
