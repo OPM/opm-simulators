@@ -27,10 +27,12 @@
 #endif
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
-#include <fmt/format.h>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <string>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace Opm {
 

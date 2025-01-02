@@ -88,11 +88,6 @@ template<class Scalar>
 class BlackoilWellModelGeneric
 {
 public:
-    // ---------      Types      ---------
-    using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric<Scalar>>>;
-    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric<Scalar>*>;
-    using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState<Scalar>>>;
-
     BlackoilWellModelGeneric(Schedule& schedule,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
@@ -248,7 +243,6 @@ public:
         serializer(active_wgstate_);
         serializer(last_valid_wgstate_);
         serializer(nupcol_wgstate_);
-        serializer(last_glift_opt_time_);
         serializer(switched_prod_groups_);
         serializer(switched_inj_groups_);
         serializer(closed_offending_wells_);
@@ -266,7 +260,6 @@ public:
                this->active_wgstate_ == rhs.active_wgstate_ &&
                this->last_valid_wgstate_ == rhs.last_valid_wgstate_ &&
                this->nupcol_wgstate_ == rhs.nupcol_wgstate_ &&
-               this->last_glift_opt_time_ == rhs.last_glift_opt_time_ &&
                this->switched_prod_groups_ == rhs.switched_prod_groups_ &&
                this->switched_inj_groups_ == rhs.switched_inj_groups_ &&
                this->closed_offending_wells_ == rhs.closed_offending_wells_;            
@@ -404,18 +397,6 @@ protected:
     void inferLocalShutWells();
 
     void setRepRadiusPerfLength();
-
-    void gliftDebug(const std::string& msg,
-                    DeferredLogger& deferred_logger) const;
-
-    void gliftDebugShowALQ(DeferredLogger& deferred_logger);
-
-    void gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
-                                   GLiftProdWells& prod_wells,
-                                   GLiftOptWells& glift_wells,
-                                   GasLiftGroupInfo<Scalar>& group_info,
-                                   GLiftWellStateMap& map,
-                                   const int episodeIndex);
 
     virtual void computePotentials(const std::size_t widx,
                                    const WellState<Scalar>& well_state_copy,
@@ -633,10 +614,6 @@ protected:
     WGState<Scalar> active_wgstate_;
     WGState<Scalar> last_valid_wgstate_;
     WGState<Scalar> nupcol_wgstate_;
-
-    bool glift_debug = false;
-
-    double last_glift_opt_time_ = -1.0;
 
     bool wellStructureChangedDynamically_{false};
 
