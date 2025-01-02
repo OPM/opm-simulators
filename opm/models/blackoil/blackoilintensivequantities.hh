@@ -186,15 +186,32 @@ public:
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& linearizationType = problem.model().linearizer().getLinearizationType();
         unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        Scalar RvMax = FluidSystem::enableVaporizedOil()
-            ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
-            : 0.0;
-        Scalar RsMax = FluidSystem::enableDissolvedGas()
-            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
-            : 0.0;
-        Scalar RswMax = FluidSystem::enableDissolvedGasInWater()
-            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
-            : 0.0;
+
+        // trying to use the dynamic BOFS if possible
+        Scalar RvMax;
+        Scalar RsMax;
+        Scalar RswMax;
+        if constexpr (is_a_blackoil_system<DynamicFluidSystem>()) {
+            RvMax = fluidSystem.enableVaporizedOil()
+                ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
+                : 0.0;
+            RsMax = fluidSystem.enableDissolvedGas()
+                ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+                : 0.0;
+            RswMax = fluidSystem.enableDissolvedGasInWater()
+                ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+                : 0.0;
+        } else {
+            RvMax = FluidSystem::enableVaporizedOil()
+                ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
+                : 0.0;
+            RsMax = FluidSystem::enableDissolvedGas()
+                ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+                : 0.0;
+            RswMax = FluidSystem::enableDissolvedGasInWater()
+                ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+                : 0.0;
+        }
 
         asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
 

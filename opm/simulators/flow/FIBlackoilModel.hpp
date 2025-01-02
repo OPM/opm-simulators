@@ -108,6 +108,7 @@ public:
         // maybe through a static assert on the type of the fluidsystem
         // TODO: ensure that this will be an updated version if the static version has changed
         constexpr bool use_dynamic_fluidsystem = is_a_blackoil_system<LocalFluidSystem>();
+        printf("use_dynamic_fluidsystem: %d\n", use_dynamic_fluidsystem);
 
         this->invalidateIntensiveQuantitiesCache(timeIdx);
         //const auto& fluidSystemInstance = FluidSystem::getNonStaticInstance();
