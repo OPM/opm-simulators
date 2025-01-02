@@ -1161,7 +1161,7 @@ getMaxCoeff(const unsigned cell_idx,
     }
 
     if constexpr (has_energy_) {
-        B_avg[contiEnergyEqIdx] += 1.0 / (4.182e1); // converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
+        B_avg[contiEnergyEqIdx] += 1.0;
         const auto R2 = modelResid[cell_idx][contiEnergyEqIdx];
         R_sum[contiEnergyEqIdx] += R2;
         maxCoeff[contiEnergyEqIdx] = std::max(maxCoeff[contiEnergyEqIdx],

@@ -75,22 +75,21 @@ class EquilInitializer
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
-    enum { enableTemperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature };
     enum { enableDissolution = Indices::compositionSwitchIdx >= 0 };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableDisgasInWater = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableDissolvedGas = Indices::compositionSwitchIdx >= 0 };
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
 
 public:
     // NB: setting the enableEnergy argument to true enables storage of enthalpy and
     // internal energy!
     using ScalarFluidState = BlackOilFluidState<Scalar,
                                                 FluidSystem,
-                                                enableTemperature,
-                                                enableEnergy,
+                                                energyModuleType == EnergyModules::ConstantTemperature,
+                                                (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
                                                 enableDissolution,
                                                 enableVapwat,
                                                 enableBrine,
@@ -159,7 +158,7 @@ public:
             }
 
             // set the temperature.
-            if constexpr (enableTemperature || enableEnergy)
+            if constexpr (energyModuleType != EnergyModules::NoTemperature)
                 fluidState.setTemperature(initialState.temperature()[elemIdx]);
 
             // set the phase pressures, invB factor and density
@@ -174,7 +173,7 @@ public:
                 const auto& rho = FluidSystem::density(fluidState, phaseIdx, regionIdx);
                 fluidState.setDensity(phaseIdx, rho);
 
-                if constexpr (enableEnergy) {
+                if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal) {
                     const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, regionIdx);
                     fluidState.setEnthalpy(phaseIdx, h);
                 }

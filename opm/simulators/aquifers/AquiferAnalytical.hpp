@@ -65,23 +65,21 @@ public:
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal };
-    enum { enableTemperature = getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::ConstantTemperature };
-
+    static constexpr EnergyModules energyModuleType = getPropValue<TypeTag, Properties::EnergyModuleType>();
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
 
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
 
-    static constexpr int numEq = BlackoilIndices::numEq;
+    using Eval = GetPropType<TypeTag, Properties::Evaluation>;
 
-    using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
+    static constexpr int numEq = BlackoilIndices::numEq;
 
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
-                                          enableTemperature,
-                                          enableEnergy,
+                                          energyModuleType == EnergyModules::ConstantTemperature,
+                                          (energyModuleType == EnergyModules::FullyImplicitThermal || energyModuleType == EnergyModules::SequentialImplicitThermal),
                                           BlackoilIndices::gasEnabled,
                                           enableVapwat,
                                           enableBrine,
@@ -187,7 +185,7 @@ public:
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
             += this->Qai_[idx] / model.dofTotalVolume(cellIdx);
 
-        if constexpr (enableEnergy) {
+        if constexpr (energyModuleType == EnergyModules::FullyImplicitThermal) {
             auto fs = intQuants.fluidState();
             if (this->Ta0_.has_value() && this->Qai_[idx] > 0)
             {

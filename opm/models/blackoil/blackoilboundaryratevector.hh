@@ -59,7 +59,7 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
-    enum { enableEnergy = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal) };
+    enum { enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal) };
     enum { contiEnergyEqIdx = Indices::contiEnergyEqIdx };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableMICP = Indices::enableMICP };
@@ -141,7 +141,7 @@ public:
             }
 
             // energy conservation
-            if constexpr (enableEnergy) {
+            if constexpr (enableFullyImplicitThermal) {
                 Evaluation density;
                 Evaluation specificEnthalpy;
                 if (pBoundary > pInside) {
@@ -199,7 +199,7 @@ public:
         LocalResidual::adaptMassConservationQuantities_(*this, insideIntQuants.pvtRegionIndex());
 
         // heat conduction
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux() *
                                                    getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
         }
@@ -269,7 +269,7 @@ public:
         setNoFlow();
 
         // if we do not conserve energy there is nothing we should do in addition
-        if constexpr (enableEnergy) {
+        if constexpr (enableFullyImplicitThermal) {
             ExtensiveQuantities extQuants;
             extQuants.updateBoundary(context, bfIdx, timeIdx, boundaryFluidState);
 
