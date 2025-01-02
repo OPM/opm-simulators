@@ -1166,21 +1166,19 @@ namespace Opm {
                           DeferredLogger& deferred_logger) const
     {
         // Finding the location of the well in wells_ecl
-        const int nw_wells_ecl = this->wells_ecl_.size();
-        int index_well_ecl = 0;
-        for (; index_well_ecl < nw_wells_ecl; ++index_well_ecl) {
-            if (well_name == this->wells_ecl_[index_well_ecl].name()) {
-                break;
-            }
-        }
+        const auto it = std::find_if(this->wells_ecl_.begin(),
+                                     this->wells_ecl_.end(),
+                                     [&well_name](const auto& w)
+                                     { return well_name == w.name(); });
         // It should be able to find in wells_ecl.
-        if (index_well_ecl == nw_wells_ecl) {
+        if (it == this->wells_ecl_.end()) {
             OPM_DEFLOG_THROW(std::logic_error,
                              fmt::format("Could not find well {} in wells_ecl ", well_name),
                              deferred_logger);
         }
 
-        return this->createWellPointer(index_well_ecl, report_step);
+        const int pos = static_cast<int>(std::distance(this->wells_ecl_.begin(), it));
+        return this->createWellPointer(pos, report_step);
     }
 
 
