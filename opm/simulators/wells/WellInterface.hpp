@@ -37,6 +37,8 @@ namespace Opm {
 
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
@@ -82,12 +84,7 @@ public:
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
-    using GLiftOptWells = typename BlackoilWellModel<TypeTag>::GLiftOptWells;
-    using GLiftProdWells = typename BlackoilWellModel<TypeTag>::GLiftProdWells;
     using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
-    using GLiftWellStateMap = 
-        typename BlackoilWellModel<TypeTag>::GLiftWellStateMap;
-    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
