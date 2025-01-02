@@ -928,6 +928,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/WriteSystemMatrixHelper.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeStepping.hpp
+  opm/simulators/timestepping/AdaptiveTimeStepping_impl.hpp
   opm/simulators/timestepping/ConvergenceReport.hpp
   opm/simulators/timestepping/EclTimeSteppingParams.hpp
   opm/simulators/timestepping/TimeStepControl.hpp
