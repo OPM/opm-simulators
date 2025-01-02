@@ -599,7 +599,10 @@ init_(const UnitSystem& unitSystem)
                   "Unsupported time step control selected " + control);
 
     // make sure growth factor is something reasonable
-    assert(growthFactor_ >= 1.0);
+    if (growthFactor_ < 1.0) {
+        OPM_THROW(std::runtime_error,
+                  "Growth factor cannot be less than 1.");
+    }
 }
 
 } // namespace Opm
