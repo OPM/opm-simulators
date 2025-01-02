@@ -309,7 +309,7 @@ step(const SimulatorTimer& simulatorTimer,
                     const auto msg = fmt::format(
                         "{}\nTimestep chopped to {} days\n",
                         causeOfFailure,
-                        std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day))
+                        unit::convert::to(substepTimer.currentStepLength(), unit::day)
                     );
                     OpmLog::problem(msg);
                 }
