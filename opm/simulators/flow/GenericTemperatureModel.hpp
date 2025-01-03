@@ -70,6 +70,10 @@ public:
         return doTemp_;   
     }
 
+    const Scalar temperature(size_t globalIdx) const {
+        return temperature_[globalIdx];
+    }
+
 protected:
     GenericTemperatureModel(const GridView& gridView,
                            const EclipseState& eclState,
@@ -91,6 +95,7 @@ protected:
 
     EnergyVector energyVector_;
     std::unique_ptr<EnergyMatrix> energyMatrix_;
+    std::vector<Scalar> temperature_;
     bool doTemp_{false};
 
 };

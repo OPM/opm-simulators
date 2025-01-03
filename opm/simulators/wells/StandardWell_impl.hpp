@@ -549,8 +549,8 @@ namespace Opm
             perf_data.phase_mixing_rates[perf][ws.vaporized_water] = perf_rates.vap_wat;
         }
 
-        if constexpr (has_energy) {
-            connectionRates[perf][Indices::contiEnergyEqIdx] =
+        if constexpr (true) {
+            //connectionRates[perf][Indices::contiEnergyEqIdx] =
                 connectionRateEnergy(simulator.problem().maxOilSaturation(cell_idx),
                                      cq_s, intQuants, deferred_logger);
         }
@@ -2644,7 +2644,7 @@ namespace Opm
                 result += Base::restrictEval(cq_r_thermal);
             }
         }
-
+        std::cout << result << std::endl;
         return result * this->well_efficiency_factor_;
     }
 } // namespace Opm

@@ -83,6 +83,8 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using TemperatureEvaluation = DenseAd::Evaluation<Scalar,1>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
     using EnergyMatrix = typename BaseType::EnergyMatrix;
     using EnergyVector = typename BaseType::EnergyVector;
@@ -104,12 +106,18 @@ public:
 
     void init(bool rst)
     {
-        this->doInit(rst, simulator_.model().numGridDof());
+        const unsigned int numCells = simulator_.model().numTotalDof();
+
+        this->doInit(rst, numCells);
 
         if (!this->doTemp())
             return;
 
-        storage0_.resize(simulator_.model().numGridDof());
+        storage0_.resize(numCells);
+
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            this->temperature_[globI] = simulator_.problem().initialFluidState(globI).temperature(0);
+        }
     }
 
     void beginTimeStep()
@@ -165,7 +173,7 @@ protected:
         //#endif
         for (unsigned globI = 0; globI < numCells; ++globI) {
             Scalar storage = 0.0;
-            //computeStorageTerm(globI, storage);
+            computeStorageTerm(globI, storage);
             storage0_[globI] = storage;
         }
         std::cout << "updateStorageCache" << std::endl;
@@ -174,19 +182,96 @@ protected:
     void advanceTemperatureFields()
     {
 
+        for (int iter = 0; iter < 20; ++iter) {
+        this->energyVector_ = 0.0;
+        (*this->energyMatrix_) = 0.0;
+
+        Scalar dt = simulator_.timeStepSize();
         const unsigned int numCells = simulator_.model().numTotalDof();
         //#ifdef _OPENMP
         //#pragma omp parallel for
         //#endif
-        Scalar dt = simulator_.timeStepSize();
         for (unsigned globI = 0; globI < numCells; ++globI) {
             Scalar volume = simulator_.model().dofTotalVolume(globI);
             Scalar storefac = volume / dt;
-            Scalar storage = 0.0;
-            //computeStorageTerm(globI, storage);
-            //TemperatureEvaluation tmpStorage(getValue(storage));
-            //tmpStorage.setDerivative(storage.derivative[Indices::energyIdx]);
-            this->energyVector_[globI] = storefac * ( storage0_[globI] - getValue(storage) );
+            Evaluation storage = 0.0;
+            computeStorageTerm(globI, storage);
+            this->energyVector_[globI] += storefac * ( getValue(storage) - storage0_[globI] );
+            (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx); 
+        }
+
+        const auto& neighborInfo = simulator_.model().linearizer().getNeighborInfo();
+//#ifdef _OPENMP
+//#pragma omp parallel for
+//#endif
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            RateVector tmp(0.0);
+            RateVector darcyFlux(0.0);
+            const auto& nbInfos = neighborInfo[globI];
+            const IntensiveQuantities& intQuantsIn = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+            for (const auto& nbInfo : nbInfos) {
+                unsigned globJ = nbInfo.neighbor;
+                assert(globJ != globI);
+                tmp = 0.0;
+                darcyFlux = 0.0;
+                const IntensiveQuantities& intQuantsEx = simulator_.model().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, simulator_.problem().moduleParams());
+                //adres *= nbInfo.res_nbinfo.faceArea;
+
+                Evaluation flux = 0.0;
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx))
+                        continue;
+                    unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                    bool inIsUp = darcyFlux[activeCompIdx] > 0;
+                    const IntensiveQuantities& up = inIsUp ? intQuantsIn : intQuantsEx;
+                    const auto& fs = up.fluidState();
+                    if (inIsUp) {
+                        flux += fs.enthalpy(phaseIdx)
+                         * fs.density(phaseIdx)
+                         * darcyFlux[activeCompIdx] * nbInfo.res_nbinfo.faceArea;
+                    } else {
+                        flux += getValue(fs.enthalpy(phaseIdx))
+                         * getValue(fs.density(phaseIdx))
+                         * getValue(darcyFlux[activeCompIdx]) * nbInfo.res_nbinfo.faceArea;
+                    }
+                }
+                flux*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+            
+                this->energyVector_[globI] += getValue(flux);
+                (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(Indices::temperatureIdx);
+                (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(Indices::temperatureIdx);
+
+            }
+        }
+
+        // Well terms
+        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+        for (const auto& wellPtr : wellPtrs) {
+            this->assembleEquationWell(*wellPtr);
+        }
+        Scalar maxNorm = 0.0;
+        Scalar sumNorm = 0.0;
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            maxNorm = max(maxNorm, std::abs(this->energyVector_[globI]));
+            sumNorm += std::abs(this->energyVector_[globI]);
+        }
+
+        if (maxNorm < 1e-6 || sumNorm/numCells < 1e-8) {
+            std::cout << "Newton converged" << std::endl;
+            break;
+        } 
+        std::cout << "iter continue: " << iter << " " << maxNorm << " " << sumNorm/numCells << std::endl;
+
+        EnergyVector dx(numCells);
+        bool converged = this->linearSolve_(*this->energyMatrix_, dx, this->energyVector_);
+        if (!converged) {
+            OpmLog::warning("### Temp model: Linear solver did not converge. ###");
+        }
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            std::cout << globI << " " << this->temperature_[globI] << " " << dx[globI] << " " << this->energyVector_[globI] << std::endl;
+            this->temperature_[globI] -= std::clamp(dx[globI][0], Scalar(-10.0), Scalar(10.0));
+        }
         }
         std::cout << "advanceTemperatureFields" << std::endl;
     }
@@ -214,7 +299,39 @@ protected:
         const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
         storage += rockFraction*uRock;
         storage*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
-        
+    }
+
+    template<class Well>
+    void assembleEquationWell(const Well& well)
+    {
+        const auto& eclWell = well.wellEcl();
+        Scalar perf_temp = 200;
+        Scalar dt = simulator_.timeStepSize();
+        std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
+        const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
+        for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
+            const auto globI = ws.perf_data.cell_index[i];
+            const auto& intQuants = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+            const auto& fs = intQuants.fluidState();
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
+                //Scalar rate = ws.perf_data.rates[i]; //well.volumetricSurfaceRateForConnection(globI, phaseIdx);
+                Scalar rate = well.volumetricSurfaceRateForConnection(globI, phaseIdx);
+
+                if (phaseIdx == gasPhaseIdx) { // assumes rv == 0
+                    rate -= well.volumetricSurfaceRateForConnection(globI, oilPhaseIdx)*getValue(fs.Rs());
+                }
+                if (rate > 0) {
+                    rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
+                } else {
+                    rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
+                }
+                std::cout << "temp " << rate << std::endl;
+                this->energyVector_[globI] -= rate * getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+            }
+        }
     }
    
 

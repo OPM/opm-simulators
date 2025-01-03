@@ -279,16 +279,16 @@ using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
     INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
     INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
     INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
-    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
-    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
-    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
-    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
-    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
-    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
-    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
-    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
-    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,1u,0u>)            \
-    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,false,1u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,true,false,0u,0u>)
 
 INSTANTIATE_TYPE(double)
 
