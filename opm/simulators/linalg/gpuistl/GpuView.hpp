@@ -124,7 +124,7 @@ public:
     /**
      * @return fetch the first element in a GpuView
      */
-    __host__ __device__ T& front()
+    __device__ T& front()
     {
 #ifndef NDEBUG
         assertHasElements();
@@ -135,7 +135,7 @@ public:
     /**
      * @return fetch the last element in a GpuView
      */
-    __host__ __device__ T& back()
+    __device__ T& back()
     {
 #ifndef NDEBUG
         assertHasElements();
@@ -151,7 +151,13 @@ public:
 #ifndef NDEBUG
         assertHasElements();
 #endif
+#if OPM_IS_INSIDE_DEVICE_FUNCTION
         return m_dataPtr[0];
+#else
+        T value;
+        cudaMemcpy(&value, &m_dataPtr[0], sizeof(T), cudaMemcpyDeviceToHost);
+        return value;
+#endif
     }
 
     /**
@@ -162,7 +168,13 @@ public:
 #ifndef NDEBUG
         assertHasElements();
 #endif
+#if OPM_IS_INSIDE_DEVICE_FUNCTION
         return m_dataPtr[m_numberOfElements-1];
+#else
+        T value;
+        cudaMemcpy(&value, &m_dataPtr[m_numberOfElements - 1], sizeof(T), cudaMemcpyDeviceToHost);
+        return value;
+#endif
     }
 
     /**
