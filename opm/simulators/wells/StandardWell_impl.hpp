@@ -19,9 +19,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
+#define OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
+
 // Improve IDE experience
 #ifndef OPM_STANDARDWELL_HEADER_INCLUDED
-#define OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
 #include <config.h>
 #include <opm/simulators/wells/StandardWell.hpp>
 #endif
@@ -2646,3 +2648,5 @@ namespace Opm
         return result * this->well_efficiency_factor_;
     }
 } // namespace Opm
+
+#endif

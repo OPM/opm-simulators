@@ -20,9 +20,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
+#define OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
+
 // Improve IDE experience
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
-#define OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #endif
@@ -2861,3 +2863,5 @@ namespace Opm {
         }
     }
 } // namespace Opm
+
+#endif

@@ -72,8 +72,6 @@ private:
 
 } // namespace Opm
 
-#ifndef OPM_GASLIFT_SINGLE_WELL_IMPL_HEADER_INCLUDED
 #include "GasLiftSingleWell_impl.hpp"
-#endif
 
 #endif // OPM_GASLIFT_SINGLE_WELL_HEADER_INCLUDED

@@ -19,10 +19,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_WELLINTERFACE_IMPL_HEADER_INCLUDED
+#define OPM_WELLINTERFACE_IMPL_HEADER_INCLUDED
+
 // Improve IDE experience
 #ifndef OPM_WELLINTERFACE_HEADER_INCLUDED
 #include <config.h>
-#define OPM_WELLINTERFACE_IMPL_HEADER_INCLUDED
 #include <opm/simulators/wells/WellInterface.hpp>
 #endif
 
@@ -2056,3 +2058,5 @@ namespace Opm
     }
 
 } // namespace Opm
+
+#endif

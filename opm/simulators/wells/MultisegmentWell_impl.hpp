@@ -19,8 +19,10 @@
 */
 
 // Improve IDE experience
-#ifndef OPM_MULTISEGMENTWELL_HEADER_INCLUDED
+#ifndef OPM_MULTISEGMENTWELL_IMPL_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_IMPL_HEADER_INCLUDED
+
+#ifndef OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #endif
@@ -2314,3 +2316,5 @@ namespace Opm
     }
 
 } // namespace Opm
+
+#endif
