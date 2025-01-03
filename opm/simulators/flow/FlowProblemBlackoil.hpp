@@ -362,14 +362,13 @@ public:
 
         const auto& initconfig = eclState.getInitConfig();
         this->tracerModel_.init(initconfig.restartRequested());
-        this->temperatureModel_.init(initconfig.restartRequested());
         if (initconfig.restartRequested()) {
             this->readEclRestartSolution_();
         }
         else {
             this->readInitialCondition_();
         }
-
+        this->temperatureModel_.init(initconfig.restartRequested());
         this->tracerModel_.prepareTracerBatches();
 
         this->updatePffDofData_();

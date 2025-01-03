@@ -37,7 +37,7 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
     using Scalar = typename FluidSystem::Scalar;
-    using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
+    using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq+1>;
     using ModelParameters = typename WellInterfaceFluidSystem<FluidSystem>::ModelParameters;
 
     int flowPhaseToModelCompIdx(const int phaseIdx) const;

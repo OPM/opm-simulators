@@ -359,11 +359,15 @@ public:
                             unsigned dofIdx,
                             unsigned timeIdx)
     {
+       std::cout << "start update temp" << temperatureIdx << std::endl;
+
         auto& fs = asImp_().fluidState_;
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
 
         // set temperature
         fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx, elemCtx.linearizationType()));
+        std::cout << "end update temp" << std::endl;
+
     }
 
     /*!
@@ -376,8 +380,11 @@ public:
                             const unsigned timeIdx,
                             const LinearizationType& lintype)
     {
+        std::cout << "start update temp2" << std::endl;
+
         auto& fs = asImp_().fluidState_;
         fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx, lintype));
+        std::cout << "end update temp2" << std::endl;
     }
 
     /*!
@@ -389,6 +396,7 @@ public:
                                  unsigned timeIdx,
                                  const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
     {
+        std::cout << "start update" << std::endl;
         auto& fs = asImp_().fluidState_;
 
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
@@ -446,6 +454,8 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using SolidEnergyLaw = GetPropType<TypeTag, Properties::SolidEnergyLaw>;
     using ThermalConductionLaw = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+
 
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
@@ -456,12 +466,20 @@ public:
                             [[maybe_unused]] unsigned dofIdx,
                             [[maybe_unused]] unsigned timeIdx)
     {
+        //auto& fs = asImp_().fluidState_;
+        //const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+
+        // set temperature
+        //fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx, elemCtx.linearizationType()));
+        //std::cout << "end update temp" << std::endl;
+
         if constexpr (enableTemperature) {
             // even if energy is conserved, the temperature can vary over the spatial
             // domain if the EnableTemperature property is set to true
             auto& fs = asImp_().fluidState_;
             const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
-            fs.setTemperature(T);
+            const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
+            fs.setTemperature(TE);
         }
     }
 
@@ -487,7 +505,6 @@ public:
                                  unsigned timeIdx,
                                  const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
     { 
-        std::cout << "start update" << std::endl;
         auto& fs = asImp_().fluidState_;
 
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
@@ -500,8 +517,6 @@ public:
             const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
             fs.setEnthalpy(phaseIdx, h);
         }
-        std::cout << "set enthalpy" << std::endl;
-
         const auto& solidEnergyLawParams = elemCtx.problem().solidEnergyLawParams(elemCtx, dofIdx, timeIdx);
         rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs);
 
@@ -515,8 +530,6 @@ public:
         // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
         const unsigned cell_idx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         rockFraction_ = elemCtx.problem().rockFraction(cell_idx, timeIdx);
-        std::cout << "end update" << std::endl;
-
     }
 
     const Evaluation& rockInternalEnergy() const

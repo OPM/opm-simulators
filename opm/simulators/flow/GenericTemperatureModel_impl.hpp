@@ -116,6 +116,7 @@ doInit(bool rst, std::size_t numGridDof)
 {
     doTemp_ = eclState_.getSimulationConfig().isTemp();
 
+    temperature_.resize(numGridDof);
     energyVector_.resize(numGridDof);
     // allocate matrix for storing the Jacobian of the temperature residual
     energyMatrix_ = std::make_unique<EnergyMatrix>(numGridDof, numGridDof, EnergyMatrix::random);

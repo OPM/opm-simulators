@@ -39,6 +39,7 @@ template<unsigned numSolventsV,
          unsigned numExtbosV,
          unsigned numPolymersV,
          unsigned numEnergyV,
+         bool enableTemperature,
          bool enableFoam,
          bool enableBrine,
          unsigned PVOffset,
@@ -92,6 +93,8 @@ struct BlackOilIndices
     //! The number of equations
     static constexpr int numEq = numPhases + numSolvents + numExtbos + numPolymers +
                                  numEnergy + numFoam + numBrine + numMICPs;
+
+    static constexpr int numDerivatives = numEq + enableTemperature;
 
     //! \brief returns the index of "active" component
     static constexpr unsigned canonicalToActiveComponentIndex(unsigned compIdx)
@@ -176,7 +179,7 @@ struct BlackOilIndices
 
     //! Index of the primary variable for temperature
     static constexpr int temperatureIdx  =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam + numBrine : - 1000;
+        (enableTemperature || enableEnergy) ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam + numBrine : - 1000;
 
 
     ////////

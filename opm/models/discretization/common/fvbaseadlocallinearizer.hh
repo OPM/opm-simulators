@@ -68,7 +68,7 @@ private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    using type = DenseAd::Evaluation<Scalar, numEq>;
+    using type = DenseAd::Evaluation<Scalar, 4>;
 };
 
 } // namespace Opm::Properties

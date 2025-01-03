@@ -868,9 +868,11 @@ public:
     Scalar temperature(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         // use the initial temperature of the DOF if temperature is not a primary
-        // variable
+        // variable       
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
+
+        return temperatureModel_.temperature(globalDofIdx);
+        //return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
 
@@ -878,7 +880,8 @@ public:
     {
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
-         return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
+        return temperatureModel_.temperature(globalDofIdx);
+        //return asImp_().initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
     const SolidEnergyLawParams&
