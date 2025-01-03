@@ -127,7 +127,11 @@ public:
 #ifndef NDEBUG
         assertHasElements();
 #endif
-    return m_dataOnDevice[0];
+#if OPM_IS_INSIDE_DEVICE_FUNCTION
+        return m_dataOnDevice[0];
+#else
+        assert(false && "Getting a reference to a value in a GPUBuffer is not allowed in CPU code");
+#endif
     }
 
     /**
@@ -138,7 +142,11 @@ public:
 #ifndef NDEBUG
         assertHasElements();
 #endif
-    return m_dataOnDevice[m_numberOfElements-1];
+#if OPM_IS_INSIDE_DEVICE_FUNCTION
+        return m_dataOnDevice[m_numberOfElements-1];
+#else
+        assert(false && "Getting a reference to a value in a GPUBuffer is not allowed in CPU code");
+#endif
     }
 
     /**
@@ -149,7 +157,13 @@ public:
 #ifndef NDEBUG
         assertHasElements();
 #endif
-    return m_dataOnDevice[0];
+#if OPM_IS_INSIDE_DEVICE_FUNCTION
+        return m_dataOnDevice[0];
+#else
+        T value;
+        cudaMemcpy(&value, &m_dataOnDevice[0], sizeof(T), cudaMemcpyDeviceToHost);
+        return value;
+#endif
     }
 
     /**
@@ -160,7 +174,13 @@ public:
 #ifndef NDEBUG
         assertHasElements();
 #endif
-    return m_dataOnDevice[m_numberOfElements-1];
+#if OPM_IS_INSIDE_DEVICE_FUNCTION
+        return m_dataOnDevice[m_numberOfElements-1];
+#else
+        T value;
+        cudaMemcpy(&value, &m_dataOnDevice[m_numberOfElements - 1], sizeof(T), cudaMemcpyDeviceToHost);
+        return value;
+#endif
     }
 
     /**

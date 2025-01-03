@@ -67,20 +67,16 @@ BOOST_AUTO_TEST_CASE(TestGpuViewOnCPUTypes)
     auto cpuview = GpuViewDouble(buf.data(), buf.size());
     const auto const_cpuview = GpuViewDouble(buf.data(), buf.size());
 
-    // check that indexing a mutable view gives references when indexing it
-    bool correct_type_of_cpu_front = std::is_same_v<double&, decltype(cpuview.front())>;
-    bool correct_type_of_cpu_back = std::is_same_v<double&, decltype(cpuview.back())>;
+    // check that indexing a const view produces a value
     bool correct_type_of_const_cpu_front = std::is_same_v<double, decltype(const_cpuview.front())>;
     bool correct_type_of_const_cpu_back = std::is_same_v<double, decltype(const_cpuview.back())>;
 
-    BOOST_CHECK(correct_type_of_cpu_front);
-    BOOST_CHECK(correct_type_of_cpu_back);
     BOOST_CHECK(correct_type_of_const_cpu_front);
     BOOST_CHECK(correct_type_of_const_cpu_back);
 
     // check that the values are correct
-    BOOST_CHECK(cpuview.front() == buf.front());
-    BOOST_CHECK(cpuview.back() == buf.back());
+    BOOST_CHECK(const_cpuview.front() == buf.front());
+    BOOST_CHECK(const_cpuview.back() == buf.back());
 }
 
 BOOST_AUTO_TEST_CASE(TestGpuViewOnCPUWithSTLIteratorAlgorithm)
