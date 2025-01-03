@@ -544,62 +544,86 @@ template<class TypeTag>
 void AdaptiveTimeStepping<TypeTag>::
 init_(const UnitSystem& unitSystem)
 {
-    // valid are "pid" and "pid+iteration"
-    std::string control = Parameters::Get<Parameters::TimeStepControl>(); // "pid"
-
     const double tol =  Parameters::Get<Parameters::TimeStepControlTolerance>(); // 1e-1
-    if (control == "pid") {
-        timeStepControl_ = std::make_unique<PIDTimeStepControl>(tol);
-        timeStepControlType_ = TimeStepControlType::PID;
-    }
-    else if (control == "pid+iteration") {
-        const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetIterations>(); // 30
-        const double decayDampingFactor = Parameters::Get<Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
-        const double growthDampingFactor = Parameters::Get<Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
-        timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor, growthDampingFactor, tol);
-        timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
-    }
-    else if (control == "pid+newtoniteration") {
-        const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetNewtonIterations>(); // 8
-        const double decayDampingFactor = Parameters::Get<Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
-        const double growthDampingFactor = Parameters::Get<Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
-        const double nonDimensionalMinTimeStepIterations = Parameters::Get<Parameters::MinTimeStepBasedOnNewtonIterations>(); // 0.0 by default
-        // the min time step can be reduced by the newton iteration numbers
-        double minTimeStepReducedByIterations = unitSystem.to_si(UnitSystem::measure::time, nonDimensionalMinTimeStepIterations);
-        timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor,
-                                                                                 growthDampingFactor, tol, minTimeStepReducedByIterations);
-        timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
-        useNewtonIteration_ = true;
-    }
-    else if (control == "iterationcount") {
-        const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetIterations>(); // 30
-        const double decayrate = Parameters::Get<Parameters::TimeStepControlDecayRate>(); // 0.75
-        const double growthrate = Parameters::Get<Parameters::TimeStepControlGrowthRate>(); // 1.25
-        timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations, decayrate, growthrate);
-        timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
-    }
-    else if (control == "newtoniterationcount") {
-        const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetNewtonIterations>(); // 8
-        const double decayrate = Parameters::Get<Parameters::TimeStepControlDecayRate>(); // 0.75
-        const double growthrate = Parameters::Get<Parameters::TimeStepControlGrowthRate>(); // 1.25
-        timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations, decayrate, growthrate);
-        useNewtonIteration_ = true;
-        timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
-    }
-    else if (control == "hardcoded") {
-        const std::string filename = Parameters::Get<Parameters::TimeStepControlFileName>(); // "timesteps"
-        timeStepControl_ = std::make_unique<HardcodedTimeStepControl>(filename);
-        timeStepControlType_ = TimeStepControlType::HardCodedTimeStep;
-    }
-    else
-        OPM_THROW(std::runtime_error,
-                  "Unsupported time step control selected " + control);
+    using VoidFunc = std::function<void()>;
+    const auto creators = std::unordered_map<std::string,VoidFunc> {
+        {"pid",
+         [this, tol]() {
+             timeStepControl_ = std::make_unique<PIDTimeStepControl>(tol);
+             timeStepControlType_ = TimeStepControlType::PID;
+        }},
+        {"pid+iteration",
+         [this, tol]() {
+             const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetIterations>(); // 30
+             const double decayDampingFactor = Parameters::Get<Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
+             const double growthDampingFactor = Parameters::Get<Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
+             timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations,
+                                                                                      decayDampingFactor,
+                                                                                      growthDampingFactor,
+                                                                                      tol);
+             timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
+         }},
+        {"pid+newtoniteration",
+         [this, tol, &unitSystem]() {
+             const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetNewtonIterations>(); // 8
+             const double decayDampingFactor = Parameters::Get<Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
+             const double growthDampingFactor = Parameters::Get<Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
+             const double nonDimensionalMinTimeStepIterations = Parameters::Get<Parameters::MinTimeStepBasedOnNewtonIterations>(); // 0.0 by default
+             // the min time step can be reduced by the newton iteration numbers
+             double minTimeStepReducedByIterations = unitSystem.to_si(UnitSystem::measure::time,
+                                                                      nonDimensionalMinTimeStepIterations);
+             timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations,
+                                                                                      decayDampingFactor,
+                                                                                      growthDampingFactor,
+                                                                                      tol,
+                                                                                      minTimeStepReducedByIterations);
+             timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
+             useNewtonIteration_ = true;
+         }},
+        {"iterationcount",
+         [this]() {
+              const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetIterations>(); // 30
+              const double decayrate = Parameters::Get<Parameters::TimeStepControlDecayRate>(); // 0.75
+              const double growthrate = Parameters::Get<Parameters::TimeStepControlGrowthRate>(); // 1.25
+              timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations,
+                                                                                       decayrate,
+                                                                                       growthrate);
+              timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
+         }},
+        {"newtoniterationcount",
+         [this]() {
+             const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetNewtonIterations>(); // 8
+             const double decayrate = Parameters::Get<Parameters::TimeStepControlDecayRate>(); // 0.75
+             const double growthrate = Parameters::Get<Parameters::TimeStepControlGrowthRate>(); // 1.25
+             timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations,
+                                                                                      decayrate,
+                                                                                      growthrate);
+             useNewtonIteration_ = true;
+             timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
+         }},
+        {"hardcoded",
+         [this]() {
+            const std::string filename = Parameters::Get<Parameters::TimeStepControlFileName>(); // "timesteps"
+            timeStepControl_ = std::make_unique<HardcodedTimeStepControl>(filename);
+            timeStepControlType_ = TimeStepControlType::HardCodedTimeStep;
+         }},
+    };
 
     // make sure growth factor is something reasonable
     if (growthFactor_ < 1.0) {
         OPM_THROW(std::runtime_error,
                   "Growth factor cannot be less than 1.");
     }
+
+    const std::string control = Parameters::Get<Parameters::TimeStepControl>(); // "pid"
+    const auto it = creators.find(control);
+    if (it == creators.end()) {
+        OPM_THROW(std::runtime_error,
+                  "Unsupported time step control selected " + control);
+    }
+
+    // invoke creator
+    it->second();
 }
 
 } // namespace Opm
