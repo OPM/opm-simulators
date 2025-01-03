@@ -80,8 +80,9 @@ template <class TypeTag>
 class FlowProblemBlackoil : public FlowProblem<TypeTag>
 {
     // TODO: the naming of the Types might be able to be adjusted
+    public:
     using FlowProblemType = FlowProblem<TypeTag>;
-
+    private:
     using typename FlowProblemType::Scalar;
     using typename FlowProblemType::Simulator;
     using typename FlowProblemType::GridView;
@@ -436,7 +437,10 @@ public:
     void endTimeStep() override
     {
         FlowProblemType::endTimeStep();
-
+        this->endStepApplyAction();
+    }
+    void endStepApplyAction()    
+    {
         // after the solution is updated, the values in output module needs also updated
         this->eclWriter()->mutableOutputModule().invalidateLocalData();
 

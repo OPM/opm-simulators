@@ -30,10 +30,10 @@ namespace Opm
 {
 namespace Helper
 {
-    template <class SimulatorType, class MatrixType, class VectorType, class Communicator>
-    void writeSystem(const SimulatorType& simulator,
-                     const MatrixType& matrix,
+    template <class SimulatorType, class VectorType, class Communicator>
+    void writeVector(const SimulatorType& simulator,
                      const VectorType& rhs,
+                     const std::string& mname,
                      [[maybe_unused]] const Communicator* comm)
     {
         std::string dir = simulator.problem().outputDir();
@@ -59,18 +59,7 @@ namespace Helper
         fs::path full_path = output_dir / output_file;
         std::string prefix = full_path.string();
         {
-            std::string filename = prefix + "matrix_istl";
-#if HAVE_MPI
-            if (comm != nullptr) { // comm is not set in serial runs
-                Dune::storeMatrixMarket(matrix, filename, *comm, true);
-            } else
-#endif
-            {
-                Dune::storeMatrixMarket(matrix, filename + ".mm");
-            }
-        }
-        {
-            std::string filename = prefix + "rhs_istl";
+            std::string filename = prefix + mname + "vector_istl";
 #if HAVE_MPI
             if (comm != nullptr) { // comm is not set in serial runs
                 Dune::storeMatrixMarket(rhs, filename, *comm, true);
@@ -81,6 +70,118 @@ namespace Helper
             }
         }
     }
+
+   template <class SimulatorType, class MatrixType, class Communicator>
+    void writeMatrix(const SimulatorType& simulator,
+                     const MatrixType& matrix,
+                     const std::string& mname,
+                     [[maybe_unused]] const Communicator* comm)
+    {
+        std::string dir = simulator.problem().outputDir();
+        if (dir == ".") {
+            dir = "";
+        } else if (!dir.empty() && dir.back() != '/') {
+            dir += "/";
+        }
+        namespace fs = ::std::filesystem;
+        fs::path output_dir(dir);
+        fs::path subdir("reports");
+        output_dir = output_dir / subdir;
+        if (!(fs::exists(output_dir))) {
+            fs::create_directory(output_dir);
+        }
+        // Combine and return.
+        std::ostringstream oss;
+        oss << "prob_" << simulator.episodeIndex() << "_time_";
+        oss << std::setprecision(15) << std::setw(12) << std::setfill('0') << simulator.time() << "_";
+        int nit = simulator.model().newtonMethod().numIterations();
+        oss << "_nit_" << nit << "_";
+        std::string output_file(oss.str());
+        fs::path full_path = output_dir / output_file;
+        std::string prefix = full_path.string();
+        {
+            std::string filename = prefix + mname + "matrix_istl";
+#if HAVE_MPI
+            if (comm != nullptr) { // comm is not set in serial runs
+                Dune::storeMatrixMarket(matrix, filename, *comm, true);
+            } else
+#endif
+            {
+                Dune::storeMatrixMarket(matrix, filename + ".mm");
+            }
+        }
+    }
+    
+
+    template <class SimulatorType, class MatrixType, class VectorType, class Communicator>
+    void writeSystem(const SimulatorType& simulator,
+                     const MatrixType& matrix,
+                     const VectorType& rhs,
+                     const std::string& mname,
+                     [[maybe_unused]] const Communicator* comm)
+    {
+        std::string dir = simulator.problem().outputDir();
+        if (dir == ".") {
+            dir = "";
+        } else if (!dir.empty() && dir.back() != '/') {
+            dir += "/";
+        }
+        namespace fs = ::std::filesystem;
+        fs::path output_dir(dir);
+        fs::path subdir("reports");
+        output_dir = output_dir / subdir;
+        if (!(fs::exists(output_dir))) {
+            fs::create_directory(output_dir);
+        }
+        // Combine and return.
+        std::ostringstream oss;
+        oss << "prob_" << simulator.episodeIndex() << "_time_";
+        oss << std::setprecision(15) << std::setw(12) << std::setfill('0') << simulator.time() << "_";
+        int nit = simulator.model().newtonMethod().numIterations();
+        oss << "_nit_" << nit << "_";
+        std::string output_file(oss.str());
+        fs::path full_path = output_dir / output_file;
+        std::string prefix = full_path.string();
+        {
+            std::string filename = prefix + mname + "matrix_istl";
+#if HAVE_MPI
+            if (comm != nullptr) { // comm is not set in serial runs
+                Dune::storeMatrixMarket(matrix, filename, *comm, true);
+            } else
+#endif
+            {
+                Dune::storeMatrixMarket(matrix, filename + ".mm");
+            }
+        }
+        {
+            std::string filename = prefix + mname + "rhs_istl";
+#if HAVE_MPI
+            if (comm != nullptr) { // comm is not set in serial runs
+                Dune::storeMatrixMarket(rhs, filename, *comm, true);
+            } else
+#endif
+            {
+                Dune::storeMatrixMarket(rhs, filename + ".mm");
+            }
+        }
+    }
+    template <class SimulatorType, class MatrixType, class VectorType, class Communicator>
+    void writeMechSystem(const SimulatorType& simulator,
+                     const MatrixType& matrix,
+                     const VectorType& rhs,
+                     [[maybe_unused]] const Communicator* comm)
+    {
+        writeSystem(simulator, matrix, rhs, "mech_", comm);
+    }
+    template <class SimulatorType, class MatrixType, class VectorType, class Communicator>
+    void writeSystem(const SimulatorType& simulator,
+                     const MatrixType& matrix,
+                     const VectorType& rhs,
+                     [[maybe_unused]] const Communicator* comm)
+    {
+        writeSystem(simulator, matrix, rhs, "flow_", comm);
+    }
+
 
 
 } // namespace Helper
