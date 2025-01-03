@@ -233,7 +233,7 @@ public:
                              this->imbalanceTol(),
                              this->gridView(), this->schedule(),
                              this->eclState(), this->parallelWells_,
-                             this->numJacobiBlocks());
+                             this->numJacobiBlocks(), this->enableEclOutput());
 #endif
 
         this->updateGridView_();
