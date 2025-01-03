@@ -175,7 +175,8 @@ BOOST_AUTO_TEST_CASE(G1)
     WellState &well_state = well_model.wellState();
     const auto &group_state = well_model.groupState();
     GLiftEclWells ecl_well_map;
-    well_model.initGliftEclWellMap(ecl_well_map);
+    Opm::BlackoilWellModelGasLift<TypeTag>::
+        initGliftEclWellMap(well_model.localNonshutWells(), ecl_well_map);
     const int iteration_idx = simulator->model().newtonMethod().numIterations();
     const auto& comm = simulator->vanguard().grid().comm();
     GasLiftGroupInfo group_info {

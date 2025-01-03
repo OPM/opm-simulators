@@ -324,7 +324,6 @@ public:
         active_wgstate_ = WGState<double>::serializationTestObject(dummy);
         last_valid_wgstate_ = WGState<double>::serializationTestObject(dummy);
         nupcol_wgstate_ = WGState<double>::serializationTestObject(dummy);
-        last_glift_opt_time_ = 5.0;
         switched_prod_groups_ = {{"test4", {Group::ProductionCMode::NONE, Group::ProductionCMode::ORAT}}};
         const auto controls = {Group::InjectionCMode::NONE, Group::InjectionCMode::RATE, Group::InjectionCMode::RATE };
         switched_inj_groups_ = {{"test4", {controls, {}, controls} }};

@@ -25,11 +25,12 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
-#include <opm/simulators/wells/WellInterface.hpp>
 
 #include <optional>
 
 namespace Opm {
+
+template<class TypeTag> class WellInterface;
 
 template<class TypeTag>
 class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, Properties::Scalar>>
