@@ -507,8 +507,6 @@ protected:
 
 } // namespace Opm
 
-#ifndef OPM_WELLINTERFACE_IMPL_HEADER_INCLUDED
 #include "WellInterface_impl.hpp"
-#endif
 
 #endif // OPM_WELLINTERFACE_HEADER_INCLUDED

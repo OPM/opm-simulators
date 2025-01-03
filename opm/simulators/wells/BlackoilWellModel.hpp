@@ -581,8 +581,6 @@ template<class Scalar> class WellContributions;
 
 } // namespace Opm
 
-#ifndef OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
 #include "BlackoilWellModel_impl.hpp"
-#endif
 
 #endif

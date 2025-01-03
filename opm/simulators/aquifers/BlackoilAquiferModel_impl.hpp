@@ -17,11 +17,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
+#define OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
 
 // Improve IDE experience
 #ifndef OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 #include <config.h>
-#define OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #endif
 
@@ -375,3 +376,5 @@ void BlackoilAquiferModel<TypeTag>::computeConnectionAreaFraction() const
 }
 
 } // namespace Opm
+
+#endif
