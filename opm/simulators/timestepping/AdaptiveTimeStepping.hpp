@@ -25,6 +25,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace Opm::Parameters {
@@ -61,6 +62,11 @@ void logTimer(const AdaptiveSimulatorTimer& substepTimer);
 std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr);
 
 void registerAdaptiveParameters();
+
+std::tuple<TimeStepControlType,
+           std::unique_ptr<TimeStepControlInterface>,
+           bool>
+createController(const UnitSystem& unitSystem);
 
 }
 
