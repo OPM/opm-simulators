@@ -69,6 +69,8 @@ namespace detail {
     void logTimer(const AdaptiveSimulatorTimer& substep_timer);
     std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr);
     void registerAdaptiveParameters();
+    std::tuple<TimeStepControlType, std::unique_ptr<TimeStepControlInterface>, bool>
+        createController(const UnitSystem& unitSystem);
 }
 
 template<class TypeTag>
