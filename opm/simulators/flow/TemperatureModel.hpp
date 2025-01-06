@@ -85,6 +85,7 @@ class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Pro
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
 
     using EnergyMatrix = typename BaseType::EnergyMatrix;
     using EnergyVector = typename BaseType::EnergyVector;
@@ -232,7 +233,6 @@ protected:
                 darcyFlux = 0.0;
                 const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
                 LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, simulator_.problem().moduleParams());
-                //adres *= nbInfo.res_nbinfo.faceArea;
 
                 Evaluation flux = 0.0;
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -262,6 +262,29 @@ protected:
                 (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(Indices::temperatureIdx);
                 (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(Indices::temperatureIdx);
 
+
+            //const Scalar inAlpha = nbInfo.inAlpha;
+            //const Scalar outAlpha = nbInfo.outAlpha;
+            const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
+            const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
+            std::cout << inAlpha << " " << outAlpha << std::endl;
+            Evaluation heatFlux;
+            {
+                short interiorDofIdx = 0; // NB
+                short exteriorDofIdx = 1; // NB
+
+                EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
+                                                                         interiorDofIdx, // focusDofIndex,
+                                                                         interiorDofIdx,
+                                                                         exteriorDofIdx,
+                                                                         intQuantsIn,
+                                                                         intQuantsEx,
+                                                                         intQuantsIn.fluidState(),
+                                                                         intQuantsEx.fluidState(),
+                                                                         inAlpha,
+                                                                         outAlpha,
+                                                                         nbInfo.res_nbinfo.faceArea);
+            }
             }
         }
 
