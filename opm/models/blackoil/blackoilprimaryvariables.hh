@@ -43,6 +43,8 @@
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
+#include <cstdint>
+
 namespace Opm::Parameters {
 
 template<class Scalar>
@@ -122,33 +124,33 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     static_assert(numComponents == 3, "The black-oil model assumes three components!");
 
 public:
-    enum class WaterMeaning {
+    enum class WaterMeaning : std::uint8_t {
         Sw,  // water saturation
         Rvw, // vaporized water
         Rsw, // dissolved gas in water
         Disabled, // The primary variable is not used
     };
 
-    enum class PressureMeaning {
+    enum class PressureMeaning : std::uint8_t {
         Po, // oil pressure
         Pg, // gas pressure
         Pw, // water pressure
     };
 
-    enum class GasMeaning {
+    enum class GasMeaning : std::uint8_t {
         Sg, // gas saturation
         Rs, // dissolved gas in oil
         Rv, // vapporized oil
         Disabled, // The primary variable is not used
     };
 
-    enum class BrineMeaning {
+    enum class BrineMeaning : std::uint8_t {
         Cs, // salt concentration
         Sp, // (precipitated) salt saturation
         Disabled, // The primary variable is not used
     };
 
-    enum class SolventMeaning {
+    enum class SolventMeaning : std::uint8_t {
         Ss, // solvent saturation
         Rsolw, // dissolved solvent in water
         Disabled, // The primary variable is not used
