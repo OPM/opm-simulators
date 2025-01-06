@@ -49,6 +49,8 @@
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
@@ -93,6 +95,8 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , eclState_(eclState)
     , comm_(comm)
     , phase_usage_(phase_usage)
+    , terminal_output_(comm_.rank() == 0 &&
+                       Parameters::Get<Parameters::EnableTerminalOutput>())
     , wbpCalculationService_ { eclState.gridDims(), comm_ }
     , guideRate_(schedule)
     , active_wgstate_(phase_usage)
@@ -1611,64 +1615,6 @@ setRepRadiusPerfLength()
     for (const auto& well : well_container_generic_) {
         well->setRepRadiusPerfLength();
     }
-}
-
-template<class Scalar>
-void BlackoilWellModelGeneric<Scalar>::
-gliftDebug(const std::string& msg,
-           DeferredLogger& deferred_logger) const
-{
-    if (this->glift_debug && this->terminal_output_) {
-        const std::string message = fmt::format(
-            "  GLIFT (DEBUG) : BlackoilWellModel : {}", msg);
-        deferred_logger.info(message);
-    }
-}
-
-template<class Scalar>
-void BlackoilWellModelGeneric<Scalar>::
-gliftDebugShowALQ(DeferredLogger& deferred_logger)
-{
-    for (auto& well : this->well_container_generic_) {
-        if (well->isProducer()) {
-            auto alq = this->wellState().getALQ(well->name());
-            const std::string msg = fmt::format("ALQ_REPORT : {} : {}",
-                                                well->name(), alq);
-            gliftDebug(msg, deferred_logger);
-        }
-    }
-}
-
-// If a group has any production rate constraints, and/or a limit
-// on its total rate of lift gas supply,  allocate lift gas
-// preferentially to the wells that gain the most benefit from
-// it. Lift gas increments are allocated in turn to the well that
-// currently has the largest weighted incremental gradient. The
-// procedure takes account of any limits on the group production
-// rate or lift gas supply applied to any level of group.
-template<class Scalar>
-void BlackoilWellModelGeneric<Scalar>::
-gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
-                          GLiftProdWells& prod_wells,
-                          GLiftOptWells& glift_wells,
-                          GasLiftGroupInfo<Scalar>& group_info,
-                          GLiftWellStateMap& glift_well_state_map,
-                          const int episodeIndex)
-{
-    GasLiftStage2 glift {episodeIndex,
-                         comm_,
-                         schedule_,
-                         summaryState_,
-                         deferred_logger,
-                         this->wellState(),
-                         this->groupState(),
-                         prod_wells,
-                         glift_wells,
-                         group_info,
-                         glift_well_state_map,
-                         this->glift_debug
-    };
-    glift.runOptimize();
 }
 
 template<class Scalar>

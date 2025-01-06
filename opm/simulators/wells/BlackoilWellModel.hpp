@@ -29,7 +29,6 @@
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -48,6 +47,7 @@
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
+#include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
@@ -80,12 +80,6 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-namespace Opm::Parameters {
-
-struct EnableTerminalOutput { static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 
 #if COMPILE_GPU_BRIDGE
@@ -110,14 +104,6 @@ template<class Scalar> class WellContributions;
             using RateVector = GetPropType<TypeTag, Properties::RateVector>;
             using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
-            using GasLiftSingleWell = typename WellInterface<TypeTag>::GasLiftSingleWell;
-            using GLiftOptWells = typename BlackoilWellModelGeneric<Scalar>::GLiftOptWells;
-            using GLiftProdWells = typename BlackoilWellModelGeneric<Scalar>::GLiftProdWells;
-            using GLiftWellStateMap =
-                typename BlackoilWellModelGeneric<Scalar>::GLiftWellStateMap;
-            using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
-            using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
-
             using ModelParameters = BlackoilModelParameters<Scalar>;
 
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
@@ -362,8 +348,6 @@ template<class Scalar> class WellContributions;
 
             void addWellPressureEquationsStruct(PressureMatrix& jacobian) const;
 
-            void initGliftEclWellMap(GLiftEclWells &ecl_well_map);
-
             /// \brief Get list of local nonshut wells
             const std::vector<WellInterfacePtr>& localNonshutWells() const
             {
@@ -525,23 +509,6 @@ template<class Scalar> class WellContributions;
             // TODO: finding a better naming
             void assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger);
 
-            bool maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
-
-            void gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
-                                           GLiftProdWells& prod_wells,
-                                           GLiftOptWells& glift_wells,
-                                           GasLiftGroupInfo<Scalar>& group_info,
-                                           GLiftWellStateMap& state_map);
-
-            // cannot be const since it accesses the non-const WellState
-            void gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
-                                                     DeferredLogger& deferred_logger,
-                                                     GLiftProdWells& prod_wells,
-                                                     GLiftOptWells& glift_wells,
-                                                     GasLiftGroupInfo<Scalar>& group_info,
-                                                     GLiftWellStateMap& state_map,
-                                                     GLiftSyncGroups& groups_to_sync);
-
             void extractLegacyCellPvtRegionIndex_();
 
             void extractLegacyDepth_();
@@ -568,6 +535,8 @@ template<class Scalar> class WellContributions;
 
         private:
             BlackoilWellModel(Simulator& simulator, const PhaseUsage& pu);
+
+            BlackoilWellModelGasLift<TypeTag> gaslift_;
 
             // These members are used to avoid reallocation in specific functions
             // instead of using local variables.

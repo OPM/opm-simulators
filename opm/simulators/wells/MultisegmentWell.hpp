@@ -22,6 +22,8 @@
 #ifndef OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
