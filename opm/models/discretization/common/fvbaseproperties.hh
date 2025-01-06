@@ -260,6 +260,10 @@ template<class TypeTag>
 struct LocalLinearizerSplice<TypeTag, TTag::FvBaseDiscretization>
 { using type = TTag::FiniteDifferenceLocalLinearizer; };
 
+//! Allow the spatial and temporal domains to exhibit non-constant temperature
+//! in the black-oil model
+template<class TypeTag, class MyTypeTag>
+struct EnableTemperature { using type = UndefinedProperty; };
 } // namespace Opm::Properties
 
 #endif

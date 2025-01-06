@@ -359,15 +359,11 @@ public:
                             unsigned dofIdx,
                             unsigned timeIdx)
     {
-       std::cout << "start update temp" << temperatureIdx << std::endl;
-
         auto& fs = asImp_().fluidState_;
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
 
         // set temperature
         fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx, elemCtx.linearizationType()));
-        std::cout << "end update temp" << std::endl;
-
     }
 
     /*!
@@ -380,11 +376,8 @@ public:
                             const unsigned timeIdx,
                             const LinearizationType& lintype)
     {
-        std::cout << "start update temp2" << std::endl;
-
         auto& fs = asImp_().fluidState_;
         fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx, lintype));
-        std::cout << "end update temp2" << std::endl;
     }
 
     /*!
@@ -396,7 +389,6 @@ public:
                                  unsigned timeIdx,
                                  const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
     {
-        std::cout << "start update" << std::endl;
         auto& fs = asImp_().fluidState_;
 
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
@@ -505,6 +497,7 @@ public:
                                  unsigned timeIdx,
                                  const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
     { 
+        if (enableTemperature) {
         auto& fs = asImp_().fluidState_;
 
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
@@ -530,6 +523,7 @@ public:
         // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
         const unsigned cell_idx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         rockFraction_ = elemCtx.problem().rockFraction(cell_idx, timeIdx);
+        }
     }
 
     const Evaluation& rockInternalEnergy() const

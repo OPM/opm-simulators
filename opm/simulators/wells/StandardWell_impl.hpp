@@ -549,8 +549,8 @@ namespace Opm
             perf_data.phase_mixing_rates[perf][ws.vaporized_water] = perf_rates.vap_wat;
         }
 
-        if constexpr (true) {
-            //connectionRates[perf][Indices::contiEnergyEqIdx] =
+        if constexpr (has_energy) {
+            connectionRates[perf][Indices::contiEnergyEqIdx] =
                 connectionRateEnergy(simulator.problem().maxOilSaturation(cell_idx),
                                      cq_s, intQuants, deferred_logger);
         }

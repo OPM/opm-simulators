@@ -64,11 +64,12 @@ struct Evaluation<TypeTag, TTag::AutoDiffLocalLinearizer>
 {
 private:
     static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
+    static const bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    using type = DenseAd::Evaluation<Scalar, 4>;
+    using type = DenseAd::Evaluation<Scalar, numEq+enableTemperature>;
 };
 
 } // namespace Opm::Properties
