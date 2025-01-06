@@ -49,6 +49,8 @@
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/models/utils/parametersystem.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
@@ -93,6 +95,8 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , eclState_(eclState)
     , comm_(comm)
     , phase_usage_(phase_usage)
+    , terminal_output_(comm_.rank() == 0 &&
+                       Parameters::Get<Parameters::EnableTerminalOutput>())
     , wbpCalculationService_ { eclState.gridDims(), comm_ }
     , guideRate_(schedule)
     , active_wgstate_(phase_usage)

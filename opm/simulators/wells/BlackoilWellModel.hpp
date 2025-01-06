@@ -80,12 +80,6 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-namespace Opm::Parameters {
-
-struct EnableTerminalOutput { static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 
 #if COMPILE_GPU_BRIDGE

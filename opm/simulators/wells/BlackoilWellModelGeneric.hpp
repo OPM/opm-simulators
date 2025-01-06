@@ -75,6 +75,12 @@ namespace Opm { namespace data {
     struct NodeData;
 }} // namespace Opm::data
 
+namespace Opm::Parameters {
+
+struct EnableTerminalOutput { static constexpr bool value = true; };
+
+} // namespace Opm::Parameters
+
 namespace Opm {
 
 /// Class for handling the blackoil well model.

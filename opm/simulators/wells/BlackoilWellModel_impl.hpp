@@ -80,9 +80,6 @@ namespace Opm {
                                             simulator.gridView().comm())
         , simulator_(simulator)
     {
-        this->terminal_output_ = (simulator.gridView().comm().rank() == 0)
-            && Parameters::Get<Parameters::EnableTerminalOutput>();
-
         local_num_cells_ = simulator_.gridView().size(0);
 
         // Number of cells the global grid view
