@@ -173,33 +173,20 @@ public:
 
     BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
-    /*!
-     * \copydoc IntensiveQuantities::update
-     */
-    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    void updateTempSalt(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
-        ParentType::update(elemCtx, dofIdx, timeIdx);
-        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
-        const auto& problem = elemCtx.problem();
+        if constexpr (enableTemperature || enableEnergy) {
+            asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
+        }
+
+        if constexpr (enableBrine) {
+            asImp_().updateSaltConcentration_(elemCtx, dofIdx, timeIdx);
+        }
+    }
+
+    void updateSaturations(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    {
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
-        unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        Scalar RvMax = FluidSystem::enableVaporizedOil()
-            ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
-            : 0.0;
-        Scalar RsMax = FluidSystem::enableDissolvedGas()
-            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
-            : 0.0;
-        Scalar RswMax = FluidSystem::enableDissolvedGasInWater()
-            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
-            : 0.0;
-
-        asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
-
-        unsigned pvtRegionIdx = priVars.pvtRegionIndex();
-        fluidState_.setPvtRegionIndex(pvtRegionIdx);
-
-        asImp_().updateSaltConcentration_(elemCtx, dofIdx, timeIdx);
 
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
@@ -252,26 +239,43 @@ public:
 
         if (FluidSystem::phaseIsActive(oilPhaseIdx))
             fluidState_.setSaturation(oilPhaseIdx, So);
+    }
 
-        asImp_().solventPreSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
+    void updateRelpermAndPressures(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    {
+        const auto& problem = elemCtx.problem();
+        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+
+        // Solvent saturation manipulation:
+        // After this, gas saturation will actually be (gas sat + solvent sat)
+        // until set back to just gas saturation in the corresponding call to
+        // solventPostSatFuncUpdate_() further down.
+        if constexpr (enableSolvent) {
+            asImp_().solventPreSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+
+        // Phase relperms.
+        problem.updateRelperms(mobility_, dirMob_, fluidState_, globalSpaceIdx);
 
         // now we compute all phase pressures
         std::array<Evaluation, numPhases> pC;
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
-        problem.updateRelperms(mobility_, dirMob_, fluidState_, globalSpaceIdx);
 
-        // scaling the capillary pressure due to salt precipitation 
-        if (BrineModule::hasPcfactTables() && priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-            unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
-            const Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
-            const Evaluation porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
-            const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
-            const Evaluation pcFactor = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                if (FluidSystem::phaseIsActive(phaseIdx)) {
-                    pC[phaseIdx] *= pcFactor;
-                }
+        // scaling the capillary pressure due to salt precipitation
+        if constexpr (enableBrine) {
+            if (BrineModule::hasPcfactTables() && priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
+                unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
+                const Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
+                const Evaluation porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
+                const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
+                const Evaluation pcFactor = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                    if (FluidSystem::phaseIsActive(phaseIdx)) {
+                        pC[phaseIdx] *= pcFactor;
+                    }
+            }
         }
 
         // oil is the reference phase for pressure
@@ -293,11 +297,32 @@ public:
                     fluidState_.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
         }
 
-        // update the Saturation functions for the blackoil solvent module.
-        asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
+        // Update the Saturation functions for the blackoil solvent module.
+        // Including setting gas saturation back to hydrocarbon gas saturation.
+        // Note that this depend on the pressures, so it must be called AFTER the pressures
+        // have been updated.
+        if constexpr (enableSolvent) {
+            asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
+        }
 
-        // update extBO parameters
-        asImp_().zFractionUpdate_(elemCtx, dofIdx, timeIdx);
+    }
+
+    Evaluation updateRsRvRsw(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    {
+        const auto& problem = elemCtx.problem();
+        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
+
+        Scalar RvMax = FluidSystem::enableVaporizedOil()
+            ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
+        Scalar RsMax = FluidSystem::enableDissolvedGas()
+            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
+        Scalar RswMax = FluidSystem::enableDissolvedGasInWater()
+            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
 
         Evaluation SoMax = 0.0;
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
@@ -361,12 +386,12 @@ public:
             }
         }
 
-        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
-        paramCache.setRegionIndex(pvtRegionIdx);
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            paramCache.setMaxOilSat(SoMax);
-        }
-        paramCache.updateAll(fluidState_);
+        return SoMax;
+    }
+
+    void updateMobilityAndInvB()
+    {
+        const unsigned pvtRegionIdx = fluidState_.pvtRegionIndex();
 
         // compute the phase densities and transform the phase permeabilities into mobilities
         int nmobilities = 1;
@@ -382,7 +407,7 @@ public:
                 continue;
             const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
-            const auto& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
+            const auto& mu = FluidSystem::viscosity(fluidState_, phaseIdx, pvtRegionIdx);
             for (int i = 0; i<nmobilities; i++) {
                 if (enableExtbo && phaseIdx == oilPhaseIdx) {
                     (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
@@ -396,6 +421,11 @@ public:
             }
         }
         Valgrind::CheckDefined(mobility_);
+    }
+
+    void updatePhaseDensities()
+    {
+        const unsigned pvtRegionIdx = fluidState_.pvtRegionIndex();
 
         // calculate the phase densities
         Evaluation rho;
@@ -440,6 +470,14 @@ public:
             }
             fluidState_.setDensity(oilPhaseIdx, rho);
         }
+    }
+
+    void updatePorosity(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    {
+        const auto& problem = elemCtx.problem();
+        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
+        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
 
         // retrieve the porosity from the problem
         referencePorosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
@@ -476,28 +514,10 @@ public:
             Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
             porosity_ *= (1.0 - Sp);
         }
+    }
 
-        rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
-
-        asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
-        asImp_().zPvtUpdate_();
-        asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
-        asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache);
-        asImp_().foamPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
-        asImp_().MICPPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
-        asImp_().saltPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
-
-        // update the quantities which are required by the chosen
-        // velocity model
-        FluxIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
-
-        // update the diffusion specific quantities of the intensive quantities
-        DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
-
-        // update the dispersion specific quantities of the intensive quantities
-        DispersionIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
-
-#ifndef NDEBUG
+    void assertFiniteMembers()
+    {
         // some safety checks in debug mode
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
@@ -511,7 +531,83 @@ public:
         }
         assert(isfinite(fluidState_.Rs()));
         assert(isfinite(fluidState_.Rv()));
+    }
 
+    /*!
+     * \copydoc IntensiveQuantities::update
+     */
+    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    {
+        ParentType::update(elemCtx, dofIdx, timeIdx);
+
+        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
+
+        const auto& problem = elemCtx.problem();
+        const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
+
+        fluidState_.setPvtRegionIndex(pvtRegionIdx);
+
+        updateTempSalt(elemCtx, dofIdx, timeIdx);
+        updateSaturations(elemCtx, dofIdx, timeIdx);
+        updateRelpermAndPressures(elemCtx, dofIdx, timeIdx);
+
+        // update extBO parameters
+        if constexpr (enableExtbo) {
+            asImp_().zFractionUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+
+        Evaluation SoMax = updateRsRvRsw(elemCtx, dofIdx, timeIdx);
+
+        updateMobilityAndInvB();
+        updatePhaseDensities();
+        updatePorosity(elemCtx, dofIdx, timeIdx);
+
+        rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
+
+        if constexpr (enableSolvent) {
+            asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+        if constexpr (enableExtbo) {
+            asImp_().zPvtUpdate_();
+        }
+        if constexpr (enablePolymer) {
+            asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+
+        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+        paramCache.setRegionIndex(pvtRegionIdx);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            paramCache.setMaxOilSat(SoMax);
+        }
+        paramCache.updateAll(fluidState_);
+
+        if constexpr (enableEnergy) {
+            asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache);
+        }
+        if constexpr (enableFoam) {
+            asImp_().foamPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+        if constexpr (enableMICP) {
+            asImp_().MICPPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+        if constexpr (enableBrine) {
+            asImp_().saltPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+
+        // update the quantities which are required by the chosen
+        // velocity model
+        FluxIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
+
+        // update the diffusion specific quantities of the intensive quantities
+        DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
+
+        // update the dispersion specific quantities of the intensive quantities
+        DispersionIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
+
+#ifndef NDEBUG
+        assertFiniteMembers();
 #endif
     }
 
