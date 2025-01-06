@@ -192,7 +192,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     transBoundary_.clear();
 
     // if energy is enabled, let's do the same for the "thermal half transmissibilities"
-    if (enableEnergy_ && !onlyTrans) {
+    if (true && enableEnergy_ && !onlyTrans) {
         thermalHalfTrans_.clear();
         thermalHalfTrans_.reserve(numElements*6*1.05);
 
@@ -273,7 +273,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
                 // for boundary intersections we also need to compute the thermal
                 // half transmissibilities
-                if (enableEnergy_ && !onlyTrans) {
+                if (true && enableEnergy_ && !onlyTrans) {
                     Scalar transBoundaryEnergyIs;
                     computeHalfDiffusivity_(transBoundaryEnergyIs,
                                             faceAreaNormal,
@@ -322,7 +322,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 // *added to* by applyNncToGridTrans_() later.
                 assert(outsideFaceIdx == -1);
                 trans_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
-                if (enableEnergy_  && !onlyTrans){
+                if (true && enableEnergy_  && !onlyTrans){
                     thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = 0.0;
                     thermalHalfTrans_[details::directionalIsId(outsideElemIdx, elemIdx)] = 0.0;
                 }
@@ -443,7 +443,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
             trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
 
             // update the "thermal half transmissibility" for the intersection
-            if (enableEnergy_ && !onlyTrans) {
+            if (enableEnergy_ && true && !onlyTrans) {
 
                 Scalar halfDiffusivity1;
                 Scalar halfDiffusivity2;
