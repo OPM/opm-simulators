@@ -118,6 +118,8 @@ public:
         for (unsigned globI = 0; globI < numCells; ++globI) {
             this->temperature_[globI] = simulator_.problem().initialFluidState(globI).temperature(0);
         }
+     
+        intQuants_.resize(numCells);
     }
 
     void beginTimeStep()
@@ -125,6 +127,11 @@ public:
         if (!this->doTemp())
             return;
 
+        // We copy the intensive quantities here to make it possible to update them
+        const unsigned int numCells = simulator_.model().numTotalDof();
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            intQuants_[globI] = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+        }
         updateStorageCache();
     }
 
@@ -136,6 +143,11 @@ public:
         if (!this->doTemp())
             return;
 
+        // We copy the intensive quantities here to make it possible to update them
+        const unsigned int numCells = simulator_.model().numTotalDof();
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            intQuants_[globI] = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+        }
         advanceTemperatureFields();
     }
 
@@ -182,6 +194,7 @@ protected:
     void advanceTemperatureFields()
     {
 
+
         for (int iter = 0; iter < 20; ++iter) {
         this->energyVector_ = 0.0;
         (*this->energyMatrix_) = 0.0;
@@ -198,7 +211,7 @@ protected:
             computeStorageTerm(globI, storage); 
             this->energyVector_[globI] += storefac * ( getValue(storage) - storage0_[globI] );
             if (globI == 0) {
-                std::cout << "storage " << storefac * ( getValue(storage) - storage0_[globI] ) << " " <<  storefac * storage.derivative(Indices::temperatureIdx) << std::endl;
+                std::cout << "storage " << getValue(storage) << " " << storage0_[globI] << " " << storefac * ( getValue(storage) - storage0_[globI] ) << " " <<  storefac * storage.derivative(Indices::temperatureIdx) << " " << dt/(3600*24) << std::endl;
             }
             (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx); 
         }
@@ -211,13 +224,13 @@ protected:
             RateVector tmp(0.0);
             RateVector darcyFlux(0.0);
             const auto& nbInfos = neighborInfo[globI];
-            const IntensiveQuantities& intQuantsIn = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+            const IntensiveQuantities& intQuantsIn = intQuants_[globI];
             for (const auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
                 assert(globJ != globI);
                 tmp = 0.0;
                 darcyFlux = 0.0;
-                const IntensiveQuantities& intQuantsEx = simulator_.model().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
                 LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, simulator_.problem().moduleParams());
                 //adres *= nbInfo.res_nbinfo.faceArea;
 
@@ -264,7 +277,7 @@ protected:
             sumNorm += std::abs(this->energyVector_[globI]);
         }
 
-        if (maxNorm < 1e-6 || sumNorm/numCells < 1e-8) {
+        if (maxNorm < 1e-3 || sumNorm/numCells < 1e-7) {
             std::cout << "Newton converged" << std::endl;
             break;
         } 
@@ -281,21 +294,17 @@ protected:
             }
             this->temperature_[globI] -= std::clamp(dx[globI][0], Scalar(-10.0), Scalar(10.0));
 
-            IntensiveQuantities& intQuantsIn = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
-            auto& fs = intQuantsIn.fluidState();
-            const Scalar T = this->temperature_[globI];
-            const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
-            fs.setTemperature(TE);
-            intQuantsIn.updateEnergyQuantities_();
+            intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
+            intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
+        }
         }
         std::cout << "advanceTemperatureFields" << std::endl;
     }
 
     template< class LhsEval>
     void computeStorageTerm(unsigned globI, LhsEval& storage) {
-        const auto& intQuants = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+        const auto& intQuants = intQuants_[globI];
         const auto& poro = decay<LhsEval>(intQuants.porosity());
-
         // accumulate the internal energy of the fluids
         const auto& fs = intQuants.fluidState();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -326,8 +335,7 @@ protected:
         const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto globI = ws.perf_data.cell_index[i];
-            const auto& intQuants = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
-            const auto& fs = intQuants.fluidState();
+            auto fs = intQuants_[globI].fluidState(); //copy to make it possible to change the temp in the injector
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
@@ -338,7 +346,13 @@ protected:
                 if (phaseIdx == gasPhaseIdx) { // assumes rv == 0
                     rate -= well.volumetricSurfaceRateForConnection(globI, oilPhaseIdx)*getValue(fs.Rs());
                 }
+
                 if (rate > 0) {
+                    fs.setTemperature(eclWell.inj_temperature());
+                    const auto& rho = FluidSystem::density(fs, phaseIdx, fs.pvtRegionIndex());
+                    fs.setDensity(phaseIdx, rho);
+                    const auto& h = FluidSystem::enthalpy(fs, phaseIdx, fs.pvtRegionIndex());
+                    fs.setEnthalpy(phaseIdx, h);
                     rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 } else {
                     rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
@@ -350,8 +364,9 @@ protected:
     }
    
 
-    const Simulator& simulator_;
+    Simulator& simulator_;
     EnergyVector storage0_;
+    std::vector<IntensiveQuantities> intQuants_;
 
 };
 
