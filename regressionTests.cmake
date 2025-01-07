@@ -121,7 +121,7 @@ add_test_compareECLFiles(CASENAME network_01_reroute
 		                 ABS_TOL ${abs_tol}
 		                 REL_TOL ${rel_tol}
 		                 DIR network
-		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+		                 TEST_ARGS --enable-tuning=true)
 
 add_test_compareECLFiles(CASENAME network_01_reroute_std
 		                 FILENAME NETWORK-01-REROUTE_STD
@@ -129,7 +129,7 @@ add_test_compareECLFiles(CASENAME network_01_reroute_std
 		                 ABS_TOL ${abs_tol}
 		                 REL_TOL ${rel_tol}
 		                 DIR network
-		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+		                 TEST_ARGS --enable-tuning=true)
 
 add_test_compareECLFiles(CASENAME network_model5_stdw_autochk
 		                 FILENAME NETWORK_MODEL5_STDW_AUTOCHK
