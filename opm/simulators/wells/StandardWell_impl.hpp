@@ -2644,7 +2644,7 @@ namespace Opm
                 result += Base::restrictEval(cq_r_thermal);
             }
         }
-        std::cout << result << std::endl;
+        //std::cout << result << std::endl;
         return result * this->well_efficiency_factor_;
     }
 } // namespace Opm

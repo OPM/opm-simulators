@@ -770,8 +770,9 @@ private:
                 residual_[globI] += res;
                 if constexpr(enableEnergy){
 
-                if (globI == 0)
-                    std::cout << "flux " << globJ << " " << adres[3] << std::endl;
+                if (globI == 0) {
+                    //std::cout << "flux " << globJ << " " << adres[3] << std::endl;
+                }
                 }
 
                 //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
@@ -834,8 +835,8 @@ private:
             bMat *= storefac;
             residual_[globI] += res;
             if constexpr(enableEnergy){
-            if (globI == 0)
-                std::cout << "storage " << res[3] << std::endl;
+            //if (globI == 0)
+                //std::cout << "storage " << res[3] << std::endl;
             }
             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;

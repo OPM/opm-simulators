@@ -218,7 +218,7 @@ public:
                               simulator.vanguard().cartesianIndexMapper(),
                               simulator.vanguard().grid(),
                               simulator.vanguard().cellCentroids(),
-                              enableEnergy,
+                              enableEnergy || enableTemperature,
                               enableDiffusion,
                               enableDispersion)
         , wellModel_(simulator)

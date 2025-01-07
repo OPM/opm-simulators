@@ -189,7 +189,6 @@ protected:
             computeStorageTerm(globI, storage);
             storage0_[globI] = storage;
         }
-        std::cout << "updateStorageCache" << std::endl;
     }
 
     void advanceTemperatureFields()
@@ -212,7 +211,7 @@ protected:
             computeStorageTerm(globI, storage); 
             this->energyVector_[globI] += storefac * ( getValue(storage) - storage0_[globI] );
             if (globI == 0) {
-                std::cout << "storage " << getValue(storage) << " " << storage0_[globI] << " " << storefac * ( getValue(storage) - storage0_[globI] ) << " " <<  storefac * storage.derivative(Indices::temperatureIdx) << " " << dt/(3600*24) << std::endl;
+                //std::cout << "storage " << getValue(storage) << " " << storage0_[globI] << " " << storefac * ( getValue(storage) - storage0_[globI] ) << " " <<  storefac * storage.derivative(Indices::temperatureIdx) << " " << dt/(3600*24) << std::endl;
             }
             (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx); 
         }
@@ -256,35 +255,36 @@ protected:
             
                 this->energyVector_[globI] += getValue(flux);
                 if (globI == 0) {
-                    std::cout << "flux: " << globJ << " " << flux << std::endl;
+                    //std::cout << "flux: " << globJ << " " << flux << std::endl;
                 }
 
                 (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(Indices::temperatureIdx);
                 (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(Indices::temperatureIdx);
 
+                const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
+                const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
+                Evaluation heatFlux;
+                {
+                    short interiorDofIdx = 0; // NB
+                    short exteriorDofIdx = 1; // NB
 
-            //const Scalar inAlpha = nbInfo.inAlpha;
-            //const Scalar outAlpha = nbInfo.outAlpha;
-            const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
-            const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
-            std::cout << inAlpha << " " << outAlpha << std::endl;
-            Evaluation heatFlux;
-            {
-                short interiorDofIdx = 0; // NB
-                short exteriorDofIdx = 1; // NB
-
-                EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
-                                                                         interiorDofIdx, // focusDofIndex,
-                                                                         interiorDofIdx,
-                                                                         exteriorDofIdx,
-                                                                         intQuantsIn,
-                                                                         intQuantsEx,
-                                                                         intQuantsIn.fluidState(),
-                                                                         intQuantsEx.fluidState(),
-                                                                         inAlpha,
-                                                                         outAlpha,
-                                                                         nbInfo.res_nbinfo.faceArea);
-            }
+                    EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
+                                                                            interiorDofIdx, // focusDofIndex,
+                                                                            interiorDofIdx,
+                                                                            exteriorDofIdx,
+                                                                            intQuantsIn,
+                                                                            intQuantsEx,
+                                                                            intQuantsIn.fluidState(),
+                                                                            intQuantsEx.fluidState(),
+                                                                            inAlpha,
+                                                                            outAlpha,
+                                                                            nbInfo.res_nbinfo.faceArea);
+                
+                    heatFlux*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+                    this->energyVector_[globI] += getValue(heatFlux);
+                    (*this->energyMatrix_)[globI][globI][0][0] += heatFlux.derivative(Indices::temperatureIdx);
+                    (*this->energyMatrix_)[globJ][globI][0][0] -= heatFlux.derivative(Indices::temperatureIdx);
+                }
             }
         }
 
@@ -293,14 +293,20 @@ protected:
         for (const auto& wellPtr : wellPtrs) {
             this->assembleEquationWell(*wellPtr);
         }
+        //std::vector<EnergyVector> tmp;
+        //tmp.resize(1);
+        //tmp[0] = this->energyVector_;
+        //auto handle = VectorVectorDataHandle<GridView, std::vector<EnergyVector>>(tmp,simulator_.gridView());
+        //simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
+        //this->energyVector_=tmp[0];
         Scalar maxNorm = 0.0;
         Scalar sumNorm = 0.0;
         for (unsigned globI = 0; globI < numCells; ++globI) {
             maxNorm = max(maxNorm, std::abs(this->energyVector_[globI]));
             sumNorm += std::abs(this->energyVector_[globI]);
         }
-
-        if (maxNorm < 1e-3 || sumNorm/numCells < 1e-7) {
+        Scalar scaling = 1.0/4.182e1;
+        if (maxNorm/scaling < 1e-2 || sumNorm/(numCells*scaling) < 1e-7) {
             std::cout << "Newton converged" << std::endl;
             break;
         } 
@@ -313,7 +319,7 @@ protected:
         }
         for (unsigned globI = 0; globI < numCells; ++globI) {
             if (globI == 0) {
-                std::cout << globI << " " << this->temperature_[globI] << " " << dx[globI] << " " << this->energyVector_[globI] << std::endl;
+                //std::cout << globI << " " << this->temperature_[globI] << " " << dx[globI] << " " << this->energyVector_[globI] << std::endl;
             }
             this->temperature_[globI] -= std::clamp(dx[globI][0], Scalar(-10.0), Scalar(10.0));
 
@@ -321,7 +327,6 @@ protected:
             intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
         }
-        std::cout << "advanceTemperatureFields" << std::endl;
     }
 
     template< class LhsEval>
@@ -370,7 +375,7 @@ protected:
                     rate -= well.volumetricSurfaceRateForConnection(globI, oilPhaseIdx)*getValue(fs.Rs());
                 }
 
-                if (rate > 0) {
+                if (rate > 0 && eclWell.isInjector()) {
                     fs.setTemperature(eclWell.inj_temperature());
                     const auto& rho = FluidSystem::density(fs, phaseIdx, fs.pvtRegionIndex());
                     fs.setDensity(phaseIdx, rho);
@@ -380,7 +385,7 @@ protected:
                 } else {
                     rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 }
-                std::cout << "temp well " << rate << std::endl;
+                //std::cout << "temp well " << rate << std::endl;
                 this->energyVector_[globI] -= rate * getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
             }
         }

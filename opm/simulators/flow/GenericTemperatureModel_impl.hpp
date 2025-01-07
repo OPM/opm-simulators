@@ -174,6 +174,9 @@ linearSolve_(const EnergyMatrix& M, EnergyVector& x, EnergyVector& b)
     prm.put("solver", std::string("bicgstab"));
     prm.put("preconditioner.type", std::string("ParOverILU0"));
 
+    //std::cout << M << std::endl;
+    //std::cout << b << std::endl;
+
 #if HAVE_MPI
     if(gridView_.grid().comm().size() > 1)
     {
