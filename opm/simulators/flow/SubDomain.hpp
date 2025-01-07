@@ -57,8 +57,7 @@ namespace Opm
 
     /// Representing a part of a grid, in a way suitable for performing
     /// local solves.
-    template <class Grid>
-    struct SubDomain
+    struct SubDomainIndices
     {
         // The index of a subdomain is arbitrary, but can be used by the
         // solvers to keep track of well locations etc.
@@ -72,10 +71,21 @@ namespace Opm
         std::vector<bool> interior;
         // Enables subdomain solves and linearization using the generic linearization
         // approach (i.e. FvBaseLinearizer as opposed to TpfaLinearizer).
+        SubDomainIndices(const int i, std::vector<int>&& c, std::vector<bool>&& in)
+            : index(i), cells(std::move(c)), interior(std::move(in))
+        {}
+    };
+
+    /// Representing a part of a grid, in a way suitable for performing
+    /// local solves.
+    template <class Grid>
+    struct SubDomain : public SubDomainIndices
+    {
         Dune::SubGridPart<Grid> view;
         // Constructor that moves from its argument.
         SubDomain(const int i, std::vector<int>&& c, std::vector<bool>&& in, Dune::SubGridPart<Grid>&& v)
-            : index(i), cells(std::move(c)), interior(std::move(in)), view(std::move(v))
+            : SubDomainIndices(i, std::move(c), std::move(in))
+            , view(std::move(v))
         {}
     };
 
