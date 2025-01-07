@@ -118,13 +118,13 @@ template<class Scalar> class WellContributions;
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
-            typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
-            typedef Dune::BlockVector<VectorBlockType> BVector;
+            using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
+            using BVector = Dune::BlockVector<VectorBlockType>;
 
-            typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-            typedef BlackOilMICPModule<TypeTag> MICPModule;
+            using PolymerModule = BlackOilPolymerModule<TypeTag>;
+            using MICPModule = BlackOilMICPModule<TypeTag>;
 
-            // For the conversion between the surface volume rate and resrevoir voidage rate
+            // For the conversion between the surface volume rate and reservoir voidage rate
             using RateConverterType = RateConverter::
                 SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
