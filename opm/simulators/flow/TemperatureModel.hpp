@@ -174,6 +174,8 @@ public:
     void serializeOp(Serializer& serializer)
     {
         serializer(static_cast<BaseType&>(*this));
+        serializer(intQuants_);
+        serializer(storage0_);
     }
 
 protected:
@@ -198,6 +200,8 @@ protected:
         for (int iter = 0; iter < 20; ++iter) {
         this->energyVector_ = 0.0;
         (*this->energyMatrix_) = 0.0;
+
+         
 
         Scalar dt = simulator_.timeStepSize();
         const unsigned int numCells = simulator_.model().numTotalDof();
@@ -293,12 +297,12 @@ protected:
         for (const auto& wellPtr : wellPtrs) {
             this->assembleEquationWell(*wellPtr);
         }
-        //std::vector<EnergyVector> tmp;
-        //tmp.resize(1);
-        //tmp[0] = this->energyVector_;
-        //auto handle = VectorVectorDataHandle<GridView, std::vector<EnergyVector>>(tmp,simulator_.gridView());
-        //simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
-        //this->energyVector_=tmp[0];
+        std::vector<EnergyVector> tmp;
+        tmp.resize(1);
+        tmp[0] = this->energyVector_;
+        auto handle = VectorVectorDataHandle<GridView, std::vector<EnergyVector>>(tmp,simulator_.gridView());
+        simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
+        this->energyVector_=tmp[0];
         Scalar maxNorm = 0.0;
         Scalar sumNorm = 0.0;
         for (unsigned globI = 0; globI < numCells; ++globI) {
@@ -306,7 +310,11 @@ protected:
             sumNorm += std::abs(this->energyVector_[globI]);
         }
         Scalar scaling = 1.0/4.182e1;
-        if (maxNorm/scaling < 1e-2 || sumNorm/(numCells*scaling) < 1e-7) {
+        maxNorm /= scaling; 
+        sumNorm /= (numCells*scaling);
+        maxNorm = simulator_.gridView().comm().sum(maxNorm);
+        sumNorm = simulator_.gridView().comm().sum(sumNorm);
+        if (maxNorm < 1e-2 || sumNorm < 1e-7) {
             std::cout << "Newton converged" << std::endl;
             break;
         } 
@@ -369,7 +377,7 @@ protected:
                     continue;
 
                 //Scalar rate = ws.perf_data.rates[i]; //well.volumetricSurfaceRateForConnection(globI, phaseIdx);
-                Scalar rate = well.volumetricSurfaceRateForConnection(globI, phaseIdx);
+                Evaluation rate = well.volumetricSurfaceRateForConnection(globI, phaseIdx);
 
                 if (phaseIdx == gasPhaseIdx) { // assumes rv == 0
                     rate -= well.volumetricSurfaceRateForConnection(globI, oilPhaseIdx)*getValue(fs.Rs());
@@ -383,10 +391,12 @@ protected:
                     fs.setEnthalpy(phaseIdx, h);
                     rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 } else {
-                    rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
+                    rate *= fs.enthalpy(phaseIdx) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 }
                 //std::cout << "temp well " << rate << std::endl;
-                this->energyVector_[globI] -= rate * getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+                rate *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+                this->energyVector_[globI] -= getValue(rate);
+                (*this->energyMatrix_)[globI][globI][0][0] -= rate.derivative(Indices::temperatureIdx);
             }
         }
     }
