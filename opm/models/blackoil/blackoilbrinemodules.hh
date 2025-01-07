@@ -387,7 +387,7 @@ public:
                                   unsigned timeIdx)
     {
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const LinearizationType lintype = elemCtx.problem().model().linearizer().getLinearizationType();
+        const LinearizationType lintype = elemCtx.linearizationType();
         updateSaltConcentration_(priVars, timeIdx, lintype);
     }
 
