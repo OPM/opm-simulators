@@ -25,6 +25,26 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_gconsump_insert_kw
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH)
 
+add_test_compareSeparateECLFiles(CASENAME actionx_gefac
+                                 DIR1 model4
+                                 FILENAME1 MOD4_GRP_GEFAC
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_GEFAC
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
+add_test_compareSeparateECLFiles(CASENAME pyaction_gefac_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_GEFAC_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_GEFAC
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
 add_test_compareSeparateECLFiles(CASENAME pyaction_gruptree_insert_kw
                                  DIR1 pyaction
                                  FILENAME1 PYACTION_GRUPTREE_INSERT_KW
@@ -161,6 +181,28 @@ if(MPI_FOUND)
                                    FILENAME1 PYACTION_GCONSUMP_INSERT_KW
                                    DIR2 actionx
                                    FILENAME2 ACTIONX_GCONSUMP
+                                   SIMULATOR flow
+                                   ABS_TOL ${abs_tol}
+                                   REL_TOL ${rel_tol}
+                                   IGNORE_EXTRA_KW BOTH
+                                   MPI_PROCS 4)
+
+  add_test_compareSeparateECLFiles(CASENAME actionx_gefac_4_procs
+                                   DIR1 model4
+                                   FILENAME1 MOD4_GRP_GEFAC
+                                   DIR2 actionx
+                                   FILENAME2 ACTIONX_GEFAC
+                                   SIMULATOR flow
+                                   ABS_TOL ${abs_tol}
+                                   REL_TOL ${rel_tol}
+                                   IGNORE_EXTRA_KW BOTH
+                                   MPI_PROCS 4)
+
+  add_test_compareSeparateECLFiles(CASENAME pyaction_gefac_insert_kw_4_procs
+                                   DIR1 pyaction
+                                   FILENAME1 PYACTION_GEFAC_INSERT_KW
+                                   DIR2 actionx
+                                   FILENAME2 ACTIONX_GEFAC
                                    SIMULATOR flow
                                    ABS_TOL ${abs_tol}
                                    REL_TOL ${rel_tol}
