@@ -128,7 +128,7 @@ public:
 
     void postSolveDomain(GlobalEqVector& deltaX, const Domain& domain)
     {
-        model_.recoverWellSolutionAndUpdateWellStateDomain(deltaX, domain);
+        model_.recoverWellSolutionAndUpdateWellStateDomain(deltaX, domain.index);
     }
 
     template <class Restarter>
