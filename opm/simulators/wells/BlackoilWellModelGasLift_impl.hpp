@@ -110,7 +110,7 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
                                         simulator.episodeIndex(),
                                         deferred_logger);
 
-        if constexpr (this->glift_debug) {
+        if constexpr (glift_debug) {
             std::vector<WellInterfaceGeneric<Scalar>*> wc;
             wc.reserve(well_container.size());
             for (const auto& w : well_container) {
@@ -230,7 +230,7 @@ gasLiftOptimizationStage1(const Simulator& simulator,
                                           group_alq_rates[j]);
                 }
             }
-            if (this->glift_debug) {
+            if constexpr (glift_debug) {
                 int counter = 0;
                 if (comm.rank() == i) {
                     counter = wellState.gliftGetDebugCounter();
