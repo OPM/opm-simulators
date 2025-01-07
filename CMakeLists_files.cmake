@@ -201,7 +201,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/WellAssemble.cpp
   opm/simulators/wells/WellBhpThpCalculator.cpp
-  opm/simulators/wells/WellConnectionAuxiliaryModule.cpp
   opm/simulators/wells/WellConstraints.cpp
   opm/simulators/wells/WellConvergence.cpp
   opm/simulators/wells/WellFilterCake.cpp

@@ -57,10 +57,6 @@
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
-#if HAVE_MPI
-#include <opm/simulators/utils/MPISerializer.hpp>
-#endif
-
 #include <algorithm>
 #include <cassert>
 #include <iomanip>
@@ -73,7 +69,8 @@ namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& simulator, const PhaseUsage& phase_usage)
-        : BlackoilWellModelGeneric<Scalar>(simulator.vanguard().schedule(),
+        : WellConnectionModule(*this, simulator.gridView().comm())
+        , BlackoilWellModelGeneric<Scalar>(simulator.vanguard().schedule(),
                                             simulator.vanguard().summaryState(),
                                             simulator.vanguard().eclState(),
                                             phase_usage,
@@ -189,116 +186,6 @@ namespace Opm {
             wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, well_opened_this_step);
         }
     }
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    addNeighbors(std::vector<NeighborSet>& neighbors) const
-    {
-        if (!param_.matrix_add_well_contributions_) {
-            return;
-        }
-
-        // Create cartesian to compressed mapping
-        const auto& schedule_wells = this->schedule().getWellsatEnd();
-        auto possibleFutureConnections = this->schedule().getPossibleFutureConnections();
-
-#if HAVE_MPI
-        // Communicate Map to other processes, since it is only available on rank 0
-        const auto& comm = this->simulator_.vanguard().grid().comm();
-        Parallel::MpiSerializer ser(comm);
-        ser.broadcast(possibleFutureConnections);
-#endif
-        // initialize the additional cell connections introduced by wells.
-        for (const auto& well : schedule_wells)
-        {
-            std::vector<int> wellCells = this->getCellsForConnections(well);
-            // Now add the cells of the possible future connections
-            const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
-            if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
-                for (auto& global_index : possibleFutureConnectionSetIt->second) {
-                    int compressed_idx = compressedIndexForInterior(global_index);
-                    if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
-                        wellCells.push_back(compressed_idx);
-                    }
-                }
-            }
-            for (int cellIdx : wellCells) {
-                neighbors[cellIdx].insert(wellCells.begin(),
-                                          wellCells.end());
-            }
-        }
-    }
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res)
-    {
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (const auto& well: well_container_) {
-            // Modifiy the Jacobian with explicit Schur complement
-            // contributions if requested.
-            if (param_.matrix_add_well_contributions_) {
-                well->addWellContributions(jacobian);
-            }
-            // Apply as Schur complement the well residual to reservoir residuals:
-            // r = r - duneC_^T * invDuneD_ * resWell_
-            // Well equations B and C uses only the perforated cells, so need to apply on local residual
-            const auto& cells = well->cells();
-            linearize_res_local_.resize(cells.size());
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                linearize_res_local_[i] = res[cells[i]];
-            }
-
-            well->apply(linearize_res_local_);
-
-            for (size_t i = 0; i < cells.size(); ++i) {
-                res[cells[i]] = linearize_res_local_[i];
-            }
-        }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
-                                   simulator_.gridView().comm());
-    }
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    linearizeDomain(const Domain& domain, SparseMatrixAdapter& jacobian, GlobalEqVector& res)
-    {
-        // Note: no point in trying to do a parallel gathering
-        // try/catch here, as this function is not called in
-        // parallel but for each individual domain of each rank.
-        for (const auto& well: well_container_) {
-            if (this->well_domain_.at(well->name()) == domain.index) {
-                // Modifiy the Jacobian with explicit Schur complement
-                // contributions if requested.
-                if (param_.matrix_add_well_contributions_) {
-                    well->addWellContributions(jacobian);
-                }
-                // Apply as Schur complement the well residual to reservoir residuals:
-                // r = r - duneC_^T * invDuneD_ * resWell_
-                // Well equations B and C uses only the perforated cells, so need to apply on local residual
-                const auto& cells = well->cells();
-                linearize_res_local_.resize(cells.size());
-
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    linearize_res_local_[i] = res[cells[i]];
-                }
-
-                well->apply(linearize_res_local_);
-
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    res[cells[i]] = linearize_res_local_[i];
-                }
-            }
-        }
-    }
-
 
     template<typename TypeTag>
     void
@@ -1711,7 +1598,9 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights, const bool use_well_weights) const
+    addWellPressureEquations(PressureMatrix& jacobian,
+                             const BVector& weights,
+                             const bool use_well_weights) const
     {
         int nw = this->numLocalWellsEnd();
         int rdofs = local_num_cells_;
@@ -1720,8 +1609,12 @@ namespace Opm {
             jacobian[wdof][wdof] = 1.0;// better scaling ?
         }
 
-        for ( const auto& well : well_container_ ) {
-            well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
+        for (const auto& well : well_container_) {
+            well->addWellPressureEquations(jacobian,
+                                           weights,
+                                           pressureVarIndex,
+                                           use_well_weights,
+                                           this->wellState());
         }
     }
 
@@ -1810,14 +1703,15 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            for (auto& well : well_container_) {
+            for (const auto& well : well_container_) {
                 const auto& cells = well->cells();
                 x_local_.resize(cells.size());
 
                 for (size_t i = 0; i < cells.size(); ++i) {
                     x_local_[i] = x[cells[i]];
                 }
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_, this->wellState(), local_deferredLogger);
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
+                                                            this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
