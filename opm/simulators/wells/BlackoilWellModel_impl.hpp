@@ -1242,7 +1242,7 @@ namespace Opm {
     {
         DeferredLogger local_deferredLogger;
 
-        if constexpr (gaslift_.glift_debug) {
+        if constexpr (BlackoilWellModelGasLift<TypeTag>::glift_debug) {
             if (gaslift_.terminalOutput()) {
                 const std::string msg =
                     fmt::format("assemble() : iteration {}" , iterationIdx);

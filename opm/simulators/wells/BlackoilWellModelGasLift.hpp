@@ -86,6 +86,7 @@ class BlackoilWellModelGasLift :
     using Base = BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::Scalar>>;
 
 public:
+    using Base::glift_debug;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
     using GLiftOptWells = typename Base::GLiftOptWells;
