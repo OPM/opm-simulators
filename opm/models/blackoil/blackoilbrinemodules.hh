@@ -34,6 +34,7 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
 
 #include <opm/models/utils/basicproperties.hh>
 
@@ -295,11 +296,21 @@ public:
         return params_.saltsolTable_[pvtnumRegionIdx];
     }
 
+    static const Scalar saltsolTable(const unsigned pvtnumRegionIdx)
+    {
+        return params_.saltsolTable_[pvtnumRegionIdx];
+    }
+
     static const Scalar saltdenTable(const ElementContext& elemCtx,
                                      unsigned scvIdx,
                                      unsigned timeIdx)
     {
         const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        return params_.saltdenTable_[pvtnumRegionIdx];
+    }
+
+    static const Scalar saltdenTable(const unsigned pvtnumRegionIdx)
+    {
         return params_.saltdenTable_[pvtnumRegionIdx];
     }
 
@@ -376,29 +387,37 @@ public:
                                   unsigned timeIdx)
     {
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const LinearizationType lintype = elemCtx.problem().model().linearizer().getLinearizationType();
+        updateSaltConcentration_(priVars, timeIdx, lintype);
+    }
 
+    void updateSaltConcentration_(const PrimaryVariables& priVars,
+                                  const unsigned timeIdx,
+                                  const LinearizationType lintype)
+    {
+        const unsigned pvtnumRegionIdx = priVars.pvtRegionIndex();
         auto& fs = asImp_().fluidState_;
 
         if constexpr (enableSaltPrecipitation) {
-            const auto& saltsolTable = BrineModule::saltsolTable(elemCtx, dofIdx, timeIdx);
+            const auto& saltsolTable = BrineModule::saltsolTable(pvtnumRegionIdx);
             saltSolubility_ = saltsolTable;
 
-            const auto& saltdenTable = BrineModule::saltdenTable(elemCtx, dofIdx, timeIdx);
+            const auto& saltdenTable = BrineModule::saltdenTable(pvtnumRegionIdx);
             saltDensity_ = saltdenTable;
 
             if (priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-                saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+                saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx, lintype);
                 fs.setSaltConcentration(saltSolubility_);
             }
             else {
-                saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+                saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx, lintype);
                 fs.setSaltConcentration(saltConcentration_);
                 saltSaturation_ = 0.0;
             }
             fs.setSaltSaturation(saltSaturation_);
         }
         else {
-            saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+            saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx, lintype);
             fs.setSaltConcentration(saltConcentration_);
         }
     }
