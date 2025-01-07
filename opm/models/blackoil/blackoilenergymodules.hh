@@ -468,7 +468,8 @@ public:
             // even if energy is conserved, the temperature can vary over the spatial
             // domain if the EnableTemperature property is set to true
             const Scalar T = problem.temperature(globalDofIdx, timeIdx);
-            fs.setTemperature(T);
+            const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
+            fs.setTemperature(TE);
         }
 
     }
