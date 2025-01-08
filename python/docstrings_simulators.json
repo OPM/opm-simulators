@@ -2,7 +2,7 @@
     "PyBlackOilSimulator":{
         "type": "class",
         "signature": "opm.simulators.BlackOilSimulator",
-        "doc": "The SummaryState class - this is where the current summary results of the simulator are stored.\nThe SummaryState class has methods to get hold of well, group and general variables."
+        "doc": "The BlackOilSimulator class to run simulations using a given Deck."
     },
     "PyBlackOilSimulator_filename_constructor": {
         "signature": "opm.simulators.BlackOilSimulator.__init__(deck_filename: str) -> None",
@@ -66,7 +66,7 @@
     },
     "setupMpi": {
         "signature": "opm.simulators.BlackOilSimulator.mpi_init(init: bool, finalize: bool) -> None",
-        "doc": "Sets MPI up for parallel simulation. This method should be called before any other method.\n:param init: Whether to call ``MPI_Init()`` or not.\n:param finalize:Whether to call ``MPI_Finalize()```when the simulator object goes out of scope.\n\n:return: None"
+        "doc": "Sets MPI up for parallel simulation. This method should be called before any other method.\n\n:param init: Whether to call ``MPI_Init()`` or not.\n:param finalize: Whether to call ``MPI_Finalize()```when the simulator object goes out of scope.\n\n:return: None"
     },
     "step": {
         "signature": "opm.simulators.BlackOilSimulator.step() -> int",
