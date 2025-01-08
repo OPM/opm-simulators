@@ -76,6 +76,7 @@ class FlashIntensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { dimWorld = GridView::dimensionworld };
     enum { pressure0Idx = Indices::pressure0Idx };
+    enum { water0Idx = Indices::water0Idx};
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -215,20 +216,22 @@ public:
         (R * fluidState_.temperature(FluidSystem::gasPhaseIdx));
 
 
-        // Update saturation
-        // \Note: the current implementation assume oil-gas system.
+        // Update oil/gas saturation; water saturation is a primary variable
+        Evaluation Sw = priVars.makeEvaluation(water0Idx, timeIdx);
         Evaluation L = fluidState_.L();
-        Evaluation So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-        Evaluation Sg = Opm::max(1 - So, 0.0);
-        Scalar sumS = Opm::getValue(So) + Opm::getValue(Sg);
+        Evaluation So = Opm::max((1 - Sw) * (L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
+        Evaluation Sg = Opm::max(1 - So - Sw, 0.0);
+        Scalar sumS = Opm::getValue(So) + Opm::getValue(Sg) + Opm::getValue(Sw);
         So /= sumS;
         Sg /= sumS;
+        Sw /= sumS;
 
-        fluidState_.setSaturation(0, So);
-        fluidState_.setSaturation(1, Sg);
+        fluidState_.setSaturation(FluidSystem::oilPhaseIdx, So);
+        fluidState_.setSaturation(FluidSystem::gasPhaseIdx, Sg);
+        fluidState_.setSaturation(FluidSystem::waterPhaseIdx, Sw);
 
-        fluidState_.setCompressFactor(0, Z_L);
-        fluidState_.setCompressFactor(1, Z_V);
+        fluidState_.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
+        fluidState_.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
 
         // Print saturation
         if (flashVerbosity >= 5) {

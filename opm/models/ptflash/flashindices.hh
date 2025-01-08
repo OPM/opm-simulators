@@ -51,13 +51,16 @@ class FlashIndices
     using EnergyIndices = Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
 
 public:
-    static constexpr bool waterEnabled = false;
+    //! All phases active (note: immiscible/"dummy" water phase)
+    static constexpr bool waterEnabled = true;
     static constexpr bool gasEnabled = true;
     static constexpr bool oilEnabled = true;
-    static constexpr int waterPhaseIdx = -1;
-    static constexpr int numPhases = 2;
+
+    //! number of active phases
+    static constexpr int numPhases = 3;
+
     //! number of equations/primary variables
-    static const int numEq = numComponents + EnergyIndices::numEq_;
+    static const int numEq = numComponents + EnergyIndices::numEq_ + 1;
 
     // Primary variable indices
 
@@ -66,6 +69,9 @@ public:
 
     //! Index of the molefraction of the first component
     static constexpr int z0Idx = pressure0Idx + 1;
+
+    //! Index of water saturation
+    static constexpr int water0Idx = z0Idx + numComponents - 1;
     
     // equation indices
 

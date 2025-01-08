@@ -125,6 +125,12 @@ protected:
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
             clampValue_(nextValue[z0Idx + compIdx], tol, 1-tol);
         }
+
+        // limit change in water saturation to 0.2
+        constexpr Scalar dSwMax = 0.2;
+        if (update[Indices::water0Idx] > dSwMax) {
+            nextValue[Indices::water0Idx] = currentValue[Indices::water0Idx] - dSwMax;
+        }
     }
 private:
     void clampValue_(Scalar& val, Scalar minVal, Scalar maxVal) const

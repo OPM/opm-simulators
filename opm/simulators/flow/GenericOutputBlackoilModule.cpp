@@ -30,7 +30,7 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
-#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Runspec.hpp>
@@ -1677,7 +1677,7 @@ INSTANTIATE_TYPE(float)
 #endif
 
 #define INSTANTIATE_COMP(NUM) \
-    template<class T> using FS##NUM = GenericOilGasFluidSystem<T, NUM>; \
+    template<class T> using FS##NUM = GenericOilGasWaterFluidSystem<T, NUM>; \
     template class GenericOutputBlackoilModule<FS##NUM<double>>;
 
 INSTANTIATE_COMP(0) // \Note: to register the parameter ForceDisableFluidInPlaceOutput

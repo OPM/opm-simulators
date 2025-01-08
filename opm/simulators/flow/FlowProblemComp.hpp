@@ -362,6 +362,9 @@ public:
             Dune::FieldVector<Scalar, numComponents> z(0.0);
             Scalar sumMoles = 0.0;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (phaseIdx == waterPhaseIdx){ 
+                    continue;
+                }
                 const auto saturation = fs.saturation(phaseIdx);
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     Scalar tmp = fs.molarity(phaseIdx, compIdx) * saturation;
@@ -526,6 +529,10 @@ protected:
                                             1.0
                                             - waterSaturationData[dofIdx]
                                             - gasSaturationData[dofIdx]);
+            }
+            if (water_active) {
+                dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
+                                            waterSaturationData[dofIdx]);
             }
 
             //////
