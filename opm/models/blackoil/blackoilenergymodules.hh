@@ -351,12 +351,6 @@ class BlackOilEnergyIntensiveQuantities
 
 
 public:
-    void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
-    { 
-    }
-    void updateEnergyQuantities_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
-    { 
-    }
     /*!
      * \brief Update the temperature of the intensive quantity's fluid state
      *
@@ -423,6 +417,15 @@ public:
         rockFraction_ = elemCtx.problem().rockFraction(cell_idx, timeIdx);
     }
 
+    void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    {
+        throw std::logic_error("This updateTemperature_ should not be called when enableEnergy is true");
+    }
+    void updateEnergyQuantities_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    {
+        throw std::logic_error("This updateEnergyQuantities_ should not be called when enableEnergy is true");
+    }
+
     const Evaluation& rockInternalEnergy() const
     { return rockInternalEnergy_; }
 
@@ -462,16 +465,16 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, false>
 public:
 
     void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
-    {        
+    {
         if constexpr (enableTemperature) {
             auto& fs = asImp_().fluidState_;
-            // even if energy is conserved, the temperature can vary over the spatial
-            // domain if the EnableTemperature property is set to true
+            // if TEMP is used the updated temperature is stored in the
+            // temperature model.
             const Scalar T = problem.temperature(globalDofIdx, timeIdx);
+            // if TEMP is used we solve for temperature seperatly
             const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
             fs.setTemperature(TE);
         }
-
     }
 
     void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
@@ -479,37 +482,32 @@ public:
                             [[maybe_unused]] unsigned timeIdx)
     {
         if constexpr (enableTemperature) {
-            // even if energy is conserved, the temperature can vary over the spatial
-            // domain if the EnableTemperature property is set to true
+            // if TEMP is used the updated temperature is stored in the
+            // temperature model.
             auto& fs = asImp_().fluidState_;
             const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
+            // if TEMP is used we solve for temperature seperatly
             const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
             fs.setTemperature(TE);
         }
     }
 
     template<class Problem>
-    void updateTemperature_([[maybe_unused]] const Problem& problem,
+    void updateTemperature_(const Problem& problem,
                             [[maybe_unused]] const PrimaryVariables& priVars,
-                            [[maybe_unused]] unsigned globalDofIdx,
-                            [[maybe_unused]] unsigned timeIdx,
+                            unsigned globalDofIdx,
+                            unsigned timeIdx,
                             [[maybe_unused]] const LinearizationType& lintype
         )
     {
-        if constexpr (enableTemperature) {
-            auto& fs = asImp_().fluidState_;
-            // even if energy is conserved, the temperature can vary over the spatial
-            // domain if the EnableTemperature property is set to true
-            const Scalar T = problem.temperature(globalDofIdx, timeIdx);
-            fs.setTemperature(T);
-        }
+        updateTemperature_(problem,globalDofIdx, timeIdx);
     }
 
     void updateEnergyQuantities_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
     {
+        // TEMP is enabled
         if (enableTemperature) {
             auto& fs = asImp_().fluidState_;
-
             // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
             // and the thermal condictivity coefficients
             for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -532,40 +530,40 @@ public:
             // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
             rockFraction_ = problem.rockFraction(globalDofIdx, timeIdx);
         }
-
-
     }
+
+
     void updateEnergyQuantities_(const ElementContext& elemCtx,
                                  unsigned dofIdx,
                                  unsigned timeIdx,
                                  const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
-    { 
+    {
         if (enableTemperature) {
-        auto& fs = asImp_().fluidState_;
+            auto& fs = asImp_().fluidState_;
 
-        // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
-        // and the thermal condictivity coefficients
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
+            // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
+            // and the thermal condictivity coefficients
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+
+                const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+                fs.setEnthalpy(phaseIdx, h);
             }
+            const auto& solidEnergyLawParams = elemCtx.problem().solidEnergyLawParams(elemCtx, dofIdx, timeIdx);
+            rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs);
 
-            const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
-            fs.setEnthalpy(phaseIdx, h);
-        }
-        const auto& solidEnergyLawParams = elemCtx.problem().solidEnergyLawParams(elemCtx, dofIdx, timeIdx);
-        rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs);
+            const auto& thermalConductionLawParams = elemCtx.problem().thermalConductionLawParams(elemCtx, dofIdx, timeIdx);
+            totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs);
 
-        const auto& thermalConductionLawParams = elemCtx.problem().thermalConductionLawParams(elemCtx, dofIdx, timeIdx);
-        totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs);
-
-        // Retrieve the rock fraction from the problem
-        // Usually 1 - porosity, but if pvmult is used to modify porosity
-        // we will apply the same multiplier to the rock fraction
-        // i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
-        // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
-        const unsigned cell_idx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        rockFraction_ = elemCtx.problem().rockFraction(cell_idx, timeIdx);
+            // Retrieve the rock fraction from the problem
+            // Usually 1 - porosity, but if pvmult is used to modify porosity
+            // we will apply the same multiplier to the rock fraction
+            // i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
+            // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
+            const unsigned cell_idx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+            rockFraction_ = elemCtx.problem().rockFraction(cell_idx, timeIdx);
         }
     }
 
@@ -808,7 +806,6 @@ public:
     {}
     const Evaluation& energyFlux()  const
     { throw std::logic_error("Requested the energy flux, but energy is not conserved"); }
-
 };
 
 

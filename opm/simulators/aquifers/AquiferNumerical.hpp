@@ -58,7 +58,6 @@ public:
     enum { numPhases = FluidSystem::numPhases };
     static constexpr int numEq = BlackoilIndices::numEq;
 
-    //using Eval =  DenseAd::Evaluation<Scalar, numEq>;
     using Eval = GetPropType<TypeTag, Properties::Evaluation>;
     using Toolbox = MathToolbox<Eval>;
 

@@ -76,8 +76,6 @@ public:
 
     static constexpr int numEq = BlackoilIndices::numEq;
 
-    //using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
-
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
                                           enableTemperature,

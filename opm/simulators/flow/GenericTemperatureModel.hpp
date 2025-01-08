@@ -67,7 +67,7 @@ public:
 
     bool doTemp()
     {
-        return doTemp_;   
+        return doTemp_;
     }
 
     const Scalar temperature(size_t globalIdx) const {
