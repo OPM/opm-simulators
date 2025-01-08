@@ -2099,7 +2099,9 @@ namespace Opm {
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
 
         for (const auto& [group_name, to] : this->closed_offending_wells_) {
-            if (this->hasWell(to.second) && !this->wasDynamicallyShutThisTimeStep(to.second)) {
+            if (this->hasOpenLocalWell(to.second) &&
+                !this->wasDynamicallyShutThisTimeStep(to.second))
+            {
                 wellTestState.close_well(to.second, WellTestConfig::Reason::GROUP, simulationTime);
                 this->updateClosedWellsThisStep(to.second);
                 const std::string msg =
@@ -2379,7 +2381,7 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    hasWell(const std::string& well_name) const
+    hasOpenLocalWell(const std::string& well_name) const
     {
         return std::any_of(well_container_.begin(), well_container_.end(),
             [&well_name](const WellInterfacePtr& elem) -> bool

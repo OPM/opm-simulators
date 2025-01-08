@@ -289,7 +289,7 @@ template<class Scalar> class WellContributions;
                                     const int iterationIdx);
 
             WellInterfacePtr getWell(const std::string& well_name) const;
-            bool hasWell(const std::string& well_name) const;
+            bool hasOpenLocalWell(const std::string& well_name) const;
 
             using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
