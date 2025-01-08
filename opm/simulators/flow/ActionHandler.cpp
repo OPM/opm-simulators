@@ -155,7 +155,7 @@ namespace {
 
         auto wellPI = std::vector<Scalar>(wellpi_wells.size());
         for (auto i = 0*wellpi_wells.size(); i < wellpi_wells.size(); ++i) {
-            if (wellModel.hasWell(wellpi_wells[i])) {
+            if (wellModel.hasLocalWell(wellpi_wells[i])) {
                 wellPI[i] = wellModel.wellPI(wellpi_wells[i]);
             }
         }

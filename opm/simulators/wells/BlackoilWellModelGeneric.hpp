@@ -105,7 +105,7 @@ public:
     bool wellsActive() const;
 
     //! \brief Returns true if well is defined and has connections on current rank.
-    bool hasWell(const std::string& wname) const;
+    bool hasLocalWell(const std::string& wname) const;
 
     //! \brief Returns true if well is defined, open and has connections on current rank.
     bool hasOpenLocalWell(const std::string& well_name) const;

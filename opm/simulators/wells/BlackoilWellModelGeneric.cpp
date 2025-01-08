@@ -147,7 +147,7 @@ numPhases() const
 
 template<class Scalar>
 bool BlackoilWellModelGeneric<Scalar>::
-hasWell(const std::string& wname) const
+hasLocalWell(const std::string& wname) const
 {
     return std::any_of(this->wells_ecl_.begin(),
                        this->wells_ecl_.end(),

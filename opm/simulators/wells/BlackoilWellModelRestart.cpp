@@ -192,7 +192,9 @@ loadRestartGuideRates(const int                    report_step,
                       GuideRate&                   guide_rate) const
 {
     for (const auto& [well_name, rst_well] : rst_wells) {
-        if (!wellModel_.hasWell(well_name) || wellModel_.getWellEcl(well_name).isInjector()) {
+        if (!wellModel_.hasLocalWell(well_name) ||
+            wellModel_.getWellEcl(well_name).isInjector())
+        {
             continue;
         }
 
