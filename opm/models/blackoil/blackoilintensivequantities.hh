@@ -370,6 +370,11 @@ public:
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        return this->updateRsRvRsw(problem, priVars, globalSpaceIdx, timeIdx);
+    }
+
+    Evaluation updateRsRvRsw(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
         const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
 
         const Scalar RvMax = FluidSystem::enableVaporizedOil()
@@ -544,13 +549,29 @@ public:
 
     void updatePorosity(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
+
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        // Retrieve the reference porosity from the problem.
+        referencePorosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
+        // Account for other effects.
+        this->updatePorosityImpl(problem, priVars, globalSpaceIdx, timeIdx);
+    }
+
+    void updatePorosity(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
+        // Retrieve the reference porosity from the problem.
+        referencePorosity_ = problem.porosity(globalSpaceIdx, timeIdx);
+        // Account for other effects.
+        this->updatePorosityImpl(problem, priVars, globalSpaceIdx, timeIdx);
+    }
+
+    void updatePorosityImpl(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
         const auto& linearizationType = problem.model().linearizer().getLinearizationType();
 
-        // retrieve the porosity from the problem
-        referencePorosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
+        // Start from the reference porosity.
         porosity_ = referencePorosity_;
 
         // the porosity must be modified by the compressibility of the
