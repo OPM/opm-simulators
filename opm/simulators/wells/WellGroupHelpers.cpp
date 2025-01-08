@@ -325,6 +325,7 @@ updateGuideRatesForInjectionGroups(const Group& group,
             break;
         }
         case Group::GuideRateInjTarget::RESV:
+            OPM_DEFLOG_THROW(std::runtime_error, "GUIDE PHASE RESV not implemented. Group " + group.name(), deferred_logger);
         case Group::GuideRateInjTarget::NO_GUIDE_RATE:
             break;
         default:

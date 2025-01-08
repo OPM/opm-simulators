@@ -56,12 +56,15 @@ public:
 
 private:
     std::string parent(const std::string& name);
+
+    // returns the sum of the guiderates of the given group
+    // and the number of sub-groups/wells that contributed to the sum
     std::pair<Scalar,int> guideRateSum(const Group& group,
                         const std::string& always_included_child,
-                        const bool use_potentials);
+                        const bool always_use_potentials);
     Scalar guideRate(const std::string& name,
                      const std::string& always_included_child,
-                     const bool use_potentials);
+                     const bool always_use_potentials);
     int groupControlledWells(const std::string& group_name,
                              const std::string& always_included_child);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
