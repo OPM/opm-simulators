@@ -357,14 +357,19 @@ public:
             paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
             fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
             fs.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::gasPhaseIdx));
+            fs.setDensity(FluidSystem::waterPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::waterPhaseIdx));
             fs.setViscosity(FluidSystem::oilPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::oilPhaseIdx));
             fs.setViscosity(FluidSystem::gasPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::gasPhaseIdx));
+            fs.setViscosity(FluidSystem::waterPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::waterPhaseIdx));
         }
 
         // determine the component fractions
         Dune::FieldVector<Scalar, numComponents> z(0.0);
         Scalar sumMoles = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (phaseIdx == waterPhaseIdx){ 
+                continue;
+            }
             const auto saturation = getValue(fs.saturation(phaseIdx));
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 Scalar tmp = getValue(fs.molarity(phaseIdx, compIdx)) * saturation;
@@ -524,6 +529,10 @@ protected:
                                             1.0
                                             - waterSaturationData[dofIdx]
                                             - gasSaturationData[dofIdx]);
+            }
+            if (water_active) {
+                dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
+                                            waterSaturationData[dofIdx]);
             }
 
             //////

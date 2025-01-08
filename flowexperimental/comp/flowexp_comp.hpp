@@ -20,7 +20,7 @@
 #define FLOWEXP_COMP_HPP
 
 #include <opm/material/constraintsolvers/PTFlash.hpp>
-#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/models/ptflash/flashmodel.hh>
@@ -169,7 +169,7 @@ private:
     static constexpr int num_comp = getPropValue<TypeTag, Properties::NumComp>();
 
 public:
-    using type = Opm::GenericOilGasFluidSystem<Scalar, num_comp>;
+    using type = Opm::GenericOilGasWaterFluidSystem<Scalar, num_comp>;
 };
 template<class TypeTag, int NumComp>
 struct EnableMech<TypeTag, TTag::FlowExpCompProblem<NumComp>> {
