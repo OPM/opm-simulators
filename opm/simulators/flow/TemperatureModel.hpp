@@ -34,7 +34,6 @@
 
 #include <opm/simulators/flow/GenericTemperatureModel.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
-//#include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <array>
 #include <cstddef>
@@ -109,24 +108,25 @@ public:
     void init(bool rst)
     {
         const unsigned int numCells = simulator_.model().numTotalDof();
-
         this->doInit(rst, numCells);
 
         if (!this->doTemp())
             return;
 
-        storage0_.resize(numCells);
+        // we need the storage term at start of the iteration (timeIdx = 1)
+        storage1_.resize(numCells);
 
+        // set the initial temperature
         for (unsigned globI = 0; globI < numCells; ++globI) {
             this->temperature_[globI] = simulator_.problem().initialFluidState(globI).temperature(0);
         }
-     
+        // keep a copy of the intensive quantities to simplify the update during
+        // the newton iterations
         intQuants_.resize(numCells);
-        const auto& elemMapper = simulator_.model().elementMapper(); //does not work.
-        // Set it up manually
-        //ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
-        detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
 
+        // find and store the overlap cells
+        const auto& elemMapper = simulator_.model().elementMapper();
+        detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
     }
 
     void beginTimeStep()
@@ -181,167 +181,42 @@ public:
     {
         serializer(static_cast<BaseType&>(*this));
         serializer(intQuants_);
-        serializer(storage0_);
+        serializer(storage1_);
     }
 
 protected:
 
     void updateStorageCache()
     {
+        // we need the storage term at start of the iteration (timeIdx = 1)
         const unsigned int numCells = simulator_.model().numTotalDof();
-        //#ifdef _OPENMP
-        //#pragma omp parallel for
-        //#endif
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (unsigned globI = 0; globI < numCells; ++globI) {
             Scalar storage = 0.0;
             computeStorageTerm(globI, storage);
-            storage0_[globI] = storage;
+            storage1_[globI] = storage;
         }
     }
 
     void advanceTemperatureFields()
     {
-
-
-        for (int iter = 0; iter < 20; ++iter) {
-        this->energyVector_ = 0.0;
-        (*this->energyMatrix_) = 0.0;
-
-         
-
-        Scalar dt = simulator_.timeStepSize();
         const unsigned int numCells = simulator_.model().numTotalDof();
-        //#ifdef _OPENMP
-        //#pragma omp parallel for
-        //#endif
-        for (unsigned globI = 0; globI < numCells; ++globI) {
-            Scalar volume = simulator_.model().dofTotalVolume(globI);
-            Scalar storefac = volume / dt;
-            Evaluation storage = 0.0;
-            computeStorageTerm(globI, storage); 
-            this->energyVector_[globI] += storefac * ( getValue(storage) - storage0_[globI] );
-            if (globI == 0) {
-                //std::cout << "storage " << getValue(storage) << " " << storage0_[globI] << " " << storefac * ( getValue(storage) - storage0_[globI] ) << " " <<  storefac * storage.derivative(Indices::temperatureIdx) << " " << dt/(3600*24) << std::endl;
+        const int maximum_number_of_newton_iterations = 20;
+        // solve using Newton
+        for (int iter = 0; iter < maximum_number_of_newton_iterations; ++iter) {
+            assembleEquations();
+            if (converged(iter)) {
+                break;
             }
-            (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx); 
+            solveAndUpdate();
         }
+    }
 
-        const auto& neighborInfo = simulator_.model().linearizer().getNeighborInfo();
-//#ifdef _OPENMP
-//#pragma omp parallel for
-//#endif
-        for (unsigned globI = 0; globI < numCells; ++globI) {
-            RateVector tmp(0.0);
-            RateVector darcyFlux(0.0);
-            const auto& nbInfos = neighborInfo[globI];
-            const IntensiveQuantities& intQuantsIn = intQuants_[globI];
-            for (const auto& nbInfo : nbInfos) {
-                unsigned globJ = nbInfo.neighbor;
-                assert(globJ != globI);
-                tmp = 0.0;
-                darcyFlux = 0.0;
-                const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
-                LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, simulator_.problem().moduleParams());
-
-                Evaluation flux = 0.0;
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    if (!FluidSystem::phaseIsActive(phaseIdx))
-                        continue;
-                    unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                    bool inIsUp = darcyFlux[activeCompIdx] > 0;
-                    const IntensiveQuantities& up = inIsUp ? intQuantsIn : intQuantsEx;
-                    const auto& fs = up.fluidState();
-                    if (inIsUp) {
-                        flux += fs.enthalpy(phaseIdx)
-                         * fs.density(phaseIdx)
-                         * darcyFlux[activeCompIdx];
-                    } else {
-                        flux += getValue(fs.enthalpy(phaseIdx))
-                         * getValue(fs.density(phaseIdx))
-                         * getValue(darcyFlux[activeCompIdx]);
-                    }
-                }
-                flux*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
-            
-                this->energyVector_[globI] += getValue(flux);
-                if (globI == 0) {
-                    //std::cout << "flux: " << globJ << " " << flux << std::endl;
-                }
-
-                (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(Indices::temperatureIdx);
-                (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(Indices::temperatureIdx);
-
-                const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
-                const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
-                Evaluation heatFlux;
-                {
-                    short interiorDofIdx = 0; // NB
-                    short exteriorDofIdx = 1; // NB
-
-                    EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
-                                                                            interiorDofIdx, // focusDofIndex,
-                                                                            interiorDofIdx,
-                                                                            exteriorDofIdx,
-                                                                            intQuantsIn,
-                                                                            intQuantsEx,
-                                                                            intQuantsIn.fluidState(),
-                                                                            intQuantsEx.fluidState(),
-                                                                            inAlpha,
-                                                                            outAlpha,
-                                                                            nbInfo.res_nbinfo.faceArea);
-                
-                    heatFlux*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
-                    this->energyVector_[globI] += getValue(heatFlux);
-                    (*this->energyMatrix_)[globI][globI][0][0] += heatFlux.derivative(Indices::temperatureIdx);
-                    (*this->energyMatrix_)[globJ][globI][0][0] -= heatFlux.derivative(Indices::temperatureIdx);
-                }
-            }
-        }
-
-        // Well terms
-        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
-        for (const auto& wellPtr : wellPtrs) {
-            this->assembleEquationWell(*wellPtr);
-        }
-        std::vector<EnergyVector> tmp;
-        tmp.resize(1);
-        tmp[0] = this->energyVector_;
-        auto handle = VectorVectorDataHandle<GridView, std::vector<EnergyVector>>(tmp,simulator_.gridView());
-        simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
-        this->energyVector_=tmp[0];
-        Scalar maxNorm = 0.0;
-        Scalar sumNorm = 0.0;
-        for (unsigned globI = 0; globI < numCells; ++globI) {
-            maxNorm = max(maxNorm, std::abs(this->energyVector_[globI]));
-            sumNorm += std::abs(this->energyVector_[globI]);
-        }
-        Scalar scaling = 1.0/4.182e1;
-        maxNorm /= scaling; 
-        sumNorm /= scaling;
-        maxNorm = simulator_.gridView().comm().sum(maxNorm);
-        sumNorm = simulator_.gridView().comm().sum(sumNorm);
-        const int globalNumCells = simulator_.gridView().comm().sum(numCells);
-        sumNorm /= globalNumCells;
-        if (maxNorm < 1e-2 || sumNorm < 1e-7) {
-            std::cout << "Newton converged" << std::endl;
-            break;
-        } 
-        std::cout << "iter continue: " << iter << " " << maxNorm << " " << sumNorm << std::endl;
-
-        if (simulator_.gridView().comm().size() > 1) {
-            //loop over precalculated overlap rows and columns
-            for (const auto row : overlapRows_)
-            {
-                // Zero out row.
-                (*this->energyMatrix_)[row] = 0.0;
-
-                //diagonal block set to diag(1.0).
-                (*this->energyMatrix_)[row][row][0][0] = 1.0;
-            }
-        }
-
+    void solveAndUpdate() {
+        const unsigned int numCells = simulator_.model().numTotalDof();
         EnergyVector dx(numCells);
-
         bool converged = this->linearSolve_(*this->energyMatrix_, dx, this->energyVector_);
         if (!converged) {
             OpmLog::warning("### Temp model: Linear solver did not converge. ###");
@@ -351,11 +226,34 @@ protected:
                 //std::cout << globI << " " << this->temperature_[globI] << " " << dx[globI] << " " << this->energyVector_[globI] << std::endl;
             }
             this->temperature_[globI] -= std::clamp(dx[globI][0], Scalar(-10.0), Scalar(10.0));
-
             intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
             intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
+    }
+    
+    bool converged(const int iter) {
+        const unsigned int numCells = simulator_.model().numTotalDof();
+        Scalar maxNorm = 0.0;
+        Scalar sumNorm = 0.0;
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            maxNorm = max(maxNorm, std::abs(this->energyVector_[globI]));
+            sumNorm += std::abs(this->energyVector_[globI]);
         }
+        Scalar scaling = 1.0/4.182e1; //// converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
+        maxNorm /= scaling; 
+        sumNorm /= scaling;
+        maxNorm = simulator_.gridView().comm().sum(maxNorm);
+        sumNorm = simulator_.gridView().comm().sum(sumNorm);
+        const int globalNumCells = simulator_.gridView().comm().sum(numCells);
+        sumNorm /= globalNumCells;
+        const auto tolerance_cnv_energy = Parameters::Get<Parameters::ToleranceCnvEnergy<Scalar>>();
+        const auto tolerance_energy_balance = Parameters::Get<Parameters::ToleranceEnergyBalance<Scalar>>();
+        if (maxNorm < tolerance_cnv_energy || sumNorm < tolerance_energy_balance) {
+            const auto msg = fmt::format("Temperature model (TEMP): Newton converged after {} iterations", iter);
+            OpmLog::debug(msg);
+            return true;
+        }
+        return false;
     }
 
     template< class LhsEval>
@@ -382,12 +280,137 @@ protected:
         storage*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
+    template < class ResidualNBInfo>
+    void computeFluxTerm(unsigned globI, unsigned globJ, const ResidualNBInfo& res_nbinfo, Evaluation& flux) {
+
+        const IntensiveQuantities& intQuantsIn = intQuants_[globI];
+        const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
+        RateVector tmp(0.0); //not used
+        RateVector darcyFlux(0.0);
+        LocalResidual::computeFlux(tmp, darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, res_nbinfo, simulator_.problem().moduleParams());
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+            unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+            bool inIsUp = darcyFlux[activeCompIdx] > 0;
+            const IntensiveQuantities& up = inIsUp ? intQuantsIn : intQuantsEx;
+            const auto& fs = up.fluidState();
+            if (inIsUp) {
+                flux += fs.enthalpy(phaseIdx)
+                    * fs.density(phaseIdx)
+                    * darcyFlux[activeCompIdx];
+            } else {
+                flux += getValue(fs.enthalpy(phaseIdx))
+                    * getValue(fs.density(phaseIdx))
+                    * getValue(darcyFlux[activeCompIdx]);
+            }
+        }
+        flux *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+    }
+
+    template < class ResidualNBInfo>
+    void computeHeatFluxTerm(unsigned globI, unsigned globJ, const ResidualNBInfo& res_nbinfo, Evaluation& flux) {
+        const IntensiveQuantities& intQuantsIn = intQuants_[globI];
+        const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
+        const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
+        const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
+        Evaluation heatFlux;
+        short interiorDofIdx = 0; // NB
+        short exteriorDofIdx = 1; // NB
+        EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
+                                                                    interiorDofIdx, // focusDofIndex,
+                                                                    interiorDofIdx,
+                                                                    exteriorDofIdx,
+                                                                    intQuantsIn,
+                                                                    intQuantsEx,
+                                                                    intQuantsIn.fluidState(),
+                                                                    intQuantsEx.fluidState(),
+                                                                    inAlpha,
+                                                                    outAlpha,
+                                                                    res_nbinfo.faceArea);
+    
+        heatFlux*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+    }
+
+    void assembleEquations() {
+        this->energyVector_ = 0.0;
+        (*this->energyMatrix_) = 0.0;
+        Scalar dt = simulator_.timeStepSize();
+        const unsigned int numCells = simulator_.model().numTotalDof();      
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            Scalar volume = simulator_.model().dofTotalVolume(globI);
+            Scalar storefac = volume / dt;
+            Evaluation storage = 0.0;
+            computeStorageTerm(globI, storage); 
+            this->energyVector_[globI] += storefac * ( getValue(storage) - storage1_[globI] );
+            if (globI == 0) {
+                //std::cout << "storage " << getValue(storage) << " " << storage1_[globI] << " " << storefac * ( getValue(storage) - storage1_[globI] ) << " " <<  storefac * storage.derivative(Indices::temperatureIdx) << " " << dt/(3600*24) << std::endl;
+            }
+            (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx); 
+        }
+
+        const auto& neighborInfo = simulator_.model().linearizer().getNeighborInfo();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            const auto& nbInfos = neighborInfo[globI];
+            for (const auto& nbInfo : nbInfos) {
+                unsigned globJ = nbInfo.neighbor;
+                assert(globJ != globI);
+
+                // compute convective flux
+                Evaluation flux = 0.0;
+                computeFluxTerm(globI, globJ, nbInfo.res_nbinfo, flux);
+                this->energyVector_[globI] += getValue(flux);
+                (*this->energyMatrix_)[globI][globI][0][0] += flux.derivative(Indices::temperatureIdx);
+                (*this->energyMatrix_)[globJ][globI][0][0] -= flux.derivative(Indices::temperatureIdx);
+
+                // compute conductive flux
+                Evaluation heatFlux = 0.0;
+                computeHeatFluxTerm(globI, globJ, nbInfo.res_nbinfo, heatFlux);
+                this->energyVector_[globI] += getValue(heatFlux);
+                (*this->energyMatrix_)[globI][globI][0][0] += heatFlux.derivative(Indices::temperatureIdx);
+                (*this->energyMatrix_)[globJ][globI][0][0] -= heatFlux.derivative(Indices::temperatureIdx);
+            }
+        }
+
+        // Well terms
+        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+        for (const auto& wellPtr : wellPtrs) {
+            this->assembleEquationWell(*wellPtr);
+        }
+
+        // Set dirichlet conditions for overlapping cells 
+        if (simulator_.gridView().comm().size() > 1) {
+            //loop over precalculated overlap rows and columns
+            for (const auto row : overlapRows_)
+            {
+                // Zero out row.
+                (*this->energyMatrix_)[row] = 0.0;
+
+                //diagonal block set to diag(1.0).
+                (*this->energyMatrix_)[row][row][0][0] = 1.0;
+            }
+        }
+
+#warning fix this
+        // Comunicate the residual
+        std::vector<EnergyVector> tmp;
+        tmp.resize(1);
+        tmp[0] = this->energyVector_;
+        auto handle = VectorVectorDataHandle<GridView, std::vector<EnergyVector>>(tmp,simulator_.gridView());
+        simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
+        this->energyVector_ = tmp[0];
+    }
+
     template<class Well>
     void assembleEquationWell(const Well& well)
     {
         const auto& eclWell = well.wellEcl();
-        Scalar perf_temp = 200;
-        Scalar dt = simulator_.timeStepSize();
         std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
         const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
@@ -397,11 +420,17 @@ protected:
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
 
-                //Scalar rate = ws.perf_data.rates[i]; //well.volumetricSurfaceRateForConnection(globI, phaseIdx);
                 Evaluation rate = well.volumetricSurfaceRateForConnection(globI, phaseIdx);
-
-                if (phaseIdx == gasPhaseIdx) { // assumes rv == 0
-                    rate -= well.volumetricSurfaceRateForConnection(globI, oilPhaseIdx)*getValue(fs.Rs());
+                const Evaluation d =  1.0 - fs.Rv() * fs.Rs();
+                if (phaseIdx == gasPhaseIdx && d > 0) {
+                    const auto& oilrate = well.volumetricSurfaceRateForConnection(globI, oilPhaseIdx);
+                    rate -= oilrate * getValue(fs.Rs());
+                    rate /= d;
+                }
+                if (phaseIdx == oilPhaseIdx && d > 0) {
+                    const auto& gasrate = well.volumetricSurfaceRateForConnection(globI, gasPhaseIdx);
+                    rate -= gasrate * getValue(fs.Rv());
+                    rate /= d;
                 }
 
                 if (rate > 0 && eclWell.isInjector()) {
@@ -421,10 +450,9 @@ protected:
             }
         }
     }
-   
 
-    Simulator& simulator_;
-    EnergyVector storage0_;
+    const Simulator& simulator_;
+    EnergyVector storage1_;
     std::vector<IntensiveQuantities> intQuants_;
     std::vector<int> overlapRows_;
     std::vector<int> interiorRows_;
