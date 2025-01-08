@@ -191,12 +191,12 @@ public:
 
     void updateTempSalt(const Problem& problem,
                         const PrimaryVariables& priVars,
-                        const unsigned globalDofIdx,
+                        const unsigned globalSpaceIdx,
                         const unsigned timeIdx,
                         const LinearizationType& lintype)
     {
         if constexpr (enableTemperature || enableEnergy) {
-            asImp_().updateTemperature_(problem, priVars, globalDofIdx, timeIdx, lintype);
+            asImp_().updateTemperature_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
         }
 
         if constexpr (enableBrine) {
@@ -285,13 +285,22 @@ public:
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        this->updateRelpermAndPressures(problem, priVars, globalSpaceIdx, timeIdx, elemCtx.linearizationType());
+    }
+
+    void updateRelpermAndPressures(const Problem& problem,
+                                   const PrimaryVariables& priVars,
+                                   const unsigned globalSpaceIdx,
+                                   const unsigned timeIdx,
+                                   const LinearizationType& lintype)
+    {
 
         // Solvent saturation manipulation:
         // After this, gas saturation will actually be (gas sat + solvent sat)
         // until set back to just gas saturation in the corresponding call to
         // solventPostSatFuncUpdate_() further down.
         if constexpr (enableSolvent) {
-            asImp_().solventPreSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
+            asImp_().solventPreSatFuncUpdate_(priVars, timeIdx, lintype);
         }
 
         // Phase relperms.
@@ -307,7 +316,7 @@ public:
             if (BrineModule::hasPcfactTables() &&
                 priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)
             {
-                const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
+                const unsigned satnumRegionIdx = problem.satnumRegionIndex(globalSpaceIdx);
                 const Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
                 const Evaluation porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
                 const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
@@ -352,7 +361,7 @@ public:
         // Note that this depend on the pressures, so it must be called AFTER the pressures
         // have been updated.
         if constexpr (enableSolvent) {
-            asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
+            asImp_().solventPostSatFuncUpdate_(problem, priVars, globalSpaceIdx, timeIdx, lintype);
         }
     }
 
