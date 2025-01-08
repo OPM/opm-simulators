@@ -633,50 +633,17 @@ public:
     /*!
      * \copydoc IntensiveQuantities::update
      */
-    // void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    // {
-    //     ParentType::update(elemCtx, dofIdx, timeIdx);
-    //     const auto& problem = elemCtx.problem();
-    //     const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-    //     const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-    //     this->update(problem, priVars, globalSpaceIdx, timeIdx);
-    // }
-
-    /*!
-     * \copydoc IntensiveQuantities::update
-     */
     void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
-
-        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
-
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
-        const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
+        updatePart1(problem, priVars, globalSpaceIdx, timeIdx);
 
-        fluidState_.setPvtRegionIndex(pvtRegionIdx);
-
-        // updateTempSalt(elemCtx, dofIdx, timeIdx);
-        updateTempSalt(problem, priVars, globalSpaceIdx, timeIdx, linearizationType);
-        // updateSaturations(elemCtx, dofIdx, timeIdx);
-        updateSaturations(priVars, timeIdx, linearizationType);
-        updateRelpermAndPressures(elemCtx, dofIdx, timeIdx);
-
-        // update extBO parameters
-        if constexpr (enableExtbo) {
-            asImp_().zFractionUpdate_(elemCtx, dofIdx, timeIdx);
-        }
-
-        const Evaluation SoMax = updateRsRvRsw(elemCtx, dofIdx, timeIdx);
-
-        updateMobilityAndInvB();
-        updatePhaseDensities();
         updatePorosity(elemCtx, dofIdx, timeIdx);
 
-        rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
+        // Below: things I want to move to elemCtx-less versions but have not done yet.
 
         if constexpr (enableSolvent) {
             asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
@@ -689,9 +656,9 @@ public:
         }
 
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
-        paramCache.setRegionIndex(pvtRegionIdx);
+        paramCache.setRegionIndex(priVars.pvtRegionIndex());
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            paramCache.setMaxOilSat(SoMax);
+            //paramCache.setMaxOilSat(SoMax);
         }
         paramCache.updateAll(fluidState_);
 
@@ -724,10 +691,64 @@ public:
         FluxIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
 
         // update the diffusion specific quantities of the intensive quantities
-        DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
+        if constexpr (enableDiffusion) {
+            DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
+        }
 
         // update the dispersion specific quantities of the intensive quantities
-        DispersionIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
+        if constexpr (enableDispersion) {
+            DispersionIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
+        }
+    }
+
+    void update(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
+        static_assert(!enableSolvent);
+        static_assert(!enableExtbo);
+        static_assert(!enablePolymer);
+        static_assert(!enableEnergy);
+        static_assert(!enableFoam);
+        static_assert(!enableMICP);
+        static_assert(!enableBrine);
+        static_assert(!enableDiffusion);
+        static_assert(!enableDispersion);
+
+        this->extrusionFactor_ = 1.0;// to avoid fixing parent update
+        updatePart1(problem, priVars, globalSpaceIdx, timeIdx);
+        // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
+        updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
+
+        // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
+    }
+
+    void updatePart1(const Problem& problem, const PrimaryVariables& priVars, const unsigned globalSpaceIdx, const unsigned timeIdx)
+    {
+        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
+
+        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
+        const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
+
+        fluidState_.setPvtRegionIndex(pvtRegionIdx);
+
+        // updateTempSalt(elemCtx, dofIdx, timeIdx);
+        updateTempSalt(problem, priVars, globalSpaceIdx, timeIdx, linearizationType);
+        // updateSaturations(elemCtx, dofIdx, timeIdx);
+        updateSaturations(priVars, timeIdx, linearizationType);
+        // updateRelpermAndPressures(elemCtx, dofIdx, timeIdx);
+        updateRelpermAndPressures(problem, priVars, globalSpaceIdx, timeIdx, linearizationType);
+
+        // update extBO parameters
+        if constexpr (enableExtbo) {
+                // TODO: asImp_().zFractionUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+
+        // Evaluation SoMax = updateRsRvRsw(elemCtx, dofIdx, timeIdx);
+        Evaluation SoMax = updateRsRvRsw(problem, priVars, globalSpaceIdx, timeIdx);
+
+        updateMobilityAndInvB();
+        updatePhaseDensities();
+
+        rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
 
 #ifndef NDEBUG
         assertFiniteMembers();
