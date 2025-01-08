@@ -289,12 +289,13 @@ solveLowerLevelSet(T* reorderedMat,
                    const T* dInv,
                    const T* d,
                    T* v,
-                   int thrBlockSize)
+                   int thrBlockSize,
+                   cudaStream_t stream)
 {
     int threadBlockSize
         = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
 
@@ -310,7 +311,8 @@ solveLowerLevelSetSplit(MatrixScalar* reorderedMat,
                         const DiagonalScalar* dInv,
                         const LinearSolverScalar* d,
                         LinearSolverScalar* v,
-                        int thrBlockSize)
+                        int thrBlockSize,
+                        cudaStream_t stream)
 {
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar>, thrBlockSize);
@@ -329,12 +331,13 @@ solveUpperLevelSet(T* reorderedMat,
                    int rowsInLevelSet,
                    const T* dInv,
                    T* v,
-                   int thrBlockSize)
+                   int thrBlockSize,
+                   cudaStream_t stream)
 {
     int threadBlockSize
         = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize, 0 ,stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
@@ -348,7 +351,8 @@ solveUpperLevelSetSplit(MatrixScalar* reorderedMat,
                         int rowsInLevelSet,
                         const DiagonalScalar* dInv,
                         LinearSolverScalar* v,
-                        int thrBlockSize)
+                        int thrBlockSize,
+                        cudaStream_t stream)
 {
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar>, thrBlockSize);
@@ -367,13 +371,14 @@ computeDiluDiagonal(T* reorderedMat,
                     const int startIdx,
                     int rowsInLevelSet,
                     T* dInv,
-                    int thrBlockSize)
+                    int thrBlockSize,
+                    cudaStream_t stream)
 {
     if (blocksize <= 3) {
         int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
             cuComputeDiluDiagonal<T, blocksize>, thrBlockSize);
         int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-        cuComputeDiluDiagonal<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(reorderedMat,
+        cuComputeDiluDiagonal<T, blocksize><<<nThreadBlocks, threadBlockSize, 0 , stream>>>(reorderedMat,
                                                                                 rowIndices,
                                                                                 colIndices,
                                                                                 reorderedToNatural,
@@ -403,7 +408,8 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
                          OutputScalar* dstDiag,
                          OutputScalar* dstLowerMat,
                          OutputScalar* dstUpperMat,
-                         int thrBlockSize)
+                         int thrBlockSize,
+                   cudaStream_t stream)
 {
     if (blocksize <= 3) {
         int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(

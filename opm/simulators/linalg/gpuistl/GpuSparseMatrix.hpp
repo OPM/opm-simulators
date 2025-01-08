@@ -293,6 +293,18 @@ public:
     template <class MatrixType>
     void updateNonzeroValues(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
 
+
+    template <class MatrixType>
+    void updateNonzeroValuesDirectlyInStream(const MatrixType& matrix, cudaStream_t stream)
+    {
+        OPM_ERROR_IF(nonzeroes() != matrix.nonzeroes(), "Matrix does not have the same number of non-zero elements.");
+        OPM_ERROR_IF(matrix[0][0].N() != blockSize(), "Matrix does not have the same blocksize.");
+        OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
+
+        const T* newNonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
+        m_nonZeroElements.copyFromHost(newNonZeroElements, nonzeroes() * blockSize() * blockSize(), stream);
+    }
+
 private:
     GpuVector<T> m_nonZeroElements;
     GpuVector<int> m_columnIndices;

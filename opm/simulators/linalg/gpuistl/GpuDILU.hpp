@@ -158,8 +158,9 @@ private:
     std::map<std::pair<field_type*, const field_type*>, cudaGraph_t> m_apply_graphs;
     bool m_update_graph_captured {false};
     cudaGraph_t m_update_graph;
+    cudaGraphExec_t m_update_executable_graph;
     std::map<std::pair<field_type*, const field_type*>, cudaGraphExec_t> m_executableGraphs;
-    cudaStream_t stream;
+    cudaStream_t m_stream;
     cudaGraph_t graph;
     cudaGraphExec_t instance;
     bool m_cudagraphInitialized {false};
