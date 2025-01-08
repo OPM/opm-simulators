@@ -36,14 +36,17 @@
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/BrooksCorey.hpp>
 #include <opm/material/constraintsolvers/PTFlash.hpp> 
-#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 #include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/models/ptflash/flashmodel.hh>
 #include <opm/models/io/structuredgridvanguard.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/start.hh>
+
 #include <opm/simulators/linalg/parallelistlbackend.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <dune/grid/yaspgrid.hh>
@@ -104,7 +107,7 @@ private:
     static constexpr int num_comp = getPropValue<TypeTag, Properties::NumComp>();
 
 public:
-    using type = Opm::GenericOilGasFluidSystem<Scalar, num_comp>;
+    using type = Opm::GenericOilGasWaterFluidSystem<Scalar, num_comp>;
 };
 
 // Set the material Law
@@ -116,8 +119,8 @@ private:
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Traits = Opm::TwoPhaseMaterialTraits<Scalar,
-                                               //  /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx, // TODO
+    using Traits = Opm::ThreePhaseMaterialTraits<Scalar,
+                                               /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
                                                /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
                                                /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
@@ -192,7 +195,11 @@ class CO2PTProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
+    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { conti0EqIdx = Indices::conti0EqIdx };
+    enum { pressure0Idx = Indices::pressure0Idx };
+    enum { z0Idx = Indices::z0Idx };
+    enum { water0Idx = Indices::water0Idx };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
@@ -201,6 +208,7 @@ class CO2PTProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
+    using SaturationVector = Dune::FieldVector<Evaluation, numPhases>;
     using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
 
 public:
@@ -235,6 +243,21 @@ public:
         porosity_ = 0.1;
     }
 
+    void initWaterPVT()
+    {
+        using WaterPvt = typename FluidSystem::WaterPvt;
+        std::shared_ptr<WaterPvt> waterPvt = std::make_shared<WaterPvt>();
+        waterPvt->setApproach(WaterPvtApproach::ConstantCompressibilityWater);
+        auto& ccWaterPvt = waterPvt->template getRealPvt<WaterPvtApproach::ConstantCompressibilityWater>();
+        ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
+        Scalar rhoRefW = 1037.0; // [kg]
+        ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, /*rhoRefO=*/Scalar(0.0), /*rhoRefG=*/Scalar(0.0), rhoRefW);
+        ccWaterPvt.setViscosity(/*regionIdx=*/0, 9.6e-4);
+        ccWaterPvt.setCompressibility(/*regionIdx=*/0, 1.450377e-10);
+        waterPvt->initEnd();
+        FluidSystem::setWaterPvt(std::move(waterPvt));
+    }
+
     template <class Context>
     const DimVector&
     gravity([[maybe_unused]]const Context& context,
@@ -255,8 +278,12 @@ public:
     void finishInit()
     {
         ParentType::finishInit();
+
         // initialize fixed parameters; temperature, permeability, porosity
         initPetrophysics();
+
+        // Initialize water pvt
+        initWaterPVT();
     }
 
     /*!
@@ -351,8 +378,8 @@ public:
 
         // Calculate storage terms
          PrimaryVariables storageL, storageG;
-         this->model().globalPhaseStorage(storageL, /*phaseIdx=*/0);
-         this->model().globalPhaseStorage(storageG, /*phaseIdx=*/1);
+         this->model().globalPhaseStorage(storageL, /*phaseIdx=*/oilPhaseIdx);
+         this->model().globalPhaseStorage(storageG, /*phaseIdx=*/gasPhaseIdx);
 
          // Write mass balance information for rank 0
         //  if (this->gridView().comm().rank() == 0) {
@@ -449,17 +476,18 @@ private:
         int prod = Parameters::Get<Parameters::CellsX>() - 1;
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         ComponentVector comp;
-        comp[0] = Evaluation::createVariable(0.5, 1);
-        comp[1] = Evaluation::createVariable(0.3, 2);
+        comp[0] = Evaluation::createVariable(0.5, z0Idx);
+        comp[1] = Evaluation::createVariable(0.3, z0Idx + 1);
         comp[2] = 1. - comp[0] - comp[1];
         if (spatialIdx == inj) {
-            comp[0] = Evaluation::createVariable(0.99, 1);
-            comp[1] = Evaluation::createVariable(0.01 - 1e-3, 2);
+            comp[0] = Evaluation::createVariable(0.99, z0Idx);
+            comp[1] = Evaluation::createVariable(0.01 - 1e-3, z0Idx + 1);
             comp[2] = 1. - comp[0] - comp[1];
         }
-        ComponentVector sat;
-        sat[0] = 1.0;
-        sat[1] = 1.0 - sat[0];
+        SaturationVector sat;
+        sat[FluidSystem::oilPhaseIdx] = 1.0;
+        sat[FluidSystem::waterPhaseIdx] = 0.0;
+        sat[FluidSystem::gasPhaseIdx] = 1.0 - sat[FluidSystem::oilPhaseIdx] - sat[FluidSystem::waterPhaseIdx];
 
         Scalar p0 = Parameters::Get<Parameters::Initialpressure<Scalar>>();
 
@@ -471,10 +499,11 @@ private:
         if (spatialIdx == prod) {
             p0 *= 0.5;
         }
-        Evaluation p_init = Evaluation::createVariable(p0, 0);
+        Evaluation p_init = Evaluation::createVariable(p0, pressure0Idx);
 
         fs.setPressure(FluidSystem::oilPhaseIdx, p_init);
         fs.setPressure(FluidSystem::gasPhaseIdx, p_init);
+        fs.setPressure(FluidSystem::waterPhaseIdx, p_init);
 
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             fs.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, comp[compIdx]);
@@ -482,8 +511,9 @@ private:
         }
 
         // It is used here only for calculate the z
-        fs.setSaturation(FluidSystem::oilPhaseIdx, sat[0]);
-        fs.setSaturation(FluidSystem::gasPhaseIdx, sat[1]);
+        fs.setSaturation(FluidSystem::oilPhaseIdx, sat[FluidSystem::oilPhaseIdx]);
+        fs.setSaturation(FluidSystem::gasPhaseIdx, sat[FluidSystem::gasPhaseIdx]);
+        fs.setSaturation(FluidSystem::waterPhaseIdx, sat[FluidSystem::waterPhaseIdx]);
 
         fs.setTemperature(temperature_);
 
@@ -494,8 +524,10 @@ private:
             paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
             fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
             fs.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::gasPhaseIdx));
+            fs.setDensity(FluidSystem::waterPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::waterPhaseIdx));
             fs.setViscosity(FluidSystem::oilPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::oilPhaseIdx));
             fs.setViscosity(FluidSystem::gasPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::gasPhaseIdx));
+            fs.setViscosity(FluidSystem::waterPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::waterPhaseIdx));
         }
 
         // determine the component total fractions
@@ -504,6 +536,9 @@ private:
         Dune::FieldVector<Scalar, numComponents> z(0.0);
         Scalar sumMoles = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (phaseIdx == static_cast<int>(waterPhaseIdx)) {
+                continue;
+            }
             const auto saturation = getValue(fs.saturation(phaseIdx));
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 Scalar tmp = getValue(fs.molarity(phaseIdx, compIdx)) * saturation;
