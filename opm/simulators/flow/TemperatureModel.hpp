@@ -33,6 +33,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/GenericTemperatureModel.hpp>
+#include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 //#include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <array>
@@ -121,6 +122,11 @@ public:
         }
      
         intQuants_.resize(numCells);
+        const auto& elemMapper = simulator_.model().elementMapper(); //does not work.
+        // Set it up manually
+        //ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
+        detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
+
     }
 
     void beginTimeStep()
@@ -311,16 +317,31 @@ protected:
         }
         Scalar scaling = 1.0/4.182e1;
         maxNorm /= scaling; 
-        sumNorm /= (numCells*scaling);
+        sumNorm /= scaling;
         maxNorm = simulator_.gridView().comm().sum(maxNorm);
         sumNorm = simulator_.gridView().comm().sum(sumNorm);
+        const int globalNumCells = simulator_.gridView().comm().sum(numCells);
+        sumNorm /= globalNumCells;
         if (maxNorm < 1e-2 || sumNorm < 1e-7) {
             std::cout << "Newton converged" << std::endl;
             break;
         } 
-        std::cout << "iter continue: " << iter << " " << maxNorm << " " << sumNorm/numCells << std::endl;
+        std::cout << "iter continue: " << iter << " " << maxNorm << " " << sumNorm << std::endl;
+
+        if (simulator_.gridView().comm().size() > 1) {
+            //loop over precalculated overlap rows and columns
+            for (const auto row : overlapRows_)
+            {
+                // Zero out row.
+                (*this->energyMatrix_)[row] = 0.0;
+
+                //diagonal block set to diag(1.0).
+                (*this->energyMatrix_)[row][row][0][0] = 1.0;
+            }
+        }
 
         EnergyVector dx(numCells);
+
         bool converged = this->linearSolve_(*this->energyMatrix_, dx, this->energyVector_);
         if (!converged) {
             OpmLog::warning("### Temp model: Linear solver did not converge. ###");
@@ -405,7 +426,8 @@ protected:
     Simulator& simulator_;
     EnergyVector storage0_;
     std::vector<IntensiveQuantities> intQuants_;
-
+    std::vector<int> overlapRows_;
+    std::vector<int> interiorRows_;
 };
 
 } // namespace Opm
