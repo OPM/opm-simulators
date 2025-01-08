@@ -466,14 +466,14 @@ public:
 
     void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
     {
+        auto& fs = asImp_().fluidState_;
+        const Scalar T = problem.temperature(globalDofIdx, timeIdx);
+        // if TEMP is used we solve for temperature seperatly
         if constexpr (enableTemperature) {
-            auto& fs = asImp_().fluidState_;
-            // if TEMP is used the updated temperature is stored in the
-            // temperature model.
-            const Scalar T = problem.temperature(globalDofIdx, timeIdx);
-            // if TEMP is used we solve for temperature seperatly
             const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
             fs.setTemperature(TE);
+        } else {
+            fs.setTemperature(T);
         }
     }
 
@@ -481,14 +481,14 @@ public:
                             [[maybe_unused]] unsigned dofIdx,
                             [[maybe_unused]] unsigned timeIdx)
     {
+        auto& fs = asImp_().fluidState_;
+        const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
+        // if TEMP is used we solve for temperature seperatly
         if constexpr (enableTemperature) {
-            // if TEMP is used the updated temperature is stored in the
-            // temperature model.
-            auto& fs = asImp_().fluidState_;
-            const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
-            // if TEMP is used we solve for temperature seperatly
             const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
             fs.setTemperature(TE);
+        } else {
+            fs.setTemperature(T);
         }
     }
 

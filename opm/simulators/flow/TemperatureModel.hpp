@@ -58,7 +58,7 @@ namespace Opm {
  *
  * \brief A class which handles sequential implicit solution of the energy equation as specified in by TEMP
  */
-template <class TypeTag>
+template <class TypeTag, bool enableTempV = getPropValue<TypeTag, Properties::EnableTemperature>()>
 class TemperatureModel : public GenericTemperatureModel<GetPropType<TypeTag, Properties::Grid>,
                                               GetPropType<TypeTag, Properties::GridView>,
                                               GetPropType<TypeTag, Properties::DofMapper>,
@@ -455,6 +455,25 @@ protected:
     std::vector<IntensiveQuantities> intQuants_;
     std::vector<int> overlapRows_;
     std::vector<int> interiorRows_;
+};
+
+
+// need for the old linearizer
+template <class TypeTag>
+class TemperatureModel<TypeTag, false> {
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+public:
+    TemperatureModel(Simulator& simulator)
+    { }
+
+    void init(bool rst) {}
+    void beginTimeStep() {}
+    void endTimeStep() {}
+    const Scalar temperature(size_t globalIdx) const {
+        return FluidSystem::reservoirTemperature();
+    }
 };
 
 } // namespace Opm
