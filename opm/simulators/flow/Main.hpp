@@ -731,6 +731,9 @@ private:
                     std::cout << ("Warning: Invalid value for OMP_NUM_THREADS environment variable.") << std::endl;
                 }
             }
+        } else {
+            // Set a limit to OMP threads. Defaults can saturate the whole machine.
+            omp_set_num_threads(threads);
         }
 
         first_time = false;
