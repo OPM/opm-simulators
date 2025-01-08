@@ -98,10 +98,10 @@ namespace Opm {
         using SourceDataSpan =
             typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
 
-        this->wbpCalculationService_
-            .localCellIndex([this](const std::size_t globalIndex)
-            { return this->compressedIndexForInterior(globalIndex); })
-            .evalCellSource([this](const int localCell, SourceDataSpan sourceTerms)
+        this->wbp_.initializeSources(
+            [this](const std::size_t globalIndex)
+            { return this->compressedIndexForInterior(globalIndex); },
+            [this](const int localCell, SourceDataSpan sourceTerms)
             {
                 using Item = typename SourceDataSpan::Item;
 
@@ -139,7 +139,8 @@ namespace Opm {
                 if (haveWat) { rho += weightedPhaseDensity(iw); }
 
                 sourceTerms.set(Item::MixtureDensity, rho);
-            });
+            }
+        );
     }
 
     template<typename TypeTag>
@@ -261,7 +262,7 @@ namespace Opm {
         {
             this->initializeWellPerfData();
             this->initializeWellState(reportStepIdx);
-            this->initializeWBPCalculationService();
+            this->wbp_.initializeWBPCalculationService();
 
             if (this->param_.use_multisegment_well_ && this->anyMSWellOpenLocal()) {
                 this->wellState().initWellStateMSWell(this->wells_ecl_, &this->prevWellState());
@@ -961,7 +962,7 @@ namespace Opm {
             }
         }
 
-        this->registerOpenWellsForWBPCalculation();
+        this->wbp_.registerOpenWellsForWBPCalculation();
     }
 
 

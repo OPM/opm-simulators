@@ -237,7 +237,7 @@ template<class Scalar> class WellContributions;
 
             data::WellBlockAveragePressures wellBlockAveragePressures() const
             {
-                return this->computeWellBlockAveragePressures(this->gravity_);
+                return this->wbp_.computeWellBlockAveragePressures(this->gravity_);
             }
 
 #if COMPILE_GPU_BRIDGE
