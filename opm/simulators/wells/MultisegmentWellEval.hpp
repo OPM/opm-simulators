@@ -63,7 +63,6 @@ protected:
     // TODO: for now, we only use one type to save some implementation efforts, while improve later.
     using EvalWell = typename PrimaryVariables::EvalWell;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numDerivatives>;
-    //using Eval = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
     //! \brief Returns a const reference to equation system.

@@ -230,7 +230,7 @@ protected:
             intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
     }
-    
+
     bool converged(const int iter) {
         const unsigned int numCells = simulator_.model().numTotalDof();
         Scalar maxNorm = 0.0;
@@ -240,7 +240,7 @@ protected:
             sumNorm += std::abs(this->energyVector_[globI]);
         }
         Scalar scaling = 1.0/4.182e1; //// converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
-        maxNorm /= scaling; 
+        maxNorm /= scaling;
         sumNorm /= scaling;
         maxNorm = simulator_.gridView().comm().sum(maxNorm);
         sumNorm = simulator_.gridView().comm().sum(sumNorm);
@@ -328,15 +328,14 @@ protected:
                                                                     inAlpha,
                                                                     outAlpha,
                                                                     res_nbinfo.faceArea);
-    
-        heatFlux*= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+        heatFlux *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     void assembleEquations() {
         this->energyVector_ = 0.0;
         (*this->energyMatrix_) = 0.0;
         Scalar dt = simulator_.timeStepSize();
-        const unsigned int numCells = simulator_.model().numTotalDof();      
+        const unsigned int numCells = simulator_.model().numTotalDof();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -344,12 +343,12 @@ protected:
             Scalar volume = simulator_.model().dofTotalVolume(globI);
             Scalar storefac = volume / dt;
             Evaluation storage = 0.0;
-            computeStorageTerm(globI, storage); 
+            computeStorageTerm(globI, storage);
             this->energyVector_[globI] += storefac * ( getValue(storage) - storage1_[globI] );
             if (globI == 0) {
                 //std::cout << "storage " << getValue(storage) << " " << storage1_[globI] << " " << storefac * ( getValue(storage) - storage1_[globI] ) << " " <<  storefac * storage.derivative(Indices::temperatureIdx) << " " << dt/(3600*24) << std::endl;
             }
-            (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx); 
+            (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx);
         }
 
         const auto& neighborInfo = simulator_.model().linearizer().getNeighborInfo();
@@ -384,7 +383,7 @@ protected:
             this->assembleEquationWell(*wellPtr);
         }
 
-        // Set dirichlet conditions for overlapping cells 
+        // Set dirichlet conditions for overlapping cells
         if (simulator_.gridView().comm().size() > 1) {
             //loop over precalculated overlap rows and columns
             for (const auto row : overlapRows_)

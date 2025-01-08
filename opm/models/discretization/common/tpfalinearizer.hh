@@ -768,13 +768,6 @@ private:
                 }
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
-                if constexpr(enableEnergy){
-
-                if (globI == 0) {
-                    //std::cout << "flux " << globJ << " " << adres[3] << std::endl;
-                }
-                }
-
                 //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
                 *diagMatAddress_[globI] += bMat;
                 bMat *= -1.0;
@@ -788,7 +781,6 @@ private:
             double dt = simulator_().timeStepSize();
             double volume = model_().dofTotalVolume(globI);
             Scalar storefac = volume / dt;
-            res = 0.0;
             adres = 0.0;
             {
                 OPM_TIMEBLOCK_LOCAL(computeStorage);
@@ -834,10 +826,6 @@ private:
             res *= storefac;
             bMat *= storefac;
             residual_[globI] += res;
-            if constexpr(enableEnergy){
-            //if (globI == 0)
-                //std::cout << "storage " << res[3] << std::endl;
-            }
             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
 

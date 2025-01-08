@@ -46,7 +46,6 @@ public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     static constexpr int numEq = BlackoilIndices::numEq;
-    //using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
     using Eval = GetPropType<TypeTag, Properties::Evaluation>;
     AquiferConstantFlux(const std::vector<Aquancon::AquancCell>& connections,
                         const Simulator&                         simulator,
