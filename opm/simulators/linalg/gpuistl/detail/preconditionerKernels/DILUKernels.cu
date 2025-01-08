@@ -294,12 +294,13 @@ solveLowerLevelSet(T* reorderedMat,
                    const T* dInv,
                    const T* d,
                    T* v,
-                   int thrBlockSize)
+                   int thrBlockSize,
+                   cudaStream_t stream)
 {
     int threadBlockSize
         = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
 
@@ -315,12 +316,13 @@ solveLowerLevelSetSplit(MatrixScalar* reorderedMat,
                         const MatrixScalar* dInv,
                         const LinearSolverScalar* d,
                         LinearSolverScalar* v,
-                        int thrBlockSize)
+                        int thrBlockSize,
+                        cudaStream_t stream)
 {
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
 // perform the upper solve for all rows in the same level set
@@ -334,12 +336,13 @@ solveUpperLevelSet(T* reorderedMat,
                    int rowsInLevelSet,
                    const T* dInv,
                    T* v,
-                   int thrBlockSize)
+                   int thrBlockSize,
+                   cudaStream_t stream)
 {
     int threadBlockSize
         = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize, 0 ,stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
@@ -353,12 +356,13 @@ solveUpperLevelSetSplit(MatrixScalar* reorderedMat,
                         int rowsInLevelSet,
                         const MatrixScalar* dInv,
                         LinearSolverScalar* v,
-                        int thrBlockSize)
+                        int thrBlockSize,
+                        cudaStream_t stream)
 {
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar><<<nThreadBlocks, threadBlockSize, 0 , stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
@@ -372,13 +376,14 @@ computeDiluDiagonal(T* reorderedMat,
                     const int startIdx,
                     int rowsInLevelSet,
                     T* dInv,
-                    int thrBlockSize)
+                    int thrBlockSize,
+                    cudaStream_t stream)
 {
     if (blocksize <= 3) {
         int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
             cuComputeDiluDiagonal<T, blocksize>, thrBlockSize);
         int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-        cuComputeDiluDiagonal<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(reorderedMat,
+        cuComputeDiluDiagonal<T, blocksize><<<nThreadBlocks, threadBlockSize, 0 , stream>>>(reorderedMat,
                                                                                 rowIndices,
                                                                                 colIndices,
                                                                                 reorderedToNatural,
@@ -408,13 +413,14 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
                          OutputScalar* dstDiag,
                          OutputScalar* dstLowerMat,
                          OutputScalar* dstUpperMat,
-                         int thrBlockSize)
+                         int thrBlockSize,
+                   cudaStream_t stream)
 {
     if (blocksize <= 3) {
         int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
             cuComputeDiluDiagonalSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix>, thrBlockSize);
         int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-        cuComputeDiluDiagonalSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix><<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
+        cuComputeDiluDiagonalSplit<blocksize, InputScalar, OutputScalar, copyResultToOtherMatrix><<<nThreadBlocks, threadBlockSize, 0, stream>>>(srcReorderedLowerMat,
                                                                                      lowerRowIndices,
                                                                                      lowerColIndices,
                                                                                      srcReorderedUpperMat,
@@ -436,17 +442,17 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
 
 // TODO: format
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
-    template void computeDiluDiagonal<T, blocksize>(T*, int*, int*, int*, int*, const int, int, T*, int);              \
+    template void computeDiluDiagonal<T, blocksize>(T*, int*, int*, int*, int*, const int, int, T*, int, cudaStream_t);              \
     template void computeDiluDiagonalSplit<blocksize, T, double, false>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int);                                      \
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int, cudaStream_t);                                      \
     template void computeDiluDiagonalSplit<blocksize, T, float, false>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int);                                      \
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int, cudaStream_t);                                      \
     template void computeDiluDiagonalSplit<blocksize, T, float, true>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int);                                      \
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int, cudaStream_t);                                      \
     template void computeDiluDiagonalSplit<blocksize, T, double, true>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int);                                      \
-    template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);                 \
-    template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int, cudaStream_t);                                      \
+    template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);                 \
+    template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int, cudaStream_t);
     // template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);       \
     // template void solveUpperLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);            \
     // template void solveLowerLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int, cudaStream_t);
@@ -466,9 +472,9 @@ INSTANTIATE_KERNEL_WRAPPERS(double, 6);
 
 #define INSTANTIATE_SOLVE_LEVEL_SET_SPLIT(blocksize, LinearSolverScalar, MatrixScalar)                                 \
     template void solveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar>(                                \
-        MatrixScalar*, int*, int*, int*, int, int, const MatrixScalar*, LinearSolverScalar*, int);                     \
+        MatrixScalar*, int*, int*, int*, int, int, const MatrixScalar*, LinearSolverScalar*, int, cudaStream_t);                     \
     template void solveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar>(                                \
-        MatrixScalar*, int*, int*, int*, int, int, const MatrixScalar*, const LinearSolverScalar*, LinearSolverScalar*, int);
+        MatrixScalar*, int*, int*, int*, int, int, const MatrixScalar*, const LinearSolverScalar*, LinearSolverScalar*, int, cudaStream_t);
 
 INSTANTIATE_SOLVE_LEVEL_SET_SPLIT(1, float, float);
 INSTANTIATE_SOLVE_LEVEL_SET_SPLIT(2, float, float);
