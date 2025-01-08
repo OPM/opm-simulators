@@ -73,9 +73,9 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
     cpuParams.setKrnSamples(cx, cy);
     cpuParams.finalize();
 
-    constGPUBufferParams gpuBufferParams = Opm::gpuistl::move_to_gpu<TraitsT, const GPUBuffer>(cpuParams);
+    constGPUBufferParams gpuBufferParams = Opm::gpuistl::move_to_gpu<const GPUBuffer>(cpuParams);
 
-    GPUViewParams gpuViewParams = Opm::gpuistl::make_view<TraitsT, const GPUBuffer, GPUView>(gpuBufferParams);
+    GPUViewParams gpuViewParams = Opm::gpuistl::make_view<GPUView>(gpuBufferParams);
 
     ValueVector testXs = {-1.0, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 1.0, 1.1};
 
