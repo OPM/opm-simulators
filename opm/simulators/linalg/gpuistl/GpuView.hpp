@@ -97,7 +97,7 @@ public:
      * @param numberOfElements number of T elements to allocate
      * @param dataOnHost data on host/CPU
      */
-    __host__ __device__ GpuView(T* dataOnHost, size_t numberOfElements)
+    GpuView(T* dataOnHost, size_t numberOfElements)
         : m_dataPtr(dataOnHost), m_numberOfElements(numberOfElements)
     {
     }
@@ -124,7 +124,7 @@ public:
     /**
      * @return fetch the first element in a GpuView
      */
-    __device__ T& front()
+    __host__ __device__ T& front()
     {
 #ifndef NDEBUG
         assertHasElements();
@@ -135,7 +135,7 @@ public:
     /**
      * @return fetch the last element in a GpuView
      */
-    __device__ T& back()
+    __host__ __device__ T& back()
     {
 #ifndef NDEBUG
         assertHasElements();
