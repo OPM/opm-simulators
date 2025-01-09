@@ -654,16 +654,8 @@ public:
         if constexpr (enablePolymer) {
             asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         }
-
-        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
-        paramCache.setRegionIndex(priVars.pvtRegionIndex());
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            //paramCache.setMaxOilSat(SoMax);
-        }
-        paramCache.updateAll(fluidState_);
-
         if constexpr (enableEnergy) {
-            asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache);
+            asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx);
         }
         if constexpr (enableFoam) {
             asImp_().foamPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
@@ -692,7 +684,7 @@ public:
 
         // update the diffusion specific quantities of the intensive quantities
         if constexpr (enableDiffusion) {
-            DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
+            DiffusionIntensiveQuantities::update_(fluidState_, priVars.pvtRegionIndex(), elemCtx, dofIdx, timeIdx);
         }
 
         // update the dispersion specific quantities of the intensive quantities

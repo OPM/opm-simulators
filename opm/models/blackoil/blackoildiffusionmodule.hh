@@ -368,7 +368,7 @@ protected:
      */
     template <class FluidState>
     void update_(FluidState&,
-                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>&,
+                 const unsigned,
                  const ElementContext&,
                  unsigned,
                  unsigned)
@@ -452,7 +452,7 @@ protected:
      */
     template <class FluidState>
     void update_(FluidState& fluidState,
-                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
+                 const unsigned regionIdx,
                  const ElementContext& elemCtx,
                  unsigned dofIdx,
                  unsigned timeIdx)
@@ -463,12 +463,12 @@ protected:
         }
 
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
-        update_(fluidState, paramCache, intQuants);
+        update_(fluidState, regionIdx, intQuants);
     }
 
     template<class FluidState>
     void update_(FluidState& fluidState,
-                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
+                 const unsigned regionIdx,
                  const IntensiveQuantities& intQuants)
     {
         using Toolbox = MathToolbox<Evaluation>;
@@ -506,7 +506,7 @@ protected:
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 diffusionCoefficient_[phaseIdx][compIdx] =
                     FluidSystem::diffusionCoefficient(fluidState,
-                                                      paramCache,
+                                                      regionIdx,
                                                       phaseIdx,
                                                       compIdx);
             }
