@@ -71,7 +71,6 @@ struct EnableDisgasInWater { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableMICP { using type = UndefinedProperty; };
 
-
 template<class TypeTag, class MyTypeTag>
 struct EnableMech { using type = UndefinedProperty; };
     

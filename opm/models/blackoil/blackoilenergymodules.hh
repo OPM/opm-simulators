@@ -506,7 +506,7 @@ public:
     void updateEnergyQuantities_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
     {
         // TEMP is enabled
-        if (enableTemperature) {
+        if constexpr (enableTemperature) {
             auto& fs = asImp_().fluidState_;
             // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
             // and the thermal condictivity coefficients
@@ -538,7 +538,7 @@ public:
                                  unsigned timeIdx,
                                  const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
     {
-        if (enableTemperature) {
+        if constexpr (enableTemperature) {
             auto& fs = asImp_().fluidState_;
 
             // compute the specific enthalpy of the fluids, the specific enthalpy of the rock

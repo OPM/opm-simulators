@@ -468,11 +468,33 @@ public:
     TemperatureModel(Simulator& simulator)
     { }
 
-    void init(bool rst) {}
+    /*!
+     * \brief This method writes the complete state of all temperature
+     *        to the hard disk.
+     */
+    template <class Restarter>
+    void serialize(Restarter&)
+    { /* not implemented */ }
+
+    /*!
+     * \brief This method restores the complete state of the temperature
+     *        from disk.
+     *
+     * It is the inverse of the serialize() method.
+     */
+    template <class Restarter>
+    void deserialize(Restarter&)
+    { /* not implemented */ }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    { /* not implemented */  }
+
+    void init(bool /*rst*/) {}
     void beginTimeStep() {}
     void endTimeStep() {}
-    const Scalar temperature(size_t globalIdx) const {
-        return FluidSystem::reservoirTemperature();
+    const Scalar temperature(size_t /*globalIdx*/) const {
+        return 273.15; // return 0C to make the compiler happy
     }
 };
 
