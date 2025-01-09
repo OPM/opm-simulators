@@ -149,10 +149,24 @@ template<class Scalar>
 bool BlackoilWellModelGeneric<Scalar>::
 hasWell(const std::string& wname) const
 {
-    return std::any_of(this->wells_ecl_.begin(), this->wells_ecl_.end(),
+    return std::any_of(this->wells_ecl_.begin(),
+                       this->wells_ecl_.end(),
         [&wname](const Well& well)
     {
         return well.name() == wname;
+    });
+}
+
+template<class Scalar>
+bool
+BlackoilWellModelGeneric<Scalar>::
+hasOpenLocalWell(const std::string& wname) const
+{
+    return std::any_of(well_container_generic_.begin(),
+                       well_container_generic_.end(),
+        [&wname](const auto* elem) -> bool
+    {
+        return elem->name() == wname;
     });
 }
 
