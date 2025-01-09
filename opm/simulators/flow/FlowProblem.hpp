@@ -1180,7 +1180,6 @@ public:
         serializer(wellModel_);
         serializer(aquiferModel_);
         serializer(tracerModel_);
-        serializer(temperatureModel_);
         serializer(*materialLawManager_);
     }
 

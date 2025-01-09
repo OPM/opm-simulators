@@ -59,12 +59,6 @@ public:
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     static constexpr int dimWorld = Grid::dimensionworld;
 
-
-    template<class Serializer>
-    void serializeOp(Serializer& serializer)
-    {
-    }
-
     bool doTemp()
     {
         return doTemp_;
@@ -87,6 +81,8 @@ protected:
                 std::size_t numGridDof);
 
     bool linearSolve_(const EnergyMatrix& M, EnergyVector& x, EnergyVector& b);
+
+    void syncOverlap_();
 
     const GridView& gridView_;
     const EclipseState& eclState_;

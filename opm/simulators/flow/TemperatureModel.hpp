@@ -34,6 +34,7 @@
 
 #include <opm/simulators/flow/GenericTemperatureModel.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
+#include <opm/models/parallel/gridcommhandles.hh>
 
 #include <array>
 #include <cstddef>
@@ -176,13 +177,20 @@ public:
     void deserialize(Restarter&)
     { /* not implemented */ }
 
-    template<class Serializer>
-    void serializeOp(Serializer& serializer)
-    {
-        serializer(static_cast<BaseType&>(*this));
-        serializer(intQuants_);
-        serializer(storage1_);
-    }
+    //template<class Serializer>
+    //void serializeOp(Serializer& serializer)
+    //{
+    //    serializer(intQuants_);
+    //    serializer(storage1_);
+    //}
+
+    //static serializationTestObject(const Simulator& simulator)
+    //{
+    //    TemperatureModel result(simulator);
+    //    result.intQuants_ = {1.0, 2.0};
+    //    result.storage1_ = {2.0};
+    //    return result;
+    //}
 
 protected:
 
@@ -309,25 +317,24 @@ protected:
     }
 
     template < class ResidualNBInfo>
-    void computeHeatFluxTerm(unsigned globI, unsigned globJ, const ResidualNBInfo& res_nbinfo, Evaluation& flux) {
+    void computeHeatFluxTerm(unsigned globI, unsigned globJ, const ResidualNBInfo& res_nbinfo, Evaluation& heatFlux) {
         const IntensiveQuantities& intQuantsIn = intQuants_[globI];
         const IntensiveQuantities& intQuantsEx = intQuants_[globJ];
         const Scalar inAlpha = simulator_.problem().thermalHalfTransmissibility(globI, globJ);
         const Scalar outAlpha = simulator_.problem().thermalHalfTransmissibility(globJ, globI);
-        Evaluation heatFlux;
         short interiorDofIdx = 0; // NB
         short exteriorDofIdx = 1; // NB
         EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
-                                                                    interiorDofIdx, // focusDofIndex,
-                                                                    interiorDofIdx,
-                                                                    exteriorDofIdx,
-                                                                    intQuantsIn,
-                                                                    intQuantsEx,
-                                                                    intQuantsIn.fluidState(),
-                                                                    intQuantsEx.fluidState(),
-                                                                    inAlpha,
-                                                                    outAlpha,
-                                                                    res_nbinfo.faceArea);
+                                                                 interiorDofIdx, // focusDofIndex,
+                                                                 interiorDofIdx,
+                                                                 exteriorDofIdx,
+                                                                 intQuantsIn,
+                                                                 intQuantsEx,
+                                                                 intQuantsIn.fluidState(),
+                                                                 intQuantsEx.fluidState(),
+                                                                 inAlpha,
+                                                                 outAlpha,
+                                                                 res_nbinfo.faceArea);
         heatFlux *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
@@ -383,9 +390,9 @@ protected:
             this->assembleEquationWell(*wellPtr);
         }
 
-        // Set dirichlet conditions for overlapping cells
         if (simulator_.gridView().comm().size() > 1) {
-            //loop over precalculated overlap rows and columns
+            // Set dirichlet conditions for overlapping cells
+            // loop over precalculated overlap rows and columns
             for (const auto row : overlapRows_)
             {
                 // Zero out row.
@@ -394,16 +401,9 @@ protected:
                 //diagonal block set to diag(1.0).
                 (*this->energyMatrix_)[row][row][0][0] = 1.0;
             }
+            // Sync residuals in overlapping cells
+            this->syncOverlap_();
         }
-
-#warning fix this
-        // Comunicate the residual
-        std::vector<EnergyVector> tmp;
-        tmp.resize(1);
-        tmp[0] = this->energyVector_;
-        auto handle = VectorVectorDataHandle<GridView, std::vector<EnergyVector>>(tmp,simulator_.gridView());
-        simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
-        this->energyVector_ = tmp[0];
     }
 
     template<class Well>
@@ -465,7 +465,7 @@ class TemperatureModel<TypeTag, false> {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 public:
-    TemperatureModel(Simulator& simulator)
+    TemperatureModel(Simulator&)
     { }
 
     /*!
@@ -486,9 +486,11 @@ public:
     void deserialize(Restarter&)
     { /* not implemented */ }
 
-    template<class Serializer>
-    void serializeOp(Serializer& serializer)
-    { /* not implemented */  }
+    //template<class Serializer>
+    //void serializeOp(Serializer& serializer)
+    // {
+    //     serializer(dummy_);
+    //}
 
     void init(bool /*rst*/) {}
     void beginTimeStep() {}
@@ -496,6 +498,7 @@ public:
     const Scalar temperature(size_t /*globalIdx*/) const {
         return 273.15; // return 0C to make the compiler happy
     }
+    //Scalar dummy_;
 };
 
 } // namespace Opm
