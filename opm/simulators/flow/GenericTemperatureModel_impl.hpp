@@ -213,6 +213,25 @@ linearSolve_(const EnergyMatrix& M, EnergyVector& x, EnergyVector& b)
 #endif
 }
 
+template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
+void GenericTemperatureModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
+syncOverlap_()
+{
+#if HAVE_MPI
+    // syncronize the solution on the ghost and overlap elements
+    using GhostSyncHandle = GridCommHandleGhostSync<Dune::FieldVector<Scalar, 1>,
+                                                    EnergyVector,
+                                                    DofMapper,
+                                                    /*commCodim=*/0>;
+
+    auto ghostSync = GhostSyncHandle(this->energyVector_,
+                                     this->dofMapper_);
+    gridView_.communicate(ghostSync,
+                          Dune::InteriorBorder_All_Interface,
+                          Dune::ForwardCommunication);
+#endif
+}
+
 } // namespace Opm
 
 #endif // OPM_GENERIC_TEMPERATURE_MODEL_IMPL_HPP
