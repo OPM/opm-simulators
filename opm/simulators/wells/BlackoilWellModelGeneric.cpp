@@ -2165,6 +2165,47 @@ computeWellBlockAveragePressures(const Scalar gravity) const
     return wbpResult;
 }
 
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+reportGroupSwitching(DeferredLogger& local_deferredLogger) const
+{
+    for (const auto& [name, ctrls] : this->switched_prod_groups_) {
+        const Group::ProductionCMode& oldControl =
+            this->prevWGState().group_state.production_control(name);
+        if (ctrls.back() != oldControl) {
+            const std::string msg =
+                fmt::format("    Production Group {} control model changed from {} to {}",
+                            name,
+                            Group::ProductionCMode2String(oldControl),
+                            Group::ProductionCMode2String(ctrls.back()));
+            local_deferredLogger.info(msg);
+        }
+    }
+    for (const auto& [grname, grdata] : this->switched_inj_groups_) {
+        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
+        for (Phase phase : all) {
+            const auto& ctrls = grdata[static_cast<std::underlying_type_t<Phase>>(phase)];
+
+            if (ctrls.empty()) {
+                continue;
+            }
+            if ( !this->prevWGState().group_state.has_injection_control(grname, phase))
+                continue;
+
+            const Group::InjectionCMode& oldControl =
+                this->prevWGState().group_state.injection_control(grname, phase);
+            if (ctrls.back() != oldControl) {
+                const std::string msg =
+                    fmt::format("    Injection Group {} control model changed from {} to {}",
+                                grname,
+                                Group::InjectionCMode2String(oldControl),
+                                Group::InjectionCMode2String(ctrls.back()));
+                    local_deferredLogger.info(msg);
+            }
+        }
+    }
+}
+
 template class BlackoilWellModelGeneric<double>;
 
 #if FLOW_INSTANTIATE_FLOAT
