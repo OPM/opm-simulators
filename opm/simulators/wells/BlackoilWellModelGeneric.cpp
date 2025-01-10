@@ -2184,13 +2184,13 @@ reportGroupSwitching(DeferredLogger& local_deferredLogger) const
     for (const auto& [grname, grdata] : this->switched_inj_groups_) {
         const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
         for (Phase phase : all) {
+            if (!this->prevWGState().group_state.has_injection_control(grname, phase)) {
+                continue;
+            }
             const auto& ctrls = grdata[static_cast<std::underlying_type_t<Phase>>(phase)];
-
             if (ctrls.empty()) {
                 continue;
             }
-            if ( !this->prevWGState().group_state.has_injection_control(grname, phase))
-                continue;
 
             const Group::InjectionCMode& oldControl =
                 this->prevWGState().group_state.injection_control(grname, phase);
@@ -2200,7 +2200,7 @@ reportGroupSwitching(DeferredLogger& local_deferredLogger) const
                                 grname,
                                 Group::InjectionCMode2String(oldControl),
                                 Group::InjectionCMode2String(ctrls.back()));
-                    local_deferredLogger.info(msg);
+                local_deferredLogger.info(msg);
             }
         }
     }
