@@ -51,6 +51,12 @@ public:
     // TODO: we can try to use DyanmicEvaluation here
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq + numResEq>;
 
+    // TODO: trying to refactor to avoid duplication
+    using FluidStateScalar = CompositionalFluidState<Scalar, FluidSystem>;
+    using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
+
+    FluidStateScalar toFluidStateScalar() const;
+
     // void init();
     void update(const SingleCompWellState<Scalar>& well_state);
     void updateEvaluation();

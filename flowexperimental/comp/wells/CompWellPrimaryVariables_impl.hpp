@@ -56,5 +56,29 @@ updateEvaluation()
     }
 }
 
+template <typename FluidSystem, typename Indices>
+typename CompWellPrimaryVariables<FluidSystem, Indices>::FluidStateScalar
+CompWellPrimaryVariables<FluidSystem, Indices>::
+toFluidStateScalar() const
+{
+    FluidStateScalar fluid_state;
+    // will be different if more connections are involved
+    const auto& pressure = value_[Bhp];
+    std::array<Scalar, FluidSystem::numComponents> total_molar_fractions;
+    for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
+        total_molar_fractions[i] = value_[i + 1];
+    }
+    total_molar_fractions[FluidSystem::numComponents - 1] = 1.0 - std::accumulate(total_molar_fractions.begin(),
+                                                                                 total_molar_fractions.end() - 1,
+                                                                                 0.0);
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        fluid_state.setMoleFraction(i, total_molar_fractions[i]);
+    }
+    fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
+    fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
+
+    return fluid_state;
+}
+
 
 }
