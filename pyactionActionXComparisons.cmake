@@ -207,6 +207,7 @@ if(MPI_FOUND)
                                    IGNORE_EXTRA_KW BOTH
                                    MPI_PROCS 4)
 
+
   add_test_compareSeparateECLFiles(CASENAME actionx_gefac_4_procs
                                    DIR1 model4
                                    FILENAME1 MOD4_GRP_GEFAC
@@ -267,6 +268,17 @@ if(MPI_FOUND)
                                    FILENAME1 PYACTION_NEXT_INSERT_KW
                                    DIR2 actionx
                                    FILENAME2 ACTIONX_NEXT
+                                   SIMULATOR flow
+                                   ABS_TOL ${abs_tol}
+                                   REL_TOL ${rel_tol}
+                                   IGNORE_EXTRA_KW BOTH
+                                   MPI_PROCS 4)
+
+  add_test_compareSeparateECLFiles(CASENAME pyaction_wefac_insert_kw_4_procs
+                                   DIR1 pyaction
+                                   FILENAME1 PYACTION_WEFAC_INSERT_KW
+                                   DIR2 actionx
+                                   FILENAME2 ACTIONX_WEFAC
                                    SIMULATOR flow
                                    ABS_TOL ${abs_tol}
                                    REL_TOL ${rel_tol}
