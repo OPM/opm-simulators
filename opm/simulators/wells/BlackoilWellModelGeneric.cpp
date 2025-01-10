@@ -2170,14 +2170,14 @@ void BlackoilWellModelGeneric<Scalar>::
 reportGroupSwitching(DeferredLogger& local_deferredLogger) const
 {
     for (const auto& [name, ctrls] : this->switched_prod_groups_) {
-        const Group::ProductionCMode& oldControl = this->prevWGState().group_state.production_control(name);
-        std::string from = Group::ProductionCMode2String(oldControl);
-        std::string to = Group::ProductionCMode2String(ctrls.back());
+        const Group::ProductionCMode& oldControl =
+            this->prevWGState().group_state.production_control(name);
         if (ctrls.back() != oldControl) {
-            std::string msg = "    Production Group " + name
-            + " control mode changed from ";
-            msg += from;
-            msg += " to " + to;
+            const std::string msg =
+                fmt::format("    Production Group {} control model changed from {} to {}",
+                            name,
+                            Group::ProductionCMode2String(oldControl),
+                            Group::ProductionCMode2String(ctrls.back()));
             local_deferredLogger.info(msg);
         }
     }
@@ -2192,15 +2192,15 @@ reportGroupSwitching(DeferredLogger& local_deferredLogger) const
             if ( !this->prevWGState().group_state.has_injection_control(grname, phase))
                 continue;
 
-            const Group::InjectionCMode& oldControl = this->prevWGState().group_state.injection_control(grname, phase);
-            std::string from = Group::InjectionCMode2String(oldControl);
-            std::string to = Group::InjectionCMode2String(ctrls.back());
+            const Group::InjectionCMode& oldControl =
+                this->prevWGState().group_state.injection_control(grname, phase);
             if (ctrls.back() != oldControl) {
-                std::string msg = "    Injection Group " + grname
-                + " control mode changed from ";
-                msg += from;
-                msg += " to " + to;
-                local_deferredLogger.info(msg);
+                const std::string msg =
+                    fmt::format("    Injection Group {} control model changed from {} to {}",
+                                grname,
+                                Group::InjectionCMode2String(oldControl),
+                                Group::InjectionCMode2String(ctrls.back()));
+                    local_deferredLogger.info(msg);
             }
         }
     }
