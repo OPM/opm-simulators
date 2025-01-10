@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
 namespace Opm
 {
 
@@ -46,6 +48,10 @@ calculateExplitQuantities(const Simulator& simulator,
 {
     updatePrimaryVariables(simulator, well_state);
     updatePrimaryVariableEvaluation();
+
+    using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
+    FluidState fluid_state = this->primary_variables_.toFluidStateScalar();
+    // We should do a flash calculation here
     assert(false && " calculateExplitQuantities is not implemented yet");
 }
 
