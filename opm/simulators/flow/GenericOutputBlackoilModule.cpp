@@ -407,32 +407,30 @@ template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
 accumulateRftDataParallel(const Parallel::Communication& comm) {
     if (comm.size() > 1) {
-        collectRftMapOnRoot(oilConnectionPressures_, comm);
-        collectRftMapOnRoot(waterConnectionSaturations_, comm);
-        collectRftMapOnRoot(gasConnectionSaturations_, comm);
+        gatherAndUpdateRftMap(oilConnectionPressures_, comm);
+        gatherAndUpdateRftMap(waterConnectionSaturations_, comm);
+        gatherAndUpdateRftMap(gasConnectionSaturations_, comm);
     }
 }
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
-collectRftMapOnRoot(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm) {
+gatherAndUpdateRftMap(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm) {
 
     std::vector<std::pair<int, Scalar>> pairs(local_map.begin(), local_map.end());
     std::vector<std::pair<int, Scalar>> all_pairs;
     std::vector<int> offsets;
 
-    std::tie(all_pairs, offsets) = Opm::gatherv(pairs, comm, 0);
+    std::tie(all_pairs, offsets) = Opm::allGatherv(pairs, comm);
 
-    // Insert/update map values on root
-    if (comm.rank() == 0) {
-        for (auto i=static_cast<std::size_t>(offsets[1]); i<all_pairs.size(); ++i) {
-            const auto& key_value = all_pairs[i];
-            if (auto candidate = local_map.find(key_value.first); candidate != local_map.end()) {
-                const Scalar prev_value = candidate->second;
-                candidate->second = std::max(prev_value, key_value.second);
-            } else {
-                local_map[key_value.first] = key_value.second;
-            }
+    // Update maps on all ranks
+    for (auto i=static_cast<std::size_t>(offsets[0]); i<all_pairs.size(); ++i) {
+        const auto& key_value = all_pairs[i];
+        if (auto candidate = local_map.find(key_value.first); candidate != local_map.end()) {
+            const Scalar prev_value = candidate->second;
+            candidate->second = std::max(prev_value, key_value.second);
+        } else {
+            local_map[key_value.first] = key_value.second;
         }
     }
 }

@@ -387,7 +387,7 @@ protected:
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
 
-    void collectRftMapOnRoot(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm);
+    void gatherAndUpdateRftMap(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm);
 
     const EclipseState& eclState_;
     const Schedule& schedule_;
