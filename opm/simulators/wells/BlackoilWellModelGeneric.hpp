@@ -33,6 +33,8 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <opm/simulators/wells/BlackoilWellModelWBP.hpp>
+#include <opm/simulators/wells/ConnectionIndexMap.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -111,6 +113,7 @@ public:
     // whether there exists any multisegment well open on this process
     bool anyMSWellOpenLocal() const;
 
+    const std::vector<Well>& eclWells() const { return wells_ecl_; }
     const Well& getWellEcl(const std::string& well_name) const;
     std::vector<Well> getLocalWells(const int timeStepIdx) const;
     const Schedule& schedule() const { return schedule_; }
@@ -266,6 +269,13 @@ public:
                this->switched_inj_groups_ == rhs.switched_inj_groups_ &&
                this->closed_offending_wells_ == rhs.closed_offending_wells_;            
     }
+
+    const ParallelWellInfo<Scalar>&
+    parallelWellInfo(const std::size_t idx) const
+    { return local_parallel_well_info_[idx].get(); }
+
+    const ConnectionIndexMap& connectionIndexMap(const std::size_t idx)
+    { return conn_idx_map_[idx]; }
 
 protected:
     /*
@@ -453,20 +463,11 @@ protected:
     void assignMassGasRate(data::Wells& wsrpt,
                            const Scalar& gasDensity) const;
 
-    void registerOpenWellsForWBPCalculation();
-
-    typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
-    makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
-
-    void initializeWBPCalculationService();
-
-    data::WellBlockAveragePressures
-    computeWellBlockAveragePressures(const Scalar gravity) const;
-
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
+    BlackoilWellModelWBP<Scalar> wbp_;
 
     PhaseUsage phase_usage_;
     bool terminal_output_{false};
@@ -486,92 +487,6 @@ protected:
     // Times at which wells were shut (for WCYCLE)
     std::map<std::string, double> well_close_times_;
 
-    /// Connection index mappings
-    class ConnectionIndexMap
-    {
-    public:
-        /// Constructor.
-        ///
-        /// \param[in] numConns Total number of well connections, both open
-        ///   and closed/shut.  Typically \code WellConnections::size() \endcode.
-        explicit ConnectionIndexMap(const std::size_t numConns)
-            : local_(numConns, -1)
-        {
-            this->global_.reserve(numConns);
-            this->open_.reserve(numConns);
-        }
-
-        /// Enumerate/map new active connection.
-        ///
-        /// \param[in] connIdx Global well connection index.  Must be an
-        ///   integer in the range 0..numConns-1.
-        ///
-        /// \param[in] connIsOpen Whether or not the connection is
-        ///   open/flowing.
-        void addActiveConnection(const int  connIdx,
-                                 const bool connIsOpen)
-        {
-            this->local_[connIdx] =
-                static_cast<int>(this->global_.size());
-
-            this->global_.push_back(connIdx);
-
-            const auto open_conn_idx = connIsOpen
-                ? this->num_open_conns_++
-                : -1;
-
-            this->open_.push_back(open_conn_idx);
-        }
-
-        /// Get local connection IDs/indices of every existing well
-        /// connection.
-        ///
-        /// Negative value (-1) for connections that don't intersect the
-        /// current rank.
-        const std::vector<int>& local() const
-        {
-            return this->local_;
-        }
-
-        /// Get global connection ID of local (on-rank) connection.
-        ///
-        /// \param[in] connIdx Local connection index.
-        ///
-        /// \return Global connection ID of \p connIdx.
-        int global(const int connIdx) const
-        {
-            return this->global_[connIdx];
-        }
-
-        /// Get open connection ID of local (on-rank) connection.
-        ///
-        /// \param[in] connIdx Local connection index.
-        ///
-        /// \return Open connection ID of \p connIdx.  Integer in the range
-        ///   0..#open connections - 1 if the connection is open or negative
-        ///   value (-1) otherwise.
-        int open(const int connIdx) const
-        {
-            return this->open_[connIdx];
-        }
-
-    private:
-        /// Local connection IDs/indices of every existing well connection.
-        /// Negative value (-1) for connections that don't intersect the
-        /// current rank.
-        std::vector<int> local_{};
-
-        /// Global connection index of each on-rank reservoir connection.
-        /// Reverse/transpose mapping of \c local_.
-        std::vector<int> global_{};
-
-        /// Open connection index of each on-rank reservoir connection.
-        std::vector<int> open_{};
-
-        /// Number of open connections on this rank.
-        int num_open_conns_{0};
-    };
-
     std::vector<ConnectionIndexMap> conn_idx_map_{};
     std::function<bool(const Well&)> not_on_process_{};
 
@@ -584,15 +499,6 @@ protected:
     std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>> local_parallel_well_info_;
 
     std::vector<WellProdIndexCalculator<Scalar>> prod_index_calc_;
-    mutable ParallelWBPCalculation<Scalar> wbpCalculationService_;
-
-    struct WBPCalcID
-    {
-        std::optional<typename std::vector<WellInterfaceGeneric<Scalar>*>::size_type> openWellIdx_{};
-        std::size_t wbpCalcIdx_{};
-    };
-
-    std::vector<WBPCalcID> wbpCalcMap_{};
 
     std::vector<int> pvt_region_idx_;
 
