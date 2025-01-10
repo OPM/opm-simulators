@@ -335,6 +335,8 @@ protected:
         this->nupcol_wgstate_ = this->active_wgstate_;
     }
 
+    void reportGroupSwitching(DeferredLogger& local_deferredLogger) const;
+
     /// \brief Create the parallel well information
     /// \param localWells The local wells from ECL schedule
     std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>
