@@ -165,7 +165,7 @@ sendActivationDateToMasterProcess() const
             /*tag=*/static_cast<int>(MessageTag::SlaveActivationDate),
             this->slave_master_comm_
         );
-        OpmLog::info("Sent simulation start date to master process from rank 0");
+        OpmLog::info("Sent simulation activation date to master process from rank 0");
    }
 }
 
