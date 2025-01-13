@@ -795,6 +795,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/BaseAquiferModel.hpp
   opm/simulators/flow/BlackoilModel.hpp
+  opm/simulators/flow/BlackoilModel_impl.hpp
   opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp
   opm/simulators/flow/BlackoilModelNldd.hpp
   opm/simulators/flow/BlackoilModelParameters.hpp
