@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
     cpuParams.setKrnSamples(cx, cy);
     cpuParams.finalize();
 
-    constGPUBufferParams gpuBufferParams = Opm::gpuistl::move_to_gpu<const GPUBuffer>(cpuParams);
+    constGPUBufferParams gpuBufferParams = Opm::gpuistl::copy_to_gpu<const GPUBuffer>(cpuParams);
 
     GPUViewParams gpuViewParams = Opm::gpuistl::make_view<GPUView>(gpuBufferParams);
 
