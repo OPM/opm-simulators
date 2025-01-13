@@ -1378,7 +1378,6 @@ namespace Opm {
         ConvergenceReport::PenaltyCard total_penaltyCard_;
         double prev_distance_ = std::numeric_limits<double>::infinity();
         int prev_above_tolerance_ = 0;
-    public:
         std::vector<bool> wasSwitched_;
     };
 
