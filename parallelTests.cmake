@@ -257,8 +257,8 @@ add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL 1.0e-3
-                        			       DIR model2
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --newton-max-iterations=30 --enable-drift-compensation=false)
+                                     DIR model2
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=1.0e-3 --tolerance-cnv-relaxed=1.0e-3 --tolerance-mb=1e-8  --tolerance-mb-relaxed=1.0e-8 --newton-max-iterations=30)
 
 add_test_compare_parallel_simulation(CASENAME rxft
                                      FILENAME TEST_RXFT
