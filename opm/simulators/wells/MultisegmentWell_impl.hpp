@@ -103,9 +103,6 @@ namespace Opm
                       "dissolved gas/ vapporized oil in injected oil/gas not supported by multisegment well yet."
                       " \n See  (WCONINJE item 10 / WCONHIST item 8)");
         }
-        if constexpr (!Indices::oilEnabled && Indices::numPhases > 1) {
-            OPM_THROW(std::runtime_error, "water + gas case not supported by multisegment well yet");
-        }
 
         this->thp_update_iterations = true;
     }

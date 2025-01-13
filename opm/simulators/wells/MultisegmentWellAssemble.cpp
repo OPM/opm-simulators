@@ -279,9 +279,7 @@ assemblePressureEq(const int seg,
                    const int outlet_segment_index,
                    const EvalWell& pressure_equation,
                    const EvalWell& outlet_pressure,
-                   Equations& eqns1,
-                   bool wfrac,
-                   bool gfrac) const
+                   Equations& eqns1) const
 {
     /*
         This method does *not* need communication.
@@ -290,10 +288,10 @@ assemblePressureEq(const int seg,
     eqns.residual()[seg][SPres] += pressure_equation.value();
     eqns.D()[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
     eqns.D()[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
-    if (wfrac) {
+    if constexpr (has_wfrac_variable) {
         eqns.D()[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
     }
-    if (gfrac) {
+    if constexpr (has_gfrac_variable) {
         eqns.D()[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
     }
 
@@ -355,10 +353,10 @@ assembleOutflowTerm(const int seg,
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] -= segment_rate.value();
     eqns.D()[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+    if constexpr (has_wfrac_variable) {
         eqns.D()[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
     }
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+    if constexpr (has_gfrac_variable) {
         eqns.D()[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
@@ -380,10 +378,10 @@ assembleInflowTerm(const int seg,
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] += inlet_rate.value();
     eqns.D()[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+    if constexpr (has_wfrac_variable) {
         eqns.D()[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
     }
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+    if constexpr (has_gfrac_variable) {
         eqns.D()[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero

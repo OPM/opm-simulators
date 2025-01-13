@@ -42,17 +42,9 @@ template<class Scalar> class WellState;
 template<class FluidSystem, class Indices>
 class MultisegmentWellAssemble
 {
-    static constexpr bool has_water = (Indices::waterSwitchIdx >= 0);
-    static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
-    static constexpr bool has_oil = (Indices::numPhases - has_gas - has_water) > 0;
-
-    // In the implementation, one should use has_wfrac_variable
-    // rather than has_water to check if you should do something
-    // with the variable at the WFrac location, similar for GFrac.
-    static constexpr bool has_wfrac_variable = has_water && Indices::numPhases > 1;
-    static constexpr bool has_gfrac_variable = has_gas && has_oil;
-
     static constexpr int WQTotal = 0;
+    static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
+    static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
     static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
@@ -107,9 +99,7 @@ public:
                             const int outlet_segment_index,
                             const EvalWell& pressure_equation,
                             const EvalWell& outlet_pressure,
-                            Equations& eqns,
-                            bool wfrac = has_wfrac_variable,
-                            bool gfrac = has_gfrac_variable) const;
+                            Equations& eqns) const;
 
     //! \brief Assembles a trivial equation.
     void assembleTrivialEq(const int seg,

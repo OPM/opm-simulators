@@ -514,7 +514,7 @@ getFrictionPressureLoss(const int seg,
     // at segment node while fraction derivatives are given at upwind node.
 
     if (seg != seg_upwind) {
-        if (!extra_reverse_flow_derivatives){
+        if (!extra_reverse_flow_derivatives) {
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
             constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
             density.setDerivative(WQTotal, 0.0);
@@ -522,12 +522,12 @@ getFrictionPressureLoss(const int seg,
             visc.setDerivative(WQTotal, 0.0);
             visc.setDerivative(SPres, 0.0);
         } else {
-            if (PrimaryVariables::has_water){
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
                 density.setDerivative(WFrac, 0.0);
                 visc.setDerivative(WFrac, 0.0);
             }
-            if (PrimaryVariables::has_gas){
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
                 density.setDerivative(GFrac, 0.0);
                 visc.setDerivative(GFrac, 0.0);
@@ -600,10 +600,10 @@ pressureDropSpiralICD(const int seg,
             zero_mask[PrimaryVariables::WQTotal] = true;
             zero_mask[PrimaryVariables::SPres] = true;
         } else {
-            if constexpr (PrimaryVariables::has_water){
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 zero_mask[PrimaryVariables::WFrac] = true;
             }
-            if constexpr (PrimaryVariables::has_gas){
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 zero_mask[PrimaryVariables::GFrac] = true;
             }
             // mass_rate has no extra derivatives (they are organized as in equations)
@@ -712,10 +712,10 @@ pressureDropAutoICD(const int seg,
             zero_mask[PrimaryVariables::WQTotal] = true;
             zero_mask[PrimaryVariables::SPres] = true;
         } else {
-            if (PrimaryVariables::has_water){
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 zero_mask[PrimaryVariables::WFrac] = true;
             }
-            if (PrimaryVariables::has_gas){
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 zero_mask[PrimaryVariables::GFrac] = true;
             }
             // mass_rate has no extra derivatives (they are organized as in equations)
@@ -787,7 +787,7 @@ pressureDropValve(const int seg,
     // For reference: the pressure equation assumes pressure/flow derivatives are given 
     // at segment node while fraction derivatives are given at upwind node. 
     if (seg != seg_upwind) {
-        if (!extra_reverse_flow_derivatives){
+        if (!extra_reverse_flow_derivatives) {
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
             constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
             density.setDerivative(WQTotal, 0.0);
@@ -795,12 +795,12 @@ pressureDropValve(const int seg,
             visc.setDerivative(WQTotal, 0.0);
             visc.setDerivative(SPres, 0.0);
         } else {
-            if (PrimaryVariables::has_water){
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
                 density.setDerivative(WFrac, 0.0);
                 visc.setDerivative(WFrac, 0.0);
             }
-            if (PrimaryVariables::has_gas){
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
                 density.setDerivative(GFrac, 0.0);
                 visc.setDerivative(GFrac, 0.0);
@@ -841,17 +841,17 @@ accelerationPressureLossContribution(const int seg,
     const int seg_upwind = upwinding_segments_[seg];
     EvalWell density = densities_[seg_upwind];    
     if (seg != seg_upwind) {
-        if (!extra_reverse_flow_derivatives){
+        if (!extra_reverse_flow_derivatives) {
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
             constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
             density.setDerivative(WQTotal, 0.0);
             density.setDerivative(SPres, 0.0);
         } else {
-            if (PrimaryVariables::has_water){
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
                 density.setDerivative(WFrac, 0.0);
             }
-            if (PrimaryVariables::has_gas){
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
                 density.setDerivative(GFrac, 0.0);
             }
@@ -859,7 +859,7 @@ accelerationPressureLossContribution(const int seg,
         }
     }
     const Scalar sign = mass_rate > 0 ? -1.0 : 1.0;
-    return sign*mswellhelpers::velocityHead(area, mass_rate, density);
+    return sign * mswellhelpers::velocityHead(area, mass_rate, density);
 }                                     
 
 template <class FluidSystem, class Indices>
@@ -933,10 +933,10 @@ mixtureDensity(const int seg) const
             continue;
         }
 
-        const auto compIdx = Indices::
-            canonicalToActiveComponentIndex(phIdx);
+        const auto active_comp_index = Indices::
+            canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phIdx));
 
-        mixDens += q[compIdx].value() * rho[compIdx].value();
+        mixDens += q[active_comp_index].value() * rho[active_comp_index].value();
     }
 
     return mixDens;
@@ -977,7 +977,7 @@ mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
     for (const auto& [fsPhaseIdx, densityExponent] : densityExponents) {
         if (FluidSystem::phaseIsActive(fsPhaseIdx)) {
             const auto compIdx = Indices::
-                canonicalToActiveComponentIndex(fsPhaseIdx);
+                canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(fsPhaseIdx));
 
             // exp = (aicd.*densityExponent)() in native syntax.
             const auto exp = std::invoke(densityExponent, aicd);
