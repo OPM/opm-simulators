@@ -2052,9 +2052,19 @@ namespace Opm {
         for (const auto& well : well_container_) {
             const auto& wname = well->name();
             const auto wasClosed = wellTestState.well_is_closed(wname);
-            well->checkWellOperability(simulator_, this->wellState(), local_deferredLogger);
-            const bool under_zero_target = well->wellUnderZeroGroupRateTarget(this->simulator_, this->wellState(), local_deferredLogger);
-            well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, under_zero_target, wellTestState, local_deferredLogger);
+            well->checkWellOperability(simulator_,
+                                       this->wellState(),
+                                       local_deferredLogger);
+            const bool under_zero_target =
+                well->wellUnderZeroGroupRateTarget(this->simulator_,
+                                                   this->wellState(),
+                                                   local_deferredLogger);
+            well->updateWellTestState(this->wellState().well(wname),
+                                      simulationTime,
+                                      /*writeMessageToOPMLog=*/ true,
+                                      under_zero_target,
+                                      wellTestState,
+                                      local_deferredLogger);
 
             if (!wasClosed && wellTestState.well_is_closed(wname)) {
                 this->closed_this_step_.insert(wname);
@@ -2062,14 +2072,20 @@ namespace Opm {
         }
 
         const Opm::Parallel::Communication comm = grid().comm();
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
+        DeferredLogger global_deferredLogger =
+            gatherDeferredLogger(local_deferredLogger, comm);
 
         for (const auto& [group_name, to] : this->closed_offending_wells_) {
-            if (this->hasWell(to.second) && !this->wasDynamicallyShutThisTimeStep(to.second)) {
-                wellTestState.close_well(to.second, WellTestConfig::Reason::GROUP, simulationTime);
+            if (this->hasOpenLocalWell(to.second) &&
+                !this->wasDynamicallyShutThisTimeStep(to.second))
+            {
+                wellTestState.close_well(to.second,
+                                         WellTestConfig::Reason::GROUP,
+                                         simulationTime);
                 this->updateClosedWellsThisStep(to.second);
                 const std::string msg =
-                    fmt::format("Procedure on exceeding {} limit is WELL for group {}. Well {} is {}.",
+                    fmt::format("Procedure on exceeding {} limit is WELL for group {}. "
+                                "Well {} is {}.",
                                 to.first,
                                 group_name,
                                 to.second,
@@ -2341,21 +2357,6 @@ namespace Opm {
 
         return *well;
     }
-
-    template<typename TypeTag>
-    bool
-    BlackoilWellModel<TypeTag>::
-    hasWell(const std::string& well_name) const
-    {
-        return std::any_of(well_container_.begin(), well_container_.end(),
-            [&well_name](const WellInterfacePtr& elem) -> bool
-        {
-            return elem->name() == well_name;
-        });
-    }
-
-
-
 
     template <typename TypeTag>
     int

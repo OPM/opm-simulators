@@ -105,7 +105,12 @@ public:
 
     /// return true if wells are available in the reservoir
     bool wellsActive() const;
-    bool hasWell(const std::string& wname) const;
+
+    //! \brief Returns true if well is defined and has connections on current rank.
+    bool hasLocalWell(const std::string& wname) const;
+
+    //! \brief Returns true if well is defined, open and has connections on current rank.
+    bool hasOpenLocalWell(const std::string& well_name) const;
 
     /// return true if network is active (at least one network well in prediction mode)
     bool networkActive() const;
