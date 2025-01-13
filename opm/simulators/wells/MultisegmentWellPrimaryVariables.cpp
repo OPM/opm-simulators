@@ -315,7 +315,8 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
         const auto& [Rs, Rv] = well_.rateConverter().inferDissolvedVaporisedRatio
             (rsMax, rvMax, segment_rates.begin() + seg * well_.numPhases());
 
-        if (! (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))) ) {
+        if ( (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) ||
+                  (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))  ) {
             vapoil[seg] = disgas[seg] = 0.0;
         }
         else {

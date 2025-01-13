@@ -522,12 +522,12 @@ getFrictionPressureLoss(const int seg,
             visc.setDerivative(WQTotal, 0.0);
             visc.setDerivative(SPres, 0.0);
         } else {
-            if (PrimaryVariables::has_wfrac_variable) {
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
                 density.setDerivative(WFrac, 0.0);
                 visc.setDerivative(WFrac, 0.0);
             }
-            if (PrimaryVariables::has_gfrac_variable) {
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
                 density.setDerivative(GFrac, 0.0);
                 visc.setDerivative(GFrac, 0.0);
@@ -712,10 +712,10 @@ pressureDropAutoICD(const int seg,
             zero_mask[PrimaryVariables::WQTotal] = true;
             zero_mask[PrimaryVariables::SPres] = true;
         } else {
-            if (PrimaryVariables::has_wfrac_variable) {
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 zero_mask[PrimaryVariables::WFrac] = true;
             }
-            if (PrimaryVariables::has_gfrac_variable) {
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 zero_mask[PrimaryVariables::GFrac] = true;
             }
             // mass_rate has no extra derivatives (they are organized as in equations)
@@ -795,12 +795,12 @@ pressureDropValve(const int seg,
             visc.setDerivative(WQTotal, 0.0);
             visc.setDerivative(SPres, 0.0);
         } else {
-            if (PrimaryVariables::has_wfrac_variable) {
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
                 density.setDerivative(WFrac, 0.0);
                 visc.setDerivative(WFrac, 0.0);
             }
-            if (PrimaryVariables::has_gfrac_variable) {
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
                 density.setDerivative(GFrac, 0.0);
                 visc.setDerivative(GFrac, 0.0);
@@ -847,11 +847,11 @@ accelerationPressureLossContribution(const int seg,
             density.setDerivative(WQTotal, 0.0);
             density.setDerivative(SPres, 0.0);
         } else {
-            if (PrimaryVariables::has_wfrac_variable) {
+            if constexpr (PrimaryVariables::has_wfrac_variable) {
                 constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
                 density.setDerivative(WFrac, 0.0);
             }
-            if (PrimaryVariables::has_gfrac_variable) {
+            if constexpr (PrimaryVariables::has_gfrac_variable) {
                 constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
                 density.setDerivative(GFrac, 0.0);
             }
@@ -859,7 +859,7 @@ accelerationPressureLossContribution(const int seg,
         }
     }
     const Scalar sign = mass_rate > 0 ? -1.0 : 1.0;
-    return sign*mswellhelpers::velocityHead(area, mass_rate, density);
+    return sign * mswellhelpers::velocityHead(area, mass_rate, density);
 }                                     
 
 template <class FluidSystem, class Indices>

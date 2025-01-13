@@ -288,10 +288,10 @@ assemblePressureEq(const int seg,
     eqns.residual()[seg][SPres] += pressure_equation.value();
     eqns.D()[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
     eqns.D()[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
-    if (has_wfrac_variable) {
+    if constexpr (has_wfrac_variable) {
         eqns.D()[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
     }
-    if (has_gfrac_variable) {
+    if constexpr (has_gfrac_variable) {
         eqns.D()[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
     }
 
