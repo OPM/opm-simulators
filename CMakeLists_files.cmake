@@ -794,6 +794,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/BlackoilModel.hpp
   opm/simulators/flow/BlackoilModelNldd.hpp
   opm/simulators/flow/BlackoilModelParameters.hpp
+  opm/simulators/flow/BlackoilModelProperties.hpp
   opm/simulators/flow/CollectDataOnIORank.hpp
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
