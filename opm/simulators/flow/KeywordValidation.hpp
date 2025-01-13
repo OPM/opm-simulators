@@ -99,7 +99,7 @@ namespace KeywordValidation
                          const SupportedKeywords<std::string>& fully_supported_string_items,
                          const SupportedKeywords<int>& fully_supported_int_items,
                          const SupportedKeywords<double>& fully_supported_double_items,
-                         const std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<ValidationError>& errors)>>& special_validation)
+                         const std::unordered_map<std::string, ValidationFunction>& special_validation)
             : m_unsupported_keywords(unsupported_keywords)
             , m_partially_supported_string_items(partially_supported_string_items)
             , m_partially_supported_int_items(partially_supported_int_items)
@@ -148,7 +148,7 @@ namespace KeywordValidation
         const SupportedKeywords<std::string> m_fully_supported_string_items;
         const SupportedKeywords<int> m_fully_supported_int_items;
         const SupportedKeywords<double> m_fully_supported_double_items;
-        const std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<ValidationError>& errors)>> m_special_validation;
+        const std::unordered_map<std::string, ValidationFunction> m_special_validation;
     };
 
 
