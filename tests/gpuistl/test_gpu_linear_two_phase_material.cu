@@ -56,47 +56,48 @@
   using GPUTwoPhaseViewMaterialLaw = Opm::PiecewiseLinearTwoPhaseMaterial<TraitsT, GPUViewParams>;
   using NorneEvaluation = Opm::DenseAd::Evaluation<Scalar, 3, 0u>;
 
-__global__ void gpuTwoPhaseSatPcnwWrapper(GPUTwoPhaseViewMaterialLaw::Params params, NorneEvaluation Sw, NorneEvaluation* res){
-    *res = GPUTwoPhaseViewMaterialLaw::twoPhaseSatPcnw(params, Sw);
+__global__ void gpuTwoPhaseSatPcnwWrapper(GPUTwoPhaseViewMaterialLaw::Params params, NorneEvaluation* Sw, NorneEvaluation* res){
+    *res = GPUTwoPhaseViewMaterialLaw::twoPhaseSatPcnw(params, *Sw);
 }
 
 BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
 {
-    CPUParams cpuParams;
-    GPUViewParams gpuViewParams;
-
     ValueVector cx = {0.0, 0.5, 1.0};
     ValueVector cy = {0.0, 0.9, 1.0};
     const GPUBuffer gx(cx);
     const GPUBuffer gy(cy);
 
+    CPUParams cpuParams;
     cpuParams.setPcnwSamples(cx, cy);
     cpuParams.setKrwSamples(cx, cy);
     cpuParams.setKrnSamples(cx, cy);
     cpuParams.finalize();
 
-    constGPUBufferParams gpuBufferParams(gx, gy, gx, gy, gx, gy);
+    constGPUBufferParams gpuBufferParams = Opm::gpuistl::move_to_gpu<const GPUBuffer>(cpuParams);
 
-    gpuViewParams = Opm::gpuistl::make_view<TraitsT, const GPUBuffer, GPUView>(gpuBufferParams);
+    GPUViewParams gpuViewParams = Opm::gpuistl::make_view<GPUView>(gpuBufferParams);
 
     ValueVector testXs = {-1.0, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 1.0, 1.1};
+
+    NorneEvaluation* gpuAdInput;
+    NorneEvaluation* gpuAdResOnGPU;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdInput, sizeof(NorneEvaluation)));
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdResOnGPU, sizeof(NorneEvaluation)));
 
     for (Scalar x_i : testXs){
         auto cpuMadeAd = NorneEvaluation(x_i, 0);
         NorneEvaluation cpuInterpolatedEval = CPUTwoPhaseMaterialLaw::twoPhaseSatPcnw<NorneEvaluation>(cpuParams, cpuMadeAd);
 
-        NorneEvaluation* gpuAdInput;
-        NorneEvaluation* gpuAdResOnGPU;
         NorneEvaluation gpuAdResOnCPU;
 
-        OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdInput, sizeof(NorneEvaluation)));
-        OPM_GPU_SAFE_CALL(cudaMalloc(&gpuAdResOnGPU, sizeof(NorneEvaluation)));
-
         OPM_GPU_SAFE_CALL(cudaMemcpy(gpuAdInput, &cpuMadeAd, sizeof(NorneEvaluation), cudaMemcpyHostToDevice));
-        gpuTwoPhaseSatPcnwWrapper<<<1,1>>>(gpuViewParams, *gpuAdInput, gpuAdResOnGPU);
+        gpuTwoPhaseSatPcnwWrapper<<<1,1>>>(gpuViewParams, gpuAdInput, gpuAdResOnGPU);
         OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
         OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuAdResOnCPU, gpuAdResOnGPU, sizeof(NorneEvaluation), cudaMemcpyDeviceToHost));
 
         BOOST_CHECK(gpuAdResOnCPU == cpuInterpolatedEval);
     }
+
+    OPM_GPU_SAFE_CALL(cudaFree(gpuAdInput));
+    OPM_GPU_SAFE_CALL(cudaFree(gpuAdResOnGPU));
 }
