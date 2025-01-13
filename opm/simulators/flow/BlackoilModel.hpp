@@ -24,7 +24,7 @@
 #ifndef OPM_BLACKOILMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILMODEL_HEADER_INCLUDED
 
-#include <fmt/format.h>
+#include <dune/common/timer.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
@@ -35,27 +35,26 @@
 
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+
 #include <opm/simulators/flow/BlackoilModelNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/flow/BlackoilModelProperties.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
+
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #include <opm/simulators/utils/ComponentName.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
-#include <dune/common/timer.hh>
-
-#include <fmt/format.h>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -73,82 +72,7 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Properties {
-
-namespace TTag {
-
-struct FlowProblem { using InheritsFrom = std::tuple<FlowBaseProblemBlackoil, BlackOilModel>; };
-
-}
-
-// default in flow is to formulate the equations in surface volumes
-template<class TypeTag>
-struct BlackoilConserveSurfaceVolume<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct UseVolumetricResidual<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct AquiferModel<TypeTag, TTag::FlowProblem>
-{ using type = BlackoilAquiferModel<TypeTag>; };
-
-// disable all extensions supported by black oil model. this should not really be
-// necessary but it makes things a bit more explicit
-template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableSolvent<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableFoam<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableConvectiveMixing<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct WellModel<TypeTag, TTag::FlowProblem>
-{ using type = BlackoilWellModel<TypeTag>; };
-
-template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::FlowProblem>
-{ using type = TTag::FlowIstlSolver; };
-
-template<class TypeTag>
-struct EnableDebuggingChecks<TypeTag, TTag::FlowProblem>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Properties
+#include <fmt/format.h>
 
 namespace Opm {
 
