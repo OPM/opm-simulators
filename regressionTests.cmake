@@ -43,6 +43,13 @@ add_test_compareECLFiles(CASENAME spe1_gaswater
                          REL_TOL ${coarse_rel_tol}
                          DIR spe1)
 
+add_test_compareECLFiles(CASENAME spe1_gaswater_msw
+                         FILENAME SPE1CASE2_GASWATER_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         DIR spe1)
+
 add_test_compareECLFiles(CASENAME spe1
                          FILENAME SPE1CASE1
                          SIMULATOR flow
