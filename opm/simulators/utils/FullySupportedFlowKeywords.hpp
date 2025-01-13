@@ -1,5 +1,5 @@
 /*
-  Copyright 2021 Equinor.
+  Copyright 2024 Equinor.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_PARTIALLYSUPPORTEDFLOWKEYWORDS_HEADER_INCLUDED
-#define OPM_PARTIALLYSUPPORTEDFLOWKEYWORDS_HEADER_INCLUDED
+#ifndef OPM_FULLYSUPPORTEDFLOWKEYWORDS_HEADER_INCLUDED
+#define OPM_FULLYSUPPORTEDFLOWKEYWORDS_HEADER_INCLUDED
 
 
 #include <opm/simulators/flow/KeywordValidation.hpp>
@@ -26,8 +26,8 @@
 #include <string>
 
 /*
-    Here keywords are defined that are supported by flow, but have items that
-    are only partially supported.
+    Here keywords are defined that are fully supported by flow, but nevertheless
+    can benefit from a preliminary high-level non-contextual verification.
 
     The keywords are specified in a mapping with the keyword names as keys, and
     values that describe the set of supported items. These are described by a
@@ -47,7 +47,7 @@ namespace Opm::FlowKeywordValidation
 {
 
 template <typename T>
-const KeywordValidation::SupportedKeywords<T>& partiallySupported();
+const KeywordValidation::SupportedKeywords<T>& fullySupported();
 
 } // namespace Opm::FlowKeywordValidation
 
