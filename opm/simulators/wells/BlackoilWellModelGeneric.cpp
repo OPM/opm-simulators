@@ -1017,8 +1017,7 @@ setWsolvent(const Group& group,
     }
 
     for (const std::string& wellName : group.wells()) {
-        const auto& wellTmp = schedule_.getWell(wellName, reportStepIdx);
-        if (wellTmp.getStatus() == Well::Status::SHUT)
+        if (! hasOpenLocalWell(wellName))
             continue;
 
         getGenWell(wellName)->setWsolvent(wsolvent);
