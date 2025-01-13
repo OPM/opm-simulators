@@ -41,6 +41,27 @@ void copyMatDataToReordered(T* srcMatrix,
                             size_t numberOfRows,
                             int threadBlockSize);
 
+// TODO: document the stream
+/**
+ * @brief Reorders the elements of a matrix by copying them from one matrix to another using a permutation list
+ * @param srcMatrix The source matrix we will copy data from
+ * @param srcRowIndices Pointer to vector on GPU containing row indices for the source matrix compliant wiht bsr format
+ * @param [out] dstMatrix The destination matrix that we copy data to
+ * @param dstRowIndices Pointer to vector on GPU containing riw indices for the destination matrix compliant wiht bsr
+ * format
+ * @param naturalToReordered Permuation list that converts indices in the src matrix to the indices in the dst matrix
+ * @param numberOfRows The number of rows in the matrices
+ */
+template <class T, int blocksize>
+void copyMatDataToReordered(T* srcMatrix,
+                            int* srcRowIndices,
+                            T* dstMatrix,
+                            int* dstRowIndices,
+                            int* naturalToReordered,
+                            size_t numberOfRows,
+                            int threadBlockSize,
+                            cudaStream_t stream);
+
 /**
  * @brief Reorders the elements of a matrix by copying them from one matrix to a split matrix using a permutation list
  * @param srcMatrix The source matrix we will copy data from
@@ -67,6 +88,34 @@ void copyMatDataToReorderedSplit(T* srcMatrix,
                                  int* naturalToReordered,
                                  size_t numberOfRows,
                                  int threadBlockSize);
+
+/**
+ * @brief Reorders the elements of a matrix by copying them from one matrix to a split matrix using a permutation list
+ * @param srcMatrix The source matrix we will copy data from
+ * @param srcRowIndices Pointer to vector on GPU containing row indices for the source matrix compliant wiht bsr format
+ * @param [out] dstLowerMatrix The destination of entries that originates from the strictly lower triangular matrix
+ * @param dstRowIndices Pointer to vector on GPU containing rww indices for the destination lower matrix compliant wiht
+ * bsr format
+ * @param [out] dstUpperMatrix The destination of entries that originates from the strictly upper triangular matrix
+ * @param dstRowIndices Pointer to vector on GPU containing riw indices for the destination upper matrix compliant wiht
+ * bsr format
+ * @param [out] dstDiag The destination buffer for the diagonal part of the matrix
+ * @param naturalToReordered Permuation list that converts indices in the src matrix to the indices in the dst matrix
+ * @param numberOfRows The number of rows in the matrices
+ */
+template <class T, int blocksize>
+void copyMatDataToReorderedSplit(T* srcMatrix,
+                                 int* srcRowIndices,
+                                 int* srcColumnIndices,
+                                 T* dstLowerMatrix,
+                                 int* dstLowerRowIndices,
+                                 T* dstUpperMatrix,
+                                 int* dstUpperRowIndices,
+                                 T* dstDiag,
+                                 int* naturalToReordered,
+                                 size_t numberOfRows,
+                                 int threadBlockSize,
+                                 cudaStream_t stream);
 
 } // namespace Opm::gpuistl::detail
 #endif
