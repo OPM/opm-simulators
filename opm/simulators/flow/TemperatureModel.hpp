@@ -106,10 +106,10 @@ public:
         , simulator_(simulator)
     { }
 
-    void init(bool rst)
+    void init()
     {
         const unsigned int numCells = simulator_.model().numTotalDof();
-        this->doInit(rst, numCells);
+        this->doInit(numCells);
 
         if (!this->doTemp())
             return;
@@ -177,21 +177,6 @@ public:
     void deserialize(Restarter&)
     { /* not implemented */ }
 
-    //template<class Serializer>
-    //void serializeOp(Serializer& serializer)
-    //{
-    //    serializer(intQuants_);
-    //    serializer(storage1_);
-    //}
-
-    //static serializationTestObject(const Simulator& simulator)
-    //{
-    //    TemperatureModel result(simulator);
-    //    result.intQuants_ = {1.0, 2.0};
-    //    result.storage1_ = {2.0};
-    //    return result;
-    //}
-
 protected:
 
     void updateStorageCache()
@@ -210,7 +195,6 @@ protected:
 
     void advanceTemperatureFields()
     {
-        const unsigned int numCells = simulator_.model().numTotalDof();
         const int maximum_number_of_newton_iterations = 20;
         // solve using Newton
         for (int iter = 0; iter < maximum_number_of_newton_iterations; ++iter) {
@@ -230,9 +214,6 @@ protected:
             OpmLog::warning("### Temp model: Linear solver did not converge. ###");
         }
         for (unsigned globI = 0; globI < numCells; ++globI) {
-            if (globI == 0) {
-                //std::cout << globI << " " << this->temperature_[globI] << " " << dx[globI] << " " << this->energyVector_[globI] << std::endl;
-            }
             this->temperature_[globI] -= std::clamp(dx[globI][0], Scalar(-10.0), Scalar(10.0));
             intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
             intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
@@ -352,9 +333,6 @@ protected:
             Evaluation storage = 0.0;
             computeStorageTerm(globI, storage);
             this->energyVector_[globI] += storefac * ( getValue(storage) - storage1_[globI] );
-            if (globI == 0) {
-                //std::cout << "storage " << getValue(storage) << " " << storage1_[globI] << " " << storefac * ( getValue(storage) - storage1_[globI] ) << " " <<  storefac * storage.derivative(Indices::temperatureIdx) << " " << dt/(3600*24) << std::endl;
-            }
             (*this->energyMatrix_)[globI][globI][0][0] += storefac * storage.derivative(Indices::temperatureIdx);
         }
 
@@ -442,7 +420,6 @@ protected:
                 } else {
                     rate *= fs.enthalpy(phaseIdx) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 }
-                //std::cout << "temp well " << rate << std::endl;
                 rate *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
                 this->energyVector_[globI] -= getValue(rate);
                 (*this->energyMatrix_)[globI][globI][0][0] -= rate.derivative(Indices::temperatureIdx);
@@ -486,13 +463,7 @@ public:
     void deserialize(Restarter&)
     { /* not implemented */ }
 
-    //template<class Serializer>
-    //void serializeOp(Serializer& serializer)
-    // {
-    //     serializer(dummy_);
-    //}
-
-    void init(bool /*rst*/) {}
+    void init() {}
     void beginTimeStep() {}
     void endTimeStep() {}
     const Scalar temperature(size_t /*globalIdx*/) const {

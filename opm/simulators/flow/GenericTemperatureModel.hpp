@@ -77,8 +77,7 @@ protected:
     /*!
      * \brief Initialize all internal data structures needed by the temperature module
      */
-    void doInit(bool rst,
-                std::size_t numGridDof);
+    void doInit(std::size_t numGridDof);
 
     bool linearSolve_(const EnergyMatrix& M, EnergyVector& x, EnergyVector& b);
 

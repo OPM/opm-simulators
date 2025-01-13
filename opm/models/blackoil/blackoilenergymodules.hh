@@ -770,18 +770,60 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 public:
     template<class FluidState>
-    static void updateEnergy(Evaluation& /*energyFlux*/,
-                             const unsigned& /*focusDofIndex*/,
-                             const unsigned& /*inIdx*/,
-                             const unsigned& /*exIdx*/,
-                             const IntensiveQuantities& /*inIq*/,
-                             const IntensiveQuantities& /*exIq*/,
-                             const FluidState& /*inFs*/,
-                             const FluidState& /*exFs*/,
-                             const Scalar& /*inAlpha*/,
-                             const Scalar& /*outAlpha*/,
-                             const Scalar& /*faceArea*/)
-    {}
+    static void updateEnergy(Evaluation& energyFlux,
+                             const unsigned& focusDofIndex,
+                             const unsigned& inIdx,
+                             const unsigned& exIdx,
+                             const IntensiveQuantities& inIq,
+                             const IntensiveQuantities& exIq,
+                             const FluidState& inFs,
+                             const FluidState& exFs,
+                             const Scalar& inAlpha,
+                             const Scalar& outAlpha,
+                             const Scalar& faceArea)
+    {
+        // used by the TEMP option
+        Evaluation deltaT;
+        if (focusDofIndex == inIdx)
+            deltaT =
+                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
+                - inFs.temperature(/*phaseIdx=*/0);
+        else if (focusDofIndex == exIdx)
+            deltaT =
+                exFs.temperature(/*phaseIdx=*/0)
+                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        else
+            deltaT =
+                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
+                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+
+        Evaluation inLambda;
+        if (focusDofIndex == inIdx)
+            inLambda = inIq.totalThermalConductivity();
+        else
+            inLambda = decay<Scalar>(inIq.totalThermalConductivity());
+
+        Evaluation exLambda;
+        if (focusDofIndex == exIdx)
+            exLambda = exIq.totalThermalConductivity();
+        else
+            exLambda = decay<Scalar>(exIq.totalThermalConductivity());
+
+        Evaluation H;
+        const Evaluation& inH = inLambda*inAlpha;
+        const Evaluation& exH = exLambda*outAlpha;
+        if (inH > 0 && exH > 0) {
+            // compute the "thermal transmissibility". In contrast to the normal
+            // transmissibility this cannot be done as a preprocessing step because the
+            // average thermal conductivity is analogous to the permeability but
+            // depends on the solution.
+            H = 1.0/(1.0/inH + 1.0/exH);
+        }
+        else
+            H = 0.0;
+
+        energyFlux = deltaT * (-H/faceArea);
+    }
 
     void updateEnergy(const ElementContext&,
                       unsigned,
