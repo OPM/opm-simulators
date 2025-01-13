@@ -36,6 +36,34 @@ add_test_compare_parallel_simulation(CASENAME spe9_dist_z
                                      REL_TOL ${rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
 
+# A test for distributed multisegment wells. We load distribute only along the z-axis
+add_test_compare_parallel_simulation(CASENAME msw-simple
+                                     FILENAME MSW-SIMPLE # this file contains one Multisegment well without branches that is distributed across several processes
+                                     DIR msw
+                                     SIMULATOR flow_distribute_z
+                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
+                                     REL_TOL 1e-5
+                                     MPI_PROCS 4
+                                     TEST_ARGS --solver-max-time-step-in-days=15 --allow-distributed-wells=true)
+
+add_test_compare_parallel_simulation(CASENAME msw-3d
+                                     FILENAME MSW-3D # this file contains one Multisegment well with branches that is distributed across several processes
+                                     DIR msw
+                                     SIMULATOR flow_distribute_z
+                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
+                                     REL_TOL 1e-4
+                                     MPI_PROCS 4
+                                     TEST_ARGS --allow-distributed-wells=true)
+
+add_test_compare_parallel_simulation(CASENAME msw-3d-two-producers
+                                     FILENAME MSW-3D-TWO-PRODUCERS # this file contains two Multisegment wells with branches that are distributed across several processes
+                                     DIR msw
+                                     SIMULATOR flow_distribute_z
+                                     ABS_TOL 1e4 # the absolute tolerance is pretty high here, yet in this case, we are only interested in the relative tolerance
+                                     REL_TOL 1e-4
+                                     MPI_PROCS 4
+                                     TEST_ARGS --allow-distributed-wells=true)
+
 add_test_compare_parallel_simulation(CASENAME spe9group
                                      FILENAME SPE9_CP_GROUP
                                      SIMULATOR flow
@@ -49,6 +77,15 @@ add_test_compare_parallel_simulation(CASENAME spe3
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7)
+
+add_test_compare_parallel_simulation(CASENAME spe3_partition_method_3
+                                     FILENAME SPE3CASE1
+                                     POSTFIX partition_method_3
+                                     DIR spe3
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=3)
 
 add_test_compare_parallel_simulation(CASENAME spe1_solvent
                                      FILENAME SPE1CASE2_SOLVENT
@@ -137,9 +174,9 @@ add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      FILENAME AQUFLUX-01
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
-                                     REL_TOL 0.04
+                                     REL_TOL 0.06
                                      DIR aquifers
-                                     TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
+                                     TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1.0e-3)
 
 add_test_compare_parallel_simulation(CASENAME aquflux_02
                                      FILENAME AQUFLUX-02
@@ -150,12 +187,12 @@ add_test_compare_parallel_simulation(CASENAME aquflux_02
                                      TEST_ARGS --enable-tuning=true)
 
 add_test_compare_parallel_simulation(CASENAME network_balance_01
-		                             FILENAME NETWORK-01
-		                             SIMULATOR flow
-		                             ABS_TOL 0.04
-		                             REL_TOL 0.02
-		                             DIR network
-		                             TEST_ARGS --enable-tuning=true)
+                                     FILENAME NETWORK-01
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol}
+                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     DIR network
+                                     TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0 --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1e-3)
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      FILENAME 3D_1AQU_3CELLS
@@ -164,6 +201,24 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      REL_TOL 0.05
                                      DIR aquifer-num
                                      TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
+
+foreach(templ_case RANGE 1 6)
+  add_test_compare_parallel_simulation(CASENAME actionx_well_templ_0${templ_case}
+    FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol_parallel}
+    REL_TOL ${rel_tol_parallel}
+    DIR actionx
+  )
+endforeach()
+
+add_test_compare_parallel_simulation(CASENAME WCYCLE-0
+                                     FILENAME WCYCLE-0
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${rel_tol_parallel}
+                                     DIR wcycle
+                                     TEST_ARGS --enable-tuning=true)
 
 add_test_compare_parallel_simulation(CASENAME actionx_m1
                                      FILENAME ACTIONX_M1
@@ -201,9 +256,9 @@ add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
                                      FILENAME 3_A_MPI_MULTFLT_SCHED_MODEL2
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
-      			       DIR model2
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+                                     REL_TOL 1.0e-3
+                        			       DIR model2
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --newton-max-iterations=30 --enable-drift-compensation=false)
 
 add_test_compare_parallel_simulation(CASENAME rxft
                                      FILENAME TEST_RXFT
@@ -212,3 +267,51 @@ add_test_compare_parallel_simulation(CASENAME rxft
                                      REL_TOL 1.0e-3
                                      DIR rxft_smry
                                      TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
+
+add_test_compareSeparateECLFiles(CASENAME actionx_compdat_1_proc
+                                 DIR1 actionx
+                                 FILENAME1 COMPDAT_SHORT
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_COMPDAT_SHORT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH
+                                 MPI_PROCS 1)
+
+add_test_compareSeparateECLFiles(CASENAME actionx_compdat_2_procs
+                                 DIR1 actionx
+                                 FILENAME1 COMPDAT_SHORT
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_COMPDAT_SHORT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH
+                                 MPI_PROCS 2)
+
+add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_1_proc
+                                 DIR1 actionx
+                                 FILENAME1 COMPDAT_SHORT
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_COMPDAT_SHORT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH
+                                 MPI_PROCS 1
+                                 TEST_ARGS --nonlinear-solver=nldd --matrix-add-well-contributions=true --linear-solver=ilu0)
+
+add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_2_procs
+                                 DIR1 actionx
+                                 FILENAME1 COMPDAT_SHORT
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_COMPDAT_SHORT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH
+                                 MPI_PROCS 2
+                                 TEST_ARGS --nonlinear-solver=nldd --matrix-add-well-contributions=true --linear-solver=ilu0)

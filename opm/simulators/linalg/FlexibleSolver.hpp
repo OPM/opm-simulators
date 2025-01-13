@@ -86,7 +86,8 @@ private:
                       const std::function<VectorType()> weightsCalculator, const Dune::Amg::SequentialInformation&,
                       std::size_t pressureIndex);
 
-    void initSolver(const Opm::PropertyTree& prm, const bool is_iorank);
+    template <class Comm>
+    void initSolver(const Opm::PropertyTree& prm, const Comm& comm);
 
     void recreateDirectSolver();
 

@@ -3,12 +3,16 @@
 CONTENT
 -------
 
-opm-simulators contains simulator programs for porous media flow.
-The most important
-(and tested) part is the Flow reservoir simulator, which is a fully
-implicit black-oil simulator that also supports solvent and polymer
-options. It is built using automatic differentiation, using the local
-AD class Evaluation from opm-material.
+opm-simulators contains the OPM Flow reservoir simulator, which is a fully
+implicit black-oil simulator that also supports CO2 storage, H2 storage, thermal,
+solvent, and polymer options. It supports input and output in the common Eclipse formats,
+allowing easy integration in existing workflows.
+Its system assembly approach builds on automatic differentiation,
+using the local AD class Evaluation from opm-common. The linear solver subsystem is based on
+the dune-istl library.
+
+For more information see https://opm-project.org, for the OPM manual see
+https://opm-project.org/?page_id=955
 
 LICENSE
 -------
@@ -49,8 +53,8 @@ BUILDING
 See build instructions at http://opm-project.org/?page_id=36
 
 
-DOCUMENTATION
--------------
+IN-CODE DOCUMENTATION
+---------------------
 
 Efforts have been made to document the code with Doxygen.
 In order to build the documentation, enter the command
@@ -63,7 +67,10 @@ in the topmost directory.
 REPORTING ISSUES
 ----------------
 
-Issues can be reported in the Git issue tracker online at:
+The OPM mailing list can be used for questions and issue reporting,
+see https://opm-project.org/?page_id=358
+
+Issues can also be reported in the Git issue tracker online at:
 
     https://github.com/OPM/opm-simulators/issues
 

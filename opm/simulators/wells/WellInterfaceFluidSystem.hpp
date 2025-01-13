@@ -25,9 +25,12 @@
 #define OPM_WELLINTERFACE_FLUID_SYSTEM_HEADER_INCLUDED
 
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <limits>
+#include <optional>
+#include <vector>
 
 namespace Opm
 {
@@ -54,6 +57,7 @@ protected:
 
 public:
     using Scalar = typename FluidSystem::Scalar;
+    using ModelParameters = typename WellInterfaceGeneric<Scalar>::ModelParameters;
 
     int flowPhaseToModelPhaseIdx(const int phaseIdx) const;
 
@@ -70,6 +74,7 @@ protected:
     WellInterfaceFluidSystem(const Well& well,
                              const ParallelWellInfo<Scalar>& parallel_well_info,
                              const int time_step,
+                             const ModelParameters& param,
                              const RateConverterType& rate_converter,
                              const int pvtRegionIdx,
                              const int num_components,
@@ -78,7 +83,7 @@ protected:
                              const std::vector<PerforationData<Scalar>>& perf_data);
 
     // updating the voidage rates in well_state when requested
-    void calculateReservoirRates(SingleWellState<Scalar>& ws) const;
+    void calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const;
 
     bool checkIndividualConstraints(SingleWellState<Scalar>& ws,
                                     const SummaryState& summaryState,
@@ -117,11 +122,11 @@ protected:
                                  Scalar efficiencyFactor,
                                  DeferredLogger& deferred_logger) const;
 
-    bool wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
-                                      const Schedule& schedule,
-                                      const WellState<Scalar>& well_state,
-                                      const GroupState<Scalar>& group_state,
-                                      DeferredLogger& deferredLogger) const;
+    bool zeroGroupRateTarget(const SummaryState& summary_state,
+                             const Schedule& schedule,
+                             const WellState<Scalar>& well_state,
+                             const GroupState<Scalar>& group_state,
+                             DeferredLogger& deferredLogger) const;
 
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;

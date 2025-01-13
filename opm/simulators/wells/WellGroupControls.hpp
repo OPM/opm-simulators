@@ -24,6 +24,7 @@
 #ifndef OPM_WELL_GROUP_CONTROLS_HEADER_INCLUDED
 #define OPM_WELL_GROUP_CONTROLS_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <string>
 #include <functional>
 #include <optional>
@@ -37,6 +38,7 @@ class Group;
 template<class Scalar> class GroupState;
 enum class InjectorType;
 using RegionId = int;
+struct PhaseUsage;
 class Schedule;
 class SummaryState;
 template<class Scalar> class WellInterfaceGeneric;
@@ -98,6 +100,19 @@ public:
                                         const RateConvFunc& rateConverter,
                                         Scalar efficiencyFactor,
                                         DeferredLogger& deferred_logger) const;
+
+    static std::pair<Scalar, Group::ProductionCMode> getAutoChokeGroupProductionTargetRate(const std::string& name,
+                                                        const Group& parent,
+                                                        const WellState<Scalar>& well_state,
+                                                        const GroupState<Scalar>& group_state,
+                                                        const Schedule& schedule,
+                                                        const SummaryState& summaryState,
+                                                        const std::vector<Scalar>& resv_coeff,
+                                                        Scalar efficiencyFactor,
+                                                        const int reportStepIdx,
+                                                        const PhaseUsage& pu,
+                                                        const GuideRate* guideRate,
+                                                        DeferredLogger& deferred_logger);
 
 private:
     const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface

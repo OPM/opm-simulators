@@ -20,11 +20,12 @@
 #ifndef OPM_GASLIFT_SINGLE_WELL_GENERIC_HEADER_INCLUDED
 #define OPM_GASLIFT_SINGLE_WELL_GENERIC_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
 #include <opm/input/eclipse/Schedule/Well/WellProductionControls.hpp>
+
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <optional>
 #include <set>
@@ -106,6 +107,8 @@ public:
                                                  bool debug_output = true) const;
 
     std::unique_ptr<GasLiftWellState<Scalar>> runOptimize(const int iteration_idx);
+
+    std::pair<Scalar, bool> wellTestALQ();
 
     virtual const WellInterfaceGeneric<Scalar>& getWell() const = 0;
 

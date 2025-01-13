@@ -17,11 +17,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
+#define OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
 
 // Improve IDE experience
 #ifndef OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 #include <config.h>
-#define OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #endif
 
@@ -316,9 +317,9 @@ void BlackoilAquiferModel<TypeTag>::createDynamicAquifers(const int episode_inde
         auto aquPos =
             std::find_if(std::begin(this->aquifers),
                          std::end(this->aquifers),
-                [id = id](const auto& aquPtr)
+                [Id = id](const auto& aquPtr)
             {
-                return aquPtr->aquiferID() == id;
+                return aquPtr->aquiferID() == Id;
             });
 
         if (aquPos == std::end(this->aquifers)) {
@@ -375,3 +376,5 @@ void BlackoilAquiferModel<TypeTag>::computeConnectionAreaFraction() const
 }
 
 } // namespace Opm
+
+#endif

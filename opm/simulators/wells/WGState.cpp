@@ -21,8 +21,9 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/WGState.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 
@@ -61,5 +62,9 @@ bool WGState<Scalar>::operator==(const WGState& rhs) const
 }
 
 template struct WGState<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template struct WGState<float>;
+#endif
 
 }

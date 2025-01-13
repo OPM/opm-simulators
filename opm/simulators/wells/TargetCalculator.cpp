@@ -228,19 +228,16 @@ groupTarget(const std::optional<Group::InjectionControls>& ctrl,
         return ctrl->target_reinj_fraction * production_rate;
     }
     case Group::InjectionCMode::VREP: {
-        const std::vector<Scalar>& group_injection_reductions = this->group_state_.injection_reduction_rates(this->group_name_);
+        // We use the injection_reservoir_rates directly instead of the reduction rates here to account for the
+        // possibility that the group in question has both a VREP control and another injection control for a different phase.
+        const std::vector<Scalar>& group_injection_reservoir_rates = this->group_state_.injection_reservoir_rates(this->group_name_);
         Scalar voidage_rate = group_state_.injection_vrep_rate(ctrl->voidage_group) * ctrl->target_void_fraction;
-        Scalar inj_reduction = 0.0;
         if (ctrl->phase != Phase::WATER)
-            inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Aqua]]
-                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Aqua]];
+            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Aqua]];
         if (ctrl->phase != Phase::OIL)
-            inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Liquid]]
-                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Liquid]];
+            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Liquid]];
         if (ctrl->phase != Phase::GAS)
-            inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Vapour]]
-                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Vapour]];
-        voidage_rate -= inj_reduction;
+            voidage_rate -= group_injection_reservoir_rates[pu_.phase_pos[BlackoilPhases::Vapour]];
         return voidage_rate / resv_coeff_[pos_];
     }
     case Group::InjectionCMode::SALE: {
@@ -266,28 +263,35 @@ InjectionTargetCalculator<Scalar>::guideTargetMode() const
     return target_;
 }
 
-#define INSTANCE_TARGET_CALCULATOR(...) \
-template __VA_ARGS__ TargetCalculator<double>::calcModeRateFromRates<__VA_ARGS__>(const __VA_ARGS__* rates) const;
+#define INSTANTIATE_TARGET_CALCULATOR(T,...) \
+    template __VA_ARGS__                     \
+    TargetCalculator<T>::calcModeRateFromRates(const __VA_ARGS__* rates) const;
 
-template class TargetCalculator<double>;
-template class InjectionTargetCalculator<double>;
+#define INSTANTIATE_TYPE(T)                                       \
+    template class TargetCalculator<T>;                           \
+    template class InjectionTargetCalculator<T>;                  \
+    INSTANTIATE_TARGET_CALCULATOR(T,T)                            \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,3,0>)   \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,4,0>)   \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,5,0>)   \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,6,0>)   \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,7,0>)   \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,8,0>)   \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,9,0>)   \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,10,0>)  \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,-1,4>)  \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,-1,5>)  \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,-1,6>)  \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,-1,7>)  \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,-1,8>)  \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,-1,9>)  \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,-1,10>) \
+    INSTANTIATE_TARGET_CALCULATOR(T,DenseAd::Evaluation<T,-1,11>)
 
-INSTANCE_TARGET_CALCULATOR(double)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,3,0>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,4,0>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,5,0>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,6,0>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,7,0>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,8,0>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,9,0>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,10,0>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,4>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,5>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,6>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,7>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,8>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,9>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,10>)
-INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,11>)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::WGHelpers

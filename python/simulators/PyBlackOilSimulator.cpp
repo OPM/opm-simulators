@@ -22,7 +22,6 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 //#include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
@@ -53,8 +52,10 @@ flowBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFile
 namespace py = pybind11;
 
 namespace Opm::Pybind {
-PyBlackOilSimulator::PyBlackOilSimulator( const std::string &deck_filename)
+PyBlackOilSimulator::PyBlackOilSimulator(const std::string& deck_filename,
+                                         const std::vector<std::string>& args)
     : deck_filename_{deck_filename}
+    , args_{args}
 {
 }
 
@@ -216,7 +217,7 @@ int PyBlackOilSimulator::stepInit()
         }
     }
     if (this->deck_) {
-        this->main_ = std::make_unique<Opm::Main>(
+        this->main_ = std::make_unique<Opm::PyMain>(
             this->deck_->getDataFile(),
             this->eclipse_state_,
             this->schedule_,
@@ -226,12 +227,13 @@ int PyBlackOilSimulator::stepInit()
         );
     }
     else {
-        this->main_ = std::make_unique<Opm::Main>(
+        this->main_ = std::make_unique<Opm::PyMain>(
             this->deck_filename_,
             this->mpi_init_,
             this->mpi_finalize_
         );
     }
+    this->main_->setArguments(args_);
     int exit_code = EXIT_SUCCESS;
     this->flow_main_ = this->main_->initFlowBlackoil(exit_code);
     if (this->flow_main_) {
@@ -293,8 +295,10 @@ void export_PyBlackOilSimulator(py::module& m)
     using namespace Opm::Pybind::DocStrings;
 
     py::class_<PyBlackOilSimulator>(m, "BlackOilSimulator")
-        .def(py::init<const std::string&>(),
-             PyBlackOilSimulator_filename_constructor_docstring)
+        .def(py::init<const std::string&,
+                      const std::vector<std::string>&>(),
+             PyBlackOilSimulator_filename_constructor_docstring,
+             py::arg("filename"), py::arg("args") = std::vector<std::string>{})
         .def(py::init<
              std::shared_ptr<Opm::Deck>,
              std::shared_ptr<Opm::EclipseState>,

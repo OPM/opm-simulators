@@ -28,9 +28,7 @@
 #include <opm/input/eclipse/Schedule/Well/PAvgCalculator.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
-#include <array>
 #include <functional>
-#include <initializer_list>
 
 template<class Scalar>
 Opm::ParallelPAvgCalculator<Scalar>::
@@ -59,3 +57,7 @@ collectGlobalContributions()
 }
 
 template class Opm::ParallelPAvgCalculator<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class Opm::ParallelPAvgCalculator<float>;
+#endif

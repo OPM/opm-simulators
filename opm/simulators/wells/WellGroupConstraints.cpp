@@ -20,15 +20,16 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/WellGroupConstraints.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/wells/WellGroupConstraints.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm
 {
@@ -149,7 +150,8 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // check, skipping over only the single group parent whose
             // control is the active one for the well (if any).
             const auto& group = schedule.getGroup(well.groupName(), well_.currentStep());
-            const Scalar efficiencyFactor = well.getEfficiencyFactor();
+            const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                            well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
                 this->checkGroupConstraintsInj(group, well_state,
                                                group_state, efficiencyFactor,
@@ -180,7 +182,8 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // check, skipping over only the single group parent whose
             // control is the active one for the well (if any).
             const auto& group = schedule.getGroup(well.groupName(), well_.currentStep());
-            const Scalar efficiencyFactor = well.getEfficiencyFactor();
+            const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                            well_state[well.name()].efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
                 this->checkGroupConstraintsProd(group, well_state,
                                                 group_state, efficiencyFactor,
@@ -203,5 +206,9 @@ checkGroupConstraints(WellState<Scalar>& well_state,
 }
 
 template class WellGroupConstraints<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class WellGroupConstraints<float>;
+#endif
 
 } // namespace Opm

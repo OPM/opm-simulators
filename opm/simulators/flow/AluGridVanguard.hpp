@@ -34,10 +34,12 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 #include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
+#include <opm/simulators/flow/AluGridLevelCartesianIndexMapper.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
@@ -106,6 +108,7 @@ public:
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;        
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    using LevelCartesianIndexMapper = Opm::LevelCartesianIndexMapper<Grid>;
     using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
     using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     using Factory = Dune::FromToGridFactory<Grid>;
@@ -233,6 +236,14 @@ public:
     { return *cartesianIndexMapper_; }
 
     /*!
+     * \brief Returns the object which maps a global element index of the simulation grid
+     *        to the corresponding element index of the level logically Cartesian index.
+     *        No refinement is supported for AluGrid so it coincides with CartesianIndexMapper.
+     */
+    const LevelCartesianIndexMapper levelCartesianIndexMapper() const
+    { return LevelCartesianIndexMapper(*cartesianIndexMapper_); }
+
+    /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
      */
     const EquilCartesianIndexMapper& equilCartesianIndexMapper() const
@@ -325,7 +336,7 @@ protected:
 
         factory_ = std::make_unique<Factory>();
         grid_ = factory_->convert(*equilGrid_, cartesianCellId_, ordering_);
-        OpmLog::warning("Space Filling Curve Ordering is not yet supported: DISABLE_ALUGRID_SFC_ORDERING is enabled");
+        OpmLog::warning("Space Filling Curve (SFC) ordering is enabled: see flow_blackoil_alugrid for more informations on disabling/enabling SFC reordering");
         equilGridToGrid_.resize(ordering_.size());
         for (std::size_t index = 0; index < ordering_.size(); ++index) {
             equilGridToGrid_[ordering_[index]] = index;

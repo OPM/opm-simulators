@@ -47,6 +47,15 @@ template<class Scalar>
 class WellGroupHelpers
 {
 public:
+
+    static Scalar sumWellPhaseRates(bool res_rates,
+                                    const Opm::Group& group,
+                                    const Opm::Schedule& schedule,
+                                    const Opm::WellState<Scalar>& wellState,
+                                    const int reportStepIdx,
+                                    const int phasePos,
+                                    const bool injector);
+
     static void setCmodeGroup(const Group& group,
                               const Schedule& schedule,
                               const SummaryState& summaryState,
@@ -96,6 +105,7 @@ public:
                                            const PhaseUsage& pu,
                                            const GuideRate& guide_rate,
                                            const WellState<Scalar>& wellState,
+                                           const SummaryState& summaryState,
                                            GroupState<Scalar>& group_state,
                                            std::vector<Scalar>& groupTargetReduction);
 
@@ -238,6 +248,8 @@ public:
     static int groupControlledWells(const Schedule& schedule,
                                     const WellState<Scalar>& well_state,
                                     const GroupState<Scalar>& group_state,
+                                    const SummaryState& summary_state,
+                                    const GuideRate* guideRate,
                                     const int report_step,
                                     const std::string& group_name,
                                     const std::string& always_included_child,
@@ -266,6 +278,12 @@ public:
                      const std::string& top,
                      const Schedule& schedule,
                      const int report_step);
+
+    static std::string
+    control_group(const Group& group,
+                  const GroupState<Scalar>& group_state,
+                  const int reportStepIdx,
+                  const Schedule& schedule);
 
     static std::pair<bool, Scalar>
     checkGroupConstraintsProd(const std::string& name,

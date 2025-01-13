@@ -40,7 +40,17 @@ public:
     /// local, on-rank, cell indices.  Assumed to return a negative value
     /// result if the input cell index is not owned by the current rank.
     using GlobalToLocal = std::function<int(const std::size_t)>;
-    template<class T> using SourceDataSpan = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<T>;
+
+    /// Fixed-width span/view of a underlying range of contiguous elements.
+    ///
+    /// Interface type for populating or providing dynamic source
+    /// information for a specified location (typically a cell).
+    ///
+    /// \tparam T Element type.  Const or non-const as needed.  Typically \c
+    ///   Scalar or \code const Scalar \endcode.
+    template <typename T>
+    using SourceDataSpan = typename
+        PAvgDynamicSourceData<Scalar>::template SourceDataSpan<T>;
 
     /// Collect source term contributions from local, on-rank, cell.
     ///

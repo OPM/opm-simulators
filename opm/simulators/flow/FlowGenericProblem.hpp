@@ -32,7 +32,6 @@
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
-#include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/SolutionContainers.hpp>
 
 #include <array>
@@ -52,12 +51,6 @@ class Deck;
 class EclipseState;
 class Schedule;
 template<typename Grid, typename GridView> class LookUpData;
-
-int eclPositionalParameter(Dune::ParameterTree& tree,
-                           std::set<std::string>& seenParams,
-                           std::string& errorMsg,
-                           const char** argv,
-                           int paramIdx);
 
 /*!
  * \ingroup BlackOilSimulator
@@ -253,15 +246,6 @@ public:
     Scalar rockCompressibility(unsigned globalSpaceIdx) const;
 
     /*!
-     * Direct access to rock reference pressure.
-     *
-     * While the above overload could be implemented in terms of this method,
-     * that would require always looking up the global space index, which
-     * is not always needed.
-     */
-    Scalar rockReferencePressure(unsigned globalSpaceIdx) const;
-
-    /*!
      * \brief Direct indexed access to the porosity.
      *
      * For the FlowProblem, this method is identical to referencePorosity(). The intensive
@@ -289,7 +273,6 @@ public:
         serializer(solventSaturation_);
         serializer(solventRsw_);
         serializer(micp_);
-        serializer(mixControls_);
     }
 
 protected:
@@ -363,8 +346,6 @@ protected:
     std::vector<Scalar> solventSaturation_;
     std::vector<Scalar> solventRsw_;
     MICPSolutionContainer<Scalar> micp_;
-
-    MixingRateControls<FluidSystem> mixControls_;
 
     // time stepping parameters
     bool enableTuning_;

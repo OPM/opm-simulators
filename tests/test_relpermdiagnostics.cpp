@@ -23,8 +23,10 @@
 
 #define BOOST_TEST_MODULE RelpermDiagnostics
 
+#include <opm/simulators/utils/satfunc/RelpermDiagnostics.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
+
 #include <boost/test/unit_test.hpp>
 #include <boost/version.hpp>
 #if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 71
@@ -32,18 +34,22 @@
 #else
 #include <boost/test/tools/floating_point_comparison.hpp>
 #endif
+
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/CounterLog.hpp>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 #include <dune/grid/common/mcmgmapper.hh>
 
-#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+
+#include <opm/input/eclipse/Deck/Deck.hpp>
+
+#include <opm/input/eclipse/Parser/Parser.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -51,7 +57,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-BOOST_AUTO_TEST_SUITE ()
+BOOST_AUTO_TEST_SUITE (RelPermDiagnostics)
 
 BOOST_AUTO_TEST_CASE(diagnosis)
 {
@@ -79,12 +85,12 @@ BOOST_AUTO_TEST_CASE(diagnosis)
                                /*flipNormals=*/false,
                                /*clipZ=*/false);
 
-    typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
-    CartesianIndexMapper cartesianIndexMapper = CartesianIndexMapper(grid);
+    typedef Opm::LevelCartesianIndexMapper<Grid> LevelCartesianIndexMapper;
+    LevelCartesianIndexMapper levelCartesianIndexMapper = LevelCartesianIndexMapper(grid);
     std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
     OpmLog::addBackend( "COUNTERLOG" , counterLog );
     RelpermDiagnostics diagnostics;
-    diagnostics.diagnosis(eclState, cartesianIndexMapper);
+    diagnostics.diagnosis(eclState, levelCartesianIndexMapper);
     BOOST_CHECK_EQUAL(1, counterLog->numMessages(Log::MessageType::Warning));
 }
 BOOST_AUTO_TEST_SUITE_END()

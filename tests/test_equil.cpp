@@ -20,9 +20,19 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
+
 #include "config.h"
 
 #define BOOST_TEST_MODULE Equil
+
+#include <boost/test/unit_test.hpp>
+
+#include <boost/version.hpp>
+#if (BOOST_VERSION / 100000 == 1) && ((BOOST_VERSION / 100) % 1000 < 71)
+#include <boost/test/floating_point_comparison.hpp>
+#else
+#include <boost/test/tools/floating_point_comparison.hpp>
+#endif
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
@@ -37,7 +47,8 @@
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -57,50 +68,45 @@
 #include <string>
 #include <vector>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/version.hpp>
-#if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 71
-#include <boost/test/floating_point_comparison.hpp>
-#else
-#include <boost/test/tools/floating_point_comparison.hpp>
-#endif
-
-
 namespace Opm::Properties {
-
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
-};
 
 namespace TTag {
 
-
 struct TestEquilTypeTag {
-    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters, FlowBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowBaseProblemBlackoil,
+                                    BlackOilModel>;
 };
+
 struct TestEquilVapwatTypeTag {
-    using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowBaseProblemBlackoil,
+                                    BlackOilModel>;
 };
-}
+
+} // namespace TTag
 
 template<class TypeTag>
 struct WellModel<TypeTag, TTag::TestEquilTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
+
 template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::TestEquilTypeTag> {
     static constexpr bool value = true;
 };
+
 template<class TypeTag>
 struct WellModel<TypeTag, TTag::TestEquilVapwatTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
+
 template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::TestEquilVapwatTypeTag> {
     static constexpr bool value = true;
 };
+
 } // namespace Opm::Properties
+
+namespace {
 
 template <class TypeTag>
 std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
@@ -108,12 +114,12 @@ initSimulator(const char *filename)
 {
     using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
-    std::string filenameArg = "--ecl-deck-file-name=";
-    filenameArg += filename;
+    const auto filenameArg = std::string {"--ecl-deck-file-name="} + filename;
 
     const char* argv[] = {
         "test_equil",
-        filenameArg.c_str()
+        filenameArg.c_str(),
+        "--check-satfunc-consistency=false",
     };
 
     Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);
@@ -124,7 +130,8 @@ initSimulator(const char *filename)
 }
 
 template <class GridView>
-static std::vector<std::pair<double,double>> cellVerticalExtent(const GridView& gridView)
+std::vector<std::pair<double,double>>
+cellVerticalExtent(const GridView& gridView)
 {
     using ElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
     ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
@@ -143,7 +150,7 @@ static std::vector<std::pair<double,double>> cellVerticalExtent(const GridView& 
 }
 
 template <class TypeTag>
-static void initDefaultFluidSystem()
+void initDefaultFluidSystem()
 {
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
 
@@ -208,11 +215,12 @@ static void initDefaultFluidSystem()
     FluidSystem::initEnd();
 }
 
-static Opm::EquilRecord mkEquilRecord( double datd, double datp,
-                                       double zwoc, double pcow_woc,
-                                       double zgoc, double pcgo_goc )
+Opm::EquilRecord
+mkEquilRecord(const double datd, const double datp,
+              const double zwoc, const double pcow_woc,
+              const double zgoc, const double pcgo_goc)
 {
-    return Opm::EquilRecord( datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0, true);
+    return { datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0, true};
 }
 
 template <typename Simulator>
@@ -220,8 +228,6 @@ double centerDepth(const Simulator& sim, const std::size_t cell)
 {
     return Opm::UgGridHelpers::cellCenterDepth(sim.vanguard().grid(), cell);
 }
-
-namespace {
 
 struct EquilFixture {
     EquilFixture() {
@@ -234,10 +240,10 @@ struct EquilFixture {
 #endif
         using namespace Opm;
         FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
-        BlackoilModelParameters<TypeTag>::registerParameters();
+        Opm::ThreadManager::registerParameters();
+        BlackoilModelParameters<double>::registerParameters();
         AdaptiveTimeStepping<TypeTag>::registerParameters();
-        Parameters::registerParam<TypeTag,
-                                  Properties::EnableTerminalOutput>("Dummy added for the well model to compile.");
+        Parameters::Register<Parameters::EnableTerminalOutput>("Dummy added for the well model to compile.");
         registerAllParameters_<TypeTag>();
     }
 
@@ -254,7 +260,7 @@ struct EquilFixture {
                                                                         CartesianIndexMapper>;
 };
 
-}
+} // Anonymous namespace
 
 BOOST_GLOBAL_FIXTURE(EquilFixture);
 
@@ -845,7 +851,6 @@ BOOST_AUTO_TEST_CASE(DeckWithCO2STORE)
         BOOST_CHECK_CLOSE(sats_go[FluidSystem::oilPhaseIdx][i], sats_gw[FluidSystem::waterPhaseIdx][i], reltol);
     }
 }
-
 
 BOOST_AUTO_TEST_CASE(DeckWithWetGas)
 {

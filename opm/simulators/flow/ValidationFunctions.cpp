@@ -16,32 +16,37 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif // HAVE_CONFIG_H
+#include <config.h>
+#include <opm/simulators/flow/ValidationFunctions.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
 
-namespace Opm
-{
+namespace {
+    void validateBRINE(const Opm::DeckKeyword& keyword,
+                       std::vector<Opm::KeywordValidation::ValidationError>& errors)
+    {
+        if (keyword.empty()) {
+            return;
+        }
 
-namespace KeywordValidation
-{
-
-
-void validateBRINE(const DeckKeyword& keyword, std::vector<ValidationError>& errors) {
-    if (keyword.size() == 0)
-        return;
-
-    bool critical = false;
-    errors.push_back( ValidationError{ critical,
-                                      keyword.location(),
-                                      0,  // not relevant
-                                      0,  // not relevant
-                                      std::nullopt,
-                                      std::string{"The BRINE keyword does not accept any salt name arguments"}} );
+        errors.emplace_back(Opm::KeywordValidation::ValidationError {
+            false,
+            keyword.location(),
+            0,  // not relevant
+            0,  // not relevant
+            std::nullopt,
+            std::string{"The BRINE keyword does not accept any salt name arguments"}}
+        );
+    }
 }
+
+namespace Opm::KeywordValidation {
+
+std::unordered_map<std::string, ValidationFunction>
+specialValidation()
+{
+    return {{"BRINE", validateBRINE}};
 }
+
 }

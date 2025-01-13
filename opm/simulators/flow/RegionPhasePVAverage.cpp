@@ -212,5 +212,6 @@ Opm::RegionPhasePoreVolAverage::valueArrayIndex(const Ix      start,
                                                 const AvgType type,
                                                 const Element element) const
 {
-    return start + type*Element::NumElem + element;
+    return start + static_cast<Ix>(type) * static_cast<Ix>(Element::NumElem)
+                 + static_cast<Ix>(element);
 }

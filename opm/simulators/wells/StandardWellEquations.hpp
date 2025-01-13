@@ -36,7 +36,7 @@ namespace Opm
 
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar, int numEq> class StandardWellEquationAccess;
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
 template<class Scalar> class WellInterfaceGeneric;
@@ -68,12 +68,10 @@ public:
     StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info);
 
     //! \brief Setup sparsity pattern for the matrices.
-    //! \param num_cells Total number of cells
     //! \param numWellEq Number of well equations
     //! \param numPerfs Number of perforations
     //! \param cells Cell indices for perforations
-    void init(const int num_cells,
-              const int numWellEq,
+    void init(const int numWellEq,
               const int numPerfs,
               const std::vector<int>& cells);
 
@@ -99,7 +97,7 @@ public:
     //! \details xw = inv(D)*(rw - C*x)
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
     //! \brief Add the matrices of this well to the WellContributions object.
     void extract(const int numStaticWellEq,
                  WellContributions<Scalar>& wellContribs) const;
@@ -150,6 +148,9 @@ private:
     // several vector used in the matrix calculation
     mutable BVectorWell Bx_;
     mutable BVectorWell invDrw_;
+
+    // Store the global index of well perforated cells
+    std::vector<int> cells_;
 };
 
 }

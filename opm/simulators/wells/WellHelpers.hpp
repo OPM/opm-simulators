@@ -76,9 +76,9 @@ Scalar computeHydrostaticCorrection(const Scalar well_ref_depth,
                                     const Scalar gravity);
 
 /// \brief Sums entries of the diagonal Matrix for distributed wells
-template<typename Scalar, typename Comm>
-void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
-                               Dune::DynamicVector<Scalar>& vec,
+template<typename MatrixType, typename VectorType, typename Comm>
+void sumDistributedWellEntries(MatrixType& mat,
+                               VectorType& vec,
                                const Comm& comm);
 
 

@@ -35,8 +35,13 @@
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
 #endif
 
-#if HAVE_CUDA
-#include <opm/simulators/linalg/cuistl/set_device.hpp>
+#if HAVE_HYPRE
+#include <HYPRE_config.h>
+#include <HYPRE_utilities.h>
+#endif
+
+#if HAVE_AMGX
+#include <amgx_c.h>
 #endif
 
 namespace Opm {
@@ -91,6 +96,14 @@ Main::~Main()
         }
     }
 #endif // HAVE_MPI
+
+#if HAVE_HYPRE
+    HYPRE_Finalize();
+#endif
+
+#if HAVE_AMGX
+    AMGX_SAFE_CALL(AMGX_finalize());
+#endif
 
     if (ownMPI_) {
         FlowGenericVanguard::setCommunication(nullptr);
@@ -163,10 +176,22 @@ void Main::initMPI()
     }
 
 #if HAVE_CUDA
-    Opm::cuistl::setDevice(FlowGenericVanguard::comm().rank(), FlowGenericVanguard::comm().size());
+    Opm::gpuistl::setDevice();
 #endif
 
 #endif // HAVE_MPI
+
+#if HAVE_HYPRE
+#if HYPRE_RELEASE_NUMBER >= 22900
+    HYPRE_Initialize();
+#else
+    HYPRE_Init();
+#endif
+#endif
+
+#if HAVE_AMGX
+    AMGX_SAFE_CALL(AMGX_initialize());
+#endif
 }
 
 void Main::handleVersionCmdLine_(int argc, char** argv,
@@ -200,7 +225,9 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool init_from_restart_file,
                     const bool allRanksDbgPrtLog,
                     const std::string& parsingStrictness,
+                    const std::string& actionParsingStrictness,
                     const std::string& inputSkipMode,
+                    const bool keepKeywords,
                     const std::size_t numThreads,
                     const int output_param,
                     const std::string& parameters,
@@ -233,9 +260,11 @@ void Main::readDeck(const std::string& deckFilename,
                   summaryConfig_,
                   std::make_shared<Python>(),
                   parsingStrictness,
+                  actionParsingStrictness,
                   inputSkipMode,
                   init_from_restart_file,
                   outputCout_,
+                  keepKeywords,
                   outputInterval);
 
     verifyValidCellGeometry(FlowGenericVanguard::comm(), *this->eclipseState_);

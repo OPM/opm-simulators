@@ -74,6 +74,10 @@ public:
         orig_precond_.update();
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return orig_precond_.hasPerfectUpdate();
+    }
+
 private:
     OriginalPreconditioner orig_precond_;
     BlockPreconditioner<X, Y, Comm, OriginalPreconditioner> block_precond_;

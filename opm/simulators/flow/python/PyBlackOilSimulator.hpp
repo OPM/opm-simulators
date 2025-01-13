@@ -20,10 +20,10 @@
 #ifndef OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
 #define OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
 
-#include <opm/simulators/flow/Main.hpp>
+#include <python/simulators/PyMain.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/simulators/flow/python/Pybind11Exporter.hpp>
 #include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
@@ -32,6 +32,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 namespace Opm::Pybind {
+
 class PyBlackOilSimulator
 {
 private:
@@ -39,7 +40,8 @@ private:
     using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
 public:
-    PyBlackOilSimulator( const std::string& deckFilename);
+    PyBlackOilSimulator(const std::string& deckFilename,
+                        const std::vector<std::string>& args);
     PyBlackOilSimulator(
         std::shared_ptr<Opm::Deck> deck,
         std::shared_ptr<Opm::EclipseState> state,
@@ -81,7 +83,7 @@ private:
     // This *must* be declared before other pointers
     // to simulator objects. This in order to deinitialize
     // MPI at the correct time (ie after the other objects).
-    std::unique_ptr<Opm::Main> main_;
+    std::unique_ptr<Opm::PyMain> main_;
 
     std::unique_ptr<Opm::FlowMain<TypeTag>> flow_main_;
     Simulator* simulator_;
@@ -91,6 +93,7 @@ private:
     std::shared_ptr<Opm::EclipseState> eclipse_state_;
     std::shared_ptr<Opm::Schedule> schedule_;
     std::shared_ptr<Opm::SummaryConfig> summary_config_;
+    std::vector<std::string> args_;
 };
 
 } // namespace Opm::Pybind

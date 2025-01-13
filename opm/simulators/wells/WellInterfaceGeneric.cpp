@@ -57,6 +57,7 @@ WellInterfaceGeneric<Scalar>::
 WellInterfaceGeneric(const Well& well,
                      const ParallelWellInfo<Scalar>& pw_info,
                      const int time_step,
+                     const ModelParameters& param,
                      const int pvtRegionIdx,
                      const int num_components,
                      const int num_phases,
@@ -65,6 +66,7 @@ WellInterfaceGeneric(const Well& well,
       : well_ecl_(well)
       , parallel_well_info_(pw_info)
       , current_step_(time_step)
+      , param_(param)
       , pvtRegionIdx_(pvtRegionIdx)
       , num_components_(num_components)
       , number_of_phases_(num_phases)
@@ -86,6 +88,7 @@ WellInterfaceGeneric(const Well& well,
 
     // We do not want to count SHUT perforations here, so
     // it would be wrong to use wells.getConnections().size().
+    // This is the number_of_perforations_ on this process only!
     number_of_perforations_ = perf_data.size();
 
     // perforations related
@@ -220,8 +223,11 @@ initInjMult(const std::vector<Scalar>& max_inj_mult)
     // prev_inj_multiplier_ will stay unchanged during the time step
     // while inj_multiplier_ might be updated during the time step
     this->prev_inj_multiplier_ = max_inj_mult;
-    // initializing the inj_multipler_ to be 1.0
-    this->inj_multiplier_ = std::vector<Scalar>(max_inj_mult.size(), 1.);
+    const auto nperf = max_inj_mult.size();
+    // initializing the (report?) step specific multipliers and damping factors to be 1.0
+    this->inj_multiplier_ = std::vector<Scalar>(nperf, 1.);
+    this->inj_multiplier_previter_ = std::vector<Scalar>(nperf, 1.);
+    this->inj_multiplier_damp_factor_ = std::vector<Scalar>(nperf, 1.);
 }
 
 template<class Scalar>
@@ -243,7 +249,8 @@ template<class Scalar>
 Scalar WellInterfaceGeneric<Scalar>::
 getInjMult(const int perf,
            const Scalar bhp,
-           const Scalar perf_pres) const
+           const Scalar perf_pres,
+           DeferredLogger& dlogger) const
 {
     assert(!this->isProducer());
 
@@ -265,15 +272,39 @@ getInjMult(const int perf,
         if (pres > frac_press) {
             multiplier = 1. + (pres - frac_press) * gradient;
         }
+        const Scalar osc_threshold = param_.inj_mult_osc_threshold_;
+        const Scalar prev_multiplier = this->inj_multiplier_[perf_ecl_index] > 0 ? this->inj_multiplier_[perf_ecl_index] : 1.0;
+        if (std::abs(multiplier - prev_multiplier) > osc_threshold) {
+            const Scalar prev2_multiplier = this->inj_multiplier_previter_[perf_ecl_index] > 0 ? this->inj_multiplier_previter_[perf_ecl_index] : 1.0;
+            const bool oscillating = (multiplier - prev_multiplier) * (prev_multiplier - prev2_multiplier) < 0;
+
+            const Scalar min_damp_factor = this->param_.inj_mult_min_damp_factor_;
+            Scalar damp_factor = this->inj_multiplier_damp_factor_[perf_ecl_index];
+            if (oscillating) {
+                if (damp_factor > min_damp_factor) {
+                    const Scalar damp_multiplier = this->param_.inj_mult_damp_mult_;
+                    damp_factor = std::max(min_damp_factor, damp_factor * damp_multiplier);
+                    this->inj_multiplier_damp_factor_[perf_ecl_index] = damp_factor;
+                } else {
+                    const auto msg = fmt::format("Well {}, perforation {}: Injectivity multiplier dampening factor reached minimum (= {})",
+                                                 this->name(),
+                                                 perf_ecl_index,
+                                                 min_damp_factor);
+                    dlogger.warning(msg);
+                }
+            }
+            multiplier = multiplier * damp_factor + (1.0 - damp_factor) * prev_multiplier;
+        }
+        // for CIRR mode, if there is no active WINJMULT setup, we will use the previous injection multiplier,
+        // to mimic keeping the existing fracturing open
+        if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
+            multiplier = std::max(multiplier, this->prev_inj_multiplier_[perf_ecl_index]);
+        }
+
+        this->inj_multiplier_[perf_ecl_index] = multiplier;
+        this->inj_multiplier_previter_[perf_ecl_index] = prev_multiplier;
     }
 
-    // for CIRR mode, if there is no active WINJMULT setup, we will use the previous injection multiplier,
-    // to mimic keeping the existing fracturing open
-    if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
-        multiplier = std::max(multiplier, this->prev_inj_multiplier_[perf_ecl_index]);
-    }
-
-    this->inj_multiplier_[perf_ecl_index] = multiplier;
     return multiplier;
 }
 
@@ -298,12 +329,14 @@ void WellInterfaceGeneric<Scalar>::
 updateWellTestState(const SingleWellState<Scalar>& ws,
                     const double& simulationTime,
                     const bool& writeMessageToOPMLog,
+                    const bool zero_group_target,
                     WellTestState& wellTestState,
                     DeferredLogger& deferred_logger) const
 {
     // updating well test state based on Economic limits for operable wells
     if (this->isOperableAndSolvable()) {
-        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState,
+                                                    zero_group_target, deferred_logger);
     } else {
         // updating well test state based on physical (THP/BHP) limits.
         WellTest(*this).updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
@@ -487,6 +520,13 @@ WellInterfaceGeneric<Scalar>::getDynamicThpLimit() const
 
 template<class Scalar>
 void WellInterfaceGeneric<Scalar>::
+setDynamicThpLimit(const std::optional<Scalar> thp_limit)
+{
+    dynamic_thp_limit_ = thp_limit;
+}
+
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
 updatePerforatedCell(std::vector<bool>& is_cell_perforated)
 {
     for (int perf_idx = 0; perf_idx < number_of_perforations_; ++perf_idx) {
@@ -618,6 +658,16 @@ wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
         const auto inj_mode = well_state.well(this->indexOfWell()).injection_cmode;
         return wellhelpers::rateControlWithZeroInjTarget(inj_controls, inj_mode);
     }
+}
+
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::
+wellUnderGroupControl(const SingleWellState<Scalar>& ws) const
+{
+    // Check if well is under group control
+    const bool isGroupControlled = (this->isInjector() && ws.injection_cmode == Well::InjectorCMode::GRUP) ||
+        (this->isProducer() && ws.production_cmode == Well::ProducerCMode::GRUP);
+    return isGroupControlled;
 }
 
 template<class Scalar>
@@ -856,5 +906,9 @@ prepareForPotentialCalculations(const SummaryState& summary_state,
 }
 
 template class WellInterfaceGeneric<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class WellInterfaceGeneric<float>;
+#endif
 
 } // namespace Opm

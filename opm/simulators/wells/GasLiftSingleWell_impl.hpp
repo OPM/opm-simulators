@@ -17,18 +17,22 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_GASLIFT_SINGLE_WELL_IMPL_HEADER_INCLUDED
+#define OPM_GASLIFT_SINGLE_WELL_IMPL_HEADER_INCLUDED
+
 // Improve IDE experience
 #ifndef OPM_GASLIFT_SINGLE_WELL_HEADER_INCLUDED
-#define OPM_GASLIFT_SINGLE_WELL_IMPL_HEADER_INCLUDED
 #include <config.h>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #endif
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
-#include <fmt/format.h>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <string>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -143,7 +147,8 @@ computeBhpAtThpLimit_(Scalar alq, bool debug_output) const
         this->simulator_,
         this->summary_state_,
         alq,
-        this->deferred_logger_);
+        this->deferred_logger_,
+        /*iterate_if_no_solution */ false);
     if (bhp_at_thp_limit) {
         if (*bhp_at_thp_limit < this->controls_.bhp_limit) {
             if (debug_output && this->debug) {
@@ -249,3 +254,5 @@ checkThpControl_() const
 }
 
 }
+
+#endif

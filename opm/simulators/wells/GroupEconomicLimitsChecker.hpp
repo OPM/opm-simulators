@@ -20,7 +20,8 @@
 #ifndef OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 #define OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 

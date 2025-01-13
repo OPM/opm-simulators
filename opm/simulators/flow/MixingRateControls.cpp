@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowProblem
+ * \copydoc Opm::FlowProblemBlackoil
  */
 
 #include <config.h>
@@ -97,22 +97,18 @@ template<class FluidSystem>
 void MixingRateControls<FluidSystem>::
 init(std::size_t numDof, int episodeIdx, const unsigned ntpvt)
 {
-    // deal with DRSDT
-    //TODO We may want to only allocate these properties only if active.
-    //But since they may be activated at later time we need some more
-    //intrastructure to handle it
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-        FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        maxDRv_.resize(ntpvt, 1e30);
-        lastRv_.resize(numDof, 0.0);
+    // allocate DRSDT related vectors
+    if (this->drsdtActive(episodeIdx) && maxDRs_.empty()) {
         maxDRs_.resize(ntpvt, 1e30);
         dRsDtOnlyFreeGas_.resize(ntpvt, false);
         lastRs_.resize(numDof, 0.0);
-        maxDRv_.resize(ntpvt, 1e30);
+    }
+    if (this->drvdtActive(episodeIdx) && maxDRv_.empty()) {
         lastRv_.resize(numDof, 0.0);
-        if (this->drsdtConvective(episodeIdx)) {
-            convectiveDrs_.resize(numDof, 1.0);
-        }
+        maxDRv_.resize(ntpvt, 1e30);
+    }
+    if (this->drsdtConvective(episodeIdx) && convectiveDrs_.empty()) {
+        convectiveDrs_.resize(numDof, 1.0);
     }
 }
 
@@ -121,9 +117,7 @@ bool MixingRateControls<FluidSystem>::
 drsdtActive(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-    return (oilVaporizationControl.drsdtActive() && bothOilGasActive);
+    return (oilVaporizationControl.drsdtActive());
 }
 
 template<class FluidSystem>
@@ -131,9 +125,7 @@ bool MixingRateControls<FluidSystem>::
 drvdtActive(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-    return (oilVaporizationControl.drvdtActive() && bothOilGasActive);
+    return (oilVaporizationControl.drvdtActive());
 }
 
 template<class FluidSystem>
@@ -141,10 +133,33 @@ bool MixingRateControls<FluidSystem>::
 drsdtConvective(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-    return (oilVaporizationControl.drsdtConvective() && bothOilGasActive);
+    return (oilVaporizationControl.drsdtConvective());
 }
+
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
+drsdtActive(int episodeIdx, std::size_t pvtRegionIdx) const
+{
+    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+    return (oilVaporizationControl.drsdtActive(pvtRegionIdx));
+}
+
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
+drvdtActive(int episodeIdx, std::size_t pvtRegionIdx) const
+{
+    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+    return (oilVaporizationControl.drvdtActive(pvtRegionIdx));
+}
+
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
+drsdtConvective(int episodeIdx, std::size_t pvtRegionIdx) const
+{
+    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+    return (oilVaporizationControl.drsdtConvective(pvtRegionIdx));
+}
+
 
 template<class FluidSystem>
 void MixingRateControls<FluidSystem>::
@@ -152,16 +167,18 @@ updateExplicitQuantities(const int episodeIdx,
                          const Scalar timeStepSize)
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    if (this->drsdtActive(episodeIdx)) {
-        // DRSDT is enabled
-        for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
+    // DRSDT is enabled
+    for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx) {
+        if (oilVaporizationControl.drsdtActive(pvtRegionIdx)) {
             maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx) * timeStepSize;
+        }
     }
 
-    if (this->drvdtActive(episodeIdx)) {
-        // DRVDT is enabled
-        for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
+    // DRVDT is enabled
+    for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx) {
+        if (oilVaporizationControl.drvdtActive(pvtRegionIdx)) {
             maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx) * timeStepSize;
+        }
     }
 }
 
@@ -186,16 +203,16 @@ updateMaxValues(const int episodeIdx,
                 const Scalar timeStepSize)
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    if (this->drsdtActive(episodeIdx)) {
-        // DRSDT is enabled
-        for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx) {
+    // DRSDT is enabled
+    for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx) {
+        if (this->drsdtActive(episodeIdx, pvtRegionIdx)) {
             maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx) * timeStepSize;
         }
     }
 
-    if (this->drvdtActive(episodeIdx)) {
-        // DRVDT is enabled
-        for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx) {
+       // DRVDT is enabled
+    for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx) {
+        if (this->drvdtActive(episodeIdx, pvtRegionIdx)) {
             maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx) * timeStepSize;
         }
     }
@@ -216,6 +233,10 @@ drsdtcon(const unsigned elemIdx,
     // Output drsdt value for index 0
     episodeIdx = std::max(episodeIdx, 0);
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+
+    if (!oilVaporizationControl.drsdtConvective(pvtRegionIdx))
+        return 0;
+
     return oilVaporizationControl.getMaxDRSDT(pvtRegionIdx) * convectiveDrs_[elemIdx];
 }
 
@@ -227,12 +248,12 @@ maxGasDissolutionFactor(const unsigned timeIdx,
                         const int episodeIdx,
                         const int pvtRegionIdx) const
 {
-    if (!this->drsdtActive(episodeIdx) || maxDRs_[pvtRegionIdx] < 0.0) {
+    if (!this->drsdtActive(episodeIdx, pvtRegionIdx)) {
         return std::numeric_limits<Scalar>::max() / 2.0;
     }
 
     Scalar scaling = 1.0;
-    if (this->drsdtConvective(episodeIdx)) {
+    if (this->drsdtConvective(episodeIdx, pvtRegionIdx)) {
        scaling = convectiveDrs_[globalDofIdx];
     }
 
@@ -253,7 +274,7 @@ maxOilVaporizationFactor(const unsigned timeIdx,
                          const int episodeIdx,
                          const int pvtRegionIdx) const
 {
-    if (!this->drvdtActive(episodeIdx) || maxDRv_[pvtRegionIdx] < 0.0) {
+    if (!this->drvdtActive(episodeIdx, pvtRegionIdx)) {
         return std::numeric_limits<Scalar>::max() / 2.0;
     }
 
@@ -271,33 +292,76 @@ void MixingRateControls<FluidSystem>::
 updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                        const Scalar t,
                        const Scalar p,
+                       const Scalar pg,
                        const Scalar rs,
-                       const Scalar so,
+                       const Scalar sg,
                        const Scalar poro,
                        const Scalar permz,
                        const Scalar distZ,
                        const Scalar gravity,
+                       const Scalar salt,
+                       const Scalar Xhi,
+                       const Scalar Psi,
+                       const Scalar omegainn,
                        const int pvtRegionIndex)
 {
-    const Scalar rssat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p);
-    const Scalar saturatedInvB
-        = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIndex, t, p);
+    const Scalar rssat = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+        FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p, salt) :
+        FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p);
+    const Scalar saturatedInvB = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+        FluidSystem::waterPvt().saturatedInverseFormationVolumeFactor(pvtRegionIndex, t, p, salt) :
+        FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIndex, t, p);
     const Scalar rsZero = 0.0;
-    const Scalar pureDensity
-        = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIndex, t, p, rsZero)
-        * FluidSystem::oilPvt().oilReferenceDensity(pvtRegionIndex);
-    const Scalar saturatedDensity = saturatedInvB
-        * (FluidSystem::oilPvt().oilReferenceDensity(pvtRegionIndex)
-           + rssat * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIndex));
-    const Scalar deltaDensity = saturatedDensity - pureDensity;
-    const Scalar visc = FluidSystem::oilPvt().viscosity(pvtRegionIndex, t, p, rs);
-    // Note that for so = 0 this gives no limits (inf) for the dissolution rate
+    const Scalar sg_max = 1.0;
+    const Scalar pureDensity = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+        (FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIndex, t, p, rsZero, salt)
+        * FluidSystem::waterPvt().waterReferenceDensity(pvtRegionIndex)) :
+         (FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIndex, t, p, rsZero)
+        * FluidSystem::oilPvt().oilReferenceDensity(pvtRegionIndex));
+    const Scalar saturatedDensity = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+        (saturatedInvB * (FluidSystem::waterPvt().waterReferenceDensity(pvtRegionIndex)
+        + rssat * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIndex))) :
+        (saturatedInvB * (FluidSystem::oilPvt().oilReferenceDensity(pvtRegionIndex)
+        + rssat * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIndex)));
+    Scalar deltaDensity = saturatedDensity - pureDensity;
+    const Scalar visc = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+        FluidSystem::waterPvt().viscosity(pvtRegionIndex, t, p, rs, salt) :
+        FluidSystem::oilPvt().viscosity(pvtRegionIndex, t, p, rs);
+
+    // Note that for sLiquid = 0 this gives no limits (inf) for the dissolution rate
     // Also we restrict the effect of convective mixing to positive density differences
     // i.e. we only allow for fingers moving downward
-    convectiveDrs_[compressedDofIdx]
-        = permz * rssat * max(0.0, deltaDensity) * gravity / (so * visc * distZ * poro);
+
+    Scalar co2Density =
+        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIndex,t,p,Scalar{0.0} /*=Rv*/, Scalar{0.0} /*=Rvw*/) *
+        FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIndex);
+    Scalar factor = 1.0;
+    Scalar X = (rs - rssat * sg) / (rssat * ( 1.0 - sg));
+    Scalar omega = 0.0;
+    const Scalar pCap = Opm::abs(pg - p);
+    if ((rs >= (rssat * sg)) || (pCap < 1e-12)) {
+        if (X > Psi) {
+            factor = 0.0;
+            omega = omegainn;
+        }
+    } else {
+        factor /= Xhi;
+        deltaDensity = (saturatedDensity - co2Density);
+    }
+    
+    convectiveDrs_[compressedDofIdx] =
+        factor * permz * rssat * max(Scalar{0.0}, deltaDensity) *
+        gravity / ( std::max(sg_max - sg, Scalar{0.0}) *
+        visc * distZ * poro) + (omega/Xhi);
 }
 
-template class MixingRateControls<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
+#define INSTANTIATE_TYPE(T) \
+    template class MixingRateControls<BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>>;
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm

@@ -38,8 +38,8 @@
 
 #include <opm/simulators/linalg/extractMatrix.hpp>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/ISTLSolverBda.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/ISTLSolverGpuBridge.hpp>
 #else
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #endif
@@ -82,8 +82,8 @@ public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using ModelParameters = BlackoilModelParameters<TypeTag>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ModelParameters = BlackoilModelParameters<Scalar>;
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
 
     using BVector = typename BlackoilModel<TypeTag>::BVector;
@@ -160,18 +160,16 @@ public:
             // only. This must be addressed before going parallel.
             const auto& eclState = model_.simulator().vanguard().eclState();
             FlowLinearSolverParameters loc_param;
-            loc_param.template init<TypeTag>(eclState.getSimulationConfig().useCPR());
+            loc_param.is_nldd_local_solver_ = true;
+            loc_param.init(eclState.getSimulationConfig().useCPR());
             // Override solver type with umfpack if small domain.
-            // Otherwise hardcode to ILU0
             if (domains_[index].cells.size() < 200) {
                 loc_param.linsolver_ = "umfpack";
-            } else {
-                loc_param.linsolver_ = "ilu0";
-                loc_param.linear_solver_reduction_ = 1e-2;
             }
             loc_param.linear_solver_print_json_definition_ = false;
             const bool force_serial = true;
             domain_linsolvers_.emplace_back(model_.simulator(), loc_param, force_serial);
+            domain_linsolvers_.back().setDomainIndex(index);
         }
 
         assert(int(domains_.size()) == num_domains);
@@ -476,7 +474,8 @@ private:
                 bool oscillate = false;
                 bool stagnate = false;
                 const int numPhases = convergence_history.front().size();
-                detail::detectOscillations(convergence_history, iter, numPhases, 0.2, 1, oscillate, stagnate);
+                detail::detectOscillations(convergence_history, iter, numPhases,
+                                           Scalar{0.2}, 1, oscillate, stagnate);
                 if (oscillate) {
                     damping_factor *= 0.85;
                     logger.debug(fmt::format("| Damping factor is now {}", damping_factor));
@@ -680,7 +679,7 @@ private:
                     report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                 }
 
-                report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
+                report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii], tol[ii]);
             }
         }
 
@@ -816,7 +815,7 @@ private:
                            const SimulatorTimerInterface& timer,
                            const Domain& domain)
     {
-        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
+        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, false);
         local_report = res.first;
@@ -826,7 +825,7 @@ private:
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         } else {
-            model_.wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+            model_.wellModel().setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
@@ -841,7 +840,7 @@ private:
                                 const SimulatorTimerInterface& timer,
                                 const Domain& domain)
     {
-        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
+        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, true);
         local_report = res.first;
@@ -882,7 +881,7 @@ private:
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
         } else {
-            model_.wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+            model_.wellModel().setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
@@ -920,19 +919,25 @@ private:
     {
         const auto& grid = this->model_.simulator().vanguard().grid();
 
-        using GridView = std::remove_cv_t<std::remove_reference_t<decltype(grid.leafGridView())>>;
-        using Element = std::remove_cv_t<std::remove_reference_t<typename GridView::template Codim<0>::Entity>>;
+        using GridView = std::remove_cv_t<std::remove_reference_t<
+            decltype(grid.leafGridView())>>;
+
+        using Element = std::remove_cv_t<std::remove_reference_t<
+            typename GridView::template Codim<0>::Entity>>;
 
         const auto& param = this->model_.param();
 
         auto zoltan_ctrl = ZoltanPartitioningControl<Element>{};
+
         zoltan_ctrl.domain_imbalance = param.local_domain_partition_imbalance_;
+
         zoltan_ctrl.index =
             [elementMapper = &this->model_.simulator().model().elementMapper()]
             (const Element& element)
         {
             return elementMapper->index(element);
         };
+
         zoltan_ctrl.local_to_global =
             [cartMapper = &this->model_.simulator().vanguard().cartesianIndexMapper()]
             (const int elemIdx)
@@ -942,20 +947,24 @@ private:
 
         // Forming the list of wells is expensive, so do this only if needed.
         const auto need_wells = param.local_domain_partition_method_ == "zoltan";
+
         const auto wells = need_wells
             ? this->model_.simulator().vanguard().schedule().getWellsatEnd()
             : std::vector<Well>{};
 
+        const auto& possibleFutureConnectionSet = need_wells
+            ? this->model_.simulator().vanguard().schedule().getPossibleFutureConnections()
+            : std::unordered_map<std::string, std::set<int>> {};
+
         // If defaulted parameter for number of domains, choose a reasonable default.
         constexpr int default_cells_per_domain = 1000;
-        const int num_cells = Opm::detail::countGlobalCells(grid);
-        const int num_domains = param.num_local_domains_ > 0
+        const int num_domains = (param.num_local_domains_ > 0)
             ? param.num_local_domains_
-            : num_cells / default_cells_per_domain;
+            : detail::countGlobalCells(grid) / default_cells_per_domain;
 
         return ::Opm::partitionCells(param.local_domain_partition_method_,
-                                     num_domains,
-                                     grid.leafGridView(), wells, zoltan_ctrl);
+                                     num_domains, grid.leafGridView(), wells,
+                                     possibleFutureConnectionSet, zoltan_ctrl);
     }
 
     std::vector<int> reconstitutePartitionVector() const

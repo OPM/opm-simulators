@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowProblem
+ * \copydoc Opm::FlowProblemBlackoil
  */
 #ifndef OPM_MIXING_RATE_CONTROLS_HPP
 #define OPM_MIXING_RATE_CONTROLS_HPP
@@ -40,7 +40,7 @@ namespace Opm {
 
 class EclipseState;
 
-//! \brief Class handling mixing rate controls for a FlowProblem.
+//! \brief Class handling mixing rate controls for a FlowProblemBlackoil.
 template<class FluidSystem>
 class MixingRateControls 
 {
@@ -60,7 +60,10 @@ public:
     bool drsdtActive(int episodeIdx) const;
     bool drvdtActive(int episodeIdx) const;
     bool drsdtConvective(int episodeIdx) const;
-
+    
+    bool drsdtActive(int episodeIdx, std::size_t pvtRegionIdx) const;
+    bool drvdtActive(int episodeIdx, std::size_t pvtRegionIdx) const;
+    bool drsdtConvective(int episodeIdx, std::size_t pvtRegionIdx) const;
     /*!
      * \brief Returns the dynamic drsdt convective mixing value
      */
@@ -114,43 +117,64 @@ public:
                 const Scalar gravity,
                 const Scalar permZ,
                 const Scalar distZ,
-                const int pvtRegionIdx,
-                const std::array<bool,3>& active)
+                const int pvtRegionIdx)
     {
-        if (active[0]) {
+        const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+
+        if (oilVaporizationControl.drsdtConvective(pvtRegionIdx)) {
             // This implements the convective DRSDT as described in
             // Sandve et al. "Convective dissolution in field scale CO2 storage simulations using the OPM Flow
             // simulator" Submitted to TCCS 11, 2021
+            // modification and introduction of regimes following Mykkeltvedt et al. Submitted to TIMP 2024
             const auto& fs = iq.fluidState();
+
+            const auto& temperature = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+                getValue(fs.temperature(FluidSystem::waterPhaseIdx)) :
+                getValue(fs.temperature(FluidSystem::oilPhaseIdx));
+            const auto& pressure = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+                getValue(fs.pressure(FluidSystem::waterPhaseIdx)) :
+                getValue(fs.pressure(FluidSystem::oilPhaseIdx));
+            const auto& pressuregas = getValue(fs.pressure(FluidSystem::gasPhaseIdx));
+            const auto& rs = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
+                getValue(fs.Rsw()) :
+                getValue(fs.Rs());
+            
+            const auto& salt = getValue(fs.saltSaturation());
+
             this->updateConvectiveDRsDt_(compressedDofIdx,
-                                         getValue(fs.temperature(FluidSystem::oilPhaseIdx)),
-                                         getValue(fs.pressure(FluidSystem::oilPhaseIdx)),
-                                         getValue(fs.Rs()),
-                                         getValue(fs.saturation(FluidSystem::oilPhaseIdx)),
+                                         temperature,
+                                         pressure,
+                                         pressuregas,
+                                         rs,
+                                         getValue(fs.saturation(FluidSystem::gasPhaseIdx)),
                                          getValue(iq.porosity()),
                                          permZ,
                                          distZ,
                                          gravity,
+                                         salt,
+                                         oilVaporizationControl.getMaxDRSDT(fs.pvtRegionIndex()),
+                                         oilVaporizationControl.getPsi(fs.pvtRegionIndex()),
+                                         oilVaporizationControl.getOmega(fs.pvtRegionIndex()),
                                          fs.pvtRegionIndex());
         }
 
-        if (active[1]) {
+        if (oilVaporizationControl.drsdtActive(pvtRegionIdx)) {
             const auto& fs = iq.fluidState();
 
             using FluidState = typename std::decay<decltype(fs)>::type;
-
-            const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
             constexpr Scalar freeGasMinSaturation_ = 1e-7;
             if (oilVaporizationControl.getOption(pvtRegionIdx) ||
                 fs.saturation(FluidSystem::gasPhaseIdx) > freeGasMinSaturation_) {
                 lastRs_[compressedDofIdx]
-                    = BlackOil::template getRs_<FluidSystem, FluidState, Scalar>(fs, iq.pvtRegionIndex());
+                    = ((FluidSystem::enableDissolvedGasInWater())) ?
+                    BlackOil::template getRsw_<FluidSystem, FluidState, Scalar>(fs, iq.pvtRegionIndex()) :
+                    BlackOil::template getRs_<FluidSystem, FluidState, Scalar>(fs, iq.pvtRegionIndex());
             }
             else
                 lastRs_[compressedDofIdx] = std::numeric_limits<Scalar>::infinity();
         }
 
-        if (active[2]) {
+        if (oilVaporizationControl.drvdtActive(pvtRegionIdx)) {
             const auto& fs = iq.fluidState();
             using FluidState = typename std::decay<decltype(fs)>::type;
             lastRv_[compressedDofIdx]
@@ -162,12 +186,17 @@ private:
     void updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                                 const Scalar t,
                                 const Scalar p,
+                                const Scalar pg,
                                 const Scalar rs,
-                                const Scalar so,
+                                const Scalar sg,
                                 const Scalar poro,
                                 const Scalar permz,
                                 const Scalar distZ,
                                 const Scalar gravity,
+                                const Scalar salt,
+                                const Scalar Xhi,
+                                const Scalar Psi,
+                                const Scalar omegainn,
                                 const int pvtRegionIndex);
 
     std::vector<Scalar> lastRv_;

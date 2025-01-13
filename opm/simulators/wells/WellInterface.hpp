@@ -37,9 +37,7 @@ namespace Opm {
 
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
-#include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
@@ -52,6 +50,7 @@ namespace Opm {
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <dune/common/fmatrix.hh>
@@ -75,8 +74,6 @@ class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Propertie
     using Base = WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
                                       GetPropType<TypeTag, Properties::Indices>>;
 public:
-    using ModelParameters = BlackoilModelParameters<TypeTag>;
-
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -87,11 +84,7 @@ public:
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
-    using GLiftOptWells = typename BlackoilWellModel<TypeTag>::GLiftOptWells;
-    using GLiftProdWells = typename BlackoilWellModel<TypeTag>::GLiftProdWells;
-    using GLiftWellStateMap =
-        typename BlackoilWellModel<TypeTag>::GLiftWellStateMap;
-    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
+    using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
@@ -105,6 +98,8 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Gas;
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
+
+    using ModelParameters = typename Base::ModelParameters;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
@@ -149,7 +144,6 @@ public:
     virtual void init(const PhaseUsage* phase_usage_arg,
                       const std::vector<Scalar>& depth_arg,
                       const Scalar gravity_arg,
-                      const int num_cells,
                       const std::vector<Scalar>& B_avg,
                       const bool changed_to_open_this_step);
 
@@ -194,7 +188,8 @@ public:
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
                                     const SummaryState& summary_state,
                                     const Scalar alq_value,
-                                    DeferredLogger& deferred_logger) const = 0;
+                                    DeferredLogger& deferred_logger,
+                                    bool iterate_if_no_solution) const = 0;
 
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
@@ -228,6 +223,11 @@ public:
     bool wellUnderZeroRateTarget(const Simulator& simulator,
                                  const WellState<Scalar>& well_state,
                                  DeferredLogger& deferred_logger) const;
+
+    bool wellUnderZeroGroupRateTarget(const Simulator& simulator,
+                                      const WellState<Scalar>& well_state,
+                                      DeferredLogger& deferred_logger,
+                                      std::optional<bool> group_control = std::nullopt) const;
 
     bool stoppedOrZeroRateTarget(const Simulator& simulator,
                                  const WellState<Scalar>& well_state,
@@ -267,9 +267,6 @@ public:
                                          WellState<Scalar>& well_state,
                                          DeferredLogger& deferred_logger) const = 0;
 
-    virtual Scalar connectionDensity(const int globalConnIdx,
-                                     const int openConnIdx) const = 0;
-
     /// \brief Wether the Jacobian will also have well contributions in it.
     virtual bool jacobianContainsWellContributions() const
     {
@@ -296,6 +293,9 @@ public:
                      /* const */ WellState<Scalar>& well_state,
                      const GroupState<Scalar>& group_state,
                      WellTestState& welltest_state,
+                     const PhaseUsage& phase_usage,
+                     GLiftEclWells& ecl_well_map,
+                     std::map<std::string, double>& open_times,
                      DeferredLogger& deferred_logger);
 
     void checkWellOperability(const Simulator& simulator,
@@ -310,6 +310,9 @@ public:
 
     void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& simulator,
                                              WellState<Scalar>& well_state,
+                                             const GroupState<Scalar>& group_state,
+                                             const PhaseUsage& phase_usage,
+                                             GLiftEclWells& ecl_well_map,
                                              DeferredLogger& deferred_logger);
 
     // check whether the well is operable under the current reservoir condition
@@ -349,16 +352,6 @@ public:
         return connectionRates_;
     }
 
-    virtual std::vector<Scalar> getPrimaryVars() const
-    {
-        return {};
-    }
-
-    virtual int setPrimaryVars(typename std::vector<Scalar>::const_iterator)
-    {
-        return 0;
-    }
-
     std::vector<Scalar> wellIndex(const int perf,
                                   const IntensiveQuantities& intQuants,
                                   const Scalar trans_mult,
@@ -370,9 +363,17 @@ public:
     void updateConnectionTransmissibilityFactor(const Simulator& simulator,
                                                 SingleWellState<Scalar>& ws) const;
 
+    virtual bool iterateWellEqWithSwitching(const Simulator& simulator,
+                                            const double dt,
+                                            const WellInjectionControls& inj_controls,
+                                            const WellProductionControls& prod_controls,
+                                            WellState<Scalar>& well_state,
+                                            const GroupState<Scalar>& group_state,
+                                            DeferredLogger& deferred_logger, 
+                                            const bool fixed_control = false, 
+                                            const bool fixed_status = false) = 0;
 protected:
     // simulation parameters
-    const ModelParameters& param_;
     std::vector<RateVector> connectionRates_;
     std::vector<Scalar> B_avg_;
     bool changed_to_stopped_this_step_ = false;
@@ -424,16 +425,6 @@ protected:
                                           const GroupState<Scalar>& group_state,
                                           DeferredLogger& deferred_logger) = 0;
 
-    virtual bool iterateWellEqWithSwitching(const Simulator& simulator,
-                                            const double dt,
-                                            const WellInjectionControls& inj_controls,
-                                            const WellProductionControls& prod_controls,
-                                            WellState<Scalar>& well_state,
-                                            const GroupState<Scalar>& group_state,
-                                            DeferredLogger& deferred_logger, 
-                                            const bool fixed_control = false, 
-                                            const bool fixed_status = false) = 0;
-
     virtual void updateIPRImplicit(const Simulator& simulator,
                                    WellState<Scalar>& well_state,
                                    DeferredLogger& deferred_logger) = 0;                                            
@@ -474,6 +465,15 @@ protected:
                              WellState<Scalar>& well_state,
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger);
+    
+
+    template<class GasLiftSingleWell>
+    std::unique_ptr<GasLiftSingleWell> initializeGliftWellTest_(const Simulator& simulator,
+                                                                WellState<Scalar>& well_state,
+                                                                const GroupState<Scalar>& group_state,
+                                                                const PhaseUsage& phase_usage,
+                                                                GLiftEclWells& ecl_well_map,
+                                                                DeferredLogger& deferred_logger);
 
     Eval getPerfCellPressure(const FluidState& fs) const;
 
@@ -504,8 +504,6 @@ protected:
 
 } // namespace Opm
 
-#ifndef OPM_WELLINTERFACE_IMPL_HEADER_INCLUDED
 #include "WellInterface_impl.hpp"
-#endif
 
 #endif // OPM_WELLINTERFACE_HEADER_INCLUDED

@@ -38,7 +38,7 @@
 
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -62,7 +62,7 @@
 namespace Opm::Properties {
     namespace TTag {
     struct TestRestartTypeTag {
-            using InheritsFrom = std::tuple<TestTypeTag, FlowTimeSteppingParameters>;
+            using InheritsFrom = std::tuple<TestTypeTag>;
         };
     }
 
@@ -246,8 +246,24 @@ BOOST_AUTO_TEST_CASE(FlowGenericProblem)
     decltype(data_out) data_in(eclState, schedule, gridView);
     ser.unpack(data_in);
     const size_t pos2 = ser.position();
-    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
-    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for FlowGenericProblem");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized FlowGenericProblem differ");
+}
+
+BOOST_AUTO_TEST_CASE(MixingRateControls)
+{
+    Opm::Schedule schedule;
+    using FS = Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>;
+    auto data_out = Opm::MixingRateControls<FS>::serializationTestObject(schedule);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(schedule);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for MixingRateControls");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized MixingRateControls differ");
 }
 
 #if HAVE_DUNE_FEM
@@ -256,17 +272,10 @@ BOOST_AUTO_TEST_CASE(FlowGenericProblemFem)
     Opm::EclipseState eclState;
     Opm::Schedule schedule;
     Dune::CpGrid grid;
-#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
     using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
     using GridView = GridPart::GridViewType;
     auto gridPart = GridPart(grid);
     auto gridView = gridPart.gridView();
-#else
-    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
-    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
-    auto gridPart = GridPart(grid);
-    auto gridView = GridView(static_cast<GridView>(gridPart));
-#endif
     auto data_out
         = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>>::
             serializationTestObject(eclState, schedule, gridView);
@@ -315,9 +324,9 @@ public:
         active_wgstate_ = WGState<double>::serializationTestObject(dummy);
         last_valid_wgstate_ = WGState<double>::serializationTestObject(dummy);
         nupcol_wgstate_ = WGState<double>::serializationTestObject(dummy);
-        last_glift_opt_time_ = 5.0;
-        switched_prod_groups_ = {{"test4", "test5"}};
-        switched_inj_groups_ = {{{"test4", Phase::SOLVENT}, "test5"}};
+        switched_prod_groups_ = {{"test4", {Group::ProductionCMode::NONE, Group::ProductionCMode::ORAT}}};
+        const auto controls = {Group::InjectionCMode::NONE, Group::InjectionCMode::RATE, Group::InjectionCMode::RATE };
+        switched_inj_groups_ = {{"test4", {controls, {}, controls} }};
         closed_offending_wells_ = {{"test4", {"test5", "test6"}}};
     }
 
@@ -459,17 +468,10 @@ BOOST_AUTO_TEST_CASE(FlowGenericTracerModelFem)
     Opm::EclipseState eclState;
     Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
     auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
-#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
     using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
     using GridView = GridPart::GridViewType;
     auto gridPart = GridPart(grid);
     auto gridView = gridPart.gridView();
-#else
-    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
-    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
-    auto gridPart = GridPart(grid);
-    auto gridView = GridView(static_cast<GridView>(gridPart));
-#endif
     Dune::MultipleCodimMultipleGeomTypeMapper<GridView> dofMapper(gridView, Dune::mcmgElementLayout());
     auto data_out = GenericTracerModelTest<Dune::CpGrid,
                                            GridView,
@@ -511,9 +513,10 @@ struct AquiferFixture {
             "test_RestartSerialization",
             "--ecl-deck-file-name=GLIFT1.DATA"
         };
+        Opm::ThreadManager::registerParameters();
         AdaptiveTimeStepping<TT>::registerParameters();
-        BlackoilModelParameters<TT>::registerParameters();
-        Parameters::registerParam<TT, Properties::EnableTerminalOutput>("Do *NOT* use!");
+        BlackoilModelParameters<double>::registerParameters();
+        Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
         setupParameters_<TT>(2, argv, /*registerParams=*/true);
         Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }

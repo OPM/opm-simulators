@@ -22,6 +22,8 @@
 #ifndef OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
@@ -81,7 +83,6 @@ namespace Opm {
         void init(const PhaseUsage* phase_usage_arg,
                   const std::vector<Scalar>& depth_arg,
                   const Scalar gravity_arg,
-                  const int num_cells,
                   const std::vector<Scalar>& B_avg,
                   const bool changed_to_open_this_step) override;
 
@@ -158,7 +159,8 @@ namespace Opm {
         computeBhpAtThpLimitProdWithAlq(const Simulator& simulator,
                                         const SummaryState& summary_state,
                                         const Scalar alq_value,
-                                        DeferredLogger& deferred_logger) const override;
+                                        DeferredLogger& deferred_logger,
+                                        bool iterate_if_no_solution) const override;
 
         std::vector<Scalar> getPrimaryVars() const override;
 
@@ -324,8 +326,6 @@ namespace Opm {
 
 }
 
-#ifndef OPM_MULTISEGMENTWELL_IMPL_HEADER_INCLUDED
 #include "MultisegmentWell_impl.hpp"
-#endif
 
 #endif // OPM_MULTISEGMENTWELL_HEADER_INCLUDED

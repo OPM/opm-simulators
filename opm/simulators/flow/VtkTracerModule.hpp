@@ -30,34 +30,21 @@
 #include <dune/common/fvector.hh>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/io/baseoutputmodule.hh>
 #include <opm/models/io/vtkmultiwriter.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <string>
 #include <vector>
 
-namespace Opm::Properties {
-
-// create new type tag for the VTK tracer output
-namespace TTag {
-struct VtkTracer {};
-}
-
-// create the property tags needed for the tracer model
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteTracerConcentration {
-    using type = UndefinedProperty;
-};
+namespace Opm::Parameters {
 
 // set default values for what quantities to output
-template<class TypeTag>
-struct VtkWriteTracerConcentration<TypeTag, TTag::VtkTracer> {
-    static constexpr bool value = false;
-};
+struct VtkWriteTracerConcentration { static constexpr bool value = false; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
     /*!
@@ -95,7 +82,7 @@ namespace Opm {
      */
         static void registerParameters()
         {
-            Parameters::registerParam<TypeTag, Properties::VtkWriteTracerConcentration>
+            Parameters::Register<Parameters::VtkWriteTracerConcentration>
                 ("Include the tracer concentration in the VTK output files");
         }
 
@@ -126,8 +113,9 @@ namespace Opm {
      */
         void processElement(const ElementContext& elemCtx)
         {
-            if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
+            if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
                 return;
+            }
 
             if (eclTracerConcentrationOutput_()) {
                 const auto& tracerModel = elemCtx.problem().tracerModel();
@@ -172,22 +160,19 @@ namespace Opm {
                     }
                 }
             }
-
-
-
         }
 
     private:
         static bool eclTracerConcentrationOutput_()
         {
-            static bool val = Parameters::get<TypeTag, Properties::VtkWriteTracerConcentration>();
+            static bool val = Parameters::Get<Parameters::VtkWriteTracerConcentration>();
             return val;
         }
-
 
         std::vector<ScalarBuffer> eclFreeTracerConcentration_;
         std::vector<ScalarBuffer> eclSolTracerConcentration_;
     };
+
 } // namespace Opm
 
 #endif // OPM_VTK_TRACER_MODULE_HPP

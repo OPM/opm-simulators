@@ -24,21 +24,21 @@
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/Events.hpp>
 
 #include <opm/output/data/Wells.hpp>
 
-#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <functional>
 #include <map>
@@ -97,13 +97,15 @@ public:
     /// to give useful initial values to the bhp(), wellRates()
     /// and perfPhaseRatesORG() fields, depending on controls
     void init(const std::vector<Scalar>& cellPressures,
+              const std::vector<Scalar>& cellTemperatures,
               const Schedule& schedule,
               const std::vector<Well>& wells_ecl,
               const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
               const int report_step,
               const WellState* prevState,
               const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
-              const SummaryState& summary_state);
+              const SummaryState& summary_state,
+              const bool enableDistributedWells);
 
     void resize(const std::vector<Well>& wells_ecl,
                 const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
@@ -150,8 +152,9 @@ public:
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
                              const WellState* prev_well_state);
 
-    static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const
-                                      std::vector<std::vector<int>>&       segment_perforations,
+    static void calculateSegmentRates(const ParallelWellInfo<Scalar>&      pw_info,
+                                      const std::vector<std::vector<int>>& segment_inlets,
+                                      const std::vector<std::vector<int>>& segment_perforations,
                                       const std::vector<Scalar>&           perforation_rates,
                                       const int                            np,
                                       const int                            segment,
@@ -161,6 +164,8 @@ public:
     void communicateGroupRates(const Parallel::Communication& comm);
 
     void updateGlobalIsGrup(const Parallel::Communication& comm);
+    void updateEfficiencyScalingFactor(const std::string& wellName,
+                                       const Scalar value);
 
     bool isInjectionGrup(const std::string& name) const
     {
@@ -170,6 +175,16 @@ public:
     bool isProductionGrup(const std::string& name) const
     {
         return this->global_well_info.value().in_producing_group(name);
+    }
+
+    bool isOpen(const std::string& name) const
+    {
+        return this->global_well_info.value().is_open(name);
+    }
+
+    Scalar getGlobalEfficiencyScalingFactor(const std::string& name) const
+    {
+        return this->global_well_info.value().efficiency_scaling_factor(name);
     }
 
     Scalar getALQ(const std::string& name) const
@@ -226,8 +241,9 @@ public:
     // reset current_alq and update default_alq. ALQ is used for
     // constant lift gas injection and for gas lift optimization
     // (THP controlled wells).
-    void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl,
-                               const SummaryState& summary_state);
+    void updateWellsDefaultALQ(const Schedule& schedule,
+                              const int report_step,
+                              const SummaryState& summary_state);
 
     int wellNameToGlobalIdx(const std::string& name)
     {
@@ -341,9 +357,16 @@ public:
         for (auto& w : wells_) {
             serializer(w);
         }
+        serializer(permanently_inactive_well_names_);
     }
 
 private:
+    bool enableDistributedWells_ = false;
+
+    bool is_permanently_inactive_well(const std::string& wname) const {
+        return std::find(this->permanently_inactive_well_names_.begin(), this->permanently_inactive_well_names_.end(), wname) != this->permanently_inactive_well_names_.end();
+    }
+
     PhaseUsage phase_usage_;
 
     // The wells_ variable is essentially a map of all the wells on the current
@@ -357,13 +380,16 @@ private:
     // Use of std::optional<> here is a technical crutch, the
     // WellStateFullyImplicitBlackoil class should be default constructible,
     // whereas the GlobalWellInfo is not.
-    std::optional<GlobalWellInfo> global_well_info;
+    std::optional<GlobalWellInfo<Scalar>> global_well_info;
     ALQState<Scalar> alq_state;
 
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
     // not.
     std::map<std::string, std::pair<bool, std::vector<Scalar>>> well_rates;
+
+    // Keep track of permanently inactive well names
+    std::vector<std::string> permanently_inactive_well_names_;
 
     data::Segment
     reportSegmentResults(const int         well_id,
@@ -377,12 +403,14 @@ private:
     /// perfRates() field is filled with zero, and perfPress()
     /// with -1e100.
     void base_init(const std::vector<Scalar>& cellPressures,
+                   const std::vector<Scalar>& cellTemperatures,
                    const std::vector<Well>& wells_ecl,
                    const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
                    const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                    const SummaryState& summary_state);
 
     void initSingleWell(const std::vector<Scalar>& cellPressures,
+                        const std::vector<Scalar>& cellTemperatures,
                         const Well& well,
                         const std::vector<PerforationData<Scalar>>& well_perf_data,
                         const ParallelWellInfo<Scalar>& well_info,
@@ -397,8 +425,18 @@ private:
     void initSingleInjector(const Well& well,
                             const ParallelWellInfo<Scalar>& well_info,
                             Scalar pressure_first_connection,
+                            Scalar temperature_first_connection,
                             const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
+
+    static void calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>&      pw_info,
+                                               const std::vector<std::vector<int>>& segment_inlets,
+                                               const std::vector<std::vector<int>>& segment_perforations,
+                                               const std::vector<Scalar>&           perforation_rates,
+                                               const int                            np,
+                                               const int                            segment,
+                                               std::vector<Scalar>&                 segment_rates);
+
 };
 
 } // namespace Opm

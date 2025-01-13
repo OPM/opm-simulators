@@ -20,12 +20,12 @@
 */
 
 #include <config.h>
+
 #include <opm/simulators/wells/WellConstraints.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -294,5 +294,9 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
 }
 
 template class WellConstraints<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class WellConstraints<float>;
+#endif
 
 } // namespace Opm

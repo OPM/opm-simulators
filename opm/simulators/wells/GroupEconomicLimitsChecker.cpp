@@ -330,7 +330,7 @@ addPrintMessage(const std::string& msg,
         this->group_.name()
     );
     const std::string measure_name(this->unit_system_.name(measure));
-    const std::string message = fmt::format(msg,
+    const std::string message = fmt::format(fmt::runtime(msg),
                                          this->unit_system_.from_si(measure, value), measure_name,
                                          this->unit_system_.from_si(measure, limit), measure_name);
 
@@ -400,10 +400,15 @@ template<class Scalar>
 void GroupEconomicLimitsChecker<Scalar>::
 throwNotImplementedError(const std::string& error) const
 {
-    const std::string msg = fmt::format("Group: {} : GECON : {} not implemented", this->group_.name(), error);
+    const std::string msg = fmt::format("Group: {} : GECON : {} not implemented",
+                                        this->group_.name(), error);
     OPM_DEFLOG_THROW(std::runtime_error, msg, this->deferred_logger_);
 }
 
 template class GroupEconomicLimitsChecker<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class GroupEconomicLimitsChecker<float>;
+#endif
 
 } // namespace Opm

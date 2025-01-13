@@ -23,6 +23,7 @@ fi
 
 MPI_PROCS=4
 OPTIND=1
+
 while getopts "i:r:b:f:a:t:c:e:n:" OPT
 do
   case "${OPT}" in

@@ -27,30 +27,37 @@
 namespace Opm
 {
 
-#define INSTANCE_PAR(Dim, ...) \
-  template class ParallelOverlappingILU0<Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>, \
-                                         Dune::BlockVector<Dune::FieldVector<double,Dim>>, \
-                                         Dune::BlockVector<Dune::FieldVector<double,Dim>>, \
-                                         __VA_ARGS__>; \
-  template class ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>, \
-                                         Dune::BlockVector<Dune::FieldVector<double,Dim>>, \
-                                         Dune::BlockVector<Dune::FieldVector<double,Dim>>, \
+#define INSTANTIATE_PAR(T, Dim, ...)                                                     \
+  template class ParallelOverlappingILU0<Dune::BCRSMatrix<MatrixBlock<T,Dim,Dim>>,       \
+                                         Dune::BlockVector<Dune::FieldVector<T,Dim>>,    \
+                                         Dune::BlockVector<Dune::FieldVector<T,Dim>>,    \
+                                         __VA_ARGS__>;                                   \
+  template class ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::FieldMatrix<T,Dim,Dim>>, \
+                                         Dune::BlockVector<Dune::FieldVector<T,Dim>>,    \
+                                         Dune::BlockVector<Dune::FieldVector<T,Dim>>,    \
                                          __VA_ARGS__>;
 
 #if HAVE_MPI
-#define INSTANCE(Dim) \
-    INSTANCE_PAR(Dim, Dune::Amg::SequentialInformation) \
-    INSTANCE_PAR(Dim, Dune::OwnerOverlapCopyCommunication<int,int>)
+#define INSTANTIATE(T,Dim)                                                \
+    INSTANTIATE_PAR(T, Dim, Dune::Amg::SequentialInformation)             \
+    INSTANTIATE_PAR(T, Dim, Dune::OwnerOverlapCopyCommunication<int,int>)
 #else
-#define INSTANCE(Dim) \
-    INSTANCE_PAR(Dim, Dune::Amg::SequentialInformation)
+#define INSTANTIATE(T,Dim) \
+    INSTANTIATE_PAR(T, Dim, Dune::Amg::SequentialInformation)
 #endif
 
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE(T,1)        \
+    INSTANTIATE(T,2)        \
+    INSTANTIATE(T,3)        \
+    INSTANTIATE(T,4)        \
+    INSTANTIATE(T,5)        \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // end namespace Opm

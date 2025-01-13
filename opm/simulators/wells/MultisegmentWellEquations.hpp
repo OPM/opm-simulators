@@ -22,6 +22,9 @@
 #ifndef OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_EQUATIONS_HEADER_INCLUDED
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -38,7 +41,7 @@ namespace Opm
 
 template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquationAccess;
 template<class Scalar> class MultisegmentWellGeneric;
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
 template<class Scalar> class WellInterfaceGeneric;
@@ -67,16 +70,14 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
-    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well);
+    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info);
 
     //! \brief Setup sparsity pattern for the matrices.
-    //! \param num_cells Total number of cells
     //! \param numPerfs Number of perforations
     //! \param cells Cell indices for perforations
     //! \param segment_inlets Cell indices for segment inlets
     //! \param segment_perforations Cell indices for segment perforations
-    void init(const int num_cells,
-              const int numPerfs,
+    void init(const int numPerfs,
               const std::vector<int>& cells,
               const std::vector<std::vector<int>>& segment_inlets,
               const std::vector<std::vector<int>>& segment_perforations);
@@ -103,7 +104,7 @@ public:
     //! \details xw = inv(D)*(rw - C*x)
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
     //! \brief Add the matrices of this well to the WellContributions object.
     void extract(WellContributions<Scalar>& wellContribs) const;
 #endif
@@ -121,6 +122,9 @@ public:
                                   const WellInterfaceGeneric<Scalar>& well,
                                   const int seg_pressure_var_ind,
                                   const WellState<Scalar>& well_state) const;
+
+    //! \brief Sum with off-process contribution.
+    void sumDistributed(Parallel::Communication comm);
 
     //! \brief Returns a const reference to the residual.
     const BVectorWell& residual() const
@@ -145,6 +149,14 @@ public:
     BVectorWell resWell_;
 
     const MultisegmentWellGeneric<Scalar>& well_; //!< Reference to well
+
+    // Store the global index of well perforated cells
+    std::vector<int> cells_;
+
+    const ParallelWellInfo<Scalar>& pw_info_;
+
+    // Wrapper for the parallel application of B for distributed wells
+    mswellhelpers::ParallellMSWellB<OffDiagMatWell> parallelB_;
 };
 
 }

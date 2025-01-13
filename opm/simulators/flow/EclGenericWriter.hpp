@@ -28,7 +28,7 @@
 #ifndef OPM_ECL_GENERIC_WRITER_HPP
 #define OPM_ECL_GENERIC_WRITER_HPP
 
-#include <opm/models/parallel/tasklets.hh>
+#include <opm/models/parallel/tasklets.hpp>
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
@@ -69,9 +69,6 @@ class EclGenericWriter
     using TransmissibilityType = Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
 
 public:
-    // The Simulator object should preferably have been const - the
-    // only reason that is not the case is due to the SummaryState
-    // object owned deep down by the vanguard.
     EclGenericWriter(const Schedule& schedule,
                      const EclipseState& eclState,
                      const SummaryConfig& summaryConfig,

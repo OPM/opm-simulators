@@ -39,6 +39,7 @@
 #include <opm/input/eclipse/Schedule/UDQ/UDQParams.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
@@ -48,13 +49,13 @@
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/GridManager.hpp>
-
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
 
@@ -157,6 +158,12 @@ namespace {
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
                                 100.0*Opm::unit::barsa);
 
+        const auto& unit_sytem = setup.es.getDeckUnitSystem();
+        const double temp = unit_sytem.to_si(Opm::UnitSystem::measure::temperature, 25);
+        const auto ctemp =
+            std::vector<double>(setup.grid.c_grid()->number_of_cells,
+                                temp);
+
         auto wells = setup.sched.getWells(timeStep);
         pinfos.resize(wells.size());
         std::vector<std::reference_wrapper<Opm::ParallelWellInfo<double>>> ppinfos;
@@ -170,9 +177,10 @@ namespace {
             ++pw;
         }
 
-        state.init(cpress, setup.sched,
+        state.init(cpress, ctemp, setup.sched,
                    wells, ppinfos,
-                   timeStep, nullptr, setup.well_perf_data, setup.st);
+                   timeStep, nullptr, setup.well_perf_data, setup.st,
+                   false /*enableDistributedWells*/);
 
         state.initWellStateMSWell(setup.sched.getWells(timeStep),
                                   nullptr);

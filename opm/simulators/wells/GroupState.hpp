@@ -20,16 +20,24 @@
 #ifndef OPM_GROUPSTATE_HEADER_INCLUDED
 #define OPM_GROUPSTATE_HEADER_INCLUDED
 
-#include <map>
-#include <vector>
-
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
+
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+
 #include <opm/simulators/wells/WellContainer.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+
+#include <map>
+#include <vector>
+#include <utility>
+
 namespace Opm {
+
+    class GConSump;
+    class Schedule;
+    class SummaryState;
 
 template<class Scalar>
 class GroupState {
@@ -49,6 +57,10 @@ public:
                                  const std::vector<Scalar>& rates);
     const std::vector<Scalar>& production_rates(const std::string& gname) const;
     const std::vector<Scalar>& network_production_rates(const std::string& gname) const;
+
+    void update_well_group_thp(const std::string& gname, const double& thp);
+    Scalar well_group_thp(const std::string& gname) const;
+    bool is_autochoke_group(const std::string& gname) const;
 
     bool has_production_reduction_rates(const std::string& gname) const;
     void update_production_reduction_rates(const std::string& gname,
@@ -92,6 +104,10 @@ public:
     bool has_injection_control(const std::string& gname, Phase phase) const;
     void injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode);
     Group::InjectionCMode injection_control(const std::string& gname, Phase phase) const;
+
+    void update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state);
+    const std::pair<Scalar, Scalar>& gconsump_rates(const std::string& gname) const;
+
 
     std::size_t data_size() const;
     std::size_t collect(Scalar* data) const;
@@ -178,6 +194,7 @@ public:
         serializer(m_production_rates);
         serializer(m_network_production_rates);
         serializer(production_controls);
+        serializer(group_thp);
         serializer(prod_red_rates);
         serializer(inj_red_rates);
         serializer(inj_surface_rates);
@@ -188,6 +205,7 @@ public:
         serializer(m_gpmaint_target);
         serializer(injection_controls);
         serializer(gpmaint_state);
+        serializer(m_gconsump_rates);
     }
 
 private:
@@ -203,9 +221,12 @@ private:
     std::map<std::string, Scalar> inj_vrep_rate;
     std::map<std::string, Scalar> m_grat_sales_target;
     std::map<std::string, Scalar> m_gpmaint_target;
+    std::map<std::string, Scalar> group_thp;
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
     WellContainer<GPMaint::State> gpmaint_state;
+    std::map<std::string, std::pair<Scalar, Scalar>> m_gconsump_rates; // Pair with {consumption_rate, import_rate} for each group
+    static constexpr std::pair<Scalar, Scalar> zero_pair = {0.0, 0.0};
 };
 
 }

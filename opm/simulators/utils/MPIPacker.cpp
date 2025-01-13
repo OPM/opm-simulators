@@ -25,13 +25,22 @@
 #include <bitset>
 #include <cstdint>
 #include <ctime>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 
 
-namespace Opm {
-namespace Mpi {
-namespace detail {
+namespace Opm::Mpi::detail {
+
+std::size_t mpi_buffer_size(const std::size_t bufsize, const std::size_t position)
+{
+    if (bufsize < position) {
+        throw std::invalid_argument("Buffer size should never be less than position!");
+    }
+
+    return std::min(bufsize - position,
+                    static_cast<std::size_t>(std::numeric_limits<int>::max()));
+}
 
 template<std::size_t Size>
 std::size_t Packing<false,std::bitset<Size>>::
@@ -45,7 +54,7 @@ template<std::size_t Size>
 void Packing<false,std::bitset<Size>>::
 pack(const std::bitset<Size>& data,
      std::vector<char>& buffer,
-     int& position,
+     std::size_t& position,
      Parallel::MPIComm comm)
 {
     Packing<true,unsigned long long>::pack(data.to_ullong(), buffer, position, comm);
@@ -54,8 +63,8 @@ pack(const std::bitset<Size>& data,
 template<std::size_t Size>
 void Packing<false,std::bitset<Size>>::
 unpack(std::bitset<Size>& data,
-       std::vector<char>& buffer,
-       int& position,
+       const std::vector<char>& buffer,
+       std::size_t& position,
        Parallel::MPIComm comm)
 {
     unsigned long long d;
@@ -76,28 +85,32 @@ packSize(const std::string& data, Parallel::MPIComm comm)
 void Packing<false,std::string>::
 pack(const std::string& data,
      std::vector<char>& buffer,
-     int& position,
+     std::size_t& position,
      Parallel::MPIComm comm)
 {
     std::size_t length = data.size();
-    MPI_Pack(&length, 1, Dune::MPITraits<std::size_t>::getType(), buffer.data(),
-             buffer.size(), &position, comm);
-    MPI_Pack(data.data(), length, MPI_CHAR, buffer.data(), buffer.size(),
-             &position, comm);
+    int int_position = 0;
+    MPI_Pack(&length, 1, Dune::MPITraits<std::size_t>::getType(), buffer.data()+position,
+             mpi_buffer_size(buffer.size(), position), &int_position, comm);
+    MPI_Pack(data.data(), length, MPI_CHAR, buffer.data()+position, mpi_buffer_size(buffer.size(), position),
+             &int_position, comm);
+    position += int_position;
 }
 
 void Packing<false,std::string>::
 unpack(std::string& data,
-       std::vector<char>& buffer,
-       int& position,
+       const std::vector<char>& buffer,
+       std::size_t& position,
        Opm::Parallel::MPIComm comm)
 {
     std::size_t length = 0;
-    MPI_Unpack(buffer.data(), buffer.size(), &position, &length, 1,
+    int int_position = 0;
+    MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position), &int_position, &length, 1,
                Dune::MPITraits<std::size_t>::getType(), comm);
     std::vector<char> cStr(length+1, '\0');
-    MPI_Unpack(buffer.data(), buffer.size(), &position, cStr.data(), length,
+    MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position), &int_position, cStr.data(), length,
                MPI_CHAR, comm);
+    position += int_position;
     data.clear();
     data.append(cStr.data(), length);
 }
@@ -105,28 +118,27 @@ unpack(std::string& data,
 std::size_t Packing<false,time_point>::
 packSize(const time_point&, Opm::Parallel::MPIComm comm)
 {
-    return Packing<true,std::time_t>::packSize(std::time_t(), comm);
+    return Packing<true, time_point::duration::rep>::packSize(time_point::duration::rep(), comm);
 }
 
 void Packing<false,time_point>::
 pack(const time_point& data,
      std::vector<char>& buffer,
-     int& position,
+     std::size_t& position,
      Parallel::MPIComm comm)
 {
-    Packing<true,std::time_t>::pack(TimeService::to_time_t(data),
-                                    buffer, position, comm);
+    Packing<true, time_point::duration::rep>::pack(data.time_since_epoch().count(), buffer, position, comm);
 }
 
 void Packing<false,time_point>::
 unpack(time_point& data,
-       std::vector<char>& buffer,
-       int& position,
+       const std::vector<char>& buffer,
+       std::size_t& position,
        Parallel::MPIComm comm)
 {
-    std::time_t res;
-    Packing<true,std::time_t>::unpack(res, buffer, position, comm);
-    data = TimeService::from_time_t(res);
+    time_point::duration::rep res;
+    Packing<true, time_point::duration::rep>::unpack(res, buffer, position, comm);
+    data = time_point(time_point::duration(res));
 }
 
 template struct Packing<false,std::bitset<3>>;
@@ -135,6 +147,4 @@ template struct Packing<false,std::bitset<10>>;
 constexpr int NumFip = static_cast<int>(FIPConfig::OutputField::NUM_FIP_REPORT);
 template struct Packing<false,std::bitset<NumFip>>;
 
-} // end namespace detail
-} // end namespace Mpi
-} // end namespace Opm
+} // end namespace Opm::Mpi::detail

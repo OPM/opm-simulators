@@ -29,6 +29,8 @@
 
 #include <dune/common/parallel/communication.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/grid/common/GridEnums.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
@@ -42,6 +44,45 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+namespace Opm::Parameters {
+
+struct AllowDistributedWells { static constexpr bool value = false; };
+struct AllowSplittingInactiveWells { static constexpr bool value = true; };
+
+struct EclOutputInterval { static constexpr int value = -1; };
+struct EdgeWeightsMethod  { static constexpr int value = 1; };
+struct EnableDryRun { static constexpr auto value = "auto"; };
+struct EnableOpmRstFile { static constexpr bool value = false; };
+struct ExternalPartition { static constexpr auto* value = ""; };
+
+template<class Scalar>
+struct ImbalanceTol { static constexpr Scalar value = 1.1; };
+
+struct IgnoreKeywords { static constexpr auto value = ""; };
+struct InputSkipMode { static constexpr auto value = "100"; };
+struct MetisParams { static constexpr auto value = "default"; };
+
+#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
+struct NumJacobiBlocks { static constexpr int value = 0; };
+#endif
+
+struct OwnerCellsFirst { static constexpr bool value = true; };
+struct ParsingStrictness { static constexpr auto value = "normal"; };
+struct ActionParsingStrictness { static constexpr auto value = "normal"; };
+
+ // 0: simple, 1: Zoltan, 2: METIS, see GridEnums.hpp
+struct PartitionMethod { static constexpr int value = 1; };
+
+struct SchedRestart{ static constexpr bool value = false; };
+struct SerialPartitioning{ static constexpr bool value = false; };
+
+template<class Scalar>
+struct ZoltanImbalanceTol { static constexpr Scalar value = 1.1; };
+
+struct ZoltanParams { static constexpr auto value = "graph"; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -214,6 +255,11 @@ public:
 
 #if HAVE_MPI
     /*!
+     * \brief Parameter deciding which partition method to use
+     */
+    Dune::PartitionMethod partitionMethod() const
+    { return partitionMethod_; }
+    /*!
      * \brief Parameter that decides if partitioning for parallel runs
      *        should be performed on a single process only.
      */
@@ -221,10 +267,17 @@ public:
     { return serialPartitioning_; }
 
     /*!
-     * \brief Parameter that sets the zoltan imbalance tolarance.
+     * \brief Parameter that sets the imbalance tolarance, depending on the chosen partition method
      */
-    double zoltanImbalanceTol() const
-    { return zoltanImbalanceTol_; }
+    double imbalanceTol() const
+    {
+        if (zoltanImbalanceTolSet_) {
+            OpmLog::info("The parameter --zoltan-imbalance-tol is deprecated and has been renamed to --imbalance-tol, please adjust your calls and scripts!");
+            return zoltanImbalanceTol_;
+        } else {
+            return imbalanceTol_;
+        }
+    }
 
     const std::string& externalPartitionFile() const
     {
@@ -270,11 +323,16 @@ protected:
     void updateOutputDir_(std::string outputDir,
                           bool enableEclCompatFile);
 
+    void updateNOSIM_(std::string_view enableDryRun);
+
     bool drsdtconEnabled() const;
 
     std::unordered_map<std::size_t, const NumericalAquiferCell*> allAquiferCells() const;
 
     void init();
+
+    template<class Scalar>
+    static void registerParameters_();
 
     double setupTime_;
 
@@ -291,12 +349,21 @@ protected:
 
     bool ownersFirst_;
 #if HAVE_MPI
+    Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
+    double imbalanceTol_;
+
+    bool zoltanImbalanceTolSet_;
     double zoltanImbalanceTol_;
     std::string zoltanParams_;
+
+    std::string metisParams_;
+
     std::string externalPartitionFile_{};
 #endif
     bool enableDistributedWells_;
+    bool allow_splitting_inactive_wells_;
+
     std::string ignoredKeywords_;
     std::optional<int> outputInterval_;
     bool useMultisegmentWell_;

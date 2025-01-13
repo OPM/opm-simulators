@@ -22,11 +22,12 @@
 #ifndef OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 #define OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/grid/utility/RegionMapping.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <dune/grid/common/gridenums.hh>
@@ -133,7 +134,7 @@ namespace Opm {
                     const auto& fs = intQuants.fluidState();
                     // use pore volume weighted averages.
                     const Scalar pv_cell =
-                            simulator.model().dofTotalVolume(cellIdx)
+                            simulator.model().dofTotalVolume(simulator.vanguard().gridEquilIdxToGridIdx(cellIdx))
                             * intQuants.porosity().value();
 
                     // only count oil and gas filled parts of the domain

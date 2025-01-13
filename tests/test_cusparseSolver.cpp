@@ -23,8 +23,8 @@
 #define BOOST_TEST_MODULE OPM_test_cusparseSolver
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/linalg/bda/BdaBridge.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/simulators/linalg/gpubridge/GpuBridge.hpp>
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
@@ -88,7 +88,7 @@ getDuneSolution(Matrix<bz>& matrix, Vector<bz>& rhs)
 
 template <int bz>
 void
-createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >& bridge)
+createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> >& bridge)
 {
     const int linear_solver_verbosity = prm.get<int>("verbosity");
     const int maxit = prm.get<int>("maxiter");
@@ -100,7 +100,7 @@ createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBri
     const std::string linsolver("ilu0");
 
     try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
+        bridge = std::make_unique<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
                                                                                linear_solver_verbosity,
                                                                                maxit,
                                                                                tolerance,
@@ -119,7 +119,7 @@ createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBri
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
-testCusparseSolver(Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
+testCusparseSolver(Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
 {
     Dune::InverseOperatorResult result;
     Vector<bz> x(rhs.size());
@@ -130,11 +130,11 @@ testCusparseSolver(Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz
     bridge.get_result(x);
 
     return x;
-}
+} 
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
-testCusparseSolverJacobi(Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
+testCusparseSolverJacobi(Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
 {
     Dune::InverseOperatorResult result;
     Vector<bz> x(rhs.size());
@@ -156,7 +156,7 @@ void test3(const pt::ptree& prm)
     const int bz = 3;
     Matrix<bz> matrix;
     Vector<bz> rhs;
-    std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
+    std::unique_ptr<Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
     readLinearSystem("matr33.txt", "rhs3.txt", matrix, rhs);
     Vector<bz> rhs2 = rhs; // deep copy, getDuneSolution() changes values in rhs vector
     auto duneSolution = getDuneSolution<bz>(matrix, rhs);

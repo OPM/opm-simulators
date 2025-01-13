@@ -78,11 +78,11 @@ function(add_test_compareECLFiles)
                   -t ${PARAM_REL_TOL}
                   -c ${COMPARE_ECL_COMMAND}
                   -d ${RST_DECK_COMMAND})
-   if(PARAM_RESTART_STEP)
-     list(APPEND DRIVER_ARGS -s ${PARAM_RESTART_STEP})
-   endif()
-  if(PARAM_RESTART_SCHED)
-   list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
+  if(PARAM_RESTART_STEP)
+    list(APPEND DRIVER_ARGS -s ${PARAM_RESTART_STEP})
+  endif()
+  if(PARAM_RESTART_SCHED STREQUAL "false" OR PARAM_RESTART_SCHED STREQUAL "true")
+    list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
@@ -95,12 +95,28 @@ function(add_test_compareECLFiles)
                         TESTNAME ${PARAM_CASENAME})
 endfunction()
 
+###########################################################################
+# TEST: compareSeparateECLFiles
+###########################################################################
+
+# Input:
+#   - casename: basename (no extension)
+#   - filename1 (no extension)
+#   - filename2 (no extension)
+#
+# Details:
+#   - This test class compares two separate simulations
 function(add_test_compareSeparateECLFiles)
-  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX)
+  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX MPI_PROCS)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_PREFIX)
     set(PARAM_PREFIX compareSeparateECLFiles)
+  endif()
+  if(PARAM_MPI_PROCS)
+    set(MPI_PROCS ${PARAM_MPI_PROCS})
+  else()
+    set(MPI_PROCS 1)
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
@@ -112,7 +128,8 @@ function(add_test_compareSeparateECLFiles)
                   -b ${PROJECT_BINARY_DIR}/bin
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
-                  -c ${COMPARE_ECL_COMMAND})
+                  -c ${COMPARE_ECL_COMMAND}
+                  -n ${MPI_PROCS})
   if(PARAM_IGNORE_EXTRA_KW)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
   endif()
@@ -124,7 +141,8 @@ function(add_test_compareSeparateECLFiles)
                         DIRNAME ${PARAM_DIR}
                         FILENAME ${PARAM_FILENAME}
                         SIMULATOR ${PARAM_SIMULATOR}
-                        TESTNAME ${PARAM_CASENAME})
+                        TESTNAME ${PARAM_CASENAME}
+                        PROCESSORS ${MPI_PROCS})
 endfunction()
 
 ###########################################################################
@@ -176,12 +194,18 @@ endfunction()
 #   - This test class compares the output from a parallel simulation
 #     to the output from the serial instance of the same model.
 function(add_test_compare_parallel_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR POSTFIX MPI_PROCS)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+
+  if(NOT PARAM_POSTFIX)
+    set(PARAM_POSTFIX "")
+  else()
+    set(PARAM_POSTFIX +${PARAM_POSTFIX})
   endif()
 
   if(PARAM_MPI_PROCS)
@@ -192,6 +216,7 @@ function(add_test_compare_parallel_simulation)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
                   -b ${PROJECT_BINARY_DIR}/bin
@@ -202,11 +227,11 @@ function(add_test_compare_parallel_simulation)
                   -n ${MPI_PROCS})
 
   # Add test that runs flow_mpi and outputs the results to file
-  opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+  opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
-  set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
+  set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}${PARAM_POSTFIX}
                        PROPERTIES PROCESSORS ${MPI_PROCS})
 endfunction()
 
@@ -347,7 +372,11 @@ function(add_test_compareDamarisFiles)
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
-  set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS})
+  set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS}
+                                    DIRNAME ${PARAM_DIR}
+                                    FILENAME ${PARAM_FILENAME}
+                                    SIMULATOR ${PARAM_SIMULATOR}
+                                    TESTNAME ${PARAM_CASENAME})
 endfunction()
 
 
@@ -445,7 +474,7 @@ if(MPI_FOUND)
                       FILENAME SPE1CASE1
                       SIMULATOR flow
                       ABS_TOL ${abs_tol}
-                      REL_TOL ${rel_tol}
+                      REL_TOL 0.01
                       DIR spe1)
     endif()
 

@@ -269,4 +269,8 @@ loadRestartData(const data::Wells&                 rst_wells,
 
 template class BlackoilWellModelRestart<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class BlackoilWellModelRestart<float>;
+#endif
+
 } // namespace Opm

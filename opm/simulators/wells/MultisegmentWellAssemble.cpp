@@ -20,15 +20,16 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
@@ -95,6 +96,10 @@ assembleControlEq(const WellState<Scalar>& well_state,
                   const bool stopped_or_zero_target,
                   DeferredLogger& deferred_logger) const
 {
+    /*
+        This function assembles the control equation, similar as for StandardWells.
+        It does *not* need communication.
+    */
     static constexpr int Gas = BlackoilPhases::Vapour;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -211,6 +216,12 @@ assembleAccelerationTerm(const int seg_target,
     // acceleration term shold be
     //  * velocity head for seg_target if seg = seg_target
     //  * negative velocity head for seg if seg != seg_target   
+    
+    /*
+        This method is called in MultisegmentWellEval::assembleAccelerationPressureLoss.
+        It does *not* need communication.
+    */
+
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg_target][SPres] -= accelerationTerm.value();
     eqns.D()[seg_target][seg][SPres][SPres] -= accelerationTerm.derivative(SPres + Indices::numEq);
@@ -230,6 +241,11 @@ assembleHydroPressureLoss(const int seg,
                           const EvalWell& hydro_pressure_drop_seg,
                           Equations& eqns1) const
 {
+    /*
+        This method is called in MultisegmentWellEval::assembleAccelerationAndHydroPressureLosses.
+        It does *not* need communication.
+    */
+
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][SPres] -= hydro_pressure_drop_seg.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -245,6 +261,9 @@ assemblePressureEqExtraDerivatives(const int seg,
                                    const EvalWell& extra_derivatives,
                                    Equations& eqns1) const
 {
+    /*
+        This method does *not* need communication.
+    */
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     // disregard residual
     // Frac - derivatives are zero (they belong to upwind^2)
@@ -264,6 +283,9 @@ assemblePressureEq(const int seg,
                    bool wfrac,
                    bool gfrac) const
 {
+    /*
+        This method does *not* need communication.
+    */
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][SPres] += pressure_equation.value();
     eqns.D()[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
@@ -288,6 +310,13 @@ assembleTrivialEq(const int seg,
                   const Scalar value,
                   Equations& eqns1) const
 {
+    /*
+        This method is called from MultisegmentWellEval::assembleICDPressureEq,
+        which is called from MultisegmentWellEval::assemblePressureEq.
+        This is the counterpart to assembleControlEquation, where assembleControlEquation is responsible for the top segment
+        and assembleICDPressureEq is responsible for the remaining segments.
+        This method does *not* need communication.
+    */
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][SPres] = value;
     eqns.D()[seg][seg][SPres][WQTotal] = 1.;
@@ -300,6 +329,10 @@ assembleAccumulationTerm(const int seg,
                          const EvalWell& accumulation_term,
                          Equations& eqns1) const
 {
+    /*
+        This method is called from MultisegmentWell::assembleWellEqWithoutIteration.
+        It only assembles on the diagonal of D and it does *not* need communication.
+    */
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] += accumulation_term.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -315,6 +348,10 @@ assembleOutflowTerm(const int seg,
                     const EvalWell& segment_rate,
                     Equations& eqns1) const
 {
+    /*
+        This method is called from MultisegmentWell::assembleWellEqWithoutIteration.
+        It does *not* need communication.
+    */
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] -= segment_rate.value();
     eqns.D()[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
@@ -336,6 +373,10 @@ assembleInflowTerm(const int seg,
                    const EvalWell& inlet_rate,
                    Equations& eqns1) const
  {
+    /*
+        This method is called from MultisegmentWell::assembleWellEqWithoutIteration.
+        It does *not* need communication.
+    */
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] += inlet_rate.value();
     eqns.D()[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
@@ -351,11 +392,17 @@ assembleInflowTerm(const int seg,
 template<class FluidSystem, class Indices>
 void MultisegmentWellAssemble<FluidSystem,Indices>::
 assemblePerforationEq(const int seg,
-                      const int cell_idx,
+                      const int local_perf_index,
                       const int comp_idx,
                       const EvalWell& cq_s_effective,
                       Equations& eqns1) const
 {
+    /*
+        This method is called from MultisegmentWell::assembleWellEqWithoutIteration.
+        It *does* need communication, i.e. this method only assembles the parts of the matrix this process is responsible for
+        and after calling this function, the diagonal of the matrix D and the residual need to be combined by calling
+        the function MultisegmentWellEquations::sumDistributed.
+    */
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     // subtract sum of phase fluxes in the well equations.
     eqns.residual()[seg][comp_idx] += cq_s_effective.value();
@@ -363,7 +410,7 @@ assemblePerforationEq(const int seg,
     // assemble the jacobians
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
-        eqns.C()[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
+        eqns.C()[seg][local_perf_index][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
 
         // the index name for the D should be eq_idx / pv_idx
         eqns.D()[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);
@@ -371,41 +418,47 @@ assemblePerforationEq(const int seg,
 
     for (int pv_idx = 0; pv_idx < Indices::numEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
-        eqns.B()[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
+        eqns.B()[seg][local_perf_index][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
     }
 }
 
-#define INSTANCE(...) \
-template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__>;
+template<class Scalar>
+using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
 
-// One phase
-INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>)
+#define INSTANTIATE(T,...) \
+    template class MultisegmentWellAssemble<FS<T>,__VA_ARGS__>;
 
-// Two phase
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)
-INSTANCE(BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>)
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,2u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
 
-// Blackoil
-INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,2u,0u>)
-INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
-INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
-INSTANCE(BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
+
 }

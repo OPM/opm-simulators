@@ -82,7 +82,6 @@ public:
 
     //! \brief Update THP.
     void updateThp(const Scalar rho,
-                   const bool stop_or_zero_rate_target,
                    const std::function<Scalar()>& alq_value,
                    const std::array<unsigned,3>& active,
                    WellState<Scalar>& well_state,
@@ -117,7 +116,19 @@ public:
   std::pair<Scalar, Scalar>
   getFloIPR(const WellState<Scalar>& well_state,
             const Well& well, 
-            const SummaryState& summary_state) const;                                                                                              
+            const SummaryState& summary_state) const;
+
+  //! \brief Find limits using brute-force solver.
+  static bool bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
+                                const std::array<Scalar, 2>& range,
+                                Scalar& low, Scalar& high,
+                                std::optional<Scalar>& approximate_solution,
+                                const Scalar& limit,
+                                DeferredLogger& deferred_logger);
+
+  //! \brief Find limits using brute-force solver.
+  static bool bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
+                                Scalar& min_thp, Scalar& max_thp);
 
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
@@ -155,11 +166,12 @@ private:
                        std::optional<Scalar>& approximate_solution,
                        DeferredLogger& deferred_logger) const;
 
-    //! \brief Find limits using brute-force solver.
-    static bool bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
-                                  const std::array<Scalar, 2>& range,
-                                  Scalar& low, Scalar& high,
-                                  DeferredLogger& deferred_logger);
+ //! \brief Find limits using brute-force solver.
+  static bool bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
+                                const std::array<Scalar, 2>& range,
+                                Scalar& low, Scalar& high,
+                                DeferredLogger& deferred_logger);
+
 
     Scalar findThpFromBhpIteratively(const std::function<Scalar(const Scalar, const Scalar)>& thp_func,
                                      const Scalar bhp,

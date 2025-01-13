@@ -20,8 +20,9 @@
 #ifndef OPM_GASLIFT_GROUP_INFO_HEADER_INCLUDED
 #define OPM_GASLIFT_GROUP_INFO_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <map>
 #include <optional>

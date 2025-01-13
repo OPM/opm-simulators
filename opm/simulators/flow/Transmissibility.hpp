@@ -172,8 +172,7 @@ protected:
                                unsigned insideCartElemIdx,
                                unsigned outsideCartElemIdx,
                                const TransMult& transMult,
-                               const std::array<int, dimWorld>& cartDims,
-                               bool pinchTop);
+                               const std::array<int, dimWorld>& cartDims);
 
     /// \brief Creates TRANS{XYZ} arrays for modification by FieldProps data
     ///
@@ -225,6 +224,12 @@ protected:
      */
     void applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed);
 
+    /// \brief Applies the previous calculate transmissibilities to the NNCs created via PINCH
+    ///
+    /// \param cartesianToCompressed Vector containing the compressed index (or -1 for inactive
+    ///                              cells) as the element at the cartesian index.
+    void applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed);
+
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
     void applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal);
 
@@ -257,10 +262,8 @@ protected:
                                  const DimVector& distance,
                                  const Scalar& poro) const;
 
-    DimVector distanceVector_(const DimVector& center,
-                              int faceIdx, // in the reference element that contains the intersection
-                              unsigned elemIdx,
-                              const std::array<std::vector<DimVector>, dimWorld>& axisCentroids) const;
+    DimVector distanceVector_(const DimVector& faceCenter,
+                              const unsigned& cellIdx) const;
 
     void applyMultipliers_(Scalar& trans,
                            unsigned faceIdx,

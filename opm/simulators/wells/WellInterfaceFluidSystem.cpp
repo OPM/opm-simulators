@@ -48,13 +48,14 @@ WellInterfaceFluidSystem<FluidSystem>::
 WellInterfaceFluidSystem(const Well& well,
                          const ParallelWellInfo<Scalar>& parallel_well_info,
                          const int time_step,
+                         const ModelParameters& param,
                          const RateConverterType& rate_converter,
                          const int pvtRegionIdx,
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
                          const std::vector<PerforationData<Scalar>>& perf_data)
-    : WellInterfaceGeneric<Scalar>(well, parallel_well_info, time_step,
+    : WellInterfaceGeneric<Scalar>(well, parallel_well_info, time_step, param,
                                    pvtRegionIdx, num_components, num_phases,
                                    index_of_well, perf_data)
     , rateConverter_(rate_converter)
@@ -64,12 +65,12 @@ WellInterfaceFluidSystem(const Well& well,
 template <typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-calculateReservoirRates(SingleWellState<Scalar>& ws) const
+calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const
 {
     const int np = this->number_of_phases_;
     const auto& pu = this->phaseUsage();
     // Calculate reservoir rates from average pressure and temperature
-    if ( !pu.has_energy || this->wellEcl().isProducer()) {
+    if ( !(co2store || pu.has_energy) || this->wellEcl().isProducer()) {
         const int fipreg = 0; // not considering the region for now
         this->rateConverter_
             .calcReservoirVoidageRates(fipreg,
@@ -99,7 +100,8 @@ calculateReservoirRates(SingleWellState<Scalar>& ws) const
         }
         return;
     }
-    // For injectors in a thermal case we convert using the well bhp and temperature
+    // For injectors in a co2 storage case or a thermal case
+    // we convert using the well bhp and temperature
     // Assume pure phases in the injector
     const Scalar saltConc = 0.0;
     Scalar rsMax = 0.0;
@@ -308,15 +310,16 @@ getGroupProductionTargetRate(const Group& group,
 template<typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
-                             const Schedule& schedule,
-                             const WellState<Scalar>& well_state,
-                             const GroupState<Scalar>& group_state,
-                             DeferredLogger& deferred_logger) const
+zeroGroupRateTarget(const SummaryState& summary_state,
+                    const Schedule& schedule,
+                    const WellState<Scalar>& well_state,
+                    const GroupState<Scalar>& group_state,
+                    DeferredLogger& deferred_logger) const
 {
     const auto& well = this->well_ecl_;
     const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-    const Scalar efficiencyFactor = well.getEfficiencyFactor();
+    const Scalar efficiencyFactor = well.getEfficiencyFactor() *
+                                    well_state[well.name()].efficiency_scaling_factor;
     if (this->isInjector()) {
         // Check injector under group control
         const auto& controls = well.injectionControls(summary_state);
@@ -341,6 +344,13 @@ wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
     }
 }
 
-template class WellInterfaceFluidSystem<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
+template<class Scalar>
+using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+
+template class WellInterfaceFluidSystem<FS<double>>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class WellInterfaceFluidSystem<FS<float>>;
+#endif
 
 } // namespace Opm

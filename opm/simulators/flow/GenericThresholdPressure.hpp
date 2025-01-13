@@ -74,12 +74,18 @@ public:
      *
      * This is used for the restart capability.
      */
-    void setFromRestart(const std::vector<Scalar>& values)
-    { thpres_ = values; }
+    void setFromRestart(const std::vector<double>& values)
+    {
+        this->restart_ = true;
+        thpres_.assign(values.begin(), values.end());
+        thpresDefault_.assign(values.begin(), values.end());
+    }
 
     //! \brief Returns a fully expanded vector for restart file writing.
     //! \details Returns the union of explicitly configured entries and defaulted values.
     std::vector<Scalar> getRestartVector() const;
+
+    bool enableThresholdPressure() const;
 
 protected:
     /*!
@@ -110,7 +116,8 @@ protected:
     std::vector<Scalar> thpresftValues_;
     std::vector<int> cartElemFaultIdx_;
 
-    bool enableThresholdPressure_;
+    bool enableThresholdPressure_ {false};
+    bool restart_ {false};
 };
 
 } // namespace Opm

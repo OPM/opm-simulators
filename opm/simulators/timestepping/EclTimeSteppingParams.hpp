@@ -23,116 +23,33 @@
 #ifndef OPM_ECL_TIMESTEPPING_PARAMS_HPP
 #define OPM_ECL_TIMESTEPPING_PARAMS_HPP
 
-#include <opm/models/utils/basicproperties.hh>
-#include <opm/models/utils/propertysystem.hh>
+namespace Opm::Parameters {
 
-namespace Opm::Properties {
+struct EnableTuning { static constexpr bool value = false; };
+template<class Scalar>
+struct SolverGrowthFactor { static constexpr Scalar value = 2.0; };
 
-namespace TTag {
-struct EclTimeSteppingParameters {};
-}
+template<class Scalar>
+struct SolverMaxGrowth { static constexpr Scalar value = 3.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct EnableTuning {
-    using type = UndefinedProperty;
-};
+template<class Scalar>
+struct SolverMinTimeStep { static constexpr Scalar value = 1e-12; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverGrowthFactor {
-    using type = UndefinedProperty;
-};
+template<class Scalar>
+struct SolverMaxTimeStepInDays { static constexpr Scalar value = 365.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverMaxGrowth {
-    using type = UndefinedProperty;
-};
+template<class Scalar>
+struct SolverRestartFactor { static constexpr Scalar value = 0.33; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverMaxTimeStepInDays {
-    using type = UndefinedProperty;
-};
+template<class Scalar>
+struct TimeStepAfterEventInDays { static constexpr Scalar value = -1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverMinTimeStep {
-    using type = UndefinedProperty;
-};
-
-template<class TypeTag, class MyTypeTag>
-struct SolverRestartFactor {
-    using type = UndefinedProperty;
-};
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepAfterEventInDays {
-    using type = UndefinedProperty;
-};
-
-template<class TypeTag>
-struct EnableTuning<TypeTag, TTag::EclTimeSteppingParameters> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct SolverGrowthFactor<TypeTag, TTag::EclTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 2.0;
-};
-
-template<class TypeTag>
-struct SolverMaxGrowth<TypeTag, TTag::EclTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 3.0;
-};
-
-template<class TypeTag>
-struct SolverMinTimeStep<TypeTag, TTag::EclTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0e-12;
-};
-
-template<class TypeTag>
-struct SolverMaxTimeStepInDays<TypeTag, TTag::EclTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 365.0;
-};
-
-template<class TypeTag>
-struct SolverRestartFactor<TypeTag, TTag::EclTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.33;
-};
-
-template<class TypeTag>
-struct TimeStepAfterEventInDays<TypeTag, TTag::EclTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1.0;
-};
-
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 
-template<class TypeTag>
-void registerEclTimeSteppingParameters()
-{
-    Parameters::registerParam<TypeTag, Properties::EnableTuning>
-        ("Honor some aspects of the TUNING keyword.");
-    Parameters::registerParam<TypeTag, Properties::SolverGrowthFactor>
-        ("The factor time steps are elongated after a successful substep");
-    Parameters::registerParam<TypeTag, Properties::SolverMaxGrowth>
-        ("The maximum factor time steps are elongated after a report step");
-    Parameters::registerParam<TypeTag, Properties::SolverMaxTimeStepInDays>
-        ("The maximum size of a time step in days");
-    Parameters::registerParam<TypeTag, Properties::SolverMinTimeStep>
-        ("The minimum size of a time step in days for field and "
-         "metric and hours for lab. If a step cannot converge without "
-         "getting cut below this step size the simulator will stop");
-    Parameters::registerParam<TypeTag, Properties::SolverRestartFactor>
-        ("The factor time steps are elongated after restarts");
-    Parameters::registerParam<TypeTag, Properties::TimeStepAfterEventInDays>
-        ("Time step size of the first time step after an event "
-         "occurs during the simulation in days");
-}
+template<class Scalar>
+void registerEclTimeSteppingParameters();
 
 } // namespace Opm
 

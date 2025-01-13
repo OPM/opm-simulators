@@ -164,7 +164,7 @@ public:
     ///
     /// \return Result set from most recent call to member function \c
     ///   inferBlockAveragePressures() for \c calcIndex.
-    const typename PAvgCalculator<Scalar>::Result&
+    const PAvgCalculatorResult<Scalar>&
     averagePressures(const std::size_t calcIndex) const;
 
 private:

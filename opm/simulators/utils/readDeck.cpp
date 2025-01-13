@@ -74,12 +74,10 @@
 #include <cstdlib>
 #include <cstdint>
 #include <filesystem>
-#include <functional>
 #include <memory>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
-#include <unordered_map>
 #include <utility>
 
 namespace {
@@ -105,6 +103,8 @@ namespace {
                                 const Opm::ParseContext&             parseContext,
                                 const bool                           initFromRestart,
                                 const std::optional<int>&            outputInterval,
+                                const bool                           lowActionParsingStrictness,
+                                const bool                           keepKeywords,
                                 Opm::EclipseState&                   eclipseState,
                                 std::shared_ptr<Opm::Python>         python,
                                 std::shared_ptr<Opm::Schedule>&      schedule,
@@ -152,7 +152,8 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), outputInterval, init_state);
+                 std::move(python), lowActionParsingStrictness, /*slave_mode=*/false,
+                 keepKeywords, outputInterval, init_state);
         }
 
         // Read network pressures from restart
@@ -173,6 +174,8 @@ namespace {
     void createNonRestartDynamicObjects(const Opm::Deck&                     deck,
                                         const Opm::EclipseState&             eclipseState,
                                         const Opm::ParseContext&             parseContext,
+                                        const bool                           lowActionParsingStrictness,
+                                        const bool                           keepKeywords,
                                         std::shared_ptr<Opm::Python>         python,
                                         std::shared_ptr<Opm::Schedule>&      schedule,
                                         std::unique_ptr<Opm::UDQState>&      udqState,
@@ -183,7 +186,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext,
-                 errorGuard, std::move(python));
+                 errorGuard, std::move(python), lowActionParsingStrictness, keepKeywords);
         }
 
         udqState = std::make_unique<Opm::UDQState>
@@ -247,6 +250,8 @@ namespace {
                       const bool                           initFromRestart,
                       const bool                           checkDeck,
                       const bool                           treatCriticalAsNonCritical,
+                      const bool                           lowActionParsingStrictness,
+                      const bool                           keepKeywords,
                       const std::optional<int>&            outputInterval,
                       Opm::ErrorGuard&                     errorGuard)
     {
@@ -271,13 +276,15 @@ namespace {
         if (eclipseState->getInitConfig().restartRequested()) {
             loadObjectsFromRestart(deck, parser, *parseContext,
                                    initFromRestart, outputInterval,
+                                   lowActionParsingStrictness, keepKeywords,
                                    *eclipseState, std::move(python),
                                    schedule, udqState, actionState, wtestState,
                                    errorGuard);
         }
         else {
-            createNonRestartDynamicObjects(deck, *eclipseState,
-                                           *parseContext, std::move(python),
+            createNonRestartDynamicObjects(deck, *eclipseState, *parseContext,
+                                           lowActionParsingStrictness, keepKeywords,
+                                           std::move(python),
                                            schedule, udqState, actionState, wtestState,
                                            errorGuard);
         }
@@ -515,15 +522,7 @@ Opm::setupLogging(Parallel::Communication& comm,
     }
 
     if (comm.rank() == 0) {
-        std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
-        Opm::OpmLog::addBackend(stdout_log_id, streamLog);
-        // Set a tag limit of 10 (no category limit). Will later in
-        // the run be replaced by calling setupMessageLimiter(), after
-        // the deck is read and the (possibly user-set) category
-        // limits are known.
-        streamLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10));
-        bool use_color_coding = OpmLog::stdoutIsTerminal();
-        streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
+        setupStreamLogging(stdout_log_id);
     }
 
     return output;
@@ -539,9 +538,11 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    std::shared_ptr<SummaryConfig>& summaryConfig,
                    std::shared_ptr<Python>         python,
                    const std::string&              parsingStrictness,
+                   const std::string&              actionParsingStrictness,
                    const std::string&              inputSkipMode,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
+                   const bool                      keepKeywords,
                    const std::optional<int>&       outputInterval)
 {
     auto errorGuard = std::make_unique<ErrorGuard>();
@@ -553,7 +554,10 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
         OPM_THROW(std::runtime_error,
                   fmt::format("Incorrect value {} for parameter ParsingStrictness, must be 'high', 'normal', or 'low'", parsingStrictness));
     }
-
+    if (actionParsingStrictness != "normal" && actionParsingStrictness != "low") {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Incorrect value {} for parameter ActionParsingStrictness, must be 'normal', or 'low'", actionParsingStrictness));
+    }
     if (inputSkipMode != "100" && inputSkipMode != "300" && inputSkipMode != "all") {
         OPM_THROW(std::runtime_error,
                   fmt::format("Incorrect value {} for parameter InputSkipMode, must be '100', '300', or 'all'", inputSkipMode));
@@ -562,6 +566,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         const bool exitOnAllErrors = (parsingStrictness == "high");
         const bool treatCriticalAsNonCritical = (parsingStrictness == "low");
+        const bool lowActionParsingStrictness = (actionParsingStrictness == "low");
         try {
             auto parseContext = setupParseContext(exitOnAllErrors);
             if (treatCriticalAsNonCritical) { // Continue with invalid names if parsing strictness is set to low
@@ -571,7 +576,8 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
-                         checkDeck, treatCriticalAsNonCritical, outputInterval, *errorGuard);
+                         checkDeck, treatCriticalAsNonCritical, lowActionParsingStrictness,
+                         keepKeywords, outputInterval, *errorGuard);
 
             // Update schedule so that re-parsing after actions use same strictness
             assert(schedule);
@@ -615,7 +621,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (*errorGuard) { // errors encountered
         parseSuccess = 0;
-        errorGuard->dump();
+        failureMessage += errorGuard->formattedErrors();
         errorGuard->clear();
     }
 
@@ -623,7 +629,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (! parseSuccess) {
         if (comm.rank() == 0) {
-            OpmLog::error(fmt::format("Unrecoverable errors while loading input: {}", failureMessage));
+            OpmLog::error(fmt::format("Unrecoverable errors while loading input:\n{}", failureMessage));
         }
 
 #if HAVE_MPI
@@ -657,4 +663,17 @@ std::unique_ptr<Opm::ParseContext> Opm::setupParseContext(const bool strictParsi
         parseContext->update(InputErrorAction::DELAYED_EXIT1);
 
     return parseContext;
+}
+
+void Opm::setupStreamLogging(const std::string& stdout_log_id)
+{
+    std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
+    Opm::OpmLog::addBackend(stdout_log_id, streamLog);
+    // Set a tag limit of 10 (no category limit). Will later in
+    // the run be replaced by calling setupMessageLimiter(), after
+    // the deck is read and the (possibly user-set) category
+    // limits are known.
+    streamLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10));
+    const bool use_color_coding = OpmLog::stdoutIsTerminal();
+    streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
 }

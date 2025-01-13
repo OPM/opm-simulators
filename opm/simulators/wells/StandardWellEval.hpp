@@ -19,7 +19,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 
@@ -90,11 +89,9 @@ protected:
 
     void init(std::vector<Scalar>& perf_depth,
               const std::vector<Scalar>& depth_arg,
-              const int num_cells,
               const bool has_polymermw);
 
-    void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
-                                             WellState<Scalar>& well_state,
+    void updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
                                              const SummaryState& summary_state,
                                              DeferredLogger& deferred_logger) const;
 

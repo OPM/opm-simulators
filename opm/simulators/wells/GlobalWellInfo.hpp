@@ -49,7 +49,7 @@ enum class WellStatus;
     under group control.
 */
 
-
+template<class Scalar>
 class GlobalWellInfo {
 public:
 
@@ -63,6 +63,8 @@ public:
         auto size = this->m_in_injecting_group.size();
         comm.sum( this->m_in_injecting_group.data(), size);
         comm.sum( this->m_in_producing_group.data(), size);
+        comm.sum( this->m_is_open.data(), size);
+        comm.min( this->m_efficiency_scaling_factors.data(), size);
     }
 
 
@@ -70,10 +72,13 @@ public:
     GlobalWellInfo(const Schedule& sched, std::size_t report_step, const std::vector<Well>& local_wells);
     bool in_producing_group(const std::string& wname) const;
     bool in_injecting_group(const std::string& wname) const;
+    bool is_open(const std::string& wname) const;
     std::size_t well_index(const std::string& wname) const;
     const std::string& well_name(std::size_t well_index) const;
     void update_injector(std::size_t well_index, WellStatus well_status, WellInjectorCMode injection_cmode);
     void update_producer(std::size_t well_index, WellStatus well_status, WellProducerCMode production_cmode);
+    void update_efficiency_scaling_factor(std::size_t well_index, const Scalar efficiency_scaling_factor);
+    Scalar efficiency_scaling_factor(const std::string& wname) const;
     void clear();
 
 private:
@@ -82,6 +87,8 @@ private:
     std::map<std::string, std::size_t> name_map; // string -> global_index
     std::vector<int> m_in_injecting_group;       // global_index -> int/bool
     std::vector<int> m_in_producing_group;       // global_index -> int/bool
+    std::vector<int> m_is_open;                  // global_index -> int/bool
+    std::vector<Scalar> m_efficiency_scaling_factors; // global_index --> double
 };
 
 

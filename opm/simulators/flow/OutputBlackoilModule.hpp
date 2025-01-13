@@ -44,7 +44,7 @@
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/output/data/Cells.hpp>
@@ -65,38 +65,12 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Properties
-{
+namespace Opm::Parameters {
 
-// create new type tag for the Ecl-output
-namespace TTag
-{
-    struct OutputBlackOil {
-    };
-} // namespace TTag
+struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
+struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
 
-template <class TypeTag, class MyTypeTag>
-struct ForceDisableFluidInPlaceOutput {
-    using type = UndefinedProperty;
-};
-
-template <class TypeTag>
-struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::OutputBlackOil> {
-    static constexpr bool value = false;
-};
-
-
-template <class TypeTag, class MyTypeTag>
-struct ForceDisableResvFluidInPlaceOutput {
-    using type = UndefinedProperty;
-};
-
-template <class TypeTag>
-struct ForceDisableResvFluidInPlaceOutput<TypeTag, TTag::OutputBlackOil> {
-    static constexpr bool value = false;
-};
-
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm
 {
@@ -173,12 +147,12 @@ public:
         this->setupBlockData(isCartIdxOnThisRank);
 
         this->forceDisableFipOutput_ =
-            Parameters::get<TypeTag, Properties::ForceDisableFluidInPlaceOutput>();
+            Parameters::Get<Parameters::ForceDisableFluidInPlaceOutput>();
 
         this->forceDisableFipresvOutput_ =
-            Parameters::get<TypeTag, Properties::ForceDisableResvFluidInPlaceOutput>();
+            Parameters::Get<Parameters::ForceDisableResvFluidInPlaceOutput>();
 
-        if (! Parameters::get<TypeTag, Properties::OwnerCellsFirst>()) {
+        if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectToIORank.isIORank()) {
                 OpmLog::error(msg);
@@ -207,10 +181,10 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::ForceDisableFluidInPlaceOutput>
+        Parameters::Register<Parameters::ForceDisableFluidInPlaceOutput>
             ("Do not print fluid-in-place values after each report step "
              "even if requested by the deck.");
-        Parameters::registerParam<TypeTag, Properties::ForceDisableResvFluidInPlaceOutput>
+        Parameters::Register<Parameters::ForceDisableResvFluidInPlaceOutput>
             ("Do not print reservoir volumes values after each report step "
              "even if requested by the deck.");
     }
@@ -238,7 +212,9 @@ public:
                              log,
                              isRestart,
                              problem.vapparsActive(std::max(simulator_.episodeIndex(), 0)),
-                             problem.materialLawManager()->enableHysteresis(),
+                             problem.materialLawManager()->enablePCHysteresis(),
+                             problem.materialLawManager()->enableNonWettingHysteresis(),
+                             problem.materialLawManager()->enableWettingHysteresis(),
                              problem.tracerModel().numTracers(),
                              problem.tracerModel().enableSolTracers(),
                              problem.eclWriter()->getOutputNnc().size());
@@ -359,6 +335,19 @@ public:
                     = FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(
                         fs, gasPhaseIdx, pvtRegionIdx, SoMax);
                 Valgrind::CheckDefined(this->oilVaporizationFactor_[globalDofIdx]);
+            }
+            if (!this->gasDissolutionFactorInWater_.empty()) {
+                Scalar SwMax = elemCtx.problem().maxWaterSaturation(globalDofIdx);
+                this->gasDissolutionFactorInWater_[globalDofIdx]
+                    = FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(
+                        fs, waterPhaseIdx, pvtRegionIdx, SwMax);
+                Valgrind::CheckDefined(this->gasDissolutionFactorInWater_[globalDofIdx]);
+            }
+            if (!this->waterVaporizationFactor_.empty()) {
+                this->waterVaporizationFactor_[globalDofIdx]
+                    = FluidSystem::template saturatedVaporizationFactor<FluidState, Scalar>(
+                        fs, gasPhaseIdx, pvtRegionIdx);
+                Valgrind::CheckDefined(this->waterVaporizationFactor_[globalDofIdx]);
             }
             if (!this->gasFormationVolumeFactor_.empty()) {
                 this->gasFormationVolumeFactor_[globalDofIdx] = 1.0
@@ -558,14 +547,6 @@ public:
                 }
             }
 
-            if (!this->soMax_.empty())
-                this->soMax_[globalDofIdx]
-                    = std::max(getValue(fs.saturation(oilPhaseIdx)), problem.maxOilSaturation(globalDofIdx));
-
-            if (!this->swMax_.empty())
-                this->swMax_[globalDofIdx]
-                    = std::max(getValue(fs.saturation(waterPhaseIdx)), problem.maxWaterSaturation(globalDofIdx));
-
             if (!this->minimumOilPressure_.empty())
                 this->minimumOilPressure_[globalDofIdx]
                     = std::min(getValue(fs.pressure(oilPhaseIdx)), problem.minOilPressure(globalDofIdx));
@@ -583,16 +564,67 @@ public:
 
             const auto& matLawManager = problem.materialLawManager();
             if (matLawManager->enableHysteresis()) {
-                if (!this->pcSwMdcOw_.empty() && !this->krnSwMdcOw_.empty()) {
-                    matLawManager->oilWaterHysteresisParams(
-                        this->pcSwMdcOw_[globalDofIdx], this->krnSwMdcOw_[globalDofIdx], globalDofIdx);
-                }
-                if (!this->pcSwMdcGo_.empty() && !this->krnSwMdcGo_.empty()) {
-                    matLawManager->gasOilHysteresisParams(
-                        this->pcSwMdcGo_[globalDofIdx], this->krnSwMdcGo_[globalDofIdx], globalDofIdx);
-                }
-            }
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) 
+                    && FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                        Scalar somax;
+                        Scalar swmax;
+                        Scalar swmin;
 
+                        matLawManager->oilWaterHysteresisParams(
+                            somax, swmax, swmin, globalDofIdx);
+                
+                    if (matLawManager->enableNonWettingHysteresis()) {
+                        if (!this->soMax_.empty()) {
+                            this->soMax_[globalDofIdx] = somax;
+                        }
+                    }
+                    if (matLawManager->enableWettingHysteresis()) {
+                        if (!this->swMax_.empty()) {
+                            this->swMax_[globalDofIdx] = swmax;
+                        }
+                    }
+                    if (matLawManager->enablePCHysteresis()) {
+                        if (!this->swmin_.empty()) {
+                            this->swmin_[globalDofIdx] = swmin;
+                        }
+                    }
+                }
+
+                if (FluidSystem::phaseIsActive(oilPhaseIdx) 
+                    && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                        Scalar sgmax;
+                        Scalar shmax;
+                        Scalar somin;
+                        matLawManager->gasOilHysteresisParams(
+                            sgmax, shmax, somin, globalDofIdx);
+                
+                    if (matLawManager->enableNonWettingHysteresis()) {
+                        if (!this->sgmax_.empty()) {
+                            this->sgmax_[globalDofIdx] = sgmax;
+                        }
+                    }
+                    if (matLawManager->enableWettingHysteresis()) {
+                        if (!this->shmax_.empty()) {
+                            this->shmax_[globalDofIdx] = shmax;
+                        }
+                    }
+                    if (matLawManager->enablePCHysteresis()) {
+                        if (!this->somin_.empty()) {
+                            this->somin_[globalDofIdx] = somin;
+                        }
+                    }
+                }
+            } else {
+                
+                if (!this->soMax_.empty())
+                    this->soMax_[globalDofIdx]
+                        = std::max(getValue(fs.saturation(oilPhaseIdx)), problem.maxOilSaturation(globalDofIdx));
+
+                if (!this->swMax_.empty())
+                    this->swMax_[globalDofIdx]
+                        = std::max(getValue(fs.saturation(waterPhaseIdx)), problem.maxWaterSaturation(globalDofIdx));
+
+            }
             if (!this->ppcw_.empty()) {
                 this->ppcw_[globalDofIdx] = matLawManager->oilWaterScaledEpsInfoDrainage(globalDofIdx).maxPcow;
                 // printf("ppcw_[%d] = %lg\n", globalDofIdx, ppcw_[globalDofIdx]);
@@ -1114,12 +1146,18 @@ public:
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             Valgrind::CheckDefined(this->fluidPressure_[elemIdx]);
             Valgrind::CheckDefined(pc);
-            assert(FluidSystem::phaseIsActive(oilPhaseIdx));
+            const auto& pressure = this->fluidPressure_[elemIdx];
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
 
-                fs.setPressure(phaseIdx, this->fluidPressure_[elemIdx] + (pc[phaseIdx] - pc[oilPhaseIdx]));
+                if (Indices::oilEnabled)
+                    fs.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
+                else if (Indices::gasEnabled)
+                    fs.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
+                else if (Indices::waterEnabled)
+                    //single (water) phase
+                    fs.setPressure(phaseIdx, pressure);
             }
         }
 
@@ -1143,14 +1181,55 @@ public:
         if (simulator.problem().materialLawManager()->enableHysteresis()) {
             auto matLawManager = simulator.problem().materialLawManager();
 
-            if (!this->pcSwMdcOw_.empty() && !this->krnSwMdcOw_.empty()) {
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) 
+                && FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                    Scalar somax = 2.0;
+                    Scalar swmax = -2.0;
+                    Scalar swmin = 2.0;
+
+                if (matLawManager->enableNonWettingHysteresis()) {
+                    if (!this->soMax_.empty()) {
+                        somax = this->soMax_[elemIdx];
+                    }
+                }
+                if (matLawManager->enableWettingHysteresis()) {
+                    if (!this->swMax_.empty()) {
+                        swmax = this->swMax_[elemIdx];
+                    }
+                }
+                if (matLawManager->enablePCHysteresis()) {
+                    if (!this->swmin_.empty()) {
+                        swmin = this->swmin_[elemIdx];
+                    }
+                }
                 matLawManager->setOilWaterHysteresisParams(
-                    this->pcSwMdcOw_[elemIdx], this->krnSwMdcOw_[elemIdx], elemIdx);
+                        somax, swmax, swmin, elemIdx);
             }
-            if (!this->pcSwMdcGo_.empty() && !this->krnSwMdcGo_.empty()) {
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) 
+                && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    Scalar sgmax = 2.0;
+                    Scalar shmax = -2.0;
+                    Scalar somin = 2.0;
+
+                if (matLawManager->enableNonWettingHysteresis()) {
+                    if (!this->sgmax_.empty()) {
+                        sgmax = this->sgmax_[elemIdx];
+                    }
+                }
+                if (matLawManager->enableWettingHysteresis()) {
+                    if (!this->shmax_.empty()) {
+                        shmax = this->shmax_[elemIdx];
+                    }
+                }
+                if (matLawManager->enablePCHysteresis()) {
+                    if (!this->somin_.empty()) {
+                        somin = this->somin_[elemIdx];
+                    }
+                }
                 matLawManager->setGasOilHysteresisParams(
-                    this->pcSwMdcGo_[elemIdx], this->krnSwMdcGo_[elemIdx], elemIdx);
+                        sgmax, shmax, somin, elemIdx);
             }
+
         }
 
         if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT")) {
@@ -1702,7 +1781,7 @@ private:
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped][globalDofIdx] = imMobileMassGas;
             }
             if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped].empty()) {
-                const Scalar mobileMassGas = massGas * std::max(0.0, sg - trappedGasSaturation);
+                const Scalar mobileMassGas = massGas * std::max(Scalar{0.0}, sg - trappedGasSaturation);
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped][globalDofIdx] = mobileMassGas;
             }
         }
@@ -1720,7 +1799,7 @@ private:
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped][globalDofIdx] = imMobileMassGas;
             }
             if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped].empty()) {
-                const Scalar mobileMassGas = massGas * std::max(0.0, sg - trappedGasSaturation);
+                const Scalar mobileMassGas = massGas * std::max(Scalar{0.0}, sg - trappedGasSaturation);
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped][globalDofIdx] = mobileMassGas;
             }
         }

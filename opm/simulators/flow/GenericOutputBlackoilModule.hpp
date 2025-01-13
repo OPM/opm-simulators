@@ -2,14 +2,17 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   This file is part of the Open Porous Media project (OPM).
+
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 2 of the License, or
   (at your option) any later version.
+
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
+
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
   Consult the COPYING file in the top-level source directory of this
@@ -92,6 +95,9 @@ public:
     // write injection report to output
     void outputInjLog(std::size_t reportStepNum);
 
+    // calculate Initial Fluid In Place
+    Inplace calc_initial_inplace(const Parallel::Communication& comm);
+
     // calculate Fluid In Place
     Inplace calc_inplace(std::map<std::string, double>& miscSummaryData,
                          std::map<std::string, std::vector<double>>& regionData,
@@ -105,6 +111,8 @@ public:
                          const Parallel::Communication& comm);
 
     void outputErrorLog(const Parallel::Communication& comm) const;
+
+    void accumulateRftDataParallel(const Parallel::Communication& comm);
 
     void addRftDataToWells(data::Wells& wellDatas,
                            std::size_t reportStepNum);
@@ -330,18 +338,21 @@ protected:
                                 bool enableBrine,
                                 bool enableSaltPrecipitation,
                                 bool enableExtbo,
-                                bool enableMICP);
+                                bool enableMICP,
+                                bool isCompositional = false);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
                         const bool substep,
                         const bool log,
                         const bool isRestart,
-                        const bool vapparsActive,
-                        const bool enableHysteresis,
-                        unsigned numTracers,
-                        const std::vector<bool>& enableSolTracers,
-                        unsigned numOutputNnc);
+                        const bool vapparsActive = false,
+                        const bool enablePCHysteresis = false,
+                        const bool enableNonWettingHysteresis =false,
+                        const bool enableWettingHysteresis = false,
+                        unsigned numTracers = 0,
+                        const std::vector<bool>& enableSolTracers = {},
+                        unsigned numOutputNnc = 0);
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -376,6 +387,8 @@ protected:
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
 
+    void gatherAndUpdateRftMap(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm);
+
     const EclipseState& eclState_;
     const Schedule& schedule_;
     const SummaryState& summaryState_;
@@ -385,30 +398,54 @@ protected:
     InterRegFlowMap interRegionFlows_;
     LogOutputHelper<Scalar> logOutput_;
 
-    bool enableEnergy_;
-    bool enableTemperature_;
-    bool enableMech_;
+    bool enableEnergy_{false};
+    bool enableTemperature_{false};
+    bool enableMech_{false};
 
-    bool enableSolvent_;
-    bool enablePolymer_;
-    bool enableFoam_;
-    bool enableBrine_;
-    bool enableSaltPrecipitation_;
-    bool enableExtbo_;
-    bool enableMICP_;
+    bool enableSolvent_{false};
+    bool enablePolymer_{false};
+    bool enableFoam_{false};
+    bool enableBrine_{false};
+    bool enableSaltPrecipitation_{false};
+    bool enableExtbo_{false};
+    bool enableMICP_{false};
+    bool isCompositional_{false};
 
-    bool forceDisableFipOutput_;
-    bool forceDisableFipresvOutput_;
-    bool outputFipRestart_;
-    bool computeFip_;
+    bool forceDisableFipOutput_{false};
+    bool forceDisableFipresvOutput_{false};
+    bool computeFip_{false};
 
-    bool anyFlows_;
-    bool anyFlores_;
-    bool blockFlows_;
-    bool enableFlows_;
-    bool enableFlores_;
-    bool enableFlowsn_;
-    bool enableFloresn_;
+    struct OutputFIPRestart {
+        /// Whether or not run requests (surface condition) fluid-in-place
+        /// restart file output using the 'FIP' mnemonic.
+        bool noPrefix {false};
+
+        /// Whether or not run requests surface condition fluid-in-place
+        /// restart file output using the 'SFIP' mnemonic.
+        bool surface {false};
+
+        /// Whether or not run requests reservoir condition fluid-in-place
+        /// restart file output using the 'RFIP' mnemonic.
+        bool reservoir {false};
+
+        void clearBits()
+        {
+            this->noPrefix = this->surface = this->reservoir = false;
+        }
+
+        explicit operator bool() const
+        {
+            return this->noPrefix || this->surface || this->reservoir;
+        }
+    } outputFipRestart_{};
+
+    bool anyFlows_{false};
+    bool anyFlores_{false};
+    bool blockFlows_{false};
+    bool enableFlows_{false};
+    bool enableFlores_{false};
+    bool enableFlowsn_{false};
+    bool enableFloresn_{false};
 
     std::unordered_map<Inplace::Phase, ScalarBuffer> fip_;
     std::unordered_map<std::string, std::vector<int>> regions_;
@@ -449,17 +486,19 @@ protected:
     ScalarBuffer mFracGas_;
     ScalarBuffer mFracCo2_;
     ScalarBuffer soMax_;
-    ScalarBuffer pcSwMdcOw_;
-    ScalarBuffer krnSwMdcOw_;
-    ScalarBuffer pcSwMdcGo_;
-    ScalarBuffer krnSwMdcGo_;
+    ScalarBuffer swMax_;
+    ScalarBuffer sgmax_;
+    ScalarBuffer shmax_;
+    ScalarBuffer somin_;
+    ScalarBuffer swmin_;
     ScalarBuffer ppcw_;
     ScalarBuffer gasDissolutionFactor_;
     ScalarBuffer oilVaporizationFactor_;
+    ScalarBuffer gasDissolutionFactorInWater_;
+    ScalarBuffer waterVaporizationFactor_;
     ScalarBuffer bubblePointPressure_;
     ScalarBuffer dewPointPressure_;
     ScalarBuffer rockCompPorvMultiplier_;
-    ScalarBuffer swMax_;
     ScalarBuffer minimumOilPressure_;
     ScalarBuffer saturatedOilFormationVolumeFactor_;
     ScalarBuffer rockCompTransMultiplier_;
@@ -505,6 +544,10 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
+    // total mole fractions for each component
+    std::array<ScalarBuffer, numComponents> moleFractions_;
+    // mole fractions for each component in each phase
+    std::array<std::array<ScalarBuffer, numComponents>, numPhases> phaseMoleFractions_;
     std::vector<ScalarBuffer> freeTracerConcentrations_;
     std::vector<ScalarBuffer> solTracerConcentrations_;
 
@@ -524,7 +567,7 @@ protected:
     std::vector<std::vector<int>> cnvData_; //!< Data for CNV_xxx arrays
 
     std::optional<Inplace> initialInplace_;
-    bool local_data_valid_;
+    bool local_data_valid_{false};
 
     std::optional<RegionPhasePoreVolAverage> regionAvgDensity_;
 };

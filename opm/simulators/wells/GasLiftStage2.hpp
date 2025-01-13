@@ -20,8 +20,9 @@
 #ifndef OPM_GASLIFT_STAGE2_HEADER_INCLUDED
 #define OPM_GASLIFT_STAGE2_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <map>
 #include <memory>
@@ -126,7 +127,6 @@ protected:
                           std::vector<GradPair>& dec_grads);
 
     void removeSurplusALQ_(const Group& group,
-                           std::vector<GradPair>& inc_grads,
                            std::vector<GradPair>& dec_grads);
 
     void saveGrad_(GradMap& map, const std::string& name, GradInfo& grad);
@@ -144,6 +144,10 @@ protected:
     void mpiSyncGlobalGradVector_(std::vector<GradPair>& grads_global) const;
     void mpiSyncLocalToGlobalGradVector_(const std::vector<GradPair>& grads_local,
                                          std::vector<GradPair>& grads_global) const;
+
+    std::array<Scalar, 4> computeDelta(const std::string& name, bool add);
+    void updateGroupInfo(const std::string& name, bool add);
+
 
     GLiftProdWells& prod_wells_;
     GLiftOptWells& stage1_wells_;
@@ -205,6 +209,7 @@ protected:
     {
         SurplusState(GasLiftStage2& parent_,
                      const Group& group_,
+                     const WellState<Scalar>& well_state_,
                      Scalar oil_rate_,
                      Scalar gas_rate_,
                      Scalar water_rate_,
@@ -218,6 +223,7 @@ protected:
                      std::optional<Scalar> max_total_gas_)
             : parent{parent_}
             , group{group_}
+            , well_state(well_state_)
             , oil_rate{oil_rate_}
             , gas_rate{gas_rate_}
             , water_rate{water_rate_}
@@ -234,6 +240,7 @@ protected:
 
         GasLiftStage2 &parent;
         const Group &group;
+        const WellState<Scalar>& well_state;
         Scalar oil_rate;
         Scalar gas_rate;
         Scalar water_rate;

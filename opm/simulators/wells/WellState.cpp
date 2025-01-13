@@ -129,7 +129,7 @@ namespace Opm {
 
 template<class Scalar>
 WellState<Scalar>::WellState(const ParallelWellInfo<Scalar>& pinfo)
-    : phase_usage_{}
+    : phase_usage_{{BlackoilPhases::Aqua, BlackoilPhases::Liquid}}
 {
     wells_.add("test4",
                SingleWellState<Scalar>{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
@@ -149,6 +149,7 @@ serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 
 template<class Scalar>
 void WellState<Scalar>::base_init(const std::vector<Scalar>& cellPressures,
+                                  const std::vector<Scalar>& cellTemperatures,
                                   const std::vector<Well>& wells_ecl,
                                   const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
                                   const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
@@ -164,7 +165,7 @@ void WellState<Scalar>::base_init(const std::vector<Scalar>& cellPressures,
             const Well& well = wells_ecl[w];
 
             // Initialize bhp(), thp(), wellRates(), temperature().
-            initSingleWell(cellPressures, well, well_perf_data[w], parallel_well_info[w], summary_state);
+            initSingleWell(cellPressures, cellTemperatures, well, well_perf_data[w], parallel_well_info[w], summary_state);
         }
     }
 }
@@ -202,12 +203,12 @@ template<class Scalar>
 void WellState<Scalar>::initSingleInjector(const Well& well,
                                            const ParallelWellInfo<Scalar>& well_info,
                                            Scalar pressure_first_connection,
+                                           Scalar temperature_first_connection,
                                            const std::vector<PerforationData<Scalar>>& well_perf_data,
                                            const SummaryState& summary_state)
 {
     const auto& pu = this->phase_usage_;
-    const Scalar temp = well.temperature();
-
+    const Scalar temp = well.hasInjTemperature() ? well.inj_temperature() : temperature_first_connection;
     auto& ws = this->wells_.add(well.name(), SingleWellState<Scalar>{well.name(),
                                                                      well_info,
                                                                      false,
@@ -228,18 +229,25 @@ void WellState<Scalar>::initSingleInjector(const Well& well,
 
 template<class Scalar>
 void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
+                                       const std::vector<Scalar>& cellTemperatures,
                                        const Well& well,
                                        const std::vector<PerforationData<Scalar>>& well_perf_data,
                                        const ParallelWellInfo<Scalar>& well_info,
                                        const SummaryState& summary_state)
 {
     Scalar pressure_first_connection = -1;
-    if (!well_perf_data.empty())
+    if (!well_perf_data.empty()) {
         pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
+    }
     pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
 
     if (well.isInjector()) {
-        this->initSingleInjector(well, well_info, pressure_first_connection,
+        Scalar temperature_first_connection = -1;
+        if (!well_perf_data.empty()) {
+            temperature_first_connection = cellTemperatures[well_perf_data[0].cell_index];
+        }
+        temperature_first_connection = well_info.broadcastFirstPerforationValue(temperature_first_connection);
+        this->initSingleInjector(well, well_info, pressure_first_connection, temperature_first_connection,
                                  well_perf_data, summary_state);
     } else {
         this->initSingleProducer(well, well_info, pressure_first_connection,
@@ -249,20 +257,25 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
 
 template<class Scalar>
 void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
+                             const std::vector<Scalar>& cellTemperatures,
                              const Schedule& schedule,
                              const std::vector<Well>& wells_ecl,
                              const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
                              const int report_step,
                              const WellState* prevState,
                              const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
-                             const SummaryState& summary_state)
+                             const SummaryState& summary_state,
+                             const bool enableDistributedWells)
 {
     // call init on base class
-    this->base_init(cellPressures, wells_ecl, parallel_well_info,
+    this->base_init(cellPressures, cellTemperatures, wells_ecl, parallel_well_info,
                     well_perf_data, summary_state);
-    this->global_well_info = std::make_optional<GlobalWellInfo>(schedule,
+    this->enableDistributedWells_ = enableDistributedWells;
+    this->global_well_info = std::make_optional<GlobalWellInfo<Scalar>>(schedule,
                                                                 report_step,
                                                                 wells_ecl);
+    well_rates.clear();
+    this->permanently_inactive_well_names_ = schedule.getInactiveWellNamesAtEnd();
     for (const auto& wname : schedule.wellNames(report_step))
     {
         well_rates.insert({wname, std::make_pair(false, std::vector<Scalar>(this->numPhases()))});
@@ -415,7 +428,7 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
         }
     }
 
-    updateWellsDefaultALQ(wells_ecl, summary_state);
+    updateWellsDefaultALQ(schedule, report_step, summary_state);
 }
 
 template<class Scalar>
@@ -428,7 +441,7 @@ void WellState<Scalar>::resize(const std::vector<Well>& wells_ecl,
                                const SummaryState& summary_state)
 {
     const std::vector<Scalar> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-    init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state);
+    init(tmp, tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state, this->enableDistributedWells_);
 
     if (handle_ms_well) {
         initWellStateMSWell(wells_ecl, nullptr);
@@ -506,6 +519,7 @@ WellState<Scalar>::report(const int* globalCellIdxMap,
         well.bhp = ws.bhp;
         well.thp = ws.thp;
         well.temperature = ws.temperature;
+        well.efficiency_scaling_factor = ws.efficiency_scaling_factor;
         well.filtrate.rate = ws.sum_filtrate_rate();
         well.filtrate.total = ws.sum_filtrate_total();
         well.filtrate.concentration = ws.filtrate_conc;
@@ -684,6 +698,9 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     // what we do here, is to set the segment rates and perforation rates
     for (int w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
+        if (this->is_permanently_inactive_well(well_ecl.name()))
+            continue;
+
         auto& ws = this->well(w);
 
         if (well_ecl.isMultiSegment()) {
@@ -715,6 +732,10 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 }
             }
 
+            if (!this->enableDistributedWells_ && static_cast<int>(ws.perf_data.size()) != n_activeperf)
+                throw std::logic_error("Distributed multi-segment wells cannot be initialized properly yet.");
+
+
             std::vector<std::vector<int>> segment_inlets(well_nseg);
             for (int seg = 0; seg < well_nseg; ++seg) {
                 const Segment& segment = segment_set[seg];
@@ -737,14 +758,15 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 // TODO: to see if this strategy can benefit StandardWell too
                 // TODO: it might cause big problem for gas rate control or if there is a gas rate limit
                 // maybe the best way is to initialize the fractions first then get the rates
-                for (int perf = 0; perf < n_activeperf; perf++)
+                for (std::size_t perf = 0; perf < perf_data.size(); perf++)
                     perf_rates[perf*np + gaspos] *= 100;
             }
 
             const auto& perf_rates = perf_data.phase_rates;
             std::vector<Scalar> perforation_rates(perf_rates.begin(), perf_rates.end());
 
-            calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
+            calculateSegmentRates(ws.parallel_info, segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
+
             // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
             // if there is no perforation associated with this segment, it uses the pressure from the outlet segment
             // which requres the ordering is successful
@@ -755,15 +777,35 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 auto& segment_pressure = ws.segments.pressure;
                 segment_pressure[0] = ws.bhp;
                 const auto& perf_press = perf_data.pressure;
+                // The segment_indices contain the indices of the segments, that are only available on one process.
+                std::vector<int> segment_indices;
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if (!segment_perforations[seg].empty()) {
-                        const int first_perf = segment_perforations[seg][0];
-                        segment_pressure[seg] = perf_press[first_perf];
+                        const int first_perf = ws.parallel_info.get().globalToLocal(segment_perforations[seg][0]);
+                        if (first_perf > -1) { //-1 indicates that the global id is not on this process
+                            segment_pressure[seg] = perf_press[first_perf];
+                        }
+                        segment_indices.push_back(seg);
                     } else {
                         // seg_press_.push_back(bhp); // may not be a good decision
                         // using the outlet segment pressure // it needs the ordering is correct
                         const int outlet_seg = segment_set[seg].outletSegment();
                         segment_pressure[seg] = segment_pressure[segment_set.segmentNumberToIndex(outlet_seg)];
+                    }
+                }
+
+                if (ws.parallel_info.get().communication().size() > 1) {
+                    // Communicate the segment_pressure values
+                    std::vector<Scalar> values_to_combine(segment_indices.size(), 0.0);
+
+                    for (size_t i = 0; i < segment_indices.size(); ++i) {
+                        values_to_combine[i] = segment_pressure[segment_indices[i]];
+                    }
+                    ws.parallel_info.get().communication().sum(values_to_combine.data(), values_to_combine.size());
+
+                    // Now make segment_pressure equal across all processes
+                    for (size_t i = 0; i < segment_indices.size(); ++i) {
+                        segment_pressure[segment_indices[i]] = values_to_combine[i];
                     }
                 }
             }
@@ -800,11 +842,12 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
 template<class Scalar>
 void WellState<Scalar>::
-calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets,
-                      const std::vector<std::vector<int>>& segment_perforations,
-                      const std::vector<Scalar>& perforation_rates,
-                      const int np, const int segment,
-                      std::vector<Scalar>& segment_rates)
+calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>& pw_info,
+                               const std::vector<std::vector<int>>& segment_inlets,
+                               const std::vector<std::vector<int>>& segment_perforations,
+                               const std::vector<Scalar>& perforation_rates,
+                               const int np, const int segment,
+                               std::vector<Scalar>& segment_rates)
 {
     // the rate of the segment equals to the sum of the contribution from the perforations and inlet segment rates.
     // the first segment is always the top segment, its rates should be equal to the well rates.
@@ -815,16 +858,33 @@ calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets,
     }
     // contributions from the perforations belong to this segment
     for (const int& perf : segment_perforations[segment]) {
-        for (int p = 0; p < np; ++p) {
-            segment_rates[np * segment + p] += perforation_rates[np * perf + p];
+        auto local_perf = pw_info.globalToLocal(perf);
+        // If local_perf == -1, then the perforation is not on this process.
+        // The perforation of the other processes are added in calculateSegmentRates.
+        if (local_perf > -1) {
+            for (int p = 0; p < np; ++p) {
+                segment_rates[np * segment + p] += perforation_rates[np * local_perf + p];
+            }
         }
     }
     for (const int& inlet_seg : segment_inlets[segment]) {
-        calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, inlet_seg, segment_rates);
+        calculateSegmentRatesBeforeSum(pw_info, segment_inlets, segment_perforations, perforation_rates, np, inlet_seg, segment_rates);
         for (int p = 0; p < np; ++p) {
             segment_rates[np * segment + p] += segment_rates[np * inlet_seg + p];
         }
     }
+}
+template<class Scalar>
+void WellState<Scalar>::
+calculateSegmentRates(const ParallelWellInfo<Scalar>& pw_info,
+                      const std::vector<std::vector<int>>& segment_inlets,
+                      const std::vector<std::vector<int>>& segment_perforations,
+                      const std::vector<Scalar>& perforation_rates,
+                      const int np, const int segment,
+                      std::vector<Scalar>& segment_rates)
+{
+    calculateSegmentRatesBeforeSum(pw_info, segment_inlets, segment_perforations, perforation_rates, np, segment, segment_rates);
+    pw_info.communication().sum(segment_rates.data(), segment_rates.size());
 }
 
 template<class Scalar>
@@ -909,12 +969,23 @@ void WellState<Scalar>::updateGlobalIsGrup(const Parallel::Communication& comm)
     this->global_well_info.value().clear();
     for (std::size_t well_index = 0; well_index < this->size(); well_index++) {
         const auto& ws = this->well(well_index);
+        this->global_well_info.value().update_efficiency_scaling_factor(well_index, ws.efficiency_scaling_factor);
         if (ws.producer)
             this->global_well_info.value().update_producer(well_index, ws.status, ws.production_cmode);
         else
             this->global_well_info.value().update_injector(well_index, ws.status, ws.injection_cmode);
     }
     this->global_well_info.value().communicate(comm);
+}
+
+template<class Scalar>
+void WellState<Scalar>::
+updateEfficiencyScalingFactor(const std::string& wellName,
+                              const Scalar value)
+{
+    const auto idx = this->index(wellName);
+    this->global_well_info.value().update_efficiency_scaling_factor(*idx, value);
+    this->well(*idx).efficiency_scaling_factor = value;
 }
 
 template<class Scalar>
@@ -1019,19 +1090,19 @@ bool WellState<Scalar>::wellIsOwned(const std::string& wellName) const
     return wellIsOwned(well_index.value(), wellName);
 }
 
-template<class Scalar>
-void WellState<Scalar>::
-updateWellsDefaultALQ(const std::vector<Well>& wells_ecl,
-                      const SummaryState& summary_state)
+template <typename Scalar>
+void WellState<Scalar>::updateWellsDefaultALQ(const Schedule& schedule,
+                                              const int report_step,
+                                              const SummaryState& summary_state)
 {
-    const int nw = wells_ecl.size();
-    for (int i = 0; i<nw; i++) {
-        const Well &well = wells_ecl[i];
-        if (well.isProducer()) {
-            // NOTE: This is the value set in item 12 of WCONPROD, or with WELTARG
-            auto alq = well.alq_value(summary_state);
-            this->alq_state.update_default(well.name(), alq);
+    const auto wells = schedule.wellNames(report_step);
+    for (const auto& wname : wells) {
+        const auto& well = schedule.getWell(wname, report_step);
+        if (! well.isProducer()) {
+            continue;
         }
+        const auto alq = well.alq_value(summary_state);
+        this->alq_state.update_default(wname, alq);
     }
 }
 
@@ -1040,7 +1111,8 @@ bool WellState<Scalar>::operator==(const WellState& rhs) const
 {
     return this->alq_state == rhs.alq_state &&
            this->well_rates == rhs.well_rates &&
-           this->wells_ == rhs.wells_;
+           this->wells_ == rhs.wells_ &&
+           this->permanently_inactive_well_names_ == rhs.permanently_inactive_well_names_;
 }
 
 template<class Scalar>
@@ -1053,5 +1125,9 @@ WellState<Scalar>::parallelWellInfo(std::size_t well_index) const
 
 
 template class WellState<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class WellState<float>;
+#endif
 
 } // namespace Opm

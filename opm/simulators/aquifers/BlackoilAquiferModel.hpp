@@ -113,8 +113,6 @@ private:
 
 } // namespace Opm
 
-#ifndef OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
 #include "BlackoilAquiferModel_impl.hpp"
-#endif
 
 #endif

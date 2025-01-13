@@ -29,7 +29,8 @@
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 
@@ -59,6 +60,7 @@ public:
         serializer(bhp);
         serializer(thp);
         serializer(temperature);
+        serializer(efficiency_scaling_factor);
         serializer(phase_mixing_rates);
         serializer(well_potentials);
         serializer(productivity_index);
@@ -87,6 +89,7 @@ public:
     Scalar bhp{0};
     Scalar thp{0};
     Scalar temperature{0};
+    Scalar efficiency_scaling_factor{1.0};
 
     // filtration injection concentration
     Scalar filtrate_conc{0};

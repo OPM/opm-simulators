@@ -24,8 +24,8 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 
-#if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#if COMPILE_GPU_BRIDGE
+#include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
@@ -52,8 +52,7 @@ StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
 
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
-init(const int num_cells,
-     const int numWellEq,
+init(const int numWellEq,
      const int numPerfs,
      const std::vector<int>& cells)
 {
@@ -62,8 +61,8 @@ init(const int num_cells,
     // B D] x_well]      res_well]
     // set the size of the matrices
     duneD_.setSize(1, 1, 1);
-    duneB_.setSize(1, num_cells, numPerfs);
-    duneC_.setSize(1, num_cells, numPerfs);
+    duneB_.setSize(1, numPerfs, numPerfs);
+    duneC_.setSize(1, numPerfs, numPerfs);
 
     for (auto row = duneD_.createbegin(),
               end = duneD_.createend(); row != end; ++row) {
@@ -76,29 +75,25 @@ init(const int num_cells,
     for (auto row = duneB_.createbegin(),
               end = duneB_.createend(); row != end; ++row) {
         for (int perf = 0 ; perf < numPerfs; ++perf) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
     for (int perf = 0 ; perf < numPerfs; ++perf) {
-        const int cell_idx = cells[perf];
         // the block size is run-time determined now
-        duneB_[0][cell_idx].resize(numWellEq, numEq);
+        duneB_[0][perf].resize(numWellEq, numEq);
     }
 
          // make the C^T matrix
     for (auto row = duneC_.createbegin(),
               end = duneC_.createend(); row != end; ++row) {
         for (int perf = 0; perf < numPerfs; ++perf) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
     for (int perf = 0; perf < numPerfs; ++perf) {
-        const int cell_idx = cells[perf];
-        duneC_[0][cell_idx].resize(numWellEq, numEq);
+        duneC_[0][perf].resize(numWellEq, numEq);
     }
 
     resWell_.resize(1);
@@ -115,6 +110,9 @@ init(const int num_cells,
     for (unsigned i = 0; i < duneD_.N(); ++i) {
         invDrw_[i].resize(numWellEq);
     }
+
+    // Store the global index of well perforated cells
+    cells_ = cells;
 }
 
 template<class Scalar, int numEq>
@@ -194,7 +192,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     invDuneD_.mv(resWell, xw);
 }
 
-#if COMPILE_BDA_BRIDGE
+#if COMPILE_GPU_BRIDGE
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
 extract(const int numStaticWellEq,
@@ -209,7 +207,7 @@ extract(const int numStaticWellEq,
     for (auto colC = duneC_[0].begin(),
               endC = duneC_[0].end(); colC != endC; ++colC )
     {
-        colIndices.emplace_back(colC.index());
+        colIndices.emplace_back(cells_[colC.index()]);
         for (int i = 0; i < numStaticWellEq; ++i) {
             for (int j = 0; j < numEq; ++j) {
                 nnzValues.emplace_back((*colC)[i][j]);
@@ -238,7 +236,7 @@ extract(const int numStaticWellEq,
     for (auto colB = duneB_[0].begin(),
               endB = duneB_[0].end(); colB != endB; ++colB )
     {
-        colIndices.emplace_back(colB.index());
+        colIndices.emplace_back(cells_[colB.index()]);
         for (int i = 0; i < numStaticWellEq; ++i) {
             for (int j = 0; j < numEq; ++j) {
                 nnzValues.emplace_back((*colB)[i][j]);
@@ -265,14 +263,17 @@ extract(SparseMatrixAdapter& jacobian) const
     for (auto colC = duneC_[0].begin(),
               endC = duneC_[0].end(); colC != endC; ++colC)
     {
-        const auto row_index = colC.index();
+        // map the well perforated cell index to global cell index
+        const auto row_index = this->cells_[colC.index()];
 
         for (auto colB = duneB_[0].begin(),
                   endB = duneB_[0].end(); colB != endB; ++colB)
         {
+            // map the well perforated cell index to global cell index
+            const auto col_index = this->cells_[colB.index()];
             detail::multMatrix(invDuneD_[0][0], (*colB), tmp);
             detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
-            jacobian.addToBlock(row_index, colB.index(), tmpMat);
+            jacobian.addToBlock(row_index, col_index, tmpMat);
         }
     }
 }
@@ -311,22 +312,23 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     int nperf = 0;
     auto cell_weights = weights[0];// not need for not(use_well_weights)
     cell_weights = 0.0;
-    assert(duneC_.M() == weights.size());
-    const int welldof_ind = duneC_.M() + well.indexOfWell();
+    const int number_cells = weights.size();
+    const int welldof_ind = number_cells + well.indexOfWell();
     // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
     if (!well.isPressureControlled(well_state) || use_well_weights) {
         // make coupling for reservoir to well
         for (auto colC = duneC_[0].begin(),
                   endC = duneC_[0].end(); colC != endC; ++colC) {
-            const auto row_ind = colC.index();
-            const auto& bw = weights[row_ind];
+            // map the well perforated cell index to global cell index
+            const auto row_index = cells_[colC.index()];
+            const auto& bw = weights[row_index];
             Scalar matel = 0;
             assert((*colC).M() == bw.size());
             for (std::size_t i = 0; i < bw.size(); ++i) {
                 matel += (*colC)[bhp_var_index][i] * bw[i];
             }
 
-            jacobian[row_ind][welldof_ind] = matel;
+            jacobian[row_index][welldof_ind] = matel;
             cell_weights += bw;
             nperf += 1;
         }
@@ -385,7 +387,8 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     if (!well.isPressureControlled(well_state) || use_well_weights) {
         for (auto colB = duneB_[0].begin(),
                   endB = duneB_[0].end(); colB != endB; ++colB) {
-            const auto col_index = colB.index();
+            // map the well perforated cell index to global cell index
+            const auto col_index = cells_[colB.index()];
             const auto& bw = bweights[0];
             Scalar matel = 0;
             for (std::size_t i = 0; i < bw.size(); ++i) {
@@ -404,24 +407,31 @@ sumDistributed(Parallel::Communication comm)
     wellhelpers::sumDistributedWellEntries(duneD_[0][0], resWell_[0], comm);
 }
 
-#define INSTANCE(N) \
-template class StandardWellEquations<double,N>; \
-template void StandardWellEquations<double,N>:: \
-    extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,N,N>>&) const; \
-template void StandardWellEquations<double,N>:: \
-    extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<double,1,1>>&, \
-                             const typename StandardWellEquations<double,N>::BVector&, \
-                             const int, \
-                             const bool, \
-                             const WellInterfaceGeneric<double>&, \
-                             const int, \
-                             const WellState<double>&) const;
+#define INSTANTIATE(T,N)                                                              \
+    template class StandardWellEquations<T,N>;                                        \
+    template void StandardWellEquations<T,N>::                                        \
+        extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<T,N,N>>&) const;          \
+    template void StandardWellEquations<T,N>::                                        \
+        extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,               \
+                                 const typename StandardWellEquations<T,N>::BVector&, \
+                                 const int,                                           \
+                                 const bool,                                          \
+                                 const WellInterfaceGeneric<T>&,                      \
+                                 const int,                                           \
+                                 const WellState<T>&) const;
 
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE(T,1)        \
+    INSTANTIATE(T,2)        \
+    INSTANTIATE(T,3)        \
+    INSTANTIATE(T,4)        \
+    INSTANTIATE(T,5)        \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 }

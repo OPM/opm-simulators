@@ -28,6 +28,7 @@
 #define OPM_GENERIC_CPGRID_VANGUARD_HPP
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 
@@ -78,6 +79,7 @@ template<class ElementMapper, class GridView, class Scalar>
 class GenericCpGridVanguard {
 protected:
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Dune::CpGrid>;
+    using LevelCartesianIndexMapper = Opm::LevelCartesianIndexMapper<Dune::CpGrid>;
     using Element = typename GridView::template Codim<0>::Entity;
 
 public:
@@ -132,6 +134,12 @@ public:
     const CartesianIndexMapper& cartesianIndexMapper() const;
 
     /*!
+     * \brief Returns the object which maps a global element index of the simulation grid
+     *        to the corresponding element index of the level logically Cartesian index.
+     */
+    const LevelCartesianIndexMapper levelCartesianIndexMapper() const;
+
+    /*!
      * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const;
@@ -150,9 +158,11 @@ protected:
 #if HAVE_MPI
     void doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                         const bool                               ownersFirst,
+                        const Dune::PartitionMethod              partitionMethod,
                         const bool                               serialPartitioning,
                         const bool                               enableDistributedWells,
-                        const double                             zoltanImbalanceTol,
+                        const bool                               allowSplittingInactiveWells,
+                        const double                             imbalanceTol,
                         const GridView&                          gridView,
                         const Schedule&                          schedule,
                         EclipseState&                            eclState,
@@ -164,37 +174,44 @@ protected:
 private:
     std::vector<double> extractFaceTrans(const GridView& gridView) const;
 
-    void distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
-                        const bool                               ownersFirst,
-                        const bool                               serialPartitioning,
-                        const bool                               enableDistributedWells,
-                        const double                             zoltanImbalanceTol,
-                        const bool                               loadBalancerSet,
-                        const std::vector<double>&               faceTrans,
-                        const std::vector<Well>&                 wells,
-                        EclipseState&                            eclState,
-                        FlowGenericVanguard::ParallelWellStruct& parallelWells);
+    void distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
+                        const bool                                            ownersFirst,
+                        const Dune::PartitionMethod                           partitionMethod,
+                        const bool                                            serialPartitioning,
+                        const bool                                            enableDistributedWells,
+                        const double                                          imbalanceTol,
+                        const bool                                            loadBalancerSet,
+                        const std::vector<double>&                            faceTrans,
+                        const std::vector<Well>&                              wells,
+                        const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
+                        EclipseState&                                         eclState,
+                        FlowGenericVanguard::ParallelWellStruct&              parallelWells);
 
-    void distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
-                        const bool                               ownersFirst,
-                        const bool                               serialPartitioning,
-                        const bool                               enableDistributedWells,
-                        const double                             zoltanImbalanceTol,
-                        const bool                               loadBalancerSet,
-                        const std::vector<double>&               faceTrans,
-                        const std::vector<Well>&                 wells,
-                        ParallelEclipseState*                    eclState,
-                        FlowGenericVanguard::ParallelWellStruct& parallelWells);
+    void distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
+                        const bool                                            ownersFirst,
+                        const Dune::PartitionMethod                           partitionMethod,
+                        const bool                                            serialPartitioning,
+                        const bool                                            enableDistributedWells,
+                        const double                                          imbalanceTol,
+                        const bool                                            loadBalancerSet,
+                        const std::vector<double>&                            faceTrans,
+                        const std::vector<Well>&                              wells,
+                        const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
+                        ParallelEclipseState*                                 eclState,
+                        FlowGenericVanguard::ParallelWellStruct&              parallelWells);
 
 protected:
     virtual const std::string& zoltanParams() const = 0;
+    virtual const std::string& metisParams() const = 0;
 
 #endif  // HAVE_MPI
 
     void allocCartMapper();
 
     void doCreateGrids_(EclipseState& eclState);
-    void addLgrsUpdateLeafView(const LgrCollection& lgrCollection, const int lgrsSize);
+    void addLgrsUpdateLeafView(const LgrCollection& lgrCollection,
+                               const int lgrsSize,
+                               Dune::CpGrid& grid);
 
     virtual void allocTrans() = 0;
     virtual double getTransmissibility(unsigned I, unsigned J) const = 0;

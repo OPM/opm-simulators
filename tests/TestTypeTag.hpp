@@ -31,7 +31,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/flow/FlowProblemProperties.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -39,15 +39,19 @@
 namespace Opm::Properties {
 
 namespace TTag {
-struct TestTypeTag {
-    using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblem, BlackOilModel, EclTimeSteppingParameters>;
+
+struct TestTypeTag
+{
+    using InheritsFrom = std::tuple<FlowBaseProblemBlackoil,
+                                    BlackOilModel>;
 };
+
 }
 
 // Set the problem class
 template<class TypeTag>
 struct Problem<TypeTag, TTag::TestTypeTag> {
-    using type = FlowProblem<TypeTag>;
+    using type = FlowProblemBlackoil<TypeTag>;
 };
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM
@@ -62,25 +66,6 @@ struct EnableExperiments<TypeTag, TTag::TestTypeTag> {
 template<class TypeTag>
 struct WellModel<TypeTag, TTag::TestTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
-};
-
-// currently, ebos uses the non-multisegment well model by default to avoid
-// regressions. the --use-multisegment-well=true|false command line parameter is still
-// available in ebos, but hidden from view.
-template<class TypeTag>
-struct UseMultisegmentWell<TypeTag, TTag::TestTypeTag> {
-    static constexpr bool value = false;
-};
-
-// set some properties that are only required by the well model
-template<class TypeTag>
-struct MatrixAddWellContributions<TypeTag, TTag::TestTypeTag> {
-    static constexpr bool value = true;
-};
-
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::TestTypeTag> {
-    static constexpr bool value = false;
 };
 
 // flow's well model only works with surface volumes
@@ -110,36 +95,6 @@ struct LinearSolverSplice<TypeTag, TTag::TestTypeTag> {
 template<>
 struct LinearSolverBackend<TTag::TestTypeTag, TTag::FlowIstlSolverParams> {
     using type = ISTLSolver<TTag::TestTypeTag>;
-};
-
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::TestTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-1;
-};
-
-// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
-// relatively often)
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::TestTypeTag> {
-    static constexpr int value = 8;
-};
-
-// if openMP is available, set the default the number of threads per process for the main
-// simulation to 2 (instead of grabbing everything that is available).
-#if _OPENMP
-template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::TestTypeTag> {
-    static constexpr int value = 2;
-};
-#endif
-
-// By default, ebos accepts the result of the time integration unconditionally if the
-// smallest time step size is reached.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::TestTypeTag> {
-    static constexpr bool value = true;
 };
 
 } // namespace Opm::Properties

@@ -22,6 +22,7 @@
 
 #include <opm/input/eclipse/Deck/DeckItem.hpp>
 #include <opm/common/OpmLog/KeywordLocation.hpp>
+#include <opm/simulators/flow/ValidationFunctions.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -87,13 +88,6 @@ namespace KeywordValidation
     std::string get_error_report(const std::vector<ValidationError>& errors,
                                  const bool include_noncritical,
                                  const bool include_critical);
-
-
-
-    // These are special case validation functions for keyword which do not fit nicely into the general
-    // validation framework. The validation function itself is void, but error conditions are signalled by
-    // appending ValidationError instances to the @errors vector.
-    void validateBRINE(const DeckKeyword& keyword, std::vector<ValidationError>& errors);
 
     class KeywordValidator
     {

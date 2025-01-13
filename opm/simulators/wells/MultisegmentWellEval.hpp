@@ -26,6 +26,7 @@
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 #include <opm/simulators/wells/MultisegmentWellSegments.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -67,11 +68,12 @@ public:
     //! \brief Returns a const reference to equation system.
     const Equations& linSys() const
     { return linSys_; }
+    const ParallelWellInfo<Scalar>& pw_info_;
 
 protected:
-    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif);
+    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info);
 
-    void initMatrixAndVectors(const int num_cells);
+    void initMatrixAndVectors();
 
     void assembleDefaultPressureEq(const int seg,
                                    WellState<Scalar>& well_state,

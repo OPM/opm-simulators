@@ -139,7 +139,7 @@ namespace Opm
                 }
             } else {
                 coarseLevelMatrix_.reset(
-                    new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), CoarseMatrix::row_wise));
+                    new CoarseMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), fineLevelMatrix.nonzeroes(), CoarseMatrix::row_wise));
                 auto createIter = coarseLevelMatrix_->createbegin();
                 for (const auto& row : fineLevelMatrix) {
                     for (auto col = row.begin(), cend = row.end(); col != cend; ++col) {

@@ -238,14 +238,16 @@ add_test_compareECLFiles(CASENAME aquflux_01
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR aquifers --solver-max-time-step-in-days=1)
+                         DIR aquifers
+                         TEST_ARGS --solver-max-time-step-in-days=1)
 
 add_test_compareECLFiles(CASENAME aquflux_02
                          FILENAME AQUFLUX-02
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR aquifers --solver-max-time-step-in-days=1)
+                         DIR aquifers
+                         TEST_ARGS --solver-max-time-step-in-days=1)
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
@@ -299,7 +301,7 @@ add_test_compareECLFiles(CASENAME polymer_injectivity
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-wells=1.e-6)
+                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-wells=1.e-6 --linear-solver=ilu0)
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
@@ -520,6 +522,12 @@ set(_pinch_cases
   T2A_NOPINCH T2A_GAP
   T1B_NOPINCH
   T1B1_GAP
+  T1B2_GAP
+  T1B3_GAP
+  T1B4_GAP
+  T1B5_GAP
+  T1B6_GAP
+  T1B7_GAP
   T1C_NOPINCH
   T1C1_NOGAP T1C1_GAP
   T1C2_GAP T1C2_NOGAP
@@ -555,13 +563,44 @@ foreach(udt_case ${_udt_cases})
     DIR udt)
 endforeach()
 
+foreach(eqreg_case RANGE 1 6)
+  add_test_compareECLFiles(CASENAME equalreg_multy_0${eqreg_case}
+    FILENAME EQUALREG-0${eqreg_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    DIR mult
+  )
+endforeach()
+
+foreach(templ_case RANGE 1 6)
+  add_test_compareECLFiles(CASENAME actionx_well_templ_0${templ_case}
+    FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    DIR actionx
+  )
+endforeach()
+
+foreach(wcycle_case RANGE 0 7)
+  add_test_compareECLFiles(CASENAME WCYCLE-${wcycle_case}
+    FILENAME WCYCLE-${wcycle_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    DIR wcycle
+    TEST_ARGS --enable-tuning=true
+  )
+endforeach()
 
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR udq_actionx)
+                         DIR udq_actionx
+                         TEST_ARGS --tolerance-wells=1.e-8)
 
 add_test_compareECLFiles(CASENAME udq_undefined
                          FILENAME UDQ_M2
@@ -688,35 +727,40 @@ add_test_compareECLFiles(CASENAME h2store
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 add_test_compareECLFiles(CASENAME h2store_gw
                          FILENAME H2STORE_GW
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 add_test_compareECLFiles(CASENAME h2store_gaswat
                          FILENAME H2STORE_GASWAT
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 add_test_compareECLFiles(CASENAME h2store_diffusive
                          FILENAME H2STORE_DIFFUSIVE
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 add_test_compareECLFiles(CASENAME h2store_energy
                          FILENAME H2STORE_ENERGY
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR h2store)
+                         DIR h2store
+                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
@@ -1075,7 +1119,8 @@ add_test_compareECLFiles(CASENAME norne_reperf
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR norne)
+                         DIR norne
+                         TEST_ARGS --tolerance-wells=1.e-8)
 
 add_test_compareECLFiles(CASENAME compl_smry
                          FILENAME COMPL_SMRY
@@ -1119,7 +1164,8 @@ add_test_compareECLFiles(CASENAME micp
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR micp)
+                         DIR micp
+                         TEST_ARGS --linear-solver=ilu0)
 
 add_test_compareECLFiles(CASENAME 0_base_model6
                          FILENAME 0_BASE_MODEL6
@@ -1488,7 +1534,7 @@ if(BUILD_FLOW_POLY_GRID)
                            DIR spe1)
 endif()
 
-if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
+if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID AND MPI_FOUND)
   add_test_compareECLFiles(CASENAME spe12_alugrid
                            FILENAME SPE1CASE2
                            SIMULATOR flow_blackoil_alugrid
@@ -1497,3 +1543,12 @@ if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
                            DIR spe1)
 endif()
 
+if(BUILD_FLOW_FLOAT_VARIANTS)
+  add_test_compareECLFiles(CASENAME spe1_float
+                           FILENAME SPE1CASE1
+                           SIMULATOR flow_blackoil_float
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR spe1
+                           TEST_ARGS --tolerance-mb=1e-6)
+endif()

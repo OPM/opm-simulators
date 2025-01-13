@@ -182,25 +182,6 @@ update(bool global, const TransUpdateQuantities update_quantities,
     else
         extractPermeability_();
 
-    // calculate the axis specific centroids of all elements
-    std::array<std::vector<DimVector>, dimWorld> axisCentroids;
-
-    for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
-        axisCentroids[dimIdx].resize(numElements);
-
-    for (const auto& elem : elements(gridView_)) {
-        unsigned elemIdx = elemMapper.index(elem);
-
-        // compute the axis specific "centroids" used for the transmissibilities. for
-        // consistency with the flow simulator, we use the element centers as
-        // computed by opm-parser's Opm::EclipseGrid class for all axes.
-        std::array<double, dimWorld> centroid = centroids_(elemIdx);
-
-        for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
-            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
-                axisCentroids[axisIdx][elemIdx][dimIdx] = centroid[dimIdx];
-    }
-
     // reserving some space in the hashmap upfront saves quite a bit of time because
     // resizes are costly for hashmaps and there would be quite a few of them if we
     // would not have a rough idea of how large the final map will be (the rough idea
@@ -236,14 +217,22 @@ update(bool global, const TransUpdateQuantities update_quantities,
     // Then the smallest multiplier is applied.
     // Default is to apply the top and bottom multiplier
     bool useSmallestMultiplier;
+    bool pinchOption4ALL;
     bool pinchActive;
     if (comm.rank() == 0) {
         const auto& eclGrid = eclState_.getInputGrid();
         pinchActive = eclGrid.isPinchActive();
+        auto pinchTransCalcMode = eclGrid.getPinchOption();
         useSmallestMultiplier = eclGrid.getMultzOption() == PinchMode::ALL;
+        pinchOption4ALL = (pinchTransCalcMode == PinchMode::ALL);
+        if (pinchOption4ALL)
+        {
+            useSmallestMultiplier = false;
+        }
     }
     if (global && comm.size() > 1) {
         comm.broadcast(&useSmallestMultiplier, 1, 0);
+        comm.broadcast(&pinchOption4ALL, 1, 0);
         comm.broadcast(&pinchActive, 1, 0);
     }
 
@@ -272,9 +261,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                   faceAreaNormal,
                                   intersection.indexInInside(),
                                   distanceVector_(faceCenterInside,
-                                                  intersection.indexInInside(),
-                                                  elemIdx,
-                                                  axisCentroids),
+                                                  elemIdx),
                                   permeability_[elemIdx]);
 
                 // normally there would be two half-transmissibilities that would be
@@ -291,9 +278,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     computeHalfDiffusivity_(transBoundaryEnergyIs,
                                             faceAreaNormal,
                                             distanceVector_(faceCenterInside,
-                                                            intersection.indexInInside(),
-                                                            elemIdx,
-                                                            axisCentroids),
+                                                            elemIdx),
                                             1.0);
                     thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] =
                         transBoundaryEnergyIs;
@@ -373,17 +358,13 @@ update(bool global, const TransUpdateQuantities update_quantities,
                               faceAreaNormal,
                               insideFaceIdx,
                               distanceVector_(faceCenterInside,
-                                              intersection.indexInInside(),
-                                              elemIdx,
-                                              axisCentroids),
+                                              elemIdx),
                               permeability_[elemIdx]);
             computeHalfTrans_(halfTrans2,
                               faceAreaNormal,
                               outsideFaceIdx,
                               distanceVector_(faceCenterOutside,
-                                              intersection.indexInOutside(),
-                                              outsideElemIdx,
-                                              axisCentroids),
+                                              outsideElemIdx),
                               permeability_[outsideElemIdx]);
 
             applyNtg_(halfTrans1, insideFaceIdx, elemIdx, ntg);
@@ -420,11 +401,11 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             if (useSmallestMultiplier)
             {
-                // Currently PINCH(4) is never queries and hence  PINCH(4) == TOPBOT is assumed
-                // and in this branch PINCH(5) == ALL holds
+                //  PINCH(4) == TOPBOT is assumed here as we set useSmallestMultipliers
+                // to false if  PINCH(4) == ALL holds
+                // In contrast to the name this will also apply
                 applyAllZMultipliers_(trans, insideFaceIdx, outsideFaceIdx, insideCartElemIdx,
-                                      outsideCartElemIdx, transMult, cartDims,
-                                      /* pinchTop= */ false);
+                                      outsideCartElemIdx, transMult, cartDims);
             }
             else
             {
@@ -470,16 +451,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDiffusivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        intersection.indexInInside(),
-                                                        elemIdx,
-                                                        axisCentroids),
+                                                        elemIdx),
                                         1.0);
                 computeHalfDiffusivity_(halfDiffusivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        intersection.indexInOutside(),
-                                                        outsideElemIdx,
-                                                        axisCentroids),
+                                                        outsideElemIdx),
                                         1.0);
                 //TODO Add support for multipliers
                 thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = halfDiffusivity1;
@@ -495,16 +472,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDiffusivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        intersection.indexInInside(),
-                                                        elemIdx,
-                                                        axisCentroids),
+                                                        elemIdx),
                                         porosity_[elemIdx]);
                 computeHalfDiffusivity_(halfDiffusivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        intersection.indexInOutside(),
-                                                        outsideElemIdx,
-                                                        axisCentroids),
+                                                        outsideElemIdx),
                                         porosity_[outsideElemIdx]);
 
                 applyNtg_(halfDiffusivity1, insideFaceIdx, elemIdx, ntg);
@@ -531,16 +504,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDispersivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        intersection.indexInInside(),
-                                                        elemIdx,
-                                                        axisCentroids),
+                                                        elemIdx),
                                         dispersion_[elemIdx]);
                 computeHalfDiffusivity_(halfDispersivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        intersection.indexInOutside(),
-                                                        outsideElemIdx,
-                                                        axisCentroids),
+                                                        outsideElemIdx),
                                         dispersion_[outsideElemIdx]);
 
                 applyNtg_(halfDispersivity1, insideFaceIdx, elemIdx, ntg);
@@ -580,6 +549,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
         // be seen in a parallel. Unfortunately, when we do not use transmissibilities
         // we will only see warnings for the partition of process 0 and also false positives.
         this->applyEditNncToGridTrans_(globalToLocal);
+        this->applyPinchNncToGridTrans_(globalToLocal);
         this->applyNncToGridTrans_(globalToLocal);
         this->applyEditNncrToGridTrans_(globalToLocal);
         if (applyNncMultregT) {
@@ -751,8 +721,7 @@ applyAllZMultipliers_(Scalar& trans,
                       unsigned insideCartElemIdx,
                       unsigned outsideCartElemIdx,
                       const TransMult& transMult,
-                      const std::array<int, dimWorld>& cartDims,
-                      bool pinchTop)
+                      const std::array<int, dimWorld>& cartDims)
 {
     if(grid_.maxLevel()> 0) {
                 OPM_THROW(std::invalid_argument, "MULTZ not support with LGRS, yet.");
@@ -772,17 +741,14 @@ applyAllZMultipliers_(Scalar& trans,
         Scalar mult = transMult.getMultiplier(lastCartElemIdx , FaceDir::ZPlus) *
             transMult.getMultiplier(outsideCartElemIdx , FaceDir::ZMinus);
 
-        if ( !pinchTop )
+        // pick the smallest multiplier using (Z+)*(Z-) while looking down
+        // the pillar until reaching the other end of the connection
+        for(auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;)
         {
-            // pick the smallest multiplier using (Z+)*(Z-) while looking down
-            // the pillar until reaching the other end of the connection
-            for(auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;)
-            {
-                auto multiplier = transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus);
-                cartElemIdx += cartDims[0]*cartDims[1];
-                multiplier *= transMult.getMultiplier(cartElemIdx, FaceDir::ZMinus);
-                mult = std::min(mult, static_cast<Scalar>(multiplier));
-            }
+            auto multiplier = transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus);
+            cartElemIdx += cartDims[0]*cartDims[1];
+            multiplier *= transMult.getMultiplier(cartElemIdx, FaceDir::ZMinus);
+            mult = std::min(mult, static_cast<Scalar>(multiplier));
         }
 
         trans *= mult;
@@ -1058,6 +1024,46 @@ computeFaceProperties(const Intersection& intersection,
         }
     }
 }
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
+{
+    // First scale NNCs with EDITNNC.
+    const auto& nnc_input = eclState_.getPinchNNC();
+
+    for (const auto& nncEntry : nnc_input) {
+        auto c1 = nncEntry.cell1;
+        auto c2 = nncEntry.cell2;
+        auto lowIt = cartesianToCompressed.find(c1);
+        auto highIt = cartesianToCompressed.find(c2);
+        int low = (lowIt == cartesianToCompressed.end())? -1 : lowIt->second;
+        int high = (highIt == cartesianToCompressed.end())? -1 : highIt->second;
+
+        if (low > high)
+            std::swap(low, high);
+
+        if (low == -1 && high == -1)
+            // Silently discard as it is not between active cells
+            continue;
+
+        if (low == -1 || high == -1) {
+            // We can end up here if one of the cells is overlap/ghost, because those
+            // are lacking connections to other cells in the ghost/overlap.
+            // Hence discard the NNC if it is between active cell and inactive cell
+            continue;
+        }
+
+        {
+            auto candidate = trans_.find(details::isId(low, high));
+            if (candidate != trans_.end()) {
+                // the correctly calculated transmissibility is stored in
+                // the NNC. Overwrite previous value with it.
+               candidate->second = nncEntry.trans;
+            }
+        }
+    }
+}
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
@@ -1293,12 +1299,7 @@ computeHalfTrans_(Scalar& halfTrans,
     unsigned dimIdx = faceIdx/2;
     assert(dimIdx < dimWorld);
     halfTrans = perm[dimIdx][dimIdx];
-
-    Scalar val = 0;
-    for (unsigned i = 0; i < areaNormal.size(); ++i)
-        val += areaNormal[i]*distance[i];
-
-    halfTrans *= std::abs(val);
+    halfTrans *= std::abs(Dune::dot(areaNormal, distance));
     halfTrans /= distance.two_norm2();
 }
 
@@ -1310,27 +1311,20 @@ computeHalfDiffusivity_(Scalar& halfDiff,
                         const Scalar& poro) const
 {
     halfDiff = poro;
-    Scalar val = 0;
-    for (unsigned i = 0; i < areaNormal.size(); ++i)
-        val += areaNormal[i]*distance[i];
-
-    halfDiff *= std::abs(val);
+    halfDiff *= std::abs(Dune::dot(areaNormal, distance));
     halfDiff /= distance.two_norm2();
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 typename Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::DimVector
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-distanceVector_(const DimVector& center,
-                int faceIdx, // in the reference element that contains the intersection
-                unsigned elemIdx,
-                const std::array<std::vector<DimVector>, dimWorld>& axisCentroids) const
+distanceVector_(const DimVector& faceCenter,
+                const unsigned& cellIdx) const
 {
-    assert(faceIdx >= 0);
-    unsigned dimIdx = faceIdx/2;
-    assert(dimIdx < dimWorld);
-    DimVector x = center;
-    x -= axisCentroids[dimIdx][elemIdx];
+    const auto& cellCenter = centroids_(cellIdx);
+    DimVector x = faceCenter;
+    for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        x[dimIdx] -= cellCenter[dimIdx];
 
     return x;
 }

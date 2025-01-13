@@ -23,6 +23,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <fmt/format.h>
 #include <cassert>
 #include <iterator>
 #include <numeric>
@@ -117,6 +118,50 @@ GlobalPerfContainerFactory(const IndexSet& local_indices,
     {
         num_global_perfs_ = num_local_perfs;
     }
+}
+
+template<class Scalar>
+void GlobalPerfContainerFactory<Scalar>::buildLocalToGlobalMap() const {
+    local_to_global_map_.clear();
+    for (const auto& index : local_indices_) {
+        local_to_global_map_[index.local()] = index.global();
+    }
+    l2g_map_built_ = true;
+}
+
+
+template<class Scalar>
+int GlobalPerfContainerFactory<Scalar>::localToGlobal(std::size_t localIndex) const {
+    if (local_indices_.size() == 0)
+        return localIndex;
+    if (!l2g_map_built_)
+        buildLocalToGlobalMap();
+    auto it = local_to_global_map_.find(localIndex);
+    if (it == local_to_global_map_.end())
+        OPM_THROW(std::logic_error, fmt::format("There is no global index for the localIndex {}.", localIndex));
+    return it->second;
+}
+
+template<class Scalar>
+void GlobalPerfContainerFactory<Scalar>::buildGlobalToLocalMap() const {
+    global_to_local_map_.clear();
+    for (const auto& index : local_indices_) {
+        global_to_local_map_[index.global()] = index.local().local();
+    }
+    g2l_map_built_ = true;
+}
+
+template<class Scalar>
+int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) const {
+    if (local_indices_.size() == 0)
+        return globalIndex;
+    if (!g2l_map_built_) {
+        buildGlobalToLocalMap();
+    }
+    auto it = global_to_local_map_.find(globalIndex);
+    if (it == global_to_local_map_.end())
+        return -1; // Global index not found
+    return it->second;
 }
 
 template<class Scalar>
@@ -256,7 +301,7 @@ int CommunicateAboveBelow<Scalar>::endReset()
         using FromSet = Dune::EnumItem<Attribute,owner>;
         using ToSet = Dune::AllSet<Attribute>;
         interface_.build(remote_indices_, FromSet(), ToSet());
-        communicator_.build<double*>(interface_);
+        communicator_.build<Scalar*>(interface_);
     }
 #endif
     return num_local_perfs_;
@@ -478,6 +523,22 @@ ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& w
 }
 
 template<class Scalar>
+int ParallelWellInfo<Scalar>::localToGlobal(std::size_t localIndex) const {
+    if(globalPerfCont_)
+        return globalPerfCont_->localToGlobal(localIndex);
+    else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
+        return localIndex;
+}
+
+template<class Scalar>
+int ParallelWellInfo<Scalar>::globalToLocal(const int globalIndex) const {
+    if(globalPerfCont_)
+        return globalPerfCont_->globalToLocal(globalIndex);
+    else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
+        return globalIndex;
+}
+
+template<class Scalar>
 void ParallelWellInfo<Scalar>::communicateFirstPerforation(bool hasFirst)
 {
     int first = hasFirst;
@@ -548,9 +609,6 @@ T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
     }
     return res;
 }
-
-template int ParallelWellInfo<double>::broadcastFirstPerforationValue<int>(const int&) const;
-template double ParallelWellInfo<double>::broadcastFirstPerforationValue<double>(const double&) const;
 
 template<class Scalar>
 std::vector<Scalar> ParallelWellInfo<Scalar>::
@@ -713,26 +771,44 @@ checkAllConnectionsFound()
 template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;
 template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterator;
 
-#define INSTANCE(T) \
-    template class CheckDistributedWellConnections<T>; \
-    template class CommunicateAboveBelow<T>; \
-    template class GlobalPerfContainerFactory<T>; \
-    template class ParallelWellInfo<T>; \
-    template typename cdIter<T>::value_type \
-        ParallelWellInfo<T>::sumPerfValues<cdIter<T>>(cdIter<T>,cdIter<T>) const; \
-    template typename dIter<T>::value_type \
-        ParallelWellInfo<T>::sumPerfValues<dIter<T>>(dIter<T>,dIter<T>) const; \
-    template void CommunicateAboveBelow<T>::partialSumPerfValues<dIter<T>>(dIter<T>, dIter<T>) const; \
-    template bool operator<(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
-    template bool operator<(const ParallelWellInfo<T>&, const std::pair<std::string, bool>&); \
-    template bool operator<(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
-    template bool operator==(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
-    template bool operator==(const ParallelWellInfo<T>& well, const std::pair<std::string, bool>&); \
-    template bool operator==(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
-    template bool operator!=(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
-    template bool operator!=(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
-    template bool operator!=(const ParallelWellInfo<T>&, const std::pair<std::string, bool>&);
+#define INSTANTIATE_TYPE(T)                                                         \
+    template class CheckDistributedWellConnections<T>;                              \
+    template class CommunicateAboveBelow<T>;                                        \
+    template class GlobalPerfContainerFactory<T>;                                   \
+    template class ParallelWellInfo<T>;                                             \
+    template typename cdIter<T>::value_type                                         \
+        ParallelWellInfo<T>::sumPerfValues<cdIter<T>>(cdIter<T>,cdIter<T>) const;   \
+    template typename dIter<T>::value_type                                          \
+        ParallelWellInfo<T>::sumPerfValues<dIter<T>>(dIter<T>,dIter<T>) const;      \
+     template int ParallelWellInfo<T>::                                             \
+        broadcastFirstPerforationValue<int>(const int&) const;                      \
+     template T ParallelWellInfo<T>::                                               \
+        broadcastFirstPerforationValue<T>(const T&) const;                          \
+    template void CommunicateAboveBelow<T>::                                        \
+        partialSumPerfValues<dIter<T>>(dIter<T>, dIter<T>) const;                   \
+    template bool operator<(const ParallelWellInfo<T>&,                             \
+                            const ParallelWellInfo<T>&);                            \
+    template bool operator<(const ParallelWellInfo<T>&,                             \
+                            const std::pair<std::string, bool>&);                   \
+    template bool operator<(const std::pair<std::string, bool>&,                    \
+                            const ParallelWellInfo<T>&);                            \
+    template bool operator==(const ParallelWellInfo<T>&,                            \
+                             const ParallelWellInfo<T>&);                           \
+    template bool operator==(const ParallelWellInfo<T>& well,                       \
+                             const std::pair<std::string, bool>&);                  \
+    template bool operator==(const std::pair<std::string, bool>&,                   \
+                             const ParallelWellInfo<T>&);                           \
+    template bool operator!=(const ParallelWellInfo<T>&,                            \
+                             const ParallelWellInfo<T>&);                           \
+    template bool operator!=(const std::pair<std::string, bool>&,                   \
+                             const ParallelWellInfo<T>&);                           \
+    template bool operator!=(const ParallelWellInfo<T>&,                            \
+                             const std::pair<std::string, bool>&);
 
-INSTANCE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // end namespace Opm

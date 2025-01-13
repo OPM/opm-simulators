@@ -25,6 +25,7 @@
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
+#include <opm/simulators/wells/RatioCalculator.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
@@ -133,7 +134,6 @@ namespace Opm
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<Scalar>& depth_arg,
                           const Scalar gravity_arg,
-                          const int num_cells,
                           const std::vector<Scalar>& B_avg,
                           const bool changed_to_open_this_step) override;
 
@@ -235,7 +235,8 @@ namespace Opm
         computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
                                         const SummaryState& summary_state,
                                         const Scalar alq_value,
-                                        DeferredLogger& deferred_logger) const override;
+                                        DeferredLogger& deferred_logger,
+                                        bool iterate_if_no_solution) const override;
 
         void updateIPRImplicit(const Simulator& simulator,
                                WellState<Scalar>& well_state,
@@ -267,12 +268,13 @@ namespace Opm
                              WellState<Scalar>& well_state,
                              DeferredLogger& deferred_logger);
 
-        // calculate the properties for the well connections
-        // to calulate the pressure difference between well connections.
         using WellConnectionProps = typename StdWellEval::StdWellConnections::Properties;
-        void computePropertiesForWellConnectionPressures(const Simulator& simulator,
-                                                         const WellState<Scalar>& well_state,
-                                                         WellConnectionProps& props) const;
+
+        // Compute connection level PVT properties needed to calulate the
+        // pressure difference between well connections.
+        WellConnectionProps
+        computePropertiesForWellConnectionPressures(const Simulator& simulator,
+                                                    const WellState<Scalar>& well_state) const;
 
         void computeWellConnectionDensitesPressures(const Simulator& simulator,
                                                     const WellState<Scalar>& well_state,
@@ -344,8 +346,7 @@ namespace Opm
                                           const bool stop_or_zero_rate_target,
                                           DeferredLogger& deferred_logger);
 
-        void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
-                                                 WellState<Scalar>& well_state,
+        void updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
                                                  const SummaryState& summary_state,
                                                  DeferredLogger& deferred_logger) const;
 
@@ -466,60 +467,10 @@ namespace Opm
                                   const std::vector<EvalWell>& cq_s,
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
-
-        template<class Value>
-        void gasOilPerfRateInj(const std::vector<Value>& cq_s,
-                               PerforationRates<Scalar>& perf_rates,
-                               const Value& rv,
-                               const Value& rs,
-                               const Value& pressure,
-                               const Value& rvw,
-                               DeferredLogger& deferred_logger) const;
-
-        template<class Value>
-        void gasOilPerfRateProd(std::vector<Value>& cq_s,
-                                PerforationRates<Scalar>& perf_rates,
-                                const Value& rv,
-                                const Value& rs,
-                                const Value& rvw) const;
-
-        template<class Value>
-        void gasWaterPerfRateProd(std::vector<Value>& cq_s,
-                                  PerforationRates<Scalar>& perf_rates,
-                                  const Value& rvw,
-                                  const Value& rsw) const;
-
-        template<class Value>
-        void gasWaterPerfRateInj(const std::vector<Value>& cq_s,
-                                 PerforationRates<Scalar>& perf_rates,
-                                 const Value& rvw,
-                                 const Value& rsw,
-                                 const Value& pressure,
-                                 DeferredLogger& deferred_logger) const;
-
-        template<class Value>
-        void disOilVapWatVolumeRatio(Value& volumeRatio,
-                                     const Value& rvw,
-                                     const Value& rsw,
-                                     const Value& pressure,
-                                     const std::vector<Value>& cmix_s,
-                                     const std::vector<Value>& b_perfcells_dense,
-                                     DeferredLogger& deferred_logger) const;
-
-        template<class Value>
-        void gasOilVolumeRatio(Value& volumeRatio,
-                               const Value& rv,
-                               const Value& rs,
-                               const Value& pressure,
-                               const std::vector<Value>& cmix_s,
-                               const std::vector<Value>& b_perfcells_dense,
-                               DeferredLogger& deferred_logger) const;
     };
 
 }
 
-#ifndef OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
 #include "StandardWell_impl.hpp"
-#endif
 
 #endif // OPM_STANDARDWELL_HEADER_INCLUDED

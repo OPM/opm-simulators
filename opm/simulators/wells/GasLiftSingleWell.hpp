@@ -21,15 +21,16 @@
 #define OPM_GASLIFT_SINGLE_WELL_HEADER_INCLUDED
 
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
-#include <opm/simulators/wells/WellInterface.hpp>
 
 #include <optional>
 
 namespace Opm {
+
+template<class TypeTag> class WellInterface;
 
 template<class TypeTag>
 class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, Properties::Scalar>>
@@ -72,8 +73,6 @@ private:
 
 } // namespace Opm
 
-#ifndef OPM_GASLIFT_SINGLE_WELL_IMPL_HEADER_INCLUDED
 #include "GasLiftSingleWell_impl.hpp"
-#endif
 
 #endif // OPM_GASLIFT_SINGLE_WELL_HEADER_INCLUDED

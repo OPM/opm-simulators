@@ -5,15 +5,17 @@ set (opm-simulators_CONFIG_VAR
   HAVE_EWOMS
   HAVE_MPI
   HAVE_PETSC
-  COMPILE_BDA_BRIDGE
+  COMPILE_GPU_BRIDGE
   HAVE_CUDA
   HAVE_OPENCL
   HAVE_OPENCL_HPP
   HAVE_AMGCL
+  HAVE_AMGX
   HAVE_VEXCL
   HAVE_ROCALUTION
   HAVE_ROCSPARSE
   HAVE_SUITESPARSE_UMFPACK_H
+  HAVE_DUNE_COMMON
   HAVE_DUNE_ISTL
   DUNE_ISTL_WITH_CHECKING
   DUNE_ISTL_VERSION_MAJOR
@@ -22,8 +24,12 @@ set (opm-simulators_CONFIG_VAR
   HAVE_SUITESPARSE_UMFPACK
   HAVE_DAMARIS
   HAVE_HDF5
+  HAVE_HYPRE
   USE_HIP
   USE_TRACY
+  FLOW_INSTANTIATE_FLOAT
+  HAVE_FLOATING_POINT_FROM_CHARS
+  OPM_COMPILE_COMPONENTS_TEMPLATE_LIST
   )
 
 # dependencies
@@ -36,13 +42,15 @@ set (opm-simulators_DEPS
   # DUNE prerequisites
   "dune-common REQUIRED"
   "dune-istl REQUIRED"
+  "dune-alugrid"
+  "dune-fem"
   # matrix library
   "BLAS REQUIRED"
   "LAPACK REQUIRED"
   # Look for MPI support
   "MPI"
   # Tim Davis' SuiteSparse archive
-  "SuiteSparse REQUIRED COMPONENTS umfpack"
+  "SuiteSparse REQUIRED COMPONENTS UMFPACK"
   # SuperLU direct solver
   "SuperLU"
   # ROCALUTION from ROCM framework
@@ -53,7 +61,6 @@ set (opm-simulators_DEPS
   # OPM dependency
   "opm-common REQUIRED"
   "opm-grid REQUIRED"
-  "opm-models REQUIRED"
   "Damaris 1.9"
   "HDF5"
   "Tracy"

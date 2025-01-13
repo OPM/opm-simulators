@@ -22,6 +22,7 @@ option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
 option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
+option(BUILD_FLOW_FLOAT_VARIANTS "Build the variants for flow using float?" OFF)
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
 option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
@@ -31,9 +32,32 @@ option(USE_CHOW_PATEL_ILU_GPU "Run iterative ILU decomposition on GPU? Requires 
 option(USE_CHOW_PATEL_ILU_GPU_PARALLEL "Try to use more parallelism on the GPU during the iterative ILU decomposition? Requires USE_CHOW_PATEL_ILU_GPU" OFF)
 option(BUILD_FLOW_ALU_GRID "Build flow blackoil with alu grid" OFF)
 option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
-option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
+option(USE_GPU_BRIDGE "Enable the GPU bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
 option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
+option(USE_AMGX "Enable AMGX support?" OFF)
+option(USE_HYPRE "Use the Hypre library for linear solvers?" OFF)
+set(OPM_COMPILE_COMPONENTS "2;3;4;5;6;7" CACHE STRING "The components to compile support for")
+option(USE_OPENCL "Enable OpenCL support?" ON)
+
+# Ensure OPM_COMPILE_COMPONENTS is a list of at least one element
+if(OPM_COMPILE_COMPONENTS STREQUAL "")
+  message(FATAL_ERROR "OPM_COMPILE_COMPONENTS must contain at least one component.")
+endif()
+# Check that OPM_COMPILE_COMPONENTS is a subset of 2,3,4,5,6,7
+set(valid_components "2;3;4;5;6;7")
+foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
+  list(FIND valid_components ${component} index)
+  if(index EQUAL -1)
+    message(FATAL_ERROR "Invalid component ${component} in OPM_COMPILE_COMPONENTS. Valid components are: ${valid_components}")
+  endif()
+endforeach()
+# Check for duplicates in OPM_COMPILE_COMPONENTS
+list(REMOVE_DUPLICATES OPM_COMPILE_COMPONENTS)
+# Make a string we can use in the code
+# this will be used in a template argument pack.
+string(REPLACE ";" "," OPM_COMPILE_COMPONENTS_TEMPLATE_LIST "${OPM_COMPILE_COMPONENTS}")
+
 
 # HIP requires cmake version 3.21
 if (CONVERT_CUDA_TO_HIP AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
@@ -120,8 +144,8 @@ if(USE_MPI)
   set(HDF5_PREFER_PARALLEL TRUE)
 endif()
 
-if(USE_BDA_BRIDGE)
-  set(COMPILE_BDA_BRIDGE 1)
+if(USE_GPU_BRIDGE)
+  set(COMPILE_GPU_BRIDGE 1)
 endif()
 
 # not the same location as most of the other projects? this hook overrides
@@ -200,41 +224,43 @@ if(CUDA_FOUND)
   endif()
 endif()
 
-find_package(OpenCL)
+if (USE_OPENCL)
+  find_package(OpenCL)
 
-if(OpenCL_FOUND)
-  # the current OpenCL implementation relies on cl2.hpp, not cl.hpp
-  # make sure it is available, otherwise disable OpenCL
-  find_file(CL2_HPP CL/cl2.hpp HINTS ${OpenCL_INCLUDE_DIRS})
-  if(CL2_HPP)
-    set(HAVE_OPENCL 1)
-    include_directories(${OpenCL_INCLUDE_DIRS})
-    find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
-    if(OPENCL_HPP)
-      set(HAVE_OPENCL_HPP 1)
-    endif()
-  else()
-    message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl2.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
-    set(OpenCL_FOUND OFF)
-    set(OPENCL_FOUND OFF)
-  endif()
-  if(USE_CHOW_PATEL_ILU)
-    add_compile_options(-DCHOW_PATEL=1)
-    if(USE_CHOW_PATEL_ILU_GPU)
-      add_compile_options(-DCHOW_PATEL_GPU=1)
-      if(USE_CHOW_PATEL_ILU_GPU_PARALLEL)
-        add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=1)
-      else()
-        add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=0)
+  if(OpenCL_FOUND)
+    # the current OpenCL implementation relies on cl2.hpp, not cl.hpp
+    # make sure it is available, otherwise disable OpenCL
+    find_file(CL2_HPP CL/cl2.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+    if(CL2_HPP)
+      set(HAVE_OPENCL 1)
+      include_directories(${OpenCL_INCLUDE_DIRS})
+      find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+      if(OPENCL_HPP)
+        set(HAVE_OPENCL_HPP 1)
       endif()
     else()
-      add_compile_options(-DCHOW_PATEL_GPU=0)
-      add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=0)
+      message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl2.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
+      set(OpenCL_FOUND OFF)
+      set(OPENCL_FOUND OFF)
     endif()
-  endif()
-else()
-  if(USE_CHOW_PATEL_ILU)
-    message(FATAL_ERROR " CHOW_PATEL_ILU only works for openclSolver, but OpenCL was not found")
+    if(USE_CHOW_PATEL_ILU)
+      add_compile_options(-DCHOW_PATEL=1)
+      if(USE_CHOW_PATEL_ILU_GPU)
+        add_compile_options(-DCHOW_PATEL_GPU=1)
+        if(USE_CHOW_PATEL_ILU_GPU_PARALLEL)
+          add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=1)
+        else()
+          add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=0)
+        endif()
+      else()
+        add_compile_options(-DCHOW_PATEL_GPU=0)
+        add_compile_options(-DCHOW_PATEL_GPU_PARALLEL=0)
+      endif()
+    endif()
+  else()
+    if(USE_CHOW_PATEL_ILU)
+      message(FATAL_ERROR " CHOW_PATEL_ILU only works for openclSolver, but OpenCL was not found")
+    endif()
   endif()
 endif()
 
@@ -267,6 +293,32 @@ if(OpenCL_FOUND)
   endif()
 endif()
 
+if(USE_HYPRE AND USE_MPI)
+  find_package(HYPRE)
+  if(HYPRE_FOUND)
+    set(HAVE_HYPRE 1)
+    list(APPEND opm-simulators_LIBRARIES HYPRE::HYPRE)
+  else()
+    message(WARNING "Hypre requested but not found. Continuing without Hypre support.")
+    set(USE_HYPRE OFF)
+  endif()
+elseif(USE_HYPRE)
+  message(WARNING "Hypre requested but MPI not activated. Continuing without Hypre support.")
+  set(USE_HYPRE OFF)
+  set(HYPRE_FOUND OFF)
+endif()
+
+# Find AMGX
+if(USE_AMGX)
+  find_package(AMGX)
+  if(AMGX_FOUND)
+    set(HAVE_AMGX 1)
+    list(APPEND opm-simulators_LIBRARIES AMGX::AMGX)
+  else()
+    message(WARNING "AMGX requested but not found. Continuing without AMGX support.")
+    set(USE_AMGX OFF)
+  endif()
+endif()
 
 macro (config_hook)
   opm_need_version_of ("dune-common")
@@ -274,7 +326,6 @@ macro (config_hook)
   if(dune-fem_FOUND)
       opm_need_version_of ("dune-fem")
   endif()
-  opm_need_version_of ("opm-models")
 
   if(NOT fmt_FOUND)
     include(DownloadFmt)
@@ -288,6 +339,25 @@ macro (config_hook)
   include_directories(${EXTRA_INCLUDES})
 
   include(UseDamaris)
+
+  if(BUILD_FLOW_FLOAT_VARIANTS)
+    set(FLOW_INSTANTIATE_FLOAT 1)
+  endif()
+
+  # The parameter system can leverage std::from_chars() for
+  # floating-point types if available.  Detect support for this
+  # feature.
+  try_compile(
+    have_float_from_chars
+    ${CMAKE_BINARY_DIR}
+    ${PROJECT_SOURCE_DIR}/cmake/test/testFloatFromChars.cpp
+    CXX_STANDARD 17
+  )
+
+  unset(HAVE_FLOATING_POINT_FROM_CHARS)
+  if(have_float_from_chars)
+    set(HAVE_FLOATING_POINT_FROM_CHARS 1)
+  endif()
 endmacro (config_hook)
 
 macro (prereqs_hook)
@@ -297,6 +367,16 @@ macro (sources_hook)
   if(OPENCL_FOUND)
     include(opencl-source-provider)
     list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
+  endif()
+  if(QuadMath_FOUND)
+    get_target_property(qm_defs QuadMath::QuadMath INTERFACE_COMPILE_DEFINITIONS)
+    list(APPEND qm_defs HAVE_QUAD=1)
+    get_target_property(qm_options QuadMath::QuadMath INTERFACE_COMPILE_OPTIONS)
+    set_source_files_properties(opm/models/nonlinear/newtonmethodparams.cpp
+                                opm/models/utils/parametersystem.cpp
+                                opm/models/utils/simulatorutils.cpp
+                                PROPERTIES COMPILE_DEFINITIONS "${qm_defs}"
+                                COMPILE_OPTIONS "${qm_options}")
   endif()
 endmacro (sources_hook)
 
@@ -332,7 +412,7 @@ macro (files_hook)
     set(HDF5_FOUND OFF)
     unset(HAVE_HDF5)
   endif()
-  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_BDA_BRIDGE) # unsure if this is the correct way to change this
+  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_GPU_BRIDGE) # unsure if this is the correct way to change this
     message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
     set(CUDA_FOUND OFF)
     unset(HAVE_CUDA)
@@ -346,6 +426,15 @@ macro (files_hook)
 endmacro (files_hook)
 
 macro (tests_hook)
+  if(HYPRE_FOUND)
+    list(APPEND tests_SOURCES tests/test_HyprePreconditionerCPU.cpp)
+    if(HYPRE_USING_CUDA OR HYPRE_USING_HIP)
+      list(APPEND tests_SOURCES tests/test_HyprePreconditionerGPU.cpp)
+    endif()
+  endif()
+  if(AMGX_FOUND)
+    list(APPEND tests_SOURCES tests/test_AmgxPreconditioner.cpp)
+  endif()
 endmacro (tests_hook)
 
 
@@ -366,8 +455,36 @@ opm_add_test(test_tuning_tsinit_nextstep
                 ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} opmcommon
               ONLY_COMPILE)
 
-if (HAVE_OPM_TESTS)
-    include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
+# this test is identical to the simulation of the lens problem that
+# uses the element centered finite volume discretization in
+# conjunction with automatic differentiation
+# (lens_immiscible_ecfv_ad). The only difference is that it uses
+# multiple compile units in order to ensure that eWoms code can be
+# used within libraries that use the same type tag within multiple
+# compile units.
+opm_add_test(lens_immiscible_ecfv_ad_mcu
+             SOURCES
+              examples/lens_immiscible_ecfv_ad_cu1.cpp
+              examples/lens_immiscible_ecfv_ad_cu2.cpp
+              examples/lens_immiscible_ecfv_ad_main.cpp
+             LIBRARIES
+              opmsimulators opmcommon
+             ONLY_COMPILE)
+
+if(QuadMath_FOUND)
+  foreach(tapp co2injection_flash_ni_ecfv
+               co2injection_flash_ni_vcfv
+               co2injection_flash_ecfv
+               co2injection_flash_vcfv)
+    opm_add_test(${tapp}_quad
+                 LIBRARIES opmsimulators opmcommon
+                 EXE_NAME ${tapp}_quad
+                 SOURCES
+                 examples/${tapp}.cpp
+                 ONLY_COMPILE)
+    target_link_libraries(${tapp}_quad QuadMath::QuadMath)
+    target_compile_definitions(${tapp}_quad PRIVATE HAVE_QUAD=1)
+  endforeach()
 endif()
 
 target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
@@ -375,227 +492,28 @@ target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 
-opm_set_test_driver(${CMAKE_CURRENT_SOURCE_DIR}/tests/run-parallel-unitTest.sh "")
+include (${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
 
-opm_add_test(test_gatherconvergencereport
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-  SOURCES
-    tests/test_gatherconvergencereport.cpp
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  PROCESSORS
-    4
-)
+if (HAVE_OPM_TESTS)
+  include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 
-opm_add_test(test_gatherdeferredlogger
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-  SOURCES
-    tests/test_gatherdeferredlogger.cpp
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  PROCESSORS
-    4
-)
+  if(OPM_ENABLE_PYTHON)
+    if(${CMAKE_BINARY_DIR} STREQUAL ${PROJECT_BINARY_DIR})
+      set(sim_dir ${CMAKE_BINARY_DIR})
+    else()
+      set(sim_dir ${CMAKE_BINARY_DIR}/opm-simulators)
+    endif()
+    add_custom_target(failure_report
+                      USES_TERMINAL
+                      COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${opm-common_DIR}/python"
+                      ${PROJECT_SOURCE_DIR}/tests/make_failure_report.sh
+                      ${OPM_TESTS_ROOT} ${CMAKE_BINARY_DIR} ${sim_dir})
+  endif()
+endif()
 
-opm_add_test(test_parallelwellinfo_mpi
-  EXE_NAME
-    test_parallelwellinfo
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    4
-    )
-
-opm_add_test(test_parallel_wbp_sourcevalues_np2
-  EXE_NAME
-    test_parallel_wbp_sourcevalues
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 2
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    2
-)
-
-opm_add_test(test_parallel_wbp_sourcevalues_np3
-  EXE_NAME
-    test_parallel_wbp_sourcevalues
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 3
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    3
-)
-
-opm_add_test(test_parallel_wbp_sourcevalues_np4
-  EXE_NAME
-    test_parallel_wbp_sourcevalues
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    4
-)
-
-opm_add_test(test_parallel_wbp_calculation
-  SOURCES
-    tests/test_parallel_wbp_calculation.cpp
-  LIBRARIES
-    opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  ONLY_COMPILE
-)
-
-opm_add_test(test_parallel_wbp_calculation_create
-  EXE_NAME
-    test_parallel_wbp_calculation
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 2
-    -b ${PROJECT_BINARY_DIR}
-  TEST_ARGS
-    --run_test=Create
-  NO_COMPILE
-  PROCESSORS
-    2
-)
-
-opm_add_test(test_parallel_wbp_calculation_well_openconns
-  EXE_NAME
-    test_parallel_wbp_calculation
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 2
-    -b ${PROJECT_BINARY_DIR}
-  TEST_ARGS
-    --run_test=TopOfFormation_Well_OpenConns
-  NO_COMPILE
-  PROCESSORS
-    2
-)
-
-opm_add_test(test_parallel_region_phase_pvaverage_np2
-  EXE_NAME
-    test_region_phase_pvaverage
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 2
-    -b ${PROJECT_BINARY_DIR}
-  TEST_ARGS
-    --run_test=Parallel/*
-  NO_COMPILE
-  PROCESSORS
-    2
-)
-
-opm_add_test(test_parallel_region_phase_pvaverage_np3
-  EXE_NAME
-    test_region_phase_pvaverage
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 3
-    -b ${PROJECT_BINARY_DIR}
-  TEST_ARGS
-    --run_test=Parallel/*
-  NO_COMPILE
-  PROCESSORS
-    3
-)
-
-opm_add_test(test_parallel_region_phase_pvaverage_np4
-  EXE_NAME
-    test_region_phase_pvaverage
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  TEST_ARGS
-    --run_test=Parallel/*
-  NO_COMPILE
-  PROCESSORS
-    4
-)
-
-opm_add_test(test_broadcast
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-  SOURCES
-    tests/test_broadcast.cpp
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  PROCESSORS
-    4
-)
-
-opm_add_test(test_HDF5File_Parallel
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-  SOURCES
-    tests/test_HDF5File_Parallel.cpp
-  CONDITION
-    HDF5_FOUND AND MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  PROCESSORS
-    4
-)
-
-opm_add_test(test_HDF5Serializer_Parallel
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-  SOURCES
-    tests/test_HDF5Serializer_Parallel.cpp
-  CONDITION
-    HDF5_FOUND AND MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  PROCESSORS
-    4
-)
-
-opm_add_test(test_rstconv_parallel
-  EXE_NAME
-    test_rstconv
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    4
-)
+if(MPI_FOUND)
+  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelUnitTests.cmake)
+endif()
 
 include(OpmBashCompletion)
 
@@ -703,6 +621,23 @@ opm_add_test(flowexp_blackoil
   $<TARGET_OBJECTS:moduleVersion>
 )
 
+# We now specify the files we actually want to compile
+set(FLOWEXP_COMPONENTS_SOURCES)
+foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
+  list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
+endforeach()
+
+opm_add_test(flowexp_comp
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flowexperimental/comp/flowexp_comp.cpp
+  ${FLOWEXP_COMPONENTS_SOURCES}
+  $<TARGET_OBJECTS:moduleVersion>
+)
+
 if(dune-alugrid_FOUND)
   if (NOT BUILD_FLOW_ALU_GRID)
     set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "FALSE")
@@ -731,6 +666,18 @@ if (BUILD_FLOW)
     PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
 endif()
 
+if(BUILD_FLOW_FLOAT_VARIANTS)
+  opm_add_test(flow_blackoil_float
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+    DEPENDS opmsimulators
+    LIBRARIES opmsimulators
+    SOURCES
+    flow/flow_blackoil_float_main.cpp
+    $<TARGET_OBJECTS:moduleVersion>)
+endif()
+
 if (OPM_ENABLE_PYTHON)
   add_subdirectory(python)
 endif()
@@ -741,10 +688,18 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 
 if(CUDA_FOUND)
   if (NOT USE_HIP)
-    target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
-    target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+    target_link_libraries(opmsimulators
+      PUBLIC
+      ${CUDA_cusparse_LIBRARY}
+      ${CUDA_cublas_LIBRARY}
+      ${CUDA_nvptxcompiler_static_LIBRARY}
+    )
+
+    foreach(tgt test_gpu_safe_call test_cuda_check_last_error test_GpuVector)
+      target_link_libraries(${tgt} CUDA::cudart)
+    endforeach()
   endif()
-  if(USE_BDA_BRIDGE)
+  if(USE_GPU_BRIDGE)
     set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
   endif()
 
@@ -755,22 +710,40 @@ if(CUDA_FOUND)
   endif()
   set_tests_properties(cusparse_safe_call
                        cublas_safe_call
-                       cuda_safe_call
+                       gpu_safe_call
                        cuda_check_last_error
                        cublas_handle
-                       cujac
+                       GpuJac
+                       GpuDILU
                        cusparse_handle
                        cuSparse_matrix_operations
                        cuVector_operations
-                       cuvector
-                       cusparsematrix
-                       cuseqilu0
-                       cuowneroverlapcopy
+                       GpuVector
+                       GpuSparseMatrix
+                       GpuSeqILU0
+                       GpuOwnerOverlapCopy
                        solver_adapter
+                       GpuBuffer
+                       GpuView
+                       gpu_ad
+                       gpu_linear_two_phase_material
+                       gpuPvt
                        PROPERTIES LABELS ${gpu_label})
 endif()
 
-if(USE_BDA_BRIDGE)
+if(HYPRE_FOUND)
+  if (HYPRE_USING_CUDA)
+    set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_cuda)
+  elseif (HYPRE_USING_HIP)
+    set_tests_properties(HyprePreconditionerGPU PROPERTIES LABELS gpu_hip)
+  endif()
+endif()
+
+if(AMGX_FOUND)
+  set_tests_properties(AmgxPreconditioner PROPERTIES LABELS gpu_cuda)
+endif()
+
+if(USE_GPU_BRIDGE)
   if(OpenCL_FOUND)
     target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
     set_tests_properties(openclSolver solvetransposed3x3 csrToCscOffsetMap
@@ -799,3 +772,4 @@ endif()
 
 install(DIRECTORY doc/man1 DESTINATION ${CMAKE_INSTALL_MANDIR}
   FILES_MATCHING PATTERN "*.1")
+

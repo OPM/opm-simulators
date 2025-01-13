@@ -20,11 +20,10 @@
 */
 
 #include <config.h>
+
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <opm/common/utility/numeric/RootFinders.hpp>
-
-#include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
@@ -33,6 +32,7 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -270,9 +270,9 @@ computeBhpAtThpLimitProd(const std::function<std::vector<Scalar>(const Scalar)>&
 
     // could not solve for the bhp-point, we could not continue to find the bhp
     if (!bhp_max.has_value()) {
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                "Robust bhp(thp) solve failed due to not being able to "
-                                "find bhp-point where production becomes non-zero for well " + well_.name());
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                              "Robust bhp(thp) solve failed due to not being able to "
+                              "find bhp-point where production becomes non-zero for well " + well_.name());
         return std::nullopt;
     }
     const std::array<Scalar, 2> range {static_cast<Scalar>(controls.bhp_limit), *bhp_max};
@@ -304,7 +304,6 @@ computeBhpAtThpLimitInj(const std::function<std::vector<Scalar>(const Scalar)>& 
 template<class Scalar>
 void WellBhpThpCalculator<Scalar>::
 updateThp(const Scalar rho,
-          const bool stop_or_zero_rate_target,
           const std::function<Scalar()>& alq_value,
           const std::array<unsigned,3>& active,
           WellState<Scalar>& well_state,
@@ -317,7 +316,7 @@ updateThp(const Scalar rho,
     auto& ws = well_state.well(well_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
-    if (!well_.isVFPActive(deferred_logger) || stop_or_zero_rate_target) {
+    if (!well_.isVFPActive(deferred_logger)) {
         ws.thp = 0;
         return;
     }
@@ -559,8 +558,8 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
         catch (...) {
             // Use previous value (or max value if at start) if we failed.
             bhp_samples.push_back(bhp_samples.empty() ? low : bhp_samples.back());
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
-                                    "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + well_.name());
+            deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
+                                  "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + well_.name());
         }
     }
 
@@ -617,7 +616,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
         // We are in the high flow regime where the bhp_samples
         // are all equal to the bhp_limit.
         assert(low == controls.bhp_limit);
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + well_.name());
         return std::nullopt;
     }
@@ -631,7 +630,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
         return solved_bhp;
     }
     catch (...) {
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + well_.name());
         return std::nullopt;
     }
@@ -673,8 +672,8 @@ bhpMax(const std::function<Scalar(const Scalar)>& fflo,
             // Even at the BHP limit, we are injecting.
             // There will be no solution here, return an
             // empty optional.
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                    "Robust bhp(thp) solve failed due to inoperability for well " + well_.name());
+            deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                  "Robust bhp(thp) solve failed due to inoperability for well " + well_.name());
             return std::nullopt;
         } else {
             // Still producing, even at high bhp.
@@ -702,8 +701,8 @@ bhpMax(const std::function<Scalar(const Scalar)>& fflo,
         if (it < maxit) {
             bhp_max = low;
         } else {
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                    "Bisect did not find the bhp-point where we produce for well " + well_.name());
+            deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                  "Bisect did not find the bhp-point where we produce for well " + well_.name());
             return std::nullopt;
         }
     }
@@ -766,7 +765,7 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
     }
 
     if (!finding_bracket) {
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
                                 "Robust bhp(thp) solve failed due to not being able to "
                                 "bracket the bhp solution with the brute force search for " + well_.name());
         return std::nullopt;
@@ -782,7 +781,7 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
         return solved_bhp;
     }
     catch (...) {
-        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
+        deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + well_.name());
         return std::nullopt;
     }
@@ -848,13 +847,13 @@ bisectBracket(const std::function<Scalar(const Scalar)>& eq,
             const Scalar limit = 0.1 * unit::barsa;
             if (std::min(abs_low, abs_high) < limit) {
                 // Return the least bad solution if less off than 0.1 bar.
-                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                        "Robust bhp(thp) not solved precisely for well " + well_.name());
+                deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
+                                      "Robust bhp(thp) not solved precisely for well " + well_.name());
                 approximate_solution = abs_low < abs_high ? low : high;
             } else {
                     // Return failure.
-                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                         "Robust bhp(thp) solve failed due to bracketing failure for well " +
+                deferred_logger.debug("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
+                                      "Robust bhp(thp) solve failed due to bracketing failure for well " +
                                          well_.name());
             }
         }
@@ -1005,33 +1004,104 @@ getFloIPR(const WellState<Scalar>& well_state,
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }
 
-template class WellBhpThpCalculator<double>;
+template<class Scalar>
+bool
+WellBhpThpCalculator<Scalar>::
+bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
+                           const std::array<Scalar, 2>& range,
+                           Scalar& low, Scalar& high,
+                           std::optional<Scalar>& approximate_solution,
+                           const Scalar& limit,
+                           DeferredLogger& deferred_logger)
+{
+    bool bracket_found = false;
+    low = range[0];
+    high = range[1];
+    const int sample_number = 300;
+    const Scalar interval = (high - low) / sample_number;
+    Scalar eq_low = eq(low);
+    Scalar eq_high = 0.0;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        high = range[0] + interval * i;
+        eq_high = eq(high);
+        if ((std::fabs(eq_high) < limit)) {
+            approximate_solution = high;
+            break;
+        }
+        if (eq_high * eq_low <= 0.) {
+            bracket_found = true;
+            break;
+        }
+        low = high;
+        eq_low = eq_high;
+    }
 
-#define INSTANCE(...) \
-template __VA_ARGS__ WellBhpThpCalculator<double>:: \
-calculateBhpFromThp<__VA_ARGS__>(const WellState<double>&, \
-                                 const std::vector<__VA_ARGS__>&, \
-                                 const Well&, \
-                                 const SummaryState&, \
-                                 const double, \
-                                 DeferredLogger&) const;
+    if (bracket_found) {
+        deferred_logger.debug(
+                " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
+                " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
+    }
+    return bracket_found;
+}
 
-INSTANCE(double)
-INSTANCE(DenseAd::Evaluation<double,3,0u>)
-INSTANCE(DenseAd::Evaluation<double,4,0u>)
-INSTANCE(DenseAd::Evaluation<double,5,0u>)
-INSTANCE(DenseAd::Evaluation<double,6,0u>)
-INSTANCE(DenseAd::Evaluation<double,7,0u>)
-INSTANCE(DenseAd::Evaluation<double,8,0u>)
-INSTANCE(DenseAd::Evaluation<double,9,0u>)
-INSTANCE(DenseAd::Evaluation<double,10,0u>)
-INSTANCE(DenseAd::Evaluation<double,-1,4u>)
-INSTANCE(DenseAd::Evaluation<double,-1,5u>)
-INSTANCE(DenseAd::Evaluation<double,-1,6u>)
-INSTANCE(DenseAd::Evaluation<double,-1,7u>)
-INSTANCE(DenseAd::Evaluation<double,-1,8u>)
-INSTANCE(DenseAd::Evaluation<double,-1,9u>)
-INSTANCE(DenseAd::Evaluation<double,-1,10u>)
-INSTANCE(DenseAd::Evaluation<double,-1,11u>)
+template<class Scalar>
+bool
+WellBhpThpCalculator<Scalar>::
+bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
+                           Scalar& min_thp, Scalar& max_thp)
+{
+    bool bracket_found = false;
+    constexpr int sample_number = 1000;
+    constexpr Scalar interval = 1E5; 
+    Scalar eq_low = eq(min_thp);
+    Scalar eq_high = 0.0;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        max_thp = min_thp + interval * i;
+        eq_high = eq(max_thp);
+        if (eq_high * eq_low <= 0.) {
+            bracket_found = true;
+            min_thp = max_thp - interval;
+            break;
+        }
+        eq_low = eq_high;
+    }
+    return bracket_found;
+}
+
+#define INSTANTIATE(T,...)                                   \
+    template __VA_ARGS__                                     \
+    WellBhpThpCalculator<T>::                                \
+        calculateBhpFromThp(const WellState<T>&,             \
+                            const std::vector<__VA_ARGS__>&, \
+                            const Well&,                     \
+                            const SummaryState&,             \
+                            const T,                         \
+                            DeferredLogger&) const;
+
+#define INSTANTIATE_TYPE(T)                      \
+    template class WellBhpThpCalculator<T>;      \
+    INSTANTIATE(T,T)                             \
+    INSTANTIATE(T,DenseAd::Evaluation<T,3,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,4,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,5,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,6,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,7,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,8,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,9,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,10,0u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,4u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,5u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,6u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,7u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,8u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,9u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,10u>) \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,11u>)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm
