@@ -368,7 +368,7 @@ public:
         else {
             this->readInitialCondition_();
         }
-        this->temperatureModel_.init(initconfig.restartRequested());
+        this->temperatureModel_.init();
         this->tracerModel_.prepareTracerBatches();
 
         this->updatePffDofData_();

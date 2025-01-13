@@ -112,7 +112,7 @@ GenericTemperatureModel(const GridView& gridView,
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
 void GenericTemperatureModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
-doInit(bool rst, std::size_t numGridDof)
+doInit(std::size_t numGridDof)
 {
     doTemp_ = eclState_.getSimulationConfig().isTemp();
 
