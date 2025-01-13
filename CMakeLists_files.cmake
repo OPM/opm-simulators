@@ -88,6 +88,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/BlackoilModelParameters.cpp
+  opm/simulators/flow/BlackoilModelConvergenceMonitor.cpp
   opm/simulators/flow/CollectDataOnIORank.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/EclGenericWriter.cpp
@@ -792,6 +793,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/BaseAquiferModel.hpp
   opm/simulators/flow/BlackoilModel.hpp
+  opm/simulators/flow/BlackoilModelConvergenceMonitor.hpp
   opm/simulators/flow/BlackoilModelNldd.hpp
   opm/simulators/flow/BlackoilModelParameters.hpp
   opm/simulators/flow/BlackoilModelProperties.hpp

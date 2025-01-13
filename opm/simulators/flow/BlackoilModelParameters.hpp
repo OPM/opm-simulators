@@ -315,12 +315,18 @@ public:
 
     bool write_partitions_{false};
 
-    /// Whether to enable convergence monitoring
-    bool convergence_monitoring_;
-    /// Cut-off limit for convergence monitoring
-    int convergence_monitoring_cutoff_;
-    /// Decay factor used in convergence monitoring
-    Scalar convergence_monitoring_decay_factor_;
+    /// Struct holding convergence monitor params
+    struct ConvergenceMonitorParams
+    {
+        /// Whether to enable convergence monitoring
+        bool enabled_;
+        /// Cut-off limit for convergence monitoring
+        int cutoff_;
+        /// Decay factor used in convergence monitoring
+        Scalar decay_factor_;
+    };
+
+    ConvergenceMonitorParams monitor_params_; //!< Convergence monitoring parameters
 
     // Relative tolerance of group rates (VREP, REIN)
     // If violated the nupcol wellstate is updated
