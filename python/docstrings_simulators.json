@@ -5,7 +5,7 @@
         "doc": "The BlackOilSimulator class to run simulations using a given Deck."
     },
     "PyBlackOilSimulator_filename_constructor": {
-        "signature": "opm.simulators.BlackOilSimulator.__init__(deck_filename: str) -> None",
+        "signature": "opm.simulators.BlackOilSimulator.__init__(deck_filename: str) -> BlackOilSimulator",
         "doc": "Constructor using a deck file name.\n\n:param deck_filename: The file name of the deck to be used for the simulation.\n:type deck_filename: str"
     },
     "PyBlackOilSimulator_objects_constructor": {
