@@ -18,7 +18,7 @@
     },
     "checkSimulationFinished": {
         "signature": "opm.simulators.BlackOilSimulator.check_simulation_finished() -> bool",
-        "doc": "Checks if the simulation has finished.\n\n:return: True if the simulation is finished, False otherwise."
+        "doc": "Checks if the simulation has finished.\n\n:return: True if the simulation is finished, False otherwise.\n:type return: bool"
     },
     "currentStep": {
         "signature": "opm.simulators.BlackOilSimulator.current_step() -> int",
