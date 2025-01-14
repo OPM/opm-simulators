@@ -34,6 +34,7 @@
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
+#include <opm/simulators/flow/SimulatorConvergenceOutput.hpp>
 #include <opm/simulators/flow/SimulatorReportBanners.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
@@ -45,17 +46,14 @@
 #include <opm/simulators/utils/HDF5Serializer.hpp>
 #endif
 
-#include <fmt/format.h>
-
-#include <cstddef>
 #include <filesystem>
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <utility>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace Opm::Parameters {
 
@@ -117,8 +115,9 @@ public:
     /// \param[in] eclipse_state the object which represents an internalized ECL deck
     /// \param[in] output_writer
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
-    SimulatorFullyImplicitBlackoil(Simulator& simulator)
+    explicit SimulatorFullyImplicitBlackoil(Simulator& simulator)
         : simulator_(simulator)
+        , convergence_output_(simulator_.vanguard().eclState())
         , serializer_(*this,
                       FlowGenericVanguard::comm(),
                       simulator_.vanguard().eclState().getIOConfig(),
@@ -134,15 +133,22 @@ public:
         if (this->grid().comm().rank() == 0) {
             this->terminalOutput_ = Parameters::Get<Parameters::EnableTerminalOutput>();
 
-            this->startConvergenceOutputThread(Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
-                                               R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))");
+            auto getPhaseName = ConvergenceOutputThread::ComponentToPhaseName {
+                [compNames = typename Model::ComponentName{}](const int compIdx)
+                { return std::string_view { compNames.name(compIdx) }; }
+            };
+
+            convergence_output_.
+                startThread(Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
+                            R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
+                            getPhaseName);
         }
     }
 
     ~SimulatorFullyImplicitBlackoil()
     {
         // Safe to call on all ranks, not just the I/O rank.
-        this->endConvergenceOutputThread();
+        convergence_output_.endThread();
     }
 
     static void registerParameters()
@@ -420,14 +426,7 @@ public:
             // Grab the step convergence reports that are new since last we
             // were here.
             const auto& reps = this->solver_->model().stepReports();
-
-            auto reports = std::vector<StepReport> {
-                reps.begin() + this->already_reported_steps_, reps.end()
-            };
-
-            this->writeConvergenceOutput(std::move(reports));
-
-            this->already_reported_steps_ = reps.size();
+            convergence_output_.write(reps);
         }
 
         // Increment timer, remember well state.
@@ -563,65 +562,6 @@ protected:
     const WellModel& wellModel_() const
     { return simulator_.problem().wellModel(); }
 
-    void startConvergenceOutputThread(std::string_view convOutputOptions,
-                                      std::string_view optionName)
-    {
-        const auto config = ConvergenceOutputConfiguration {
-            convOutputOptions, optionName
-        };
-        if (! config.want(ConvergenceOutputConfiguration::Option::Iterations)) {
-            return;
-        }
-
-        auto getPhaseName = ConvergenceOutputThread::ComponentToPhaseName {
-            [compNames = typename Model::ComponentName{}](const int compIdx)
-            { return std::string_view { compNames.name(compIdx) }; }
-        };
-
-        auto convertTime = ConvergenceOutputThread::ConvertToTimeUnits {
-            [usys = this->eclState().getUnits()](const double time)
-            { return usys.from_si(UnitSystem::measure::time, time); }
-        };
-
-        this->convergenceOutputQueue_.emplace();
-        this->convergenceOutputObject_.emplace
-            (this->eclState().getIOConfig().getOutputDir(),
-             this->eclState().getIOConfig().getBaseName(),
-             std::move(getPhaseName),
-             std::move(convertTime),
-             config, *this->convergenceOutputQueue_);
-
-        this->convergenceOutputThread_
-            .emplace(&ConvergenceOutputThread::writeASynchronous,
-                     &this->convergenceOutputObject_.value());
-    }
-
-    void writeConvergenceOutput(std::vector<StepReport>&& reports)
-    {
-        if (! this->convergenceOutputThread_.has_value()) {
-            return;
-        }
-
-        auto requests = std::vector<ConvergenceReportQueue::OutputRequest>{};
-        requests.reserve(reports.size());
-
-        for (auto&& report : reports) {
-            requests.push_back({ report.report_step, report.current_step, std::move(report.report) });
-        }
-
-        this->convergenceOutputQueue_->enqueue(std::move(requests));
-    }
-
-    void endConvergenceOutputThread()
-    {
-        if (! this->convergenceOutputThread_.has_value()) {
-            return;
-        }
-
-        this->convergenceOutputQueue_->signalLastOutputRequest();
-        this->convergenceOutputThread_->join();
-    }
-
     // Data.
     Simulator& simulator_;
 
@@ -636,14 +576,11 @@ protected:
     bool terminalOutput_;
 
     SimulatorReport report_;
-    std::size_t already_reported_steps_ = 0;
     std::unique_ptr<time::StopWatch> solverTimer_;
     std::unique_ptr<time::StopWatch> totalTimer_;
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
 
-    std::optional<ConvergenceReportQueue> convergenceOutputQueue_{};
-    std::optional<ConvergenceOutputThread> convergenceOutputObject_{};
-    std::optional<std::thread> convergenceOutputThread_{};
+    SimulatorConvergenceOutput convergence_output_;
 
     SimulatorSerializer serializer_;
 };
