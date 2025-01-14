@@ -302,10 +302,9 @@ namespace Opm {
                 if (result.ec == std::errc() && omp_num_threads > 0) {
                     // Set threads to omp_num_threads if it was successfully parsed and is positive
                     threads = omp_num_threads;
-                    // Warning in 'Main.hpp', where this code is duplicated
-                    // if (requested_threads > 0) {
-                    //     OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
-                    // }
+                    if (requested_threads > 0) {
+                        OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
+                    }
                 } else {
                     OpmLog::warning("Invalid value for OMP_NUM_THREADS environment variable.");
                 }
