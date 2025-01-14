@@ -107,11 +107,15 @@ public:
         // TODO: add something here so that the existing code will not be made any slower or cause copies
         // maybe through a static assert on the type of the fluidsystem
         // TODO: ensure that this will be an updated version if the static version has changed
-        constexpr bool use_dynamic_fluidsystem = is_a_blackoil_system<LocalFluidSystem>();
+        using DynamicFluidSystem = std::remove_reference_t<decltype(LocalFluidSystem::getNonStatic())>;
+        constexpr bool use_dynamic_fluidsystem = is_a_dynamic_blackoil_system<DynamicFluidSystem>;
         printf("use_dynamic_fluidsystem: %d\n", use_dynamic_fluidsystem);
+        DynamicFluidSystem* fluidSystemInstance = nullptr;
+        if constexpr (use_dynamic_fluidsystem) {
+            fluidSystemInstance = &LocalFluidSystem::getNonStatic();
+        }
 
         this->invalidateIntensiveQuantitiesCache(timeIdx);
-        const auto& fluidSystemInstance = LocalFluidSystem::getNonStatic();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if constexpr (gridIsUnchanging) {
             const int num_chunks = grid_chunk_iterators_.size() - 1;
@@ -123,10 +127,12 @@ public:
                 for (auto it = grid_chunk_iterators_[chunk]; it != grid_chunk_iterators_[chunk+1]; ++it) {
                     const Element& elem = *it;
                     elemCtx.updatePrimaryStencil(elem);
-                    printf("Using dynamic fluid system1\n");
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, fluidSystemInstance);
-                    // elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem::getNonStatic());
-                    // elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem{});
+
+                    if constexpr (use_dynamic_fluidsystem) {
+                        elemCtx.updatePrimaryIntensiveQuantities(timeIdx, *fluidSystemInstance);
+                    } else {
+                        elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                    }
                 }
             }
         } else {
@@ -139,10 +145,9 @@ public:
                 const Element& elem = *it;
                 elemCtx.updatePrimaryStencil(elem);
                 if constexpr (use_dynamic_fluidsystem) {
-                    printf("Using dynamic fluid system2\n");
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem::getNonStatic());
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, *fluidSystemInstance);
                 } else {
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, nullptr);
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
                 }
             }
         }

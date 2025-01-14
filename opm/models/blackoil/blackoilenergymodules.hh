@@ -384,12 +384,12 @@ public:
      * \brief Compute the intensive quantities needed to handle energy conservation
      *
      */
-    template <class FluidSystemT = void*>
+    template <class FluidSystemT = FluidSystem>
     void updateEnergyQuantities_(const ElementContext& elemCtx,
                                  unsigned dofIdx,
                                  unsigned timeIdx,
                                  const typename FluidSystem::template ParameterCache<Evaluation>& paramCache,
-                                 const FluidSystemT& fluidSystem = nullptr)
+                                 const FluidSystemT& fluidSystem = FluidSystemT{})
     {
         auto& fs = asImp_().fluidState_;
 
@@ -490,7 +490,7 @@ public:
         }
     }
 
-    template <class FluidSystemT = void*>
+    template <class FluidSystemT = FluidSystem>
     void updateEnergyQuantities_(const ElementContext&,
                                  unsigned,
                                  unsigned,
