@@ -19,6 +19,8 @@
 
 #include <opm/models/utils/parametersystem.hpp>
 
+#include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>

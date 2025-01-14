@@ -23,6 +23,11 @@
 #ifndef OPM_FLOW_GENERIC_PROBLEM_IMPL_HPP
 #define OPM_FLOW_GENERIC_PROBLEM_IMPL_HPP
 
+#ifndef OPM_FLOW_GENERIC_PROBLEM_HPP
+#include <config.h>
+#include <opm/simulators/flow/FlowGenericProblem.hpp>
+#endif
+
 #include <dune/common/parametertree.hh>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -31,8 +36,14 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
-#include <opm/simulators/flow/FlowGenericProblem.hpp>
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+#include <opm/models/utils/basicparameters.hh>
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/flow/SolutionContainers.hpp>
+
+#include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 
 #include <boost/date_time.hpp>
 
@@ -54,6 +65,24 @@ FlowGenericProblem(const EclipseState& eclState,
     , gridView_(gridView)
     , lookUpData_(gridView)
 {
+    enableTuning_ = Parameters::Get<Parameters::EnableTuning>();
+    enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
+    initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
+    maxTimeStepAfterWellEvent_ = unit::convert::from
+        (Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>(), unit::day);
+
+    // The value N for this parameter is defined in the following order of precedence:
+    //
+    // 1. Command line value (--num-pressure-points-equil=N)
+    //
+    // 2. EQLDIMS item 2.  Default value from
+    //    opm-common/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
+
+    numPressurePointsEquil_ = Parameters::IsSet<Parameters::NumPressurePointsEquil>()
+        ? Parameters::Get<Parameters::NumPressurePointsEquil>()
+        : eclState.getTableManager().getEqldims().getNumDepthNodesP();
+
+    explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
 }
 
 template<class GridView, class FluidSystem>
