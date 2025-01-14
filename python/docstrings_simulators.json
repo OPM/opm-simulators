@@ -6,7 +6,7 @@
     },
     "PyBlackOilSimulator_filename_constructor": {
         "signature": "opm.simulators.BlackOilSimulator.__init__(deck_filename: str) -> BlackOilSimulator",
-        "doc": "Constructor using a deck file name.\n\n:param deck_filename: The file name of the deck to be used for the simulation.\n:type deck_filename: str"
+        "doc": "Constructor using a deck file name.\n\n:param deck_filename: The file name of the deck to be used for the simulation.\n:type deck_filename: str\n:return: The BlackOilSimulator.\n:type return: BlackOilSimulator"
     },
     "PyBlackOilSimulator_objects_constructor": {
         "signature": "opm.simulators.BlackOilSimulator.__init__(deck: Deck, state: EclipseState, schedule: Schedule, summary_config: SummaryConfig) -> None",
