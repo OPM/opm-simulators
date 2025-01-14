@@ -69,6 +69,7 @@ class FvBaseElementContext
     using ExtensiveQuantitiesVector = std::vector<ExtensiveQuantities>;
 
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     using Model = GetPropType<TypeTag, Properties::Model>;
     using Stencil = GetPropType<TypeTag, Properties::Stencil>;
@@ -209,8 +210,9 @@ public:
      *
      * \param timeIdx The index of the solution vector used by the time discretization.
      */
-    void updatePrimaryIntensiveQuantities(unsigned timeIdx)
-    { updateIntensiveQuantities_(timeIdx, numPrimaryDof(timeIdx)); }
+    template <class FluidSystemT = FluidSystem>
+    void updatePrimaryIntensiveQuantities(unsigned timeIdx, const FluidSystemT& Fsystem = FluidSystemT{})
+    { updateIntensiveQuantities_(timeIdx, numPrimaryDof(timeIdx), Fsystem); }
 
     /*!
      * \brief Compute the intensive quantities of a single sub-control volume of the
@@ -545,7 +547,8 @@ protected:
      *
      * This method considers the intensive quantities cache.
      */
-    void updateIntensiveQuantities_(unsigned timeIdx, size_t numDof)
+    template <class FluidSystemT = FluidSystem>
+    void updateIntensiveQuantities_(unsigned timeIdx, size_t numDof, const FluidSystemT& Fsystem = FluidSystemT{})
     {
         // update the intensive quantities for the whole history
         const SolutionVector& globalSol = model().solution(timeIdx);
@@ -564,7 +567,7 @@ protected:
                 dofVars_[dofIdx].intensiveQuantities[timeIdx] = *cachedIntQuants;
             }
             else {
-                updateSingleIntQuants_(dofSol, dofIdx, timeIdx);
+                updateSingleIntQuants_(dofSol, dofIdx, timeIdx, Fsystem);
                 model().updateCachedIntensiveQuantities(dofVars_[dofIdx].intensiveQuantities[timeIdx],
                                                         globalIdx,
                                                         timeIdx);
@@ -572,7 +575,8 @@ protected:
         }
     }
 
-    void updateSingleIntQuants_(const PrimaryVariables& priVars, unsigned dofIdx, unsigned timeIdx)
+    template <class FluidSystemT = FluidSystem>
+    void updateSingleIntQuants_(const PrimaryVariables& priVars, unsigned dofIdx, unsigned timeIdx, const FluidSystemT& Fsystem = FluidSystemT{})
     {
 #ifndef NDEBUG
         if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage())
@@ -581,7 +585,7 @@ protected:
 #endif
 
         dofVars_[dofIdx].priVars[timeIdx] = &priVars;
-        dofVars_[dofIdx].intensiveQuantities[timeIdx].update(/*context=*/asImp_(), dofIdx, timeIdx);
+        dofVars_[dofIdx].intensiveQuantities[timeIdx].update(/*context=*/asImp_(), dofIdx, timeIdx, Fsystem);
     }
 
     IntensiveQuantities intensiveQuantitiesStashed_;
