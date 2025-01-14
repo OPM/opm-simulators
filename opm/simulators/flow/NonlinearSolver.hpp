@@ -30,7 +30,6 @@
 #include <opm/models/nonlinear/newtonmethodparams.hpp>
 #include <opm/models/nonlinear/newtonmethodproperties.hh>
 
-#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/basicproperties.hh>
 
@@ -72,10 +71,25 @@ template <class BVector, class Scalar>
 void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
                               const Scalar omega, NonlinearRelaxType relaxType);
 
-template<class Scalar>
-void registerNonlinearParameters();
-
 }
+
+// Solver parameters controlling nonlinear process.
+template<class Scalar>
+struct NonlinearSolverParameters
+{
+    NonlinearRelaxType relaxType_;
+    Scalar relaxMax_;
+    Scalar relaxIncrement_;
+    Scalar relaxRelTol_;
+    int maxIter_; // max nonlinear iterations
+    int minIter_; // min nonlinear iterations
+
+    NonlinearSolverParameters();
+
+    static void registerParameters();
+
+    void reset();
+};
 
     /// A nonlinear solver class suitable for general fully-implicit models,
     /// as well as pressure, transport and sequential models.
@@ -85,54 +99,7 @@ void registerNonlinearParameters();
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
-        // Solver parameters controlling nonlinear process.
-        struct SolverParameters
-        {
-            NonlinearRelaxType relaxType_;
-            Scalar relaxMax_;
-            Scalar relaxIncrement_;
-            Scalar relaxRelTol_;
-            int maxIter_; // max nonlinear iterations
-            int minIter_; // min nonlinear iterations
-
-            SolverParameters()
-            {
-                // set default values
-                reset();
-
-                // overload with given parameters
-                relaxMax_ = Parameters::Get<Parameters::NewtonMaxRelax<Scalar>>();
-                maxIter_ = Parameters::Get<Parameters::NewtonMaxIterations>();
-                minIter_ = Parameters::Get<Parameters::NewtonMinIterations>();
-
-                const auto& relaxationTypeString = Parameters::Get<Parameters::NewtonRelaxationType>();
-                if (relaxationTypeString == "dampen") {
-                    relaxType_ = NonlinearRelaxType::Dampen;
-                } else if (relaxationTypeString == "sor") {
-                    relaxType_ = NonlinearRelaxType::SOR;
-                } else {
-                    OPM_THROW(std::runtime_error,
-                              "Unknown Relaxtion Type " + relaxationTypeString);
-                }
-            }
-
-            static void registerParameters()
-            {
-                detail::registerNonlinearParameters<Scalar>();
-            }
-
-            void reset()
-            {
-                // default values for the solver parameters
-                relaxType_ = NonlinearRelaxType::Dampen;
-                relaxMax_ = 0.5;
-                relaxIncrement_ = 0.1;
-                relaxRelTol_ = 0.2;
-                maxIter_ = 10;
-                minIter_ = 1;
-            }
-
-        };
+        using SolverParameters = NonlinearSolverParameters<Scalar>;
 
         // ---------  Public methods  ---------
 
