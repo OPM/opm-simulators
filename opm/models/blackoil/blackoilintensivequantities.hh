@@ -57,6 +57,7 @@
 #include <utility>
 
 #include <fmt/format.h>
+#include <iostream>
 
 namespace Opm {
 /*!
@@ -192,6 +193,7 @@ public:
         Scalar RsMax;
         Scalar RswMax;
         if constexpr (is_a_blackoil_system<DynamicFluidSystem>()) {
+            printf("Computing Rv with dynamic fluid system\n");
             RvMax = fluidSystem.enableVaporizedOil()
                 ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
                 : 0.0;
@@ -202,6 +204,7 @@ public:
                 ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
                 : 0.0;
         } else {
+            std::cout << "Type of DynamicFluidSystem: " << typeid(decltype(fluidSystem)).name() << std::endl;
             RvMax = FluidSystem::enableVaporizedOil()
                 ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
                 : 0.0;

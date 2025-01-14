@@ -123,7 +123,8 @@ public:
                 for (auto it = grid_chunk_iterators_[chunk]; it != grid_chunk_iterators_[chunk+1]; ++it) {
                     const Element& elem = *it;
                     elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                    printf("Using dynamic fluid system1\n");
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem::getNonStatic());
                 }
             }
         } else {
@@ -136,6 +137,7 @@ public:
                 const Element& elem = *it;
                 elemCtx.updatePrimaryStencil(elem);
                 if constexpr (use_dynamic_fluidsystem) {
+                    printf("Using dynamic fluid system2\n");
                     elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem::getNonStatic());
                 } else {
                     elemCtx.updatePrimaryIntensiveQuantities(timeIdx, nullptr);
