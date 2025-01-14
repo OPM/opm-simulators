@@ -399,18 +399,9 @@ public:
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
-            // TODO: in actuality we only want to use the dynamic version of the blackoilfluidsystem when using GPUs.
-            if constexpr (is_a_blackoil_system<FluidSystemT>()) {
-                // const auto& fluidSystem = FluidSystem::getNonStatic();
-                const auto h = fluidSystem.enthalpy(fs, paramCache, phaseIdx);
-                fs.setEnthalpy(phaseIdx, h);
-            }
-            else {
-                const auto h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
-                fs.setEnthalpy(phaseIdx, h);
-            }
-            // const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
-            // fs.setEnthalpy(phaseIdx, h);
+
+            const auto& h = fluidSystem.enthalpy(fs, paramCache, phaseIdx);
+            fs.setEnthalpy(phaseIdx, h);
         }
 
         const auto& solidEnergyLawParams = elemCtx.problem().solidEnergyLawParams(elemCtx, dofIdx, timeIdx);
