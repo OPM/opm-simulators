@@ -61,6 +61,7 @@
 
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
