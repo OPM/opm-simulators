@@ -188,17 +188,13 @@ public:
         const auto& linearizationType = problem.model().linearizer().getLinearizationType();
         unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
 
-        // trying to use the dynamic BOFS if possible
-        Scalar RvMax;
-        Scalar RsMax;
-        Scalar RswMax;
-        RvMax = fluidSystem.enableVaporizedOil()
+        Scalar RvMax = fluidSystem.enableVaporizedOil()
             ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
             : 0.0;
-        RsMax = fluidSystem.enableDissolvedGas()
+        Scalar RsMax = fluidSystem.enableDissolvedGas()
             ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
             : 0.0;
-        RswMax = fluidSystem.enableDissolvedGasInWater()
+        Scalar RswMax = fluidSystem.enableDissolvedGasInWater()
             ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
             : 0.0;
 
