@@ -117,34 +117,12 @@ public:
     FlowBaseVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        fileName_ = Parameters::Get<Parameters::EclDeckFileName>();
-        edgeWeightsMethod_   = Dune::EdgeWeightMethod(Parameters::Get<Parameters::EdgeWeightsMethod>());
-
-#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
-        numJacobiBlocks_ = Parameters::Get<Parameters::NumJacobiBlocks>();
-#endif
-
-        ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
 #if HAVE_MPI
-        partitionMethod_   = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
-        serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
         imbalanceTol_ = Parameters::Get<Parameters::ImbalanceTol<Scalar>>();
 
         zoltanImbalanceTolSet_ = Parameters::IsSet<Parameters::ZoltanImbalanceTol<Scalar>>();
         zoltanImbalanceTol_ = Parameters::Get<Parameters::ZoltanImbalanceTol<Scalar>>();
-        zoltanParams_ = Parameters::Get<Parameters::ZoltanParams>();
-
-        metisParams_ = Parameters::Get<Parameters::MetisParams>();
-
-        externalPartitionFile_ = Parameters::Get<Parameters::ExternalPartition>();
 #endif
-        enableDistributedWells_ = Parameters::Get<Parameters::AllowDistributedWells>();
-        allow_splitting_inactive_wells_ = Parameters::Get<Parameters::AllowSplittingInactiveWells>();
-        ignoredKeywords_ = Parameters::Get<Parameters::IgnoreKeywords>();
-        int output_param = Parameters::Get<Parameters::EclOutputInterval>();
-        if (output_param >= 0)
-            outputInterval_ = output_param;
-        useMultisegmentWell_ = Parameters::Get<Parameters::UseMultisegmentWell>();
         enableExperiments_ = enableExperiments;
 
         init();
