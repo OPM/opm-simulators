@@ -231,7 +231,7 @@ public:
             ("Method for solving vapor-liquid composition. Available options include: "
              "ssi, newton, ssi+newton");
 
-        Parameters::SetDefault<Parameters::FlashTolerance<Scalar>>(1e-12);
+        Parameters::SetDefault<Parameters::FlashTolerance<Scalar>>(1.e-8);
         Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
 
         // since thermodynamic hints are basically free if the cache for intensive quantities is
