@@ -104,12 +104,9 @@ public:
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
 
-        // TODO: add something here so that the existing code will not be made any slower or cause copies
-        // maybe through a static assert on the type of the fluidsystem
-        // TODO: ensure that this will be an updated version if the static version has changed
         using DynamicFluidSystem = std::remove_reference_t<decltype(LocalFluidSystem::getNonStatic())>;
         constexpr bool use_dynamic_fluidsystem = is_a_dynamic_blackoil_system<DynamicFluidSystem>;
-        printf("use_dynamic_fluidsystem: %d\n", use_dynamic_fluidsystem);
+
         DynamicFluidSystem* fluidSystemInstance = nullptr;
         if constexpr (use_dynamic_fluidsystem) {
             fluidSystemInstance = &LocalFluidSystem::getNonStatic();
