@@ -156,6 +156,9 @@ namespace Opm {
                 }
             }
 
+            // set the maximum limit on OMP threads
+            setMaxThreads();
+
             return status;
         }
 
@@ -278,6 +281,11 @@ namespace Opm {
             mpi_rank_ = comm.rank();
             mpi_size_ = comm.size();
 
+            setMaxThreads();
+        }
+
+        static void setMaxThreads()
+        {
 #if _OPENMP
             // If openMP is available, default to 2 threads per process unless
             // OMP_NUM_THREADS is set or command line --threads-per-process used.
