@@ -105,21 +105,6 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
     return;
 }
 
-template<class Scalar>
-void registerNonlinearParameters()
-{
-    Parameters::Register<Parameters::NewtonMaxRelax<Scalar>>
-        ("The maximum relaxation factor of a Newton iteration");
-    Parameters::Register<Parameters::NewtonMaxIterations>
-        ("The maximum number of Newton iterations per time step");
-    Parameters::Register<Parameters::NewtonMinIterations>
-        ("The minimum number of Newton iterations per time step");
-    Parameters::Register<Parameters::NewtonRelaxationType>
-        ("The type of relaxation used by Newton method");
-
-    Parameters::SetDefault<Parameters::NewtonMaxIterations>(20);
-}
-
 template<class Scalar, int Size>
 using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
 
@@ -131,7 +116,6 @@ using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
     template void detectOscillations(const std::vector<std::vector<T>>&,    \
                                      const int, const int, const T,         \
                                      const int, bool&, bool&);              \
-    template void registerNonlinearParameters<T>();                         \
     INSTANTIATE(T,1)                                                        \
     INSTANTIATE(T,2)                                                        \
     INSTANTIATE(T,3)                                                        \
@@ -146,3 +130,65 @@ INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm::detail
+
+namespace Opm {
+
+template<class Scalar>
+NonlinearSolverParameters<Scalar>::
+NonlinearSolverParameters()
+{
+    // set default values
+    reset();
+
+    // overload with given parameters
+    relaxMax_ = Parameters::Get<Parameters::NewtonMaxRelax<Scalar>>();
+    maxIter_ = Parameters::Get<Parameters::NewtonMaxIterations>();
+    minIter_ = Parameters::Get<Parameters::NewtonMinIterations>();
+
+    const auto& relaxationTypeString = Parameters::Get<Parameters::NewtonRelaxationType>();
+    if (relaxationTypeString == "dampen") {
+        relaxType_ = NonlinearRelaxType::Dampen;
+    } else if (relaxationTypeString == "sor") {
+        relaxType_ = NonlinearRelaxType::SOR;
+    } else {
+        OPM_THROW(std::runtime_error,
+                  "Unknown Relaxtion Type " + relaxationTypeString);
+    }
+}
+
+template<class Scalar>
+void NonlinearSolverParameters<Scalar>::
+reset()
+{
+    // default values for the solver parameters
+    relaxType_ = NonlinearRelaxType::Dampen;
+    relaxMax_ = 0.5;
+    relaxIncrement_ = 0.1;
+    relaxRelTol_ = 0.2;
+    maxIter_ = 10;
+    minIter_ = 1;
+}
+
+template<class Scalar>
+void NonlinearSolverParameters<Scalar>::
+registerParameters()
+{
+    Parameters::Register<Parameters::NewtonMaxRelax<Scalar>>
+        ("The maximum relaxation factor of a Newton iteration");
+    Parameters::Register<Parameters::NewtonMaxIterations>
+        ("The maximum number of Newton iterations per time step");
+    Parameters::Register<Parameters::NewtonMinIterations>
+        ("The minimum number of Newton iterations per time step");
+    Parameters::Register<Parameters::NewtonRelaxationType>
+        ("The type of relaxation used by Newton method");
+
+    Parameters::SetDefault<Parameters::NewtonMaxIterations>(20);
+}
+
+template struct NonlinearSolverParameters<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template struct NonlinearSolverParameters<float>;
+#endif
+
+}
