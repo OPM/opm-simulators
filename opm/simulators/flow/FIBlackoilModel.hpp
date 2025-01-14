@@ -111,7 +111,7 @@ public:
         printf("use_dynamic_fluidsystem: %d\n", use_dynamic_fluidsystem);
 
         this->invalidateIntensiveQuantitiesCache(timeIdx);
-        //const auto& fluidSystemInstance = FluidSystem::getNonStaticInstance();
+        const auto& fluidSystemInstance = LocalFluidSystem::getNonStatic();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if constexpr (gridIsUnchanging) {
             const int num_chunks = grid_chunk_iterators_.size() - 1;
@@ -124,7 +124,9 @@ public:
                     const Element& elem = *it;
                     elemCtx.updatePrimaryStencil(elem);
                     printf("Using dynamic fluid system1\n");
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem::getNonStatic());
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, fluidSystemInstance);
+                    // elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem::getNonStatic());
+                    // elemCtx.updatePrimaryIntensiveQuantities(timeIdx, LocalFluidSystem{});
                 }
             }
         } else {

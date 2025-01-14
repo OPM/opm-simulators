@@ -178,8 +178,8 @@ public:
      * \copydoc IntensiveQuantities::update
      */
     //TODO: avoid functions being compiled for the void* instantiation
-    template <class DynamicFluidSystem = void*>
-    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = nullptr)
+    template <class DynamicFluidSystem = FluidSystem>
+    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
         OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
@@ -192,29 +192,15 @@ public:
         Scalar RvMax;
         Scalar RsMax;
         Scalar RswMax;
-        if constexpr (is_a_blackoil_system<DynamicFluidSystem>()) {
-            printf("Computing Rv with dynamic fluid system\n");
-            RvMax = fluidSystem.enableVaporizedOil()
-                ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
-                : 0.0;
-            RsMax = fluidSystem.enableDissolvedGas()
-                ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
-                : 0.0;
-            RswMax = fluidSystem.enableDissolvedGasInWater()
-                ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
-                : 0.0;
-        } else {
-            std::cout << "Type of DynamicFluidSystem: " << typeid(decltype(fluidSystem)).name() << std::endl;
-            RvMax = FluidSystem::enableVaporizedOil()
-                ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
-                : 0.0;
-            RsMax = FluidSystem::enableDissolvedGas()
-                ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
-                : 0.0;
-            RswMax = FluidSystem::enableDissolvedGasInWater()
-                ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
-                : 0.0;
-        }
+        RvMax = fluidSystem.enableVaporizedOil()
+            ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
+        RsMax = fluidSystem.enableDissolvedGas()
+            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
+        RswMax = fluidSystem.enableDissolvedGasInWater()
+            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
 
         asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
 
