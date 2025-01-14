@@ -624,72 +624,93 @@ namespace Opm {
     {
         this->closed_this_step_.clear();
 
-        // time step is finished and we are not any more at the beginning of an report step
+        // Time step ends and we are no longer at the beginning of a report
+        // step.
         this->report_step_starts_ = false;
-        const int reportStepIdx = simulator_.episodeIndex();
+        const int reportStepIdx = this->simulator_.episodeIndex();
 
-        DeferredLogger local_deferredLogger;
-        for (const auto& well : well_container_) {
-            if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
-                well->updateWaterThroughput(dt, this->wellState());
+        if (getPropValue<TypeTag, Properties::EnablePolymerMW>()) {
+            for (auto& wellPtr : this->well_container_) {
+                if (wellPtr->isInjector()) {
+                    wellPtr->updateWaterThroughput(dt, this->wellState());
+                }
             }
         }
-        // update connection transmissibility factor and d factor (if applicable) in the wellstate
-        for (const auto& well : well_container_) {
-            well->updateConnectionTransmissibilityFactor(simulator_, this->wellState().well(well->indexOfWell()));
-            well->updateConnectionDFactor(simulator_, this->wellState().well(well->indexOfWell()));
+
+        // Update connection transmissibility factor and d factor (if
+        // applicable) in the wellstate.
+        for (auto& wellPtr : this->well_container_) {
+            auto& ws = this->wellState().well(wellPtr->indexOfWell());
+
+            wellPtr->updateConnectionTransmissibilityFactor(this->simulator_, ws);
+            wellPtr->updateConnectionDFactor(this->simulator_, ws);
         }
 
+        DeferredLogger local_deferredLogger{};
         if (Indices::waterEnabled) {
             this->updateFiltrationModelsPostStep(dt, FluidSystem::waterPhaseIdx, local_deferredLogger);
         }
 
-        // WINJMULT: At the end of the time step, update the inj_multiplier saved in WellState for later use
+        // WINJMULT: At the end of the time step, update the inj_multiplier
+        // saved in WellState for later use.
         this->updateInjMult(local_deferredLogger);
 
-        // report well switching
-        for (const auto& well : well_container_) {
-            well->reportWellSwitching(this->wellState().well(well->indexOfWell()), local_deferredLogger);
+        // Report well switching.
+        for (auto& wellPtr : this->well_container_) {
+            wellPtr->reportWellSwitching(this->wellState().well(wellPtr->indexOfWell()),
+                                         local_deferredLogger);
         }
-        // report group switching
+
+        // Report group switching.
         if (this->terminal_output_) {
             this->reportGroupSwitching(local_deferredLogger);
         }
 
-        // update the rate converter with current averages pressures etc in
-        rateConverter_->template defineState<ElementContext>(simulator_);
+        // Update the rate converter with current averages pressures etc in.
+        this->rateConverter_->template defineState<ElementContext>(simulator_);
 
-        // calculate the well potentials
+        // Calculate the well potentials.
         try {
             this->updateWellPotentials(reportStepIdx,
-                                       /*onlyAfterEvent*/false,
+                                       /* onlyAfterEvent = */ false,
                                        simulator_.vanguard().summaryConfig(),
                                        local_deferredLogger);
-        } catch ( std::runtime_error& e ) {
+        }
+        catch (const std::runtime_error& e) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
 
         updateWellTestState(simulationTime, this->wellTestState());
 
-        // check group sales limits at the end of the timestep
-        const Group& fieldGroup = this->schedule_.getGroup("FIELD", reportStepIdx);
-        this->checkGEconLimits(fieldGroup, simulationTime,
-                               simulator_.episodeIndex(), local_deferredLogger);
-        this->checkGconsaleLimits(fieldGroup, this->wellState(),
-                                  simulator_.episodeIndex(), local_deferredLogger);
+        // Check group sales limits at the end of the timestep.
+        {
+            const Group& fieldGroup = this->schedule_
+                .getGroup("FIELD", reportStepIdx);
+
+            this->checkGEconLimits(fieldGroup,
+                                   simulationTime,
+                                   reportStepIdx,
+                                   local_deferredLogger);
+
+            this->checkGconsaleLimits(fieldGroup,
+                                      this->wellState(),
+                                      reportStepIdx,
+                                      local_deferredLogger);
+        }
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
         this->commitWGState();
 
-        const Opm::Parallel::Communication& comm = grid().comm();
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
-        if (this->terminal_output_) {
+        if (auto global_deferredLogger =
+            gatherDeferredLogger(local_deferredLogger, grid().comm());
+            this->terminal_output_)
+        {
             global_deferredLogger.logMessages();
         }
 
-        //reporting output temperatures
+        // Reporting output temperatures.
         this->computeWellTemperature();
     }
 

@@ -1676,9 +1676,8 @@ protected:
 
         return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
     }
-
+protected:
     typename Vanguard::TransmissibilityType transmissibilities_;
-
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;
 
@@ -1694,6 +1693,8 @@ protected:
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
 
+
+private:
     template<class T>
     struct BCData
     {
@@ -1726,8 +1727,9 @@ protected:
     virtual void handleSolventBC(const BCProp::BCFace&, RateVector&) const = 0;
 
     virtual void handlePolymerBC(const BCProp::BCFace&, RateVector&) const = 0;
-
+protected:
     BCData<int> bcindex_;
+private:    
     bool nonTrivialBoundaryConditions_ = false;
     bool explicitRockCompaction_ = false;
     bool first_step_ = true;
