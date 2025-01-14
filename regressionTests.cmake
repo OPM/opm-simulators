@@ -590,7 +590,7 @@ foreach(templ_case RANGE 1 6)
   )
 endforeach()
 
-foreach(wcycle_case RANGE 0 7)
+foreach(wcycle_case RANGE 0 8)
   add_test_compareECLFiles(CASENAME WCYCLE-${wcycle_case}
     FILENAME WCYCLE-${wcycle_case}
     SIMULATOR flow
