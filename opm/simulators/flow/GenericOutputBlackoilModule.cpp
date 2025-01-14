@@ -25,14 +25,12 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/grid/common/CommunicationUtils.hpp>
+
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
 #include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
-
-#include <opm/grid/common/CommunicationUtils.hpp>
-
-#include <opm/output/data/Solution.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Runspec.hpp>
@@ -45,6 +43,10 @@
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
 #include <opm/input/eclipse/Units/Units.hpp>
+
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/output/data/Solution.hpp>
 
 #include <opm/simulators/utils/PressureAverage.hpp>
 
@@ -270,11 +272,28 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
             break;
         }
     }
+
+    forceDisableFipOutput_ =
+        Parameters::Get<Parameters::ForceDisableFluidInPlaceOutput>();
+    forceDisableFipresvOutput_ =
+        Parameters::Get<Parameters::ForceDisableResvFluidInPlaceOutput>();
 }
 
 template<class FluidSystem>
 GenericOutputBlackoilModule<FluidSystem>::
 ~GenericOutputBlackoilModule() = default;
+
+template<class FluidSystem>
+void GenericOutputBlackoilModule<FluidSystem>::
+registerParameters()
+{
+    Parameters::Register<Parameters::ForceDisableFluidInPlaceOutput>
+        ("Do not print fluid-in-place values after each report step "
+         "even if requested by the deck.");
+    Parameters::Register<Parameters::ForceDisableResvFluidInPlaceOutput>
+        ("Do not print reservoir volumes values after each report step "
+         "even if requested by the deck.");
+}
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
@@ -361,9 +380,9 @@ outputFipAndResvLog(const Inplace& inplace,
                          const bool substep,
                          const Parallel::Communication& comm)
 {
-    if (comm.rank() != 0)
+    if (comm.rank() != 0) {
         return;
-
+    }
 
     // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
     std::unique_ptr<FIPConfig> fipSched;
