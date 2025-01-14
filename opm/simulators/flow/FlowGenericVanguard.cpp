@@ -390,6 +390,8 @@ void FlowGenericVanguard::registerParameters_()
         ("The number of report steps that ought to be skipped between two writes of ECL results");
     Parameters::Register<Parameters::EnableDryRun>
         ("Specify if the simulation ought to be actually run, or just pretended to be");
+    Parameters::Register<Parameters::EnableEclOutput>
+        ("Write binary output which is compatible with the commercial Eclipse simulator");
     Parameters::Register<Parameters::EnableOpmRstFile>
         ("Include OPM-specific keywords in the ECL restart file to "
          "enable restart of OPM simulators from these files");
