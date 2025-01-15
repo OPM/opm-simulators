@@ -184,7 +184,9 @@ public:
         }
     }
 
-    void updateSaturations(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+
+    template <class DynamicFluidSystem = FluidSystem>
+    void updateSaturations(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
 
@@ -241,7 +243,8 @@ public:
             fluidState_.setSaturation(oilPhaseIdx, So);
     }
 
-    void updateRelpermAndPressures(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    template <class DynamicFluidSystem = FluidSystem>
+    void updateRelpermAndPressures(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
@@ -272,7 +275,7 @@ public:
                 const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
                 const Evaluation pcFactor = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                    if (FluidSystem::phaseIsActive(phaseIdx)) {
+                    if (fluidSystem.phaseIsActive(phaseIdx)) {
                         pC[phaseIdx] *= pcFactor;
                     }
             }
@@ -307,20 +310,21 @@ public:
 
     }
 
-    Evaluation updateRsRvRsw(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    template <class DynamicFluidSystem = FluidSystem>
+    Evaluation updateRsRvRsw(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
 
-        Scalar RvMax = FluidSystem::enableVaporizedOil()
+        Scalar RvMax = fluidSystem.enableVaporizedOil()
             ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
             : 0.0;
-        Scalar RsMax = FluidSystem::enableDissolvedGas()
+        Scalar RsMax = fluidSystem.enableDissolvedGas()
             ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
             : 0.0;
-        Scalar RswMax = FluidSystem::enableDissolvedGasInWater()
+        Scalar RswMax = fluidSystem.enableDissolvedGasInWater()
             ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
             : 0.0;
 
@@ -389,7 +393,8 @@ public:
         return SoMax;
     }
 
-    void updateMobilityAndInvB()
+    template <class DynamicFluidSystem = FluidSystem>
+    void updateMobilityAndInvB(const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         const unsigned pvtRegionIdx = fluidState_.pvtRegionIndex();
 
@@ -407,7 +412,7 @@ public:
                 continue;
             const auto& b = fluidSystem.inverseFormationVolumeFactor(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
-            const auto& mu = FluidSystem::viscosity(fluidState_, phaseIdx, pvtRegionIdx);
+            const auto& mu = fluidSystem.viscosity(fluidState_, phaseIdx, pvtRegionIdx);
             for (int i = 0; i<nmobilities; i++) {
                 if (enableExtbo && phaseIdx == oilPhaseIdx) {
                     (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
@@ -423,7 +428,8 @@ public:
         Valgrind::CheckDefined(mobility_);
     }
 
-    void updatePhaseDensities()
+    template <class DynamicFluidSystem = FluidSystem>
+    void updatePhaseDensities(const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         const unsigned pvtRegionIdx = fluidState_.pvtRegionIndex();
 
@@ -472,7 +478,8 @@ public:
         }
     }
 
-    void updatePorosity(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    template <class DynamicFluidSystem = FluidSystem>
+    void updatePorosity(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
@@ -516,7 +523,8 @@ public:
         }
     }
 
-    void assertFiniteMembers()
+    template <class DynamicFluidSystem = FluidSystem>
+    void assertFiniteMembers(const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         // some safety checks in debug mode
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -536,7 +544,8 @@ public:
     /*!
      * \copydoc IntensiveQuantities::update
      */
-    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    template <class DynamicFluidSystem = FluidSystem>
+    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
 
@@ -549,20 +558,20 @@ public:
 
         fluidState_.setPvtRegionIndex(pvtRegionIdx);
 
-        updateTempSalt(elemCtx, dofIdx, timeIdx);
-        updateSaturations(elemCtx, dofIdx, timeIdx);
-        updateRelpermAndPressures(elemCtx, dofIdx, timeIdx);
+        updateTempSalt(elemCtx, dofIdx, timeIdx, fluidSystem);
+        updateSaturations(elemCtx, dofIdx, timeIdx, fluidSystem);
+        updateRelpermAndPressures(elemCtx, dofIdx, timeIdx, fluidSystem);
 
         // update extBO parameters
         if constexpr (enableExtbo) {
             asImp_().zFractionUpdate_(elemCtx, dofIdx, timeIdx);
         }
 
-        Evaluation SoMax = updateRsRvRsw(elemCtx, dofIdx, timeIdx);
+        Evaluation SoMax = updateRsRvRsw(elemCtx, dofIdx, timeIdx, fluidSystem);
 
-        updateMobilityAndInvB();
-        updatePhaseDensities();
-        updatePorosity(elemCtx, dofIdx, timeIdx);
+        updateMobilityAndInvB(fluidSystem);
+        updatePhaseDensities(fluidSystem);
+        updatePorosity(elemCtx, dofIdx, timeIdx, fluidSystem);
 
         rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
 
@@ -578,7 +587,7 @@ public:
 
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
         paramCache.setRegionIndex(pvtRegionIdx);
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        if (fluidSystem.phaseIsActive(fluidSystem.oilPhaseIdx)) {
             paramCache.setMaxOilSat(SoMax);
         }
         paramCache.updateAll(fluidState_);
@@ -607,7 +616,7 @@ public:
         DispersionIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
 
 #ifndef NDEBUG
-        assertFiniteMembers();
+        assertFiniteMembers(fluidSystem);
 #endif
     }
 

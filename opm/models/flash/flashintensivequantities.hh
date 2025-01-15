@@ -101,7 +101,7 @@ public:
      * \copydoc IntensiveQuantities::update
      */
     template <class DynamicFluidSystem = FluidSystem>
-    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
+    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx, [[maybe_unused]] const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
         EnergyIntensiveQuantities::updateTemperatures_(fluidState_, elemCtx, dofIdx, timeIdx);
