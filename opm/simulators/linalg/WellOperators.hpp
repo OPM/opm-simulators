@@ -188,7 +188,8 @@ public:
         std::size_t well_index = 0;
         for (const auto& well : this->wellMod_) {
             if (this->wellMod_.well_domain().at(well->name()) == domainIndex_) {
-                this->applySingleWell(x, y, well, this->wellMod_.well_local_cells()[well_index]);
+                this->applySingleWell(x, y, well,
+                                      this->wellMod_.well_local_cells()[well_index]);
             }
             ++well_index;
         }
@@ -199,7 +200,10 @@ public:
                                   const bool use_well_weights) const override
     {
         OPM_TIMEBLOCK(addWellPressureEquations);
-        this->wellMod_.addWellPressureEquationsDomain(jacobian, weights, use_well_weights, domainIndex_);
+        this->wellMod_.addWellPressureEquationsDomain(jacobian,
+                                                      weights,
+                                                      use_well_weights,
+                                                      domainIndex_);
     }
 
 private:
