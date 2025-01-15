@@ -48,6 +48,13 @@
 #include <utility>
 #include <vector>
 
+namespace Opm::Parameters {
+
+struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
+struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
+
 namespace Opm {
 
 namespace data { class Solution; }
@@ -65,13 +72,20 @@ public:
     // Virtual destructor for safer inheritance.
     virtual ~GenericOutputBlackoilModule();
 
-     Scalar* getPRESSURE_ptr(void) {
-        return (this->fluidPressure_.data()) ;
-    };
+    Scalar* getPRESSURE_ptr()
+    {
+        return this->fluidPressure_.data();
+    }
 
-    int  getPRESSURE_size( void ) {
-        return (this->fluidPressure_.size()) ;
-    };
+    int getPRESSURE_size()
+    {
+        return this->fluidPressure_.size();
+    }
+
+    /*!
+     * \brief Register all run-time parameters for the Vtk output module.
+     */
+    static void registerParameters();
 
     void outputTimeStamp(const std::string& lbl,
                          double elapsed,
