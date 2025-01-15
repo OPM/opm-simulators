@@ -111,6 +111,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/RegionPhasePVAverage.cpp
   opm/simulators/flow/SimulatorConvergenceOutput.cpp
+  opm/simulators/flow/SimulatorFullyImplicitBlackoil.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
