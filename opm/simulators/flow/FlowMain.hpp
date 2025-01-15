@@ -101,11 +101,10 @@ namespace Opm {
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
-            ThreadManager::registerParameters();
-            Simulator::registerParameters();
-
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
+
+            Simulator::registerParameters();
 
             detail::hideUnusedParameters<Scalar>();
 
