@@ -72,6 +72,10 @@ void registerFlowProblemParameters()
     Parameters::Register<Parameters::NumSatfuncConsistencySamplePoints>
         ("Maximum number of reported failures for each individual saturation function consistency check");
 
+    Parameters::Register<Parameters::ConserveInnerEnergyThermal>
+        ("Conserve inner energy and not enthalpy "
+         "even if THERMAL is used.");
+
     // By default, stop it after the universe will probably have stopped
     // to exist. (the ECL problem will finish the simulation explicitly
     // after it simulated the last episode specified in the deck.)
@@ -90,6 +94,8 @@ void registerFlowProblemParameters()
     // the default for the allowed volumetric error for oil per second
     Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-2);
     Parameters::SetDefault<Parameters::EnableGravity>(true);
+
+    Parameters::SetDefault<Parameters::ConserveInnerEnergyThermal>(false);
 }
 
 template void registerFlowProblemParameters<double>();
