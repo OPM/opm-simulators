@@ -457,9 +457,6 @@ private:
             comp[1] = Evaluation::createVariable(0.01 - 1e-3, 2);
             comp[2] = 1. - comp[0] - comp[1];
         }
-        ComponentVector sat;
-        sat[0] = 1.0;
-        sat[1] = 1.0 - sat[0];
 
         Scalar p0 = Parameters::Get<Parameters::Initialpressure<Scalar>>();
 
@@ -476,46 +473,10 @@ private:
         fs.setPressure(FluidSystem::oilPhaseIdx, p_init);
         fs.setPressure(FluidSystem::gasPhaseIdx, p_init);
 
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            fs.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, comp[compIdx]);
-            fs.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, comp[compIdx]);
-        }
-
-        // It is used here only for calculate the z
-        fs.setSaturation(FluidSystem::oilPhaseIdx, sat[0]);
-        fs.setSaturation(FluidSystem::gasPhaseIdx, sat[1]);
-
         fs.setTemperature(temperature_);
 
-        // ParameterCache paramCache;
-        {
-            typename FluidSystem::template ParameterCache<Evaluation> paramCache;
-            paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
-            paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
-            fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
-            fs.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::gasPhaseIdx));
-            fs.setViscosity(FluidSystem::oilPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::oilPhaseIdx));
-            fs.setViscosity(FluidSystem::gasPhaseIdx, FluidSystem::viscosity(fs, paramCache, FluidSystem::gasPhaseIdx));
-        }
-
-        // determine the component total fractions
-        // TODO: duplicated code here, while should be refactored out when we swithing
-        // to starting from total mole fractions
-        Dune::FieldVector<Scalar, numComponents> z(0.0);
-        Scalar sumMoles = 0.0;
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            const auto saturation = getValue(fs.saturation(phaseIdx));
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                Scalar tmp = getValue(fs.molarity(phaseIdx, compIdx)) * saturation;
-                tmp = max(tmp, 1.e-8);
-                z[compIdx] += tmp;
-                sumMoles += tmp;
-            }
-        }
-        z /= sumMoles;
-
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-            fs.setMoleFraction(compIdx, z[compIdx]);
+            fs.setMoleFraction(compIdx, comp[compIdx]);
         }
 
         // Set initial K and L

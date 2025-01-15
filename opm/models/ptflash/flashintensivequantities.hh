@@ -178,7 +178,7 @@ public:
             const int spatialIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
             std::cout << " updating the intensive quantities for Cell " << spatialIdx << std::endl;
         }
-        FlashSolver::solve(fluidState_, z, flashTwoPhaseMethod, flashTolerance, flashVerbosity);
+        FlashSolver::solve(fluidState_, flashTwoPhaseMethod, flashTolerance, flashVerbosity);
 
         if (flashVerbosity >= 5) {
             // printing of flash result after solve
