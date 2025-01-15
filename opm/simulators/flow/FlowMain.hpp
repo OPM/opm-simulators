@@ -292,6 +292,7 @@ namespace Opm {
             // Issue a warning if both OMP_NUM_THREADS and --threads-per-process are set,
             // but let the environment variable take precedence.
             constexpr int default_threads = 2;
+            const bool isSet = Parameters::IsSet<Parameters::ThreadsPerProcess>();
             const int requested_threads = Parameters::Get<Parameters::ThreadsPerProcess>();
             int threads = requested_threads > 0 ? requested_threads : default_threads;
 
@@ -302,7 +303,7 @@ namespace Opm {
                 if (result.ec == std::errc() && omp_num_threads > 0) {
                     // Set threads to omp_num_threads if it was successfully parsed and is positive
                     threads = omp_num_threads;
-                    if (requested_threads > 0) {
+                    if (isSet) {
                         OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
                     }
                 } else {
@@ -311,7 +312,8 @@ namespace Opm {
             }
 
             // Requesting -1 thread will let OMP automatically deduce the number
-            if (requested_threads != -1) {
+            // but setting OMP_NUM_THREADS takes precedence.
+            if (env_var || !(isSet && requested_threads == -1)) {
                 omp_set_num_threads(threads);
             }
 #endif
