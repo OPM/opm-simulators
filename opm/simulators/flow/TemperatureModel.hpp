@@ -139,6 +139,8 @@ public:
         const unsigned int numCells = simulator_.model().numTotalDof();
         for (unsigned globI = 0; globI < numCells; ++globI) {
             intQuants_[globI] = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+            intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
+            intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
         updateStorageCache();
     }
@@ -316,7 +318,7 @@ protected:
                                                                  inAlpha,
                                                                  outAlpha,
                                                                  res_nbinfo.faceArea);
-        heatFlux *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+        heatFlux *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>()*res_nbinfo.faceArea;
     }
 
     void assembleEquations() {
@@ -398,18 +400,6 @@ protected:
                     continue;
 
                 Evaluation rate = well.volumetricSurfaceRateForConnection(globI, phaseIdx);
-                const Evaluation d =  1.0 - fs.Rv() * fs.Rs();
-                if (phaseIdx == gasPhaseIdx && d > 0) {
-                    const auto& oilrate = well.volumetricSurfaceRateForConnection(globI, oilPhaseIdx);
-                    rate -= oilrate * getValue(fs.Rs());
-                    rate /= d;
-                }
-                if (phaseIdx == oilPhaseIdx && d > 0) {
-                    const auto& gasrate = well.volumetricSurfaceRateForConnection(globI, gasPhaseIdx);
-                    rate -= gasrate * getValue(fs.Rv());
-                    rate /= d;
-                }
-
                 if (rate > 0 && eclWell.isInjector()) {
                     fs.setTemperature(eclWell.inj_temperature());
                     const auto& rho = FluidSystem::density(fs, phaseIdx, fs.pvtRegionIndex());
@@ -418,6 +408,17 @@ protected:
                     fs.setEnthalpy(phaseIdx, h);
                     rate *= getValue(fs.enthalpy(phaseIdx)) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 } else {
+                    const Evaluation d =  1.0 - fs.Rv() * fs.Rs();
+                    if (phaseIdx == gasPhaseIdx && d > 0) {
+                        const auto& oilrate = well.volumetricSurfaceRateForConnection(globI, oilPhaseIdx);
+                        rate -= oilrate * getValue(fs.Rs());
+                        rate /= d;
+                    }
+                    if (phaseIdx == oilPhaseIdx && d > 0) {
+                        const auto& gasrate = well.volumetricSurfaceRateForConnection(globI, gasPhaseIdx);
+                        rate -= gasrate * getValue(fs.Rv());
+                        rate /= d;
+                    }
                     rate *= fs.enthalpy(phaseIdx) * getValue(fs.density(phaseIdx)) / getValue(fs.invB(phaseIdx));
                 }
                 rate *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
