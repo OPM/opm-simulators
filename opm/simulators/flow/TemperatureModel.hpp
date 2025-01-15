@@ -157,6 +157,8 @@ public:
         const unsigned int numCells = simulator_.model().numTotalDof();
         for (unsigned globI = 0; globI < numCells; ++globI) {
             intQuants_[globI] = simulator_.model().intensiveQuantities(globI, /*timeIdx*/ 0);
+            intQuants_[globI].updateTemperature_(simulator_.problem(), globI, /*timeIdx*/ 0);
+            intQuants_[globI].updateEnergyQuantities_(simulator_.problem(), globI, /*timeIdx*/ 0);
         }
         advanceTemperatureFields();
     }

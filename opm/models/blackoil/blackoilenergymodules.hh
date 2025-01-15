@@ -477,19 +477,11 @@ public:
         }
     }
 
-    void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
-                            [[maybe_unused]] unsigned dofIdx,
-                            [[maybe_unused]] unsigned timeIdx)
+    void updateTemperature_(const ElementContext& elemCtx,
+                            unsigned dofIdx,
+                            unsigned timeIdx)
     {
-        auto& fs = asImp_().fluidState_;
-        const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
-        // if TEMP is used we solve for temperature seperatly
-        if constexpr (enableTemperature) {
-            const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
-            fs.setTemperature(TE);
-        } else {
-            fs.setTemperature(T);
-        }
+        updateTemperature_(elemCtx.problem(), elemCtx.globalSpaceIndex(dofIdx, timeIdx), timeIdx);
     }
 
     template<class Problem>
@@ -500,7 +492,7 @@ public:
                             [[maybe_unused]] const LinearizationType& lintype
         )
     {
-        updateTemperature_(problem,globalDofIdx, timeIdx);
+        updateTemperature_(problem, globalDofIdx, timeIdx);
     }
 
     void updateEnergyQuantities_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
