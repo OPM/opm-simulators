@@ -163,7 +163,7 @@ public:
                 (simulator, this->eclIO_->finalSummaryConfig(), this->collectOnIORank_);
         }
         
-        wanted_vars_set_ = Opm::DamarisOutput::getSetOfIncludedVariables<TypeTag>();
+        wanted_vars_set_ = DamarisOutput::getSetOfIncludedVariables();
     }
 
     /*!
