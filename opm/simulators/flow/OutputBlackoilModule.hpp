@@ -65,15 +65,7 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Parameters {
-
-struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
-struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
-namespace Opm
-{
+namespace Opm {
 
 // forward declaration
 template <class TypeTag>
@@ -146,12 +138,6 @@ public:
 
         this->setupBlockData(isCartIdxOnThisRank);
 
-        this->forceDisableFipOutput_ =
-            Parameters::Get<Parameters::ForceDisableFluidInPlaceOutput>();
-
-        this->forceDisableFipresvOutput_ =
-            Parameters::Get<Parameters::ForceDisableResvFluidInPlaceOutput>();
-
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectToIORank.isIORank()) {
@@ -174,19 +160,6 @@ public:
                          (const std::string& rsetName) -> decltype(auto)
                          { return fp.get().get_int(rsetName); });
         }
-    }
-
-    /*!
-     * \brief Register all run-time parameters for the Vtk output module.
-     */
-    static void registerParameters()
-    {
-        Parameters::Register<Parameters::ForceDisableFluidInPlaceOutput>
-            ("Do not print fluid-in-place values after each report step "
-             "even if requested by the deck.");
-        Parameters::Register<Parameters::ForceDisableResvFluidInPlaceOutput>
-            ("Do not print reservoir volumes values after each report step "
-             "even if requested by the deck.");
     }
 
     /*!
