@@ -178,13 +178,11 @@ namespace Opm {
                         + ScheduleEvents::NEW_WELL;
         const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
         for (auto& wellPtr : this->well_container_) {
-            const bool well_opened_this_step = this->report_step_starts_ && events.hasEvent(wellPtr->name(), effective_events_mask);
-            if (well_opened_this_step && this->wellState().well(wellPtr->name()).status == Well::Status::OPEN) {
-                this->well_open_times_.insert_or_assign(wellPtr->name(), this->simulator_.time());
-                this->well_close_times_.erase(wellPtr->name());
-            }
-
-            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_, this->B_avg_, well_opened_this_step);
+            const bool well_opened_this_step = this->report_step_starts_ &&
+                                               events.hasEvent(wellPtr->name(),
+                                                               effective_events_mask);
+            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
+                          this->B_avg_, well_opened_this_step);
         }
     }
 
@@ -790,8 +788,40 @@ namespace Opm {
         if (nw > 0) {
             well_container_.reserve(nw);
 
+            const auto& wg_events = this->schedule()[report_step].wellgroup_events();
+
+            // First loop and check for status changes. This is necessary
+            // as wcycle needs the updated open/close times.
+            std::for_each(this->wells_ecl_.begin(), this->wells_ecl_.end(),
+                          [this, &wg_events](const auto& well_ecl)
+                          {
+                              if (!well_ecl.hasConnections()) {
+                                  // No connections in this well.  Nothing to do.
+                                  return;
+                              }
+
+                              constexpr auto events_mask = ScheduleEvents::WELL_STATUS_CHANGE |
+                                                           ScheduleEvents::REQUEST_OPEN_WELL;
+                              const bool well_status_change =
+                                  this->report_step_starts_ &&
+                                  wg_events.hasEvent(well_ecl.name(), events_mask);
+                              if (well_status_change) {
+                                  if (well_ecl.getStatus() == WellStatus::OPEN) {
+                                      this->well_open_times_.insert_or_assign(well_ecl.name(),
+                                                                              this->simulator_.time());
+                                      this->well_close_times_.erase(well_ecl.name());
+                                  } else if (well_ecl.getStatus() == WellStatus::SHUT) {
+                                      this->well_close_times_.insert_or_assign(well_ecl.name(),
+                                                                               this->simulator_.time());
+                                      this->well_open_times_.erase(well_ecl.name());
+                                  }
+                              }
+                          });
+
             const auto& wmatcher = this->schedule().wellMatcher(report_step);
             const auto& wcycle = this->schedule()[report_step].wcycle.get();
+
+            // Grab wcycle states. This needs to run before the schedule gets processed
             const auto cycle_states = wcycle.wellStatus(this->simulator_.time(),
                                                          wmatcher,
                                                          this->well_open_times_,
@@ -915,9 +945,8 @@ namespace Opm {
             }
 
             if (!wcycle.empty()) {
-                auto schedule_open = [this, report_step](const std::string& name)
+                auto schedule_open = [&wg_events](const std::string& name)
                 {
-                    const auto& wg_events = this->schedule()[report_step].wellgroup_events();
                     return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
                 };
                 for (const auto& [wname, wscale] : wcycle.efficiencyScale(this->simulator_.time(),
