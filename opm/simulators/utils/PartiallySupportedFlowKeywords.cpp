@@ -28,10 +28,10 @@ namespace Opm::FlowKeywordValidation
 {
 
 template <>
-const SupportedKeywords<std::string>&
+const SupportedKeywordItems<std::string>&
 partiallySupported()
 {
-   static const SupportedKeywords<std::string> partially_supported_keywords_strings = {
+   static const SupportedKeywordItems<std::string> partially_supported_keywords_strings = {
          {
             "BRANPROP",
             {
@@ -344,10 +344,10 @@ partiallySupported()
 }
 
 template <>
-const KeywordValidation::SupportedKeywords<int>&
+const KeywordValidation::SupportedKeywordItems<int>&
 partiallySupported()
 {
-   static const KeywordValidation::SupportedKeywords<int>partially_supported_keywords_int = {
+   static const KeywordValidation::SupportedKeywordItems<int>partially_supported_keywords_int = {
          {
             "EDITNNC",
             {
@@ -528,10 +528,10 @@ partiallySupported()
 }
 
 template <>
-const KeywordValidation::SupportedKeywords<double>&
+const KeywordValidation::SupportedKeywordItems<double>&
 partiallySupported()
 {
-   static const KeywordValidation::SupportedKeywords<double> partially_supported_keywords_double = {
+   static const KeywordValidation::SupportedKeywordItems<double> partially_supported_keywords_double = {
          {
             "AQUCON",
             {

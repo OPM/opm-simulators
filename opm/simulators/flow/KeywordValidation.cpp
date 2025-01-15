@@ -131,19 +131,23 @@ namespace Opm::KeywordValidation {
                 properties.critical, keyword.location(), 1, std::nullopt, std::nullopt, properties.message});
         } else {
             // Otherwise, check all its items.
-            validateKeywordItems(keyword, m_partially_supported_string_items, errors);
-            validateKeywordItems(keyword, m_partially_supported_int_items, errors);
-            validateKeywordItems(keyword, m_partially_supported_double_items, errors);
-            validateKeywordItems(keyword, m_fully_supported_string_items, errors);
-            validateKeywordItems(keyword, m_fully_supported_int_items, errors);
-            validateKeywordItems(keyword, m_fully_supported_double_items, errors);
+            validateKeywordItems(keyword, m_partially_supported_keywords, errors);
+            validateKeywordItems(keyword, m_fully_supported_keywords, errors);
         }
     }
 
+    void KeywordValidator::validateKeywordItems(const DeckKeyword& keyword,
+                                                const SupportedKeywords& keyword_items,
+                                                std::vector<ValidationError>& errors) const
+    {
+        validateKeywordItems(keyword, keyword_items.string_items, errors);
+        validateKeywordItems(keyword, keyword_items.int_items, errors);
+        validateKeywordItems(keyword, keyword_items.double_items, errors);
+    }
 
     template <typename T>
     void KeywordValidator::validateKeywordItems(const DeckKeyword& keyword,
-                                                const SupportedKeywords<T>& partially_or_fully_supported_items,
+                                                const SupportedKeywordItems<T>& partially_or_fully_supported_items,
                                                 std::vector<ValidationError>& errors) const
     {
         const auto& keyword_properties = partially_or_fully_supported_items.find(keyword.name());

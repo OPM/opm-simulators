@@ -63,11 +63,11 @@ namespace KeywordValidation
 
     // This is used to list the partially supported items of a keyword:
     template <typename T>
-    using SupportedKeywordItems = std::map<std::size_t, SupportedKeywordProperties<T>>;
+    using SupportedSingleKeywordItems = std::map<std::size_t, SupportedKeywordProperties<T>>;
 
     // This is used to list the keywords that have partially supported items or items that benefit from early validation:
     template <typename T>
-    using SupportedKeywords = std::map<std::string, SupportedKeywordItems<T>>;
+    using SupportedKeywordItems = std::map<std::string, SupportedSingleKeywordItems<T>>;
 
     // This contains the information needed to report a single error occurence.
     // The validator will construct a vector of these, copying the relevant
@@ -89,24 +89,22 @@ namespace KeywordValidation
                                  const bool include_noncritical,
                                  const bool include_critical);
 
+struct SupportedKeywords {
+    const SupportedKeywordItems<std::string> string_items;
+    const SupportedKeywordItems<int> int_items;
+    const SupportedKeywordItems<double> double_items;
+};
+
     class KeywordValidator
     {
     public:
         KeywordValidator(const UnsupportedKeywords& unsupported_keywords,
-                         const SupportedKeywords<std::string>& partially_supported_string_items,
-                         const SupportedKeywords<int>& partially_supported_int_items,
-                         const SupportedKeywords<double>& partially_supported_double_items,
-                         const SupportedKeywords<std::string>& fully_supported_string_items,
-                         const SupportedKeywords<int>& fully_supported_int_items,
-                         const SupportedKeywords<double>& fully_supported_double_items,
+                         const SupportedKeywords& partially_supported_keywords,
+                         const SupportedKeywords& fully_supported_keywords,
                          const std::unordered_map<std::string, ValidationFunction>& special_validation)
             : m_unsupported_keywords(unsupported_keywords)
-            , m_partially_supported_string_items(partially_supported_string_items)
-            , m_partially_supported_int_items(partially_supported_int_items)
-            , m_partially_supported_double_items(partially_supported_double_items)
-            , m_fully_supported_string_items(fully_supported_string_items)
-            , m_fully_supported_int_items(fully_supported_int_items)
-            , m_fully_supported_double_items(fully_supported_double_items)
+            , m_partially_supported_keywords(partially_supported_keywords)
+            , m_fully_supported_keywords(fully_supported_keywords)
             , m_special_validation(special_validation)
         {
         }
@@ -135,19 +133,18 @@ namespace KeywordValidation
                                  const T& item_value,
                                  std::vector<ValidationError>& errors) const;
 
+        void validateKeywordItems(const DeckKeyword& keyword,
+                                  const SupportedKeywords& keyword_items,
+                                  std::vector<ValidationError>& errors) const;
 
         template <typename T>
         void validateKeywordItems(const DeckKeyword& keyword,
-                                  const SupportedKeywords<T>& supported_options,
+                                  const SupportedKeywordItems<T>& supported_options,
                                   std::vector<ValidationError>& errors) const;
 
         const UnsupportedKeywords m_unsupported_keywords;
-        const SupportedKeywords<std::string> m_partially_supported_string_items;
-        const SupportedKeywords<int> m_partially_supported_int_items;
-        const SupportedKeywords<double> m_partially_supported_double_items;
-        const SupportedKeywords<std::string> m_fully_supported_string_items;
-        const SupportedKeywords<int> m_fully_supported_int_items;
-        const SupportedKeywords<double> m_fully_supported_double_items;
+        const SupportedKeywords m_partially_supported_keywords;
+        const SupportedKeywords m_fully_supported_keywords;
         const std::unordered_map<std::string, ValidationFunction> m_special_validation;
     };
 

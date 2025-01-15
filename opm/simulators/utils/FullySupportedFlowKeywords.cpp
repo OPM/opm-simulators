@@ -28,10 +28,10 @@ namespace Opm::FlowKeywordValidation
 {
 
 template <>
-const SupportedKeywords<std::string>&
+const SupportedKeywordItems<std::string>&
 fullySupported()
 {
-   static const SupportedKeywords<std::string> fully_supported_keywords_strings = {
+   static const SupportedKeywordItems<std::string> fully_supported_keywords_strings = {
          {
             "NEXTSTEP",
             {
@@ -52,20 +52,20 @@ fullySupported()
 
 
 template <>
-const SupportedKeywords<int>&
+const SupportedKeywordItems<int>&
 fullySupported()
 {
-   static const SupportedKeywords<int> fully_supported_keywords_int = {
+   static const SupportedKeywordItems<int> fully_supported_keywords_int = {
    };
 
    return fully_supported_keywords_int;
 }
 
 template <>
-const SupportedKeywords<double>&
+const SupportedKeywordItems<double>&
 fullySupported()
 {
-   static const SupportedKeywords<double> fully_supported_keywords_double = {
+   static const SupportedKeywordItems<double> fully_supported_keywords_double = {
          {
             "WPIMULT",
             {

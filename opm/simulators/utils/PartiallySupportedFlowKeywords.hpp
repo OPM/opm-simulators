@@ -47,7 +47,7 @@ namespace Opm::FlowKeywordValidation
 {
 
 template <typename T>
-const KeywordValidation::SupportedKeywords<T>& partiallySupported();
+const KeywordValidation::SupportedKeywordItems<T>& partiallySupported();
 
 } // namespace Opm::FlowKeywordValidation
 
