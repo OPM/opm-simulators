@@ -125,7 +125,13 @@ struct MinTimeStepSize { static constexpr Scalar value = 0.0; };
 struct OutputDir { static constexpr auto value = ""; };
 
 //! \brief Number of threads per process.
-struct ThreadsPerProcess { static constexpr int value = 1; };
+struct ThreadsPerProcess {
+#if _OPENMP
+  static constexpr int value = 2;
+#else
+  static constexpr int value = 1;
+#endif // _OPENMP
+};
 
 } // namespace Opm::Parameters
 

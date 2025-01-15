@@ -261,9 +261,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
 
     Parameters::Hide<Parameters::DebugEmitCellPartition>();
 
-    // if openMP is available, determine the number threads per process automatically.
+    // if openMP is available, use two threads per mpi rank by default
 #if _OPENMP
-    Parameters::SetDefault<Parameters::ThreadsPerProcess>(-1);
+    Parameters::SetDefault<Parameters::ThreadsPerProcess>(2);
 #endif
 }
 

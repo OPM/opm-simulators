@@ -310,10 +310,10 @@ namespace Opm {
                 }
             }
 
-            // We are not limiting this to the number of processes
-            // reported by OpenMP as on some hardware (and some OpenMPI
-            // versions) this will be 1 when run with mpirun
-            omp_set_num_threads(threads);
+            // Requesting -1 thread will let OMP automatically deduce the number
+            if (requested_threads != -1) {
+                omp_set_num_threads(threads);
+            }
 #endif
 
             using TM = GetPropType<TypeTag, Properties::ThreadManager>;
