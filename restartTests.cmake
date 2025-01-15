@@ -83,6 +83,15 @@ add_test_compare_restarted_simulation(CASENAME network_01_restart
                                       DIR network
                                       TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
 
+add_test_compare_restarted_simulation(CASENAME network_01_standard_restart
+                                      FILENAME NETWORK-01_STANDARD
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 4
+                                      DIR network
+                                      TEST_ARGS --solver-max-time-step-in-days=2.0)
+
 add_test_compare_restarted_simulation(CASENAME network_01_reroute_restart
                                       FILENAME NETWORK-01-REROUTE-RESTART
                                       SIMULATOR flow
