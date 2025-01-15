@@ -47,8 +47,7 @@
     and defaults are set in opm/simulators/flow/FlowProblemProperties.hpp
 */
 
-namespace Opm::DamarisOutput
-{
+namespace Opm::DamarisOutput {
 
 bool FileExists(const std::string& filename_in,
                 const Parallel::Communication& comm)
@@ -256,6 +255,52 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
     };
                             
     return damaris_keywords;
+}
+
+std::map<std::string, std::string>
+getDamarisKeywords(const Parallel::Communication& comm, const std::string& OutputDir)
+{
+    DamarisSettings settings;
+    // Get all of the Damaris keywords (except for --enable-damaris,
+    // which is used in simulators/flow/Main.hpp)
+    // These command line arguments are defined in opm/simulators/flow/DamarisWriter.hpp and
+    // defaults are set in opm/simulators/flow/FlowProblemProperties.hpp
+    settings.enableDamarisOutputCollective_ = Parameters::Get<Parameters::DamarisOutputHdfCollective>();
+    settings.saveMeshToHDF5_ = Parameters::Get<Parameters::DamarisSaveMeshToHdf>();
+    settings.saveToDamarisHDF5_ = Parameters::Get<Parameters::DamarisSaveToHdf>();
+    settings.pythonFilename_ = Parameters::Get<Parameters::DamarisPythonScript>();
+    settings.paraviewPythonFilename_ = Parameters::Get<Parameters::DamarisPythonParaviewScript>();
+    settings.damarisSimName_ = Parameters::Get<Parameters::DamarisSimName>();
+    settings.nDamarisCores_ = Parameters::Get<Parameters::DamarisDedicatedCores>();
+    settings.nDamarisNodes_ = Parameters::Get<Parameters::DamarisDedicatedNodes>();
+    settings.shmemSizeBytes_ = Parameters::Get<Parameters::DamarisSharedMemorySizeBytes>();
+    settings.shmemName_ = Parameters::Get<Parameters::DamarisSharedMemoryName>();
+    settings.damarisLogLevel_ = Parameters::Get<Parameters::DamarisLogLevel>();
+    settings.damarisDaskFile_ = Parameters::Get<Parameters::DamarisDaskFile>();
+
+    return settings.getKeywords(comm, OutputDir);
+}
+
+std::unordered_set<std::string>
+getSetOfIncludedVariables()
+{
+    std::unordered_set<std::string> resuset ;
+    std::string tstr;
+    // The --damaris-limit-variables command line option (defaults to empty string)
+    std::string damarisLimitVars = Parameters::Get<Parameters::DamarisLimitVariables>();
+    std::stringstream ss(damarisLimitVars);
+
+    // Use while loop to check the getline() function condition.
+    while (std::getline(ss, tstr, ',')) {
+        //remove whitespace
+        std::string::iterator end_pos = std::remove(tstr.begin(), tstr.end(), ' ');
+        tstr.erase(end_pos, tstr.end());
+        // place in set (no duplicates possible in set and no empty string)
+        if (tstr != "") {
+            resuset.insert(tstr) ;
+        }
+    }
+    return resuset;
 }
 
 } // namespace Opm::DamarisOutput
