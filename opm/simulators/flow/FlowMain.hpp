@@ -156,6 +156,9 @@ namespace Opm {
                 }
             }
 
+            // set the maximum limit on OMP threads
+            setMaxThreads();
+
             return status;
         }
 
@@ -278,6 +281,11 @@ namespace Opm {
             mpi_rank_ = comm.rank();
             mpi_size_ = comm.size();
 
+            setMaxThreads();
+        }
+
+        static void setMaxThreads()
+        {
 #if _OPENMP
             // If openMP is available, default to 2 threads per process unless
             // OMP_NUM_THREADS is set or command line --threads-per-process used.
@@ -294,10 +302,9 @@ namespace Opm {
                 if (result.ec == std::errc() && omp_num_threads > 0) {
                     // Set threads to omp_num_threads if it was successfully parsed and is positive
                     threads = omp_num_threads;
-                    // Warning in 'Main.hpp', where this code is duplicated
-                    // if (requested_threads > 0) {
-                    //     OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
-                    // }
+                    if (requested_threads > 0) {
+                        OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
+                    }
                 } else {
                     OpmLog::warning("Invalid value for OMP_NUM_THREADS environment variable.");
                 }
