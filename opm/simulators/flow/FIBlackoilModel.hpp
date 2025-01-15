@@ -105,12 +105,7 @@ public:
     {
 
         using DynamicFluidSystem = std::remove_reference_t<decltype(LocalFluidSystem::getNonStatic())>;
-        // static constexpr bool use_dynamic_fluidsystem = is_a_dynamic_blackoil_system<DynamicFluidSystem>;
-
         DynamicFluidSystem* fluidSystemInstance = &LocalFluidSystem::getNonStatic();
-        // if constexpr (use_dynamic_fluidsystem) {
-        //     fluidSystemInstance = &LocalFluidSystem::getNonStatic();
-        // }
 
         this->invalidateIntensiveQuantitiesCache(timeIdx);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
