@@ -39,6 +39,7 @@
 
 #include <opm/material/thermal/EclThermalLawManager.hpp>
 
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 
 #include <algorithm>
 #include <functional>
@@ -103,7 +104,13 @@ public:
         // tighter tolerance is needed for compositional modeling here
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-7);
     }
-
+    
+    Opm::CompositionalConfig::EOSType getEosType() const
+    {
+        auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
+        return eclState.compositionalConfig().eosType(0);
+    }
 
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
@@ -344,7 +351,8 @@ public:
             }
 
             {
-                typename FluidSystem::template ParameterCache<Scalar> paramCache;
+		const auto& eos_type = getEosType();
+                typename FluidSystem::template ParameterCache<Scalar> paramCache(eos_type);
                 paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
                 paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
                 fs.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fs, paramCache, FluidSystem::oilPhaseIdx));
