@@ -28,7 +28,6 @@
 #ifndef OPM_FLOW_GENERIC_PROBLEM_HPP
 #define OPM_FLOW_GENERIC_PROBLEM_HPP
 
-
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
@@ -37,7 +36,6 @@
 #include <array>
 #include <cstddef>
 #include <functional>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -354,6 +352,9 @@ protected:
     
     // equilibration parameters
     int numPressurePointsEquil_;
+
+    bool enableDriftCompensation_;
+    bool explicitRockCompaction_;
 
     // To lookup origin cell indices
     using Grid = std::remove_cv_t< typename std::remove_reference<decltype(gridView_.grid())>::type>;

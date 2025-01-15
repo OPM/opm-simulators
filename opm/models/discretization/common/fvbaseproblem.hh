@@ -806,10 +806,10 @@ public:
 protected:
     Scalar nextTimeStepSize_;
 
-private:
     bool enableVtkOutput_() const
     { return Parameters::Get<Parameters::EnableVtkOutput>(); }
 
+private:
     //! Returns the implementation of the problem (i.e. static polymorphism)
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }

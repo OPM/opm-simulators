@@ -184,7 +184,6 @@ public:
         registerFlowProblemParameters<Scalar>();
     }
 
-
     /*!
      * \copydoc FvBaseProblem::handlePositionalParameter
      */
@@ -225,27 +224,6 @@ public:
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
     {
-        this->enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
-        this->enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
-        this->enableTuning_ = Parameters::Get<Parameters::EnableTuning>();
-
-        this->initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
-        this->maxTimeStepAfterWellEvent_ = unit::convert::from
-            (Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>(), unit::day);
-
-        // The value N for this parameter is defined in the following order of precedence:
-        //
-        // 1. Command line value (--num-pressure-points-equil=N)
-        //
-        // 2. EQLDIMS item 2.  Default value from
-        //    opm-common/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
-
-        this->numPressurePointsEquil_ = Parameters::IsSet<Parameters::NumPressurePointsEquil>()
-            ? Parameters::Get<Parameters::NumPressurePointsEquil>()
-            : simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
-
-        this->explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
-
         if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
             // User did not enable the "new" saturation function consistency
             // check module.  Run the original checker instead.  This is a
@@ -1682,14 +1660,10 @@ protected:
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;
 
-    bool enableDriftCompensation_;
     GlobalEqVector drift_;
 
     WellModel wellModel_;
     AquiferModel aquiferModel_;
-
-    bool enableVtkOutput_;
-
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
@@ -1729,7 +1703,6 @@ protected:
 
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
-    bool explicitRockCompaction_ = false;
     bool first_step_ = true;
 
 };

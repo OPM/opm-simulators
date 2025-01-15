@@ -228,7 +228,7 @@ public:
         } */
 
         // TODO: check wether the following can work with compostional
-        if (enableVtkOutput_ && eclState.getIOConfig().initOnly()) {
+        if (this->enableVtkOutput_() && eclState.getIOConfig().initOnly()) {
             simulator.setTimeStepSize(0.0);
             FlowProblemType::writeOutput(true);
         }
@@ -597,8 +597,6 @@ private:
 
     bool enableEclOutput_{false};
     std::unique_ptr<EclWriterType> eclWriter_;
-
-    bool enableVtkOutput_{false};
 };
 
 } // namespace Opm

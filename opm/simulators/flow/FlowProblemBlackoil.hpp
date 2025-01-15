@@ -390,7 +390,7 @@ public:
             this->drift_ = 0.0;
         }
 
-        if (this->enableVtkOutput_ && eclState.getIOConfig().initOnly()) {
+        if (this->enableVtkOutput_() && eclState.getIOConfig().initOnly()) {
             simulator.setTimeStepSize(0.0);
             FlowProblemType::writeOutput(true);
         }
