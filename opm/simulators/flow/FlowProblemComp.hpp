@@ -351,7 +351,7 @@ public:
             }
 
             {
-		const auto& eos_type = getEosType();
+		        const auto& eos_type = getEosType();
                 typename FluidSystem::template ParameterCache<Scalar> paramCache(eos_type);
                 paramCache.updatePhase(fs, FluidSystem::oilPhaseIdx);
                 paramCache.updatePhase(fs, FluidSystem::gasPhaseIdx);
