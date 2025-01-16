@@ -178,7 +178,8 @@ public:
             const int spatialIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
             std::cout << " updating the intensive quantities for Cell " << spatialIdx << std::endl;
         }
-        FlashSolver::solve(fluidState_, flashTwoPhaseMethod, flashTolerance, flashVerbosity);
+        const auto& eos_type = problem.getEosType();
+        FlashSolver::solve(fluidState_, flashTwoPhaseMethod, flashTolerance, eos_type, flashVerbosity);
 
         if (flashVerbosity >= 5) {
             // printing of flash result after solve
@@ -203,7 +204,7 @@ public:
 
 
         // Update phases
-        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+        typename FluidSystem::template ParameterCache<Evaluation> paramCache(eos_type);
         paramCache.updatePhase(fluidState_, FluidSystem::oilPhaseIdx);
 
         const Scalar R = Opm::Constants<Scalar>::R;
