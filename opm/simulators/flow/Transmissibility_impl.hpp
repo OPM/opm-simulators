@@ -251,6 +251,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
     ThreadedMap transBoundary(transBoundary_, 1);
     ThreadedMap transMap(trans_, 1);
+    ThreadedMap thermalHalfTransBoundary(thermalHalfTransBoundary_, 1);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : Dune::elements(gridView_)) {
@@ -291,7 +292,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                             distanceVector_(faceCenterInside,
                                                             elemIdx),
                                             1.0);
-                    thermalHalfTransBoundary_.emplace(std::make_pair(elemIdx, boundaryIsIdx),
+                    thermalHalfTransBoundary.emplace(std::make_pair(elemIdx, boundaryIsIdx),
                                                       transBoundaryEnergyIs);
                 }
 
@@ -545,6 +546,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
     transBoundary.finalize();
     transMap.finalize();
+    thermalHalfTransBoundary.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
