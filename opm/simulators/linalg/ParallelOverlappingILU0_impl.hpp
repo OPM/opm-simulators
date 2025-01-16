@@ -41,6 +41,7 @@ template<class M>
 void ghost_last_bilu0_decomposition (M& A, std::size_t interiorSize)
 {
     // iterator types
+    assert(interiorSize <= A.N());
     using rowiterator = typename M::RowIterator;
     using coliterator = typename M::ColIterator;
     using block = typename M::block_type;
@@ -311,6 +312,7 @@ ParallelOverlappingILU0(const Matrix& A,
 {
     // BlockMatrix is a Subclass of FieldMatrix that just adds
     // methods. Therefore this cast should be safe.
+    assert(interiorSize <= A_->N());
     update( );
 }
 
@@ -443,6 +445,7 @@ update()
 
             if (comm_) {
                 interiorSize_ = detail::set_interiorSize(A_->N(), interiorSize_, *comm_);
+                assert(interiorSize_ <= A_->N());
             }
 
             // create ILU-0 decomposition
