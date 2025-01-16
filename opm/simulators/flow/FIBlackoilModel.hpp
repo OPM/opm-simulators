@@ -33,6 +33,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/grid/utility/createThreadIterators.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <cstddef>
@@ -73,29 +75,16 @@ public:
     {
         if constexpr (gridIsUnchanging) {
             const auto& gv = this->gridView_;
+            int nt = 1;
 #ifdef _OPENMP
-            const int nt = omp_get_max_threads();
+            nt = omp_get_max_threads();
+#endif
+            constexpr int max_chunk_size = 1000;
+            int chunk_size = -1;
+            grid_chunk_iterators_ = createThreadIterators(gv, nt, max_chunk_size, chunk_size);
             if (nt > 1) {
-                const auto num_elements = gv.size(0);
-                constexpr int max_chunk_size = 1000;
-                const int chunk_size = std::clamp(num_elements / nt, 1, max_chunk_size);
                 OpmLog::debug("Using chunk size " + std::to_string(chunk_size) +
                               " for property evaluation with " + std::to_string(nt) + " OpenMP threads.");
-                grid_chunk_iterators_.reserve(num_elements / chunk_size + 2);
-                auto it = gv.template begin<0>();
-                const auto end = gv.template end<0>();
-                for (int count = 0; it != end; ++it, ++count) {
-                    if (count % chunk_size == 0) {
-                        grid_chunk_iterators_.push_back(it);
-                    }
-                }
-                grid_chunk_iterators_.push_back(end);
-            } else
-#endif
-            {
-                // With one thread, or without OpenMP, we use a single chunk.
-                grid_chunk_iterators_.push_back(gv.template begin<0>());
-                grid_chunk_iterators_.push_back(gv.template end<0>());
             }
         }
     }
