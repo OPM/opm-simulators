@@ -167,7 +167,8 @@ protected:
                         const Schedule&                          schedule,
                         EclipseState&                            eclState,
                         FlowGenericVanguard::ParallelWellStruct& parallelWells,
-                        const int                                numJacobiBlocks);
+                        const int                                numJacobiBlocks,
+                        const bool                               enableEclOutput);
 
     void distributeFieldProps_(EclipseState& eclState);
 

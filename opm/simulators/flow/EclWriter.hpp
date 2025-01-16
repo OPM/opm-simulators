@@ -65,9 +65,6 @@
 
 namespace Opm::Parameters {
 
-// enable the ECL output by default
-struct EnableEclOutput { static constexpr bool value = true; };
-
 // If available, write the ECL output in a non-blocking manner
 struct EnableAsyncEclOutput { static constexpr bool value = true; };
 

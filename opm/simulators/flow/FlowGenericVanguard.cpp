@@ -126,6 +126,7 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
         externalPartitionFile_ = Parameters::Get<Parameters::ExternalPartition>();
 #endif
         enableDistributedWells_ = Parameters::Get<Parameters::AllowDistributedWells>();
+        enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
         allow_splitting_inactive_wells_ = Parameters::Get<Parameters::AllowSplittingInactiveWells>();
         ignoredKeywords_ = Parameters::Get<Parameters::IgnoreKeywords>();
         int output_param = Parameters::Get<Parameters::EclOutputInterval>();
@@ -416,6 +417,8 @@ void FlowGenericVanguard::registerParameters_()
         ("The number of report steps that ought to be skipped between two writes of ECL results");
     Parameters::Register<Parameters::EnableDryRun>
         ("Specify if the simulation ought to be actually run, or just pretended to be");
+    Parameters::Register<Parameters::EnableEclOutput>
+        ("Write binary output which is compatible with the commercial Eclipse simulator");
     Parameters::Register<Parameters::EnableOpmRstFile>
         ("Include OPM-specific keywords in the ECL restart file to "
          "enable restart of OPM simulators from these files");
