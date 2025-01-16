@@ -290,6 +290,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                   MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder thermalHalfTransBoundary(thermalHalfTransBoundary_, 1,
                                                   MapBuilderInsertionMode::Insert_Or_Assign);
+    ThreadSafeMapBuilder thermalHalfTrans(thermalHalfTrans_, 1,
+                                          MapBuilderInsertionMode::Insert_Or_Assign);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
@@ -404,8 +406,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 assert(outside.faceIdx == -1);
                 transMap.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
                 if (enableEnergy_ && !onlyTrans) {
-                    thermalHalfTrans_.insert_or_assign(details::directionalIsId(inside.elemIdx, outside.elemIdx), 0.0);
-                    thermalHalfTrans_.insert_or_assign(details::directionalIsId(outside.elemIdx, inside.elemIdx), 0.0);
+                    thermalHalfTrans.insert_or_assign(details::directionalIsId(inside.elemIdx, outside.elemIdx), 0.0);
+                    thermalHalfTrans.insert_or_assign(details::directionalIsId(outside.elemIdx, inside.elemIdx), 0.0);
                 }
 
                 if (updateDiffusivity && !onlyTrans) {
@@ -469,10 +471,10 @@ update(bool global, const TransUpdateQuantities update_quantities,
             if (enableEnergy_ && !onlyTrans) {
                 const auto half = computeHalf(halfDiff, 1.0, 1.0);
                 // TODO Add support for multipliers
-                thermalHalfTrans_.insert_or_assign(details::directionalIsId(inside.elemIdx, outside.elemIdx),
-                                                   half[0]);
-                thermalHalfTrans_.insert_or_assign(details::directionalIsId(outside.elemIdx, inside.elemIdx),
-                                                   half[1]);
+                thermalHalfTrans.insert_or_assign(details::directionalIsId(inside.elemIdx, outside.elemIdx),
+                                                  half[0]);
+                thermalHalfTrans.insert_or_assign(details::directionalIsId(outside.elemIdx, inside.elemIdx),
+                                                  half[1]);
             }
 
             // update the "diffusive half transmissibility" for the intersection
@@ -493,6 +495,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     transBoundary.finalize();
     transMap.finalize();
     thermalHalfTransBoundary.finalize();
+    thermalHalfTrans.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
