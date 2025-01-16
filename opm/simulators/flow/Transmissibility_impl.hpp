@@ -35,12 +35,15 @@
 #include <opm/common/utility/ThreadedMap.hpp>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/utility/createThreadIterators.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
+
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <algorithm>
 #include <array>
@@ -189,19 +192,25 @@ update(bool global, const TransUpdateQuantities update_quantities,
         extractPermeability_();
     }
 
+    const int num_threads = ThreadManager::maxThreads();
+
     // reserving some space in the hashmap upfront saves quite a bit of time because
     // resizes are costly for hashmaps and there would be quite a few of them if we
     // would not have a rough idea of how large the final map will be (the rough idea
     // is a conforming Cartesian grid).
     trans_.clear();
-    trans_.reserve(numElements*3*1.05);
+    if (num_threads == 1) {
+        trans_.reserve(numElements*3*1.05);
+    }
 
     transBoundary_.clear();
 
     // if energy is enabled, let's do the same for the "thermal half transmissibilities"
     if (enableEnergy_ && !onlyTrans) {
         thermalHalfTrans_.clear();
-        thermalHalfTrans_.reserve(numElements*6*1.05);
+        if (num_threads == 1) {
+            thermalHalfTrans_.reserve(numElements*6*1.05);
+        }
 
         thermalHalfTransBoundary_.clear();
     }
@@ -209,14 +218,18 @@ update(bool global, const TransUpdateQuantities update_quantities,
     // if diffusion is enabled, let's do the same for the "diffusivity"
     if (updateDiffusivity && !onlyTrans) {
         diffusivity_.clear();
-        diffusivity_.reserve(numElements*3*1.05);
+        if (num_threads == 1) {
+            diffusivity_.reserve(numElements*3*1.05);
+        }
         extractPorosity_();
     }
 
     // if dispersion is enabled, let's do the same for the "dispersivity"
     if (updateDispersivity && !onlyTrans) {
         dispersivity_.clear();
-        dispersivity_.reserve(numElements*3*1.05);
+        if (num_threads == 1) {
+            dispersivity_.reserve(numElements*3*1.05);
+        }
         extractDispersion_();
     }
 
@@ -249,15 +262,27 @@ update(bool global, const TransUpdateQuantities update_quantities,
         centroids_cache_[elemIdx] = centroids_(elemIdx);
     }
 
-    ThreadedMap transBoundary(transBoundary_, 1);
-    ThreadedMap transMap(trans_, 1);
-    ThreadedMap thermalHalfTransBoundary(thermalHalfTransBoundary_, 1);
-    ThreadedMap thermalHalfTrans(thermalHalfTrans_, 1);
-    ThreadedMap diffusivity(diffusivity_, 1);
-    ThreadedMap dispersivity(dispersivity_, 1);
+    ThreadedMap transBoundary(transBoundary_, num_threads);
+    ThreadedMap transMap(trans_, num_threads);
+    ThreadedMap thermalHalfTransBoundary(thermalHalfTransBoundary_, num_threads);
+    ThreadedMap thermalHalfTrans(thermalHalfTrans_, num_threads);
+    ThreadedMap diffusivity(diffusivity_, num_threads);
+    ThreadedMap dispersivity(dispersivity_, num_threads);
+
+    [[maybe_unused]] int chunk_size;
+    const auto grid_chunk_iterators =
+        createThreadIterators(gridView_, num_threads,
+                              std::numeric_limits<int>::max(), chunk_size);
 
     // compute the transmissibilities for all intersections
-    for (const auto& elem : Dune::elements(gridView_)) {
+    const int num_chunks = grid_chunk_iterators.size() - 1;
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for (int chunk = 0; chunk < num_chunks; ++chunk) {
+    for (auto it = grid_chunk_iterators[chunk]; it != grid_chunk_iterators[chunk+1]; ++it) {
+        const auto& elem = *it;
         unsigned elemIdx = elemMapper.index(elem);
 
         unsigned boundaryIsIdx = 0;
@@ -545,14 +570,38 @@ update(bool global, const TransUpdateQuantities update_quantities,
            }
         }
     }
+    }
     centroids_cache_.clear();
 
-    transBoundary.finalize();
-    transMap.finalize();
-    thermalHalfTransBoundary.finalize();
-    thermalHalfTrans.finalize();
-    diffusivity.finalize();
-    dispersivity.finalize();
+#ifdef _OPENMP
+#pragma omp parallel sections
+#endif
+    {
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        transMap.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        transBoundary.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        thermalHalfTransBoundary.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        thermalHalfTrans.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        diffusivity.finalize();
+#ifdef _OPENMP
+#pragma omp section
+#endif
+        dispersivity.finalize();
+    }
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
