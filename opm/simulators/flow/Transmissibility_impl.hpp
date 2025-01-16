@@ -292,6 +292,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                   MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder thermalHalfTrans(thermalHalfTrans_, 1,
                                           MapBuilderInsertionMode::Insert_Or_Assign);
+    ThreadSafeMapBuilder diffusivity(diffusivity_, 1,
+                                     MapBuilderInsertionMode::Insert_Or_Assign);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
@@ -411,7 +413,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 }
 
                 if (updateDiffusivity && !onlyTrans) {
-                    diffusivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
+                    diffusivity.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
                 }
                 if (updateDispersivity && !onlyTrans) {
                     dispersivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
@@ -479,8 +481,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             // update the "diffusive half transmissibility" for the intersection
             if (updateDiffusivity && !onlyTrans) {
-                diffusivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx),
-                                              computeHalfMean(halfDiff, porosity_));
+                diffusivity.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx),
+                                             computeHalfMean(halfDiff, porosity_));
             }
 
             // update the "dispersivity half transmissibility" for the intersection
@@ -496,6 +498,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     transMap.finalize();
     thermalHalfTransBoundary.finalize();
     thermalHalfTrans.finalize();
+    diffusivity.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
