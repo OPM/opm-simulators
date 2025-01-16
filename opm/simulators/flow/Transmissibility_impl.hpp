@@ -253,6 +253,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     ThreadedMap transMap(trans_, 1);
     ThreadedMap thermalHalfTransBoundary(thermalHalfTransBoundary_, 1);
     ThreadedMap thermalHalfTrans(thermalHalfTrans_, 1);
+    ThreadedMap diffusivity(diffusivity_, 1);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : Dune::elements(gridView_)) {
@@ -342,7 +343,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 }
 
                 if (updateDiffusivity && !onlyTrans) {
-                    diffusivity_.emplace(details::isId(elemIdx, outsideElemIdx), 0.0);
+                    diffusivity.emplace(details::isId(elemIdx, outsideElemIdx), 0.0);
                 }
                 if (updateDispersivity && !onlyTrans) {
                     dispersivity_.emplace(details::isId(elemIdx, outsideElemIdx), 0.0);
@@ -498,16 +499,16 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 applyNtg_(halfDiffusivity2, outsideFaceIdx, outsideElemIdx, ntg);
 
                 //TODO Add support for multipliers
-                Scalar diffusivity;
+                Scalar diffuse;
                 if (std::abs(halfDiffusivity1) < 1e-30 || std::abs(halfDiffusivity2) < 1e-30) {
                     // avoid division by zero
-                    diffusivity = 0.0;
+                    diffuse = 0.0;
                 }
                 else {
-                    diffusivity = 1.0 / (1.0 / halfDiffusivity1 + 1.0 / halfDiffusivity2);
+                    diffuse = 1.0 / (1.0 / halfDiffusivity1 + 1.0 / halfDiffusivity2);
                 }
 
-                diffusivity_.emplace(details::isId(elemIdx, outsideElemIdx), diffusivity);
+                diffusivity.emplace(details::isId(elemIdx, outsideElemIdx), diffuse);
            }
 
            // update the "dispersivity half transmissibility" for the intersection
@@ -549,6 +550,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     transMap.finalize();
     thermalHalfTransBoundary.finalize();
     thermalHalfTrans.finalize();
+    diffusivity.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
