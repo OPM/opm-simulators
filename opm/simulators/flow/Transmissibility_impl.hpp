@@ -236,6 +236,13 @@ update(bool global, const TransUpdateQuantities update_quantities,
         comm.broadcast(&pinchActive, 1, 0);
     }
 
+    // fill the centroids cache to avoid repeated calculations in loops below
+    centroids_cache_.resize(gridView_.size(0));
+    for (const auto& elem : elements(gridView_)) {
+        const unsigned elemIdx = elemMapper.index(elem);
+        centroids_cache_[elemIdx] = centroids_(elemIdx);
+    }
+
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
         unsigned elemIdx = elemMapper.index(elem);
@@ -528,6 +535,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
            }
         }
     }
+
+    centroids_cache_.clear();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
@@ -1321,7 +1330,8 @@ Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 distanceVector_(const DimVector& faceCenter,
                 const unsigned& cellIdx) const
 {
-    const auto& cellCenter = centroids_(cellIdx);
+    const auto& cellCenter = centroids_cache_.empty() ? centroids_(cellIdx)
+                                                      : centroids_cache_[cellIdx];
     DimVector x = faceCenter;
     for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
         x[dimIdx] -= cellCenter[dimIdx];
