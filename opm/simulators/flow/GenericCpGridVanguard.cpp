@@ -534,7 +534,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
         
         eclState.reset_actnum(UgGridHelpers::createACTNUM(*equilGrid_));
-        eclState.set_active_indices(this->grid_->globalCell());
+        eclState.set_active_indices(this->grid_->currentData().front()->globalCell());
     }
     
 
