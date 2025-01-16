@@ -284,6 +284,7 @@ protected:
     const CartesianIndexMapper& cartMapper_;
     const Grid& grid_;
     std::function<std::array<double,dimWorld>(int)> centroids_;
+    std::vector<std::array<double,dimWorld>> centroids_cache_;
     Scalar transmissibilityThreshold_;
     std::map<std::pair<unsigned, unsigned>, Scalar> transBoundary_;
     std::map<std::pair<unsigned, unsigned>, Scalar> thermalHalfTransBoundary_;
