@@ -334,11 +334,11 @@ updateGuideRatesForInjectionGroups(const Group& group,
                              deferred_logger);
         }
 
-        const UnitSystem& unit_system = schedule.getUnits();
         if (guideRateValue) {
+            const UnitSystem& unit_system = schedule.getUnits();
             guideRateValue = unit_system.from_si(UnitSystem::measure::rate, *guideRateValue);
         }
-        guideRate->compute(group.name(), phase, reportStepIdx, guideRateValue);
+        guideRate->compute(group.name(), phase, reportStepIdx, guideRateValue.value_or(0.0));
     }
 }
 
