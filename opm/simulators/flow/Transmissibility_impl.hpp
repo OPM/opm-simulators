@@ -277,7 +277,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 // transmissibility of the interior element.
                 unsigned insideCartElemIdx = cartMapper_.cartesianIndex(elemIdx);
                 applyMultipliers_(transBoundaryIs, intersection.indexInInside(), insideCartElemIdx, transMult);
-                transBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] = transBoundaryIs;
+                transBoundary_.insert_or_assign(std::make_pair(elemIdx, boundaryIsIdx), transBoundaryIs);
 
                 // for boundary intersections we also need to compute the thermal
                 // half transmissibilities
@@ -288,8 +288,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                             distanceVector_(faceCenterInside,
                                                             elemIdx),
                                             1.0);
-                    thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] =
-                        transBoundaryEnergyIs;
+                    thermalHalfTransBoundary_.insert_or_assign(std::make_pair(elemIdx, boundaryIsIdx),
+                                                               transBoundaryEnergyIs);
                 }
 
                 ++boundaryIsIdx;
@@ -330,17 +330,17 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 // NNC. Set zero transmissibility, as it will be
                 // *added to* by applyNncToGridTrans_() later.
                 assert(outsideFaceIdx == -1);
-                trans_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
+                trans_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), 0.0);
                 if (enableEnergy_ && !onlyTrans) {
-                    thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = 0.0;
-                    thermalHalfTrans_[details::directionalIsId(outsideElemIdx, elemIdx)] = 0.0;
+                    thermalHalfTrans_.insert_or_assign(details::directionalIsId(elemIdx, outsideElemIdx), 0.0);
+                    thermalHalfTrans_.insert_or_assign(details::directionalIsId(outsideElemIdx, elemIdx), 0.0);
                 }
 
                 if (updateDiffusivity && !onlyTrans) {
-                    diffusivity_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
+                    diffusivity_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), 0.0);
                 }
                 if (updateDispersivity && !onlyTrans) {
-                    dispersivity_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
+                    dispersivity_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), 0.0);
                 }
                 continue;
             }
@@ -449,7 +449,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                    outsideCartElemIdx,
                                                    faceDir);
 
-            trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
+            trans_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), trans);
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_ && !onlyTrans) {
@@ -467,8 +467,10 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                         outsideElemIdx),
                                         1.0);
                 // TODO Add support for multipliers
-                thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = halfDiffusivity1;
-                thermalHalfTrans_[details::directionalIsId(outsideElemIdx, elemIdx)] = halfDiffusivity2;
+                thermalHalfTrans_.insert_or_assign(details::directionalIsId(elemIdx, outsideElemIdx),
+                                                   halfDiffusivity1);
+                thermalHalfTrans_.insert_or_assign(details::directionalIsId(outsideElemIdx, elemIdx),
+                                                   halfDiffusivity2);
            }
 
             // update the "diffusive half transmissibility" for the intersection
@@ -500,7 +502,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     diffusivity = 1.0 / (1.0 / halfDiffusivity1 + 1.0 / halfDiffusivity2);
                 }
 
-                diffusivity_[details::isId(elemIdx, outsideElemIdx)] = diffusivity;
+                diffusivity_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), diffusivity);
            }
 
            // update the "dispersivity half transmissibility" for the intersection
@@ -532,7 +534,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     dispersivity = 1.0 / (1.0 / halfDispersivity1 + 1.0 / halfDispersivity2);
                 }
 
-                dispersivity_[details::isId(elemIdx, outsideElemIdx)] = dispersivity;
+                dispersivity_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), dispersivity);
            }
         }
     }
