@@ -239,22 +239,17 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
     // fill the centroids cache to avoid repeated calculations in loops below
     centroids_cache_.resize(gridView_.size(0));
-    for (const auto& elem : elements(gridView_)) {
+    for (const auto& elem : Dune::elements(gridView_)) {
         const unsigned elemIdx = elemMapper.index(elem);
         centroids_cache_[elemIdx] = centroids_(elemIdx);
     }
 
     // compute the transmissibilities for all intersections
-    for (const auto& elem : elements(gridView_)) {
+    for (const auto& elem : Dune::elements(gridView_)) {
         unsigned elemIdx = elemMapper.index(elem);
 
-        auto isIt = gridView_.ibegin(elem);
-        const auto& isEndIt = gridView_.iend(elem);
         unsigned boundaryIsIdx = 0;
-        for (; isIt != isEndIt; ++ isIt) {
-            // store intersection, this might be costly
-            const auto& intersection = *isIt;
-
+        for (const auto& intersection : Dune::intersections(gridView_, elem)) {
             // deal with grid boundaries
             if (intersection.boundary()) {
                 // compute the transmissibilty for the boundary intersection
