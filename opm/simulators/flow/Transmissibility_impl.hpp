@@ -286,6 +286,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
     ThreadSafeMapBuilder transBoundary(transBoundary_, 1,
                                        MapBuilderInsertionMode::Insert_Or_Assign);
+    ThreadSafeMapBuilder transMap(trans_, 1,
+                                  MapBuilderInsertionMode::Insert_Or_Assign);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
@@ -398,7 +400,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 // NNC. Set zero transmissibility, as it will be
                 // *added to* by applyNncToGridTrans_() later.
                 assert(outside.faceIdx == -1);
-                trans_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
+                transMap.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
                 if (enableEnergy_ && !onlyTrans) {
                     thermalHalfTrans_.insert_or_assign(details::directionalIsId(inside.elemIdx, outside.elemIdx), 0.0);
                     thermalHalfTrans_.insert_or_assign(details::directionalIsId(outside.elemIdx, inside.elemIdx), 0.0);
@@ -459,7 +461,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                    outside.cartElemIdx,
                                                    faceIdToDir(inside.faceIdx));
 
-            trans_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), trans);
+            transMap.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), trans);
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_ && !onlyTrans) {
@@ -487,6 +489,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     centroids_cache_.clear();
 
     transBoundary.finalize();
+    transMap.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
