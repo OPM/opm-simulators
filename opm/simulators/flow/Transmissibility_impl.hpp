@@ -294,6 +294,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                           MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder diffusivity(diffusivity_, 1,
                                      MapBuilderInsertionMode::Insert_Or_Assign);
+    ThreadSafeMapBuilder dispersivity(dispersivity_, 1,
+                                      MapBuilderInsertionMode::Insert_Or_Assign);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
@@ -416,7 +418,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     diffusivity.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
                 }
                 if (updateDispersivity && !onlyTrans) {
-                    dispersivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
+                    dispersivity.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), 0.0);
                 }
                 continue;
             }
@@ -487,8 +489,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             // update the "dispersivity half transmissibility" for the intersection
             if (updateDispersivity && !onlyTrans) {
-                dispersivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx),
-                                               computeHalfMean(halfDiff, dispersion_));
+                dispersivity.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx),
+                                              computeHalfMean(halfDiff, dispersion_));
             }
         }
     }
@@ -499,6 +501,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     thermalHalfTransBoundary.finalize();
     thermalHalfTrans.finalize();
     diffusivity.finalize();
+    dispersivity.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
