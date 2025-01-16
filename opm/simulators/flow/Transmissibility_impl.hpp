@@ -288,6 +288,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                        MapBuilderInsertionMode::Insert_Or_Assign);
     ThreadSafeMapBuilder transMap(trans_, 1,
                                   MapBuilderInsertionMode::Insert_Or_Assign);
+    ThreadSafeMapBuilder thermalHalfTransBoundary(thermalHalfTransBoundary_, 1,
+                                                  MapBuilderInsertionMode::Insert_Or_Assign);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
@@ -358,7 +360,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                         computeHalfDiffusivity_(faceAreaNormal,
                                                 distanceVector_(inside.faceCenter, inside.elemIdx),
                                                 1.0);
-                    thermalHalfTransBoundary_.insert_or_assign(std::make_pair(inside.elemIdx, boundaryIsIdx),
+                    thermalHalfTransBoundary.insert_or_assign(std::make_pair(inside.elemIdx, boundaryIsIdx),
                                                                transBoundaryEnergyIs);
                 }
 
@@ -490,6 +492,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
     transBoundary.finalize();
     transMap.finalize();
+    thermalHalfTransBoundary.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
