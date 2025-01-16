@@ -137,17 +137,11 @@ namespace {
 
     template <typename Scalar, class WellModel>
     std::unordered_map<std::string, Scalar>
-    fetchWellPI(const int                                    reportStep,
-                const Opm::Schedule&                         schedule,
-                const WellModel&                             wellModel,
-                const Opm::Action::ActionX&                  action,
-                const Opm::Action::Result::MatchingEntities& matches,
+    fetchWellPI(const WellModel&                             wellModel,
+                const std::vector<std::string>&              wellpi_wells,
                 const Opm::Parallel::Communication           comm)
     {
         auto wellpi = std::unordered_map<std::string, Scalar> {};
-
-        const auto wellpi_wells = action.wellpi_wells
-            (schedule.wellMatcher(reportStep), matches);
 
         if (wellpi_wells.empty()) {
             return wellpi;
@@ -207,8 +201,13 @@ applyActions(const int reportStep,
 
     bool commit_wellstate = false;
     for (const auto& pyaction : actions.pending_python(actionState_)) {
+        // The std::unordered_map<std::string, Scalar> wellpi contains the well production indices from the last
+        // timestep. This map is needed for the keyword WELPI. For a PyAction, we do not know which wells are
+        // affected by the PyAction, thus we get the production indices for all wells.
+        const std::vector<std::string> wellpi_wells = schedule_[reportStep].well_order().names();
+        const auto wellpi = fetchWellPI<Scalar>(this->wellModel_, wellpi_wells, this->comm_);
         auto sim_update = schedule_.runPyAction(reportStep, *pyaction, actionState_,
-                                                ecl_state_, summaryState_);
+                                                ecl_state_, summaryState_, wellpi);
 
         if (const auto pyRes = this->actionState_.python_result(pyaction->name());
             !pyRes.has_value() || !*pyRes)
@@ -237,9 +236,11 @@ applyActions(const int reportStep,
 
         logActiveAction(action->name(), matches.wells(), ts);
 
-        const auto wellpi = fetchWellPI<Scalar>
-            (reportStep, this->schedule_, this->wellModel_,
-             *action, matches, this->comm_);
+        // The std::unordered_map<std::string, Scalar> wellpi contains the well production indices from the last
+        // timestep. This map is needed for the keyword WELPI. For an ActionX, we know which wells are affected by
+        // the ActionX, thus fetch the well production indices only for the affected wells.
+        const std::vector<std::string> wellpi_wells = action->wellpi_wells(schedule_.wellMatcher(reportStep), matches);
+        const auto wellpi = fetchWellPI<Scalar>(this->wellModel_, wellpi_wells, this->comm_);
 
         const auto sim_update = this->schedule_
             .applyAction(reportStep, *action, matches, wellpi);
