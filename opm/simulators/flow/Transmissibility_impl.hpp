@@ -23,21 +23,24 @@
 #ifndef OPM_TRANSMISSIBILITY_IMPL_HPP
 #define OPM_TRANSMISSIBILITY_IMPL_HPP
 
+#ifndef OPM_TRANSMISSIBILITY_HPP
+#include <config.h>
+#include <opm/simulators/flow/Transmissibility.hpp>
+#endif
+
 #include <dune/common/version.hh>
 #include <dune/grid/common/mcmgmapper.hh>
 
+#include <opm/common/OpmLog/KeywordLocation.hpp>
+#include <opm/common/utility/ThreadedMap.hpp>
+
 #include <opm/grid/CpGrid.hpp>
 
-#include <opm/common/OpmLog/KeywordLocation.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
-
-#include <opm/simulators/flow/Transmissibility.hpp>
-
-#include <fmt/format.h>
 
 #include <algorithm>
 #include <array>
@@ -52,6 +55,8 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -244,6 +249,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
         centroids_cache_[elemIdx] = centroids_(elemIdx);
     }
 
+    ThreadedMap transBoundary(transBoundary_, 1);
+
     // compute the transmissibilities for all intersections
     for (const auto& elem : Dune::elements(gridView_)) {
         unsigned elemIdx = elemMapper.index(elem);
@@ -272,7 +279,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 // transmissibility of the interior element.
                 unsigned insideCartElemIdx = cartMapper_.cartesianIndex(elemIdx);
                 applyMultipliers_(transBoundaryIs, intersection.indexInInside(), insideCartElemIdx, transMult);
-                transBoundary_.emplace(std::make_pair(elemIdx, boundaryIsIdx), transBoundaryIs);
+                transBoundary.emplace(std::make_pair(elemIdx, boundaryIsIdx), transBoundaryIs);
 
                 // for boundary intersections we also need to compute the thermal
                 // half transmissibilities
@@ -533,8 +540,9 @@ update(bool global, const TransUpdateQuantities update_quantities,
            }
         }
     }
-
     centroids_cache_.clear();
+
+    transBoundary.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
