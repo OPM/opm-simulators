@@ -177,10 +177,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
     const bool disableNNC = eclState_.getSimulationConfig().useNONNC();
 
-    if (map)
+    if (map) {
         extractPermeability_(map);
-    else
+    }
+    else {
         extractPermeability_();
+    }
 
     // reserving some space in the hashmap upfront saves quite a bit of time because
     // resizes are costly for hashmaps and there would be quite a few of them if we
@@ -225,8 +227,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
         auto pinchTransCalcMode = eclGrid.getPinchOption();
         useSmallestMultiplier = eclGrid.getMultzOption() == PinchMode::ALL;
         pinchOption4ALL = (pinchTransCalcMode == PinchMode::ALL);
-        if (pinchOption4ALL)
-        {
+        if (pinchOption4ALL) {
             useSmallestMultiplier = false;
         }
     }
@@ -291,14 +292,14 @@ update(bool global, const TransUpdateQuantities update_quantities,
                         transBoundaryEnergyIs;
                 }
 
-                ++ boundaryIsIdx;
+                ++boundaryIsIdx;
                 continue;
             }
 
             if (!intersection.neighbor()) {
                 // elements can be on process boundaries, i.e. they are not on the
                 // domain boundary yet they don't have neighbors.
-                ++ boundaryIsIdx;
+                ++boundaryIsIdx;
                 continue;
             }
 
@@ -316,8 +317,9 @@ update(bool global, const TransUpdateQuantities update_quantities,
             // ghost cells and we need to use the cartesian index as this will be used when applying Z multipliers
             // To cover the case where both cells are part of an LGR and as a consequence might have
             // the same cartesian index, we tie their Cartesian indices and the ones on the leaf grid view.
-            if (std::tie(insideCartElemIdx, elemIdx) > std::tie(outsideCartElemIdx, outsideElemIdx))
+            if (std::tie(insideCartElemIdx, elemIdx) > std::tie(outsideCartElemIdx, outsideElemIdx)) {
                 continue;
+            }
 
             // local indices of the faces of the inside and
             // outside elements which contain the intersection
@@ -388,19 +390,19 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             // apply the full face transmissibility multipliers
             // for the inside ...
-            if(!pinchActive){
-                if (insideFaceIdx > 3){// top or bottom
+            if (!pinchActive) {
+                if (insideFaceIdx > 3) {// top or bottom
                      auto find_layer = [&cartDims](std::size_t cell){
                         cell /= cartDims[0];
                         auto k = cell / cartDims[1];
                         return k;
                     };
                     int kup = find_layer(insideCartElemIdx);
-                    int kdown=find_layer(outsideCartElemIdx);
+                    int kdown = find_layer(outsideCartElemIdx);
                     // When a grid is a CpGrid with LGRs, insideCartElemIdx coincides with outsideCartElemIdx
                     // for cells on the leaf with the same parent cell on level zero.
                     assert((kup != kdown) || (insideCartElemIdx == outsideCartElemIdx));
-                    if(std::abs(kup -kdown) > 1){
+                    if (std::abs(kup -kdown) > 1) {
                         trans = 0.0;
                     }
                 }
@@ -451,7 +453,6 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_ && !onlyTrans) {
-
                 Scalar halfDiffusivity1;
                 Scalar halfDiffusivity2;
 
@@ -465,14 +466,13 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                         distanceVector_(faceCenterOutside,
                                                         outsideElemIdx),
                                         1.0);
-                //TODO Add support for multipliers
+                // TODO Add support for multipliers
                 thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = halfDiffusivity1;
                 thermalHalfTrans_[details::directionalIsId(outsideElemIdx, elemIdx)] = halfDiffusivity2;
            }
 
             // update the "diffusive half transmissibility" for the intersection
             if (updateDiffusivity && !onlyTrans) {
-
                 Scalar halfDiffusivity1;
                 Scalar halfDiffusivity2;
 
@@ -492,19 +492,19 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
                 //TODO Add support for multipliers
                 Scalar diffusivity;
-                if (std::abs(halfDiffusivity1) < 1e-30 || std::abs(halfDiffusivity2) < 1e-30)
+                if (std::abs(halfDiffusivity1) < 1e-30 || std::abs(halfDiffusivity2) < 1e-30) {
                     // avoid division by zero
                     diffusivity = 0.0;
-                else
-                    diffusivity = 1.0 / (1.0/halfDiffusivity1 + 1.0/halfDiffusivity2);
-
+                }
+                else {
+                    diffusivity = 1.0 / (1.0 / halfDiffusivity1 + 1.0 / halfDiffusivity2);
+                }
 
                 diffusivity_[details::isId(elemIdx, outsideElemIdx)] = diffusivity;
            }
 
            // update the "dispersivity half transmissibility" for the intersection
             if (updateDispersivity && !onlyTrans) {
-
                 Scalar halfDispersivity1;
                 Scalar halfDispersivity2;
 
@@ -522,14 +522,15 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 applyNtg_(halfDispersivity1, insideFaceIdx, elemIdx, ntg);
                 applyNtg_(halfDispersivity2, outsideFaceIdx, outsideElemIdx, ntg);
 
-                //TODO Add support for multipliers
+                // TODO Add support for multipliers
                 Scalar dispersivity;
-                if (std::abs(halfDispersivity1) < 1e-30 || std::abs(halfDispersivity2) < 1e-30)
+                if (std::abs(halfDispersivity1) < 1e-30 || std::abs(halfDispersivity2) < 1e-30) {
                     // avoid division by zero
                     dispersivity = 0.0;
-                else
-                    dispersivity = 1.0 / (1.0/halfDispersivity1 + 1.0/halfDispersivity2);
-
+                }
+                else {
+                    dispersivity = 1.0 / (1.0 / halfDispersivity1 + 1.0 / halfDispersivity2);
+                }
 
                 dispersivity_[details::isId(elemIdx, outsideElemIdx)] = dispersivity;
            }
