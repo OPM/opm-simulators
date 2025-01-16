@@ -294,6 +294,7 @@ evalUDQAssignments(const unsigned episodeIdx,
 {
     this->schedule_[episodeIdx].udq()
         .eval_assign(this->schedule_.wellMatcher(episodeIdx),
+                     this->schedule_[episodeIdx].group_order(),
                      this->schedule_.segmentMatcherFactory(episodeIdx),
                      this->summaryState_,
                      udq_state);
