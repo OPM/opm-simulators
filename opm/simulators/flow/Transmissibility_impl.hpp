@@ -254,6 +254,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     ThreadedMap thermalHalfTransBoundary(thermalHalfTransBoundary_, 1);
     ThreadedMap thermalHalfTrans(thermalHalfTrans_, 1);
     ThreadedMap diffusivity(diffusivity_, 1);
+    ThreadedMap dispersivity(dispersivity_, 1);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : Dune::elements(gridView_)) {
@@ -531,16 +532,16 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 applyNtg_(halfDispersivity2, outsideFaceIdx, outsideElemIdx, ntg);
 
                 // TODO Add support for multipliers
-                Scalar dispersivity;
+                Scalar dispersiv;
                 if (std::abs(halfDispersivity1) < 1e-30 || std::abs(halfDispersivity2) < 1e-30) {
                     // avoid division by zero
-                    dispersivity = 0.0;
+                    dispersiv = 0.0;
                 }
                 else {
-                    dispersivity = 1.0 / (1.0 / halfDispersivity1 + 1.0 / halfDispersivity2);
+                    dispersiv = 1.0 / (1.0 / halfDispersivity1 + 1.0 / halfDispersivity2);
                 }
 
-                dispersivity_.emplace(details::isId(elemIdx, outsideElemIdx), dispersivity);
+                dispersivity.emplace(details::isId(elemIdx, outsideElemIdx), dispersiv);
            }
         }
     }
@@ -551,6 +552,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     thermalHalfTransBoundary.finalize();
     thermalHalfTrans.finalize();
     diffusivity.finalize();
+    dispersivity.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
