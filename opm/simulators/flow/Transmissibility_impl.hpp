@@ -250,6 +250,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     }
 
     ThreadedMap transBoundary(transBoundary_, 1);
+    ThreadedMap transMap(trans_, 1);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : Dune::elements(gridView_)) {
@@ -332,7 +333,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 // NNC. Set zero transmissibility, as it will be
                 // *added to* by applyNncToGridTrans_() later.
                 assert(outsideFaceIdx == -1);
-                trans_.emplace(details::isId(elemIdx, outsideElemIdx), 0.0);
+                transMap.emplace(details::isId(elemIdx, outsideElemIdx), 0.0);
                 if (enableEnergy_  && !onlyTrans){
                     thermalHalfTrans_.emplace(details::directionalIsId(elemIdx, outsideElemIdx), 0.0);
                     thermalHalfTrans_.emplace(details::directionalIsId(outsideElemIdx, elemIdx), 0.0);
@@ -451,7 +452,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                    outsideCartElemIdx,
                                                    faceDir);
 
-            trans_.emplace(details::isId(elemIdx, outsideElemIdx), trans);
+            transMap.emplace(details::isId(elemIdx, outsideElemIdx), trans);
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_ && !onlyTrans) {
@@ -543,6 +544,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
     centroids_cache_.clear();
 
     transBoundary.finalize();
+    transMap.finalize();
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
