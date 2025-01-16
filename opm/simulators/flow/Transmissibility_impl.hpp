@@ -248,13 +248,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
     for (const auto& elem : elements(gridView_)) {
         unsigned elemIdx = elemMapper.index(elem);
 
-        auto isIt = gridView_.ibegin(elem);
-        const auto& isEndIt = gridView_.iend(elem);
         unsigned boundaryIsIdx = 0;
-        for (; isIt != isEndIt; ++ isIt) {
-            // store intersection, this might be costly
-            const auto& intersection = *isIt;
-
+        for (const auto& intersection : intersections(gridView_, elem)) {
             // deal with grid boundaries
             if (intersection.boundary()) {
                 // compute the transmissibilty for the boundary intersection
@@ -829,8 +824,8 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
     };
 
     // compute the transmissibilities for all intersections
-    for (const auto& elem : Dune::elements(gridView_)) {
-        for (const auto& intersection : Dune::intersections(gridView_, elem)) {
+    for (const auto& elem : elements(gridView_)) {
+        for (const auto& intersection : intersections(gridView_, elem)) {
             // store intersection, this might be costly
             if (!intersection.neighbor()) {
                 continue; // intersection is on the domain boundary
