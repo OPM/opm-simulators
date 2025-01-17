@@ -175,10 +175,8 @@ protected:
     ///
     /// \param pinchTop Whether PINCH(5) is TOP, otherwise ALL is assumed.
     void applyAllZMultipliers_(Scalar& trans,
-                               unsigned insideFaceIdx,
-                               unsigned outsideFaceIdx,
-                               unsigned insideCartElemIdx,
-                               unsigned outsideCartElemIdx,
+                               const FaceInfo& inside,
+                               const FaceInfo& outside,
                                const TransMult& transMult,
                                const std::array<int, dimWorld>& cartDims);
 

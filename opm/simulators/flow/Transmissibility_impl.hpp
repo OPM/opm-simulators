@@ -414,9 +414,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 //  PINCH(4) == TOPBOT is assumed here as we set useSmallestMultipliers
                 // to false if  PINCH(4) == ALL holds
                 // In contrast to the name this will also apply
-                applyAllZMultipliers_(trans, inside.faceIdx,
-                                      outside.faceIdx, inside.cartElemIdx,
-                                      outside.cartElemIdx, transMult, cartDims);
+                applyAllZMultipliers_(trans, inside, outside, transMult, cartDims);
             }
             else {
                 applyMultipliers_(trans, inside.faceIdx, inside.cartElemIdx, transMult);
@@ -686,34 +684,32 @@ removeNonCartesianTransmissibilities_(bool removeAll)
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper, Scalar>::
 applyAllZMultipliers_(Scalar& trans,
-                      unsigned insideFaceIdx,
-                      unsigned outsideFaceIdx,
-                      unsigned insideCartElemIdx,
-                      unsigned outsideCartElemIdx,
+                      const FaceInfo& inside,
+                      const FaceInfo& outside,
                       const TransMult& transMult,
                       const std::array<int, dimWorld>& cartDims)
 {
     if (grid_.maxLevel() > 0) {
         OPM_THROW(std::invalid_argument, "MULTZ not support with LGRS, yet.");
     }
-    if (insideFaceIdx > 3) { // top or or bottom
-        assert(insideFaceIdx==5); // as insideCartElemIdx < outsideCartElemIdx holds for the Z column
+    if (inside.faceIdx > 3) { // top or or bottom
+        assert(inside.faceIdx == 5); // as insideCartElemIdx < outsideCartElemIdx holds for the Z column
         // For CpGrid with LGRs, insideCartElemIdx == outsideCartElemIdx when cells on the leaf have the same parent cell on level zero.
-        assert(outsideCartElemIdx >= insideCartElemIdx);
+        assert(outside.cartElemIdx >= inside.cartElemIdx);
         unsigned lastCartElemIdx;
-        if (outsideCartElemIdx == insideCartElemIdx) {
-            lastCartElemIdx = outsideCartElemIdx;
+        if (outside.cartElemIdx == inside.cartElemIdx) {
+            lastCartElemIdx = outside.cartElemIdx;
         }
         else {
-            lastCartElemIdx = outsideCartElemIdx - cartDims[0]*cartDims[1];
+            lastCartElemIdx = outside.cartElemIdx - cartDims[0]*cartDims[1];
         }
         // Last multiplier using (Z+)*(Z-)
         Scalar mult = transMult.getMultiplier(lastCartElemIdx , FaceDir::ZPlus) *
-            transMult.getMultiplier(outsideCartElemIdx , FaceDir::ZMinus);
+            transMult.getMultiplier(outside.cartElemIdx , FaceDir::ZMinus);
 
         // pick the smallest multiplier using (Z+)*(Z-) while looking down
         // the pillar until reaching the other end of the connection
-        for (auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;) {
+        for (auto cartElemIdx = inside.cartElemIdx; cartElemIdx < lastCartElemIdx;) {
             auto multiplier = transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus);
             cartElemIdx += cartDims[0]*cartDims[1];
             multiplier *= transMult.getMultiplier(cartElemIdx, FaceDir::ZMinus);
@@ -723,8 +719,8 @@ applyAllZMultipliers_(Scalar& trans,
         trans *= mult;
     }
     else {
-        applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
-        applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
+        applyMultipliers_(trans, inside.faceIdx, inside.cartElemIdx, transMult);
+        applyMultipliers_(trans, outside.faceIdx, outside.cartElemIdx, transMult);
     }
 }
 
