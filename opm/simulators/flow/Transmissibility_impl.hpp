@@ -250,6 +250,23 @@ update(bool global, const TransUpdateQuantities update_quantities,
             : 1.0 / (1.0 / half1 + 1.0 / half2);
     };
 
+    auto faceIdToDir = [](int insideFaceIdx) {
+        switch (insideFaceIdx) {
+        case 0:
+        case 1:
+            return FaceDir::XPlus;
+        case 2:
+        case 3:
+            return FaceDir::YPlus;
+            break;
+        case 4:
+        case 5:
+            return FaceDir::ZPlus;
+        default:
+            throw std::logic_error("Could not determine a face direction");
+        }
+    };
+
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
         unsigned elemIdx = elemMapper.index(elem);
@@ -410,30 +427,9 @@ update(bool global, const TransUpdateQuantities update_quantities,
             }
 
             // apply the region multipliers (cf. the MULTREGT keyword)
-            FaceDir::DirEnum faceDir;
-            switch (insideFaceIdx) {
-            case 0:
-            case 1:
-                faceDir = FaceDir::XPlus;
-                break;
-
-            case 2:
-            case 3:
-                faceDir = FaceDir::YPlus;
-                break;
-
-            case 4:
-            case 5:
-                faceDir = FaceDir::ZPlus;
-                break;
-
-            default:
-                throw std::logic_error("Could not determine a face direction");
-            }
-
             trans *= transMult.getRegionMultiplier(insideCartElemIdx,
                                                    outsideCartElemIdx,
-                                                   faceDir);
+                                                   faceIdToDir(insideFaceIdx));
 
             trans_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), trans);
 
