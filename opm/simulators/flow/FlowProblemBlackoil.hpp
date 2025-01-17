@@ -334,6 +334,13 @@ public:
 
         this->initFluidSystem_();
 
+        // conserve inner energy instead of enthalpy if TEMP is used
+        // or THERMAL and parameter ConserveInnerEnergyThermal is true (default false)
+        bool isThermal = eclState.getSimulationConfig().isThermal();
+        bool isTemp = eclState.getSimulationConfig().isTemp();
+        bool conserveInnerEnergy = isTemp || (isThermal && Parameters::Get<Parameters::ConserveInnerEnergyThermal>());
+        FluidSystem::setEnergyEqualEnthalpy(conserveInnerEnergy);
+
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
@@ -368,7 +375,7 @@ public:
         else {
             this->readInitialCondition_();
         }
-
+        this->temperatureModel_.init();
         this->tracerModel_.prepareTracerBatches();
 
         this->updatePffDofData_();
@@ -1162,8 +1169,9 @@ protected:
 
             // For CO2STORE and H2STORE we need to set the initial temperature for isothermal simulations
             bool isThermal = eclState.getSimulationConfig().isThermal();
+            bool isTemp = eclState.getSimulationConfig().isTemp();
             bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
-            if (!isThermal && needTemperature) {
+            if (!isThermal && !isTemp && needTemperature) {
                 const auto& fp = simulator.vanguard().eclState().fieldProps();
                 elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
             }

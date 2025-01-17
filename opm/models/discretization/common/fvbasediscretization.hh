@@ -263,6 +263,11 @@ template<class TypeTag>
 struct EnableExperiments<TypeTag, TTag::FvBaseDiscretization>
 { static constexpr bool value = true; };
 
+// enable sequential temperature option.
+template<class TypeTag>
+struct EnableTemperature<TypeTag, TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
 template <class TypeTag, class MyTypeTag>
 struct BaseDiscretizationType { using type = UndefinedProperty; };
 
