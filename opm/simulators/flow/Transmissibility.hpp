@@ -163,6 +163,14 @@ protected:
 
     void removeNonCartesianTransmissibilities_(bool removeAll);
 
+    struct FaceInfo
+    {
+        DimVector faceCenter;
+        int faceIdx;
+        unsigned elemIdx;
+        unsigned cartElemIdx;
+    };
+
     /// \brief Apply the Multipliers for the case PINCH(4)==TOPBOT
     ///
     /// \param pinchTop Whether PINCH(5) is TOP, otherwise ALL is assumed.
