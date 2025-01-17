@@ -56,7 +56,8 @@ public:
                                     const Opm::WellState<Scalar>& wellState,
                                     const int reportStepIdx,
                                     const int phasePos,
-                                    const bool injector);
+                                    const bool injector,
+                                    const bool network = false);
 
     static Scalar satelliteProduction(const ScheduleState& sched,
                                       const std::vector<std::string>& groups,
