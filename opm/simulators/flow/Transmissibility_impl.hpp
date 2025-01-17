@@ -244,13 +244,15 @@ update(bool global, const TransUpdateQuantities update_quantities,
         centroids_cache_[elemIdx] = centroids_(elemIdx);
     }
 
-    auto harmonicMean = [](const Scalar half1, const Scalar half2) {
+    auto harmonicMean = [](const Scalar half1, const Scalar half2)
+    {
         return (std::abs(half1) < 1e-30 || std::abs(half2) < 1e-30)
             ? 0.0
             : 1.0 / (1.0 / half1 + 1.0 / half2);
     };
 
-    auto faceIdToDir = [](int insideFaceIdx) {
+    auto faceIdToDir = [](int insideFaceIdx)
+    {
         switch (insideFaceIdx) {
         case 0:
         case 1:
@@ -267,11 +269,50 @@ update(bool global, const TransUpdateQuantities update_quantities,
         }
     };
 
+    auto halfDiff = [](const DimVector& faceAreaNormal,
+                       const unsigned,
+                       const DimVector& distVector,
+                       const Scalar prop)
+    {
+        return computeHalfDiffusivity_(faceAreaNormal,
+                                       distVector,
+                                       prop);
+    };
+
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
         FaceInfo inside;
         FaceInfo outside;
+        DimVector faceAreaNormal;
+
         inside.elemIdx = elemMapper.index(elem);
+
+        auto computeHalf = [this, &faceAreaNormal, &inside, &outside]
+                           (const auto& halfComputer,
+                            const auto& prop1, const auto& prop2) -> std::array<Scalar,2>
+        {
+            return {
+                halfComputer(faceAreaNormal,
+                             inside.faceIdx,
+                             distanceVector_(inside.faceCenter, inside.elemIdx),
+                             prop1),
+                halfComputer(faceAreaNormal,
+                             outside.faceIdx,
+                             distanceVector_(outside.faceCenter, outside.elemIdx),
+                             prop2)
+            };
+        };
+
+        auto computeHalfMean = [&inside, &outside, &computeHalf, &ntg, &harmonicMean]
+                               (const auto& halfComputer, const auto& prop)
+        {
+            auto half = computeHalf(halfComputer, prop[inside.elemIdx], prop[outside.elemIdx]);
+            applyNtg_(half[0], inside, ntg);
+            applyNtg_(half[1], outside, ntg);
+
+            //TODO Add support for multipliers
+            return harmonicMean(half[0], half[1]);
+        };
 
         unsigned boundaryIsIdx = 0;
         for (const auto& intersection : intersections(gridView_, elem)) {
@@ -281,7 +322,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 const auto& geometry = intersection.geometry();
                 inside.faceCenter = geometry.center();
 
-                auto faceAreaNormal = intersection.centerUnitOuterNormal();
+                faceAreaNormal = intersection.centerUnitOuterNormal();
                 faceAreaNormal *= geometry.volume();
 
                 Scalar transBoundaryIs =
@@ -363,8 +404,6 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 continue;
             }
 
-            DimVector faceAreaNormal;
-
             typename std::is_same<Grid, Dune::CpGrid>::type isCpGrid;
             computeFaceProperties(intersection,
                                   inside,
@@ -372,23 +411,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                   faceAreaNormal,
                                   isCpGrid);
 
-            Scalar halfTrans1 =
-                computeHalfTrans_(faceAreaNormal,
-                                  inside.faceIdx,
-                                  distanceVector_(inside.faceCenter, inside.elemIdx),
-                                  permeability_[inside.elemIdx]);
-            Scalar halfTrans2 =
-                computeHalfTrans_(faceAreaNormal,
-                                  outside.faceIdx,
-                                  distanceVector_(outside.faceCenter, outside.elemIdx),
-                                  permeability_[outside.elemIdx]);
-
-            applyNtg_(halfTrans1, inside, ntg);
-            applyNtg_(halfTrans2, outside, ntg);
-
-            // convert half transmissibilities to full face
-            // transmissibilities using the harmonic mean
-            Scalar trans = harmonicMean(halfTrans1, halfTrans2);
+            Scalar trans = computeHalfMean(computeHalfTrans_, permeability_);
 
             // apply the full face transmissibility multipliers
             // for the inside ...
@@ -431,58 +454,25 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_ && !onlyTrans) {
-                const Scalar halfDiffusivity1 =
-                    computeHalfDiffusivity_(faceAreaNormal,
-                                            distanceVector_(inside.faceCenter, inside.elemIdx),
-                                            1.0);
-                const Scalar halfDiffusivity2 =
-                    computeHalfDiffusivity_(faceAreaNormal,
-                                            distanceVector_(outside.faceCenter, outside.elemIdx),
-                                            1.0);
+                const auto half = computeHalf(halfDiff, 1.0, 1.0);
                 // TODO Add support for multipliers
                 thermalHalfTrans_.insert_or_assign(details::directionalIsId(inside.elemIdx, outside.elemIdx),
-                                                   halfDiffusivity1);
+                                                   half[0]);
                 thermalHalfTrans_.insert_or_assign(details::directionalIsId(outside.elemIdx, inside.elemIdx),
-                                                   halfDiffusivity2);
-           }
+                                                   half[1]);
+            }
 
             // update the "diffusive half transmissibility" for the intersection
             if (updateDiffusivity && !onlyTrans) {
-                Scalar halfDiffusivity1 =
-                    computeHalfDiffusivity_(faceAreaNormal,
-                                            distanceVector_(inside.faceCenter, inside.elemIdx),
-                                            porosity_[inside.elemIdx]);
-                Scalar halfDiffusivity2 =
-                    computeHalfDiffusivity_(faceAreaNormal,
-                                            distanceVector_(outside.faceCenter, outside.elemIdx),
-                                            porosity_[outside.elemIdx]);
+                diffusivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx),
+                                              computeHalfMean(halfDiff, porosity_));
+            }
 
-                applyNtg_(halfDiffusivity1, inside, ntg);
-                applyNtg_(halfDiffusivity2, outside, ntg);
-
-                //TODO Add support for multipliers
-                const Scalar diffusivity = harmonicMean(halfDiffusivity1, halfDiffusivity2);
-                diffusivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), diffusivity);
-           }
-
-           // update the "dispersivity half transmissibility" for the intersection
+            // update the "dispersivity half transmissibility" for the intersection
             if (updateDispersivity && !onlyTrans) {
-                Scalar halfDispersivity1 =
-                    computeHalfDiffusivity_(faceAreaNormal,
-                                            distanceVector_(inside.faceCenter, inside.elemIdx),
-                                            dispersion_[inside.elemIdx]);
-                Scalar halfDispersivity2 =
-                    computeHalfDiffusivity_(faceAreaNormal,
-                                            distanceVector_(outside.faceCenter, outside.elemIdx),
-                                            dispersion_[outside.elemIdx]);
-
-                applyNtg_(halfDispersivity1, inside, ntg);
-                applyNtg_(halfDispersivity2, outside, ntg);
-
-                // TODO Add support for multipliers
-                const Scalar dispersivity = harmonicMean(halfDispersivity1, halfDispersivity2);
-                dispersivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), dispersivity);
-           }
+                dispersivity_.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx),
+                                               computeHalfMean(halfDiff, dispersion_));
+            }
         }
     }
 
