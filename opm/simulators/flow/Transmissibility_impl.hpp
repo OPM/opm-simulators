@@ -367,15 +367,10 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             typename std::is_same<Grid, Dune::CpGrid>::type isCpGrid;
             computeFaceProperties(intersection,
-                                  inside.elemIdx,
-                                  inside.faceIdx,
-                                  outside.elemIdx,
-                                  outside.faceIdx,
-                                  inside.faceCenter,
-                                  outside.faceCenter,
+                                  inside,
+                                  outside,
                                   faceAreaNormal,
                                   isCpGrid);
-
 
             Scalar halfTrans1 =
                 computeHalfTrans_(faceAreaNormal,
@@ -928,19 +923,14 @@ template<class Grid, class GridView, class ElementMapper, class CartesianIndexMa
 template<class Intersection>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 computeFaceProperties(const Intersection& intersection,
-                      const int,
-                      const int,
-                      const int,
-                      const int,
-                      DimVector& faceCenterInside,
-                      DimVector& faceCenterOutside,
+                      FaceInfo& inside,
+                      FaceInfo& outside,
                       DimVector& faceAreaNormal,
                       /*isCpGrid=*/std::false_type) const
 {
     // default implementation for DUNE grids
     const auto& geometry = intersection.geometry();
-    faceCenterInside = geometry.center();
-    faceCenterOutside = faceCenterInside;
+    outside.faceCenter = inside.faceCenter = geometry.center();
 
     faceAreaNormal = intersection.centerUnitOuterNormal();
     faceAreaNormal *= geometry.volume();
@@ -950,43 +940,41 @@ template<class Grid, class GridView, class ElementMapper, class CartesianIndexMa
 template<class Intersection>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 computeFaceProperties(const Intersection& intersection,
-                      const int insideElemIdx,
-                      const int insideFaceIdx,
-                      const int outsideElemIdx,
-                      const int outsideFaceIdx,
-                      DimVector& faceCenterInside,
-                      DimVector& faceCenterOutside,
+                      FaceInfo& inside,
+                      FaceInfo& outside,
                       DimVector& faceAreaNormal,
                       /*isCpGrid=*/std::true_type) const
 {
     int faceIdx = intersection.id();
 
-    if(grid_.maxLevel() == 0) {
-        faceCenterInside = grid_.faceCenterEcl(insideElemIdx, insideFaceIdx, intersection);
-        faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx, intersection);
+    if (grid_.maxLevel() == 0) {
+        inside.faceCenter = grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx, intersection);
+        outside.faceCenter = grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx, intersection);
         faceAreaNormal = grid_.faceAreaNormalEcl(faceIdx);
     }
     else {
         if ((intersection.inside().level() != intersection.outside().level())) {
-
             // For CpGrid with LGRs, intersection laying on the boundary of an LGR, having two neighboring cells:
             // one coarse neighboring cell and one refined neighboring cell, we get the corresponding parent
             // intersection (from level 0), and use the center of the parent intersection for the coarse
             // neighboring cell.
 
             // Get parent intersection and its geometry
-            const auto& parentIntersection = grid_.getParentIntersectionFromLgrBoundaryFace(intersection);
+            const auto& parentIntersection =
+                grid_.getParentIntersectionFromLgrBoundaryFace(intersection);
             const auto& parentIntersectionGeometry = parentIntersection.geometry();
 
             // For the coarse neighboring cell, take the center of the parent intersection.
-            // For the refined neighboring cell, take the 'usual' center. 
-            faceCenterInside =  (intersection.inside().level() == 0) ? parentIntersectionGeometry.center() :
-                grid_.faceCenterEcl(insideElemIdx, insideFaceIdx, intersection);
-            faceCenterOutside = (intersection.outside().level() == 0) ?  parentIntersectionGeometry.center() :
-                grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx, intersection);
+            // For the refined neighboring cell, take the 'usual' center.
+            inside.faceCenter =  (intersection.inside().level() == 0)
+                ? parentIntersectionGeometry.center()
+                : grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx, intersection);
+            outside.faceCenter = (intersection.outside().level() == 0)
+                ?  parentIntersectionGeometry.center()
+                : grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx, intersection);
 
             // For some computations, it seems to be benefitial to replace the actual area of the refined face, by
-            // the area of its parent face. 
+            // the area of its parent face.
             // faceAreaNormal = parentIntersection.centerUnitOuterNormal();
             // faceAreaNormal *= parentIntersectionGeometry.volume();
 
@@ -996,10 +984,10 @@ computeFaceProperties(const Intersection& intersection,
         }
         else {
             assert(intersection.inside().level() == intersection.outside().level());
-        
-            faceCenterInside = grid_.faceCenterEcl(insideElemIdx, insideFaceIdx, intersection);
-            faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx, intersection);
-        
+
+            inside.faceCenter = grid_.faceCenterEcl(inside.elemIdx, inside.faceIdx, intersection);
+            outside.faceCenter = grid_.faceCenterEcl(outside.elemIdx, outside.faceIdx, intersection);
+
             // When the CpGrid has LGRs, we compute the face area normal differently.
             if (intersection.inside().level() > 0) {  // remove intersection.inside().level() > 0
                 faceAreaNormal = intersection.centerUnitOuterNormal();
@@ -1011,6 +999,7 @@ computeFaceProperties(const Intersection& intersection,
         }
     }
 }
+
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::

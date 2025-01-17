@@ -198,23 +198,15 @@ protected:
 
     template <class Intersection>
     void computeFaceProperties(const Intersection& intersection,
-                               const int,
-                               const int,
-                               const int,
-                               const int,
-                               DimVector& faceCenterInside,
-                               DimVector& faceCenterOutside,
+                               FaceInfo& inside,
+                               FaceInfo& outside,
                                DimVector& faceAreaNormal,
                                /*isCpGrid=*/std::false_type) const;
 
     template <class Intersection>
     void computeFaceProperties(const Intersection& intersection,
-                               const int insideElemIdx,
-                               const int insideFaceIdx,
-                               const int outsideElemIdx,
-                               const int outsideFaceIdx,
-                               DimVector& faceCenterInside,
-                               DimVector& faceCenterOutside,
+                               FaceInfo& inside,
+                               FaceInfo& outside,
                                DimVector& faceAreaNormal,
                                /*isCpGrid=*/std::true_type) const;
 
