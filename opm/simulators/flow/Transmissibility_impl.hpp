@@ -244,6 +244,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
         centroids_cache_[elemIdx] = centroids_(elemIdx);
     }
 
+    auto harmonicMean = [](const Scalar half1, const Scalar half2) {
+        return (std::abs(half1) < 1e-30 || std::abs(half2) < 1e-30)
+            ? 0.0
+            : 1.0 / (1.0 / half1 + 1.0 / half2);
+    };
+
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
         unsigned elemIdx = elemMapper.index(elem);
@@ -351,6 +357,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                   faceAreaNormal,
                                   isCpGrid);
 
+
             Scalar halfTrans1 =
                 computeHalfTrans_(faceAreaNormal,
                                   insideFaceIdx,
@@ -367,14 +374,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             // convert half transmissibilities to full face
             // transmissibilities using the harmonic mean
-            Scalar trans;
-            if (std::abs(halfTrans1) < 1e-30 || std::abs(halfTrans2) < 1e-30) {
-                // avoid division by zero
-                trans = 0.0;
-            }
-            else {
-                trans = 1.0 / (1.0 / halfTrans1 + 1.0 / halfTrans2);
-            }
+            Scalar trans = harmonicMean(halfTrans1, halfTrans2);
 
             // apply the full face transmissibility multipliers
             // for the inside ...
@@ -469,15 +469,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 applyNtg_(halfDiffusivity2, outsideFaceIdx, outsideElemIdx, ntg);
 
                 //TODO Add support for multipliers
-                Scalar diffusivity;
-                if (std::abs(halfDiffusivity1) < 1e-30 || std::abs(halfDiffusivity2) < 1e-30) {
-                    // avoid division by zero
-                    diffusivity = 0.0;
-                }
-                else {
-                    diffusivity = 1.0 / (1.0 / halfDiffusivity1 + 1.0 / halfDiffusivity2);
-                }
-
+                const Scalar diffusivity = harmonicMean(halfDiffusivity1, halfDiffusivity2);
                 diffusivity_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), diffusivity);
            }
 
@@ -496,15 +488,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 applyNtg_(halfDispersivity2, outsideFaceIdx, outsideElemIdx, ntg);
 
                 // TODO Add support for multipliers
-                Scalar dispersivity;
-                if (std::abs(halfDispersivity1) < 1e-30 || std::abs(halfDispersivity2) < 1e-30) {
-                    // avoid division by zero
-                    dispersivity = 0.0;
-                }
-                else {
-                    dispersivity = 1.0 / (1.0 / halfDispersivity1 + 1.0 / halfDispersivity2);
-                }
-
+                const Scalar dispersivity = harmonicMean(halfDispersivity1, halfDispersivity2);
                 dispersivity_.insert_or_assign(details::isId(elemIdx, outsideElemIdx), dispersivity);
            }
         }
