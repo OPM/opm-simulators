@@ -297,10 +297,26 @@ template <class M, class X, class Y, int l>
 void
 OpmGpuILU0<M, X, Y, l>::update()
 {
-    OPM_TIMEBLOCK(prec_update);
-    {
-        update(m_moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
-    }
+    cudaDeviceSynchronize();
+    CumulativeScopeTimer timer;
+
+    m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
+    reorderAndSplitMatrix(m_moveThreadBlockSize);
+
+    LUFactorizeMatrix(m_ILU0FactorizationThreadBlockSize);
+    // if (!m_update_graph_captured)
+    // {
+    //     m_update_graph = cudaGraph_t();
+    //     m_update_executable_graph = cudaGraphExec_t();
+    //     OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream, cudaStreamCaptureModeGlobal));
+    //     LUFactorizeMatrix(m_ILU0FactorizationThreadBlockSize);
+    //     OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream, &m_update_graph));
+    //     OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_update_executable_graph, m_update_graph, nullptr, nullptr, 0));
+    //     m_update_graph_captured = true;
+    // }
+
+    // OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_update_executable_graph, 0));
+    cudaDeviceSynchronize();
 }
 
 template <class M, class X, class Y, int l>
