@@ -256,10 +256,9 @@ protected:
                                     const DimVector& distance,
                                     const DimMatrix& perm);
 
-    void computeHalfDiffusivity_(Scalar& halfDiff,
-                                 const DimVector& areaNormal,
-                                 const DimVector& distance,
-                                 const Scalar& poro) const;
+    static Scalar computeHalfDiffusivity_(const DimVector& areaNormal,
+                                          const DimVector& distance,
+                                          const Scalar poro);
 
     DimVector distanceVector_(const DimVector& faceCenter,
                               const unsigned& cellIdx) const;

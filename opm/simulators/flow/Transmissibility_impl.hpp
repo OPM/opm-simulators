@@ -275,12 +275,10 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 // for boundary intersections we also need to compute the thermal
                 // half transmissibilities
                 if (enableEnergy_ && !onlyTrans) {
-                    Scalar transBoundaryEnergyIs;
-                    computeHalfDiffusivity_(transBoundaryEnergyIs,
-                                            faceAreaNormal,
-                                            distanceVector_(faceCenterInside,
-                                                            elemIdx),
-                                            1.0);
+                    Scalar transBoundaryEnergyIs =
+                        computeHalfDiffusivity_(faceAreaNormal,
+                                                distanceVector_(faceCenterInside, elemIdx),
+                                                1.0);
                     thermalHalfTransBoundary_.insert_or_assign(std::make_pair(elemIdx, boundaryIsIdx),
                                                                transBoundaryEnergyIs);
                 }
@@ -441,19 +439,14 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_ && !onlyTrans) {
-                Scalar halfDiffusivity1;
-                Scalar halfDiffusivity2;
-
-                computeHalfDiffusivity_(halfDiffusivity1,
-                                        faceAreaNormal,
-                                        distanceVector_(faceCenterInside,
-                                                        elemIdx),
-                                        1.0);
-                computeHalfDiffusivity_(halfDiffusivity2,
-                                        faceAreaNormal,
-                                        distanceVector_(faceCenterOutside,
-                                                        outsideElemIdx),
-                                        1.0);
+                const Scalar halfDiffusivity1 =
+                    computeHalfDiffusivity_(faceAreaNormal,
+                                            distanceVector_(faceCenterInside, elemIdx),
+                                            1.0);
+                const Scalar halfDiffusivity2 =
+                    computeHalfDiffusivity_(faceAreaNormal,
+                                            distanceVector_(faceCenterOutside, outsideElemIdx),
+                                            1.0);
                 // TODO Add support for multipliers
                 thermalHalfTrans_.insert_or_assign(details::directionalIsId(elemIdx, outsideElemIdx),
                                                    halfDiffusivity1);
@@ -463,19 +456,14 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
             // update the "diffusive half transmissibility" for the intersection
             if (updateDiffusivity && !onlyTrans) {
-                Scalar halfDiffusivity1;
-                Scalar halfDiffusivity2;
-
-                computeHalfDiffusivity_(halfDiffusivity1,
-                                        faceAreaNormal,
-                                        distanceVector_(faceCenterInside,
-                                                        elemIdx),
-                                        porosity_[elemIdx]);
-                computeHalfDiffusivity_(halfDiffusivity2,
-                                        faceAreaNormal,
-                                        distanceVector_(faceCenterOutside,
-                                                        outsideElemIdx),
-                                        porosity_[outsideElemIdx]);
+                Scalar halfDiffusivity1 =
+                    computeHalfDiffusivity_(faceAreaNormal,
+                                            distanceVector_(faceCenterInside, elemIdx),
+                                            porosity_[elemIdx]);
+                Scalar halfDiffusivity2 =
+                    computeHalfDiffusivity_(faceAreaNormal,
+                                            distanceVector_(faceCenterOutside, outsideElemIdx),
+                                            porosity_[outsideElemIdx]);
 
                 applyNtg_(halfDiffusivity1, insideFaceIdx, elemIdx, ntg);
                 applyNtg_(halfDiffusivity2, outsideFaceIdx, outsideElemIdx, ntg);
@@ -495,19 +483,14 @@ update(bool global, const TransUpdateQuantities update_quantities,
 
            // update the "dispersivity half transmissibility" for the intersection
             if (updateDispersivity && !onlyTrans) {
-                Scalar halfDispersivity1;
-                Scalar halfDispersivity2;
-
-                computeHalfDiffusivity_(halfDispersivity1,
-                                        faceAreaNormal,
-                                        distanceVector_(faceCenterInside,
-                                                        elemIdx),
-                                        dispersion_[elemIdx]);
-                computeHalfDiffusivity_(halfDispersivity2,
-                                        faceAreaNormal,
-                                        distanceVector_(faceCenterOutside,
-                                                        outsideElemIdx),
-                                        dispersion_[outsideElemIdx]);
+                Scalar halfDispersivity1 =
+                    computeHalfDiffusivity_(faceAreaNormal,
+                                            distanceVector_(faceCenterInside, elemIdx),
+                                            dispersion_[elemIdx]);
+                Scalar halfDispersivity2 =
+                    computeHalfDiffusivity_(faceAreaNormal,
+                                            distanceVector_(faceCenterOutside, outsideElemIdx),
+                                            dispersion_[outsideElemIdx]);
 
                 applyNtg_(halfDispersivity1, insideFaceIdx, elemIdx, ntg);
                 applyNtg_(halfDispersivity2, outsideFaceIdx, outsideElemIdx, ntg);
@@ -1332,15 +1315,17 @@ computeHalfTrans_(const DimVector& areaNormal,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-computeHalfDiffusivity_(Scalar& halfDiff,
-                        const DimVector& areaNormal,
+Scalar
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+computeHalfDiffusivity_(const DimVector& areaNormal,
                         const DimVector& distance,
-                        const Scalar& poro) const
+                        const Scalar poro)
 {
-    halfDiff = poro;
+    Scalar halfDiff = poro;
     halfDiff *= std::abs(Dune::dot(areaNormal, distance));
     halfDiff /= distance.two_norm2();
+
+    return halfDiff;
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
