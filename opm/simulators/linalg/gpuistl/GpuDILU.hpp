@@ -158,16 +158,17 @@ private:
     int m_moveThreadBlockSize = -1;
     int m_DILUFactorizationThreadBlockSize = -1;
 
+    // Graphs for Apply
     std::map<std::pair<field_type*, const field_type*>, cudaGraph_t> m_apply_graphs;
+    std::map<std::pair<field_type*, const field_type*>, cudaGraphExec_t> m_executableGraphs;
+
+    // Update graph and support variables
     bool m_update_graph_captured {false};
     cudaGraph_t m_update_graph;
     cudaGraphExec_t m_update_executable_graph;
-    std::map<std::pair<field_type*, const field_type*>, cudaGraphExec_t> m_executableGraphs;
+
+    // Stream for the DILU operations on the GPU
     cudaStream_t m_stream;
-    cudaGraph_t graph;
-    cudaGraphExec_t instance;
-    bool m_cudagraphInitialized {false};
-    cudaGraph_t m_cudagraphInstance;
 };
 } // end namespace Opm::gpuistl
 

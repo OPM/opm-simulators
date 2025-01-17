@@ -362,12 +362,13 @@ solveLowerLevelSet(T* reorderedMat,
                    int rowsInLevelSet,
                    const T* d,
                    T* v,
-                   int thrBlockSize)
+                   int thrBlockSize,
+                   cudaStream_t stream)
 {
     int threadBlockSize
         = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, d, v);
 }
 // perform the upper solve for all rows in the same level set
@@ -380,12 +381,13 @@ solveUpperLevelSet(T* reorderedMat,
                    int startIdx,
                    int rowsInLevelSet,
                    T* v,
-                   int thrBlockSize)
+                   int thrBlockSize,
+                   cudaStream_t stream)
 {
     int threadBlockSize
         = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, v);
 }
 
@@ -399,12 +401,13 @@ solveLowerLevelSetSplit(MatrixScalar* reorderedMat,
                         int rowsInLevelSet,
                         const LinearSolverScalar* d,
                         LinearSolverScalar* v,
-                        int thrBlockSize)
+                        int thrBlockSize,
+                        cudaStream_t stream)
 {
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, d, v);
 }
 // perform the upper solve for all rows in the same level set
@@ -418,12 +421,13 @@ solveUpperLevelSetSplit(MatrixScalar* reorderedMat,
                         int rowsInLevelSet,
                         const DiagonalScalar* dInv,
                         LinearSolverScalar* v,
-                        int thrBlockSize)
+                        int thrBlockSize,
+                        cudaStream_t stream)
 {
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
@@ -436,12 +440,13 @@ LUFactorization(T* srcMatrix,
                 int* reorderedToNatual,
                 size_t rowsInLevelSet,
                 int startIdx,
-                int thrBlockSize)
+                int thrBlockSize,
+                cudaStream_t stream)
 {
     int threadBlockSize
         = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorization<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuLUFactorization<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuLUFactorization<T, blocksize><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         srcMatrix, srcRowIndices, srcColumnIndices, naturalToReordered, reorderedToNatual, rowsInLevelSet, startIdx);
 }
 
@@ -461,13 +466,14 @@ LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                      int* naturalToReordered,
                      const int startIdx,
                      int rowsInLevelSet,
-                     int thrBlockSize)
+                     int thrBlockSize,
+                     cudaStream_t stream)
 {
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, mixedPrecisionScheme>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, mixedPrecisionScheme>
-        <<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
+        <<<nThreadBlocks, threadBlockSize, 0, stream>>>(srcReorderedLowerMat,
                                              lowerRowIndices,
                                              lowerColIndices,
                                              reorderedUpperMat,
@@ -484,21 +490,21 @@ LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
 }
 
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
-    template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, T*, int);                           \
-    template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);                 \
-    template void LUFactorization<T, blocksize>(T*, int*, int*, int*, int*, size_t, int, int);                         \
+    template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, T*, int, cudaStream_t);                           \
+    template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);                 \
+    template void LUFactorization<T, blocksize>(T*, int*, int*, int*, int*, size_t, int, int, cudaStream_t);                         \
     template void LUFactorizationSplit<blocksize, T, float, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(                                                     \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                  \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int, cudaStream_t);                  \
     template void LUFactorizationSplit<blocksize, T, double, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(                                                    \
-        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int);               \
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int, cudaStream_t);               \
     template void LUFactorizationSplit<blocksize, T, float, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(                                                    \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                  \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int, cudaStream_t);                  \
     template void LUFactorizationSplit<blocksize, T, double, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(                                                   \
-        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int); \
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int, cudaStream_t); \
     template void LUFactorizationSplit<blocksize, T, float, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(                                                    \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                  \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int, cudaStream_t);                  \
     template void LUFactorizationSplit<blocksize, T, double, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(                                                   \
-        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int); 
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int, cudaStream_t); 
 
 #define INSTANTIATE_BLOCK_SIZED_KERNEL_WRAPPERS(T) \
     INSTANTIATE_KERNEL_WRAPPERS(T, 1); \
@@ -514,32 +520,32 @@ INSTANTIATE_BLOCK_SIZED_KERNEL_WRAPPERS(double)
 #define INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(blocksize)                                                         \
     /* double preconditioner */                                                                                        \
     template void solveLowerLevelSetSplit<blocksize, double, double>(                                                  \
-        double*, int*, int*, int*, int, int, const double*, double*, int);                                             \
+        double*, int*, int*, int*, int, int, const double*, double*, int, cudaStream_t);                                             \
     /* float matrix, double compute preconditioner */                                                                  \
     template void solveLowerLevelSetSplit<blocksize, double, float>(                                                   \
-        float*, int*, int*, int*, int, int, const double*, double*, int);                                              \
+        float*, int*, int*, int*, int, int, const double*, double*, int, cudaStream_t);                                              \
     /* float preconditioner */                                                                                         \
     template void solveLowerLevelSetSplit<blocksize, float, float>(                                                    \
-        float*, int*, int*, int*, int, int, const float*, float*, int);                                                \
+        float*, int*, int*, int*, int, int, const float*, float*, int, cudaStream_t);                                                \
                                                                                                                        \
     /* double preconditioner */                                                                                        \
     template void solveUpperLevelSetSplit<blocksize, double, double, double>(                                                  \
-        double*, int*, int*, int*, int, int, const double*, double*, int);                                             \
+        double*, int*, int*, int*, int, int, const double*, double*, int, cudaStream_t);                                             \
     /* float matrix, double compute preconditioner */                                                                  \
     template void solveUpperLevelSetSplit<blocksize, double, float, double>(                                                   \
-        float*, int*, int*, int*, int, int, const double*, double*, int);                                               \
+        float*, int*, int*, int*, int, int, const double*, double*, int, cudaStream_t);                                               \
     /* float preconditioner */                                                                                         \
     template void solveUpperLevelSetSplit<blocksize, float, float, double>(                                                    \
-        float*, int*, int*, int*, int, int, const double*, float*, int);                                                \
+        float*, int*, int*, int*, int, int, const double*, float*, int, cudaStream_t);                                                \
     /* double preconditioner */                                                                                        \
     template void solveUpperLevelSetSplit<blocksize, double, double, float>(                                                  \
-        double*, int*, int*, int*, int, int, const float*, double*, int);                                             \
+        double*, int*, int*, int*, int, int, const float*, double*, int, cudaStream_t);                                             \
     /* float matrix, double compute preconditioner */                                                                  \
     template void solveUpperLevelSetSplit<blocksize, double, float, float>(                                                   \
-        float*, int*, int*, int*, int, int, const float*, double*, int);                                               \
+        float*, int*, int*, int*, int, int, const float*, double*, int, cudaStream_t);                                               \
     /* float preconditioner */                                                                                         \
     template void solveUpperLevelSetSplit<blocksize, float, float, float>(                                                    \
-        float*, int*, int*, int*, int, int, const float*, float*, int);
+        float*, int*, int*, int*, int, int, const float*, float*, int, cudaStream_t);
 
 
 INSTANTIATE_MIXED_PRECISION_KERNEL_WRAPPERS(1);

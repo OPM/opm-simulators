@@ -37,37 +37,6 @@
 #include <functional>
 #include <utility>
 #include <string>
-#include <chrono>
-
-class CumulativeScopeTimer {
-public:
-    // Constructor starts the timer
-    CumulativeScopeTimer() : start_time(std::chrono::high_resolution_clock::now()) {
-        ++instance_count;
-    }
-
-    // Destructor stops the timer and accumulates the time
-    ~CumulativeScopeTimer() {
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
-        total_time_spent += duration;
-
-        std::cout << "Average: " << total_time_spent / instance_count << "us/update. This update: " << duration << "us. Total time spent: " << total_time_spent / 1000.0 << " ms. " << " Updates: " << instance_count << std::endl;
-    }
-
-    // Static method to report the cumulative time and instance count
-    static void report() {
-    }
-
-private:
-    std::chrono::high_resolution_clock::time_point start_time;  // Time when the timer started
-    static long long total_time_spent;  // Cumulative time spent in all instances
-    static int instance_count;  // Number of times the timer has been instantiated
-};
-
-// Static member variables need to be defined outside the class
-long long CumulativeScopeTimer::total_time_spent = 0;
-int CumulativeScopeTimer::instance_count = 0;
 
 namespace Opm::gpuistl
 {
@@ -147,10 +116,6 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d)
 {
     OPM_TIMEBLOCK(prec_apply);
     {
-        // cudaDeviceSynchronize(); // only for timing
-        // CumulativeScopeTimer timer; // only for timing
-        // apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
-
         const auto ptrs = std::make_pair(v.data(), d.data());
 
         auto it = m_apply_graphs.find(ptrs);
@@ -168,8 +133,6 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d)
             OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_executableGraphs[ptrs], m_apply_graphs[ptrs], nullptr, nullptr, 0));
         }
         OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs], 0));
-
-        // cudaDeviceSynchronize(); // only for timing
     }
 }
 
@@ -317,9 +280,6 @@ GpuDILU<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
     {
-
-        cudaDeviceSynchronize(); // only for timing
-        CumulativeScopeTimer timer; // only for timing
         m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
         reorderAndSplitMatrix(m_moveThreadBlockSize);
 
@@ -335,9 +295,7 @@ GpuDILU<M, X, Y, l>::update()
         }
 
         OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_update_executable_graph, 0));
-        cudaDeviceSynchronize(); // only for timing
     }
-
 }
 
 template <class M, class X, class Y, int l>
