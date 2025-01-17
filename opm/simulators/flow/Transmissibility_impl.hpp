@@ -1319,31 +1319,11 @@ applyMultipliers_(Scalar& trans,
                   unsigned cartElemIdx,
                   const TransMult& transMult) const
 {
-    // apply multiplyer for the transmissibility of the face. (the
+    // apply multiplier for the transmissibility of the face. (the
     // face index is the index of the reference-element face which
     // contains the intersection of interest.)
-    switch (faceIdx) {
-    case 0: // left
-        trans *= transMult.getMultiplier(cartElemIdx, FaceDir::XMinus);
-        break;
-    case 1: // right
-        trans *= transMult.getMultiplier(cartElemIdx, FaceDir::XPlus);
-        break;
-
-    case 2: // front
-        trans *= transMult.getMultiplier(cartElemIdx, FaceDir::YMinus);
-        break;
-    case 3: // back
-        trans *= transMult.getMultiplier(cartElemIdx, FaceDir::YPlus);
-        break;
-
-    case 4: // bottom
-        trans *= transMult.getMultiplier(cartElemIdx, FaceDir::ZMinus);
-        break;
-    case 5: // top
-        trans *= transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus);
-        break;
-    }
+    trans *= transMult.getMultiplier(cartElemIdx,
+                                     FaceDir::FromIntersectionIndex(faceIdx));
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
