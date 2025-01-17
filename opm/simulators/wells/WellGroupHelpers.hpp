@@ -54,7 +54,8 @@ public:
                                     const Opm::WellState<Scalar>& wellState,
                                     const int reportStepIdx,
                                     const int phasePos,
-                                    const bool injector);
+                                    const bool injector,
+                                    const bool network = false);
 
     static void setCmodeGroup(const Group& group,
                               const Schedule& schedule,
