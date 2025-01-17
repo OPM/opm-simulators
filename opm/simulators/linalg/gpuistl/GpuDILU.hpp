@@ -83,8 +83,11 @@ public:
     //! \brief Updates the matrix data.
     void update() final;
 
+    //! \brief perform matrix splitting and reordering
+    void reorderAndSplitMatrix(int moveThreadBlockSize);
+
     //! \brief Compute the diagonal of the DILU, and update the data of the reordered matrix
-    void computeDiagAndMoveReorderedData(int moveThreadBlockSize, int factorizationThreadBlockSize);
+    void computeDiagonal(int factorizationThreadBlockSize);
 
     //! \brief function that will experimentally tune the thread block sizes of the important cuda kernels
     void tuneThreadBlockSizes();

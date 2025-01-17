@@ -127,7 +127,8 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, int
         }
     }
 
-    computeDiagAndMoveReorderedData(m_moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
+    reorderAndSplitMatrix(m_moveThreadBlockSize);
+    computeDiagonal(m_DILUFactorizationThreadBlockSize);
 
     if (m_tuneThreadBlockSizes) {
         tuneThreadBlockSizes();
@@ -191,7 +192,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     m_gpuDInvFloat->data(),
                     d.data(),
                     v.data(),
-                    lowerSolveThreadBlockSize);
+                    lowerSolveThreadBlockSize,
+                    m_stream);
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG) {
                 detail::DILU::solveLowerLevelSetSplit<blocksize_, field_type, float, field_type>(
                     m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
@@ -203,7 +205,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     m_gpuDInv.data(),
                     d.data(),
                     v.data(),
-                    lowerSolveThreadBlockSize);
+                    lowerSolveThreadBlockSize,
+                    m_stream);
             } else {
                 detail::DILU::solveLowerLevelSetSplit<blocksize_, field_type, field_type, field_type>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
@@ -251,7 +254,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     numOfRowsInLevel,
                     m_gpuDInvFloat->data(),
                     v.data(),
-                    upperSolveThreadBlockSize);
+                    upperSolveThreadBlockSize,
+                    m_stream);
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG){
                 detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, float>(
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
@@ -262,7 +266,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     numOfRowsInLevel,
                     m_gpuDInv.data(),
                     v.data(),
-                    upperSolveThreadBlockSize);
+                    upperSolveThreadBlockSize,
+                    m_stream);
             } else {
                 detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, field_type>(
                     m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
@@ -315,19 +320,21 @@ GpuDILU<M, X, Y, l>::update()
 
         cudaDeviceSynchronize(); // only for timing
         CumulativeScopeTimer timer; // only for timing
-        update(m_moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
-        // m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
-        // if (!m_update_graph_captured)
-        // {
-        //     m_update_graph = cudaGraph_t();
-        //     m_update_executable_graph = cudaGraphExec_t();
-        //     OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream, cudaStreamCaptureModeGlobal));
-        //     computeDiagAndMoveReorderedData(m_moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
-        //     OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream, &m_update_graph));
-        //     OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_update_executable_graph, m_update_graph, nullptr, nullptr, 0));
-        //     m_update_graph_captured = true;
-        // }
-        // OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_update_executable_graph, 0));
+        m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
+        reorderAndSplitMatrix(m_moveThreadBlockSize);
+
+        if (!m_update_graph_captured)
+        {
+            m_update_graph = cudaGraph_t();
+            m_update_executable_graph = cudaGraphExec_t();
+            OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream, cudaStreamCaptureModeGlobal));
+            computeDiagonal(m_DILUFactorizationThreadBlockSize);
+            OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream, &m_update_graph));
+            OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_update_executable_graph, m_update_graph, nullptr, nullptr, 0));
+            m_update_graph_captured = true;
+        }
+
+        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_update_executable_graph, 0));
         cudaDeviceSynchronize(); // only for timing
     }
 
@@ -338,12 +345,13 @@ void
 GpuDILU<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationBlockSize)
 {
     m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
-    computeDiagAndMoveReorderedData(moveThreadBlockSize, factorizationBlockSize);
+    reorderAndSplitMatrix(moveThreadBlockSize);
+    computeDiagonal(factorizationBlockSize);
 }
 
 template <class M, class X, class Y, int l>
 void
-GpuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData(int moveThreadBlockSize, int factorizationBlockSize)
+GpuDILU<M, X, Y, l>::reorderAndSplitMatrix(int moveThreadBlockSize)
 {
     if (m_splitMatrix) {
         detail::copyMatDataToReorderedSplit<field_type, blocksize_>(
@@ -369,7 +377,12 @@ GpuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData(int moveThreadBlockSize, in
                                                                 moveThreadBlockSize,
                                                                 m_stream);
     }
+}
 
+template <class M, class X, class Y, int l>
+void
+GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
+{
     int levelStartIdx = 0;
     for (int level = 0; level < m_levelSets.size(); ++level) {
         const int numOfRowsInLevel = m_levelSets[level].size();
@@ -391,7 +404,8 @@ GpuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData(int moveThreadBlockSize, in
                     m_gpuDInvFloat->data(),
                     m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
-                    factorizationBlockSize);
+                    factorizationBlockSize,
+                    m_stream);
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG) {
                 detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
@@ -409,7 +423,8 @@ GpuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData(int moveThreadBlockSize, in
                     nullptr,
                     m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
-                    factorizationBlockSize);
+                    factorizationBlockSize,
+                    m_stream);
             } else {
                 // TODO: should this be field type twice or field type then float in the template?
                 detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(

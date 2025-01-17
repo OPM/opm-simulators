@@ -317,7 +317,7 @@ solveLowerLevelSetSplit(MatrixScalar* reorderedMat,
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
 // perform the upper solve for all rows in the same level set
@@ -357,7 +357,7 @@ solveUpperLevelSetSplit(MatrixScalar* reorderedMat,
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
@@ -415,7 +415,7 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
         int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
             cuComputeDiluDiagonalSplit<blocksize, InputScalar, OutputScalar, scheme>, thrBlockSize);
         int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-        cuComputeDiluDiagonalSplit<blocksize, InputScalar, OutputScalar, scheme><<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
+        cuComputeDiluDiagonalSplit<blocksize, InputScalar, OutputScalar, scheme><<<nThreadBlocks, threadBlockSize, 0, stream>>>(srcReorderedLowerMat,
                                                                                      lowerRowIndices,
                                                                                      lowerColIndices,
                                                                                      srcReorderedUpperMat,
@@ -437,21 +437,21 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
 
 // TODO: format
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
-    template void computeDiluDiagonal<T, blocksize>(T*, int*, int*, int*, int*, const int, int, T*, int);              \
+    template void computeDiluDiagonal<T, blocksize>(T*, int*, int*, int*, int*, const int, int, T*, int, cudaStream_t);              \
     template void computeDiluDiagonalSplit<blocksize, T, double, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int);                                      \
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int, cudaStream_t);                                      \
     template void computeDiluDiagonalSplit<blocksize, T, float, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int);                                      \
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int, cudaStream_t);                                      \
     template void computeDiluDiagonalSplit<blocksize, T, float, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int);                                      \
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int, cudaStream_t);                                      \
     template void computeDiluDiagonalSplit<blocksize, T, double, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int);                                      \
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int, cudaStream_t);                                      \
     template void computeDiluDiagonalSplit<blocksize, T, float, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int);                                      \
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, float*, float*, float*, int, cudaStream_t);                                      \
     template void computeDiluDiagonalSplit<blocksize, T, double, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(                                                              \
-        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int);                                      \
-    template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);                 \
-    template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);
+        const T*, int*, int*, const T*, int*, int*, const T*, int*, int*, const int, int, T*, double*, double*, double*, int, cudaStream_t);                                      \
+    template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);                 \
+    template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int, cudaStream_t);
     // template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);       \
     // template void solveUpperLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);            \
     // template void solveLowerLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int, cudaStream_t);
@@ -471,9 +471,9 @@ INSTANTIATE_KERNEL_WRAPPERS(double, 6);
 
 #define INSTANTIATE_SOLVE_LEVEL_SET_SPLIT(blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar)                                 \
     template void solveUpperLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar>(                                \
-        MatrixScalar*, int*, int*, int*, int, int, const DiagonalScalar*, LinearSolverScalar*, int);                     \
+        MatrixScalar*, int*, int*, int*, int, int, const DiagonalScalar*, LinearSolverScalar*, int, cudaStream_t);                     \
     template void solveLowerLevelSetSplit<blocksize, LinearSolverScalar, MatrixScalar, DiagonalScalar>(                                \
-        MatrixScalar*, int*, int*, int*, int, int, const DiagonalScalar*, const LinearSolverScalar*, LinearSolverScalar*, int);
+        MatrixScalar*, int*, int*, int*, int, int, const DiagonalScalar*, const LinearSolverScalar*, LinearSolverScalar*, int, cudaStream_t);
 
 // TODO: be smarter about this... Surely this instantiates many more combinations that are actually needed
 #define INSTANTIATE_SOLVE_LEVEL_SET_SPLIT_ALL(blocksize) \
