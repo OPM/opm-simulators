@@ -120,6 +120,12 @@ void GlobalWellInfo<Scalar>::clear()
 }
 
 template<class Scalar>
+bool GlobalWellInfo<Scalar>::isRank0() const
+{
+    return is_rank0_;
+}
+
+template<class Scalar>
 Scalar GlobalWellInfo<Scalar>::
 efficiency_scaling_factor(const std::string& wname) const
 {

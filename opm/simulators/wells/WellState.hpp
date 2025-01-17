@@ -260,6 +260,10 @@ public:
 
     bool wellIsOwned(const std::string& wellName) const;
 
+    bool isRank0() const {
+        return this->global_well_info.value().isRank0();
+    }
+
     void updateStatus(int well_index, WellStatus status);
 
     void openWell(int well_index);

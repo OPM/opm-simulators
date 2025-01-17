@@ -24,6 +24,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
@@ -97,6 +98,21 @@ namespace Opm {
             const auto& groupTmp = schedule.getGroup(groupName, reportStepIdx);
             const auto& gefac = groupTmp.getGroupEfficiencyFactor();
             rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
+            const auto& gsatprod = schedule[reportStepIdx].gsatprod.get();
+            // only sum once
+            if (wellState.isRank0() && !injector && gsatprod.has(groupName)) {
+                const auto& gsatprod_rates = gsatprod.get(groupName);
+                const auto& pu = wellState.phaseUsage();
+                if (pu.phase_used[BlackoilPhases::Aqua] && pu.phase_pos[BlackoilPhases::Aqua] == phasePos) {
+                    rate += gsatprod_rates.water_rate;
+                }
+                if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_pos[BlackoilPhases::Liquid] == phasePos) {
+                    rate += gsatprod_rates.oil_rate;
+                }
+                if (pu.phase_used[BlackoilPhases::Vapour] && pu.phase_pos[BlackoilPhases::Vapour] == phasePos) {
+                    rate += gsatprod_rates.gas_rate;
+                }
+            }
         }
 
         for (const std::string& wellName : group.wells()) {
