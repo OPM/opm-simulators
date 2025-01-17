@@ -28,10 +28,10 @@ namespace Opm::FlowKeywordValidation
 {
 
 template <>
-const PartiallySupportedKeywords<std::string>&
+const SupportedKeywordItems<std::string>&
 partiallySupported()
 {
-   static const PartiallySupportedKeywords<std::string> partially_supported_keywords_strings = {
+   static const SupportedKeywordItems<std::string> partially_supported_keywords_strings = {
          {
             "BRANPROP",
             {
@@ -273,13 +273,6 @@ partiallySupported()
                {5,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(WATER_MODEL): only the NO option is supported – will STOP"}}, // WATER_MODEL
             },
          },
-
-         {
-            "WCONHIST",
-            {
-               {3,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP"}, "WCONHIST(TARGET): should be set to ORAT/WRAT/GRAT/LRAT/RESV or BHP"}}, // CMODE
-            },
-         },
          {
             "WEFAC",
             {
@@ -351,10 +344,10 @@ partiallySupported()
 }
 
 template <>
-const KeywordValidation::PartiallySupportedKeywords<int>&
+const KeywordValidation::SupportedKeywordItems<int>&
 partiallySupported()
 {
-   static const KeywordValidation::PartiallySupportedKeywords<int>partially_supported_keywords_int = {
+   static const KeywordValidation::SupportedKeywordItems<int>partially_supported_keywords_int = {
          {
             "EDITNNC",
             {
@@ -535,10 +528,10 @@ partiallySupported()
 }
 
 template <>
-const KeywordValidation::PartiallySupportedKeywords<double>&
+const KeywordValidation::SupportedKeywordItems<double>&
 partiallySupported()
 {
-   static const KeywordValidation::PartiallySupportedKeywords<double> partially_supported_keywords_double = {
+   static const KeywordValidation::SupportedKeywordItems<double> partially_supported_keywords_double = {
          {
             "AQUCON",
             {
