@@ -268,10 +268,9 @@ protected:
                            unsigned cartElemIdx,
                            const TransMult& transMult) const;
 
-    void applyNtg_(Scalar& trans,
-                   unsigned faceIdx,
-                   unsigned elemIdx,
-                   const std::vector<double>& ntg) const;
+    static void applyNtg_(Scalar& trans,
+                          const FaceInfo& face,
+                          const std::vector<double>& ntg);
 
     std::vector<DimMatrix> permeability_;
     std::vector<Scalar> porosity_;

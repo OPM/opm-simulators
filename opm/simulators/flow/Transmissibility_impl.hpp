@@ -383,8 +383,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                   distanceVector_(outside.faceCenter, outside.elemIdx),
                                   permeability_[outside.elemIdx]);
 
-            applyNtg_(halfTrans1, inside.faceIdx, inside.elemIdx, ntg);
-            applyNtg_(halfTrans2, outside.faceIdx, outside.elemIdx, ntg);
+            applyNtg_(halfTrans1, inside, ntg);
+            applyNtg_(halfTrans2, outside, ntg);
 
             // convert half transmissibilities to full face
             // transmissibilities using the harmonic mean
@@ -459,8 +459,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                             distanceVector_(outside.faceCenter, outside.elemIdx),
                                             porosity_[outside.elemIdx]);
 
-                applyNtg_(halfDiffusivity1, inside.faceIdx, inside.elemIdx, ntg);
-                applyNtg_(halfDiffusivity2, outside.faceIdx, outside.elemIdx, ntg);
+                applyNtg_(halfDiffusivity1, inside, ntg);
+                applyNtg_(halfDiffusivity2, outside, ntg);
 
                 //TODO Add support for multipliers
                 const Scalar diffusivity = harmonicMean(halfDiffusivity1, halfDiffusivity2);
@@ -478,8 +478,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                             distanceVector_(outside.faceCenter, outside.elemIdx),
                                             dispersion_[outside.elemIdx]);
 
-                applyNtg_(halfDispersivity1, inside.faceIdx, inside.elemIdx, ntg);
-                applyNtg_(halfDispersivity2, outside.faceIdx, outside.elemIdx, ntg);
+                applyNtg_(halfDispersivity1, inside, ntg);
+                applyNtg_(halfDispersivity2, outside, ntg);
 
                 // TODO Add support for multipliers
                 const Scalar dispersivity = harmonicMean(halfDispersivity1, halfDispersivity2);
@@ -1353,26 +1353,25 @@ applyMultipliers_(Scalar& trans,
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyNtg_(Scalar& trans,
-          unsigned faceIdx,
-          unsigned elemIdx,
-          const std::vector<double>& ntg) const
+          const FaceInfo& face,
+          const std::vector<double>& ntg)
 {
     // apply multiplyer for the transmissibility of the face. (the
     // face index is the index of the reference-element face which
     // contains the intersection of interest.)
-    switch (faceIdx) {
+    switch (face.faceIdx) {
     case 0: // left
-        trans *= ntg[elemIdx];
+        trans *= ntg[face.elemIdx];
         break;
     case 1: // right
-        trans *= ntg[elemIdx];
+        trans *= ntg[face.elemIdx];
         break;
 
     case 2: // front
-        trans *= ntg[elemIdx];
+        trans *= ntg[face.elemIdx];
         break;
     case 3: // back
-        trans *= ntg[elemIdx];
+        trans *= ntg[face.elemIdx];
         break;
 
         // NTG does not apply to top and bottom faces
