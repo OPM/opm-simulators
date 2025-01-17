@@ -259,13 +259,11 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 auto faceAreaNormal = intersection.centerUnitOuterNormal();
                 faceAreaNormal *= geometry.volume();
 
-                Scalar transBoundaryIs;
-                computeHalfTrans_(transBoundaryIs,
-                                  faceAreaNormal,
-                                  intersection.indexInInside(),
-                                  distanceVector_(faceCenterInside,
-                                                  elemIdx),
-                                  permeability_[elemIdx]);
+                Scalar transBoundaryIs =
+                    computeHalfTrans_(faceAreaNormal,
+                                      intersection.indexInInside(),
+                                      distanceVector_(faceCenterInside, elemIdx),
+                                      permeability_[elemIdx]);
 
                 // normally there would be two half-transmissibilities that would be
                 // averaged. on the grid boundary there only is the half
@@ -355,21 +353,16 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                   faceAreaNormal,
                                   isCpGrid);
 
-            Scalar halfTrans1;
-            Scalar halfTrans2;
-
-            computeHalfTrans_(halfTrans1,
-                              faceAreaNormal,
-                              insideFaceIdx,
-                              distanceVector_(faceCenterInside,
-                                              elemIdx),
-                              permeability_[elemIdx]);
-            computeHalfTrans_(halfTrans2,
-                              faceAreaNormal,
-                              outsideFaceIdx,
-                              distanceVector_(faceCenterOutside,
-                                              outsideElemIdx),
-                              permeability_[outsideElemIdx]);
+            Scalar halfTrans1 =
+                computeHalfTrans_(faceAreaNormal,
+                                  insideFaceIdx,
+                                  distanceVector_(faceCenterInside, elemIdx),
+                                  permeability_[elemIdx]);
+            Scalar halfTrans2 =
+                computeHalfTrans_(faceAreaNormal,
+                                  outsideFaceIdx,
+                                  distanceVector_(faceCenterOutside, outsideElemIdx),
+                                  permeability_[outsideElemIdx]);
 
             applyNtg_(halfTrans1, insideFaceIdx, elemIdx, ntg);
             applyNtg_(halfTrans2, outsideFaceIdx, outsideElemIdx, ntg);
@@ -1321,19 +1314,21 @@ applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompresse
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-computeHalfTrans_(Scalar& halfTrans,
-                  const DimVector& areaNormal,
+Scalar
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+computeHalfTrans_(const DimVector& areaNormal,
                   int faceIdx, // in the reference element that contains the intersection
                   const DimVector& distance,
-                  const DimMatrix& perm) const
+                  const DimMatrix& perm)
 {
     assert(faceIdx >= 0);
-    unsigned dimIdx = faceIdx/2;
+    unsigned dimIdx = faceIdx / 2;
     assert(dimIdx < dimWorld);
-    halfTrans = perm[dimIdx][dimIdx];
+    Scalar halfTrans = perm[dimIdx][dimIdx];
     halfTrans *= std::abs(Dune::dot(areaNormal, distance));
     halfTrans /= distance.two_norm2();
+
+    return halfTrans;
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>

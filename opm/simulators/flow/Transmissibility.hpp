@@ -251,11 +251,10 @@ protected:
 
     void extractDispersion_();
 
-    void computeHalfTrans_(Scalar& halfTrans,
-                           const DimVector& areaNormal,
-                           int faceIdx, // in the reference element that contains the intersection
-                           const DimVector& distance,
-                           const DimMatrix& perm) const;
+    static Scalar computeHalfTrans_(const DimVector& areaNormal,
+                                    int faceIdx, // in the reference element that contains the intersection
+                                    const DimVector& distance,
+                                    const DimMatrix& perm);
 
     void computeHalfDiffusivity_(Scalar& halfDiff,
                                  const DimVector& areaNormal,
