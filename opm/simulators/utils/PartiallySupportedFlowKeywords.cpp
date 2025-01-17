@@ -603,6 +603,14 @@ partiallySupported()
             },
          },
          {
+            "GSATPROD",
+            {
+               {5,{true, allow_values<double> {.0}, "GSATPROD(RESV): reservoir volume rate is not supported and should be defaulted (1*)"}}, // RESERVOIR_VOLUME_RATE
+               {6,{true, allow_values<double> {.0}, "GSATPROD(GASLIFT): gaslift rate is not supported and should be defaulted (1*)"}}, // GASLIFT
+               {7,{false, allow_values<double> {.0}, "GSATPROD(CALRATE): calorific rate is not used and should be defaulted (1*)"}}, // CALORIFIC_RATE
+            },
+         },
+         {
             "GUIDERAT",
             {
                {10,{true, [](double x) { return x >= 0; }, "GUIDERAT(GROPT01): only only positive values allowed – will STOP"}}, // ALLOW_INCREASE
