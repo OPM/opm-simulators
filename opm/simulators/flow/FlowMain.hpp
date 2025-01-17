@@ -105,7 +105,6 @@ namespace Opm {
             Parameters::Register<Parameters::Slave>
                 ("Specify if the simulation is a slave simulation in a master-slave simulation");
             Parameters::Hide<Parameters::Slave>();
-            Simulator::registerParameters();
 
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
