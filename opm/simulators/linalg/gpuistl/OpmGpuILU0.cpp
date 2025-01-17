@@ -155,7 +155,6 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d)
         auto it = m_apply_graphs.find(ptrs);
 
         if (it == m_apply_graphs.end()) {
-            printf("\ncapturing apply\n");
             m_apply_graphs[ptrs] = cudaGraph_t();
             m_executableGraphs[ptrs] = cudaGraphExec_t();
             OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream, cudaStreamCaptureModeGlobal));
@@ -297,26 +296,9 @@ template <class M, class X, class Y, int l>
 void
 OpmGpuILU0<M, X, Y, l>::update()
 {
-    cudaDeviceSynchronize();
-    CumulativeScopeTimer timer;
-
     m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
     reorderAndSplitMatrix(m_moveThreadBlockSize);
-
     LUFactorizeMatrix(m_ILU0FactorizationThreadBlockSize);
-    // if (!m_update_graph_captured)
-    // {
-    //     m_update_graph = cudaGraph_t();
-    //     m_update_executable_graph = cudaGraphExec_t();
-    //     OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream, cudaStreamCaptureModeGlobal));
-    //     LUFactorizeMatrix(m_ILU0FactorizationThreadBlockSize);
-    //     OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream, &m_update_graph));
-    //     OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_update_executable_graph, m_update_graph, nullptr, nullptr, 0));
-    //     m_update_graph_captured = true;
-    // }
-
-    // OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_update_executable_graph, 0));
-    cudaDeviceSynchronize();
 }
 
 template <class M, class X, class Y, int l>

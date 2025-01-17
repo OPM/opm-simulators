@@ -162,11 +162,6 @@ private:
     std::map<std::pair<field_type*, const field_type*>, cudaGraph_t> m_apply_graphs;
     std::map<std::pair<field_type*, const field_type*>, cudaGraphExec_t> m_executableGraphs;
 
-    // Update graph and support variables
-    bool m_update_graph_captured {false};
-    cudaGraph_t m_update_graph;
-    cudaGraphExec_t m_update_executable_graph;
-
     // Stream for the DILU operations on the GPU
     cudaStream_t m_stream;
 };
