@@ -353,7 +353,7 @@ void Main::setupDamaris(const std::string& outputDir )
     //const auto find_replace_map;
     //const auto find_replace_map = Opm::DamarisOutput::DamarisKeywords<PreTypeTag>(EclGenericVanguard::comm(), outputDir);
     std::map<std::string, std::string> find_replace_map;
-    find_replace_map = Opm::DamarisOutput::getDamarisKeywords<PreTypeTag>(FlowGenericVanguard::comm(), outputDir);
+    find_replace_map = DamarisOutput::getDamarisKeywords(FlowGenericVanguard::comm(), outputDir);
 
     // By default EnableDamarisOutputCollective is true so all simulation results will
     // be written into one single file for each iteration using Parallel HDF5.
@@ -366,9 +366,9 @@ void Main::setupDamaris(const std::string& outputDir )
                                      find_replace_map);
     int is_client;
     MPI_Comm new_comm;
-    // damaris_start() is where the Damaris Server ranks will block, until damaris_stop()
+    // damaris_start() is where the Damaris Server ranks will block, until damaris_stop() 
     // is called from the client ranks
-    int err = damaris_start(&is_client);
+    int err = damaris_start(&is_client);  
     isSimulationRank_ = (is_client > 0);
     if (isSimulationRank_ && err == DAMARIS_OK) {
         damaris_client_comm_get(&new_comm);

@@ -47,8 +47,6 @@
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/SimulatorConvergenceOutput.hpp>
-#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
-#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
 #include <opm/simulators/flow/SimulatorReportBanners.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
