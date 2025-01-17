@@ -508,35 +508,35 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     // After loadbalance, grid_ will contain a global and distribute view.
     // equilGrid_ being a shallow copy only the global view.
     //
-    // --- Add LGRs  ---
     // Check if input file contains Lgrs.
     const auto& lgrs = eclState.getLgrs();
     const auto lgrsSize = lgrs.size();
-    if (lgrsSize == 0)
-    {
+    // If there are no LGRs, do as usual: equilGrid_ being a shallow copy of the global view.
+    if (lgrsSize == 0) {
         if (mpiRank == 0)
         {
+
             equilGrid_.reset(new Dune::CpGrid(*grid_));
             equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
 
             eclState.reset_actnum(UgGridHelpers::createACTNUM(*grid_));
-            eclState.set_active_indices(this->grid_->globalCell());
+            eclState.set_active_indices( this->grid_->globalCell() );
         }
     }
-    else { // If there are lgrs, create the grid with them, and update the leaf grid view.
+    else {
+        // If there are lgrs, we need equilGrid_ to be the global view of leaf grid view
+        // with LGRs.
         equilGrid_.reset(new Dune::CpGrid(*grid_));
-        if (lgrsSize)
-        {
-            OpmLog::info("\nAdding LGRs to the equilGrid and updating its leaf grid view");
-           
-            addLgrsUpdateLeafView(lgrs, lgrsSize, *equilGrid_);
-        }
+
+        OpmLog::info("\nAdding LGRs to the equilGrid and updating its leaf grid view");
+
+        addLgrsUpdateLeafView(lgrs, lgrsSize, *equilGrid_);
+
+
         equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
-        
         eclState.reset_actnum(UgGridHelpers::createACTNUM(*equilGrid_));
-        eclState.set_active_indices(this->grid_->currentData().front()->globalCell());
+        eclState.set_active_indices(this->equilGrid_->currentData().front()->globalCell());
     }
-    
 
     {
         auto size = removed_cells.size();

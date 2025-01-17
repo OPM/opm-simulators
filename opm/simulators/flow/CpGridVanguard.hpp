@@ -235,7 +235,7 @@ public:
                              this->eclState(), this->parallelWells_,
                              this->numJacobiBlocks(), this->enableEclOutput());
 #endif
-       
+
         // --- Add LGRs  ---
         // Check if input file contains Lgrs.
         const auto& lgrs = this-> eclState().getLgrs();
