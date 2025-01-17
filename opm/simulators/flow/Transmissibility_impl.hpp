@@ -1356,25 +1356,12 @@ applyNtg_(Scalar& trans,
           const FaceInfo& face,
           const std::vector<double>& ntg)
 {
-    // apply multiplyer for the transmissibility of the face. (the
+    // apply multiplier for the transmissibility of the face. (the
     // face index is the index of the reference-element face which
     // contains the intersection of interest.)
-    switch (face.faceIdx) {
-    case 0: // left
+    // NTG does not apply to top and bottom faces
+    if (face.faceIdx >= 0 && face.faceIdx <= 3) {
         trans *= ntg[face.elemIdx];
-        break;
-    case 1: // right
-        trans *= ntg[face.elemIdx];
-        break;
-
-    case 2: // front
-        trans *= ntg[face.elemIdx];
-        break;
-    case 3: // back
-        trans *= ntg[face.elemIdx];
-        break;
-
-        // NTG does not apply to top and bottom faces
     }
 }
 
