@@ -37,6 +37,37 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <chrono>
+
+class CumulativeScopeTimer {
+public:
+    // Constructor starts the timer
+    CumulativeScopeTimer() : start_time(std::chrono::high_resolution_clock::now()) {
+        ++instance_count;
+    }
+
+    // Destructor stops the timer and accumulates the time
+    ~CumulativeScopeTimer() {
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+        total_time_spent += duration;
+
+        std::cout << "Average: " << total_time_spent / instance_count << "us/update. This update: " << duration << "us. Total time spent: " << total_time_spent / 1000.0 << " ms. " << " Updates: " << instance_count << std::endl;
+    }
+
+    // Static method to report the cumulative time and instance count
+    static void report() {
+    }
+
+private:
+    std::chrono::high_resolution_clock::time_point start_time;  // Time when the timer started
+    static long long total_time_spent;  // Cumulative time spent in all instances
+    static int instance_count;  // Number of times the timer has been instantiated
+};
+
+// Static member variables need to be defined outside the class
+long long CumulativeScopeTimer::total_time_spent = 0;
+int CumulativeScopeTimer::instance_count = 0;
 namespace Opm::gpuistl
 {
 
@@ -58,6 +89,7 @@ OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernel
     , m_tuneThreadBlockSizes(tuneKernels)
     , m_mixedPrecisionScheme(makeMatrixStorageMPScheme(mixedPrecisionScheme))
 {
+    cudaStreamCreate(&m_stream);
 
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
     // Some sanity check
@@ -98,7 +130,8 @@ OpmGpuILU0<M, X, Y, l>::OpmGpuILU0(const M& A, bool splitMatrix, bool tuneKernel
         }
     }
 
-    LUFactorizeAndMoveData(m_moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
+    reorderAndSplitMatrix(m_moveThreadBlockSize);
+    LUFactorizeMatrix(m_ILU0FactorizationThreadBlockSize);
 
     if (m_tuneThreadBlockSizes) {
         tuneThreadBlockSizes();
@@ -117,7 +150,22 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d)
 {
     OPM_TIMEBLOCK(prec_apply);
     {
-        apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
+        const auto ptrs = std::make_pair(v.data(), d.data());
+
+        auto it = m_apply_graphs.find(ptrs);
+
+        if (it == m_apply_graphs.end()) {
+            m_apply_graphs[ptrs] = cudaGraph_t();
+            m_executableGraphs[ptrs] = cudaGraphExec_t();
+            OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream, cudaStreamCaptureModeGlobal));
+
+            // The apply functions contains lots of small function calls which call a kernel each
+            apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
+
+            OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream, &m_apply_graphs[ptrs]));
+            OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_executableGraphs[ptrs], m_apply_graphs[ptrs], nullptr, nullptr, 0));
+        }
+        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs], 0));
     }
 }
 
@@ -142,7 +190,8 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, i
                     numOfRowsInLevel,
                     d.data(),
                     v.data(),
-                    lowerSolveThreadBlockSize);
+                    lowerSolveThreadBlockSize,
+                    m_stream);
             }
             else{
                 detail::ILU0::solveLowerLevelSetSplit<blocksize_, field_type, field_type>(
@@ -154,7 +203,8 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, i
                     numOfRowsInLevel,
                     d.data(),
                     v.data(),
-                    lowerSolveThreadBlockSize);
+                    lowerSolveThreadBlockSize,
+                    m_stream);
             }
         } else {
             detail::ILU0::solveLowerLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
@@ -165,7 +215,8 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, i
                                                                      numOfRowsInLevel,
                                                                      d.data(),
                                                                      v.data(),
-                                                                     lowerSolveThreadBlockSize);
+                                                                     lowerSolveThreadBlockSize,
+                                                                     m_stream);
         }
         levelStartIdx += numOfRowsInLevel;
     }
@@ -185,7 +236,8 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, i
                         numOfRowsInLevel,
                         m_gpuMatrixReorderedDiagFloat.value().data(),
                         v.data(),
-                        upperSolveThreadBlockSize);
+                        upperSolveThreadBlockSize,
+                        m_stream);
             }
             else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG) {
                     detail::ILU0::solveUpperLevelSetSplit<blocksize_, field_type, float, field_type>(
@@ -197,7 +249,8 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, i
                         numOfRowsInLevel,
                         m_gpuMatrixReorderedDiag.value().data(),
                         v.data(),
-                        upperSolveThreadBlockSize);
+                        upperSolveThreadBlockSize,
+                        m_stream);
             }
             else{
                 detail::ILU0::solveUpperLevelSetSplit<blocksize_, field_type, field_type, field_type>(
@@ -209,7 +262,8 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, i
                     numOfRowsInLevel,
                     m_gpuMatrixReorderedDiag.value().data(),
                     v.data(),
-                    upperSolveThreadBlockSize);
+                    upperSolveThreadBlockSize,
+                    m_stream);
             }
         } else {
             detail::ILU0::solveUpperLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
@@ -219,7 +273,8 @@ OpmGpuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, i
                                                                      levelStartIdx,
                                                                      numOfRowsInLevel,
                                                                      v.data(),
-                                                                     upperSolveThreadBlockSize);
+                                                                     upperSolveThreadBlockSize,
+                                                                     m_stream);
         }
     }
 }
@@ -241,10 +296,9 @@ template <class M, class X, class Y, int l>
 void
 OpmGpuILU0<M, X, Y, l>::update()
 {
-    OPM_TIMEBLOCK(prec_update);
-    {
-        update(m_moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
-    }
+    m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
+    reorderAndSplitMatrix(m_moveThreadBlockSize);
+    LUFactorizeMatrix(m_ILU0FactorizationThreadBlockSize);
 }
 
 template <class M, class X, class Y, int l>
@@ -254,12 +308,14 @@ OpmGpuILU0<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationThreadB
     OPM_TIMEBLOCK(prec_update);
     {
         m_gpuMatrix.updateNonzeroValues(m_cpuMatrix, true); // send updated matrix to the gpu
-        LUFactorizeAndMoveData(moveThreadBlockSize, factorizationThreadBlockSize);
+        reorderAndSplitMatrix(moveThreadBlockSize);
+        LUFactorizeMatrix(factorizationThreadBlockSize);
     }
 }
+
 template <class M, class X, class Y, int l>
 void
-OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int factorizationThreadBlockSize)
+OpmGpuILU0<M, X, Y, l>::reorderAndSplitMatrix(int moveThreadBlockSize)
 {
     if (m_splitMatrix) {
         detail::copyMatDataToReorderedSplit<field_type, blocksize_>(
@@ -273,7 +329,8 @@ OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int fact
             m_gpuMatrixReorderedDiag.value().data(),
             m_gpuNaturalToReorder.data(),
             m_gpuMatrixReorderedLower->N(),
-            moveThreadBlockSize);
+            moveThreadBlockSize,
+            m_stream);
     } else {
         detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
                                                                m_gpuMatrix.getRowIndices().data(),
@@ -281,8 +338,15 @@ OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int fact
                                                                m_gpuReorderedLU->getRowIndices().data(),
                                                                m_gpuNaturalToReorder.data(),
                                                                m_gpuReorderedLU->N(),
-                                                               moveThreadBlockSize);
+                                                               moveThreadBlockSize,
+                                                               m_stream);
     }
+}
+
+template <class M, class X, class Y, int l>
+void
+OpmGpuILU0<M, X, Y, l>::LUFactorizeMatrix(int factorizationThreadBlockSize)
+{
     int levelStartIdx = 0;
     for (int level = 0; level < m_levelSets.size(); ++level) {
         const int numOfRowsInLevel = m_levelSets[level].size();
@@ -304,7 +368,8 @@ OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int fact
                     m_gpuNaturalToReorder.data(),
                     levelStartIdx,
                     numOfRowsInLevel,
-                    factorizationThreadBlockSize);
+                    factorizationThreadBlockSize,
+                    m_stream);
             }
             else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG){
                 detail::ILU0::LUFactorizationSplit<blocksize_, field_type, float, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(
@@ -322,7 +387,8 @@ OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int fact
                     m_gpuNaturalToReorder.data(),
                     levelStartIdx,
                     numOfRowsInLevel,
-                    factorizationThreadBlockSize);
+                    factorizationThreadBlockSize,
+                    m_stream);
             }
             else{
                 detail::ILU0::LUFactorizationSplit<blocksize_, field_type, float, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(
@@ -340,7 +406,8 @@ OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int fact
                     m_gpuNaturalToReorder.data(),
                     levelStartIdx,
                     numOfRowsInLevel,
-                    factorizationThreadBlockSize);
+                    factorizationThreadBlockSize,
+                    m_stream);
             }
 
         } else {
@@ -351,7 +418,8 @@ OpmGpuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int fact
                                                                   m_gpuReorderToNatural.data(),
                                                                   numOfRowsInLevel,
                                                                   levelStartIdx,
-                                                                  factorizationThreadBlockSize);
+                                                                  factorizationThreadBlockSize,
+                                                                  m_stream);
         }
         levelStartIdx += numOfRowsInLevel;
     }
