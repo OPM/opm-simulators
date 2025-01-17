@@ -253,7 +253,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"GTADD", {true, std::nullopt}},
         {"GTMULT", {true, std::nullopt}},
         {"GUIDECAL", {true, std::nullopt}},
-        {"GSATPROD", {true, std::nullopt}},
         {"GUPFREQ", {true, std::nullopt}},
         {"GWRTWCV", {true, std::nullopt}},
         {"HALFTRAN", {true, std::nullopt}},
