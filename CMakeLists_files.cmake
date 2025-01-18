@@ -1172,7 +1172,20 @@ if(dune-alugrid_FOUND)
     examples/fracture_discretefracture.cpp
   )
 endif()
-
+if(USE_MPI)
+  list (APPEND MAIN_SOURCE_FILES
+    opm/simulators/flow/ReservoirCoupling.cpp
+    opm/simulators/flow/ReservoirCouplingMaster.cpp
+    opm/simulators/flow/ReservoirCouplingSlave.cpp
+    opm/simulators/flow/ReservoirCouplingSpawnSlaves.cpp
+  )
+  list (APPEND PUBLIC_HEADER_FILES
+    opm/simulators/flow/ReservoirCoupling.hpp
+    opm/simulators/flow/ReservoirCouplingMaster.hpp
+    opm/simulators/flow/ReservoirCouplingSlave.hpp
+    opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp
+  )
+endif()
 if(HYPRE_FOUND)
   list(APPEND PUBLIC_HEADER_FILES
     opm/simulators/linalg/HyprePreconditioner.hpp
