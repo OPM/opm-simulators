@@ -110,6 +110,17 @@ public:
         updateGridView_();
     }
 
+    /*!
+     * \brief Add LGRs to the grid, if any. Only supported for CpGrid - for now.
+     */
+    void addLgrs()
+    {
+        if(&asImp_() != this) {
+            asImp_().addLgrs();
+            updateGridView_();
+        }
+    }
+
 protected:
     // this method should be called after the grid has been allocated
     void finalizeInit_()

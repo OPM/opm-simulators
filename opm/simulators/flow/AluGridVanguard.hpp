@@ -196,7 +196,12 @@ public:
             globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans,
                                  [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
         }
-        
+
+    }
+
+    void addLgrs()
+    {
+    // do nothing: AluGrid with LGRs not supported yet!
     }
 
     template<class DataHandle>
