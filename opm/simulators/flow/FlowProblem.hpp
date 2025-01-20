@@ -74,6 +74,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <iostream>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -224,6 +225,9 @@ public:
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
     {
+        std::cout<< "from flow problem elemntMapper size: " << (this->elementMapper().size())
+                 << " vs gridView size: " << simulator.gridView().size(0) << std::endl;
+        
         if (! Parameters::Get<Parameters::CheckSatfuncConsistency>()) {
             // User did not enable the "new" saturation function consistency
             // check module.  Run the original checker instead.  This is a
@@ -976,13 +980,18 @@ public:
         OPM_TIMEBLOCK_LOCAL(eclProblemSource);
         rate = 0.0;
 
+        auto assigner = this->lookupIdxOnLevelZeroAssigner_();
+        //this-> lookupIdxOnLevelZeroAssigner_();
+         auto ancestor_idx = assigner(globalDofIdx);
+        
+
         // Add well contribution to source here.
         wellModel_.computeTotalRatesForDof(rate, globalDofIdx);
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
         for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
-            rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
+            rate[eqIdx] /= this->model().dofTotalVolume(ancestor_idx); //globalDofIdx);
 
             Valgrind::CheckDefined(rate[eqIdx]);
             assert(isfinite(rate[eqIdx]));
@@ -1344,7 +1353,7 @@ protected:
         updateReferencePorosity_();
         this->referencePorosity_[1] = this->referencePorosity_[0];
         ////////////////////////////////
-
+       
         ////////////////////////////////
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
@@ -1381,16 +1390,21 @@ protected:
 
         this->referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
+        std::cout<< "from updateRefPor numdof: " << numDof << std::endl;
+
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV");
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+           
+            int tmp_idx = this-> lookupIdxOnLevelZeroAssigner_()(dofIdx);
             int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(dofIdx);
+            std::cout<< " sdfklj " << sfcdofIdx << " vs tmp " << tmp_idx << " vs dofIdx " << dofIdx << std::endl;
             Scalar poreVolume = porvData[dofIdx];
 
             // we define the porosity as the accumulated pore volume divided by the
             // geometric volume of the element. Note that -- in pathetic cases -- it can
             // be larger than 1.0!
-            Scalar dofVolume = simulator.model().dofTotalVolume(sfcdofIdx);
+            Scalar dofVolume = simulator.model().dofTotalVolume(tmp_idx);//sfcdofIdx);
             assert(dofVolume > 0.0);
             this->referencePorosity_[/*timeIdx=*/0][sfcdofIdx] = poreVolume/dofVolume;
         }

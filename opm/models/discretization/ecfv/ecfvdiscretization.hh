@@ -175,7 +175,7 @@ public:
      *        discretization's degrees of freedoms are to indices.
      */
     const DofMapper& dofMapper() const
-    { return this->elementMapper(); }
+    { return this->elementMapper(); } 
 
     /*!
      * \brief Syncronize the values of the primary variables on the

@@ -792,11 +792,13 @@ private:
         OPM_TIMEBLOCK(captureLocalData);
 
         const auto& gridView = this->simulator_.vanguard().gridView();
+        std::cout<< "from capture local flux data: " << gridView.size(0) << " vs " << gridView.grid().currentData()[0]->size(0) << std::endl;
         const auto timeIdx = 0u;
 
         auto elemCtx = ElementContext { this->simulator_ };
 
         const auto elemMapper = ElementMapper { gridView, Dune::mcmgElementLayout() };
+        std::cout<< "elemMapper size: " << elemMapper.size() << std::endl;
         const auto activeIndex = [&elemMapper](const Element& e)
         {
             return elemMapper.index(e);

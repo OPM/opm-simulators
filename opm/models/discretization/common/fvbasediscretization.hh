@@ -553,13 +553,15 @@ public:
         ElementContext elemCtx(simulator_);
 
         // iterate through the grid and evaluate the initial condition
-        for (const auto& elem : elements(gridView_)) {
+        //    for (const auto& elem : elements(gridView_)) {
+        for (const auto& elem : elements(gridView_.grid().levelGridView(0))) {
             // ignore everything which is not in the interior if the
             // current process' piece of the grid
             if (elem.partitionType() != Dune::InteriorEntity)
                 continue;
 
             // deal with the current element
+            // const auto& origin = elem.getOrigin();
             elemCtx.updateStencil(elem);
 
             // loop over all element vertices, i.e. sub control volumes

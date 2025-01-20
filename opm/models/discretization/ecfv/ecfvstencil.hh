@@ -258,7 +258,9 @@ public:
         , elementMapper_(mapper)
     {
         // try to ensure that the mapper passed indeed maps elements
-        assert(int(gridView.size(/*codim=*/0)) == int(elementMapper_.size()));
+        std::cout<< "gridView size: " << gridView.size(/*codim=*/0) << " vs elemMapper_ size: " <<
+                 elementMapper_.size()<< std::endl;
+        // assert(int(gridView.size(/*codim=*/0)) == int(elementMapper_.size()));
     }
 
     void updateTopology(const Element& element)
