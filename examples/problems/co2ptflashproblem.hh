@@ -77,6 +77,14 @@ struct NumComp<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr int value = 3;
 };
 
+template <class TypeTag, class MyTypeTag>
+struct EnableDummyWater { using type = UndefinedProperty; };
+
+template <class TypeTag>
+struct EnableDummyWater<TypeTag, TTag::CO2PTBaseProblem> {
+    static constexpr bool value = true;
+};
+
 // Set the grid type: --->2D
 template <class TypeTag>
 struct Grid<TypeTag, TTag::CO2PTBaseProblem> { using type = Dune::YaspGrid</*dim=*/2>; };
@@ -105,9 +113,10 @@ struct FluidSystem<TypeTag, TTag::CO2PTBaseProblem>
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr int num_comp = getPropValue<TypeTag, Properties::NumComp>();
+    static constexpr bool enable_water = getPropValue<TypeTag, Properties::EnableDummyWater>();
 
 public:
-    using type = Opm::GenericOilGasWaterFluidSystem<Scalar, num_comp>;
+    using type = Opm::GenericOilGasWaterFluidSystem<Scalar, num_comp, enable_water>;
 };
 
 // Set the material Law

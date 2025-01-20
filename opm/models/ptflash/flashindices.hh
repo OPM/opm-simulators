@@ -48,19 +48,20 @@ class FlashIndices
 {
     static constexpr int numComponents = getPropValue<TypeTag, Properties::NumComponents>();
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableWater = getPropValue<TypeTag, Properties::EnableWater>() };
     using EnergyIndices = Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
 
 public:
     //! All phases active (note: immiscible/"dummy" water phase)
-    static constexpr bool waterEnabled = true;
+    static constexpr bool waterEnabled = enableWater;
     static constexpr bool gasEnabled = true;
     static constexpr bool oilEnabled = true;
 
     //! number of active phases
-    static constexpr int numPhases = 3;
+    static constexpr int numPhases = enableWater ? 3 : 2;
 
     //! number of equations/primary variables
-    static const int numEq = numComponents + EnergyIndices::numEq_ + 1;
+    static const int numEq = numComponents + EnergyIndices::numEq_ + (enableWater ? 1 : 0);
 
     // Primary variable indices
 
@@ -71,7 +72,7 @@ public:
     static constexpr int z0Idx = pressure0Idx + 1;
 
     //! Index of water saturation
-    static constexpr int water0Idx = z0Idx + numComponents - 1;
+    static constexpr int water0Idx = enableWater ? z0Idx + numComponents - 1 : -1000;
     
     // equation indices
 

@@ -65,6 +65,8 @@ class FlashLocalResidual: public GetPropType<TypeTag, Properties::DiscLocalResid
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
+    static const bool waterEnabled = Indices::waterEnabled;
+
     using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
@@ -82,7 +84,7 @@ public:
         const auto& fs = intQuants.fluidState();
 
         // compute water storage term
-        if (phaseIdx == waterPhaseIdx) {
+        if (waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)) {
             unsigned eqIdx = conti0EqIdx + numComponents;
             storage[eqIdx] = 
                 Toolbox::template decay<LhsEval>(fs.density(phaseIdx))
@@ -160,7 +162,7 @@ public:
                     up.fluidState().density(phaseIdx)
                     * extQuants.volumeFlux(phaseIdx);
 
-                if (phaseIdx == waterPhaseIdx) {
+                if (waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)) {
                     unsigned eqIdx = conti0EqIdx + numComponents;
                     flux[eqIdx] = tmp;
                 }
@@ -176,7 +178,7 @@ public:
                     Toolbox::value(up.fluidState().density(phaseIdx))
                      * extQuants.volumeFlux(phaseIdx);
                 
-                if (phaseIdx == waterPhaseIdx) {
+                if (waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)) {
                     unsigned eqIdx = conti0EqIdx + numComponents;
                     flux[eqIdx] = tmp;
                 }
