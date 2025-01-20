@@ -286,6 +286,10 @@ update(bool global, const TransUpdateQuantities update_quantities,
         DimVector faceAreaNormal;
 
         inside.elemIdx = elemMapper.index(elem);
+        // Get the Cartesian index of the origin cells (parent or equivalent cell on level zero),
+        // for CpGrid with LGRs. For general grids and no LGRs, get the usual Cartesian Index.
+        inside.cartElemIdx = this->lookUpCartesianData_.
+            template getFieldPropCartesianIdx<Grid>(inside.elemIdx);
 
         auto computeHalf = [this, &faceAreaNormal, &inside, &outside]
                            (const auto& halfComputer,
@@ -334,7 +338,6 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 // normally there would be two half-transmissibilities that would be
                 // averaged. on the grid boundary there only is the half
                 // transmissibility of the interior element.
-                inside.cartElemIdx = cartMapper_.cartesianIndex(inside.elemIdx);
                 applyMultipliers_(transBoundaryIs, intersection.indexInInside(), inside.cartElemIdx, transMult);
                 transBoundary_.insert_or_assign(std::make_pair(inside.elemIdx, boundaryIsIdx), transBoundaryIs);
 
@@ -363,10 +366,8 @@ update(bool global, const TransUpdateQuantities update_quantities,
             const auto& outsideElem = intersection.outside();
             outside.elemIdx = elemMapper.index(outsideElem);
 
-            // Get the Cartesian indices of the origin cells (parent or equivalent cell on level zero),
+            // Get the Cartesian index of the origin cells (parent or equivalent cell on level zero),
             // for CpGrid with LGRs. For general grids and no LGRs, get the usual Cartesian Index.
-            inside.cartElemIdx = this->lookUpCartesianData_.
-                template getFieldPropCartesianIdx<Grid>(inside.elemIdx);
             outside.cartElemIdx =  this->lookUpCartesianData_.
                 template getFieldPropCartesianIdx<Grid>(outside.elemIdx);
 
