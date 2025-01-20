@@ -579,6 +579,36 @@ reservoirCouplingSlave_()
 #endif
 
 #ifdef RESERVOIR_COUPLING_ENABLED
+// Description of the reservoir coupling master and slave substep loop
+// -------------------------------------------------------------------
+// The master and slave processes attempts to reach the end of the report step using a series of substeps
+// (also called timesteps). Each substep have an upper limit that is roughly determined by a combination
+// of the keywords TUNING (through the TSINIT, TSMAXZ values), NEXSTEP, WCYCLE, and the start of the
+// next report step (the last substep needs to coincide with this time). Note that NEXTSTEP can be
+// updated from an ACTIONX keyword. Although, this comment focuses on the maximum substep limit,
+// note that there is also a lower limit on the substep length. And the substep sizes will be adjusted
+// automatically (or retried) based on the convergence behavior of the solver and other criteria.
+//
+// When using reservoir coupling, the upper limit on each substep is further limited to: a) not overshoot
+// next report date of a slave reservoir, and b) to keep the flow rate of the slave groups within
+// certain limits. To determine this potential further limitation on the substep, the following procedure
+// is used at the beginning of each master substep:
+// - First, the slaves sends the master the date of their next report step
+// - The master receives the date of the next report step from the slaves
+// - If necessary, the master computes a modified substep length based on the received dates
+// TODO: explain how the substep is limited to keep the flow rate of the slave groups within certain
+// limits. Since this is not implemented yet, this part of the procedure is not explained here.
+//
+// Then, after the master has determined the substep length using the above procedure, it sends it
+// to the slaves. The slaves will now use the end of this substep as a fixed point (like a mini report
+// step), that they will try to reach using a single substep or multiple substeps. The end of the
+// substep received from the master will either conincide with the end of its current report step, or
+// it will end before (it cannot not end after since the master has already adjusted the step to not
+// exceed any report time in a slave). If the end of this substep is earlier in time than its next report
+// date, the slave will enter a loop and wait for the master to send it a new substep.
+// The loop is finished when the end of the received time step conincides with the end of its current
+// report step.
+
 template <class TypeTag>
 template <class Solver>
 SimulatorReport
