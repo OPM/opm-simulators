@@ -176,15 +176,6 @@ public:
     void copyFromHost(const T* dataPointer, size_t numberOfElements);
 
     /**
-     * @brief copyFromHost copies numberOfElements from the CPU memory dataPointer
-     * @param dataPointer raw pointer to CPU memory
-     * @param numberOfElements number of elements to copy
-     * @note This does synchronous transfer.
-     * @note assumes that this buffer has numberOfElements elements
-     */
-    void copyFromHost(const T* dataPointer, size_t numberOfElements, cudaStream_t stream);
-
-    /**
      * @brief copyFromHost copies numberOfElements to the CPU memory dataPointer
      * @param dataPointer raw pointer to CPU memory
      * @param numberOfElements number of elements to copy
@@ -201,15 +192,6 @@ public:
      * @note This assumes that the size of this buffer is equal to the size of the input vector.
      */
     void copyFromHost(const std::vector<T>& data);
-
-    /**
-     * @brief copyToHost copies data from an std::vector
-     * @param data the vector to copy from
-     *
-     * @note This does synchronous transfer.
-     * @note This assumes that the size of this buffer is equal to the size of the input vector.
-     */
-    void copyFromHost(const std::vector<T>& data, cudaStream_t stream);
 
     /**
      * @brief copyToHost copies data to an std::vector

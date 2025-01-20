@@ -157,8 +157,7 @@ void LUFactorization(T* reorderedMat,
                      int* reorderedToNatual,
                      size_t rowsInLevelSet,
                      int startIdx,
-                     int threadBlockSize,
-                     cudaStream_t stream);
+                     int threadBlockSize);
 
 /**
  * TODO: update this doucmentation
@@ -197,8 +196,7 @@ void LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                           int* naturalToReordered,
                           int startIdx,
                           int rowsInLevelSet,
-                          int threadBlockSize,
-                          cudaStream_t stream);
+                          int threadBlockSize);
 
 } // namespace Opm::gpuistl::detail::ILU0
 #endif

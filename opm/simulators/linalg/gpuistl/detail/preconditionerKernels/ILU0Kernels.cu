@@ -442,13 +442,12 @@ LUFactorization(T* srcMatrix,
                 int* reorderedToNatual,
                 size_t rowsInLevelSet,
                 int startIdx,
-                int thrBlockSize,
-                cudaStream_t stream)
+                int thrBlockSize)
 {
     int threadBlockSize
         = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuLUFactorization<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuLUFactorization<T, blocksize><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
+    cuLUFactorization<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         srcMatrix, srcRowIndices, srcColumnIndices, naturalToReordered, reorderedToNatual, rowsInLevelSet, startIdx);
 }
 
@@ -468,45 +467,44 @@ LUFactorizationSplit(InputScalar* srcReorderedLowerMat,
                      int* naturalToReordered,
                      const int startIdx,
                      int rowsInLevelSet,
-                     int thrBlockSize,
-                     cudaStream_t stream)
+                     int thrBlockSize)
 {
     int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
         cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, mixedPrecisionScheme>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuLUFactorizationSplit<blocksize, InputScalar, OutputScalar, mixedPrecisionScheme>
-        <<<nThreadBlocks, threadBlockSize, 0, stream>>>(srcReorderedLowerMat,
-                                                        lowerRowIndices,
-                                                        lowerColIndices,
-                                                        reorderedUpperMat,
-                                                        upperRowIndices,
-                                                        upperColIndices,
-                                                        srcDiagonal,
-                                                        dstReorderedLowerMat,
-                                                        dstReorderedUpperMat,
-                                                        dstDiagonal,
-                                                        reorderedToNatural,
-                                                        naturalToReordered,
-                                                        startIdx,
-                                                        rowsInLevelSet);
+        <<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
+                                             lowerRowIndices,
+                                             lowerColIndices,
+                                             reorderedUpperMat,
+                                             upperRowIndices,
+                                             upperColIndices,
+                                             srcDiagonal,
+                                             dstReorderedLowerMat,
+                                             dstReorderedUpperMat,
+                                             dstDiagonal,
+                                             reorderedToNatural,
+                                             naturalToReordered,
+                                             startIdx,
+                                             rowsInLevelSet);
 }
 
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
     template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, T*, int, cudaStream_t);             \
     template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);   \
-    template void LUFactorization<T, blocksize>(T*, int*, int*, int*, int*, size_t, int, int, cudaStream_t);           \
+    template void LUFactorization<T, blocksize>(T*, int*, int*, int*, int*, size_t, int, int);                         \
     template void LUFactorizationSplit<blocksize, T, float, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(        \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int, cudaStream_t);    \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                  \
     template void LUFactorizationSplit<blocksize, T, double, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(       \
-        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int, cudaStream_t); \
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int);               \
     template void LUFactorizationSplit<blocksize, T, float, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(          \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int, cudaStream_t);    \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                  \
     template void LUFactorizationSplit<blocksize, T, double, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(         \
-        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int, cudaStream_t); \
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int);               \
     template void LUFactorizationSplit<blocksize, T, float, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(         \
-        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int, cudaStream_t);    \
+        T*, int*, int*, T*, int*, int*, T*, float*, float*, float*, int*, int*, const int, int, int);                  \
     template void LUFactorizationSplit<blocksize, T, double, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(        \
-        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int, cudaStream_t);
+        T*, int*, int*, T*, int*, int*, T*, double*, double*, double*, int*, int*, const int, int, int);
 
 #define INSTANTIATE_BLOCK_SIZED_KERNEL_WRAPPERS(T)                                                                     \
     INSTANTIATE_KERNEL_WRAPPERS(T, 1);                                                                                 \

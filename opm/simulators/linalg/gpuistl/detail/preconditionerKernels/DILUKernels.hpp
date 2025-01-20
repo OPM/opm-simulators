@@ -165,8 +165,7 @@ void computeDiluDiagonal(T* reorderedMat,
                          int startIdx,
                          int rowsInLevelSet,
                          T* dInv,
-                         int threadBlockSize,
-                         cudaStream_t stream);
+                         int threadBlockSize);
 
 /**
  * @brief Computes the ILU0 of the diagonal elements of the split reordered matrix and stores it in a reordered vector
@@ -205,8 +204,7 @@ void computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
                               OutputScalar* dstDiagonal,
                               OutputScalar* dstLowerMat,
                               OutputScalar* dstUpperMat,
-                              int threadBlockSize,
-                              cudaStream_t stream);
+                              int threadBlockSize);
 
 } // namespace Opm::gpuistl::detail::DILU
 #endif
