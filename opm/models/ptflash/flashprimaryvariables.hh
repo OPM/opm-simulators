@@ -63,6 +63,8 @@ class FlashPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { water0Idx = Indices::water0Idx };
 
+    static constexpr bool waterEnabled = Indices::waterEnabled;
+
     // phase indices
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -122,7 +124,9 @@ public:
         (*this)[pressure0Idx] = getValue(fluidState.pressure(oilPhaseIdx));
 
         // assign water saturation
-        (*this)[water0Idx] = getValue(fluidState.saturation(waterPhaseIdx));
+        if constexpr (waterEnabled) {
+            (*this)[water0Idx] = getValue(fluidState.saturation(waterPhaseIdx));
+        }
     }
 
     /*!
@@ -138,7 +142,9 @@ public:
             os << ", z_" << FluidSystem::componentName(compIdx) << " = "
                << this->operator[](z0Idx + compIdx);
         }
-        os << ", S_w = " << this->operator[](water0Idx);
+        if constexpr (waterEnabled) {
+            os << ", S_w = " << this->operator[](water0Idx);
+        }
         os << ")" << std::flush;
     }
 };

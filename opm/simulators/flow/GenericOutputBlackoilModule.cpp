@@ -1676,17 +1676,27 @@ INSTANTIATE_TYPE(double)
 INSTANTIATE_TYPE(float)
 #endif
 
-#define INSTANTIATE_COMP(NUM) \
-    template<class T> using FS##NUM = GenericOilGasWaterFluidSystem<T, NUM>; \
+#define INSTANTIATE_COMP_THREEPHASE(NUM) \
+    template<class T> using FS##NUM = GenericOilGasWaterFluidSystem<T, NUM, true>; \
     template class GenericOutputBlackoilModule<FS##NUM<double>>;
 
-INSTANTIATE_COMP(0) // \Note: to register the parameter ForceDisableFluidInPlaceOutput
+INSTANTIATE_COMP_THREEPHASE(0) // \Note: to register the parameter ForceDisableFluidInPlaceOutput
+INSTANTIATE_COMP_THREEPHASE(2)
+INSTANTIATE_COMP_THREEPHASE(3)
+INSTANTIATE_COMP_THREEPHASE(4)
+INSTANTIATE_COMP_THREEPHASE(5)
+INSTANTIATE_COMP_THREEPHASE(6)
+INSTANTIATE_COMP_THREEPHASE(7)
 
-INSTANTIATE_COMP(2)
-INSTANTIATE_COMP(3)
-INSTANTIATE_COMP(4)
-INSTANTIATE_COMP(5)
-INSTANTIATE_COMP(6)
-INSTANTIATE_COMP(7)
+#define INSTANTIATE_COMP_TWOPHASE(NUM) \
+    template<class T> using GFS##NUM = GenericOilGasWaterFluidSystem<T, NUM, false>; \
+    template class GenericOutputBlackoilModule<GFS##NUM<double>>;
+
+INSTANTIATE_COMP_TWOPHASE(2)
+INSTANTIATE_COMP_TWOPHASE(3)
+INSTANTIATE_COMP_TWOPHASE(4)
+INSTANTIATE_COMP_TWOPHASE(5)
+INSTANTIATE_COMP_TWOPHASE(6)
+INSTANTIATE_COMP_TWOPHASE(7)
 
 } // namespace Opm

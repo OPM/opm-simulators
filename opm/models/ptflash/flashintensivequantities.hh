@@ -78,6 +78,8 @@ class FlashIntensiveQuantities
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { water0Idx = Indices::water0Idx};
 
+    static constexpr bool waterEnabled = Indices::waterEnabled;
+
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -216,8 +218,12 @@ public:
         (R * fluidState_.temperature(FluidSystem::gasPhaseIdx));
 
 
-        // Update oil/gas saturation; water saturation is a primary variable
-        Evaluation Sw = priVars.makeEvaluation(water0Idx, timeIdx);
+        // Update saturation
+        Evaluation Sw = 0.0;
+        if constexpr (waterEnabled) {
+            Sw = priVars.makeEvaluation(water0Idx, timeIdx);
+            fluidState_.setSaturation(FluidSystem::waterPhaseIdx, Sw);
+        }
         Evaluation L = fluidState_.L();
         Evaluation So = Opm::max((1 - Sw) * (L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
         Evaluation Sg = Opm::max(1 - So - Sw, 0.0);
@@ -228,7 +234,6 @@ public:
 
         fluidState_.setSaturation(FluidSystem::oilPhaseIdx, So);
         fluidState_.setSaturation(FluidSystem::gasPhaseIdx, Sg);
-        fluidState_.setSaturation(FluidSystem::waterPhaseIdx, Sw);
 
         fluidState_.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
         fluidState_.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
@@ -253,7 +258,10 @@ public:
 
         // set the phase viscosity and density
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            paramCache.updatePhase(fluidState_, phaseIdx);
+            if (phaseIdx == static_cast<unsigned int>(FluidSystem::oilPhaseIdx) 
+             || phaseIdx == static_cast<unsigned int>(FluidSystem::gasPhaseIdx)) {
+                paramCache.updatePhase(fluidState_, phaseIdx);
+            }
 
             const Evaluation& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
 

@@ -362,7 +362,7 @@ public:
             Dune::FieldVector<Scalar, numComponents> z(0.0);
             Scalar sumMoles = 0.0;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (phaseIdx == waterPhaseIdx){ 
+                if (Indices::waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)){ 
                     continue;
                 }
                 const auto saturation = fs.saturation(phaseIdx);
@@ -494,7 +494,7 @@ protected:
         const bool gas_active = FluidSystem::phaseIsActive(gasPhaseIdx);
         const bool oil_active = FluidSystem::phaseIsActive(oilPhaseIdx);
 
-        if (water_active && Indices::numPhases > 1)
+        if (water_active && Indices::numPhases > 2)
             waterSaturationData = fp.get_double("SWAT");
         else
             waterSaturationData.resize(numDof);
