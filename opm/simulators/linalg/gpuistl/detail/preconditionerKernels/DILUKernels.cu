@@ -383,21 +383,20 @@ computeDiluDiagonal(T* reorderedMat,
                     const int startIdx,
                     int rowsInLevelSet,
                     T* dInv,
-                    int thrBlockSize,
-                    cudaStream_t stream)
+                    int thrBlockSize)
 {
     if (blocksize <= 3) {
         int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
             cuComputeDiluDiagonal<T, blocksize>, thrBlockSize);
         int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-        cuComputeDiluDiagonal<T, blocksize><<<nThreadBlocks, threadBlockSize, 0, stream>>>(reorderedMat,
-                                                                                           rowIndices,
-                                                                                           colIndices,
-                                                                                           reorderedToNatural,
-                                                                                           naturalToReordered,
-                                                                                           startIdx,
-                                                                                           rowsInLevelSet,
-                                                                                           dInv);
+        cuComputeDiluDiagonal<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(reorderedMat,
+                                                                                rowIndices,
+                                                                                colIndices,
+                                                                                reorderedToNatural,
+                                                                                naturalToReordered,
+                                                                                startIdx,
+                                                                                rowsInLevelSet,
+                                                                                dInv);
     } else {
         OPM_THROW(std::invalid_argument, "Inverting diagonal is not implemented for blocksizes > 3");
     }
@@ -420,37 +419,35 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
                          OutputScalar* dstDiag,
                          OutputScalar* dstLowerMat,
                          OutputScalar* dstUpperMat,
-                         int thrBlockSize,
-                         cudaStream_t stream)
+                         int thrBlockSize)
 {
     if (blocksize <= 3) {
         int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
             cuComputeDiluDiagonalSplit<blocksize, InputScalar, OutputScalar, scheme>, thrBlockSize);
         int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
         cuComputeDiluDiagonalSplit<blocksize, InputScalar, OutputScalar, scheme>
-            <<<nThreadBlocks, threadBlockSize, 0, stream>>>(srcReorderedLowerMat,
-                                                            lowerRowIndices,
-                                                            lowerColIndices,
-                                                            srcReorderedUpperMat,
-                                                            upperRowIndices,
-                                                            upperColIndices,
-                                                            srcDiagonal,
-                                                            reorderedToNatural,
-                                                            naturalToReordered,
-                                                            startIdx,
-                                                            rowsInLevelSet,
-                                                            dInv,
-                                                            dstDiag,
-                                                            dstLowerMat,
-                                                            dstUpperMat);
+            <<<nThreadBlocks, threadBlockSize>>>(srcReorderedLowerMat,
+                                                 lowerRowIndices,
+                                                 lowerColIndices,
+                                                 srcReorderedUpperMat,
+                                                 upperRowIndices,
+                                                 upperColIndices,
+                                                 srcDiagonal,
+                                                 reorderedToNatural,
+                                                 naturalToReordered,
+                                                 startIdx,
+                                                 rowsInLevelSet,
+                                                 dInv,
+                                                 dstDiag,
+                                                 dstLowerMat,
+                                                 dstUpperMat);
     } else {
         OPM_THROW(std::invalid_argument, "Inverting diagonal is not implemented for blocksizes > 3");
     }
 }
 
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
-    template void computeDiluDiagonal<T, blocksize>(                                                                   \
-        T*, int*, int*, int*, int*, const int, int, T*, int, cudaStream_t);                                            \
+    template void computeDiluDiagonal<T, blocksize>(T*, int*, int*, int*, int*, const int, int, T*, int);              \
     template void computeDiluDiagonalSplit<blocksize, T, double, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(   \
         const T*,                                                                                                      \
         int*,                                                                                                          \
@@ -467,8 +464,7 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
         double*,                                                                                                       \
         double*,                                                                                                       \
         double*,                                                                                                       \
-        int,                                                                                                           \
-        cudaStream_t);                                                                                                 \
+        int);                                                                                                          \
     template void computeDiluDiagonalSplit<blocksize, T, float, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(    \
         const T*,                                                                                                      \
         int*,                                                                                                          \
@@ -485,8 +481,7 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
         float*,                                                                                                        \
         float*,                                                                                                        \
         float*,                                                                                                        \
-        int,                                                                                                           \
-        cudaStream_t);                                                                                                 \
+        int);                                                                                                          \
     template void computeDiluDiagonalSplit<blocksize, T, float, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(      \
         const T*,                                                                                                      \
         int*,                                                                                                          \
@@ -503,8 +498,7 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
         float*,                                                                                                        \
         float*,                                                                                                        \
         float*,                                                                                                        \
-        int,                                                                                                           \
-        cudaStream_t);                                                                                                 \
+        int);                                                                                                          \
     template void computeDiluDiagonalSplit<blocksize, T, double, MatrixStorageMPScheme::FLOAT_DIAG_FLOAT_OFFDIAG>(     \
         const T*,                                                                                                      \
         int*,                                                                                                          \
@@ -521,8 +515,7 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
         double*,                                                                                                       \
         double*,                                                                                                       \
         double*,                                                                                                       \
-        int,                                                                                                           \
-        cudaStream_t);                                                                                                 \
+        int);                                                                                                          \
     template void computeDiluDiagonalSplit<blocksize, T, float, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(     \
         const T*,                                                                                                      \
         int*,                                                                                                          \
@@ -539,8 +532,7 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
         float*,                                                                                                        \
         float*,                                                                                                        \
         float*,                                                                                                        \
-        int,                                                                                                           \
-        cudaStream_t);                                                                                                 \
+        int);                                                                                                          \
     template void computeDiluDiagonalSplit<blocksize, T, double, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(    \
         const T*,                                                                                                      \
         int*,                                                                                                          \
@@ -557,14 +549,10 @@ computeDiluDiagonalSplit(const InputScalar* srcReorderedLowerMat,
         double*,                                                                                                       \
         double*,                                                                                                       \
         double*,                                                                                                       \
-        int,                                                                                                           \
-        cudaStream_t);                                                                                                 \
+        int);                                                                                                          \
     template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);   \
     template void solveLowerLevelSet<T, blocksize>(                                                                    \
         T*, int*, int*, int*, int, int, const T*, const T*, T*, int, cudaStream_t);
-// template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);       \
-    // template void solveUpperLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int, cudaStream_t);            \
-    // template void solveLowerLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int, cudaStream_t);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);

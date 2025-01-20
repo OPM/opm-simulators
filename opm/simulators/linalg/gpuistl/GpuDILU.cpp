@@ -279,7 +279,7 @@ GpuDILU<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
     {
-        m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
+        m_gpuMatrix.updateNonzeroValues(m_cpuMatrix); // send updated matrix to the gpu
         reorderAndSplitMatrix(m_moveThreadBlockSize);
         computeDiagonal(m_DILUFactorizationThreadBlockSize);
     }
@@ -289,7 +289,7 @@ template <class M, class X, class Y, int l>
 void
 GpuDILU<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationBlockSize)
 {
-    m_gpuMatrix.updateNonzeroValuesDirectlyInStream(m_cpuMatrix, m_stream); // send updated matrix to the gpu
+    m_gpuMatrix.updateNonzeroValues(m_cpuMatrix); // send updated matrix to the gpu
     reorderAndSplitMatrix(moveThreadBlockSize);
     computeDiagonal(factorizationBlockSize);
 }
@@ -310,8 +310,7 @@ GpuDILU<M, X, Y, l>::reorderAndSplitMatrix(int moveThreadBlockSize)
             m_gpuMatrixReorderedDiag->data(),
             m_gpuNaturalToReorder.data(),
             m_gpuMatrixReorderedLower->N(),
-            moveThreadBlockSize,
-            m_stream);
+            moveThreadBlockSize);
     } else {
         detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
                                                                 m_gpuMatrix.getRowIndices().data(),
@@ -319,8 +318,7 @@ GpuDILU<M, X, Y, l>::reorderAndSplitMatrix(int moveThreadBlockSize)
                                                                 m_gpuMatrixReordered->getRowIndices().data(),
                                                                 m_gpuNaturalToReorder.data(),
                                                                 m_gpuMatrixReordered->N(),
-                                                                moveThreadBlockSize,
-                                                                m_stream);
+                                                                moveThreadBlockSize);
     }
 }
 
@@ -349,8 +347,7 @@ GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
                     m_gpuDInvFloat->data(),
                     m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
-                    factorizationBlockSize,
-                    m_stream);
+                    factorizationBlockSize);
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG) {
                 detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
@@ -368,8 +365,7 @@ GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
                     nullptr,
                     m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
-                    factorizationBlockSize,
-                    m_stream);
+                    factorizationBlockSize);
             } else {
                 // TODO: should this be field type twice or field type then float in the template?
                 detail::DILU::computeDiluDiagonalSplit<blocksize_, field_type, float, MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG>(
@@ -388,8 +384,7 @@ GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
                     nullptr,
                     nullptr,
                     nullptr,
-                    factorizationBlockSize,
-                    m_stream);
+                    factorizationBlockSize);
             }
         } else {
             detail::DILU::computeDiluDiagonal<field_type, blocksize_>(
@@ -401,8 +396,7 @@ GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
                 levelStartIdx,
                 numOfRowsInLevel,
                 m_gpuDInv.data(),
-                factorizationBlockSize,
-                m_stream);
+                factorizationBlockSize);
         }
         levelStartIdx += numOfRowsInLevel;
     }
