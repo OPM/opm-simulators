@@ -163,14 +163,20 @@ protected:
 
     void removeNonCartesianTransmissibilities_(bool removeAll);
 
+    struct FaceInfo
+    {
+        DimVector faceCenter;
+        int faceIdx;
+        unsigned elemIdx;
+        unsigned cartElemIdx;
+    };
+
     /// \brief Apply the Multipliers for the case PINCH(4)==TOPBOT
     ///
     /// \param pinchTop Whether PINCH(5) is TOP, otherwise ALL is assumed.
     void applyAllZMultipliers_(Scalar& trans,
-                               unsigned insideFaceIdx,
-                               unsigned outsideFaceIdx,
-                               unsigned insideCartElemIdx,
-                               unsigned outsideCartElemIdx,
+                               const FaceInfo& inside,
+                               const FaceInfo& outside,
                                const TransMult& transMult,
                                const std::array<int, dimWorld>& cartDims);
 
@@ -190,23 +196,15 @@ protected:
 
     template <class Intersection>
     void computeFaceProperties(const Intersection& intersection,
-                               const int,
-                               const int,
-                               const int,
-                               const int,
-                               DimVector& faceCenterInside,
-                               DimVector& faceCenterOutside,
+                               FaceInfo& inside,
+                               FaceInfo& outside,
                                DimVector& faceAreaNormal,
                                /*isCpGrid=*/std::false_type) const;
 
     template <class Intersection>
     void computeFaceProperties(const Intersection& intersection,
-                               const int insideElemIdx,
-                               const int insideFaceIdx,
-                               const int outsideElemIdx,
-                               const int outsideFaceIdx,
-                               DimVector& faceCenterInside,
-                               DimVector& faceCenterOutside,
+                               FaceInfo& inside,
+                               FaceInfo& outside,
                                DimVector& faceAreaNormal,
                                /*isCpGrid=*/std::true_type) const;
 
@@ -251,16 +249,14 @@ protected:
 
     void extractDispersion_();
 
-    void computeHalfTrans_(Scalar& halfTrans,
-                           const DimVector& areaNormal,
-                           int faceIdx, // in the reference element that contains the intersection
-                           const DimVector& distance,
-                           const DimMatrix& perm) const;
+    static Scalar computeHalfTrans_(const DimVector& areaNormal,
+                                    int faceIdx, // in the reference element that contains the intersection
+                                    const DimVector& distance,
+                                    const DimMatrix& perm);
 
-    void computeHalfDiffusivity_(Scalar& halfDiff,
-                                 const DimVector& areaNormal,
-                                 const DimVector& distance,
-                                 const Scalar& poro) const;
+    static Scalar computeHalfDiffusivity_(const DimVector& areaNormal,
+                                          const DimVector& distance,
+                                          const Scalar poro);
 
     DimVector distanceVector_(const DimVector& faceCenter,
                               const unsigned& cellIdx) const;
@@ -270,10 +266,9 @@ protected:
                            unsigned cartElemIdx,
                            const TransMult& transMult) const;
 
-    void applyNtg_(Scalar& trans,
-                   unsigned faceIdx,
-                   unsigned elemIdx,
-                   const std::vector<double>& ntg) const;
+    static void applyNtg_(Scalar& trans,
+                          const FaceInfo& face,
+                          const std::vector<double>& ntg);
 
     std::vector<DimMatrix> permeability_;
     std::vector<Scalar> porosity_;
