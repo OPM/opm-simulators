@@ -79,6 +79,12 @@ fullySupported()
 {
    static const SupportedKeywordItems<double> fully_supported_keywords_double = {
          {
+            "NEFAC",
+            {
+               {2,{true, [](double x) { return x > 0 && x <= 1.0; }, "NEFAC(EFF_FACTOR: Efficiency must be in the range (0,1]"}}, // NETWORK_EFF_FACTOR
+            },
+         },
+         {
             "WPIMULT",
             {
                {2,{true, [](double x) { return x > 0; }, "WPIMULT(PIMULT): Well PI multiplier must be a positive number."}}, // PI_MULTIPLIER
