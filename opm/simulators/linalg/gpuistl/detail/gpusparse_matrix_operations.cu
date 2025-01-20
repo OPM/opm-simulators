@@ -118,24 +118,6 @@ copyMatDataToReordered(T* srcMatrix,
 
 template <class T, int blocksize>
 void
-copyMatDataToReordered(T* srcMatrix,
-                       int* srcRowIndices,
-                       T* dstMatrix,
-                       int* dstRowIndices,
-                       int* naturalToReordered,
-                       size_t numberOfRows,
-                       int thrBlockSize,
-                       cudaStream_t stream)
-{
-    int threadBlockSize
-        = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuMoveDataToReordered<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
-    cuMoveDataToReordered<T, blocksize><<<nThreadBlocks, threadBlockSize, 0, stream>>>(
-        srcMatrix, srcRowIndices, dstMatrix, dstRowIndices, naturalToReordered, numberOfRows);
-}
-
-template <class T, int blocksize>
-void
 copyMatDataToReorderedSplit(T* srcMatrix,
                             int* srcRowIndices,
                             int* srcColumnIndices,
@@ -163,42 +145,9 @@ copyMatDataToReorderedSplit(T* srcMatrix,
                                                                                  numberOfRows);
 }
 
-template <class T, int blocksize>
-void
-copyMatDataToReorderedSplit(T* srcMatrix,
-                            int* srcRowIndices,
-                            int* srcColumnIndices,
-                            T* dstLowerMatrix,
-                            int* dstLowerRowIndices,
-                            T* dstUpperMatrix,
-                            int* dstUpperRowIndices,
-                            T* dstDiag,
-                            int* naturalToReordered,
-                            size_t numberOfRows,
-                            int thrBlockSize,
-                            cudaStream_t stream)
-{
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(
-        cuMoveDataToReorderedSplit<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
-    cuMoveDataToReorderedSplit<T, blocksize><<<nThreadBlocks, threadBlockSize, 0 , stream>>>(srcMatrix,
-                                                                                 srcRowIndices,
-                                                                                 srcColumnIndices,
-                                                                                 dstLowerMatrix,
-                                                                                 dstLowerRowIndices,
-                                                                                 dstUpperMatrix,
-                                                                                 dstUpperRowIndices,
-                                                                                 dstDiag,
-                                                                                 naturalToReordered,
-                                                                                 numberOfRows);
-}
-
-
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
     template void copyMatDataToReordered<T, blocksize>(T*, int*, T*, int*, int*, size_t, int);                         \
-    template void copyMatDataToReordered<T, blocksize>(T*, int*, T*, int*, int*, size_t, int, cudaStream_t);           \
-    template void copyMatDataToReorderedSplit<T, blocksize>(T*, int*, int*, T*, int*, T*, int*, T*, int*, size_t, int);\
-    template void copyMatDataToReorderedSplit<T, blocksize>(T*, int*, int*, T*, int*, T*, int*, T*, int*, size_t, int, cudaStream_t);
+    template void copyMatDataToReorderedSplit<T, blocksize>(T*, int*, int*, T*, int*, T*, int*, T*, int*, size_t, int);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);
