@@ -72,10 +72,19 @@ toFluidStateScalar() const
                                                                                  total_molar_fractions.end() - 1,
                                                                                  0.0);
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setMoleFraction(i, total_molar_fractions[i]);
+        fluid_state.setMoleFraction(i, max(total_molar_fractions[i], 1.e-8));
     }
+
     fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
     fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
+
+    fluid_state.setTemperature(273.15 + 150.0);
+
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
+    }
+
+    fluid_state.setLvalue(-1.);
 
     return fluid_state;
 }

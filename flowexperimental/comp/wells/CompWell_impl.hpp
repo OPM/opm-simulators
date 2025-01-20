@@ -49,10 +49,14 @@ calculateExplitQuantities(const Simulator& simulator,
     updatePrimaryVariables(simulator, well_state);
     updatePrimaryVariableEvaluation();
 
+    // flash calculation in the wellbore
     using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
     FluidState fluid_state = this->primary_variables_.toFluidStateScalar();
+    PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", 1.e-6, 3);
+    // calculating the mass within the wellbore
+
     // We should do a flash calculation here
-    assert(false && " calculateExplitQuantities is not implemented yet");
+    // assert(false && " calculateExplitQuantities is not implemented yet");
 }
 
 template <typename TypeTag>
