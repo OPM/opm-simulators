@@ -200,6 +200,12 @@ public:
                                            const WellState<Scalar>& wellState,
                                            GroupState<Scalar>& group_state);
 
+    static void updateNetworkLeafNodeProductionRates(const Schedule& schedule,
+                                                     const int reportStepIdx,
+                                                     const WellState<Scalar>& wellState,
+                                                     GroupState<Scalar>& group_state);
+
+
     static void updateWellRatesFromGroupTargetScale(const Scalar scale,
                                                     const Group& group,
                                                     const Schedule& schedule,

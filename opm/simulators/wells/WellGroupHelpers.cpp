@@ -742,16 +742,29 @@ updateGroupProductionRates(const Group& group,
         rates[phase] = sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
     }
     group_state.update_production_rates(group.name(), rates);
+}
 
+template<class Scalar>
+void WellGroupHelpers<Scalar>::
+updateNetworkLeafNodeProductionRates(const Schedule& schedule,
+                                     const int reportStepIdx,
+                                     const WellState<Scalar>& wellState,
+                                     GroupState<Scalar>& group_state)
+{
     const auto& network = schedule[reportStepIdx].network();
     if (network.active()) {
-        std::vector<Scalar> network_rates = rates;
-        if (network.needs_instantaneous_rates(schedule, reportStepIdx)) {
-            for (int phase = 0; phase < np; ++phase) {
-                network_rates[phase] = sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false, /*network*/ true);
+        const int np = wellState.numPhases();
+        for (const auto& group_name : network.leaf_nodes()) {
+            assert(schedule[reportStepIdx].groups.has(group_name));
+            const auto& group = schedule[reportStepIdx].groups.get(group_name);
+            std::vector<Scalar> network_rates(np, 0.0);
+            if (group.numWells() > 0) {
+                for (int phase = 0; phase < np; ++phase) {
+                    network_rates[phase] = sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false, /*network*/ true);
+                }
             }
+            group_state.update_network_leaf_node_production_rates(group_name, network_rates);
         }
-        group_state.update_network_production_rates(group.name(), network_rates);
     }
 }
 
@@ -938,8 +951,8 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                 node_inflows[node] = zero_rates;
                 continue;
             }
-            node_inflows[node] = group_state.network_production_rates(node);
 
+            node_inflows[node] = group_state.network_leaf_node_production_rates(node);
             // Add the ALQ amounts to the gas rates if requested.
             if (network.node(node).add_gas_lift_gas()) {
                 const auto& group = schedule.getGroup(node, report_time_step);
@@ -966,10 +979,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                 std::vector<Scalar>& up = node_inflows[(*upbranch).uptree_node()];
                 const std::vector<Scalar>& down = node_inflows[node];
                 // @TODO@ Also support NEFAC (for nodes that do not correspond to groups)
-                double efficiency = 1.0;
-                if (schedule.hasGroup(node, report_time_step)) {
-                    efficiency = schedule.getGroup(node, report_time_step).getGroupEfficiencyFactor(/*network*/ true);
-                }
+                const double efficiency = network.node(node).efficiency();
                 if (up.empty()) {
                     up = std::vector<Scalar>(down.size(), 0.0);
                 }
