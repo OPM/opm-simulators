@@ -22,6 +22,7 @@
 // it is use for the development when some facility class are not ready
 
 #include <opm/output/data/Aquifer.hpp>
+#include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Wells.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>

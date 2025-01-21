@@ -22,10 +22,7 @@
 #ifndef OPM_MULTISEGMENTWELL_GENERIC_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_GENERIC_HEADER_INCLUDED
 
-#include <functional>
-#include <optional>
 #include <vector>
-#include <array>
 
 namespace Opm
 {

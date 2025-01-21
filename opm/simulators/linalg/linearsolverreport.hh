@@ -27,8 +27,6 @@
 #ifndef EWOMS_LINEAR_SOLVER_REPORT_HH
 #define EWOMS_LINEAR_SOLVER_REPORT_HH
 
-#include "convergencecriterion.hh"
-
 #include <opm/models/utils/timer.hpp>
 #include <opm/models/utils/timerguard.hh>
 

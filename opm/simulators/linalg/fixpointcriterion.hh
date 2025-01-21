@@ -29,8 +29,6 @@
 
 #include "convergencecriterion.hh"
 
-#include <opm/material/common/Unused.hpp>
-
 namespace Opm {
 namespace Linear {
 

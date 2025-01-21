@@ -32,8 +32,6 @@
 
 #include <opm/simulators/linalg/gpubridge/opencl/openclSolverBackend.hpp>
 
-#include <type_traits>
-
 namespace Opm::Accelerator {
 
 template<class Scalar> class BlockedMatrix;
