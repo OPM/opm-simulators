@@ -54,7 +54,8 @@ public:
                                     const Opm::WellState<Scalar>& wellState,
                                     const int reportStepIdx,
                                     const int phasePos,
-                                    const bool injector);
+                                    const bool injector,
+                                    const bool network = false);
 
     static void setCmodeGroup(const Group& group,
                               const Schedule& schedule,
@@ -189,6 +190,12 @@ public:
                                            const int reportStepIdx,
                                            const WellState<Scalar>& wellState,
                                            GroupState<Scalar>& group_state);
+
+    static void updateNetworkLeafNodeProductionRates(const Schedule& schedule,
+                                                     const int reportStepIdx,
+                                                     const WellState<Scalar>& wellState,
+                                                     GroupState<Scalar>& group_state);
+
 
     static void updateWellRatesFromGroupTargetScale(const Scalar scale,
                                                     const Group& group,

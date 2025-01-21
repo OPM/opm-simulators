@@ -1368,6 +1368,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                                 reportStepIdx,
                                                                 well_state_nupcol,
                                                                 this->groupState());
+    WellGroupHelpers<Scalar>::updateNetworkLeafNodeProductionRates(schedule(),
+                                                                   reportStepIdx,
+                                                                   well_state_nupcol,
+                                                                   this->groupState());
 
     WellGroupHelpers<Scalar>::updateGroupProductionRates(fieldGroup,
                                                          schedule(),
