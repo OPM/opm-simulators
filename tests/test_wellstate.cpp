@@ -171,7 +171,7 @@ namespace {
 
         for (const auto& well : wells)
         {
-            *pw = {well.name()};
+            *pw = Opm::ParallelWellInfo<double>{well.name()};
             ppinfos.push_back(std::ref(*pw));
             pw->communicateFirstPerforation(true);
             ++pw;

@@ -74,7 +74,7 @@ class VtkEnergyModule : public BaseOutputModule<TypeTag>
     using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
-    VtkEnergyModule(const Simulator& simulator)
+    explicit VtkEnergyModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();

@@ -66,7 +66,7 @@ class PvsNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod
     enum { switch0Idx = Indices::switch0Idx };
 
 public:
-    PvsNewtonMethod(Simulator& simulator) : ParentType(simulator)
+    explicit PvsNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {}
 
 protected:

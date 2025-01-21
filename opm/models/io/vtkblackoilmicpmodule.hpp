@@ -67,7 +67,7 @@ class VtkBlackOilMICPModule : public BaseOutputModule<TypeTag>
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
-    VtkBlackOilMICPModule(const Simulator& simulator)
+    explicit VtkBlackOilMICPModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         if constexpr (enableMICP) {

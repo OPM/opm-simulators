@@ -61,7 +61,7 @@ class VtkPrimaryVarsModule : public BaseOutputModule<TypeTag>
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
 public:
-    VtkPrimaryVarsModule(const Simulator& simulator)
+    explicit VtkPrimaryVarsModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();

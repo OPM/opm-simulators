@@ -42,7 +42,7 @@ template <class Callback>
 class GenericGuard
 {
 public:
-    GenericGuard(Callback& callback)
+    explicit GenericGuard(Callback& callback)
         : callback_(callback)
         , isEnabled_(true)
     { }

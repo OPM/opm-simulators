@@ -39,7 +39,7 @@ class EmptyModel : public BaseAuxiliaryModule<TypeTag>
 
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    EmptyModel(Simulator& /*simulator*/)
+    explicit EmptyModel(Simulator& /*simulator*/)
     {
     }
 

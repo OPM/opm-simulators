@@ -114,8 +114,8 @@ public:
 template <class TypeTag>
 struct DummySpaceVcfv {
     using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
-    DummySpaceVcfv(const DiscreteFunctionSpace&) {};
-    DummySpaceVcfv(const int&) {};
+    explicit DummySpaceVcfv(const DiscreteFunctionSpace&) {};
+    explicit DummySpaceVcfv(const int&) {};
 };
 
 template <class TypeTag>
@@ -162,7 +162,7 @@ class VcfvDiscretization : public GetPropType<TypeTag, Properties::BaseDiscretiz
     enum { dim = GridView::dimension };
 
 public:
-    VcfvDiscretization(Simulator& simulator)
+    explicit VcfvDiscretization(Simulator& simulator)
         : ParentType(simulator)
     { }
 

@@ -74,7 +74,7 @@ class VtkCompositionModule : public BaseOutputModule<TypeTag>
     using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
 
 public:
-    VtkCompositionModule(const Simulator& simulator)
+    explicit VtkCompositionModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();

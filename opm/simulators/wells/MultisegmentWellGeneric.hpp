@@ -52,7 +52,7 @@ public:
     int numberOfSegments() const;
 
 protected:
-    MultisegmentWellGeneric(WellInterfaceGeneric<Scalar>& baseif);
+    explicit MultisegmentWellGeneric(WellInterfaceGeneric<Scalar>& baseif);
 
     // scale the segment rates and pressure based on well rates and bhp
     void scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,

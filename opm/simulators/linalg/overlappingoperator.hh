@@ -47,7 +47,7 @@ public:
     using domain_type = DomainVector;
     using field_type = typename domain_type::field_type;
 
-    OverlappingOperator(const OverlappingMatrix& A) : A_(A)
+    explicit OverlappingOperator(const OverlappingMatrix& A) : A_(A)
     {}
 
     //! the kind of computations supported by the operator. Either overlapping or non-overlapping

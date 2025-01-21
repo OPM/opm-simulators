@@ -158,7 +158,7 @@ public:
   typedef C Criterion;
   typedef SequentialInformation ParallelInformation;
 
-  AggregationLevelTransferPolicyCpr(const Criterion& crit)
+  explicit AggregationLevelTransferPolicyCpr(const Criterion& crit)
   : criterion_(crit)
   {}
 

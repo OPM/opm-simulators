@@ -53,7 +53,7 @@ public:
 
     /// \brief Constructs an empty parallel information object using a communicator.
     /// \param communicator The communicator to use.
-    ParallelISTLInformation(MPI_Comm communicator);
+    explicit ParallelISTLInformation(MPI_Comm communicator);
 
     /// \brief Constructs a parallel information object from the specified information.
     /// \param indexSet The parallel index set to use.
@@ -234,7 +234,7 @@ private:
             typename std::remove_const<typename BinaryOperator::result_type>::type
             >::type Result;
 
-        MaskToMinOperator(BinaryOperator b)
+        explicit MaskToMinOperator(BinaryOperator b)
         : b_(b)
         {}
         /// \brief Apply the underlying binary operator according to the mask.
@@ -298,7 +298,7 @@ private:
             typename std::remove_reference<typename BinaryOperator::result_type>::type
             >::type Result;
 
-        MaskToMaxOperator(BinaryOperator b)
+        explicit MaskToMaxOperator(BinaryOperator b)
         : b_(b)
         {}
         /// \brief Apply the underlying binary operator according to the mask.

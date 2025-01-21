@@ -71,7 +71,7 @@ public:
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(Scalar)
      */
-    NcpRateVector(const Evaluation& value)
+    explicit NcpRateVector(const Evaluation& value)
         : ParentType(value)
     {}
 

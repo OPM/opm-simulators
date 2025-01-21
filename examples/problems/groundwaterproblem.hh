@@ -168,7 +168,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    GroundWaterProblem(Simulator& simulator)
+    explicit GroundWaterProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

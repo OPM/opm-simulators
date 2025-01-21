@@ -143,7 +143,7 @@ class ParallelAmgBackend : public ParallelBaseBackend<TypeTag>
                   "The ParallelAmgBackend linear solver backend requires the IstlSparseMatrixAdapter");
 
 public:
-    ParallelAmgBackend(const Simulator& simulator)
+    explicit ParallelAmgBackend(const Simulator& simulator)
         : ParentType(simulator)
     { }
 

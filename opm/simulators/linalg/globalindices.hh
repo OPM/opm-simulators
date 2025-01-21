@@ -60,7 +60,7 @@ class GlobalIndices
     using DomesticToGlobalMap = std::map<Index, Index>;
 
 public:
-    GlobalIndices(const ForeignOverlap& foreignOverlap)
+    explicit GlobalIndices(const ForeignOverlap& foreignOverlap)
         : foreignOverlap_(foreignOverlap)
     {
         myRank_ = 0;

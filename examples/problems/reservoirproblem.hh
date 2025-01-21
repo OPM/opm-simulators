@@ -205,7 +205,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    ReservoirProblem(Simulator& simulator)
+    explicit ReservoirProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

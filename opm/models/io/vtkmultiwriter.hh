@@ -67,7 +67,7 @@ class VtkMultiWriter : public BaseOutputWriter
     class WriteDataTasklet : public TaskletInterface
     {
     public:
-        WriteDataTasklet(VtkMultiWriter& multiWriter)
+        explicit WriteDataTasklet(VtkMultiWriter& multiWriter)
             : multiWriter_(multiWriter)
         { }
 

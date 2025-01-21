@@ -37,7 +37,7 @@ namespace Opm
 class PropertyTree {
 public:
     PropertyTree();
-    PropertyTree(const std::string& jsonFile);
+    explicit PropertyTree(const std::string& jsonFile);
     PropertyTree(const PropertyTree& tree);
     ~PropertyTree();
 

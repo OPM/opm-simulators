@@ -74,7 +74,7 @@ public:
      *
      * \param value The scalar value to which all entries of the vector will be set.
      */
-    ImmiscibleRateVector(const Evaluation& value)
+    explicit ImmiscibleRateVector(const Evaluation& value)
         : ParentType(value)
     {}
 

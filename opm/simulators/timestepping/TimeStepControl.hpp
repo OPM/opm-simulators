@@ -101,8 +101,8 @@ namespace Opm
         /// \param tol      tolerance for the relative changes of the numerical solution to be accepted
         ///                 in one time step (default is 1e-3)
         /// \param verbose  if true get some output (default = false)
-        PIDTimeStepControl( const double tol = 1e-3,
-                            const bool verbose = false );
+        explicit PIDTimeStepControl(const double tol = 1e-3,
+                                    const bool verbose = false);
 
         static PIDTimeStepControl serializationTestObject();
 
@@ -143,12 +143,12 @@ namespace Opm
         /// \param tol        tolerance for the relative changes of the numerical solution to be accepted
         ///                   in one time step (default is 1e-3)
         /// \param verbose    if true get some output (default = false)
-        PIDAndIterationCountTimeStepControl( const int target_iterations = 20,
-                                             const double decayDampingFactor = 1.0,
-                                             const double growthDampingFactor = 1.0/1.2,
-                                             const double tol = 1e-3,
-                                             const double minTimeStepBasedOnIterations = 0.,
-                                             const bool verbose = false);
+        explicit PIDAndIterationCountTimeStepControl(const int target_iterations = 20,
+                                                     const double decayDampingFactor = 1.0,
+                                                     const double growthDampingFactor = 1.0/1.2,
+                                                     const double tol = 1e-3,
+                                                     const double minTimeStepBasedOnIterations = 0.,
+                                                     const bool verbose = false);
 
         static PIDAndIterationCountTimeStepControl serializationTestObject();
 
@@ -191,7 +191,7 @@ namespace Opm
 
         /// \brief constructor
         /// \param filename   filename contaning the timesteps
-        explicit HardcodedTimeStepControl( const std::string& filename);
+        explicit HardcodedTimeStepControl(const std::string& filename);
 
         static HardcodedTimeStepControl serializationTestObject();
 

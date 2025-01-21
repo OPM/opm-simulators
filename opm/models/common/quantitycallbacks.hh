@@ -56,7 +56,7 @@ public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
-    TemperatureCallback(const ElementContext& elemCtx)
+    explicit TemperatureCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     {}
 
@@ -92,7 +92,7 @@ public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
-    PressureCallback(const ElementContext& elemCtx)
+    explicit PressureCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     { Valgrind::SetUndefined(phaseIdx_); }
 
@@ -203,7 +203,7 @@ public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
-    DensityCallback(const ElementContext& elemCtx)
+    explicit DensityCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     { Valgrind::SetUndefined(phaseIdx_); }
 
@@ -251,7 +251,7 @@ public:
     using ResultType = decltype(std::declval<IQFluidState>().molarDensity(0));
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
-    MolarDensityCallback(const ElementContext& elemCtx)
+    explicit MolarDensityCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     { Valgrind::SetUndefined(phaseIdx_); }
 
@@ -300,7 +300,7 @@ public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
-    ViscosityCallback(const ElementContext& elemCtx)
+    explicit ViscosityCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     { Valgrind::SetUndefined(phaseIdx_); }
 
@@ -352,7 +352,7 @@ public:
     using ResultFieldType = typename ResultType::field_type;
     using ResultFieldValueType = typename MathToolbox<ResultFieldType>::ValueType;
 
-    VelocityCallback(const ElementContext& elemCtx)
+    explicit VelocityCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     {}
 
@@ -384,7 +384,7 @@ public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
-    VelocityComponentCallback(const ElementContext& elemCtx)
+    explicit VelocityComponentCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     { Valgrind::SetUndefined(dimIdx_); }
 
@@ -433,7 +433,7 @@ public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
-    MoleFractionCallback(const ElementContext& elemCtx)
+    explicit MoleFractionCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     {
         Valgrind::SetUndefined(phaseIdx_);

@@ -42,7 +42,7 @@ std::unique_ptr<Opm::TaskletRunner> runner{};
 class SleepTasklet : public Opm::TaskletInterface
 {
 public:
-    SleepTasklet(int mseconds)
+    explicit SleepTasklet(int mseconds)
         : mseconds_(mseconds)
     {
         n_ = numInstantiated_;

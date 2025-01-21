@@ -75,7 +75,7 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
-    VtkBlackOilModule(const Simulator& simulator)
+    explicit VtkBlackOilModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();

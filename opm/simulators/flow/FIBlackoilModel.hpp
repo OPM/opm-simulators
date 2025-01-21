@@ -70,7 +70,7 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     static constexpr bool gridIsUnchanging = std::is_same_v<GetPropType<TypeTag, Properties::Grid>, Dune::CpGrid>;
 
 public:
-    FIBlackOilModel(Simulator& simulator)
+    explicit FIBlackOilModel(Simulator& simulator)
         : BlackOilModel<TypeTag>(simulator)
     {
         if constexpr (gridIsUnchanging) {

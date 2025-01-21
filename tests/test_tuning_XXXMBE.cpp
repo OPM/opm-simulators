@@ -11,7 +11,7 @@
 #include <boost/test/unit_test.hpp>
 
 struct Column : public std::vector<std::string> {
-		Column(const std::string& name_, const int size = 0, const int num_rows_estimate = 1000) : 
+		explicit Column(const std::string& name_, const int size = 0, const int num_rows_estimate = 1000) : 
 				std::vector<std::string>(size), name(name_)
 		{
 				this->reserve(num_rows_estimate);
@@ -60,7 +60,7 @@ struct Column : public std::vector<std::string> {
 
 
 struct ColumnData {
-		ColumnData(const std::string& file_name, const int num_columns_estimate=20) {
+		explicit ColumnData(const std::string& file_name, const int num_columns_estimate=20) {
 				raw_columns.reserve(num_columns_estimate);
 				load_file(file_name);
 		}

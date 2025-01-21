@@ -226,7 +226,7 @@ class ImmiscibleModel
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
-    ImmiscibleModel(Simulator& simulator)
+    explicit ImmiscibleModel(Simulator& simulator)
         : ParentType(simulator)
     {}
 

@@ -48,7 +48,7 @@ template<class Scalar>
 class WellGroupConstraints {
 public:
     //! \brief Constructor sets reference to well.
-    WellGroupConstraints(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellGroupConstraints(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
 
     using RateConvFunc = std::function<void(const RegionId,
                                             const int,

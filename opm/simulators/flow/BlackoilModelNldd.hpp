@@ -97,7 +97,7 @@ public:
     //! \param model BlackOil model to solve for
     //! \param param param Model parameters
     //! \param compNames Names of the solution components
-    BlackoilModelNldd(BlackoilModel<TypeTag>& model)
+    explicit BlackoilModelNldd(BlackoilModel<TypeTag>& model)
         : model_(model), rank_(model_.simulator().vanguard().grid().comm().rank())
     {
         // Create partitions.

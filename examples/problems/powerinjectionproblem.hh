@@ -179,7 +179,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    PowerInjectionProblem(Simulator& simulator)
+    explicit PowerInjectionProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

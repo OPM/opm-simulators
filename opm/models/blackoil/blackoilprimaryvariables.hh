@@ -166,7 +166,7 @@ public:
     /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
      */
-    BlackOilPrimaryVariables(Scalar value)
+    explicit BlackOilPrimaryVariables(Scalar value)
         : ParentType(value)
     {
         Valgrind::SetUndefined(primaryVarsMeaningWater_);

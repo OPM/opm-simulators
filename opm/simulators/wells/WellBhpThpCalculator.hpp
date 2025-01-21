@@ -41,7 +41,7 @@ template<class Scalar>
 class WellBhpThpCalculator {
 public:
     //! \brief Constructor sets reference to well.
-    WellBhpThpCalculator(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellBhpThpCalculator(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
 
     //! \brief Checks if well has THP constraints.
     bool wellHasTHPConstraints(const SummaryState& summaryState) const;

@@ -71,7 +71,7 @@ class BlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
     static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
 
 public:
-    BlackOilNewtonMethod(Simulator& simulator) : ParentType(simulator)
+    explicit BlackOilNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
         bparams_.read();
     }

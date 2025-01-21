@@ -62,7 +62,7 @@ public:
     /*!
      * \copydoc Problem::FvBaseProblem(Simulator& )
      */
-    DiscreteFractureProblem(Simulator& simulator)
+    explicit DiscreteFractureProblem(Simulator& simulator)
         : ParentType(simulator)
     {}
 

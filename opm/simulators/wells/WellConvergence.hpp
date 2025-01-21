@@ -37,7 +37,7 @@ template<class Scalar>
 class WellConvergence
 {
 public:
-    WellConvergence(const WellInterfaceGeneric<Scalar>& well)
+    explicit WellConvergence(const WellInterfaceGeneric<Scalar>& well)
         : well_(well)
     {}
 

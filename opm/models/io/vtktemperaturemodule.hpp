@@ -63,7 +63,7 @@ class VtkTemperatureModule : public BaseOutputModule<TypeTag>
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
-    VtkTemperatureModule(const Simulator& simulator)
+    explicit VtkTemperatureModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();

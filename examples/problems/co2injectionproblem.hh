@@ -235,7 +235,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    Co2InjectionProblem(Simulator& simulator)
+    explicit Co2InjectionProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

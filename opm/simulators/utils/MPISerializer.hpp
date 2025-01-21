@@ -30,7 +30,7 @@ namespace Opm::Parallel {
 //! \brief Class for serializing and broadcasting data using MPI.
 class MpiSerializer : public Serializer<Mpi::Packer> {
 public:
-    MpiSerializer(Parallel::Communication comm)
+    explicit MpiSerializer(Parallel::Communication comm)
         : Serializer<Mpi::Packer>(m_packer)
         , m_packer(comm)
         , m_comm(comm)

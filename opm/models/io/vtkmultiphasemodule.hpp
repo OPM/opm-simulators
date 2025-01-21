@@ -92,7 +92,7 @@ class VtkMultiPhaseModule : public BaseOutputModule<TypeTag>
     using PhaseVectorBuffer = std::array<VectorBuffer, numPhases>;
 
 public:
-    VtkMultiPhaseModule(const Simulator& simulator)
+    explicit VtkMultiPhaseModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();

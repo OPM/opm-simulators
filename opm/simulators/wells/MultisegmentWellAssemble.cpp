@@ -46,7 +46,7 @@ template<class Scalar, int numWellEq, int numEq>
 class MultisegmentWellEquationAccess {
 public:
     //! \brief Constructor initializes reference to the equation system.
-    MultisegmentWellEquationAccess(MultisegmentWellEquations<Scalar,numWellEq,numEq>& eqns)
+    explicit MultisegmentWellEquationAccess(MultisegmentWellEquations<Scalar,numWellEq,numEq>& eqns)
         : eqns_(eqns)
     {}
 

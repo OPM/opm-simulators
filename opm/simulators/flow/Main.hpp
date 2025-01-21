@@ -136,7 +136,7 @@ public:
     Main(int argc, char** argv, bool ownMPI = true);
 
     // This constructor can be called from Python
-    Main(const std::string& filename, bool mpi_init = true, bool mpi_finalize = true);
+    explicit Main(const std::string& filename, bool mpi_init = true, bool mpi_finalize = true);
 
     // This constructor can be called from Python when Python has
     // already parsed a deck

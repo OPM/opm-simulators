@@ -43,7 +43,7 @@ namespace Opm {
 class TaskletInterface
 {
 public:
-    TaskletInterface(int refCount = 1)
+    explicit TaskletInterface(int refCount = 1)
         : referenceCount_(refCount)
     {}
     virtual ~TaskletInterface() {}
@@ -92,7 +92,7 @@ class TaskletRunner
     class BarrierTasklet : public TaskletInterface
     {
     public:
-        BarrierTasklet(unsigned numWorkers);
+        explicit BarrierTasklet(unsigned numWorkers);
 
         void run();
 
@@ -128,7 +128,7 @@ public:
      * The number of worker threads may be 0. In this case, all work is done by the main
      * thread (synchronous mode).
      */
-    TaskletRunner(unsigned numWorkers);
+    explicit TaskletRunner(unsigned numWorkers);
 
     /*!
      * \brief Destructor

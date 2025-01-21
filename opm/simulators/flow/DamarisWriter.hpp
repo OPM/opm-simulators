@@ -111,7 +111,7 @@ public:
     // The Simulator object should preferably have been const - the
     // only reason that is not the case is due to the SummaryState
     // object owned deep down by the vanguard.
-    DamarisWriter(Simulator& simulator)
+    explicit DamarisWriter(Simulator& simulator)
         : BaseType(simulator.vanguard().schedule(),
                    simulator.vanguard().eclState(),
                    simulator.vanguard().summaryConfig(),

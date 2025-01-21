@@ -72,7 +72,7 @@ namespace Opm {
         using ScalarBuffer = typename ParentType::ScalarBuffer;
 
     public:
-        VtkTracerModule(const Simulator& simulator)
+        explicit VtkTracerModule(const Simulator& simulator)
             : ParentType(simulator)
         { }
 

@@ -65,7 +65,7 @@ public:
     // block vector type
     using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
 
-    StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info);
+    explicit StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info);
 
     //! \brief Setup sparsity pattern for the matrices.
     //! \param numWellEq Number of well equations

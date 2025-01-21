@@ -71,7 +71,7 @@ class VtkBlackOilEnergyModule : public BaseOutputModule<TypeTag>
     using PhaseBuffer = typename ParentType::PhaseBuffer;
 
 public:
-    VtkBlackOilEnergyModule(const Simulator& simulator)
+    explicit VtkBlackOilEnergyModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         if constexpr (enableEnergy) {

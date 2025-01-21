@@ -45,7 +45,7 @@ template<class Scalar, int numEq>
 class StandardWellEquationAccess {
 public:
     //! \brief Constructor initializes reference to the equation system.
-    StandardWellEquationAccess(StandardWellEquations<Scalar,numEq>& eqns)
+    explicit StandardWellEquationAccess(StandardWellEquations<Scalar,numEq>& eqns)
         : eqns_(eqns)
     {}
 

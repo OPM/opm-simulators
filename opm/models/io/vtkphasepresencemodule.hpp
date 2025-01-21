@@ -60,7 +60,7 @@ class VtkPhasePresenceModule : public BaseOutputModule<TypeTag>
 
 
 public:
-    VtkPhasePresenceModule(const Simulator& simulator)
+    explicit VtkPhasePresenceModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();

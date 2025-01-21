@@ -117,7 +117,7 @@ class GPUObliviousMPISender : public GPUSender<field_type, OwnerOverlapCopyCommu
 public:
     using X = GpuVector<field_type>;
 
-    GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
+    explicit GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
         : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
         {
         }
@@ -172,7 +172,7 @@ class GPUAwareMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunica
 public:
     using X = GpuVector<field_type>;
 
-    GPUAwareMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
+    explicit GPUAwareMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
         : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
     {
     }
@@ -385,7 +385,7 @@ class GpuOwnerOverlapCopy
 public:
     using X = GpuVector<field_type>;
 
-    GpuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
+    explicit GpuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
 
     void copyOwnerToAll(const X& source, X& dest) const {
         m_sender->copyOwnerToAll(source, dest);

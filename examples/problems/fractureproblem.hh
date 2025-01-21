@@ -224,7 +224,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    FractureProblem(Simulator& simulator)
+    explicit FractureProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

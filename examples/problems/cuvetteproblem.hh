@@ -184,7 +184,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    CuvetteProblem(Simulator& simulator)
+    explicit CuvetteProblem(Simulator& simulator)
         : ParentType(simulator)
         , eps_(1e-6)
     { }

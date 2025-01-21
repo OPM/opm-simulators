@@ -75,7 +75,7 @@ class VtkDiffusionModule : public BaseOutputModule<TypeTag>
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
 public:
-    VtkDiffusionModule(const Simulator& simulator)
+    explicit VtkDiffusionModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();

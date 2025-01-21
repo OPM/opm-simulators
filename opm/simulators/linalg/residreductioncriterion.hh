@@ -53,7 +53,7 @@ class ResidReductionCriterion : public ConvergenceCriterion<Vector>
     using Scalar = typename Vector::field_type;
 
 public:
-    ResidReductionCriterion(Dune::ScalarProduct<Vector>& scalarProduct,
+    explicit ResidReductionCriterion(Dune::ScalarProduct<Vector>& scalarProduct,
                             Scalar tolerance = 1e-6)
         : scalarProduct_(scalarProduct), tolerance_(tolerance)
     {}

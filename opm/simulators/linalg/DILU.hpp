@@ -65,7 +65,7 @@ public:
     /*! \brief Constructor gets all parameters to operate the prec.
        \param A The matrix to operate on.
     */
-    MultithreadDILU(const M& A)
+    explicit MultithreadDILU(const M& A)
         : A_(A)
     {
         OPM_TIMEBLOCK(prec_construct);

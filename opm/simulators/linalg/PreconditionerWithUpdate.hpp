@@ -43,7 +43,7 @@ class DummyUpdatePreconditioner : public PreconditionerWithUpdate<typename Origi
 {
 public:
     template <class... Args>
-    DummyUpdatePreconditioner(Args&&... args)
+    explicit DummyUpdatePreconditioner(Args&&... args)
         : orig_precond_(std::forward<Args>(args)...)
     {
     }
@@ -109,7 +109,7 @@ template <class OriginalPreconditioner, class... Args>
 struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPreconditioner> {
     using GenericPreconditioner = Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>;
     
-    PreconditionerMaker(Args&&... args)
+    explicit PreconditionerMaker(Args&&... args)
         : args_(args...)
     {
     }
@@ -134,7 +134,7 @@ class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename O
 {
 public:
     template<class... Args>
-    RebuildOnUpdatePreconditioner(Args... args)
+    explicit RebuildOnUpdatePreconditioner(Args... args)
         : preconditioner_maker_(std::make_unique<PreconditionerMaker<OriginalPreconditioner, Args...>>(std::forward<Args>(args)...))
     {
         update();

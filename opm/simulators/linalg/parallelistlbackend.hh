@@ -99,7 +99,7 @@ class ParallelIstlSolverBackend : public ParallelBaseBackend<TypeTag>
                   "The ParallelIstlSolverBackend linear solver backend requires the IstlSparseMatrixAdapter");
 
 public:
-    ParallelIstlSolverBackend(const Simulator& simulator)
+    explicit ParallelIstlSolverBackend(const Simulator& simulator)
         : ParentType(simulator)
     { }
 

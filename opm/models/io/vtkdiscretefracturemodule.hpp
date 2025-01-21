@@ -84,7 +84,7 @@ class VtkDiscreteFractureModule : public BaseOutputModule<TypeTag>
     using PhaseVectorBuffer = typename ParentType::PhaseVectorBuffer;
 
 public:
-    VtkDiscreteFractureModule(const Simulator& simulator)
+    explicit VtkDiscreteFractureModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();
