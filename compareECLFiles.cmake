@@ -398,6 +398,12 @@ add_test_runSimulator(CASENAME norne_parallel
                       PROCS 4
                       CONFIGURATION extra)
 
+add_test_runSimulator(CASENAME spe1case1_carfin
+                      FILENAME SPE1CASE1_CARFIN
+   	              SIMULATOR flow
+		      DIR lgr
+		      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
+
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
 add_test_runSimulator(CASENAME tuning_xxxmbe
                       FILENAME 01_TUNING_XXXMBE
