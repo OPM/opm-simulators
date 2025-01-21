@@ -28,7 +28,7 @@ namespace Opm::Accelerator {
 template<class Scalar> class BlockedMatrix;
 
 template <class Scalar, unsigned int block_size>
-class openclPreconditioner : public Preconditioner<Scalar, block_size>
+class openclPreconditioner : public Preconditioner<Scalar, block_size, cl::Buffer>
 {
 
 protected:
@@ -37,9 +37,9 @@ protected:
     std::vector<cl::Event> events;
     cl_int err;
 
-    openclPreconditioner(int verbosity_) :
-    Preconditioner<Scalar, block_size>(verbosity_)
-    {};
+    openclPreconditioner(int verbosity_)
+        : Preconditioner<Scalar, block_size, cl::Buffer>(verbosity_)
+    {}
 
 public:
     virtual ~openclPreconditioner() = default;
@@ -48,14 +48,6 @@ public:
 
     // nested Preconditioners might need to override this
     virtual void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
-
-    // apply preconditioner, x = prec(y)
-    virtual void apply(const cl::Buffer& y, cl::Buffer& x) = 0;
- 
-    // create/update preconditioner, probably used every linear solve
-    // the version with two params can be overloaded, if not, it will default to using the one param version
-    virtual bool create_preconditioner(BlockedMatrix<Scalar> *mat) = 0;
-    virtual bool create_preconditioner(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat) = 0;
 };
 } //namespace Opm
 
