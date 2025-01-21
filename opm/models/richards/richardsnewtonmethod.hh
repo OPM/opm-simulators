@@ -64,7 +64,7 @@ class RichardsNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
     using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
 
 public:
-    RichardsNewtonMethod(Simulator& simulator) : ParentType(simulator)
+    explicit RichardsNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {}
 
 protected:

@@ -166,7 +166,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::setInitial(const Vector& , const Vector& )
      */
-    void setInitial(const Vector& curSol, const Vector& curResid)
+    void setInitial(const Vector& curSol, const Vector& curResid) override
     {
         lastResidualError_ = 1e100;
 
@@ -186,7 +186,7 @@ public:
      */
     void update(const Vector& curSol,
                 const Vector&,
-                const Vector& curResid)
+                const Vector& curResid) override
     {
         lastResidualError_ = residualError_;
         updateErrors_(curSol, curResid);
@@ -195,7 +195,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::converged()
      */
-    bool converged() const
+    bool converged() const override
     {
         // we're converged if the solution is better than the tolerance
         // fix-point and residual tolerance.
@@ -207,7 +207,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::failed()
      */
-    bool failed() const
+    bool failed() const override
     {
         return
             (!converged() && fixPointError_ <= fixPointTolerance_)
@@ -219,13 +219,13 @@ public:
      *
      * For the accuracy we only take the residual into account,
      */
-    Scalar accuracy() const
+    Scalar accuracy() const override
     { return residualError_; }
 
     /*!
      * \copydoc ConvergenceCriterion::printInitial()
      */
-    void printInitial(std::ostream& os = std::cout) const
+    void printInitial(std::ostream& os = std::cout) const override
     {
         os << std::setw(20) << " Iter ";
         os << std::setw(20) << " Delta ";
@@ -238,7 +238,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::print()
      */
-    void print(Scalar iter, std::ostream& os = std::cout) const
+    void print(Scalar iter, std::ostream& os = std::cout) const override
     {
         static constexpr Scalar eps = std::numeric_limits<Scalar>::min()*1e10;
 

@@ -67,10 +67,12 @@ struct StepReport;
 
 namespace detail {
     void logTimer(const AdaptiveSimulatorTimer& substep_timer);
+
     std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr);
     void registerAdaptiveParameters();
+
     std::tuple<TimeStepControlType, std::unique_ptr<TimeStepControlInterface>, bool>
-        createController(const UnitSystem& unitSystem);
+    createController(const UnitSystem& unitSystem);
 }
 
 template<class TypeTag>
@@ -82,8 +84,9 @@ private:
     class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
     {
     public:
-        SolutionTimeErrorSolverWrapper(const Solver& solver);
+        explicit SolutionTimeErrorSolverWrapper(const Solver& solver);
         double relativeChange() const;
+
     private:
         const Solver& solver_;
     };

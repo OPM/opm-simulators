@@ -53,7 +53,7 @@ class ResidReductionCriterion : public ConvergenceCriterion<Vector>
     using Scalar = typename Vector::field_type;
 
 public:
-    ResidReductionCriterion(Dune::ScalarProduct<Vector>& scalarProduct,
+    explicit ResidReductionCriterion(Dune::ScalarProduct<Vector>& scalarProduct,
                             Scalar tolerance = 1e-6)
         : scalarProduct_(scalarProduct), tolerance_(tolerance)
     {}
@@ -74,7 +74,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::setInitial(const Vector& , const Vector& )
      */
-    void setInitial(const Vector&, const Vector& curResid)
+    void setInitial(const Vector&, const Vector& curResid) override
     {
         static constexpr Scalar eps = std::numeric_limits<Scalar>::min()*1e10;
 
@@ -90,7 +90,7 @@ public:
      */
     void update(const Vector&,
                 const Vector&,
-                const Vector& curResid)
+                const Vector& curResid) override
     {
         lastDefect_ = curDefect_;
         curDefect_ = scalarProduct_.norm(curResid);
@@ -99,19 +99,19 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::converged()
      */
-    bool converged() const
+    bool converged() const override
     { return accuracy() <= tolerance(); }
 
     /*!
      * \copydoc ConvergenceCriterion::accuracy()
      */
-    Scalar accuracy() const
+    Scalar accuracy() const override
     { return curDefect_/initialDefect_; }
 
     /*!
      * \copydoc ConvergenceCriterion::printInitial()
      */
-    void printInitial(std::ostream& os=std::cout) const
+    void printInitial(std::ostream& os = std::cout) const override
     {
         os << std::setw(20) << "iteration ";
         os << std::setw(20) << "residual ";
@@ -123,7 +123,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::print()
      */
-    void print(Scalar iter, std::ostream& os=std::cout) const
+    void print(Scalar iter, std::ostream& os = std::cout) const override
     {
         static constexpr Scalar eps = std::numeric_limits<Scalar>::min()*1e10;
 

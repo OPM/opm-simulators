@@ -94,8 +94,6 @@ public:
         bool alq_is_limited;
     };
 
-    virtual ~GasLiftSingleWellGeneric() = default;
-
     const std::string& name() const { return well_name_; }
 
     std::optional<GradInfo> calcIncOrDecGradient(Scalar oil_rate,
@@ -158,7 +156,7 @@ protected:
         // This copy constructor cannot be defined inline here since LimitedRates
         //   has not been defined yet (it is defined below). Instead it is defined in
         //   in the .cpp file
-        BasicRates(const LimitedRates& rates);
+        explicit BasicRates(const LimitedRates& rates);
 
         Scalar operator[](Rate rate_type) const
         {

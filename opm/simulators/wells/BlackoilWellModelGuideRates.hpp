@@ -46,7 +46,7 @@ class BlackoilWellModelGuideRates
 {
 public:
     //! \brief Constructor initializes reference to the well model.
-    BlackoilWellModelGuideRates(const BlackoilWellModelGeneric<Scalar>& wellModel)
+    explicit BlackoilWellModelGuideRates(const BlackoilWellModelGeneric<Scalar>& wellModel)
         : wellModel_(wellModel)
     {}
 

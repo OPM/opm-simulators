@@ -134,7 +134,7 @@ template<class Scalar> class WellContributions;
 
             using Domain = SubDomain<Grid>;
 
-            BlackoilWellModel(Simulator& simulator);
+            explicit BlackoilWellModel(Simulator& simulator);
 
             void init();
             void initWellContainer(const int reportStepIdx) override;

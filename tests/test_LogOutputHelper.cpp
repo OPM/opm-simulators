@@ -106,7 +106,7 @@ END
     {
         LogFixture() : LogFixture { deck() } {}
 
-        LogFixture(const Opm::Deck& deck)
+        explicit LogFixture(const Opm::Deck& deck)
             : eclState { deck }
             , schedule { deck, eclState }
         {

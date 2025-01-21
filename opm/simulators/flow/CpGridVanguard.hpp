@@ -110,7 +110,7 @@ private:
     using Element = typename GridView::template Codim<0>::Entity;
 
 public:
-    CpGridVanguard(Simulator& simulator)
+    explicit CpGridVanguard(Simulator& simulator)
         : FlowBaseVanguard<TypeTag>(simulator)
     {
         this->checkConsistency();

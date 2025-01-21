@@ -49,7 +49,7 @@ template<class Scalar>
 class WellGroupControls {
 public:
     //! \brief Constructor sets reference to well.
-    WellGroupControls(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellGroupControls(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
 
     using RateConvFunc = std::function<void(const RegionId, const int,
                                             const std::optional<std::string>&, std::vector<Scalar>&)>;

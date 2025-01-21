@@ -39,7 +39,7 @@
 class PlatformInitException : public std::logic_error
 {
 public:
-    PlatformInitException(std::string msg) : logic_error(msg){};
+    explicit PlatformInitException(const std::string& msg) : logic_error(msg){};
 };
 
 template <int bz>

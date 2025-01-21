@@ -148,7 +148,7 @@ namespace Opm {
                  * representative cell.
                  */
                 struct Value {
-                    Value(const Attributes& attr)
+                    explicit Value(const Attributes& attr)
                         : attr_(attr)
                         , cell_(-1)
                     {}

@@ -50,7 +50,7 @@ public:
     Dune::SolverCategory::Category category() const override
     { return Dune::SolverCategory::overlapping; }
 
-    OverlappingScalarProduct(const Overlap& overlap)
+    explicit OverlappingScalarProduct(const Overlap& overlap)
         : overlap_(overlap),
           comm_( Dune::MPIHelper::getCommunication() )
     {}

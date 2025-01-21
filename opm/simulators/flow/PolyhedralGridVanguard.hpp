@@ -107,7 +107,7 @@ public:
     using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper,
                                                   CartesianIndexMapper, Scalar>;
 
-    PolyhedralGridVanguard(Simulator& simulator)
+    explicit PolyhedralGridVanguard(Simulator& simulator)
         : FlowBaseVanguard<TypeTag>(simulator)
         , simulator_(simulator)
     {

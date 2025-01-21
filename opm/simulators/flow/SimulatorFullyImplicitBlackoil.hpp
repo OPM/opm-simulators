@@ -166,7 +166,7 @@ public:
         }
     }
 
-    ~SimulatorFullyImplicitBlackoil()
+    ~SimulatorFullyImplicitBlackoil() override
     {
         // Safe to call on all ranks, not just the I/O rank.
         convergence_output_.endThread();

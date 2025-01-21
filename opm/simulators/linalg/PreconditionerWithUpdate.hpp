@@ -43,7 +43,7 @@ class DummyUpdatePreconditioner : public PreconditionerWithUpdate<typename Origi
 {
 public:
     template <class... Args>
-    DummyUpdatePreconditioner(Args&&... args)
+    explicit DummyUpdatePreconditioner(Args&&... args)
         : orig_precond_(std::forward<Args>(args)...)
     {
     }
@@ -109,10 +109,11 @@ template <class OriginalPreconditioner, class... Args>
 struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPreconditioner> {
     using GenericPreconditioner = Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>;
     
-    PreconditionerMaker(Args&&... args)
+    explicit PreconditionerMaker(Args&&... args)
         : args_(args...)
     {
     }
+
     std::unique_ptr<GenericPreconditioner>
     make() override
     {
@@ -122,7 +123,7 @@ struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPrecondit
                 return std::make_unique<OriginalPreconditioner>(std::forward<Args>(args)...);
             }, args_);
     }
-    ~PreconditionerMaker(){}
+
     std::tuple<Args...> args_;
 };
 
@@ -134,7 +135,7 @@ class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename O
 {
 public:
     template<class... Args>
-    RebuildOnUpdatePreconditioner(Args... args)
+    explicit RebuildOnUpdatePreconditioner(Args... args)
         : preconditioner_maker_(std::make_unique<PreconditionerMaker<OriginalPreconditioner, Args...>>(std::forward<Args>(args)...))
     {
         update();
@@ -143,22 +144,22 @@ public:
     using X = typename OriginalPreconditioner::domain_type;
     using Y = typename OriginalPreconditioner::range_type;
 
-    virtual void pre(X& x, Y& b) override
+    void pre(X& x, Y& b) override
     {
         orig_precond_->pre(x, b);
     }
 
-    virtual void apply(X& v, const Y& d) override
+    void apply(X& v, const Y& d) override
     {
         orig_precond_->apply(v, d);
     }
 
-    virtual void post(X& x) override
+    void post(X& x) override
     {
         orig_precond_->post(x);
     }
 
-    virtual SolverCategory::Category category() const override
+    SolverCategory::Category category() const override
     {
         return orig_precond_->category();
     }
@@ -169,7 +170,8 @@ public:
         orig_precond_ = preconditioner_maker_->make();
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override
+    {
         return true;
     }
 

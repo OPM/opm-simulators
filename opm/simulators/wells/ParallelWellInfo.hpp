@@ -197,8 +197,8 @@ public:
     static constexpr int INVALID_ECL_INDEX = -1;
 
     /// \brief Constructs object using MPI_COMM_SELF
-    ParallelWellInfo(const std::string& name = {""},
-                     bool hasLocalCells = true);
+    explicit ParallelWellInfo(const std::string& name = {""},
+                              bool hasLocalCells = true);
 
     /// \brief Constructs object with communication between all rank sharing
     ///        a well

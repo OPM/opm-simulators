@@ -162,7 +162,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    RichardsLensProblem(Simulator& simulator)
+    explicit RichardsLensProblem(Simulator& simulator)
         : ParentType(simulator)
         , pnRef_(1e5)
     {

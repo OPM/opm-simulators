@@ -215,7 +215,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    FingerProblem(Simulator& simulator)
+    explicit FingerProblem(Simulator& simulator)
         : ParentType(simulator),
           materialParams_( simulator.vanguard().grid(), codim )
     {

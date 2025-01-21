@@ -65,7 +65,7 @@ public:
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(Scalar)
      */
-    FlashRateVector(const Evaluation& value) : ParentType(value)
+    explicit FlashRateVector(const Evaluation& value) : ParentType(value)
     {}
 
     /*!

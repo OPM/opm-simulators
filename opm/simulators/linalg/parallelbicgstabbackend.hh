@@ -112,7 +112,7 @@ class ParallelBiCGStabSolverBackend : public ParallelBaseBackend<TypeTag>
                   "The ParallelIstlSolverBackend linear solver backend requires the IstlSparseMatrixAdapter");
 
 public:
-    ParallelBiCGStabSolverBackend(const Simulator& simulator)
+    explicit ParallelBiCGStabSolverBackend(const Simulator& simulator)
         : ParentType(simulator)
     { }
 

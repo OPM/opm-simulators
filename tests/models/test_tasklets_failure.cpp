@@ -70,7 +70,7 @@ private:
 class FailingSleepTasklet : public Opm::TaskletInterface
 {
 public:
-    FailingSleepTasklet(int mseconds)
+    explicit FailingSleepTasklet(int mseconds)
         : mseconds_(mseconds)
     {}
     void run() override

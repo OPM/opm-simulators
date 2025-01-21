@@ -66,7 +66,7 @@ public:
      * \brief Constructor taking simulator and creating an empty matrix .
      */
     template <class Simulator>
-    IstlSparseMatrixAdapter(const Simulator& simulator)
+    explicit IstlSparseMatrixAdapter(const Simulator& simulator)
         : IstlSparseMatrixAdapter(simulator.model().numTotalDof(), simulator.model().numTotalDof())
     {}
 

@@ -307,7 +307,7 @@ public:
 
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
 
-    BlackOilModel(Simulator& simulator)
+    explicit BlackOilModel(Simulator& simulator)
         : ParentType(simulator)
     {
         eqWeights_.resize(numEq, 1.0);

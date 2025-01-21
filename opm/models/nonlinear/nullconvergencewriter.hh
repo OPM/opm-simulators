@@ -55,7 +55,7 @@ class NullConvergenceWriter
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
 
 public:
-    NullConvergenceWriter(NewtonMethod&)
+    explicit NullConvergenceWriter(NewtonMethod&)
     {}
 
     /*!

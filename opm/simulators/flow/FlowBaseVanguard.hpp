@@ -114,7 +114,7 @@ public:
      * This is the file format used by the commercial ECLiPSE simulator. Usually it uses
      * a cornerpoint description of the grid.
      */
-    FlowBaseVanguard(Simulator& simulator)
+    explicit FlowBaseVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
 #if HAVE_MPI

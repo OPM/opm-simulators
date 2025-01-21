@@ -54,7 +54,7 @@ public:
         updateMpiDataSize_();
     }
 
-    MpiBuffer(size_t size)
+    explicit MpiBuffer(size_t size)
     {
         data_ = new DataType[size];
         dataSize_ = size;

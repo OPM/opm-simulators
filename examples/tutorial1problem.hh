@@ -164,7 +164,7 @@ class Tutorial1Problem
 public:
     //! The constructor of the problem. This only _allocates_ the memory required by the
     //! problem. The constructor is supposed to _never ever_ throw an exception.
-    Tutorial1Problem(Simulator& simulator)
+    explicit Tutorial1Problem(Simulator& simulator)
         : ParentType(simulator)
         , eps_(3e-6)
     { }

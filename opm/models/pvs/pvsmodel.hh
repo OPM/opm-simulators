@@ -285,7 +285,7 @@ class PvsModel
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
-    PvsModel(Simulator& simulator)
+    explicit PvsModel(Simulator& simulator)
         : ParentType(simulator)
     {
         verbosity_ = Parameters::Get<Parameters::PvsVerbosity>();

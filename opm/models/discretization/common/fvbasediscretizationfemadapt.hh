@@ -101,7 +101,7 @@ public:
         }
     };
 
-    FvBaseDiscretizationFemAdapt(Simulator& simulator)
+    explicit FvBaseDiscretizationFemAdapt(Simulator& simulator)
         : ParentType(simulator)
         , space_(simulator.vanguard().gridPart())
     {

@@ -41,7 +41,7 @@ class BlackoilWellModelConstraints
 {
 public:
     //! \brief Constructor initializes reference to the well model.
-    BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar>& wellModel)
+    explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar>& wellModel)
         : wellModel_(wellModel)
     {}
 

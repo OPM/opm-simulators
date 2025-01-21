@@ -67,7 +67,7 @@ public:
     /*!
      * \copydoc FvBaseNewtonMethod::FvBaseNewtonMethod(Problem& )
      */
-    FlashNewtonMethod(Simulator& simulator) : ParentType(simulator)
+    explicit FlashNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {}
 
 protected:

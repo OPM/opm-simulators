@@ -68,7 +68,7 @@ class VtkBlackOilSolventModule : public BaseOutputModule<TypeTag>
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
-    VtkBlackOilSolventModule(const Simulator& simulator)
+    explicit VtkBlackOilSolventModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         if constexpr (enableSolvent) {
@@ -91,7 +91,7 @@ public:
      * \brief Allocate memory for the scalar fields we would like to
      *        write to the VTK file.
      */
-    void allocBuffers()
+    void allocBuffers() override
     {
         if constexpr (enableSolvent) {
             if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
@@ -120,7 +120,7 @@ public:
      * \brief Modify the internal buffers according to the intensive quantities relevant for
      *        an element
      */
-    void processElement(const ElementContext& elemCtx)
+    void processElement(const ElementContext& elemCtx) override
     {
         if constexpr (enableSolvent) {
             if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
@@ -163,7 +163,7 @@ public:
     /*!
      * \brief Add all buffers to the VTK output writer.
      */
-    void commitBuffers(BaseOutputWriter& baseWriter)
+    void commitBuffers(BaseOutputWriter& baseWriter) override
     {
         if constexpr (enableSolvent) {
             VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
