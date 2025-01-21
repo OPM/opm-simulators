@@ -42,6 +42,8 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <set>
+#include <map>
 
 namespace {
 
@@ -155,6 +157,8 @@ namespace {
         ///
         /// \param[in] vertexId Enumeration of reachable vertices.
         ///
+        /// \param[in] vertices_to_merge Map of vertices to be merged.
+        ///
         /// \param[in] globalCell Callback for mapping (local) vertex IDs to
         ///   globally unique vertex IDs.
         template <typename Edge, typename GlobalCellID>
@@ -162,6 +166,7 @@ namespace {
                              const std::size_t            numVertices,
                              const std::vector<Edge>&     edges,
                              const EnumerateSeenVertices& vertexId,
+                             const std::map<int, std::vector<int>>& vertices_to_merge,
                              GlobalCellID&&               globalCell)
             : myRank_ { myRank }
         {
@@ -171,7 +176,24 @@ namespace {
                 this->graph_.addConnection(vertexId[v2], vertexId[v1]);
             }
 
-            this->graph_.compress(vertexId.numVertices());
+            // Apply any vertex merges that were collected
+            for (const auto& [target, vertices] : vertices_to_merge) {
+                this->graph_.mergeVertices(vertices, target);
+            }
+
+            // Build set of all vertices that will be merged away
+            std::set<int> merged_vertices;
+            for (const auto& [target, sources] : vertices_to_merge) {
+                for (const auto& source : sources) {
+                    if (source != target) {  // Only count if not mapping to itself
+                        merged_vertices.insert(source);
+                    }
+                }
+            }
+
+            // Compress graph, taking into account the vertices that will be merged away
+            const auto numVerticesAfterMerge = vertexId.numVertices() - merged_vertices.size();
+            this->graph_.compress(numVerticesAfterMerge);
 
             // Form local-to-global vertex ID mapping for reachable vertices.
             this->globalCell_.resize(vertexId.numVertices());
@@ -218,6 +240,15 @@ namespace {
         decltype(auto) columnIndices() const
         {
             return this->graph_.columnIndices();
+        }
+
+        /// Get the final vertex ID after merging and renumbering for a given original vertex ID.
+        ///
+        /// \param[in] originalVertexID The original vertex ID to look up
+        /// \return The final vertex ID after merges and renumbering
+        int getFinalVertexID(const int originalVertexID) const
+        {
+            return this->graph_.getFinalVertexID(originalVertexID);
         }
 
     private:
@@ -536,18 +567,12 @@ extern "C" {
         return blocks;
     }
 
-    void forceSameDomain(const std::vector<int>& cells,
-                         std::vector<int>&       parts)
-    {
-        if (cells.empty()) { return; }
-
-        const auto first = parts[cells.front()];
-        for (const auto& cell : cells) {
-            parts[cell] = first;
-        }
-    }
-
 } // Anonymous namespace
+
+void Opm::ParallelNLDDPartitioningZoltan::mergeVertices(const std::vector<int>& vertices, const int target)
+{
+    this->vertices_to_merge_[target].insert(this->vertices_to_merge_[target].end(), vertices.begin(), vertices.end());
+}
 
 std::vector<int>
 Opm::ParallelNLDDPartitioningZoltan::partitionElements(const ZoltanParamMap& params) const
@@ -556,7 +581,7 @@ Opm::ParallelNLDDPartitioningZoltan::partitionElements(const ZoltanParamMap& par
 
     auto graph = VertexGraph {
         this->comm_.rank(), this->numElements_,
-        this->conns_, vertexId, this->globalCell_
+        this->conns_, vertexId, this->vertices_to_merge_, this->globalCell_
     };
 
     const auto partsForReachableCells = Partitioner {
@@ -567,12 +592,10 @@ Opm::ParallelNLDDPartitioningZoltan::partitionElements(const ZoltanParamMap& par
     auto parts = std::vector<int>(this->numElements_, -1);
     for (auto elm = 0*this->numElements_; elm < this->numElements_; ++elm) {
         if (const auto reachableElmIx = vertexId[elm]; reachableElmIx >= 0) {
-            parts[elm] = partsForReachableCells[reachableElmIx];
+            // Get the final vertex ID after merging and renumbering
+            const auto finalVertexId = graph.getFinalVertexID(reachableElmIx);
+            parts[elm] = partsForReachableCells[finalVertexId];
         }
-    }
-
-    for (const auto& cells : this->sameDomain_) {
-        ::forceSameDomain(cells, parts);
     }
 
     return util::compressPartitionIDs(std::move(parts));

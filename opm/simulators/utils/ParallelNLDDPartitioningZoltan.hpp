@@ -72,18 +72,6 @@ namespace Opm {
             this->conns_.emplace_back(c1, c2);
         }
 
-        /// Force collection of cells to be in same result domain.
-        ///
-        /// Mostly as a means to ensuring wells do not intersect multiple
-        /// domains/blocks.
-        ///
-        /// \param[in] cells Cell collection.  Typically those cells which
-        ///   are intersected by a single well.
-        void forceSameDomain(std::vector<int>&& cells)
-        {
-            this->sameDomain_.emplace_back(std::move(cells));
-        }
-
         /// Partition connectivity graph using Zoltan graph partitioning
         /// package.
         ///
@@ -99,9 +87,19 @@ namespace Opm {
         std::vector<int>
         partitionElements(const ZoltanParamMap& params) const;
 
+        /// Merge vertices into a single vertex.
+        ///
+        /// \param[in] vertices Vertices to merge.
+        ///
+        /// \param[in] target Target vertex.
+        void mergeVertices(const std::vector<int>& vertices, const int target);
+
     private:
         /// Connection/graph edge.
         using Connection = std::pair<std::size_t, std::size_t>;
+
+        /// Collection of vertices to be merged, mapping target vertex to list of vertices to merge into it
+        std::map<int, std::vector<int>> vertices_to_merge_{};
 
         /// MPI communication object.  Needed by Zoltan.
         Parallel::Communication comm_{};
@@ -116,12 +114,6 @@ namespace Opm {
 
         /// Connectivity graph edges.
         std::vector<Connection> conns_{};
-
-        /// Collections of vertices/cells which must be coalesced to the
-        /// same domain/block.  All vertices within a single collection will
-        /// be placed on the same domain, but cells from different
-        /// collections may be placed on different domains.
-        std::vector<std::vector<int>> sameDomain_{};
     };
 
 } // namespace Opm
