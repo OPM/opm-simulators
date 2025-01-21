@@ -183,8 +183,8 @@ struct StandardPreconditioners {
                 comm, op.getmat(), n, w, resort);
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-            DUNE_UNUSED_PARAMETER(prm);
-            return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
+            const bool split_matrix = prm.get<bool>("split_matrix", false);
+            return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat(), split_matrix);
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const int n = prm.get<int>("repeats", 1);
@@ -462,8 +462,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 op.getmat(), n, w, MILU_VARIANT::ILU);
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-            DUNE_UNUSED_PARAMETER(prm);
-            return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
+            const bool split_matrix = prm.get<bool>("split_matrix", false);
+            return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat(), split_matrix);
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);
