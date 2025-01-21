@@ -94,8 +94,6 @@ public:
         bool alq_is_limited;
     };
 
-    virtual ~GasLiftSingleWellGeneric() = default;
-
     const std::string& name() const { return well_name_; }
 
     std::optional<GradInfo> calcIncOrDecGradient(Scalar oil_rate,

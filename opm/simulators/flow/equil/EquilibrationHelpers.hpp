@@ -131,8 +131,6 @@ template<class Scalar>
 class NoMixing : public RsFunction<Scalar>
 {
 public:
-    virtual ~NoMixing() = default;
-
     /**
      * Function call.
      *
@@ -180,8 +178,6 @@ public:
     RsVD(const int pvtRegionIdx,
          const std::vector<Scalar>& depth,
          const std::vector<Scalar>& rs);
-
-    virtual ~RsVD() = default;
 
     /**
      * Function call.
@@ -234,8 +230,6 @@ public:
          const std::vector<Scalar>& depth,
          const std::vector<Scalar>& pbub);
 
-    virtual ~PBVD() = default;
-
     /**
      * Function call.
      *
@@ -285,8 +279,6 @@ public:
     PDVD(const int pvtRegionIdx,
          const std::vector<Scalar>& depth,
          const std::vector<Scalar>& pdew);
-
-    virtual ~PDVD() = default;
 
     /**
      * Function call.

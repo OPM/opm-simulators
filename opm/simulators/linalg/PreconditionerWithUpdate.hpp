@@ -122,7 +122,7 @@ struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPrecondit
                 return std::make_unique<OriginalPreconditioner>(std::forward<Args>(args)...);
             }, args_);
     }
-    ~PreconditionerMaker(){}
+
     std::tuple<Args...> args_;
 };
 

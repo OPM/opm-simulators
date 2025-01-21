@@ -45,13 +45,10 @@ protected:
     {};
             
 public:
-    
     int nnzbs_prec = 0; // number of nnz blocks in preconditioner matrix M
     bool useJacMatrix = false;
     std::shared_ptr<BlockedMatrix<Scalar>> jacMat{}; // matrix for preconditioner
     
-    virtual ~rocsparsePreconditioner() = default;
-
     static std::unique_ptr<rocsparsePreconditioner<Scalar, block_size>> create(PreconditionerType type, 
                                                                                int verbosity);
 

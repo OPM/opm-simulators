@@ -42,8 +42,6 @@ protected:
     {};
 
 public:
-    virtual ~openclPreconditioner() = default;
-
     static std::unique_ptr<openclPreconditioner<Scalar, block_size>> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
 
     // nested Preconditioners might need to override this
