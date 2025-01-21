@@ -103,14 +103,15 @@ namespace Opm {
             if (wellState.isRank0() && !injector && gsatprod.has(groupName)) {
                 const auto& gsatprod_rates = gsatprod.get(groupName);
                 const auto& pu = wellState.phaseUsage();
+                using Rate = GSatProd::GSatProdGroup::Rate;
                 if (pu.phase_used[BlackoilPhases::Aqua] && pu.phase_pos[BlackoilPhases::Aqua] == phasePos) {
-                    rate += gsatprod_rates.water_rate;
+                    rate += gsatprod_rates.rate[Rate::Water];
                 }
                 if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_pos[BlackoilPhases::Liquid] == phasePos) {
-                    rate += gsatprod_rates.oil_rate;
+                    rate += gsatprod_rates.rate[Rate::Oil];
                 }
                 if (pu.phase_used[BlackoilPhases::Vapour] && pu.phase_pos[BlackoilPhases::Vapour] == phasePos) {
-                    rate += gsatprod_rates.gas_rate;
+                    rate += gsatprod_rates.rate[Rate::Gas];
                 }
             }
         }
