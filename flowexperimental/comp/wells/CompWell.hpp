@@ -50,8 +50,8 @@ public:
 
     void init() override;
 
-    void calculateExplitQuantities(const Simulator& simulator,
-                                   const SingleCompWellState<Scalar>& well_state) override;
+    void calculateExplicitQuantities(const Simulator& simulator,
+                                     const SingleCompWellState<Scalar>& well_state);
 
     void updatePrimaryVariables(const Simulator& simulator,
                                 const SingleCompWellState<Scalar>& well_state) override;
