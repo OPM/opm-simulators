@@ -129,7 +129,7 @@ public:
                        unsigned int deviceID);
 
     /// Destroy a openclSolver, and free memory
-    ~amgclSolverBackend();
+    ~amgclSolverBackend() override;
 
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
     /// \param[in] matrix         matrix A

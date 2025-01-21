@@ -48,9 +48,9 @@ public:
     void init(Something /*A*/){}
     void prepareTracerBatches(){};
     using NeighborSet = std::set<unsigned>;
-    void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/){};
-    unsigned numDofs() const{return 0;};
-    void addNeighbors(std::vector<NeighborSet>& /*neighbors*/) const{};
+    void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/) override {}
+    unsigned numDofs() const override { return 0; }
+    void addNeighbors(std::vector<NeighborSet>& /*neighbors*/) const override {}
     //void applyInitial(){};
     void initialSolutionApplied(){};
     //void initFromRestart(const data::Aquifers& aquiferSoln);
@@ -73,7 +73,7 @@ public:
     void endIteration()const{};
     void endTimeStep(){};
     void endEpisode(){};
-    void applyInitial(){};
+    void applyInitial() override {}
     template<class RateType>
     void computeTotalRatesForDof(RateType& /*rate*/, unsigned /*globalIdx*/) const{};
 

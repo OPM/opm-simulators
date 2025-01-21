@@ -113,6 +113,7 @@ struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPrecondit
         : args_(args...)
     {
     }
+
     std::unique_ptr<GenericPreconditioner>
     make() override
     {
@@ -143,22 +144,22 @@ public:
     using X = typename OriginalPreconditioner::domain_type;
     using Y = typename OriginalPreconditioner::range_type;
 
-    virtual void pre(X& x, Y& b) override
+    void pre(X& x, Y& b) override
     {
         orig_precond_->pre(x, b);
     }
 
-    virtual void apply(X& v, const Y& d) override
+    void apply(X& v, const Y& d) override
     {
         orig_precond_->apply(v, d);
     }
 
-    virtual void post(X& x) override
+    void post(X& x) override
     {
         orig_precond_->post(x);
     }
 
-    virtual SolverCategory::Category category() const override
+    SolverCategory::Category category() const override
     {
         return orig_precond_->category();
     }
@@ -169,7 +170,8 @@ public:
         orig_precond_ = preconditioner_maker_->make();
     }
 
-    virtual bool hasPerfectUpdate() const override {
+    bool hasPerfectUpdate() const override
+    {
         return true;
     }
 

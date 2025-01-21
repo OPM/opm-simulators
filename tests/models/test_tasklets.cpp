@@ -49,7 +49,7 @@ public:
         ++ numInstantiated_;
     }
 
-    void run()
+    void run() override
     {
         assert(0 <= runner->workerThreadIndex() && runner->workerThreadIndex() < runner->numWorkerThreads());
         std::this_thread::sleep_for(std::chrono::milliseconds(mseconds_));

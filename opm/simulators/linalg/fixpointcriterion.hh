@@ -128,7 +128,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::setInitial(const Vector&, const Vector&)
      */
-    void setInitial(const Vector& curSol, const Vector&)
+    void setInitial(const Vector& curSol, const Vector&) override
     {
         lastSol_ = curSol;
         delta_ = 1000 * tolerance_;
@@ -139,7 +139,7 @@ public:
      */
     void update(const Vector& curSol,
                 const Vector&,
-                const Vector&)
+                const Vector&) override
     {
         assert(curSol.size() == lastSol_.size());
 
@@ -158,7 +158,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::converged()
      */
-    bool converged() const
+    bool converged() const override
     { return accuracy() < tolerance(); }
 
     /*!

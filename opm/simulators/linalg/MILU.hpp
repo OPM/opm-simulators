@@ -74,7 +74,7 @@ struct Reorderer
 
 struct NoReorderer : public Reorderer
 {
-    virtual std::size_t operator[](std::size_t i) const
+    std::size_t operator[](std::size_t i) const override
     {
         return i;
     }
@@ -85,10 +85,12 @@ struct RealReorderer : public Reorderer
     explicit RealReorderer(const std::vector<std::size_t>& ordering)
         : ordering_(&ordering)
     {}
-    virtual std::size_t operator[](std::size_t i) const
+
+    std::size_t operator[](std::size_t i) const override
     {
         return (*ordering_)[i];
     }
+
     const std::vector<std::size_t>* ordering_;
 };
 

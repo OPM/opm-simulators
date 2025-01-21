@@ -173,7 +173,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     {}
 
     // callback to eclIO serial writeTimeStep method
-    void run()
+    void run() override
     {
         this->eclIO_.writeTimeStep(this->actionState_,
                                    this->wtestState_,

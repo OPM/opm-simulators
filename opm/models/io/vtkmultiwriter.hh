@@ -139,7 +139,7 @@ public:
         commSize_ = gridView.comm().size();
     }
 
-    ~VtkMultiWriter()
+    ~VtkMultiWriter() override
     {
         taskletRunner_.barrier();
         releaseBuffers_();
@@ -176,7 +176,7 @@ public:
     /*!
      * \brief Called whenever a new time step must be written.
      */
-    void beginWrite(double t)
+    void beginWrite(double t) override
     {
         if (!multiFile_.is_open()) {
             startMultiFile_(multiFileName_);

@@ -59,7 +59,10 @@ namespace Opm
         static SimpleIterationCountTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const double /*simulationTimeElapsed */ ) const;
+        double computeTimeStepSize(const double dt,
+                                   const int iterations,
+                                   const RelativeChangeInterface& /* relativeChange */,
+                                   const double /*simulationTimeElapsed */ ) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -107,7 +110,10 @@ namespace Opm
         static PIDTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relativeChange, const double /*simulationTimeElapsed */ ) const;
+        double computeTimeStepSize(const double dt,
+                                   const int /* iterations */,
+                                   const RelativeChangeInterface& relativeChange,
+                                   const double /*simulationTimeElapsed */ ) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -153,7 +159,10 @@ namespace Opm
         static PIDAndIterationCountTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange, const double /*simulationTimeElapsed */ ) const;
+        double computeTimeStepSize(const double dt,
+                                   const int iterations,
+                                   const RelativeChangeInterface& relativeChange,
+                                   const double /*simulationTimeElapsed */ ) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -196,7 +205,10 @@ namespace Opm
         static HardcodedTimeStepControl serializationTestObject();
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& /*relativeChange */, const double simulationTimeElapsed) const;
+        double computeTimeStepSize(const double dt,
+                                   const int /* iterations */,
+                                   const RelativeChangeInterface& /*relativeChange */,
+                                   const double simulationTimeElapsed) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)

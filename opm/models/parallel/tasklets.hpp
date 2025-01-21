@@ -94,7 +94,7 @@ class TaskletRunner
     public:
         explicit BarrierTasklet(unsigned numWorkers);
 
-        void run();
+        void run() override;
 
         void wait();
 
@@ -111,10 +111,10 @@ class TaskletRunner
     class TerminateThreadTasklet : public TaskletInterface
     {
     public:
-        void run()
+        void run() override
         { }
 
-        bool isEndMarker() const
+        bool isEndMarker() const override
         { return true; }
     };
 
