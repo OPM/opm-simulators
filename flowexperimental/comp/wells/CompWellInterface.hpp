@@ -47,8 +47,8 @@ public:
 
     const std::string& name() const;
 
-    virtual void calculateExplitQuantities(const Simulator& simulator,
-                                           const SingleCompWellState<Scalar>& well_state) = 0;
+    virtual void calculateExplicitQuantities(const Simulator& simulator,
+                                             const SingleCompWellState<Scalar>& well_state) = 0;
 
     virtual void updatePrimaryVariables(const Simulator& simulator,
                                         const SingleCompWellState<Scalar>& well_state) = 0;
