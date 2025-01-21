@@ -58,6 +58,10 @@ void registerSimulatorParameters()
         ("FileName for .OPMRST file used to load serialized state. "
          "If empty, CASENAME.OPMRST is used.");
     Parameters::Hide<Parameters::LoadFile>();
+    Parameters::Register<Parameters::Slave>
+        ("Specify if the simulation is a slave simulation in a master-slave simulation");
+    Parameters::Hide<Parameters::Slave>();
+
 }
 
 } // namespace Opm::detail

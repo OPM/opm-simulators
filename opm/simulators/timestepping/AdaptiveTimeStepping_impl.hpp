@@ -1,5 +1,22 @@
 /*
+  Copyright 2024 Equinor ASA.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #ifndef OPM_ADAPTIVE_TIME_STEPPING_IMPL_HPP
 #define OPM_ADAPTIVE_TIME_STEPPING_IMPL_HPP
 
@@ -27,391 +44,183 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
 namespace Opm {
+/*********************************************
+ * Public methods of AdaptiveTimeStepping
+ * ******************************************/
 
+
+//! \brief contructor taking parameter object
 template<class TypeTag>
-AdaptiveTimeStepping<TypeTag>::
-AdaptiveTimeStepping(const UnitSystem& unitSystem,
-                     const double max_next_tstep,
-                     const bool terminalOutput)
-    : timeStepControl_()
-    , restartFactor_(Parameters::Get<Parameters::SolverRestartFactor<Scalar>>()) // 0.33
-    , growthFactor_(Parameters::Get<Parameters::SolverGrowthFactor<Scalar>>()) // 2.0
-    , maxGrowth_(Parameters::Get<Parameters::SolverMaxGrowth<Scalar>>()) // 3.0
-    , maxTimeStep_(Parameters::Get<Parameters::SolverMaxTimeStepInDays<Scalar>>() * 24 * 60 * 60) // 365.25
-    , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, Parameters::Get<Parameters::SolverMinTimeStep<Scalar>>())) // 1e-12;
-    , ignoreConvergenceFailure_(Parameters::Get<Parameters::SolverContinueOnConvergenceFailure>()) // false;
-    , solverRestartMax_(Parameters::Get<Parameters::SolverMaxRestarts>()) // 10
-    , solverVerbose_(Parameters::Get<Parameters::SolverVerbosity>() > 0 && terminalOutput) // 2
-    , timestepVerbose_(Parameters::Get<Parameters::TimeStepVerbosity>() > 0 && terminalOutput) // 2
-    , suggestedNextTimestep_((max_next_tstep <= 0 ? Parameters::Get<Parameters::InitialTimeStepInDays>() : max_next_tstep) * 24 * 60 * 60) // 1.0
-    , fullTimestepInitially_(Parameters::Get<Parameters::FullTimeStepInitially>()) // false
-    , timestepAfterEvent_(Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>() * 24 * 60 * 60) // 1e30
-    , useNewtonIteration_(false)
-    , minTimeStepBeforeShuttingProblematicWells_(Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
+AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(
+                                 const UnitSystem& unit_system,
+                                 const double max_next_tstep,
+                                 const bool terminal_output
+)
+    : time_step_control_{}
+    , restart_factor_{Parameters::Get<Parameters::SolverRestartFactor<Scalar>>()} // 0.33
+    , growth_factor_{Parameters::Get<Parameters::SolverGrowthFactor<Scalar>>()} // 2.0
+    , max_growth_{Parameters::Get<Parameters::SolverMaxGrowth<Scalar>>()} // 3.0
+    , max_time_step_{
+        Parameters::Get<Parameters::SolverMaxTimeStepInDays<Scalar>>() * 24 * 60 * 60} // 365.25
+    , min_time_step_{
+        unit_system.to_si(UnitSystem::measure::time,
+                          Parameters::Get<Parameters::SolverMinTimeStep<Scalar>>())} // 1e-12;
+    , ignore_convergence_failure_{
+        Parameters::Get<Parameters::SolverContinueOnConvergenceFailure>()} // false;
+    , solver_restart_max_{Parameters::Get<Parameters::SolverMaxRestarts>()} // 10
+    , solver_verbose_{Parameters::Get<Parameters::SolverVerbosity>() > 0 && terminal_output} // 2
+    , timestep_verbose_{Parameters::Get<Parameters::TimeStepVerbosity>() > 0 && terminal_output} // 2
+    , suggested_next_timestep_{
+        (max_next_tstep <= 0 ? Parameters::Get<Parameters::InitialTimeStepInDays>()
+                             : max_next_tstep) * 24 * 60 * 60} // 1.0
+    , full_timestep_initially_{Parameters::Get<Parameters::FullTimeStepInitially>()} // false
+    , timestep_after_event_{
+        Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>() * 24 * 60 * 60} // 1e30
+    , use_newton_iteration_{false}
+    , min_time_step_before_shutting_problematic_wells_{
+        Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day}
 
 {
-    init_(unitSystem);
+    init_(unit_system);
+}
+
+//! \brief contructor
+//! \param tuning Pointer to ecl TUNING keyword
+template<class TypeTag>
+AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(double max_next_tstep,
+                                                 const Tuning& tuning,
+                                                 const UnitSystem& unit_system,
+                                                 const bool terminal_output
+)
+    : time_step_control_{}
+    , restart_factor_{tuning.TSFCNV}
+    , growth_factor_{tuning.TFDIFF}
+    , max_growth_{tuning.TSFMAX}
+    , max_time_step_{tuning.TSMAXZ} // 365.25
+    , min_time_step_{tuning.TSFMIN} // 0.1;
+    , ignore_convergence_failure_{true}
+    , solver_restart_max_{Parameters::Get<Parameters::SolverMaxRestarts>()} // 10
+    , solver_verbose_{Parameters::Get<Parameters::SolverVerbosity>() > 0 && terminal_output} // 2
+    , timestep_verbose_{Parameters::Get<Parameters::TimeStepVerbosity>() > 0 && terminal_output} // 2
+    , suggested_next_timestep_{
+        max_next_tstep <= 0 ? Parameters::Get<Parameters::InitialTimeStepInDays>() * 24 * 60 * 60
+                            : max_next_tstep} // 1.0
+    , full_timestep_initially_{Parameters::Get<Parameters::FullTimeStepInitially>()} // false
+    , timestep_after_event_{tuning.TMAXWC} // 1e30
+    , use_newton_iteration_{false}
+    , min_time_step_before_shutting_problematic_wells_{
+        Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day}
+{
+    init_(unit_system);
 }
 
 template<class TypeTag>
+bool
 AdaptiveTimeStepping<TypeTag>::
-AdaptiveTimeStepping(double max_next_tstep,
-                     const Tuning& tuning,
-                     const UnitSystem& unitSystem,
-                     const bool terminalOutput)
-    : timeStepControl_()
-    , restartFactor_(tuning.TSFCNV)
-    , growthFactor_(tuning.TFDIFF)
-    , maxGrowth_(tuning.TSFMAX)
-    , maxTimeStep_(tuning.TSMAXZ) // 365.25
-    , minTimeStep_(tuning.TSFMIN) // 0.1;
-    , ignoreConvergenceFailure_(true)
-    , solverRestartMax_(Parameters::Get<Parameters::SolverMaxRestarts>()) // 10
-    , solverVerbose_(Parameters::Get<Parameters::SolverVerbosity>() > 0 && terminalOutput) // 2
-    , timestepVerbose_(Parameters::Get<Parameters::TimeStepVerbosity>() > 0 && terminalOutput) // 2
-    , suggestedNextTimestep_(max_next_tstep <= 0 ? Parameters::Get<Parameters::InitialTimeStepInDays>() * 24 * 60 * 60 : max_next_tstep) // 1.0
-    , fullTimestepInitially_(Parameters::Get<Parameters::FullTimeStepInitially>()) // false
-    , timestepAfterEvent_(tuning.TMAXWC) // 1e30
-    , useNewtonIteration_(false)
-    , minTimeStepBeforeShuttingProblematicWells_(Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
+operator==(const AdaptiveTimeStepping<TypeTag>& rhs)
 {
-    init_(unitSystem);
+    if (this->time_step_control_type_ != rhs.time_step_control_type_ ||
+        (this->time_step_control_ && !rhs.time_step_control_) ||
+        (!this->time_step_control_ && rhs.time_step_control_)) {
+        return false;
+    }
+
+    bool result = false;
+    switch (this->time_step_control_type_) {
+    case TimeStepControlType::HardCodedTimeStep:
+        result = castAndComp<HardcodedTimeStepControl>(rhs);
+        break;
+    case TimeStepControlType::PIDAndIterationCount:
+        result = castAndComp<PIDAndIterationCountTimeStepControl>(rhs);
+        break;
+    case TimeStepControlType::SimpleIterationCount:
+        result = castAndComp<SimpleIterationCountTimeStepControl>(rhs);
+        break;
+    case TimeStepControlType::PID:
+        result = castAndComp<PIDTimeStepControl>(rhs);
+        break;
+    }
+
+    return result &&
+           this->restart_factor_ == rhs.restart_factor_ &&
+           this->growth_factor_ == rhs.growth_factor_ &&
+           this->max_growth_ == rhs.max_growth_ &&
+           this->max_time_step_ == rhs.max_time_step_ &&
+           this->min_time_step_ == rhs.min_time_step_ &&
+           this->ignore_convergence_failure_ == rhs.ignore_convergence_failure_ &&
+           this->solver_restart_max_== rhs.solver_restart_max_ &&
+           this->solver_verbose_ == rhs.solver_verbose_ &&
+           this->full_timestep_initially_ == rhs.full_timestep_initially_ &&
+           this->timestep_after_event_ == rhs.timestep_after_event_ &&
+           this->use_newton_iteration_ == rhs.use_newton_iteration_ &&
+           this->min_time_step_before_shutting_problematic_wells_ ==
+               rhs.min_time_step_before_shutting_problematic_wells_;
 }
 
 template<class TypeTag>
-void AdaptiveTimeStepping<TypeTag>::registerParameters()
+void
+AdaptiveTimeStepping<TypeTag>::
+registerParameters()
 {
     registerEclTimeSteppingParameters<Scalar>();
     detail::registerAdaptiveParameters();
 }
 
+#ifdef RESERVOIR_COUPLING_ENABLED
 template<class TypeTag>
-template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::
+setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master)
+{
+    this->reservoir_coupling_master_ = reservoir_coupling_master;
+}
+
+template<class TypeTag>
+void
+AdaptiveTimeStepping<TypeTag>::
+setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave)
+{
+    this->reservoir_coupling_slave_ = reservoir_coupling_slave;
+}
+#endif
+
+/** \brief  step method that acts like the solver::step method
+            in a sub cycle of time steps
+    \param tuningUpdater Function used to update TUNING parameters before each
+                         time step. ACTIONX might change tuning.
+*/
+template<class TypeTag>
+template <class Solver>
 SimulatorReport
 AdaptiveTimeStepping<TypeTag>::
-step(const SimulatorTimer& simulatorTimer,
+step(const SimulatorTimer& simulator_timer,
      Solver& solver,
-     const bool isEvent,
-     const std::function<bool(const double, const double, const int)> tuningUpdater)
+     const bool is_event,
+     const std::function<bool(const double /*current_time*/,
+                              const double /*dt*/,
+                              const int    /*substep_number*/
+                             )> tuning_updater
+)
 {
-    // Maybe update tuning
-    tuningUpdater(simulatorTimer.simulationTimeElapsed(), suggestedNextTimestep_, 0);
-    SimulatorReport report;
-    const double timestep = simulatorTimer.currentStepLength();
-
-    // init last time step as a fraction of the given time step
-    if (suggestedNextTimestep_ < 0) {
-        suggestedNextTimestep_ = restartFactor_ * timestep;
-    }
-
-    if (fullTimestepInitially_) {
-        suggestedNextTimestep_ = timestep;
-    }
-
-    // use seperate time step after event
-    if (isEvent && timestepAfterEvent_ > 0) {
-        suggestedNextTimestep_ = timestepAfterEvent_;
-    }
-
-    auto& simulator = solver.model().simulator();
-    auto& problem = simulator.problem();
-
-    // create adaptive step timer with previously used sub step size
-    AdaptiveSimulatorTimer substepTimer(simulatorTimer, suggestedNextTimestep_, maxTimeStep_);
-
-    // counter for solver restarts
-    int restarts = 0;
-
-    // sub step time loop
-    while (!substepTimer.done()) {
-        // Maybe update tuning
-        // get current delta t
-        auto oldValue = suggestedNextTimestep_;
-        if (tuningUpdater(substepTimer.simulationTimeElapsed(),
-                          substepTimer.currentStepLength(),
-                          substepTimer.currentStepNum())) {
-            // Use provideTimeStepEstimate to make we sure don't simulate longer than the report step is.
-            substepTimer.provideTimeStepEstimate(suggestedNextTimestep_);
-            suggestedNextTimestep_ = oldValue;
-        }
-        const double dt = substepTimer.currentStepLength();
-        if (timestepVerbose_) {
-            detail::logTimer(substepTimer);
-        }
-
-        SimulatorReportSingle substepReport;
-        std::string causeOfFailure;
-        try {
-            substepReport = solver.step(substepTimer);
-
-            if (solverVerbose_) {
-                // report number of linear iterations
-                OpmLog::debug("Overall linear iterations used: " +
-                              std::to_string(substepReport.total_linear_iterations));
-            }
-        }
-        catch (const TooManyIterations& e) {
-            substepReport = solver.failureReport();
-            causeOfFailure = "Solver convergence failure - Iteration limit reached";
-
-            logException_(e, solverVerbose_);
-            // since linearIterations is < 0 this will restart the solver
-        }
-        catch (const ConvergenceMonitorFailure& e) {
-            substepReport = solver.failureReport();
-            causeOfFailure = "Convergence monitor failure";
-        }
-        catch (const LinearSolverProblem& e) {
-            substepReport = solver.failureReport();
-            causeOfFailure = "Linear solver convergence failure";
-
-            logException_(e, solverVerbose_);
-            // since linearIterations is < 0 this will restart the solver
-        }
-        catch (const NumericalProblem& e) {
-            substepReport = solver.failureReport();
-            causeOfFailure = "Solver convergence failure - Numerical problem encountered";
-
-            logException_(e, solverVerbose_);
-            // since linearIterations is < 0 this will restart the solver
-        }
-        catch (const std::runtime_error& e) {
-            substepReport = solver.failureReport();
-
-            logException_(e, solverVerbose_);
-            // also catch linear solver not converged
-        }
-        catch (const Dune::ISTLError& e) {
-            substepReport = solver.failureReport();
-
-            logException_(e, solverVerbose_);
-            // also catch errors in ISTL AMG that occur when time step is too large
-        }
-        catch (const Dune::MatrixBlockError& e) {
-            substepReport = solver.failureReport();
-
-            logException_(e, solverVerbose_);
-            // this can be thrown by ISTL's ILU0 in block mode, yet is not an ISTLError
-        }
-
-        //Pass substep to eclwriter for summary output
-        simulator.problem().setSubStepReport(substepReport);
-
-        report += substepReport;
-
-        bool continue_on_uncoverged_solution = ignoreConvergenceFailure_ &&
-                                               !substepReport.converged  &&
-                                               dt <= minTimeStep_;
-
-        if (continue_on_uncoverged_solution && solverVerbose_) {
-            const auto msg = fmt::format(
-                "Solver failed to converge but timestep "
-                "{} is smaller or equal to {}\n"
-                "which is the minimum threshold given "
-                "by option --solver-min-time-step\n",
-                dt, minTimeStep_
-            );
-            OpmLog::problem(msg);
-        }
-
-        if (substepReport.converged || continue_on_uncoverged_solution) {
-
-            // advance by current dt
-            ++substepTimer;
-
-            // create object to compute the time error, simply forwards the call to the model
-            SolutionTimeErrorSolverWrapper<Solver> relativeChange(solver);
-
-            // compute new time step estimate
-            const int iterations = useNewtonIteration_ ? substepReport.total_newton_iterations
-                : substepReport.total_linear_iterations;
-            double dtEstimate = timeStepControl_->computeTimeStepSize(dt, iterations, relativeChange,
-                                                                       substepTimer.simulationTimeElapsed());
-
-            assert(dtEstimate > 0);
-            // limit the growth of the timestep size by the growth factor
-            dtEstimate = std::min(dtEstimate, double(maxGrowth_ * dt));
-            assert(dtEstimate > 0);
-            // further restrict time step size growth after convergence problems
-            if (restarts > 0) {
-                dtEstimate = std::min(growthFactor_ * dt, dtEstimate);
-                // solver converged, reset restarts counter
-                restarts = 0;
-            }
-
-            if (timestepVerbose_) {
-                std::ostringstream ss;
-                substepReport.reportStep(ss);
-                OpmLog::info(ss.str());
-            }
-
-            // write data if outputWriter was provided
-            // if the time step is done we do not need
-            // to write it as this will be done by the simulator
-            // anyway.
-            if (!substepTimer.done()) {
-                time::StopWatch perfTimer;
-                perfTimer.start();
-
-                problem.writeOutput(true);
-
-                report.success.output_write_time += perfTimer.secsSinceStart();
-            }
-
-            // set new time step length
-            substepTimer.provideTimeStepEstimate(dtEstimate);
-
-            report.success.converged = substepTimer.done();
-            substepTimer.setLastStepFailed(false);
-
-        }
-        else { // in case of no convergence
-            substepTimer.setLastStepFailed(true);
-
-            // If we have restarted (i.e. cut the timestep) too
-            // many times, we have failed and throw an exception.
-            if (restarts >= solverRestartMax_) {
-                const auto msg = fmt::format(
-                    "Solver failed to converge after cutting timestep {} times.",
-                    restarts
-                );
-                if (solverVerbose_) {
-                    OpmLog::error(msg);
-                }
-                // Use throw directly to prevent file and line
-                throw TimeSteppingBreakdown{msg};
-            }
-
-            // The new, chopped timestep.
-            const double newTimeStep = restartFactor_ * dt;
-
-
-            // If we have restarted (i.e. cut the timestep) too
-            // much, we have failed and throw an exception.
-            if (newTimeStep < minTimeStep_) {
-                const auto msg = fmt::format(
-                    "Solver failed to converge after cutting timestep to {}\n"
-                    "which is the minimum threshold given by option --solver-min-time-step\n",
-                    minTimeStep_
-                );
-                if (solverVerbose_) {
-                    OpmLog::error(msg);
-                }
-                // Use throw directly to prevent file and line
-                throw TimeSteppingBreakdown{msg};
-            }
-
-            // Define utility function for chopping timestep.
-            auto chopTimestep = [&]() {
-                substepTimer.provideTimeStepEstimate(newTimeStep);
-                if (solverVerbose_) {
-                    const auto msg = fmt::format(
-                        "{}\nTimestep chopped to {} days\n",
-                        causeOfFailure,
-                        unit::convert::to(substepTimer.currentStepLength(), unit::day)
-                    );
-                    OpmLog::problem(msg);
-                }
-                ++restarts;
-            };
-
-            const double minimumChoppedTimestep = minTimeStepBeforeShuttingProblematicWells_;
-            if (newTimeStep > minimumChoppedTimestep) {
-                chopTimestep();
-            } else {
-                // We are below the threshold, and will check if there are any
-                // wells we should close rather than chopping again.
-                std::set<std::string> failing_wells = detail::consistentlyFailingWells(solver.model().stepReports());
-                if (failing_wells.empty()) {
-                    // Found no wells to close, chop the timestep as above.
-                    chopTimestep();
-                } else {
-                    // Close all consistently failing wells that are not under group control
-                    std::vector<std::string> shut_wells;
-                    for (const auto& well : failing_wells) {
-                        bool was_shut = solver.model().wellModel().forceShutWellByName(
-                                                    well, substepTimer.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ true);
-                        if (was_shut) {
-                            shut_wells.push_back(well);
-                        }
-                    }
-                    // If no wells are closed we also try to shut wells under group control
-                    if (shut_wells.empty()) {
-                        for (const auto& well : failing_wells) {
-                            bool was_shut = solver.model().wellModel().forceShutWellByName(
-                                                    well, substepTimer.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ false);
-                            if (was_shut) {
-                                shut_wells.push_back(well);
-                            }
-                        }
-                    }
-                    // If still no wells are closed we must fall back to chopping again
-                    if (shut_wells.empty()) {
-                        chopTimestep();
-                    } else {
-                        substepTimer.provideTimeStepEstimate(dt);
-                        if (solverVerbose_) {
-                            const std::string msg =
-                                fmt::format("\nProblematic well(s) were shut: {}"
-                                            "(retrying timestep)\n",
-                                            fmt::join(shut_wells, " "));
-                            OpmLog::problem(msg);
-                        }
-                    }
-                }
-            }
-        }
-        problem.setNextTimeStepSize(substepTimer.currentStepLength());
-    }
-
-    // store estimated time step for next reportStep
-    suggestedNextTimestep_ = substepTimer.currentStepLength();
-    if (timestepVerbose_) {
-        std::ostringstream ss;
-        substepTimer.report(ss);
-        ss << "Suggested next step size = " << unit::convert::to(suggestedNextTimestep_, unit::day) << " (days)" << std::endl;
-        OpmLog::debug(ss.str());
-    }
-
-    if (! std::isfinite(suggestedNextTimestep_)) { // check for NaN
-        suggestedNextTimestep_ = timestep;
-    }
-    return report;
-}
-
-template<class TypeTag>
-void AdaptiveTimeStepping<TypeTag>::
-updateTUNING(double max_next_tstep, const Tuning& tuning)
-{
-    restartFactor_ = tuning.TSFCNV;
-    growthFactor_ = tuning.TFDIFF;
-    maxGrowth_ = tuning.TSFMAX;
-    maxTimeStep_ = tuning.TSMAXZ;
-    updateNEXTSTEP(max_next_tstep);
-    timestepAfterEvent_ = tuning.TMAXWC;
-}
-
-template<class TypeTag>
-void AdaptiveTimeStepping<TypeTag>::
-updateNEXTSTEP(double max_next_tstep)
-{
-     // \Note Only update next suggested step if TSINIT was explicitly set in TUNING or NEXTSTEP is active.
-    if (max_next_tstep > 0) {
-        suggestedNextTimestep_ = max_next_tstep;
-    }
+    SubStepper sub_stepper{
+        *this, simulator_timer, solver, is_event, tuning_updater,
+    };
+    return sub_stepper.run();
 }
 
 template<class TypeTag>
 template<class Serializer>
-void AdaptiveTimeStepping<TypeTag>::
+void
+AdaptiveTimeStepping<TypeTag>::
 serializeOp(Serializer& serializer)
 {
-    serializer(timeStepControlType_);
-    switch (timeStepControlType_) {
+    serializer(this->time_step_control_type_);
+    switch (this->time_step_control_type_) {
     case TimeStepControlType::HardCodedTimeStep:
         allocAndSerialize<HardcodedTimeStepControl>(serializer);
         break;
@@ -425,20 +234,20 @@ serializeOp(Serializer& serializer)
         allocAndSerialize<PIDTimeStepControl>(serializer);
         break;
     }
-    serializer(restartFactor_);
-    serializer(growthFactor_);
-    serializer(maxGrowth_);
-    serializer(maxTimeStep_);
-    serializer(minTimeStep_);
-    serializer(ignoreConvergenceFailure_);
-    serializer(solverRestartMax_);
-    serializer(solverVerbose_);
-    serializer(timestepVerbose_);
-    serializer(suggestedNextTimestep_);
-    serializer(fullTimestepInitially_);
-    serializer(timestepAfterEvent_);
-    serializer(useNewtonIteration_);
-    serializer(minTimeStepBeforeShuttingProblematicWells_);
+    serializer(this->restart_factor_);
+    serializer(this->growth_factor_);
+    serializer(this->max_growth_);
+    serializer(this->max_time_step_);
+    serializer(this->min_time_step_);
+    serializer(this->ignore_convergence_failure_);
+    serializer(this->solver_restart_max_);
+    serializer(this->solver_verbose_);
+    serializer(this->timestep_verbose_);
+    serializer(this->suggested_next_timestep_);
+    serializer(this->full_timestep_initially_);
+    serializer(this->timestep_after_event_);
+    serializer(this->use_newton_iteration_);
+    serializer(this->min_time_step_before_shutting_problematic_wells_);
 }
 
 template<class TypeTag>
@@ -473,47 +282,95 @@ serializationTestObjectSimple()
     return serializationTestObject_<SimpleIterationCountTimeStepControl>();
 }
 
+
 template<class TypeTag>
+void
+AdaptiveTimeStepping<TypeTag>::
+setSuggestedNextStep(const double x)
+{
+    this->suggested_next_timestep_ = x;
+}
+
+template<class TypeTag>
+double
+AdaptiveTimeStepping<TypeTag>::
+suggestedNextStep() const
+{
+    return this->suggested_next_timestep_;
+}
+
+
+template<class TypeTag>
+void
+AdaptiveTimeStepping<TypeTag>::
+updateNEXTSTEP(double max_next_tstep)
+{
+     // \Note Only update next suggested step if TSINIT was explicitly
+     //  set in TUNING or NEXTSTEP is active.
+    if (max_next_tstep > 0) {
+        this->suggested_next_timestep_ = max_next_tstep;
+    }
+}
+
+template<class TypeTag>
+void
+AdaptiveTimeStepping<TypeTag>::
+updateTUNING(double max_next_tstep, const Tuning& tuning)
+{
+    this->restart_factor_ = tuning.TSFCNV;
+    this->growth_factor_ = tuning.TFDIFF;
+    this->max_growth_ = tuning.TSFMAX;
+    this->max_time_step_ = tuning.TSMAXZ;
+    updateNEXTSTEP(max_next_tstep);
+    this->timestep_after_event_ = tuning.TMAXWC;
+}
+
+/*********************************************
+ * Private methods of AdaptiveTimeStepping
+ * ******************************************/
+
+template<class TypeTag>
+template<class T, class Serializer>
+void
+AdaptiveTimeStepping<TypeTag>::
+allocAndSerialize(Serializer& serializer)
+{
+    if (!serializer.isSerializing()) {
+        this->time_step_control_ = std::make_unique<T>();
+    }
+    serializer(*static_cast<T*>(this->time_step_control_.get()));
+}
+
+template<class TypeTag>
+template<class T>
 bool
 AdaptiveTimeStepping<TypeTag>::
-operator==(const AdaptiveTimeStepping<TypeTag>& rhs) const
+castAndComp(const AdaptiveTimeStepping<TypeTag>& Rhs) const
 {
-    if (timeStepControlType_ != rhs.timeStepControlType_ ||
-        (timeStepControl_ && !rhs.timeStepControl_) ||
-        (!timeStepControl_ && rhs.timeStepControl_)) {
-        return false;
+    const T* lhs = static_cast<const T*>(this->time_step_control_.get());
+    const T* rhs = static_cast<const T*>(Rhs.time_step_control_.get());
+    return *lhs == *rhs;
+}
+
+template<class TypeTag>
+void
+AdaptiveTimeStepping<TypeTag>::
+maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_step,
+                                                     bool is_event)
+{
+    // init last time step as a fraction of the given time step
+    if (this->suggested_next_timestep_ < 0) {
+        this->suggested_next_timestep_ = this->restart_factor_ * original_time_step;
     }
 
-    bool result = false;
-    switch (timeStepControlType_) {
-    case TimeStepControlType::HardCodedTimeStep:
-        result = castAndComp<HardcodedTimeStepControl>(rhs);
-        break;
-    case TimeStepControlType::PIDAndIterationCount:
-        result = castAndComp<PIDAndIterationCountTimeStepControl>(rhs);
-        break;
-    case TimeStepControlType::SimpleIterationCount:
-        result = castAndComp<SimpleIterationCountTimeStepControl>(rhs);
-        break;
-    case TimeStepControlType::PID:
-        result = castAndComp<PIDTimeStepControl>(rhs);
-        break;
+    if (this->full_timestep_initially_) {
+        this->suggested_next_timestep_ = original_time_step;
     }
 
-    return result
-        && this->restartFactor_ == rhs.restartFactor_
-        && this->growthFactor_ == rhs.growthFactor_
-        && this->maxGrowth_ == rhs.maxGrowth_
-        && this->maxTimeStep_ == rhs.maxTimeStep_
-        && this->minTimeStep_ == rhs.minTimeStep_
-        && this->ignoreConvergenceFailure_ == rhs.ignoreConvergenceFailure_
-        && this->solverRestartMax_== rhs.solverRestartMax_
-        && this->solverVerbose_ == rhs.solverVerbose_
-        && this->fullTimestepInitially_ == rhs.fullTimestepInitially_
-        && this->timestepAfterEvent_ == rhs.timestepAfterEvent_
-        && this->useNewtonIteration_ == rhs.useNewtonIteration_
-        && this->minTimeStepBeforeShuttingProblematicWells_ ==
-               rhs.minTimeStepBeforeShuttingProblematicWells_;
+    // use seperate time step after event
+    if (is_event && this->timestep_after_event_ > 0) {
+        this->suggested_next_timestep_ = this->timestep_after_event_;
+    }
 }
 
 template<class TypeTag>
@@ -524,40 +381,925 @@ serializationTestObject_()
 {
     AdaptiveTimeStepping<TypeTag> result;
 
-    result.restartFactor_ = 1.0;
-    result.growthFactor_ = 2.0;
-    result.maxGrowth_ = 3.0;
-    result.maxTimeStep_ = 4.0;
-    result.minTimeStep_ = 5.0;
-    result.ignoreConvergenceFailure_ = true;
-    result.solverRestartMax_ = 6;
-    result.solverVerbose_ = true;
-    result.timestepVerbose_ = true;
-    result.suggestedNextTimestep_ = 7.0;
-    result.fullTimestepInitially_ = true;
-    result.useNewtonIteration_ = true;
-    result.minTimeStepBeforeShuttingProblematicWells_ = 9.0;
-    result.timeStepControlType_ = Controller::Type;
-    result.timeStepControl_ = std::make_unique<Controller>(Controller::serializationTestObject());
+    result.restart_factor_ = 1.0;
+    result.growth_factor_ = 2.0;
+    result.max_growth_ = 3.0;
+    result.max_time_step_ = 4.0;
+    result.min_time_step_ = 5.0;
+    result.ignore_convergence_failure_ = true;
+    result.solver_restart_max_ = 6;
+    result.solver_verbose_ = true;
+    result.timestep_verbose_ = true;
+    result.suggested_next_timestep_ = 7.0;
+    result.full_timestep_initially_ = true;
+    result.use_newton_iteration_ = true;
+    result.min_time_step_before_shutting_problematic_wells_ = 9.0;
+    result.time_step_control_type_ = Controller::Type;
+    result.time_step_control_ =
+                       std::make_unique<Controller>(Controller::serializationTestObject());
 
     return result;
 }
+
+/*********************************************
+ * Protected methods of AdaptiveTimeStepping
+ * ******************************************/
 
 template<class TypeTag>
 void AdaptiveTimeStepping<TypeTag>::
 init_(const UnitSystem& unitSystem)
 {
-    std::tie(timeStepControlType_,
-             timeStepControl_,
-             useNewtonIteration_) = detail::createController(unitSystem);
-
+    std::tie(time_step_control_type_,
+             time_step_control_,
+             use_newton_iteration_) = detail::createController(unitSystem);
     // make sure growth factor is something reasonable
-    if (growthFactor_ < 1.0) {
+    if (this->growth_factor_ < 1.0) {
         OPM_THROW(std::runtime_error,
                   "Growth factor cannot be less than 1.");
     }
 }
 
-} // namespace Opm
+
+
+/************************************************
+ * Private class SubStepper public methods
+ ************************************************/
+
+template<class TypeTag>
+template<class Solver>
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+SubStepper(
+    AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
+    const SimulatorTimer& simulator_timer,
+    Solver& solver,
+    const bool is_event,
+    const std::function<bool(const double /*current_time*/,
+                             const double /*dt*/,
+                             const int    /*substep_number*/
+                            )>& tuning_updater
+
+)
+    : adaptive_time_stepping_{adaptive_time_stepping}
+    , simulator_timer_{simulator_timer}
+    , solver_{solver}
+    , is_event_{is_event}
+    , tuning_updater_{tuning_updater}
+{
+}
+
+template<class TypeTag>
+template<class Solver>
+AdaptiveTimeStepping<TypeTag>&
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+getAdaptiveTimerStepper()
+{
+    return adaptive_time_stepping_;
+}
+
+template<class TypeTag>
+template<class Solver>
+SimulatorReport
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+run()
+{
+#ifdef RESERVOIR_COUPLING_ENABLED
+    if (isReservoirCouplingSlave_() && reservoirCouplingSlave_().activated()) {
+        return runStepReservoirCouplingSlave_();
+    }
+    else if (isReservoirCouplingMaster_() && reservoirCouplingMaster_().activated()) {
+        return runStepReservoirCouplingMaster_();
+    }
+    else {
+        return runStepOriginal_();
+    }
+#else
+    return runStepOriginal_();
+#endif
+}
+
+/************************************************
+ * Private class SubStepper private methods
+ ************************************************/
+
+
+template<class TypeTag>
+template<class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+isReservoirCouplingMaster_() const
+{
+    return this->adaptive_time_stepping_.reservoir_coupling_master_ != nullptr;
+}
+
+template<class TypeTag>
+template<class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+isReservoirCouplingSlave_() const
+{
+    return this->adaptive_time_stepping_.reservoir_coupling_slave_ != nullptr;
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_step)
+{
+    this->adaptive_time_stepping_.maybeModifySuggestedTimeStepAtBeginningOfReportStep_(
+        original_time_step, this->is_event_
+    );
+}
+
+// The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicitBlackoil::runStep()
+// It has to be called for each substep since TUNING might have been changed for next sub step due
+// to ACTIONX (via NEXTSTEP) or WCYCLE keywords.
+template<class TypeTag>
+template<class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+maybeUpdateTuning_(double elapsed, double dt, int sub_step_number) const
+{
+    return this->tuning_updater_(elapsed, dt, sub_step_number);
+}
+
+template<class TypeTag>
+template<class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+maxTimeStep_() const
+{
+    return this->adaptive_time_stepping_.max_time_step_;
+}
+
+template <class TypeTag>
+template <class Solver>
+SimulatorReport
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+runStepOriginal_()
+{
+    auto elapsed = this->simulator_timer_.simulationTimeElapsed();
+    auto original_time_step = this->simulator_timer_.currentStepLength();
+    auto report_step = this->simulator_timer_.reportStepNum();
+    maybeUpdateTuning_(elapsed, original_time_step, report_step);
+    maybeModifySuggestedTimeStepAtBeginningOfReportStep_(original_time_step);
+
+    AdaptiveSimulatorTimer substep_timer{
+        this->simulator_timer_.startDateTime(),
+        original_time_step,
+        elapsed,
+        suggestedNextTimestep_(),
+        report_step,
+        maxTimeStep_()
+    };
+    SubStepIteration substepIteration{*this, substep_timer, original_time_step, /*final_step=*/true};
+    return substepIteration.run();
+}
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+template <class TypeTag>
+template <class Solver>
+ReservoirCouplingMaster&
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+reservoirCouplingMaster_()
+{
+    return *adaptive_time_stepping_.reservoir_coupling_master_;
+}
+#endif
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+template <class TypeTag>
+template <class Solver>
+ReservoirCouplingSlave&
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+reservoirCouplingSlave_()
+{
+    return *this->adaptive_time_stepping_.reservoir_coupling_slave_;
+}
+#endif
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+// Description of the reservoir coupling master and slave substep loop
+// -------------------------------------------------------------------
+// The master and slave processes attempts to reach the end of the report step using a series of substeps
+// (also called timesteps). Each substep have an upper limit that is roughly determined by a combination
+// of the keywords TUNING (through the TSINIT, TSMAXZ values), NEXSTEP, WCYCLE, and the start of the
+// next report step (the last substep needs to coincide with this time). Note that NEXTSTEP can be
+// updated from an ACTIONX keyword. Although, this comment focuses on the maximum substep limit,
+// note that there is also a lower limit on the substep length. And the substep sizes will be adjusted
+// automatically (or retried) based on the convergence behavior of the solver and other criteria.
+//
+// When using reservoir coupling, the upper limit on each substep is further limited to: a) not overshoot
+// next report date of a slave reservoir, and b) to keep the flow rate of the slave groups within
+// certain limits. To determine this potential further limitation on the substep, the following procedure
+// is used at the beginning of each master substep:
+// - First, the slaves sends the master the date of their next report step
+// - The master receives the date of the next report step from the slaves
+// - If necessary, the master computes a modified substep length based on the received dates
+// TODO: explain how the substep is limited to keep the flow rate of the slave groups within certain
+// limits. Since this is not implemented yet, this part of the procedure is not explained here.
+//
+// Then, after the master has determined the substep length using the above procedure, it sends it
+// to the slaves. The slaves will now use the end of this substep as a fixed point (like a mini report
+// step), that they will try to reach using a single substep or multiple substeps. The end of the
+// substep received from the master will either conincide with the end of its current report step, or
+// it will end before (it cannot not end after since the master has already adjusted the step to not
+// exceed any report time in a slave). If the end of this substep is earlier in time than its next report
+// date, the slave will enter a loop and wait for the master to send it a new substep.
+// The loop is finished when the end of the received time step conincides with the end of its current
+// report step.
+
+template <class TypeTag>
+template <class Solver>
+SimulatorReport
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+runStepReservoirCouplingMaster_()
+{
+    bool substep_done = false;
+    int iteration = 0;
+    const double original_time_step = this->simulator_timer_.currentStepLength();
+    double current_time{this->simulator_timer_.simulationTimeElapsed()};
+    double step_end_time = current_time + original_time_step;
+    auto current_step_length = original_time_step;
+    SimulatorReport report;
+    while(!substep_done) {
+        reservoirCouplingMaster_().receiveNextReportDateFromSlaves();
+        if (iteration == 0) {
+            maybeUpdateTuning_(current_time, current_step_length, /*substep=*/0);
+        }
+        current_step_length = reservoirCouplingMaster_().maybeChopSubStep(
+                                          current_step_length, current_time);
+        reservoirCouplingMaster_().sendNextTimeStepToSlaves(current_step_length);
+        if (iteration == 0) {
+            maybeModifySuggestedTimeStepAtBeginningOfReportStep_(current_step_length);
+        }
+        AdaptiveSimulatorTimer substep_timer{
+            this->simulator_timer_.startDateTime(),
+            /*stepLength=*/current_step_length,
+            /*elapsedTime=*/current_time,
+            /*timeStepEstimate=*/suggestedNextTimestep_(),
+            /*reportStep=*/this->simulator_timer_.reportStepNum(),
+            maxTimeStep_()
+        };
+        bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
+            current_time + current_step_length, step_end_time
+        );
+        SubStepIteration substepIteration{*this, substep_timer, current_step_length, final_step};
+        auto sub_steps_report = substepIteration.run();
+        report += sub_steps_report;
+        current_time += current_step_length;
+        if (final_step) {
+            break;
+        }
+        iteration++;
+    }
+    return report;
+}
+#endif
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+template <class TypeTag>
+template <class Solver>
+SimulatorReport
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+runStepReservoirCouplingSlave_()
+{
+    bool substep_done = false;
+    int iteration = 0;
+    const double original_time_step = this->simulator_timer_.currentStepLength();
+    double current_time{this->simulator_timer_.simulationTimeElapsed()};
+    double step_end_time = current_time + original_time_step;
+    SimulatorReport report;
+    while(!substep_done) {
+        reservoirCouplingSlave_().sendNextReportDateToMasterProcess();
+        auto timestep = reservoirCouplingSlave_().receiveNextTimeStepFromMaster();
+        if (iteration == 0) {
+            maybeUpdateTuning_(current_time, original_time_step, /*substep=*/0);
+            maybeModifySuggestedTimeStepAtBeginningOfReportStep_(timestep);
+        }
+        AdaptiveSimulatorTimer substep_timer{
+            this->simulator_timer_.startDateTime(),
+            /*step_length=*/timestep,
+            /*elapsed_time=*/current_time,
+            /*time_step_estimate=*/suggestedNextTimestep_(),
+            this->simulator_timer_.reportStepNum(),
+            maxTimeStep_()
+        };
+        bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
+            current_time + timestep, step_end_time
+        );
+        SubStepIteration substepIteration{*this, substep_timer, timestep, final_step};
+        auto sub_steps_report = substepIteration.run();
+        report += sub_steps_report;
+        current_time += timestep;
+        if (final_step) {
+            substep_done = true;
+            break;
+        }
+        iteration++;
+    }
+    return report;
+}
 
 #endif
+
+template <class TypeTag>
+template <class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+suggestedNextTimestep_() const
+{
+    return this->adaptive_time_stepping_.suggestedNextStep();
+}
+
+
+
+/************************************************
+ * Private class SubStepIteration public methods
+ ************************************************/
+
+template<class TypeTag>
+template<class Solver>
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+SubStepIteration(
+    SubStepper<Solver>& substepper,
+    AdaptiveSimulatorTimer& substep_timer,
+    const double original_time_step,
+    bool final_step
+)
+    : substepper_{substepper}
+    , substep_timer_{substep_timer}
+    , original_time_step_{original_time_step}
+    , final_step_{final_step}
+    , adaptive_time_stepping_{substepper.getAdaptiveTimerStepper()}
+{
+}
+
+template <class TypeTag>
+template <class Solver>
+SimulatorReport
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+run()
+{
+    auto& simulator = solver_().model().simulator();
+    auto& problem = simulator.problem();
+    // counter for solver restarts
+    int restarts = 0;
+    SimulatorReport report;
+
+    // sub step time loop
+    while (!this->substep_timer_.done()) {
+        maybeUpdateTuningAndTimeStep_();
+        const double dt = this->substep_timer_.currentStepLength();
+        if (timeStepVerbose_()) {
+            detail::logTimer(this->substep_timer_);
+        }
+
+        auto substep_report = runSubStep_();
+
+        //Pass substep to eclwriter for summary output
+        problem.setSubStepReport(substep_report);
+
+        report += substep_report;
+
+        if (substep_report.converged || checkContinueOnUnconvergedSolution_(dt)) {
+            ++this->substep_timer_;   // advance by current dt
+
+            const int iterations = getNumIterations_(substep_report);
+            auto dt_estimate = timeStepControlComputeEstimate_(
+                                     dt, iterations, this->substep_timer_.simulationTimeElapsed());
+
+            assert(dt_estimate > 0);
+            dt_estimate = maybeRestrictTimeStepGrowth_(dt, dt_estimate, restarts);
+            restarts = 0;         // solver converged, reset restarts counter
+
+            maybeReportSubStep_(substep_report);
+            if (this->final_step_ && this->substep_timer_.done()) {
+                // if the time step is done we do not need to write it as this will be done
+                // by the simulator anyway.
+            }
+            else {
+                report.success.output_write_time += writeOutput_();
+            }
+
+            // set new time step length
+            setTimeStep_(dt_estimate);
+
+            report.success.converged = this->substep_timer_.done();
+            this->substep_timer_.setLastStepFailed(false);
+        }
+        else { // in case of no convergence
+            this->substep_timer_.setLastStepFailed(true);
+            checkTimeStepMaxRestartLimit_(restarts);
+
+            const double new_time_step = restartFactor_() * dt;
+            checkTimeStepMinLimit_(new_time_step);
+            bool wells_shut = false;
+            if (new_time_step > minTimeStepBeforeClosingWells_()) {
+                chopTimeStep_(new_time_step);
+            } else {
+                wells_shut = chopTimeStepOrCloseFailingWells_(new_time_step);
+            }
+            if (wells_shut) {
+                setTimeStep_(dt);  // retry the old timestep
+            }
+            else {
+                restarts++;   // only increase if no wells were shut
+            }
+        }
+        problem.setNextTimeStepSize(this->substep_timer_.currentStepLength());
+    }
+    updateSuggestedNextStep_();
+    return report;
+}
+
+
+/************************************************
+ * Private class SubStepIteration private methods
+ ************************************************/
+
+
+template<class TypeTag>
+template<class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+checkContinueOnUnconvergedSolution_(double dt) const
+{
+    bool continue_on_uncoverged_solution = ignoreConvergenceFailure_() && dt <= minTimeStep_();
+    if (continue_on_uncoverged_solution && solverVerbose_()) {
+        // NOTE: This method is only called if the solver failed to converge.
+        const auto msg = fmt::format(
+            "Solver failed to converge but timestep {} is smaller or equal to {}\n"
+            "which is the minimum threshold given by option --solver-min-time-step\n",
+            dt, minTimeStep_()
+        );
+        OpmLog::problem(msg);
+    }
+    return continue_on_uncoverged_solution;
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+checkTimeStepMaxRestartLimit_(const int restarts) const
+{
+   // If we have restarted (i.e. cut the timestep) too
+    // many times, we have failed and throw an exception.
+    if (restarts >= solverRestartMax_()) {
+        const auto msg = fmt::format(
+            "Solver failed to converge after cutting timestep {} times.", restarts
+        );
+        if (solverVerbose_()) {
+            OpmLog::error(msg);
+        }
+        // Use throw directly to prevent file and line
+        throw TimeSteppingBreakdown{msg};
+    }
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+checkTimeStepMinLimit_(const int new_time_step) const
+{
+    // If we have restarted (i.e. cut the timestep) too
+    // much, we have failed and throw an exception.
+    if (new_time_step < minTimeStep_()) {
+        const auto msg = fmt::format(
+            "Solver failed to converge after cutting timestep to {}\n"
+            "which is the minimum threshold given by option --solver-min-time-step\n",
+            minTimeStep_()
+        );
+        if (solverVerbose_()) {
+            OpmLog::error(msg);
+        }
+        // Use throw directly to prevent file and line
+        throw TimeSteppingBreakdown{msg};
+    }
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+chopTimeStep_(const double new_time_step)
+{
+    setTimeStep_(new_time_step);
+    if (solverVerbose_()) {
+        const auto msg = fmt::format("{}\nTimestep chopped to {} days\n",
+                    this->cause_of_failure_,
+                    unit::convert::to(this->substep_timer_.currentStepLength(), unit::day));
+        OpmLog::problem(msg);
+    }
+}
+
+template<class TypeTag>
+template<class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+chopTimeStepOrCloseFailingWells_(const int new_time_step)
+{
+    bool wells_shut = false;
+    // We are below the threshold, and will check if there are any wells we should close
+    // rather than chopping again.
+    std::set<std::string> failing_wells = detail::consistentlyFailingWells(
+                                         solver_().model().stepReports());
+    if (failing_wells.empty()) {
+        // Found no wells to close, chop the timestep
+        chopTimeStep_(new_time_step);
+    } else {
+        // Close all consistently failing wells that are not under group control
+        std::vector<std::string> shut_wells;
+        for (const auto& well : failing_wells) {
+            bool was_shut = solver_().model().wellModel().forceShutWellByName(
+                        well, this->substep_timer_.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ true);
+            if (was_shut) {
+                shut_wells.push_back(well);
+            }
+        }
+        // If no wells are closed we also try to shut wells under group control
+        if (shut_wells.empty()) {
+            for (const auto& well : failing_wells) {
+                bool was_shut = solver_().model().wellModel().forceShutWellByName(
+                        well, this->substep_timer_.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ false);
+                if (was_shut) {
+                    shut_wells.push_back(well);
+                }
+            }
+        }
+        // If still no wells are closed we must fall back to chopping again
+        if (shut_wells.empty()) {
+            chopTimeStep_(new_time_step);
+        } else {
+            wells_shut = true;
+            if (solverVerbose_()) {
+                const std::string msg =
+                        fmt::format("\nProblematic well(s) were shut: {}"
+                                    "(retrying timestep)\n",
+                                    fmt::join(shut_wells, " "));
+                OpmLog::problem(msg);
+            }
+        }
+    }
+    return wells_shut;
+}
+
+template<class TypeTag>
+template<class Solver>
+boost::posix_time::ptime
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+currentDateTime_() const
+{
+    return simulatorTimer_().currentDateTime();
+}
+
+template<class TypeTag>
+template<class Solver>
+int
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+getNumIterations_(const SimulatorReportSingle &substep_report) const
+{
+    if (useNewtonIteration_()) {
+        return substep_report.total_newton_iterations;
+    }
+    else {
+        return substep_report.total_linear_iterations;
+    }
+}
+
+template<class TypeTag>
+template<class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+growthFactor_() const
+{
+    return this->adaptive_time_stepping_.growth_factor_;
+}
+
+template<class TypeTag>
+template<class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+ignoreConvergenceFailure_() const
+{
+    return adaptive_time_stepping_.ignore_convergence_failure_;
+}
+
+template<class TypeTag>
+template<class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+maxGrowth_() const
+{
+    return this->adaptive_time_stepping_.max_growth_;
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+maybeReportSubStep_(SimulatorReportSingle substep_report) const
+{
+    if (timeStepVerbose_()) {
+        std::ostringstream ss;
+        substep_report.reportStep(ss);
+        OpmLog::info(ss.str());
+    }
+}
+
+template<class TypeTag>
+template<class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+maybeRestrictTimeStepGrowth_(const double dt, double dt_estimate, const int restarts) const
+{
+    // limit the growth of the timestep size by the growth factor
+    dt_estimate = std::min(dt_estimate, double(maxGrowth_() * dt));
+    assert(dt_estimate > 0);
+    // further restrict time step size growth after convergence problems
+    if (restarts > 0) {
+        dt_estimate = std::min(growthFactor_() * dt, dt_estimate);
+    }
+
+    return dt_estimate;
+}
+
+// The maybeUpdateTuning_() lambda callback is defined in SimulatorFullyImplicitBlackoil::runStep()
+// It has to be called for each substep since TUNING might have been changed for next sub step due
+// to ACTIONX (via NEXTSTEP) or WCYCLE keywords.
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+maybeUpdateTuningAndTimeStep_()
+{
+    // TODO: This function is currently only called if NEXTSTEP is activated from ACTIONX or
+    // if the WCYCLE keyword needs to modify the current timestep. So this method should rather
+    // be named maybeUpdateTimeStep_() or similar, since it should not update the tuning. However,
+    // the current definition of the maybeUpdateTuning_() callback is actually calling
+    // adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning) which is updating the tuning
+    // see SimulatorFullyImplicitBlackoil::runStep() for more details.
+    auto old_value = suggestedNextTimestep_();
+    if (this->substepper_.maybeUpdateTuning_(this->substep_timer_.simulationTimeElapsed(),
+                                                this->substep_timer_.currentStepLength(),
+                                                this->substep_timer_.currentStepNum()))
+    {
+        // Either NEXTSTEP and WCYCLE wants to change the current time step, but they cannot
+        // change the current time step directly. Instead, they change the suggested next time step
+        // by calling updateNEXTSTEP() via the maybeUpdateTuning() callback. We now need to update
+        // the current time step to the new suggested time step and reset the suggested time step
+        // to the old value.
+        setTimeStep_(suggestedNextTimestep_());
+        setSuggestedNextStep_(old_value);
+    }
+}
+
+template<class TypeTag>
+template<class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+minTimeStepBeforeClosingWells_() const
+{
+    return this->adaptive_time_stepping_.min_time_step_before_shutting_problematic_wells_;
+}
+
+template<class TypeTag>
+template<class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+minTimeStep_() const
+{
+    return this->adaptive_time_stepping_.min_time_step_;
+}
+
+template<class TypeTag>
+template<class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+restartFactor_() const
+{
+    return this->adaptive_time_stepping_.restart_factor_;
+}
+
+template<class TypeTag>
+template<class Solver>
+SimulatorReportSingle
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+runSubStep_()
+{
+    SimulatorReportSingle substep_report;
+
+    auto handleFailure = [this, &substep_report]
+            (const std::string& failure_reason, const std::exception& e, bool log_exception = true)
+    {
+        substep_report = solver_().failureReport();
+        this->cause_of_failure_ = failure_reason;
+        if (log_exception && solverVerbose_()) {
+            std::string message;
+            message = "Caught Exception: ";
+            message += e.what();
+            OpmLog::debug(message);
+        }
+    };
+
+    try {
+        substep_report = solver_().step(this->substep_timer_);
+        if (solverVerbose_()) {
+            // report number of linear iterations
+            OpmLog::debug("Overall linear iterations used: "
+                          + std::to_string(substep_report.total_linear_iterations));
+        }
+    }
+    catch (const TooManyIterations& e) {
+        handleFailure("Solver convergence failure - Iteration limit reached", e);
+    }
+    catch (const ConvergenceMonitorFailure& e) {
+        handleFailure("Convergence monitor failure", e, /*log_exception=*/false);
+    }
+    catch (const LinearSolverProblem& e) {
+        handleFailure("Linear solver convergence failure", e);
+    }
+    catch (const NumericalProblem& e) {
+        handleFailure("Solver convergence failure - Numerical problem encountered", e);
+    }
+    catch (const std::runtime_error& e) {
+        handleFailure("Runtime error encountered", e);
+    }
+    catch (const Dune::ISTLError& e) {
+        handleFailure("ISTL error - Time step too large", e);
+    }
+    catch (const Dune::MatrixBlockError& e) {
+        handleFailure("Matrix block error", e);
+    }
+
+    return substep_report;
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+setTimeStep_(double dt_estimate)
+{
+    this->substep_timer_.provideTimeStepEstimate(dt_estimate);
+}
+
+template<class TypeTag>
+template<class Solver>
+Solver&
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+solver_() const
+{
+    return this->substepper_.solver_;
+}
+
+
+template<class TypeTag>
+template<class Solver>
+int
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+solverRestartMax_() const
+{
+    return this->adaptive_time_stepping_.solver_restart_max_;
+}
+
+template<class TypeTag>
+template<class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+setSuggestedNextStep_(double step)
+{
+    this->adaptive_time_stepping_.setSuggestedNextStep(step);
+}
+
+template <class TypeTag>
+template <class Solver>
+const SimulatorTimer&
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+simulatorTimer_() const
+{
+    return this->substepper_.simulator_timer_;
+}
+
+template <class TypeTag>
+template <class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+solverVerbose_() const
+{
+    return this->adaptive_time_stepping_.solver_verbose_;
+}
+
+template<class TypeTag>
+template<class Solver>
+boost::posix_time::ptime
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+startDateTime_() const
+{
+    return simulatorTimer_().startDateTime();
+}
+
+template <class TypeTag>
+template <class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+suggestedNextTimestep_() const
+{
+    return this->adaptive_time_stepping_.suggestedNextStep();
+}
+
+template <class TypeTag>
+template <class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+timeStepControlComputeEstimate_(const double dt, const int iterations, double elapsed) const
+{
+    // create object to compute the time error, simply forwards the call to the model
+    SolutionTimeErrorSolverWrapper<Solver> relative_change{solver_()};
+    return this->adaptive_time_stepping_.time_step_control_->computeTimeStepSize(
+        dt, iterations, relative_change, elapsed);
+}
+
+template <class TypeTag>
+template <class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+timeStepVerbose_() const
+{
+    return this->adaptive_time_stepping_.timestep_verbose_;
+}
+
+// The suggested time step is the stepsize that will be used as a first try for
+// the next sub step. It is updated at the end of each substep. It can also be
+// updated by the TUNING or NEXTSTEP keywords at the beginning of each report step or
+// at the beginning of each substep by the ACTIONX keyword (via NEXTSTEP), this is
+// done by the maybeUpdateTuning_() method which is called at the beginning of each substep
+// (and the begginning of each report step). Note that the WCYCLE keyword can also update the
+// suggested time step via the maybeUpdateTuning_() method.
+template <class TypeTag>
+template <class Solver>
+void
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+updateSuggestedNextStep_()
+{
+    auto suggested_next_step = this->substep_timer_.currentStepLength();
+    if (! std::isfinite(suggested_next_step)) { // check for NaN
+        suggested_next_step = this->original_time_step_;
+    }
+    if (timeStepVerbose_()) {
+        std::ostringstream ss;
+        this->substep_timer_.report(ss);
+        ss << "Suggested next step size = "
+           << unit::convert::to(suggested_next_step, unit::day) << " (days)" << std::endl;
+        OpmLog::debug(ss.str());
+    }
+    setSuggestedNextStep_(suggested_next_step);
+}
+
+template <class TypeTag>
+template <class Solver>
+bool
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+useNewtonIteration_() const
+{
+    return this->adaptive_time_stepping_.use_newton_iteration_;
+}
+
+template <class TypeTag>
+template <class Solver>
+double
+AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+writeOutput_() const
+{
+    time::StopWatch perf_timer;
+    perf_timer.start();
+    auto& problem = solver_().model().simulator().problem();
+    problem.writeOutput(true);
+    return perf_timer.secsSinceStart();
+}
+
+/************************************************
+ * Private class SolutionTimeErrorSolverWrapper
+ * **********************************************/
+
+template<class TypeTag>
+template<class Solver>
+AdaptiveTimeStepping<TypeTag>::SolutionTimeErrorSolverWrapper<Solver>::SolutionTimeErrorSolverWrapper(
+    const Solver& solver
+)
+    : solver_{solver}
+{}
+
+template<class TypeTag>
+template<class Solver>
+double AdaptiveTimeStepping<TypeTag>::SolutionTimeErrorSolverWrapper<Solver>::relativeChange() const
+{
+    // returns:   || u^n+1 - u^n || / || u^n+1 ||
+    return solver_.model().relativeChange();
+}
+
+} // namespace Opm
+
+#endif // OPM_ADAPTIVE_TIME_STEPPING_IMPL_HPP
