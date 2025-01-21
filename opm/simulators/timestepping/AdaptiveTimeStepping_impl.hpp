@@ -906,10 +906,14 @@ AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
 chopTimeStepOrCloseFailingWells_(const int new_time_step)
 {
     bool wells_shut = false;
-    // We are below the threshold, and will check if there are any wells we should close
-    // rather than chopping again.
-    std::set<std::string> failing_wells = detail::consistentlyFailingWells(
-                                         solver_().model().stepReports());
+    // We are below the threshold, and will check if there are any
+    // wells that failes repeatedly (that means that it fails in the last three steps)
+    // we should close rather than chopping again.
+    // If we already have chopped the timestep serveral times due to failed wells we also shut wells that
+    // fails only on this step.
+    bool checkRepeatedFailures = new_time_step > ( minTimeStepBeforeClosingWells_()*restartFactor_()*restartFactor_());
+    std::set<std::string> failing_wells = detail::consistentlyFailingWells(solver_().model().stepReports(), checkRepeatedFailures);
+
     if (failing_wells.empty()) {
         // Found no wells to close, chop the timestep
         chopTimeStep_(new_time_step);

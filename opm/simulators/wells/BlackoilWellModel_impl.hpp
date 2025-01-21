@@ -1938,10 +1938,10 @@ namespace Opm {
         bool changed_well_group = false;
 
         int iter = 0;
+        const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
         // iterate a few times to make sure all constrains are kept
         while(!changed_well_group && iter < 3) {
             // Check group individual constraints.
-            const Group& fieldGroup = this->schedule().getGroup("FIELD", episodeIdx);
             changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
             
             // Check wells' group constraints and communicate.
