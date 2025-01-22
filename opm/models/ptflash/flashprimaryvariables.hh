@@ -28,16 +28,11 @@
 #ifndef OPM_PTFLASH_PRIMARY_VARIABLES_HH
 #define OPM_PTFLASH_PRIMARY_VARIABLES_HH
 
-#include "flashindices.hh"
-
-#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
+#include <opm/models/ptflash/flashindices.hh>
 
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
 
 #include <iostream>
 
@@ -78,20 +73,13 @@ public:
     { Opm::Valgrind::SetDefined(*this); }
 
     /*!
-     * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
-     */
-    FlashPrimaryVariables(Scalar value) : ParentType(value)
-    {
-        Opm::Valgrind::CheckDefined(value);
-        Opm::Valgrind::SetDefined(*this);
-    }
-
-    /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(const
      * ImmisciblePrimaryVariables& )
      */
     FlashPrimaryVariables(const FlashPrimaryVariables& value) = default;
     FlashPrimaryVariables& operator=(const FlashPrimaryVariables& value) = default;
+
+    using ParentType::operator=; //!< Import base class assignment operators.
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignMassConservative
