@@ -433,7 +433,7 @@ namespace Opm {
             // have proper multi-phase rates proportional to rates at bhp zero.
             // This is done only for producers, as injectors will only have a single
             // nonzero phase anyway.
-            for (auto& well : well_container_) {
+            for (const auto& well : well_container_) {
                 const bool zero_target = well->stoppedOrZeroRateTarget(simulator_, this->wellState(), local_deferredLogger);
                 if (well->isProducer() && !zero_target) {
                     well->updateWellStateRates(simulator_, this->wellState(), local_deferredLogger);
@@ -441,7 +441,7 @@ namespace Opm {
             }
         }
 
-        for (auto& well : well_container_) {
+        for (const auto& well : well_container_) {
             if (well->isVFPActive(local_deferredLogger)){
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
@@ -478,7 +478,7 @@ namespace Opm {
         auto exc_type = ExceptionType::NONE;
         // update gpmaint targets
         if (this->schedule_[reportStepIdx].has_gpmaint()) {
-            for (auto& calculator : regionalAveragePressureCalculator_) {
+            for (const auto& calculator : regionalAveragePressureCalculator_) {
                 calculator.second->template defineState<ElementContext>(simulator_);
             }
             const double dt = simulator_.timeStepSize();
@@ -1641,7 +1641,7 @@ namespace Opm {
     template <typename TypeTag>
     void BlackoilWellModel<TypeTag>::
     addReservoirSourceTerms(GlobalEqVector& residual,
-                            std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const
+                            const std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const
     {
         // NB this loop may write multiple times to the same element
         // if a cell is perforated by more than one well, so it should
@@ -2022,7 +2022,7 @@ namespace Opm {
         // if a well or group change control it affects all wells that are under the same group
         for (const auto& well : well_container_) {
             // We only want to update wells under group-control here
-            auto& ws = this->wellState().well(well->indexOfWell());
+            const auto& ws = this->wellState().well(well->indexOfWell());
             if (ws.production_cmode ==  Well::ProducerCMode::GRUP ||
                 ws.injection_cmode == Well::InjectorCMode::GRUP)
             {

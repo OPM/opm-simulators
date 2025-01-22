@@ -373,7 +373,7 @@ protected:
         for (unsigned i = 0; i < phaseIdxs.size(); ++i) {
             normVelocityCell_[i] = 0;
         }
-        for (auto& velocityInfo : velocityInfos) {
+        for (const auto& velocityInfo : velocityInfos) {
             for (unsigned i = 0; i < phaseIdxs.size(); ++i) {
                 if (FluidSystem::phaseIsActive(phaseIdxs[i])) {
                     normVelocityCell_[phaseIdxs[i]] = max( normVelocityCell_[phaseIdxs[i]], 

@@ -244,7 +244,7 @@ public:
 
 #ifdef RESERVOIR_COUPLING_ENABLED
     // NOTE: The argc and argv will be used when launching a slave process
-    void init(SimulatorTimer &timer, int argc, char** argv)
+    void init(const SimulatorTimer& timer, int argc, char** argv)
     {
         auto slave_mode = Parameters::Get<Parameters::Slave>();
         if (slave_mode) {
@@ -269,7 +269,7 @@ public:
             }
         }
 #else
-    void init(SimulatorTimer &timer)
+    void init(const SimulatorTimer& timer)
     {
 #endif
         simulator_.setEpisodeIndex(-1);

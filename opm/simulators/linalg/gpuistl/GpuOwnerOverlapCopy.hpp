@@ -285,11 +285,11 @@ private:
 
     void buildCommPairIdxs() const
     {
-        auto &ri = this->m_cpuOwnerOverlapCopy.remoteIndices();
+        const auto& ri = this->m_cpuOwnerOverlapCopy.remoteIndices();
         std::vector<int> commpairIndicesCopyOnCPU;
         std::vector<int> commpairIndicesOwnerCPU;
 
-        for (auto process : ri) {
+        for (const auto& process : ri) {
             m_im[process.first] = std::pair(std::vector<int>(), std::vector<int>());
             for (int send = 0; send < 2; ++send) {
                 auto remoteEnd = send ? process.second.first->end()

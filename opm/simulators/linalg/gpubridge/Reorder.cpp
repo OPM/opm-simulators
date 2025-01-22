@@ -61,10 +61,10 @@ bool canBeStarted(const int rowIndex,
  * "Iterative methods for Sparse Linear Systems" by Yousef Saad in section 11.6.3
  */
 
-void findLevelScheduling(int* CSRColIndices,
-                         int* CSRRowPointers,
-                         int* CSCRowIndices,
-                         int* CSCColPointers,
+void findLevelScheduling(const int* CSRColIndices,
+                         const int* CSRRowPointers,
+                         const int* CSCRowIndices,
+                         const int* CSCColPointers,
                          int Nb,
                          int* numColors,
                          int* toOrder,
@@ -129,8 +129,8 @@ void findLevelScheduling(int* CSRColIndices,
 }
 
 // based on the scipy package from python, scipy/sparse/sparsetools/csr.h on github
-void csrPatternToCsc(int* CSRColIndices,
-                     int* CSRRowPointers,
+void csrPatternToCsc(const int* CSRColIndices,
+                     const int* CSRRowPointers,
                      int* CSCRowIndices,
                      int* CSCColPointers,
                      int Nb)

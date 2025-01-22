@@ -194,7 +194,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 {
     const unsigned int bs = block_size;
 
-    auto *matToDecompose = jacMat ? jacMat : mat;
+    const auto* matToDecompose = jacMat ? jacMat : mat;
     bool use_multithreading = true;
 
 #if HAVE_OPENMP

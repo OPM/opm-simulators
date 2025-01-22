@@ -121,7 +121,7 @@ public:
         // Create a function that calls some function
         // for all the individual data items to simplify
         // the further code.
-        auto iterateContainer = [](auto& container, auto& func) {
+        auto iterateContainer = [](auto& container, const auto& func) {
             for (auto& x : container) {
                 func(x.second);
             }

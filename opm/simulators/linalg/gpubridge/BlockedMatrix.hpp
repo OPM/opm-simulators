@@ -111,7 +111,8 @@ void sortRow(int* colIndices, int* data, int left, int right);
 /// \param[in] c                 input block
 /// \param[in] block_size        size of block
 template<class Scalar>
-void blockMultSub(Scalar* a, Scalar* b, Scalar* c, unsigned int block_size);
+void blockMultSub(Scalar* a, const Scalar* b,
+                  const Scalar* c, unsigned int block_size);
 
 /// Perform a matrix-matrix multiplication on two blocks
 /// resMat = mat1 * mat2

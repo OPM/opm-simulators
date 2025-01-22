@@ -16,6 +16,7 @@
 #include <dune/common/unused.hh>
 #include <dune/common/version.hh>
 
+#include <algorithm>
 #include <cstddef>
 #include <iostream>
 #include <memory>
@@ -193,13 +194,8 @@ public:
     ParallelInformation pinfo;
 
     std::size_t aggregates = coarsen(renumberer, pinfo, pg, vm,*aggregatesMap_, noAggregates, true);
-    std::vector<bool>& visited=excluded;
 
-    typedef std::vector<bool>::iterator Iterator;
-
-    for(Iterator iter= visited.begin(), end=visited.end();
-        iter != end; ++iter)
-          *iter=false;
+    std::fill(excluded.begin(), excluded.end(), false);
     matrix_.reset(productBuilder.build(mg, vm,
                                        SequentialInformation(),
                                        *aggregatesMap_,

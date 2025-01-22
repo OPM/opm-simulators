@@ -1906,7 +1906,7 @@ getMaxWellConnections() const
 
         const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
         if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
-            for (auto& global_index : possibleFutureConnectionSetIt->second) {
+            for (const auto& global_index : possibleFutureConnectionSetIt->second) {
                 int compressed_idx = compressedIndexForInterior(global_index);
                 if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
                     compressed_well_perforations.push_back(compressed_idx);

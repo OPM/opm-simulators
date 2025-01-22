@@ -46,10 +46,10 @@ bool canBeStarted(const int rowIndex,
 /// \param[out] toOrder         the reorder pattern that was found, which lists for each index in the original order, to which index in the new order it should be moved
 /// \param[out] fromOrder       the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
 /// \param[out] rowsPerColor    for each color, an array of all rowIndices in that color, this function uses emplace_back() to fill
-void findLevelScheduling(int* CSRColIndices,
-                         int* CSRRowPointers,
-                         int* CSCRowIndices,
-                         int* CSCColPointers,
+void findLevelScheduling(const int* CSRColIndices,
+                         const int* CSRRowPointers,
+                         const int* CSCRowIndices,
+                         const int* CSCColPointers,
                          int Nb,
                          int* numColors,
                          int* toOrder,
@@ -64,8 +64,8 @@ void findLevelScheduling(int* CSRColIndices,
 /// \param[inout] CSCRowIndices  row indices of the result CSC representation of the pattern
 /// \param[inout] CSCColPointers column pointers of the result CSC representation of the pattern
 /// \param[in] Nb                number of blockrows in the matrix
-void csrPatternToCsc(int* CSRColIndices,
-                     int* CSRRowPointers,
+void csrPatternToCsc(const int* CSRColIndices,
+                     const int* CSRRowPointers,
                      int* CSCRowIndices,
                      int* CSCColPointers,
                      int Nb);

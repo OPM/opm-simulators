@@ -105,12 +105,12 @@ private:
     /// Convert the BCSR sparsity pattern to a CSR one
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
     /// \param[in] cols           array of columnIndices, contains nnz values
-    void convert_sparsity_pattern(int *rows, int *cols);
+    void convert_sparsity_pattern(const int *rows, const int *cols);
 
     /// Convert the BCSR nonzero data to a CSR format
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
-    void convert_data(Scalar* vals, int* rows);
+    void convert_data(const Scalar* vals, const int* rows);
 
     /// Solve linear system
     /// \param[in] b              pointer to b vector

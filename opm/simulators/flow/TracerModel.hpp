@@ -616,7 +616,7 @@ protected:
             if (elem.partitionType() != Dune::InteriorEntity)
             {
                 // Dirichlet boundary conditions needed for the parallel matrix
-                for (auto& tr : tbatch) {
+                for (const auto& tr : tbatch) {
                     if (tr.numTracer() != 0) {
                         (*tr.mat)[I][I][0][0] = 1.;
                         (*tr.mat)[I][I][1][1] = 1.;
