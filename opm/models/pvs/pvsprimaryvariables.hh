@@ -28,19 +28,17 @@
 #ifndef EWOMS_PVS_PRIMARY_VARIABLES_HH
 #define EWOMS_PVS_PRIMARY_VARIABLES_HH
 
-#include "pvsindices.hh"
-#include "pvsproperties.hh"
+#include <dune/common/fvector.hh>
 
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
+#include <opm/models/pvs/pvsproperties.hh>
 
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
 
 #include <iostream>
 

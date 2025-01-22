@@ -28,15 +28,15 @@
 #ifndef EWOMS_RICHARDS_PRIMARY_VARIABLES_HH
 #define EWOMS_RICHARDS_PRIMARY_VARIABLES_HH
 
-#include "richardsproperties.hh"
+#include <dune/common/fvector.hh>
+
+#include <opm/models/richards/richardsproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/ImmiscibleFlash.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
-#include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
 
 namespace Opm {
 

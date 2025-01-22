@@ -28,7 +28,7 @@
 #ifndef EWOMS_DISCRETE_FRACTURE_PRIMARY_VARIABLES_HH
 #define EWOMS_DISCRETE_FRACTURE_PRIMARY_VARIABLES_HH
 
-#include "discretefractureproperties.hh"
+#include <opm/models/discretefracture/discretefractureproperties.hh>
 
 #include <opm/models/immiscible/immiscibleprimaryvariables.hh>
 

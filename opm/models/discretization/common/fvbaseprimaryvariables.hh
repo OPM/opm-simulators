@@ -28,15 +28,15 @@
 #ifndef EWOMS_FV_BASE_PRIMARY_VARIABLES_HH
 #define EWOMS_FV_BASE_PRIMARY_VARIABLES_HH
 
-#include <type_traits>
+#include <dune/common/fvector.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
 
-#include "fvbaseproperties.hh"
-#include "linearizationtype.hh"
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
-#include <dune/common/fvector.hh>
-
 #include <stdexcept>
+#include <type_traits>
 
 namespace Opm {
 

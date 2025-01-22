@@ -28,16 +28,15 @@
 #ifndef EWOMS_NCP_PRIMARY_VARIABLES_HH
 #define EWOMS_NCP_PRIMARY_VARIABLES_HH
 
-#include "ncpproperties.hh"
+#include <dune/common/fvector.hh>
 
-#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
+#include <opm/models/ncp/ncpproperties.hh>
 
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Math.hpp>
-
-#include <dune/common/fvector.hh>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 namespace Opm {
 
