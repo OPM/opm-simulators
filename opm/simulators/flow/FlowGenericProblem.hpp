@@ -367,7 +367,7 @@ protected:
     // is inherited from its parent or equivalent (when has no parent) cell on level zero.
     std::function<unsigned(unsigned)> lookupIdxOnLevelZeroAssigner_()
     {
-        return [this](unsigned elemIdx) { return lookUpData_.template getFieldPropIdx<unsigned, Grid>(elemIdx);};
+        return [this](unsigned elemIdx) { return lookUpData_.template getFieldPropIdx<Grid>(elemIdx);};
     }
 
 private:

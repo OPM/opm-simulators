@@ -289,7 +289,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
         // Get the Cartesian index of the origin cells (parent or equivalent cell on level zero),
         // for CpGrid with LGRs. For general grids and no LGRs, get the usual Cartesian Index.
         inside.cartElemIdx = this->lookUpCartesianData_.
-            template getFieldPropCartesianIdx<decltype(inside.elemIdx), Grid>(inside.elemIdx);
+            template getFieldPropCartesianIdx<Grid>(inside.elemIdx);
 
         auto computeHalf = [this, &faceAreaNormal, &inside, &outside]
                            (const auto& halfComputer,
@@ -369,7 +369,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
             // Get the Cartesian index of the origin cells (parent or equivalent cell on level zero),
             // for CpGrid with LGRs. For general grids and no LGRs, get the usual Cartesian Index.
             outside.cartElemIdx =  this->lookUpCartesianData_.
-                template getFieldPropCartesianIdx<decltype(outside.elemIdx), Grid>(outside.elemIdx);
+                template getFieldPropCartesianIdx<Grid>(outside.elemIdx);
 
             // we only need to calculate a face's transmissibility
             // once...
