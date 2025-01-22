@@ -79,17 +79,13 @@ public:
     { Opm::Valgrind::SetUndefined(*this); }
 
     /*!
-     * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
-     */
-    RichardsPrimaryVariables(Scalar value) : ParentType(value)
-    {}
-
-    /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(const
      * ImmisciblePrimaryVariables& )
      */
     RichardsPrimaryVariables(const RichardsPrimaryVariables& value) = default;
     RichardsPrimaryVariables& operator=(const RichardsPrimaryVariables& value) = default;
+
+    using ParentType::operator=; //!< Import base class assignment operators.
 
     /*!
      * \brief Set the primary variables with the wetting phase

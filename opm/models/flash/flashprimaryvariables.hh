@@ -73,11 +73,6 @@ public:
     /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
      */
-    FlashPrimaryVariables(Scalar value) : ParentType(value)
-    {
-        Opm::Valgrind::CheckDefined(value);
-        Opm::Valgrind::SetDefined(*this);
-    }
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(const
@@ -85,6 +80,8 @@ public:
      */
     FlashPrimaryVariables(const FlashPrimaryVariables& value) = default;
     FlashPrimaryVariables& operator=(const FlashPrimaryVariables& value) = default;
+
+    using ParentType::operator=; //!< Import base class assignment operators.
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignMassConservative

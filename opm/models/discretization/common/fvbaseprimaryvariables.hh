@@ -64,13 +64,6 @@ public:
     { Valgrind::SetUndefined(*this); }
 
     /*!
-     * \brief Construction from a scalar value
-     */
-    FvBasePrimaryVariables(Scalar value)
-        : ParentType(value)
-    { }
-
-    /*!
      * \brief Assignment from another primary variables object
      */
     FvBasePrimaryVariables(const FvBasePrimaryVariables& value) = default;
@@ -79,6 +72,8 @@ public:
      * \brief Assignment from another primary variables object
      */
     FvBasePrimaryVariables& operator=(const FvBasePrimaryVariables& value) = default;
+
+    using ParentType::operator=; //!< Import base class assignment operators.
 
     static void init()
     {

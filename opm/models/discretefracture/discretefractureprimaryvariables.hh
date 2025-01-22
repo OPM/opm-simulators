@@ -59,20 +59,14 @@ public:
     {}
 
     /*!
-     * \brief Constructor with assignment from scalar
-     *
-     * \param value The scalar value to which all entries of the vector will be set.
-     */
-    DiscreteFracturePrimaryVariables(Scalar value) : ParentType(value)
-    {}
-
-    /*!
      * \brief Copy constructor
      *
      * \param value The primary variables that will be duplicated.
      */
     DiscreteFracturePrimaryVariables(const DiscreteFracturePrimaryVariables& value) = default;
     DiscreteFracturePrimaryVariables& operator=(const DiscreteFracturePrimaryVariables& value) = default;
+
+    using ParentType::operator=; //!< Import base class assignment operators.
 
     /*!
      * \brief Directly retrieve the primary variables from an

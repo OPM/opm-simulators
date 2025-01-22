@@ -85,17 +85,6 @@ public:
     { Valgrind::SetDefined(*this); }
 
     /*!
-     * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
-     */
-    explicit PvsPrimaryVariables(Scalar value) : ParentType(value)
-    {
-        Valgrind::CheckDefined(value);
-        Valgrind::SetDefined(*this);
-
-        phasePresence_ = 0;
-    }
-
-    /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(const
      * ImmisciblePrimaryVariables& )
      */

@@ -164,21 +164,6 @@ public:
     }
 
     /*!
-     * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
-     */
-    explicit BlackOilPrimaryVariables(Scalar value)
-        : ParentType(value)
-    {
-        Valgrind::SetUndefined(primaryVarsMeaningWater_);
-        Valgrind::SetUndefined(primaryVarsMeaningGas_);
-        Valgrind::SetUndefined(primaryVarsMeaningPressure_);
-        Valgrind::SetUndefined(primaryVarsMeaningBrine_);
-        Valgrind::SetUndefined(primaryVarsMeaningSolvent_);
-
-        pvtRegionIdx_ = 0;
-    }
-
-    /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(const ImmisciblePrimaryVariables& )
      */
     BlackOilPrimaryVariables(const BlackOilPrimaryVariables& value) = default;
@@ -947,13 +932,8 @@ public:
     }
 
     BlackOilPrimaryVariables& operator=(const BlackOilPrimaryVariables& other) = default;
-    BlackOilPrimaryVariables& operator=(Scalar value)
-    {
-        for (unsigned i = 0; i < numEq; ++i)
-            (*this)[i] = value;
 
-        return *this;
-    }
+    using ParentType::operator=; //!< Import base class assignment operators.
 
     /*!
      * \brief Instruct valgrind to check the definedness of all attributes of this class.

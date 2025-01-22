@@ -80,17 +80,13 @@ public:
     {}
 
     /*!
-     * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
-     */
-    NcpPrimaryVariables(Scalar value) : ParentType(value)
-    {}
-
-    /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(const
      * ImmisciblePrimaryVariables& )
      */
     NcpPrimaryVariables(const NcpPrimaryVariables& value) = default;
     NcpPrimaryVariables& operator=(const NcpPrimaryVariables& value) = default;
+
+    using ParentType::operator=; //!< Import base class assignment operators.
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignMassConservative

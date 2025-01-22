@@ -83,14 +83,6 @@ public:
     { Opm::Valgrind::SetUndefined(*this); }
 
     /*!
-     * \brief Constructor with assignment from scalar
-     *
-     * \param value The scalar value to which all entries of the vector will be set.
-     */
-    ImmisciblePrimaryVariables(Scalar value) : ParentType(value)
-    {}
-
-    /*!
      * \brief Copy constructor
      *
      * \param value The primary variables that will be duplicated.
@@ -103,6 +95,8 @@ public:
      * \param value The primary variables that will be duplicated.
      */
     ImmisciblePrimaryVariables& operator=(const ImmisciblePrimaryVariables& value) = default;
+
+    using ParentType::operator=; //!< Import base class assignment operators.
 
     /*!
      * \brief Set the primary variables from an arbitrary fluid state
