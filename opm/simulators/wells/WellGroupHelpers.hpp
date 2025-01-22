@@ -22,8 +22,10 @@
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleState.hpp>
 
 #include <map>
 #include <string>
@@ -55,6 +57,13 @@ public:
                                     const int reportStepIdx,
                                     const int phasePos,
                                     const bool injector);
+
+    static Scalar satelliteProduction(const ScheduleState& sched,
+                                      const std::vector<std::string>& groups,
+                                      const GSatProd::GSatProdGroup::Rate rateComp);
+
+    static std::optional<GSatProd::GSatProdGroup::Rate>
+    selectRateComponent(const PhaseUsage& pu, const int phasePos);
 
     static void setCmodeGroup(const Group& group,
                               const Schedule& schedule,

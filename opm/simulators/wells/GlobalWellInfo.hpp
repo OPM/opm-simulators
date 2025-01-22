@@ -65,6 +65,7 @@ public:
         comm.sum( this->m_in_producing_group.data(), size);
         comm.sum( this->m_is_open.data(), size);
         comm.min( this->m_efficiency_scaling_factors.data(), size);
+        is_rank0_ = (comm.rank() == 0);
     }
 
 
@@ -80,6 +81,7 @@ public:
     void update_efficiency_scaling_factor(std::size_t well_index, const Scalar efficiency_scaling_factor);
     Scalar efficiency_scaling_factor(const std::string& wname) const;
     void clear();
+    bool isRank0() const;
 
 private:
     std::vector<std::size_t> local_map;    // local_index -> global_index
@@ -89,6 +91,7 @@ private:
     std::vector<int> m_in_producing_group;       // global_index -> int/bool
     std::vector<int> m_is_open;                  // global_index -> int/bool
     std::vector<Scalar> m_efficiency_scaling_factors; // global_index --> double
+    bool is_rank0_{true};
 };
 
 

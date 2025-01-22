@@ -24,6 +24,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
@@ -99,6 +100,14 @@ namespace Opm {
             rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
         }
 
+        // only sum satelite production once
+        if (wellState.isRank0() && !injector) {
+            const auto rateComp = selectRateComponent(wellState.phaseUsage(), phasePos);
+            if (rateComp.has_value()) {
+                rate += satelliteProduction(schedule[reportStepIdx], group.groups(), *rateComp);
+            }
+        }
+
         for (const std::string& wellName : group.wells()) {
             const auto& well_index = wellState.index(wellName);
             if (!well_index.has_value())
@@ -136,6 +145,42 @@ namespace Opm {
         }
         return rate;
     }
+
+template <typename Scalar>
+Scalar WellGroupHelpers<Scalar>::
+satelliteProduction(const ScheduleState& sched,
+                    const std::vector<std::string>& groups,
+                    const GSatProd::GSatProdGroup::Rate rateComp)
+{
+    auto gsatProdRate = Scalar{};
+    const auto& gsatProd = sched.gsatprod();
+    for (const auto& group : groups) {
+        if (! gsatProd.has(group)) {
+            continue;
+        }
+        gsatProdRate += gsatProd.get(group).rate[rateComp];
+    }
+    return gsatProdRate;
+}
+
+template <typename Scalar>
+std::optional<GSatProd::GSatProdGroup::Rate> WellGroupHelpers<Scalar>::
+selectRateComponent(const PhaseUsage& pu, const int phasePos)
+{
+    using Rate = GSatProd::GSatProdGroup::Rate;
+
+    for (const auto& [phase, rateComp] : std::array {
+        std::pair { BlackoilPhases::Aqua, Rate::Water },
+        std::pair { BlackoilPhases::Liquid, Rate::Oil },
+        std::pair { BlackoilPhases::Vapour, Rate::Gas } })
+    {
+        if (pu.phase_used[phase] && (pu.phase_pos[phase] == phasePos)) {
+            return rateComp;
+        }
+    }
+
+    return std::nullopt;
+}
 
 template<class Scalar>
 void WellGroupHelpers<Scalar>::
