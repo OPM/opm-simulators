@@ -139,8 +139,9 @@ BlackoilAquiferModel<TypeTag>::endTimeStep()
     for (auto& aquifer : this->aquifers) {
         aquifer->endTimeStep();
         NumAq* num = dynamic_cast<NumAq*>(aquifer.get());
-        if (num)
+        if (num) {
             this->simulator_.vanguard().grid().comm().barrier();
+        }
     }
 }
 

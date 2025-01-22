@@ -23,28 +23,28 @@
 
 #include <opm/simulators/linalg/gpubridge/Reorder.hpp>
 
-#include <vector>
 #include <cassert>
+#include <vector>
 
-
-namespace Opm
-{
-namespace Accelerator
-{
-
+namespace Opm::Accelerator {
 
 /* Check is operations on a node in the matrix can be started
- * A node can only be started if all nodes that it depends on during sequential execution have already completed.*/
+ * A node can only be started if all nodes that it depends on during sequential
+ * execution have already completed.*/
 
-bool canBeStarted(const int rowIndex, const int *rowPointers, const int *colIndices, const std::vector<bool>& doneRows) {
+bool canBeStarted(const int rowIndex,
+                  const int* rowPointers,
+                  const int* colIndices,
+                  const std::vector<bool>& doneRows)
+{
     bool canStart = !doneRows[rowIndex];
-    int i, thisDependency;
     if (canStart) {
-        for (i = rowPointers[rowIndex]; i < rowPointers[rowIndex + 1]; i++) {
-            thisDependency = colIndices[i];
+        for (int i = rowPointers[rowIndex]; i < rowPointers[rowIndex + 1]; ++i) {
+            int thisDependency = colIndices[i];
             // Only dependencies on rows that should execute before the current one are relevant
-            if (thisDependency >= rowIndex)
+            if (thisDependency >= rowIndex) {
                 break;
+            }
             // Check if dependency has been resolved
             if (!doneRows[thisDependency]) {
                 return false;
@@ -55,14 +55,23 @@ bool canBeStarted(const int rowIndex, const int *rowPointers, const int *colIndi
 }
 
 /*
- * The level scheduling of a non-symmetric, blocked matrix requires access to a CSC encoding and a CSR encoding of the sparsity pattern of the input matrix.
+ * The level scheduling of a non-symmetric, blocked matrix requires access to a CSC
+ * encoding and a CSR encoding of the sparsity pattern of the input matrix.
  * This function is based on a standard level scheduling algorithm, like the one described in:
  * "Iterative methods for Sparse Linear Systems" by Yousef Saad in section 11.6.3
  */
 
-void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb, int *numColors, int *toOrder, int* fromOrder, std::vector<int>& rowsPerColor) {
-    int activeRowIndex = 0, colorEnd, nextActiveRowIndex = 0;
-    int thisRow;
+void findLevelScheduling(int* CSRColIndices,
+                         int* CSRRowPointers,
+                         int* CSCRowIndices,
+                         int* CSCColPointers,
+                         int Nb,
+                         int* numColors,
+                         int* toOrder,
+                         int* fromOrder,
+                         std::vector<int>& rowsPerColor)
+{
+    int activeRowIndex = 0, nextActiveRowIndex = 0;
     std::vector<bool> doneRows(Nb, false);
     std::vector <int> rowsToStart;
 
@@ -70,23 +79,27 @@ void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
     assert(rowsPerColor.empty());
 
     // find starting rows: rows that are independent from all rows that come before them.
-    for (thisRow = 0; thisRow < Nb; thisRow++) {
+    int thisRow;
+    for (thisRow = 0; thisRow < Nb; ++thisRow) {
         if (canBeStarted(thisRow, CSCColPointers, CSCRowIndices, doneRows)) {
             fromOrder[nextActiveRowIndex] = thisRow;
             toOrder[thisRow] = nextActiveRowIndex;
-            nextActiveRowIndex++;
+            ++nextActiveRowIndex;
         }
     }
+
     // 'do' compute on all active rows
-    for (colorEnd = 0; colorEnd < nextActiveRowIndex; colorEnd++) {
+    int colorEnd;
+    for (colorEnd = 0; colorEnd < nextActiveRowIndex; ++colorEnd) {
         doneRows[fromOrder[colorEnd]] = true;
     }
 
     rowsPerColor.emplace_back(nextActiveRowIndex - activeRowIndex);
 
     while (colorEnd < Nb) {
-        // Go over all rows active from the last color, and check which of their neighbours can be activated this color
-        for (; activeRowIndex < colorEnd; activeRowIndex++) {
+        // Go over all rows active from the last color, and check which of
+        // their neighbours can be activated this color
+        for (; activeRowIndex < colorEnd; ++activeRowIndex) {
             thisRow = fromOrder[activeRowIndex];
 
             for (int i = CSCColPointers[thisRow]; i < CSCColPointers[thisRow + 1]; i++) {
@@ -104,7 +117,7 @@ void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
                 doneRows[thisRow] = true;
                 fromOrder[nextActiveRowIndex] = thisRow;
                 toOrder[thisRow] = nextActiveRowIndex;
-                nextActiveRowIndex++;
+                ++nextActiveRowIndex;
             }
         }
         rowsToStart.clear();
@@ -115,10 +128,13 @@ void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
     *numColors = rowsPerColor.size();
 }
 
-
 // based on the scipy package from python, scipy/sparse/sparsetools/csr.h on github
-void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb) {
-
+void csrPatternToCsc(int* CSRColIndices,
+                     int* CSRRowPointers,
+                     int* CSCRowIndices,
+                     int* CSCColPointers,
+                     int Nb)
+{
     int nnz = CSRRowPointers[Nb];
 
     // compute number of nnzs per column
@@ -141,7 +157,7 @@ void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices
             int col = CSRColIndices[j];
             int dest = CSCColPointers[col];
             CSCRowIndices[dest] = row;
-            CSCColPointers[col]++;
+            ++CSCColPointers[col];
         }
     }
 
@@ -152,6 +168,4 @@ void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices
     }
 }
 
-
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator

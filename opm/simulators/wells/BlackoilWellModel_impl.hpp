@@ -2011,7 +2011,10 @@ namespace Opm {
                          const int iterationIdx,
                          DeferredLogger& deferred_logger)
     {
-        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, deferred_logger);
+        this->updateAndCommunicateGroupData(reportStepIdx,
+                                            iterationIdx,
+                                            param_.nupcol_group_rate_tolerance_,
+                                            deferred_logger);
 
         // updateWellStateWithTarget might throw for multisegment wells hence we
         // have a parallel try catch here to thrown on all processes.
@@ -2020,14 +2023,19 @@ namespace Opm {
         for (const auto& well : well_container_) {
             // We only want to update wells under group-control here
             auto& ws = this->wellState().well(well->indexOfWell());
-            if (ws.production_cmode ==  Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP) {
+            if (ws.production_cmode ==  Well::ProducerCMode::GRUP ||
+                ws.injection_cmode == Well::InjectorCMode::GRUP)
+            {
                 well->updateWellStateWithTarget(simulator_, this->groupState(),
                                                 this->wellState(), deferred_logger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
                                    simulator_.gridView().comm())
-        this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, deferred_logger);
+        this->updateAndCommunicateGroupData(reportStepIdx,
+                                            iterationIdx,
+                                            param_.nupcol_group_rate_tolerance_,
+                                            deferred_logger);
     }
 
     template<typename TypeTag>

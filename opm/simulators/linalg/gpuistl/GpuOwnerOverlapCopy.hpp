@@ -24,8 +24,8 @@
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <vector>
 
-namespace Opm::gpuistl
-{
+namespace Opm::gpuistl {
+
 /**
  * @brief GPUSender is a wrapper class for classes which will implement copOwnerToAll
  * This is implemented with the intention of creating communicators with generic GPUSender
@@ -119,10 +119,11 @@ public:
 
     explicit GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
         : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
-        {
-        }
+    {
+    }
 
-    void copyOwnerToAll(const X& source, X& dest) const override {
+    void copyOwnerToAll(const X& source, X& dest) const override
+    {
         // TODO: [perf] Can we reduce copying from the GPU here?
         // TODO: [perf] Maybe create a global buffer instead?
         auto sourceAsDuneVector = source.template asDuneBlockVector<block_size>();
@@ -179,7 +180,6 @@ public:
 
     void copyOwnerToAll(const X& source, X& dest) const override
     {
-
         OPM_ERROR_IF(&source != &dest, "The provided GpuVectors' address did not match"); // In this context, source == dest!!!
         std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
 
@@ -198,9 +198,9 @@ public:
 
         {
             size_t i = 0;
-            for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
+            for (const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
                 processMap[i]=info->first;
-                if(info->second.second.m_size) {
+                if (info->second.second.m_size) {
                     MPI_Irecv(m_GPURecvBuf->data()+info->second.second.m_start,
                             detail::to_int(info->second.second.m_size),
                             MPI_BYTE,
@@ -209,16 +209,17 @@ public:
                             this->m_cpuOwnerOverlapCopy.communicator(),
                             &recvRequests[i]);
                     numberOfRealRecvRequests += 1;
-                } else {
-                    recvRequests[i]=MPI_REQUEST_NULL;
+                }
+                else {
+                    recvRequests[i] = MPI_REQUEST_NULL;
                 }
             }
         }
 
         {
             size_t i = 0;
-            for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
-                if(info->second.first.m_size) {
+            for (const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
+                if (info->second.first.m_size) {
                     MPI_Issend(m_GPUSendBuf->data()+info->second.first.m_start,
                             detail::to_int(info->second.first.m_size),
                             MPI_BYTE,
@@ -227,24 +228,28 @@ public:
                             this->m_cpuOwnerOverlapCopy.communicator(),
                             &sendRequests[i]);
                 } else {
-                    sendRequests[i]=MPI_REQUEST_NULL;
+                    sendRequests[i] = MPI_REQUEST_NULL;
                 }
             }
         }
         int finished = MPI_UNDEFINED;
         MPI_Status status;
-        for(size_t i = 0; i < numberOfRealRecvRequests; i++) {
+        for (size_t i = 0; i < numberOfRealRecvRequests; i++) {
             status.MPI_ERROR=MPI_SUCCESS;
             MPI_Waitany(m_messageInformation.size(), recvRequests.data(), &finished, &status);
 
-            if(status.MPI_ERROR!=MPI_SUCCESS) {
-                OPM_THROW(std::runtime_error, fmt::format("MPI_Error occurred while rank {} received a message from rank {}", rank, processMap[finished]));
+            if (status.MPI_ERROR!=MPI_SUCCESS) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("MPI_Error occurred while rank {} received a message from rank {}",
+                                      rank, processMap[finished]));
             }
         }
         MPI_Status recvStatus;
-        for(size_t i = 0; i < m_messageInformation.size(); i++) {
-            if(MPI_SUCCESS!=MPI_Wait(&sendRequests[i], &recvStatus)) {
-                OPM_THROW(std::runtime_error, fmt::format("MPI_Error occurred while rank {} sent a message from rank {}", rank, processMap[finished]));
+        for (size_t i = 0; i < m_messageInformation.size(); i++) {
+            if (MPI_SUCCESS != MPI_Wait(&sendRequests[i], &recvStatus)) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("MPI_Error occurred while rank {} sent a message from rank {}",
+                                      rank, processMap[finished]));
             }
         }
         // ...End of MPI stuff
@@ -279,20 +284,21 @@ private:
         std::vector<int> commpairIndicesCopyOnCPU;
         std::vector<int> commpairIndicesOwnerCPU;
 
-        for(auto process : ri) {
+        for (auto process : ri) {
             m_im[process.first] = std::pair(std::vector<int>(), std::vector<int>());
-            for(int send = 0; send < 2; ++send) {
+            for (int send = 0; send < 2; ++send) {
                 auto remoteEnd = send ? process.second.first->end()
                                       : process.second.second->end();
                 auto remote = send ? process.second.first->begin()
                                    : process.second.second->begin();
 
-                while(remote != remoteEnd) {
+                while (remote != remoteEnd) {
                     if (send ? (remote->localIndexPair().local().attribute() == 1)
                              : (remote->attribute() == 1)) {
                         if (send) {
                             m_im[process.first].first.push_back(remote->localIndexPair().local().local()); 
-                        } else {
+                        }
+                        else {
                             m_im[process.first].second.push_back(remote->localIndexPair().local().local());
                         }
                     }
@@ -317,13 +323,13 @@ private:
                                                         recvBufIdx * block_size,
                                                         noRecv * block_size * sizeof(field_type)))));
 
-                for(int x = 0; x < noSend; x++) {
-                    for(int bs = 0; bs < block_size; bs++) {
+                for (int x = 0; x < noSend; x++) {
+                    for (int bs = 0; bs < block_size; bs++) {
                         commpairIndicesOwnerCPU.push_back(it->second.first[x] * block_size + bs);
                     }
                 }
-                for(int x = 0; x < noRecv; x++) {
-                    for(int bs = 0; bs < block_size; bs++) {
+                for (int x = 0; x < noRecv; x++) {
+                    for (int bs = 0; bs < block_size; bs++) {
                         commpairIndicesCopyOnCPU.push_back(it->second.second[x] * block_size + bs);
                     }
                 }
@@ -385,9 +391,12 @@ class GpuOwnerOverlapCopy
 public:
     using X = GpuVector<field_type>;
 
-    explicit GpuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
+    explicit GpuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender)
+        : m_sender(sender)
+    {}
 
-    void copyOwnerToAll(const X& source, X& dest) const {
+    void copyOwnerToAll(const X& source, X& dest) const
+    {
         m_sender->copyOwnerToAll(source, dest);
     }
 
@@ -409,5 +418,7 @@ public:
 private:
     std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> m_sender;
 };
+
 } // namespace Opm::gpuistl
+
 #endif

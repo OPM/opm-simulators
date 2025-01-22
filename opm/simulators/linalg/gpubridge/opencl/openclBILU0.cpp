@@ -198,8 +198,9 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     bool use_multithreading = true;
 
 #if HAVE_OPENMP
-    if (omp_get_max_threads() == 1)
+    if (omp_get_max_threads() == 1) {
         use_multithreading = false;
+    }
 #endif
 
     if (jacMat && use_multithreading) {

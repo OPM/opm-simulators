@@ -892,7 +892,7 @@ protected:
 
       TracerBatch(int phaseIdx = 0) : phaseIdx_(phaseIdx) {}
 
-      int numTracer() const {return idx_.size(); }
+      int numTracer() const { return idx_.size(); }
 
       void addTracer(const int idx, const TV & concentration)
       {
