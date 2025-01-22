@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
@@ -138,6 +139,7 @@ std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar>::
 runOptimize(const int iteration_idx)
 {
+    OPM_TIMEFUNCTION();
     std::unique_ptr<GasLiftWellState<Scalar>> state;
     if (this->optimize_) {
         if (this->debug_limit_increase_decrease_) {
@@ -430,6 +432,7 @@ std::optional<typename GasLiftSingleWellGeneric<Scalar>::BasicRates>
 GasLiftSingleWellGeneric<Scalar>::
 computeWellRatesWithALQ_(Scalar alq) const
 {
+    OPM_TIMEFUNCTION();
     std::optional<BasicRates> rates;
     auto bhp_opt = computeBhpAtThpLimit_(alq);
     if (bhp_opt) {
@@ -1326,6 +1329,7 @@ std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar>::
 runOptimizeLoop_(bool increase)
 {
+    OPM_TIMEFUNCTION();
     if (this->debug)
         debugShowProducerControlMode();
     std::unique_ptr<GasLiftWellState<Scalar>> ret_value; // nullptr initially
@@ -1364,6 +1368,7 @@ runOptimizeLoop_(bool increase)
         state.stop_iteration = true;
     }
     while (!state.stop_iteration && (++state.it <= this->max_iterations_)) {
+        OPM_TIMEBLOCK(GasliftOptimizationLoopStage1);
         if (state.checkRatesViolated(new_rates))
             break;
         if (state.checkAlqOutsideLimits(temp_alq, new_rates.oil))
@@ -1443,6 +1448,7 @@ template<class Scalar>
 std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar>::runOptimize1_()
 {
+    OPM_TIMEFUNCTION();
     std::unique_ptr<GasLiftWellState<Scalar>> state;
     int inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
     int dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
@@ -1465,6 +1471,7 @@ template<class Scalar>
 std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar>::runOptimize2_()
 {
+    OPM_TIMEFUNCTION();
     std::unique_ptr<GasLiftWellState<Scalar>> state;
     state = tryIncreaseLiftGas_();
     if (!state || !(state->alqChanged())) {

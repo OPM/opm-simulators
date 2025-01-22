@@ -25,6 +25,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/output/data/Groups.hpp>
@@ -1255,6 +1256,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                               const Scalar tol_nupcol,
                               DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
     const int nupcol = schedule()[reportStepIdx].nupcol();
 
@@ -1268,6 +1270,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().updateGlobalIsGrup(comm_);
 
     if (iterationIdx <= nupcol) {
+        OPM_TIMEBLOCK(updateNupcol);
         this->updateNupcolWGState();
     } else {
         for (const auto& gr_name : schedule().groupNames(reportStepIdx)) {
@@ -1276,6 +1279,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                 if (this->groupState().has_injection_control(gr_name, phase)) {
                     if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP || 
                         this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::REIN) {
+		        OPM_TIMEBLOCK(extraIterationsAfterNupcol);
                         const bool is_vrep = this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP;
                         const Group& group = schedule().getGroup(gr_name, reportStepIdx);
                         const int np = this->wellState().numPhases();
@@ -1513,6 +1517,7 @@ template<class Scalar>
 Scalar BlackoilWellModelGeneric<Scalar>::
 updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor)
 {
+    OPM_TIMEFUNCTION();
     // Get the network and return if inactive (no wells in network at this time)
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {

@@ -143,6 +143,7 @@ std::optional<typename GasLiftSingleWell<TypeTag>::Scalar>
 GasLiftSingleWell<TypeTag>::
 computeBhpAtThpLimit_(Scalar alq, bool debug_output) const
 {
+    OPM_TIMEFUNCTION();
     auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlq(
         this->simulator_,
         this->summary_state_,

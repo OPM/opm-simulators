@@ -45,7 +45,7 @@
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
-
+#include <opm/common/TimingMacros.hpp>
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -335,6 +335,7 @@ updateGuideRatesForInjectionGroups(const Group& group,
                                    GuideRate* guideRate,
                                    DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
         updateGuideRatesForInjectionGroups(groupTmp, schedule, summaryState, pu, reportStepIdx, wellState, group_state, guideRate, deferred_logger);
@@ -400,6 +401,7 @@ updateGroupTargetReduction(const Group& group,
                            GroupState<Scalar>& group_state,
                            std::vector<Scalar>& groupTargetReduction)
 {
+    OPM_TIMEFUNCTION();
     const int np = wellState.numPhases();
     for (const std::string& subGroupName : group.groups()) {
         std::vector<Scalar> subGroupTargetReduction(np, 0.0);
@@ -544,6 +546,7 @@ updateWellRatesFromGroupTargetScale(const Scalar scale,
                                     const GroupState<Scalar>& group_state,
                                     WellState<Scalar>& wellState)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         bool individual_control = false;
         if (isInjector) {
@@ -614,6 +617,7 @@ updateVREPForGroups(const Group& group,
                     const WellState<Scalar>& wellState,
                     GroupState<Scalar>& group_state)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
         updateVREPForGroups(groupTmp, schedule, reportStepIdx, wellState, group_state);
@@ -640,6 +644,7 @@ updateReservoirRatesInjectionGroups(const Group& group,
                                     const WellState<Scalar>& wellState,
                                     GroupState<Scalar>& group_state)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
         updateReservoirRatesInjectionGroups(groupTmp, schedule, reportStepIdx, wellState, group_state);
@@ -666,6 +671,7 @@ updateSurfaceRatesInjectionGroups(const Group& group,
                                   const WellState<Scalar>& wellState,
                                   GroupState<Scalar>& group_state)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
         updateSurfaceRatesInjectionGroups(groupTmp, schedule, reportStepIdx, wellState, group_state);
@@ -692,6 +698,7 @@ updateWellRates(const Group& group,
                 const WellState<Scalar>& wellStateNupcol,
                 WellState<Scalar>& wellState)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
         updateWellRates(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
@@ -724,6 +731,7 @@ updateGroupProductionRates(const Group& group,
                            const WellState<Scalar>& wellState,
                            GroupState<Scalar>& group_state)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
         updateGroupProductionRates(groupTmp, schedule, reportStepIdx, wellState, group_state);
@@ -747,6 +755,7 @@ updateREINForGroups(const Group& group,
                     GroupState<Scalar>& group_state,
                     bool sum_rank)
 {
+    OPM_TIMEFUNCTION();
     const int np = wellState.numPhases();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
@@ -781,6 +790,7 @@ updateGpMaintTargetForGroups(const Group& group,
                              const WellState<Scalar>& well_state,
                              GroupState<Scalar>& group_state)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
         updateGpMaintTargetForGroups(groupTmp, schedule, regional_values, reportStepIdx, dt, well_state, group_state);
@@ -875,7 +885,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                         const int report_time_step)
 {
     // TODO: Only dealing with production networks for now.
-
+    OPM_TIMEFUNCTION();
     if (!network.active()) {
         return {};
     }
@@ -969,6 +979,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                 const Scalar up_press = node_pressures[(*upbranch).uptree_node()];
                 const auto vfp_table = (*upbranch).vfp_table();
                 if (vfp_table) {
+                    OPM_TIMEBLOCK(NetworkVfpCalculations);
                     // The rates are here positive, but the VFP code expects the
                     // convention that production rates are negative, so we must
                     // take a copy and flip signs.
@@ -1153,6 +1164,7 @@ groupControlledWells(const Schedule& schedule,
                      const bool is_production_group,
                      const Phase injection_phase)
 {
+    OPM_TIMEFUNCTION();
     const Group& group = schedule.getGroup(group_name, report_step);
     int num_wells = 0;
     for (const std::string& child_group : group.groups()) {
@@ -1330,6 +1342,7 @@ checkGroupConstraintsProd(const std::string& name,
 
     // NOTE: if name is a group, the rates-argument is the portion of the 'full' group rates that
     // is potentially available for control by an ancestor, i.e. full rates minus reduction rates
+    OPM_TIMEFUNCTION();
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
 
     if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
@@ -1803,6 +1816,7 @@ updateGuideRates(const Group& group,
                  std::vector<Scalar>& pot,
                  DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     guide_rate->updateGuideRateExpiration(sim_time, report_step);
     updateGuideRateForProductionGroups(group, schedule, pu, report_step, sim_time, well_state, group_state, comm, guide_rate, pot);
     updateGuideRatesForInjectionGroups(group, schedule, summary_state, pu, report_step, well_state, group_state, guide_rate, deferred_logger);
@@ -1822,6 +1836,7 @@ updateGuideRateForProductionGroups(const Group& group,
                                    GuideRate* guideRate,
                                    std::vector<Scalar>& pot)
 {
+    OPM_TIMEFUNCTION();
     const int np = pu.num_phases;
     for (const std::string& groupName : group.groups()) {
         std::vector<Scalar> thisPot(np, 0.0);
@@ -1899,6 +1914,7 @@ updateGuideRatesForWells(const Schedule& schedule,
                          const Parallel::Communication& comm,
                          GuideRate* guideRate)
 {
+    OPM_TIMEFUNCTION();
     for (const auto& well : schedule.getWells(reportStepIdx)) {
         std::array<Scalar,3> potentials{};
         auto& [oilpot, gaspot, waterpot] = potentials;

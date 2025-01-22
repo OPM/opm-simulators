@@ -394,6 +394,7 @@ namespace Opm
                                       std::vector<Scalar>& well_flux,
                                       DeferredLogger& deferred_logger) const
     {
+        OPM_TIMEFUNCTION();
         // creating a copy of the well itself, to avoid messing up the explicit information
         // during this copy, the only information not copied properly is the well controls
         MultisegmentWell<TypeTag> well_copy(*this);
@@ -2107,6 +2108,7 @@ namespace Opm
                                     DeferredLogger& deferred_logger,
                                     bool iterate_if_no_solution) const
     {
+        OPM_TIMEFUNCTION();
         // Make the frates() function.
         auto frates = [this, &simulator, &deferred_logger](const Scalar bhp) {
             // Not solving the well equations here, which means we are

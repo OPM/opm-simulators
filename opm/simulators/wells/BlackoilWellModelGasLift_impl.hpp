@@ -27,7 +27,7 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #endif
-
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 
 #if HAVE_MPI
@@ -45,6 +45,7 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
                        GroupState<Scalar>& groupState,
                        DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     bool do_glift_optimization = false;
     int num_wells_changed = 0;
     const double simulation_time = simulator.time();
@@ -139,6 +140,7 @@ gasLiftOptimizationStage1(const Simulator& simulator,
                           GLiftWellStateMap& state_map,
                           DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     auto comm = simulator.vanguard().grid().comm();
     int num_procs = comm.size();
     // NOTE: Gas lift optimization stage 1 seems to be difficult
@@ -188,8 +190,12 @@ gasLiftOptimizationStage1(const Simulator& simulator,
             }
             num_rates_to_sync = groups_to_sync.size();
         }
-        num_rates_to_sync = comm.sum(num_rates_to_sync);
+        {
+            OPM_TIMEBLOCK(WaitForGasLiftSyncGroups);  
+            num_rates_to_sync = comm.sum(num_rates_to_sync);
+        }
         if (num_rates_to_sync > 0) {
+            OPM_TIMEBLOCK(GasLiftSyncGroups);
             std::vector<int> group_indexes;
             group_indexes.reserve(num_rates_to_sync);
             std::vector<Scalar> group_alq_rates;
@@ -261,6 +267,7 @@ gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
                                     GLiftSyncGroups& sync_groups,
                                     DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     const auto& summary_state = simulator.vanguard().summaryState();
     auto glift = std::make_unique<GasLiftSingleWell<TypeTag>>(*well,
                                                               simulator,
