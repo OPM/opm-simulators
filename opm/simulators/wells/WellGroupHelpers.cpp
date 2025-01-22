@@ -98,21 +98,13 @@ namespace Opm {
             const auto& groupTmp = schedule.getGroup(groupName, reportStepIdx);
             const auto& gefac = groupTmp.getGroupEfficiencyFactor();
             rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
-            const auto& gsatprod = schedule[reportStepIdx].gsatprod.get();
-            // only sum once
-            if (wellState.isRank0() && !injector && gsatprod.has(groupName)) {
-                const auto& gsatprod_rates = gsatprod.get(groupName);
-                const auto& pu = wellState.phaseUsage();
-                using Rate = GSatProd::GSatProdGroup::Rate;
-                if (pu.phase_used[BlackoilPhases::Aqua] && pu.phase_pos[BlackoilPhases::Aqua] == phasePos) {
-                    rate += gsatprod_rates.rate[Rate::Water];
-                }
-                if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_pos[BlackoilPhases::Liquid] == phasePos) {
-                    rate += gsatprod_rates.rate[Rate::Oil];
-                }
-                if (pu.phase_used[BlackoilPhases::Vapour] && pu.phase_pos[BlackoilPhases::Vapour] == phasePos) {
-                    rate += gsatprod_rates.rate[Rate::Gas];
-                }
+        }
+
+        // only sum satelite production once
+        if (wellState.isRank0() && !injector) {
+            const auto rateComp = selectRateComponent(wellState.phaseUsage(), phasePos);
+            if (rateComp.has_value()) {
+                rate += satelliteProduction(schedule[reportStepIdx], group.groups(), *rateComp);
             }
         }
 
@@ -153,6 +145,42 @@ namespace Opm {
         }
         return rate;
     }
+
+template <typename Scalar>
+Scalar WellGroupHelpers<Scalar>::
+satelliteProduction(const ScheduleState& sched,
+                    const std::vector<std::string>& groups,
+                    const GSatProd::GSatProdGroup::Rate rateComp)
+{
+    auto gsatProdRate = Scalar{};
+    const auto& gsatProd = sched.gsatprod();
+    for (const auto& group : groups) {
+        if (! gsatProd.has(group)) {
+            continue;
+        }
+        gsatProdRate += gsatProd.get(group).rate[rateComp];
+    }
+    return gsatProdRate;
+}
+
+template <typename Scalar>
+std::optional<GSatProd::GSatProdGroup::Rate> WellGroupHelpers<Scalar>::
+selectRateComponent(const PhaseUsage& pu, const int phasePos)
+{
+    using Rate = GSatProd::GSatProdGroup::Rate;
+
+    for (const auto& [phase, rateComp] : std::array {
+        std::pair { BlackoilPhases::Aqua, Rate::Water },
+        std::pair { BlackoilPhases::Liquid, Rate::Oil },
+        std::pair { BlackoilPhases::Vapour, Rate::Gas } })
+    {
+        if (pu.phase_used[phase] && (pu.phase_pos[phase] == phasePos)) {
+            return rateComp;
+        }
+    }
+
+    return std::nullopt;
+}
 
 template<class Scalar>
 void WellGroupHelpers<Scalar>::
