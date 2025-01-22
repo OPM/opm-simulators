@@ -1172,7 +1172,7 @@ if(dune-alugrid_FOUND)
     examples/fracture_discretefracture.cpp
   )
 endif()
-if(USE_MPI)
+if(MPI_FOUND)
   list (APPEND MAIN_SOURCE_FILES
     opm/simulators/flow/ReservoirCoupling.cpp
     opm/simulators/flow/ReservoirCouplingMaster.cpp
