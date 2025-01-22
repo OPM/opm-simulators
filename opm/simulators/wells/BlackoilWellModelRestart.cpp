@@ -258,7 +258,7 @@ loadRestartData(const data::Wells&                 rst_wells,
     {
         const auto& well_name = well_state.name(well_index);
 
-        this->loadRestartWellData(well_name, handle_ms_well & !well_state.is_permanently_inactive_well(well_name), phs,
+        this->loadRestartWellData(well_name, handle_ms_well && !well_state.is_permanently_inactive_well(well_name), phs,
                                   rst_wells.at(well_name),
                                   wellModel_.perfData(well_index),
                                   well_state.well(well_index));
