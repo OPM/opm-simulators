@@ -23,6 +23,8 @@
 #ifndef OPM_GENERIC_THRESHOLD_PRESSURE_IMPL_HPP
 #define OPM_GENERIC_THRESHOLD_PRESSURE_IMPL_HPP
 
+#include <opm/simulators/flow/GenericThresholdPressure.hpp>
+
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/rangegenerators.hh>
 
@@ -33,8 +35,6 @@
 #include <opm/input/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/input/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/input/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
-
-#include <opm/simulators/flow/GenericThresholdPressure.hpp>
 
 #include <fmt/format.h>
 

@@ -18,10 +18,15 @@
 */
 #ifndef OPM_GPUISTL_GPUOWNEROVERLAPCOPY_HPP
 #define OPM_GPUISTL_GPUOWNEROVERLAPCOPY_HPP
+
 #include <dune/istl/owneroverlapcopy.hh>
+
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+
+#include <mpi.h>
+
 #include <memory>
 #include <mutex>
-#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <vector>
 
 namespace Opm::gpuistl {

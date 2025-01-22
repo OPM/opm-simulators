@@ -28,11 +28,13 @@
 #ifndef EWOMS_DISPERSION_MODULE_HH
 #define EWOMS_DISPERSION_MODULE_HH
 
+#include <dune/common/fvector.hh>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
 
 #include <stdexcept>
 

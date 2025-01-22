@@ -6,17 +6,21 @@
 // NOTE: This file is a modified version of dune/istl/paamg/twolevelmethod.hh from
 // dune-istl release 2.6.0. Modifications have been kept as minimal as possible.
 
-#include <tuple>
-
-#include<dune/istl/operators.hh>
+#include <dune/istl/operators.hh>
 //#include "amg.hh"
 //#include"galerkin.hh"
-#include<dune/istl/paamg/amg.hh>
-#include<dune/istl/paamg/galerkin.hh>
-#include<dune/istl/solver.hh>
+#include <dune/istl/paamg/amg.hh>
+#include <dune/istl/paamg/galerkin.hh>
+#include <dune/istl/solver.hh>
 
-#include<dune/common/unused.hh>
-#include<dune/common/version.hh>
+#include <dune/common/unused.hh>
+#include <dune/common/version.hh>
+
+#include <cstddef>
+#include <iostream>
+#include <memory>
+#include <tuple>
+#include <vector>
 
 /**
  * @addtogroup ISTL_PAAMG
