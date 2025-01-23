@@ -33,7 +33,7 @@
 #endif
 
 #include <cassert>
-#include <stddef.h>
+#include <cstddef>
 #include <vector>
 
 namespace Opm {
@@ -51,7 +51,7 @@ public:
         updateMpiDataSize_();
     }
 
-    explicit MpiBuffer(size_t size)
+    explicit MpiBuffer(std::size_t size)
     {
         data_.resize(size);
 
@@ -62,7 +62,7 @@ public:
     /*!
      * \brief Set the size of the buffer
      */
-    void resize(size_t newSize)
+    void resize(std::size_t newSize)
     {
         data_.resize(newSize);
         updateMpiDataSize_();
@@ -145,13 +145,13 @@ public:
     /*!
      * \brief Returns the number of data objects in the buffer
      */
-    size_t size() const
+    std::size_t size() const
     { return data_.size(); }
 
     /*!
      * \brief Provide access to the buffer data.
      */
-    DataType& operator[](size_t i)
+    DataType& operator[](std::size_t i)
     {
         assert(i < data_.size());
         return data_[i];
@@ -160,7 +160,7 @@ public:
     /*!
      * \brief Provide access to the buffer data.
      */
-    const DataType& operator[](size_t i) const
+    const DataType& operator[](std::size_t i) const
     {
         assert(i < data_.size());
         return data_[i];
@@ -214,7 +214,7 @@ private:
 
     std::vector<DataType> data_;
 #if HAVE_MPI
-    size_t mpiDataSize_;
+    std::size_t mpiDataSize_;
     MPI_Datatype mpiDataType_;
     MPI_Request mpiRequest_;
     MPI_Status mpiStatus_;
