@@ -50,6 +50,7 @@ public:
     // we use hard-coded Evaluation type for now
     // TODO: we can try to use DyanmicEvaluation here
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq + numResEq>;
+    using Eval = DenseAd::Evaluation<Scalar, numResEq>;
 
     // TODO: trying to refactor to avoid duplication
     using FluidStateScalar = CompositionalFluidState<Scalar, FluidSystem>;
@@ -57,10 +58,15 @@ public:
 
     FluidStateScalar toFluidStateScalar() const;
 
+    FluidState toFluidState() const;
+
     // void init();
     void update(const SingleCompWellState<Scalar>& well_state);
     void updateEvaluation();
 
+    EvalWell getBhp() const;
+
+    static EvalWell extendEval(const Eval& in);
 private:
     std::array<Scalar, numWellEq> value_;
     std::array<EvalWell, numWellEq> evaluation_;

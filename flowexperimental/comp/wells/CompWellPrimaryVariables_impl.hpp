@@ -89,5 +89,59 @@ toFluidStateScalar() const
     return fluid_state;
 }
 
+template <typename FluidSystem, typename Indices>
+typename CompWellPrimaryVariables<FluidSystem, Indices>::FluidState
+CompWellPrimaryVariables<FluidSystem, Indices>::
+toFluidState() const
+{
+    FluidState fluid_state;
+    // will be different if more connections are involved
+    const auto& pressure = evaluation_[Bhp];
+    std::array<EvalWell, FluidSystem::numComponents> total_molar_fractions;
+    EvalWell sum = 0.;
+    for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
+        total_molar_fractions[i] = evaluation_[i + 1];
+        sum += total_molar_fractions[i];
+    }
+    total_molar_fractions[FluidSystem::numComponents - 1] = 1.0 - sum;
+
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        fluid_state.setMoleFraction(i, max(total_molar_fractions[i], 1.e-8));
+    }
+
+    fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
+    fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
+
+    fluid_state.setTemperature(273.15 + 150.0);
+
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
+    }
+
+    fluid_state.setLvalue(-1.);
+
+    return fluid_state;
+}
+
+template <typename FluidSystem, typename Indices>
+typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
+CompWellPrimaryVariables<FluidSystem, Indices>::
+getBhp() const
+{
+    return evaluation_[Bhp];
+}
+
+template <typename FluidSystem, typename Indices>
+typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
+CompWellPrimaryVariables<FluidSystem, Indices>::
+extendEval(const Eval& in)
+{
+    EvalWell out = 0.0;
+    out.setValue(in.value());
+    for(int eq_idx = 0; eq_idx < Indices::numEq;++eq_idx) {
+        out.setDerivative(eq_idx, in.derivative(eq_idx));
+    }
+    return out;
+}
 
 }
