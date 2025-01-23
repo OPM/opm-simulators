@@ -29,12 +29,12 @@
 
 #if HAVE_MPI
 #include <mpi.h>
+#include <type_traits>
 #endif
 
-#include <stddef.h>
-
-#include <type_traits>
 #include <cassert>
+#include <cstddef>
+#include <vector>
 
 namespace Opm {
 
@@ -47,35 +47,24 @@ class MpiBuffer
 public:
     MpiBuffer()
     {
-        data_ = NULL;
-        dataSize_ = 0;
-
         setMpiDataType_();
         updateMpiDataSize_();
     }
 
-    explicit MpiBuffer(size_t size)
+    explicit MpiBuffer(std::size_t size)
     {
-        data_ = new DataType[size];
-        dataSize_ = size;
+        data_.resize(size);
 
         setMpiDataType_();
         updateMpiDataSize_();
     }
-
-    MpiBuffer(const MpiBuffer&) = default;
-
-    ~MpiBuffer()
-    { delete[] data_; }
 
     /*!
      * \brief Set the size of the buffer
      */
-    void resize(size_t newSize)
+    void resize(std::size_t newSize)
     {
-        delete[] data_;
-        data_ = new DataType[newSize];
-        dataSize_ = newSize;
+        data_.resize(newSize);
         updateMpiDataSize_();
     }
 
@@ -85,7 +74,7 @@ public:
     void send([[maybe_unused]] unsigned peerRank)
     {
 #if HAVE_MPI
-        MPI_Isend(data_,
+        MPI_Isend(data_.data(),
                   static_cast<int>(mpiDataSize_),
                   mpiDataType_,
                   static_cast<int>(peerRank),
@@ -111,7 +100,7 @@ public:
     void receive([[maybe_unused]] unsigned peerRank)
     {
 #if HAVE_MPI
-        MPI_Recv(data_,
+        MPI_Recv(data_.data(),
                  static_cast<int>(mpiDataSize_),
                  mpiDataType_,
                  static_cast<int>(peerRank),
@@ -156,24 +145,24 @@ public:
     /*!
      * \brief Returns the number of data objects in the buffer
      */
-    size_t size() const
-    { return dataSize_; }
+    std::size_t size() const
+    { return data_.size(); }
 
     /*!
      * \brief Provide access to the buffer data.
      */
-    DataType& operator[](size_t i)
+    DataType& operator[](std::size_t i)
     {
-        assert(i < dataSize_);
+        assert(i < data_.size());
         return data_[i];
     }
 
     /*!
      * \brief Provide access to the buffer data.
      */
-    const DataType& operator[](size_t i) const
+    const DataType& operator[](std::size_t i) const
     {
-        assert(i < dataSize_);
+        assert(i < data_.size());
         return data_[i];
     }
 
@@ -182,31 +171,31 @@ private:
     {
 #if HAVE_MPI
         // set the MPI data type
-        if (std::is_same<DataType, char>::value)
+        if (std::is_same_v<DataType, char>)
             mpiDataType_ = MPI_CHAR;
-        else if (std::is_same<DataType, unsigned char>::value)
+        else if (std::is_same_v<DataType, unsigned char>)
             mpiDataType_ = MPI_UNSIGNED_CHAR;
-        else if (std::is_same<DataType, short>::value)
+        else if (std::is_same_v<DataType, short>)
             mpiDataType_ = MPI_SHORT;
-        else if (std::is_same<DataType, unsigned short>::value)
+        else if (std::is_same_v<DataType, unsigned short>)
             mpiDataType_ = MPI_UNSIGNED_SHORT;
-        else if (std::is_same<DataType, int>::value)
+        else if (std::is_same_v<DataType, int>)
             mpiDataType_ = MPI_INT;
-        else if (std::is_same<DataType, unsigned>::value)
+        else if (std::is_same_v<DataType, unsigned>)
             mpiDataType_ = MPI_UNSIGNED;
-        else if (std::is_same<DataType, long>::value)
+        else if (std::is_same_v<DataType, long>)
             mpiDataType_ = MPI_LONG;
-        else if (std::is_same<DataType, unsigned long>::value)
+        else if (std::is_same_v<DataType, unsigned long>)
             mpiDataType_ = MPI_UNSIGNED_LONG;
-        else if (std::is_same<DataType, long long>::value)
+        else if (std::is_same_v<DataType, long long>)
             mpiDataType_ = MPI_LONG_LONG;
-        else if (std::is_same<DataType, unsigned long long>::value)
+        else if (std::is_same_v<DataType, unsigned long long>)
             mpiDataType_ = MPI_UNSIGNED_LONG_LONG;
-        else if (std::is_same<DataType, float>::value)
+        else if (std::is_same_v<DataType, float>)
             mpiDataType_ = MPI_FLOAT;
-        else if (std::is_same<DataType, double>::value)
+        else if (std::is_same_v<DataType, double>)
             mpiDataType_ = MPI_DOUBLE;
-        else if (std::is_same<DataType, long double>::value)
+        else if (std::is_same_v<DataType, long double>)
             mpiDataType_ = MPI_LONG_DOUBLE;
         else {
             mpiDataType_ = MPI_BYTE;
@@ -217,16 +206,15 @@ private:
     void updateMpiDataSize_()
     {
 #if HAVE_MPI
-        mpiDataSize_ = dataSize_;
+        mpiDataSize_ = data_.size();
         if (mpiDataType_ == MPI_BYTE)
             mpiDataSize_ *= sizeof(DataType);
 #endif // HAVE_MPI
     }
 
-    DataType *data_;
-    size_t dataSize_;
+    std::vector<DataType> data_;
 #if HAVE_MPI
-    size_t mpiDataSize_;
+    std::size_t mpiDataSize_;
     MPI_Datatype mpiDataType_;
     MPI_Request mpiRequest_;
     MPI_Status mpiStatus_;
