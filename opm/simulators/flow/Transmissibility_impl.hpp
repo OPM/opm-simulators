@@ -61,10 +61,10 @@ namespace details {
 
     std::uint64_t isId(std::uint32_t elemIdx1, std::uint32_t elemIdx2)
     {
-        std::uint32_t elemAIdx = std::min(elemIdx1, elemIdx2);
-        std::uint64_t elemBIdx = std::max(elemIdx1, elemIdx2);
+        const std::uint32_t elemAIdx = std::min(elemIdx1, elemIdx2);
+        const std::uint64_t elemBIdx = std::max(elemIdx1, elemIdx2);
 
-        return (elemBIdx<<elemIdxShift) + elemAIdx;
+        return (elemBIdx << elemIdxShift) + elemAIdx;
     }
 
     std::pair<std::uint32_t, std::uint32_t> isIdReverse(const std::uint64_t& id)
@@ -72,15 +72,15 @@ namespace details {
         // Assigning an unsigned integer to a narrower type discards the most significant bits.
         // See "The C programming language", section A.6.2.
         // NOTE that the ordering of element A and B may have changed
-        std::uint32_t elemAIdx = id;
-        std::uint32_t elemBIdx = (id - elemAIdx) >> elemIdxShift;
+        const std::uint32_t elemAIdx = static_cast<uint32_t>(id);
+        const std::uint32_t elemBIdx = (id - elemAIdx) >> elemIdxShift;
 
         return std::make_pair(elemAIdx, elemBIdx);
     }
 
     std::uint64_t directionalIsId(std::uint32_t elemIdx1, std::uint32_t elemIdx2)
     {
-        return (std::uint64_t(elemIdx1)<<elemIdxShift) + elemIdx2;
+        return (std::uint64_t(elemIdx1) << elemIdxShift) + elemIdx2;
     }
 }
 
