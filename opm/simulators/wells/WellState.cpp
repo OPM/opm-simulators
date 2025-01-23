@@ -919,48 +919,44 @@ template<class Scalar>
 void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& comm)
 {
     // Compute the size of the data.
-    std::size_t sz = 0;
-    for (const auto& [_, owner_rates] : this->well_rates) {
-        (void)_;
-        const auto& [__, rates] = owner_rates;
-        (void)__;
-        sz += rates.size();
-    }
+    std::size_t sz = std::accumulate(this->well_rates.begin(), this->well_rates.end(), std::size_t{0},
+                     [](const std::size_t acc, const auto& rates)
+                     { return acc + rates.second.second.size(); });
     sz += this->alq_state.pack_size();
 
     // Make a vector and collect all data into it.
     std::vector<Scalar> data(sz);
-    std::size_t pos = 0;
-    for (const auto& [_, owner_rates] : this->well_rates) {
-        (void)_;
-        const auto& [owner, rates] = owner_rates;
-        for (const auto& value : rates) {
-            if (owner)
-                data[pos++] = value;
-            else
-                data[pos++] = 0;
-        }
+    auto pos = data.begin();
+    std::for_each(this->well_rates.begin(), this->well_rates.end(),
+                  [&pos](const auto& input)
+                  {
+                      const auto& [owner, rates] = input.second;
+                      if (owner) {
+                          std::copy(rates.begin(), rates.end(), pos);
+                      }
+                      pos += rates.size();
+                  });
+
+    if (pos != data.end()) {
+        pos += this->alq_state.pack_data(&(*pos));
     }
-    if (!data.empty() && pos != sz) {
-        pos += this->alq_state.pack_data(&data[pos]);
-    }
-    assert(pos == sz);
+    assert(pos == data.end());
 
     // Communicate it with a single sum() call.
     comm.sum(data.data(), data.size());
 
-    pos = 0;
-    for (auto& [_, owner_rates] : this->well_rates) {
-        (void)_;
-        auto& [__, rates] = owner_rates;
-        (void)__;
-        for (auto& value : rates)
-            value = data[pos++];
+    pos = data.begin();
+    std::for_each(this->well_rates.begin(), this->well_rates.end(),
+                  [&pos](auto& input)
+                  {
+                      auto& rates = input.second.second;
+                      std::copy(pos, pos + rates.size(), rates.begin());
+                      pos += rates.size();
+                  });
+    if (pos != data.end()) {
+        pos += this->alq_state.unpack_data(&(*pos));
     }
-    if (!data.empty() && pos != sz) {
-        pos += this->alq_state.unpack_data(&data[pos]);
-    }
-    assert(pos == sz);
+    assert(pos == data.end());
 }
 
 template<class Scalar>
