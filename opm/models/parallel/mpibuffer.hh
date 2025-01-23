@@ -171,31 +171,31 @@ private:
     {
 #if HAVE_MPI
         // set the MPI data type
-        if (std::is_same<DataType, char>::value)
+        if (std::is_same_v<DataType, char>)
             mpiDataType_ = MPI_CHAR;
-        else if (std::is_same<DataType, unsigned char>::value)
+        else if (std::is_same_v<DataType, unsigned char>)
             mpiDataType_ = MPI_UNSIGNED_CHAR;
-        else if (std::is_same<DataType, short>::value)
+        else if (std::is_same_v<DataType, short>)
             mpiDataType_ = MPI_SHORT;
-        else if (std::is_same<DataType, unsigned short>::value)
+        else if (std::is_same_v<DataType, unsigned short>)
             mpiDataType_ = MPI_UNSIGNED_SHORT;
-        else if (std::is_same<DataType, int>::value)
+        else if (std::is_same_v<DataType, int>)
             mpiDataType_ = MPI_INT;
-        else if (std::is_same<DataType, unsigned>::value)
+        else if (std::is_same_v<DataType, unsigned>)
             mpiDataType_ = MPI_UNSIGNED;
-        else if (std::is_same<DataType, long>::value)
+        else if (std::is_same_v<DataType, long>)
             mpiDataType_ = MPI_LONG;
-        else if (std::is_same<DataType, unsigned long>::value)
+        else if (std::is_same_v<DataType, unsigned long>)
             mpiDataType_ = MPI_UNSIGNED_LONG;
-        else if (std::is_same<DataType, long long>::value)
+        else if (std::is_same_v<DataType, long long>)
             mpiDataType_ = MPI_LONG_LONG;
-        else if (std::is_same<DataType, unsigned long long>::value)
+        else if (std::is_same_v<DataType, unsigned long long>)
             mpiDataType_ = MPI_UNSIGNED_LONG_LONG;
-        else if (std::is_same<DataType, float>::value)
+        else if (std::is_same_v<DataType, float>)
             mpiDataType_ = MPI_FLOAT;
-        else if (std::is_same<DataType, double>::value)
+        else if (std::is_same_v<DataType, double>)
             mpiDataType_ = MPI_DOUBLE;
-        else if (std::is_same<DataType, long double>::value)
+        else if (std::is_same_v<DataType, long double>)
             mpiDataType_ = MPI_LONG_DOUBLE;
         else {
             mpiDataType_ = MPI_BYTE;
