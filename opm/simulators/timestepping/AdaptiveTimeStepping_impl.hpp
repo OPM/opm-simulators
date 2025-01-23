@@ -207,7 +207,7 @@ step(const SimulatorTimer& simulator_timer,
                              )> tuning_updater
 )
 {
-    SubStepper sub_stepper{
+    SubStepper<Solver> sub_stepper{
         *this, simulator_timer, solver, is_event, tuning_updater,
     };
     return sub_stepper.run();
@@ -552,7 +552,7 @@ runStepOriginal_()
         report_step,
         maxTimeStep_()
     };
-    SubStepIteration substepIteration{*this, substep_timer, original_time_step, /*final_step=*/true};
+    SubStepIteration<Solver> substepIteration{*this, substep_timer, original_time_step, /*final_step=*/true};
     return substepIteration.run();
 }
 
@@ -644,7 +644,7 @@ runStepReservoirCouplingMaster_()
         bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + current_step_length, step_end_time
         );
-        SubStepIteration substepIteration{*this, substep_timer, current_step_length, final_step};
+        SubStepIteration<Solver> substepIteration{*this, substep_timer, current_step_length, final_step};
         auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
         current_time += current_step_length;
@@ -688,7 +688,7 @@ runStepReservoirCouplingSlave_()
         bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + timestep, step_end_time
         );
-        SubStepIteration substepIteration{*this, substep_timer, timestep, final_step};
+        SubStepIteration<Solver> substepIteration{*this, substep_timer, timestep, final_step};
         auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
         current_time += timestep;
