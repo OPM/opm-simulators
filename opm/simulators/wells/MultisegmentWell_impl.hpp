@@ -1656,32 +1656,28 @@ namespace Opm
         // if we fail to solve eqs, we reset status/operability before leaving
         const auto well_status_orig = this->wellStatus_;
         const auto operability_orig = this->operability_status_;
-        auto well_status_cur = well_status_orig;
         // don't allow opening wells that are stopped from schedule or has a stopped well state
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
                                  well_state.well(this->index_of_well_).status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
         const bool allow_switching = !this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) &&
                                      (!fixed_control || !fixed_status) && allow_open;
-        bool changed = false;
         bool final_check = false;
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
-            its_since_last_switch++;
+            ++its_since_last_switch;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
-                changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
-                                                                         inj_controls, prod_controls, wqTotal,
-                                                                         deferred_logger, fixed_control, fixed_status);
-                if (changed){
+                bool changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
+                                                                              inj_controls, prod_controls, wqTotal,
+                                                                              deferred_logger, fixed_control,
+                                                                              fixed_status);
+                if (changed) {
                     its_since_last_switch = 0;
-                    switch_count++;
-                    if (well_status_cur != this->wellStatus_) {
-                        well_status_cur = this->wellStatus_;
-                    }
+                    ++switch_count;
                 }
                 if (!changed && final_check) {
                     break;
@@ -1690,7 +1686,8 @@ namespace Opm
                 }
             }
 
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
+                                           well_state, group_state, deferred_logger);
 
             const BVectorWell dx_well = this->linSys_.solve();
 
