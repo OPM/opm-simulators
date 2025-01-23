@@ -412,8 +412,8 @@ protected:
                            Scalar delta_alq) const;
 
     LimitedRates
-    updateRatesToGroupLimits_(const BasicRates& rates,
-                              const LimitedRates& new_rates,
+    updateRatesToGroupLimits_(const BasicRates& old_rates,
+                              const LimitedRates& rates,
                               const std::string& gr_name = "") const;
 
     void updateWellStateAlqFixedValue_(const GasLiftWell& well);

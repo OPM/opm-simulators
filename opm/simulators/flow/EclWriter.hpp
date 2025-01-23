@@ -309,7 +309,7 @@ public:
         if (this->sub_step_report_.max_linear_iterations != 0) {
             miscSummaryData["NLINSMAX"] = this->sub_step_report_.max_linear_iterations;
         }
-        if (this->simulation_report_.success.total_newton_iterations != 0) {
+        if (this->simulation_report_.success.total_linear_iterations != 0) {
             miscSummaryData["MSUMLINS"] = this->simulation_report_.success.total_linear_iterations;
         }
         if (this->simulation_report_.success.total_newton_iterations != 0) {

@@ -319,7 +319,7 @@ private:
         }
 
         HYPRE_IJMatrixAssemble(A_hypre_);
-        HYPRE_IJMatrixGetObject(A_hypre_, (void**)&parcsr_A_);
+        HYPRE_IJMatrixGetObject(A_hypre_, reinterpret_cast<void**>(&parcsr_A_));
     }
 
     /**
@@ -350,8 +350,8 @@ private:
 
         HYPRE_IJVectorAssemble(x_hypre_);
         HYPRE_IJVectorAssemble(b_hypre_);
-        HYPRE_IJVectorGetObject(x_hypre_, (void**)&par_x_);
-        HYPRE_IJVectorGetObject(b_hypre_, (void**)&par_b_);
+        HYPRE_IJVectorGetObject(x_hypre_, reinterpret_cast<void**>(&par_x_));
+        HYPRE_IJVectorGetObject(b_hypre_, reinterpret_cast<void**>(&par_b_));
     }
 
     /**

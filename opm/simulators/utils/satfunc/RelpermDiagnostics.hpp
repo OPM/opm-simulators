@@ -77,10 +77,10 @@ namespace Opm {
             NoFamily
         };
 
-        SaturationFunctionFamily satFamily_;
+        SaturationFunctionFamily satFamily_{NoFamily};
 
-        std::vector<EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
-        std::vector<EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
+        std::vector<EclEpsScalingPointsInfo<double> > unscaledEpsInfo_{};
+        std::vector<EclEpsScalingPointsInfo<double> > scaledEpsInfo_{};
 
 
         ///Check the phase that used.

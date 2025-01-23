@@ -70,7 +70,7 @@ namespace Opm::Satfunc::PhaseChecks::Water {
 
     private:
         /// Minimum (connate) water saturation.
-        Scalar swl_;
+        Scalar swl_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -124,7 +124,7 @@ namespace Opm::Satfunc::PhaseChecks::Water {
 
     private:
         /// Maximum water saturation.
-        Scalar swu_;
+        Scalar swu_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -182,13 +182,13 @@ namespace Opm::Satfunc::PhaseChecks::Water {
 
     private:
         /// Minimum (connate) water saturation.
-        Scalar swl_;
+        Scalar swl_{};
 
         /// Critical water saturation.
-        Scalar swcr_;
+        Scalar swcr_{};
 
         /// Maximum water saturation.
-        Scalar swu_;
+        Scalar swu_{};
 
         /// Run check against a set of saturation function end-points.
         ///

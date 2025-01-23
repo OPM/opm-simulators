@@ -194,14 +194,17 @@ public:
             }
 
             // Adding dispersion in the gas phase leads to
-            // convergence issues and unphysical results. 
+            // convergence issues and unphysical results.
             // We disable dispersion in the gas phase for now
+            // See comment below
             if (FluidSystem::gasPhaseIdx == phaseIdx) {
                 continue;
             }
 
             // no dispersion in gas for blackoil models unless gas can contain evaporated water or oil
-            if ((!FluidSystem::enableVaporizedWater() && !FluidSystem::enableVaporizedOil()) && FluidSystem::gasPhaseIdx == phaseIdx) {
+            // phase check disabled due to if above, reenable when removing unconditional gas phase disablement
+            if ((!FluidSystem::enableVaporizedWater() && !FluidSystem::enableVaporizedOil())
+                /*&& FluidSystem::gasPhaseIdx == phaseIdx*/) {
                 continue;
             }
 

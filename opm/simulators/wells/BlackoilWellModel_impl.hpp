@@ -1852,9 +1852,8 @@ namespace Opm {
 
         if (this->terminal_output_) {
             global_deferredLogger.logMessages();
-        }
-        // Log debug messages for NaN or too large residuals.
-        if (this->terminal_output_) {
+
+            // Log debug messages for NaN or too large residuals.
             for (const auto& f : report.wellFailures()) {
                 if (f.severity() == ConvergenceReport::Severity::NotANumber) {
                         OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());

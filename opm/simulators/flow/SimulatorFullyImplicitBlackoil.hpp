@@ -337,9 +337,6 @@ public:
             std::ostringstream ss;
             timer.report(ss);
             OpmLog::debug(ss.str());
-        }
-
-        if (terminalOutput_) {
             details::outputReportStep(timer);
         }
 

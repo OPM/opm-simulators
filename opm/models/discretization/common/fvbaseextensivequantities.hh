@@ -124,10 +124,10 @@ public:
 
 private:
     // local indices of the interior and the exterior sub-control-volumes
-    unsigned short interiorScvIdx_;
-    unsigned short exteriorScvIdx_;
+    unsigned short interiorScvIdx_{};
+    unsigned short exteriorScvIdx_{};
 
-    Scalar extrusionFactor_;
+    Scalar extrusionFactor_{};
 };
 
 } // namespace Opm
