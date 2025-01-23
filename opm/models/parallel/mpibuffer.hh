@@ -29,12 +29,12 @@
 
 #if HAVE_MPI
 #include <mpi.h>
+#include <type_traits>
 #endif
 
-#include <stddef.h>
-
-#include <type_traits>
 #include <cassert>
+#include <stddef.h>
+#include <vector>
 
 namespace Opm {
 
@@ -47,35 +47,24 @@ class MpiBuffer
 public:
     MpiBuffer()
     {
-        data_ = NULL;
-        dataSize_ = 0;
-
         setMpiDataType_();
         updateMpiDataSize_();
     }
 
     explicit MpiBuffer(size_t size)
     {
-        data_ = new DataType[size];
-        dataSize_ = size;
+        data_.resize(size);
 
         setMpiDataType_();
         updateMpiDataSize_();
     }
-
-    MpiBuffer(const MpiBuffer&) = default;
-
-    ~MpiBuffer()
-    { delete[] data_; }
 
     /*!
      * \brief Set the size of the buffer
      */
     void resize(size_t newSize)
     {
-        delete[] data_;
-        data_ = new DataType[newSize];
-        dataSize_ = newSize;
+        data_.resize(newSize);
         updateMpiDataSize_();
     }
 
@@ -85,7 +74,7 @@ public:
     void send([[maybe_unused]] unsigned peerRank)
     {
 #if HAVE_MPI
-        MPI_Isend(data_,
+        MPI_Isend(data_.data(),
                   static_cast<int>(mpiDataSize_),
                   mpiDataType_,
                   static_cast<int>(peerRank),
@@ -111,7 +100,7 @@ public:
     void receive([[maybe_unused]] unsigned peerRank)
     {
 #if HAVE_MPI
-        MPI_Recv(data_,
+        MPI_Recv(data_.data(),
                  static_cast<int>(mpiDataSize_),
                  mpiDataType_,
                  static_cast<int>(peerRank),
@@ -157,14 +146,14 @@ public:
      * \brief Returns the number of data objects in the buffer
      */
     size_t size() const
-    { return dataSize_; }
+    { return data_.size(); }
 
     /*!
      * \brief Provide access to the buffer data.
      */
     DataType& operator[](size_t i)
     {
-        assert(i < dataSize_);
+        assert(i < data_.size());
         return data_[i];
     }
 
@@ -173,7 +162,7 @@ public:
      */
     const DataType& operator[](size_t i) const
     {
-        assert(i < dataSize_);
+        assert(i < data_.size());
         return data_[i];
     }
 
@@ -217,14 +206,13 @@ private:
     void updateMpiDataSize_()
     {
 #if HAVE_MPI
-        mpiDataSize_ = dataSize_;
+        mpiDataSize_ = data_.size();
         if (mpiDataType_ == MPI_BYTE)
             mpiDataSize_ *= sizeof(DataType);
 #endif // HAVE_MPI
     }
 
-    DataType *data_;
-    size_t dataSize_;
+    std::vector<DataType> data_;
 #if HAVE_MPI
     size_t mpiDataSize_;
     MPI_Datatype mpiDataType_;
