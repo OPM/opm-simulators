@@ -29,7 +29,7 @@
 #include <cstddef>
 #include <numeric>
 #include <ostream>
-
+#include <limits>
 namespace Opm
 {
 
@@ -37,6 +37,7 @@ namespace Opm
     SimulatorTimer::SimulatorTimer()
         : current_step_(0),
           current_time_(0.0),
+          end_step_(std::numeric_limits<int>::max()),
           start_date_(2012,1,1)    // A really arbitrary default starting value?!
     {
     }
@@ -48,6 +49,7 @@ namespace Opm
         res.current_step_ = 4;
         res.current_time_ = 5.0;
         res.total_time_ = 6.0;
+        res.end_step_ = 8;
         res.start_date_ = boost::gregorian::date(2023,1,31);
 
         return res;
@@ -59,22 +61,24 @@ namespace Opm
     void SimulatorTimer::init(const ParameterGroup& param)
     {
         const int num_psteps = param.getDefault("num_psteps", 1);
+        const int end_step = param.getDefault("end_step", 50000);
         const double stepsize_days = param.getDefault("stepsize_days", 1.0);
         const double stepsize = Opm::unit::convert::from(stepsize_days, Opm::unit::day);
         timesteps_.clear();
         timesteps_.resize(num_psteps, stepsize);
+	end_step_ = end_step;
         total_time_ = num_psteps*stepsize;
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-    void SimulatorTimer::init(const Schedule& schedule, std::size_t report_step)
+    void SimulatorTimer::init(const Schedule& schedule, std::size_t report_step, std::size_t end_step)
     {
         total_time_ = schedule.seconds( schedule.size() - 1 );
         timesteps_.resize(schedule.size() - 1);
         for (std::size_t i = 0; i < schedule.size() - 1; ++i) {
             timesteps_[i] = schedule.stepLength(i);
         }
-
+        end_step_ = end_step;
         setCurrentStepNum(report_step);
         start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
     }
@@ -167,7 +171,11 @@ namespace Opm
     /// Return true if op++() has been called numSteps() times.
     bool SimulatorTimer::done() const
     {
-        return int(timesteps_.size()) == current_step_;
+        if(current_step_ < end_step_){
+            return int(timesteps_.size()) == current_step_;
+        }else{
+            return true;
+        }
     }
 
     /// return copy of object
@@ -183,6 +191,7 @@ namespace Opm
                this->current_step_ == rhs.current_step_ &&
                this->current_time_ == rhs.current_time_ &&
                this->total_time_ == rhs.total_time_ &&
+               this->end_step_ == rhs.end_step_ &&
                this->start_date_ == rhs.start_date_;
     }
 

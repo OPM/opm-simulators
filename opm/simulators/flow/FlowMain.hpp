@@ -54,6 +54,7 @@ namespace Opm::Parameters {
 // Do not merge parallel output files or warn about them
 struct EnableLoggingFalloutWarning { static constexpr bool value = false; };
 struct OutputInterval { static constexpr int value = 1; };
+struct EndStep { static constexpr int value = std::numeric_limits<int>::max(); };  
 
 } // namespace Opm::Parameters
 
@@ -103,6 +104,7 @@ namespace Opm {
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
+	    Parameters::Register<Parameters::EndStep>("End step for simulation");
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
@@ -421,7 +423,8 @@ namespace Opm {
 
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
-            simtimer_->init(schedule, static_cast<std::size_t>(initConfig.getRestartStep()));
+            int end_step =   Parameters::Get<Parameters::EndStep>();
+            simtimer_->init(schedule, static_cast<std::size_t>(initConfig.getRestartStep()), end_step);
 
             if (this->output_cout_) {
                 std::ostringstream oss;
