@@ -1048,11 +1048,10 @@ GasLiftSingleWellGeneric<Scalar>::
 increaseALQtoPositiveOilRate_(Scalar alq,
                               const LimitedRates& orig_rates) const
 {
-    bool stop_iteration = false;
     Scalar temp_alq = alq;
     // use the copy constructor to only copy the rates
     BasicRates rates = orig_rates;
-    while (!stop_iteration) {
+    while (true) {
         temp_alq += this->increment_;
         if (temp_alq > this->max_alq_)
             break;
@@ -1078,10 +1077,9 @@ increaseALQtoMinALQ_(const Scalar orig_alq,
     assert(min_alq >= 0);
     assert(orig_alq < min_alq);
     assert(min_alq < this->max_alq_);
-    bool stop_iteration = false;
     Scalar alq = orig_alq;
     LimitedRates rates = orig_rates;
-    while (!stop_iteration) {
+    while (true) {
         Scalar temp_alq = alq + this->increment_;
 
         alq = temp_alq;
@@ -1175,11 +1173,10 @@ GasLiftSingleWellGeneric<Scalar>::
 reduceALQtoGroupAlqLimits_(const Scalar orig_alq,
                            const LimitedRates& orig_rates) const
 {
-    bool stop_this_iteration = false;
     Scalar alq = orig_alq;
     BasicRates rates {orig_rates};
     Scalar temp_alq = orig_alq;
-    while (!stop_this_iteration) {
+    while (true) {
         if (temp_alq == 0)
             break;
         temp_alq -= this->increment_;
@@ -1268,8 +1265,7 @@ reduceALQtoWellTarget_(const Scalar orig_alq,
     Scalar alq = orig_alq;
     Scalar temp_alq = alq;
     std::optional<LimitedRates> new_rates;
-    bool stop_iteration = false;
-    while (!stop_iteration) {
+    while (true) {
         if (temp_alq == 0)
             break;
         temp_alq -= this->increment_;
