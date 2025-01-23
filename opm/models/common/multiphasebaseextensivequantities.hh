@@ -167,8 +167,8 @@ public:
     { return 1.0 - upstreamWeight(phaseIdx); }
 
 private:
-    short upstreamScvIdx_[numPhases];
-    short downstreamScvIdx_[numPhases];
+    short upstreamScvIdx_[numPhases]{};
+    short downstreamScvIdx_[numPhases]{};
 };
 
 } // namespace Opm

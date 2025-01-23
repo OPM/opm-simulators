@@ -70,7 +70,7 @@ namespace Opm::Satfunc::PhaseChecks::Gas {
 
     private:
         /// Minimum gas saturation.
-        Scalar sgl_;
+        Scalar sgl_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -124,7 +124,7 @@ namespace Opm::Satfunc::PhaseChecks::Gas {
 
     private:
         /// Maximum gas saturation.
-        Scalar sgu_;
+        Scalar sgu_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -182,13 +182,13 @@ namespace Opm::Satfunc::PhaseChecks::Gas {
 
     private:
         /// Minimum gas saturation.
-        Scalar sgl_;
+        Scalar sgl_{};
 
         /// Critical gas saturation.
-        Scalar sgcr_;
+        Scalar sgcr_{};
 
         /// Maximum gas saturation.
-        Scalar sgu_;
+        Scalar sgu_{};
 
         /// Run check against a set of saturation function end-points.
         ///

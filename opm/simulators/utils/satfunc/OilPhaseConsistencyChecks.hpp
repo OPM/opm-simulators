@@ -70,7 +70,7 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
     private:
         /// Critical oil saturation in gas/oil system.
-        Scalar sogcr_;
+        Scalar sogcr_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -128,10 +128,10 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
     private:
         /// Minimum (connate) water saturation in gas/oil system.
-        Scalar swl_;
+        Scalar swl_{};
 
         /// Maximum gas saturation in gas/oil system.
-        Scalar sgu_;
+        Scalar sgu_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -192,13 +192,13 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
     private:
         /// Minimum water saturation.
-        Scalar swl_;
+        Scalar swl_{};
 
         /// Minimum gas saturation.
-        Scalar sgl_;
+        Scalar sgl_{};
 
         /// Critical oil saturation in gas/oil system.
-        Scalar sogcr_;
+        Scalar sogcr_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -259,13 +259,13 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
     private:
         /// Minimum water saturation.
-        Scalar swl_;
+        Scalar swl_{};
 
         /// Critical gas saturation.
-        Scalar sgcr_;
+        Scalar sgcr_{};
 
         /// Critical oil saturation in gas/oil system
-        Scalar sogcr_;
+        Scalar sogcr_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -321,7 +321,7 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
     private:
         /// Critical oil saturation in oil/water system.
-        Scalar sowcr_;
+        Scalar sowcr_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -379,10 +379,10 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
     private:
         /// Minimum gas saturation.  Typically zero.
-        Scalar sgl_;
+        Scalar sgl_{};
 
         /// Minimum (connate) saturation.
-        Scalar swu_;
+        Scalar swu_{};
  
         /// Run check against a set of saturation function end-points.
         ///
@@ -443,13 +443,13 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
     private:
         /// Minimum (connate) water saturation.
-        Scalar swl_;
+        Scalar swl_{};
 
         /// Minimum gas saturation.  Typically zero.
-        Scalar sgl_;
+        Scalar sgl_{};
 
         /// Critical oil saturation in oil/water system.
-        Scalar sowcr_;
+        Scalar sowcr_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -510,13 +510,13 @@ namespace Opm::Satfunc::PhaseChecks::Oil {
 
     private:
         /// Minimum gas saturation.  Typically zero.
-        Scalar sgl_;
+        Scalar sgl_{};
 
         /// Critical water saturation.
-        Scalar swcr_;
+        Scalar swcr_{};
 
         /// Critical oil saturation in oil/water system.
-        Scalar sowcr_;
+        Scalar sowcr_{};
 
         /// Run check against a set of saturation function end-points.
         ///

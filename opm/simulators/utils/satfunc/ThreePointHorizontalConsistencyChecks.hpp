@@ -82,16 +82,16 @@ namespace Opm::Satfunc::PhaseChecks::ThreePointHorizontal {
 
     private:
         /// Minimum (connate) water saturation.
-        Scalar swl_;
+        Scalar swl_{};
 
         /// Critical oil saturation in two-phase gas/oil system.
-        Scalar sogcr_;
+        Scalar sogcr_{};
 
         /// Critical gas saturation.
-        Scalar sgcr_;
+        Scalar sgcr_{};
 
         /// Maximum gas saturation.
-        Scalar sgu_;
+        Scalar sgu_{};
 
         /// Run check against a set of saturation function end-points.
         ///
@@ -157,16 +157,16 @@ namespace Opm::Satfunc::PhaseChecks::ThreePointHorizontal {
 
     private:
         /// Minimum gas saturation.
-        Scalar sgl_;
+        Scalar sgl_{};
 
         /// Critical oil saturation in two-phase oil/water system.
-        Scalar sowcr_;
+        Scalar sowcr_{};
 
         /// Critical water saturation.
-        Scalar swcr_;
+        Scalar swcr_{};
 
         /// Maximum water saturation.
-        Scalar swu_;
+        Scalar swu_{};
 
         /// Run check against a set of saturation function end-points.
         ///

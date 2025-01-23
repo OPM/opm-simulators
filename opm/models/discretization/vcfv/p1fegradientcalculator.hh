@@ -341,9 +341,9 @@ private:
 #if HAVE_DUNE_LOCALFUNCTIONS
     static LocalFiniteElementCache feCache_;
 
-    const LocalFiniteElement* localFiniteElement_;
-    std::vector<Dune::FieldVector<Scalar, 1>> p1Value_[maxFap];
-    DimVector p1Gradient_[maxFap][maxDof];
+    const LocalFiniteElement* localFiniteElement_{nullptr};
+    std::vector<Dune::FieldVector<Scalar, 1>> p1Value_[maxFap]{};
+    DimVector p1Gradient_[maxFap][maxDof]{};
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 };
 
