@@ -44,6 +44,10 @@ public:
     using PrimaryVariables = CompWellPrimaryVariables<FluidSystem, Indices>;
     using WellEquations = CompWellEquations<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
 
+    constexpr static unsigned num_comp = FluidSystem::numComponents;
+
+    using EvalWell = typename PrimaryVariables::EvalWell;
+
     CompWell(const Well& well,
              int index_of_well,
              const std::vector<CompConnectionData<Scalar>>& well_connection_data);
@@ -67,9 +71,18 @@ private:
     // the following varialbes are temporary and remain to be cleaned up and re-organized
     // some are testing variables, and some are secondary variables might be kept
     // anyway, they are very rough prototype code for testing and will be changed
-    constexpr static Scalar wellbore_volume_ {21.6}; // m^3, it is rather big, will come with different design when the working flow is established
+    const Scalar wellbore_volume_ {21.6}; // m^3, it is rather big, will come with different design when the working flow is established
+
+    std::array<EvalWell, num_comp> mass_fractions_{0.};
+    EvalWell fluid_density_{0.};
 
     // following are some secondary property or variables to be used for later
+    void calculateSingleConnectionRate(const Simulator& simulator,
+                                       std::vector<EvalWell>& cq_s) const;
+
+    void getMoblity(const Simulator& simulator,
+                    int connection_idx,
+                    std::vector<EvalWell>& mob) const;
 };
 
 } // end of namespace Opm
