@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
@@ -82,6 +83,7 @@ GasLiftStage2<Scalar>::GasLiftStage2(const int report_step_idx,
 template<class Scalar>
 void GasLiftStage2<Scalar>::runOptimize()
 {
+    OPM_TIMEFUNCTION();
     const auto& group = this->schedule_.getGroup("FIELD", this->report_step_idx_);
     optimizeGroupsRecursive_(group);
 }
@@ -419,6 +421,7 @@ template<class Scalar>
 void GasLiftStage2<Scalar>::
 optimizeGroup_(const Group& group)
 {
+    OPM_TIMEFUNCTION();
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
     if ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD))
@@ -445,6 +448,7 @@ template<class Scalar>
 void GasLiftStage2<Scalar>::
 optimizeGroupsRecursive_(const Group& group)
 {
+    OPM_TIMEFUNCTION();
     for (const std::string& group_name : group.groups()) {
         if(!this->schedule_.back().groups.has(group_name))
             continue;
@@ -568,6 +572,7 @@ redistributeALQ_(std::vector<GasLiftSingleWell*>& wells,
                  std::vector<GradPair>& inc_grads,
                  std::vector<GradPair>& dec_grads)
 {
+    OPM_TIMEFUNCTION();
     OptimizeState state {*this, group};
     if (this->comm_.size() == 1) {
         // NOTE: 'inc_grads' and 'dec_grads' can never grow larger than wells.size()
@@ -634,6 +639,7 @@ void GasLiftStage2<Scalar>::
 removeSurplusALQ_(const Group& group,
                   std::vector<GradPair>& dec_grads)
 {
+    OPM_TIMEFUNCTION();
     if (dec_grads.empty()) {
         displayDebugMessage_("no wells to remove ALQ from. Skipping");
         return;

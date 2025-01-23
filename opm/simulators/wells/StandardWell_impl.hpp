@@ -1479,7 +1479,7 @@ namespace Opm
                             std::vector<Scalar>& well_flux,
                             DeferredLogger& deferred_logger) const
     {
-
+        OPM_TIMEFUNCTION();
         const int np = this->number_of_phases_;
         well_flux.resize(np, 0.0);
 
@@ -2237,6 +2237,7 @@ namespace Opm
                                     DeferredLogger& deferred_logger,
                                     bool iterate_if_no_solution) const
     {
+        OPM_TIMEFUNCTION();
         // Make the frates() function.
         auto frates = [this, &simulator, &deferred_logger](const Scalar bhp) {
             // Not solving the well equations here, which means we are

@@ -1079,6 +1079,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     doPreStepNetworkRebalance(DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
@@ -1122,6 +1123,7 @@ namespace Opm {
     assemble(const int iterationIdx,
              const double dt)
     {
+        OPM_TIMEFUNCTION();
         DeferredLogger local_deferredLogger;
 
         if constexpr (BlackoilWellModelGasLift<TypeTag>::glift_debug) {
@@ -1145,6 +1147,7 @@ namespace Opm {
         }
 
         if (iterationIdx == 0 && this->wellsActive()) {
+	    OPM_TIMEBLOCK(firstIterationAssmble);
             // try-catch is needed here as updateWellControls
             // contains global communication and has either to
             // be reached by all processes or all need to abort
@@ -1185,6 +1188,7 @@ namespace Opm {
                                  const double dt,
                                  DeferredLogger& local_deferredLogger)
     {
+        OPM_TIMEFUNCTION();
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
@@ -1224,6 +1228,7 @@ namespace Opm {
                                           const double dt,
                                           DeferredLogger& local_deferredLogger)
     {
+        OPM_TIMEFUNCTION();
         auto [well_group_control_changed, more_network_update] =
                 updateWellControls(mandatory_network_balance,
                                    local_deferredLogger,
@@ -1281,6 +1286,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     {
+        OPM_TIMEFUNCTION();
         const int reportStepIdx = this->simulator_.episodeIndex();
         const auto& network = this->schedule()[reportStepIdx].network();
         const auto& balance = this->schedule()[reportStepIdx].network_balance();
@@ -1494,6 +1500,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     assembleWellEq(const double dt, DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         for (auto& well : well_container_) {
             well->assembleWellEq(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
@@ -1518,6 +1525,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         for (auto& well : well_container_) {
             well->prepareWellBeforeAssembling(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
@@ -1529,6 +1537,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         // We make sure that all processes throw in case there is an exception
         // on one of them (WetGasPvt::saturationPressure might throw if not converged)
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1891,6 +1900,7 @@ namespace Opm {
                        DeferredLogger& deferred_logger,
                        const bool relax_network_tolerance)
     {
+        OPM_TIMEFUNCTION();
         const int episodeIdx = simulator_.episodeIndex();
         const auto& network = this->schedule()[episodeIdx].network();
         if (!this->wellsActive() && !network.active()) {
@@ -1904,6 +1914,7 @@ namespace Opm {
         // network related
         bool more_network_update = false;
         if (this->shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
+            OPM_TIMEBLOCK(BalanceNetowork);
             const double dt = this->simulator_.timeStepSize();
             // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
             bool well_group_thp_updated = computeWellGroupThp(dt, deferred_logger);
@@ -1931,6 +1942,7 @@ namespace Opm {
         // Check wells' group constraints and communicate.
         bool changed_well_to_group = false;
         {
+            OPM_TIMEBLOCK(UpdateWellControls);
             // For MS Wells a linear solve is performed below and the matrix might be singular.
             // We need to communicate the exception thrown to the others and rethrow.
             OPM_BEGIN_PARALLEL_TRY_CATCH()
@@ -2045,6 +2057,7 @@ namespace Opm {
                         const int reportStepIdx,
                         const int iterationIdx)
     {
+        OPM_TIMEFUNCTION();
         bool changed = false;
         // restrict the number of group switches but only after nupcol iterations.
         const int nupcol = this->schedule()[reportStepIdx].nupcol();
@@ -2084,6 +2097,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const
     {
+        OPM_TIMEFUNCTION();
         DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
             const auto& wname = well->name();
@@ -2144,6 +2158,7 @@ namespace Opm {
                                                   ExceptionType::ExcEnum& exc_type,
                                                   DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         const int np = this->numPhases();
         std::vector<Scalar> potentials;
         const auto& well = well_container_[widx];
