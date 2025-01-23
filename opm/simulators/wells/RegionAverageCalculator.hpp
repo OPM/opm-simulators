@@ -89,17 +89,10 @@ namespace Opm {
                     numRegions = std::max(numRegions, reg);
                 }
                 numRegions = comm.max(numRegions);
-                for (int reg = 1; reg <= numRegions ; ++ reg) {
+                // reg = 0 is used for field
+                for (int reg = 0; reg <= numRegions ; ++ reg) {
                     if (!attr_.has(reg))
                         attr_.insert(reg, Attributes());
-                }
-                // create map from cell to region
-                // and set all attributes to zero
-                for (int reg = 1; reg <= numRegions ; ++ reg) {
-                    auto& ra = attr_.attributes(reg);
-                    ra.pressure = 0.0;
-                    ra.pv = 0.0;
-
                 }
 
                 // quantities for pore volume average
@@ -114,7 +107,6 @@ namespace Opm {
                 }
 
                 ElementContext elemCtx( simulator );
-
                 OPM_BEGIN_PARALLEL_TRY_CATCH();
                 for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                     elemCtx.updatePrimaryStencil(elem);
@@ -165,6 +157,10 @@ namespace Opm {
                 }
                 OPM_END_PARALLEL_TRY_CATCH("AverageRegionalPressure::defineState(): ", simulator.vanguard().grid().comm());
 
+                Scalar field_p_hpv = 0.0;
+                Scalar field_hpv = 0.0;
+                Scalar field_p_pv = 0.0;
+                Scalar field_pv = 0.0;
                 for (int reg = 1; reg <= numRegions ; ++ reg) {
                       auto& ra = attr_.attributes(reg);
                       const Scalar hpv_sum = comm.sum(attributes_hpv[reg].pv);
@@ -173,6 +169,9 @@ namespace Opm {
                           const auto& attri_hpv = attributes_hpv[reg];
                           const Scalar p_hpv_sum = comm.sum(attri_hpv.pressure);
                           ra.pressure = p_hpv_sum / hpv_sum;
+                          ra.pv = hpv_sum;
+                          field_p_hpv += p_hpv_sum;
+                          field_hpv += hpv_sum;
                       } else {
                           // using the pore volume to do the averaging
                           const auto& attri_pv = attributes_pv[reg];
@@ -181,9 +180,18 @@ namespace Opm {
                           if (pv_sum > 0) {
                             const Scalar p_pv_sum = comm.sum(attri_pv.pressure);
                             ra.pressure = p_pv_sum / pv_sum;
+                            ra.pv = pv_sum;
+                            field_p_pv += p_pv_sum;
+                            field_pv += pv_sum;
                           }
                       }
                 }
+                // update field pressure
+                auto& ra_field = attr_.attributes(0);
+                if (field_hpv > 0)
+                    ra_field.pressure = field_p_hpv / field_hpv;
+                else if (field_hpv > 0)
+                    ra_field.pressure = field_p_pv / field_pv;
             }
 
             /**
@@ -200,19 +208,6 @@ namespace Opm {
             Scalar
             pressure(const RegionId r) const
             {
-                if (r == 0 ) // region 0 is the whole field
-                {
-                    Scalar pressure = 0.0;
-                    int num_active_regions = 0;
-                    for (const auto& attr :  attr_.attributes()) {
-                        const auto& value = *attr.second;
-                        const auto& ra = value.attr_;
-                        pressure += ra.pressure;
-                        num_active_regions ++;
-                    }
-                    return pressure / num_active_regions;
-                }
-
                 const auto& ra = attr_.attributes(r);
                 return ra.pressure;
             }
