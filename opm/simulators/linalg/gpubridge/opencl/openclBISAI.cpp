@@ -341,16 +341,16 @@ create_preconditioner(BlockedMatrix<Scalar>* mat)
 }
 
 template<class Scalar, unsigned int block_size>
-void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
+void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 {
     const unsigned int bs = block_size;
 
     OpenclKernels<Scalar>::spmv(d_invLvals, d_rowIndices, d_colPointers,
-                                x, d_invL_x, Nb, bs, true, true); // application of isaiL is a simple spmv with addition
+                                y, d_invL_x, Nb, bs, true, true); // application of isaiL is a simple spmv with addition
                                                                   // (to compensate for the unitary diagonal that is not
                                                                   // included in isaiL, for simplicity)
     OpenclKernels<Scalar>::spmv(d_invUvals, d_rowIndices, d_colPointers,
-                                d_invL_x, y, Nb, bs); // application of isaiU is a simple spmv
+                                d_invL_x, x, Nb, bs); // application of isaiU is a simple spmv
 }
 
 #define INSTANTIATE_TYPE(T)          \
