@@ -581,13 +581,13 @@ public:
         using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            bool oldPhasePresent = (oldPhasePresence&  (1 << phaseIdx)) > 0;
+            bool oldPhasePresent = (oldPhasePresence & (1 << phaseIdx)) > 0;
             bool newPhasePresent = newPv.phaseIsPresent(phaseIdx);
             if (oldPhasePresent == newPhasePresent)
                 continue;
 
             const auto& pos = elemCtx.pos(dofIdx, /*timeIdx=*/0);
-            if (oldPhasePresent && !newPhasePresent) {
+            if (oldPhasePresent) {
                 std::cout << "'" << FluidSystem::phaseName(phaseIdx)
                           << "' phase disappears at position " << pos
                           << ". saturation=" << fs.saturation(phaseIdx)
