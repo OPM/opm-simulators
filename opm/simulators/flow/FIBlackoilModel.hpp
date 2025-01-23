@@ -33,7 +33,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/grid/utility/createThreadIterators.hpp>
+#include <opm/grid/utility/ElementChunks.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
@@ -48,6 +48,20 @@
 
 namespace Opm
 {
+
+namespace detail
+{
+    inline int numThreads()
+    {
+#ifdef _OPENMP
+        return omp_get_max_threads();
+#else
+        return 1;
+#endif
+    }
+}
+
+
 template <typename TypeTag>
 class FIBlackOilModel : public BlackOilModel<TypeTag>
 {
@@ -72,21 +86,8 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
 public:
     explicit FIBlackOilModel(Simulator& simulator)
         : BlackOilModel<TypeTag>(simulator)
+        , element_chunks_(this->gridView_, detail::numThreads())
     {
-        if constexpr (gridIsUnchanging) {
-            const auto& gv = this->gridView_;
-            int nt = 1;
-#ifdef _OPENMP
-            nt = omp_get_max_threads();
-#endif
-            constexpr int max_chunk_size = 1000;
-            int chunk_size = -1;
-            grid_chunk_iterators_ = createThreadIterators(gv, nt, max_chunk_size, chunk_size);
-            if (nt > 1) {
-                OpmLog::debug("Using chunk size " + std::to_string(chunk_size) +
-                              " for property evaluation with " + std::to_string(nt) + " OpenMP threads.");
-            }
-        }
     }
 
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
@@ -94,26 +95,20 @@ public:
         this->invalidateIntensiveQuantitiesCache(timeIdx);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if constexpr (gridIsUnchanging) {
-            const int num_chunks = grid_chunk_iterators_.size() - 1;
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-            for (int chunk = 0; chunk < num_chunks; ++chunk) {
+            for (const auto& chunk : element_chunks_) {
                 ElementContext elemCtx(this->simulator_);
-                for (auto it = grid_chunk_iterators_[chunk]; it != grid_chunk_iterators_[chunk+1]; ++it) {
-                    const Element& elem = *it;
+                for (const auto& elem : chunk) {
                     elemCtx.updatePrimaryStencil(elem);
                     elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
                 }
             }
         } else {
             // Grid is possibly refined or otherwise changed between calls.
-            const auto& gv = this->gridView_;
-            auto it = gv.template begin<0>();
-            const auto end = gv.template end<0>();
             ElementContext elemCtx(this->simulator_);
-            for (; it != end; ++it) {
-                const Element& elem = *it;
+            for (const auto& elem : elements(this->gridView_)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
@@ -211,7 +206,7 @@ public:
     }
 
 protected:
-    std::vector<ElementIterator> grid_chunk_iterators_;
+    ElementChunks<GridView> element_chunks_;
 };
 } // namespace Opm
 #endif // FI_BLACK_OIL_MODEL_HPP
