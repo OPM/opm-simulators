@@ -239,7 +239,7 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behavior_.
      */
-    void attachScalarVertexData(ScalarBuffer& buf, std::string name)
+    void attachScalarVertexData(ScalarBuffer& buf, std::string name) override
     {
         sanitizeScalarBuffer_(buf);
 
@@ -267,7 +267,7 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behaviour_.
      */
-    void attachScalarElementData(ScalarBuffer& buf, std::string name)
+    void attachScalarElementData(ScalarBuffer& buf, std::string name) override
     {
         sanitizeScalarBuffer_(buf);
 
@@ -296,7 +296,7 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behavior_.
      */
-    void attachVectorVertexData(VectorBuffer& buf, std::string name)
+    void attachVectorVertexData(VectorBuffer& buf, std::string name) override
     {
         sanitizeVectorBuffer_(buf);
 
@@ -312,7 +312,7 @@ public:
     /*!
      * \brief Add a finished vertex-centered tensor field to the output.
      */
-    void attachTensorVertexData(TensorBuffer& buf, std::string name)
+    void attachTensorVertexData(TensorBuffer& buf, std::string name) override
     {
         using VtkFn = VtkTensorFunction<GridView, VertexMapper>;
 
@@ -345,7 +345,7 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behaviour_.
      */
-    void attachVectorElementData(VectorBuffer& buf, std::string name)
+    void attachVectorElementData(VectorBuffer& buf, std::string name) override
     {
         sanitizeVectorBuffer_(buf);
 
@@ -361,7 +361,7 @@ public:
     /*!
      * \brief Add a finished element-centered tensor field to the output.
      */
-    void attachTensorElementData(TensorBuffer& buf, std::string name)
+    void attachTensorElementData(TensorBuffer& buf, std::string name) override
     {
         using VtkFn = VtkTensorFunction<GridView, ElementMapper>;
 
@@ -386,7 +386,7 @@ public:
      * the onlyDiscard argument is true. In this case only all managed
      * buffers are deleted, but no output is written.
      */
-    void endWrite(bool onlyDiscard = false)
+    void endWrite(bool onlyDiscard = false) override
     {
         if (!onlyDiscard) {
             auto tasklet = std::make_shared<WriteDataTasklet>(*this);
