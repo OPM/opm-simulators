@@ -253,9 +253,7 @@ initFromRestartFile(const RestartValue& restartValues,
                                   config.model().target(),
                                   restartValues.wells,
                                   this->guideRate_);
-    }
 
-    if (config.has_model()) {
         BlackoilWellModelRestart(*this).
             loadRestartGuideRates(report_step,
                                   config,

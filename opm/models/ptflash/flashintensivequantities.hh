@@ -231,17 +231,11 @@ public:
         fluidState_.setCompressFactor(1, Z_V);
 
         // Print saturation
-         if (flashVerbosity >= 5) {
-             std::cout << "So = " << So <<std::endl;
-             std::cout << "Sg = " << Sg <<std::endl;
-           }
-
-        // Print saturation
-         if (flashVerbosity >= 5) {
-             std::cout << "So = " << So <<std::endl;
-             std::cout << "Sg = " << Sg <<std::endl;
-             std::cout << "Z_L = " << Z_L <<std::endl;
-             std::cout << "Z_V = " << Z_V <<std::endl;
+        if (flashVerbosity >= 5) {
+             std::cout << "So = " << So << std::endl;
+             std::cout << "Sg = " << Sg << std::endl;
+             std::cout << "Z_L = " << Z_L << std::endl;
+             std::cout << "Z_V = " << Z_V << std::endl;
          }
 
         /////////////
