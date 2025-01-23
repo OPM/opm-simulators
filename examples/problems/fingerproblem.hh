@@ -509,8 +509,8 @@ private:
         if (!onUpperBoundary_(pos))
             return false;
 
-        Scalar xInject[] = { 0.25, 0.75 };
-        Scalar injectLen[] = { 0.1, 0.1 };
+        const Scalar xInject[] = { 0.25, 0.75 };
+        const Scalar injectLen[] = { 0.1, 0.1 };
         for (unsigned i = 0; i < sizeof(xInject) / sizeof(Scalar); ++i) {
             if (xInject[i] - injectLen[i] / 2 < lambda
                 && lambda < xInject[i] + injectLen[i] / 2)

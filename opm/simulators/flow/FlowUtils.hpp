@@ -36,7 +36,7 @@ void mergeParallelLogFiles(std::string_view output_dir,
                            std::string_view deck_filename,
                            bool enableLoggingFalloutWarning);
 
-void handleExtraConvergenceOutput(SimulatorReport& report,
+void handleExtraConvergenceOutput(const SimulatorReport& report,
                                   std::string_view option,
                                   std::string_view optionName,
                                   std::string_view output_dir,

@@ -81,7 +81,7 @@ public:
             // Now add the cells of the possible future connections
             const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
             if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
-                for (auto& global_index : possibleFutureConnectionSetIt->second) {
+                for (const auto& global_index : possibleFutureConnectionSetIt->second) {
                     int compressed_idx = model_.compressedIndexForInterior(global_index);
                     if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
                         wellCells.push_back(compressed_idx);
@@ -126,7 +126,7 @@ public:
         }
     }
 
-    void postSolveDomain(GlobalEqVector& deltaX, const Domain& domain)
+    void postSolveDomain(const GlobalEqVector& deltaX, const Domain& domain)
     {
         model_.recoverWellSolutionAndUpdateWellStateDomain(deltaX, domain);
     }

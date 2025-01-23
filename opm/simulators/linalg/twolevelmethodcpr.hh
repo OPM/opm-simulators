@@ -6,17 +6,22 @@
 // NOTE: This file is a modified version of dune/istl/paamg/twolevelmethod.hh from
 // dune-istl release 2.6.0. Modifications have been kept as minimal as possible.
 
-#include <tuple>
-
-#include<dune/istl/operators.hh>
+#include <dune/istl/operators.hh>
 //#include "amg.hh"
 //#include"galerkin.hh"
-#include<dune/istl/paamg/amg.hh>
-#include<dune/istl/paamg/galerkin.hh>
-#include<dune/istl/solver.hh>
+#include <dune/istl/paamg/amg.hh>
+#include <dune/istl/paamg/galerkin.hh>
+#include <dune/istl/solver.hh>
 
-#include<dune/common/unused.hh>
-#include<dune/common/version.hh>
+#include <dune/common/unused.hh>
+#include <dune/common/version.hh>
+
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <memory>
+#include <tuple>
+#include <vector>
 
 /**
  * @addtogroup ISTL_PAAMG
@@ -189,13 +194,8 @@ public:
     ParallelInformation pinfo;
 
     std::size_t aggregates = coarsen(renumberer, pinfo, pg, vm,*aggregatesMap_, noAggregates, true);
-    std::vector<bool>& visited=excluded;
 
-    typedef std::vector<bool>::iterator Iterator;
-
-    for(Iterator iter= visited.begin(), end=visited.end();
-        iter != end; ++iter)
-          *iter=false;
+    std::fill(excluded.begin(), excluded.end(), false);
     matrix_.reset(productBuilder.build(mg, vm,
                                        SequentialInformation(),
                                        *aggregatesMap_,

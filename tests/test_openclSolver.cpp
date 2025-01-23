@@ -116,7 +116,8 @@ createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::GpuBri
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
-testOpenclSolver(Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
+testOpenclSolver(Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz>& bridge,
+                 const Matrix<bz>& matrix, Vector<bz>& rhs)
 {
     Dune::InverseOperatorResult result;
     Vector<bz> x(rhs.size());
@@ -131,7 +132,8 @@ testOpenclSolver(Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz>&
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
-testOpenclSolverJacobi(Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz>& bridge, Matrix<bz>& matrix, Vector<bz>& rhs)
+testOpenclSolverJacobi(Opm::GpuBridge<Matrix<bz>, Vector<bz>, bz>& bridge,
+                       const Matrix<bz>& matrix, Vector<bz>& rhs)
 {
     Dune::InverseOperatorResult result;
     Vector<bz> x(rhs.size());

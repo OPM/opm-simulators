@@ -711,7 +711,7 @@ public:
             if (!problem.model().linearizer().getFlowsInfo().empty()) {
                 const auto& flowsInf = problem.model().linearizer().getFlowsInfo();
                 auto flowsInfos = flowsInf[globalDofIdx];
-                for (auto& flowsInfo : flowsInfos) {
+                for (const auto& flowsInfo : flowsInfos) {
                     if (flowsInfo.faceId >= 0) {
                         if (!this->flows_[flowsInfo.faceId][gasCompIdx].empty()) {
                             this->flows_[flowsInfo.faceId][gasCompIdx][globalDofIdx]
@@ -750,7 +750,7 @@ public:
             if (!problem.model().linearizer().getFloresInfo().empty()) {
                 const auto& floresInf = problem.model().linearizer().getFloresInfo();
                 auto floresInfos =floresInf[globalDofIdx];
-                for (auto& floresInfo : floresInfos) {
+                for (const auto& floresInfo : floresInfos) {
                     if (floresInfo.faceId >= 0) {
                         if (!this->flores_[floresInfo.faceId][gasCompIdx].empty()) {
                             this->flores_[floresInfo.faceId][gasCompIdx][globalDofIdx]

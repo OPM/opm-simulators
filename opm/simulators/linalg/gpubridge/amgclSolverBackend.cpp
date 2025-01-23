@@ -163,7 +163,7 @@ void amgclSolverBackend<Scalar,block_size>::initialize(int Nb_, int nnzbs)
 
 template<class Scalar, unsigned int block_size>
 void amgclSolverBackend<Scalar,block_size>::
-convert_sparsity_pattern(int* rows, int* cols)
+convert_sparsity_pattern(const int* rows, const int* cols)
 {
     Timer t;
     const unsigned int bs = block_size;
@@ -193,7 +193,7 @@ convert_sparsity_pattern(int* rows, int* cols)
 
 template<class Scalar, unsigned int block_size>
 void amgclSolverBackend<Scalar,block_size>::
-convert_data(Scalar* vals, int* rows)
+convert_data(const Scalar* vals, const int* rows)
 {
     Timer t;
     const unsigned int bs = block_size;

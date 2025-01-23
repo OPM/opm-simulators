@@ -476,7 +476,7 @@ namespace Opm
             deferred_logger.info(msg);
 
             // also reopen completions
-            for (auto& completion : this->well_ecl_.getCompletions()) {
+            for (const auto& completion : this->well_ecl_.getCompletions()) {
                 if (!welltest_state_temp.completion_is_closed(this->name(), completion.first))
                     well_test_state.open_completion(this->name(), completion.first);
             }

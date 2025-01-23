@@ -23,6 +23,8 @@
 #ifndef OPM_GENERIC_THRESHOLD_PRESSURE_IMPL_HPP
 #define OPM_GENERIC_THRESHOLD_PRESSURE_IMPL_HPP
 
+#include <opm/simulators/flow/GenericThresholdPressure.hpp>
+
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/rangegenerators.hh>
 
@@ -33,8 +35,6 @@
 #include <opm/input/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/input/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/input/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
-
-#include <opm/simulators/flow/GenericThresholdPressure.hpp>
 
 #include <fmt/format.h>
 
@@ -73,10 +73,11 @@ thresholdPressure(int elem1Idx, int elem2Idx) const
         int fault1Idx = lookUpCartesianData_(elem1Idx, cartElemFaultIdx_);
         int fault2Idx = lookUpCartesianData_(elem2Idx, cartElemFaultIdx_);
 
-        if (fault1Idx != -1 && fault1Idx == fault2Idx)
+        if (fault1Idx != -1 && fault1Idx == fault2Idx) {
             // inside a fault there's no threshold pressure, even accross EQUIL
             // regions.
             return 0.0;
+        }
         if (fault1Idx != fault2Idx) {
             // TODO: which value if a cell is part of multiple faults? we take
             // the maximum here.
@@ -90,8 +91,9 @@ thresholdPressure(int elem1Idx, int elem2Idx) const
     auto equilRegion1Idx = elemEquilRegion_[elem1Idx];
     auto equilRegion2Idx = elemEquilRegion_[elem2Idx];
 
-    if (equilRegion1Idx == equilRegion2Idx)
+    if (equilRegion1Idx == equilRegion2Idx) {
         return 0.0;
+    }
 
     return thpres_[equilRegion1Idx*numEquilRegions_ + equilRegion2Idx];
 }
@@ -103,8 +105,9 @@ finishInit()
     const auto& simConfig = eclState_.getSimulationConfig();
 
     enableThresholdPressure_ = simConfig.useThresholdPressure();
-    if (!enableThresholdPressure_)
+    if (!enableThresholdPressure_) {
         return;
+    }
 
     numEquilRegions_ = eclState_.getTableManager().getEqldims().getNumEquilRegions();
     const decltype(numEquilRegions_) maxRegions =
@@ -129,16 +132,18 @@ finishInit()
     }
 
     // internalize the data specified using the EQLNUM keyword
-    elemEquilRegion_ = lookUpData_.template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
-                                                                                          "EQLNUM", true);
+    elemEquilRegion_ = lookUpData_.
+        template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
+                                                               "EQLNUM", true);
 
     /*
       If this is a restart run the ThresholdPressure object will be active,
       and already properly initialized with numerical values from the restart.
       Done using GenericThresholdPressure::setFromRestart() in EclWriter::beginRestart().
     */
-    if (simConfig.getThresholdPressure().restart())
+    if (simConfig.getThresholdPressure().restart()) {
         return;
+    }
 
     // allocate the array which specifies the threshold pressures
     thpres_.resize(numEquilRegions_*numEquilRegions_, 0.0);
@@ -156,10 +161,12 @@ applyExplicitThresholdPressures_()
     // intersection in the grid
     for (const auto& elem : elements(gridView_, Dune::Partitions::interior)) {
         for (const auto& intersection : intersections(gridView_, elem)) {
-            if (intersection.boundary())
+            if (intersection.boundary()) {
                 continue; // ignore boundary intersections for now (TODO?)
-            else if (!intersection.neighbor()) //processor boundary but not domain boundary
+            }
+            else if (!intersection.neighbor()) { // processor boundary but not domain boundary
                 continue;
+            }
 
             const auto& inside = intersection.inside();
             const auto& outside = intersection.outside();
@@ -189,8 +196,9 @@ applyExplicitThresholdPressures_()
     }
 
     // apply threshold pressures across faults
-    if (thpres.ftSize() > 0)
+    if (thpres.ftSize() > 0) {
         configureThpresft_();
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
@@ -207,14 +215,16 @@ configureThpresft_()
     int numCartesianElem = eclState_.getInputGrid().getCartesianSize();
     thpresftValues_.resize(numFaults, -1.0);
     cartElemFaultIdx_.resize(numCartesianElem, -1);
-    for (std::size_t faultIdx = 0; faultIdx < faults.size(); faultIdx++) {
-        auto& fault = faults.getFault(faultIdx);
+    for (std::size_t faultIdx = 0; faultIdx < faults.size(); ++faultIdx) {
+        const auto& fault = faults.getFault(faultIdx);
         thpresftValues_[faultIdx] = thpres.getThresholdPressureFault(faultIdx);
-        for (const FaultFace& face : fault)
+        for (const FaultFace& face : fault) {
             // "face" is a misnomer because the object describes a set of cell
             // indices, but we go with the conventions of the parser here...
-            for (std::size_t cartElemIdx : face)
+            for (std::size_t cartElemIdx : face) {
                 cartElemFaultIdx_[cartElemIdx] = faultIdx;
+            }
+        }
     }
 }
 
@@ -223,8 +233,9 @@ std::vector<Scalar>
 GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 getRestartVector() const
 {
-    if (!enableThresholdPressure_)
+    if (!enableThresholdPressure_) {
         return {};
+    }
 
     return this->thpres_;
 }
@@ -243,8 +254,9 @@ void
 GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 logPressures()
 {
-    if (!enableThresholdPressure_)
+    if (!enableThresholdPressure_) {
         return;
+    }
 
     auto lineFormat = [this](unsigned i, unsigned j, double val)
     {
@@ -274,7 +286,8 @@ logPressures()
             if (thpres.hasRegionBarrier(i, j)) {
                 if (thpres.hasThresholdPressure(i, j)) {
                     str += lineFormat(i, j, thpres.getThresholdPressure(j, i));
-                } else {
+                }
+                else {
                     std::size_t idx = (j - 1) * numEquilRegions_ + (i - 1);
                     str += lineFormat(i, j, this->thpresDefault_[idx]);
                 }

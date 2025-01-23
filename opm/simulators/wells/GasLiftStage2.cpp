@@ -474,7 +474,7 @@ recalculateGradientAndUpdateData_(GradPairItr& grad_itr,
     // only applies to wells in the well_state_map (i.e. wells on this rank)
     // the grads and other grads are synchronized later
     if(this->stage1_wells_.count(name) > 0) {
-        GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(name).get());
+        const GasLiftSingleWell& gs_well = *(this->stage1_wells_.at(name).get());
         {
             auto grad = calcIncOrDecGrad_(name, gs_well, gr_name_dont_limit, increase);
             if (grad) {

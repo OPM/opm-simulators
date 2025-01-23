@@ -1590,7 +1590,7 @@ template<class Scalar>
 void GasLiftSingleWellGeneric<Scalar>::
 updateWellStateAlqFixedValue_(const GasLiftWell& well)
 {
-    auto& max_alq_optional = well.max_rate();
+    const auto& max_alq_optional = well.max_rate();
     if (max_alq_optional) {
         // According to WLIFTOPT, item 3:
         // If item 2 is NO, then item 3 is regarded as the fixed

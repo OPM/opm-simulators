@@ -259,7 +259,7 @@ template<class Scalar> class WellContributions;
 
             // add source from wells to the reservoir matrix
             void addReservoirSourceTerms(GlobalEqVector& residual,
-                                         std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const;
+                                         const std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const;
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
