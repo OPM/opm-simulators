@@ -104,7 +104,7 @@ namespace Opm {
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
-	    Parameters::Register<Parameters::EndStep>("End step for parameter");
+	    Parameters::Register<Parameters::EndStep>("End step for simulering");
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
