@@ -297,12 +297,13 @@ class BlackoilWellModelGenericTest : public BlackoilWellModelGeneric<double>
 {
 public:
     BlackoilWellModelGenericTest(Schedule& schedule,
+                                 BlackoilWellModelGasLiftGeneric<double>& gaslift,
                                  const SummaryState& summaryState,
                                  const EclipseState& eclState,
                                  const PhaseUsage& phase_usage,
                                  const Parallel::Communication& comm,
                                  bool deserialize)
-        : BlackoilWellModelGeneric<double>(schedule, summaryState,
+        : BlackoilWellModelGeneric<double>(schedule, gaslift, summaryState,
                                            eclState, phase_usage, comm)
     {
         if (deserialize) {
@@ -366,6 +367,16 @@ private:
     ParallelWellInfo<double> dummy;
 };
 
+class BlackoilWellModelGasLiftGenericTest : public BlackoilWellModelGasLiftGeneric<double>
+{
+public:
+    BlackoilWellModelGasLiftGenericTest()
+        : BlackoilWellModelGasLiftGeneric<double>(false)
+    {
+        this->last_glift_opt_time_ = 1234.5;
+    }
+};
+
 }
 
 BOOST_AUTO_TEST_CASE(BlackoilWellModelGeneric)
@@ -375,14 +386,15 @@ BOOST_AUTO_TEST_CASE(BlackoilWellModelGeneric)
     Opm::EclipseState eclState{};
     Opm::PhaseUsage phase_usage{};
     Opm::Parallel::Communication comm{};
-    Opm::BlackoilWellModelGenericTest data_out(schedule, summaryState,
+    Opm::BlackoilWellModelGasLiftGenericTest gaslift;
+    Opm::BlackoilWellModelGenericTest data_out(schedule, gaslift, summaryState,
                                                eclState, phase_usage, comm, false);
     data_out.setSerializationTestData();
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
     const size_t pos1 = ser.position();
-    Opm::BlackoilWellModelGenericTest data_in(schedule, summaryState,
+    Opm::BlackoilWellModelGenericTest data_in(schedule, gaslift, summaryState,
                                               eclState, phase_usage, comm, true);
     ser.unpack(data_in);
     const size_t pos2 = ser.position();

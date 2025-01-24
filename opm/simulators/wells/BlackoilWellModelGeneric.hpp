@@ -55,6 +55,7 @@
 namespace Opm {
     class DeferredLogger;
     class EclipseState;
+    template<class Scalar> class BlackoilWellModelGasLiftGeneric;
     template<class Scalar> class GasLiftGroupInfo;
     template<class Scalar> class GasLiftSingleWellGeneric;
     template<class Scalar> class GasLiftWellState;
@@ -91,6 +92,7 @@ class BlackoilWellModelGeneric
 {
 public:
     BlackoilWellModelGeneric(Schedule& schedule,
+                             BlackoilWellModelGasLiftGeneric<Scalar>& gaslift,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsage& phase_usage,
@@ -256,24 +258,10 @@ public:
         serializer(switched_prod_groups_);
         serializer(switched_inj_groups_);
         serializer(closed_offending_wells_);
+        serializer(gen_gaslift_);
     }
 
-    bool operator==(const BlackoilWellModelGeneric& rhs) const
-    {
-        return this->initial_step_ == rhs.initial_step_ &&
-               this->report_step_starts_ == rhs.report_step_starts_ &&
-               this->last_run_wellpi_ == rhs.last_run_wellpi_ &&
-               this->local_shut_wells_ == rhs.local_shut_wells_ &&
-               this->closed_this_step_ == rhs.closed_this_step_ &&
-               this->node_pressures_ == rhs.node_pressures_ &&
-               this->prev_inj_multipliers_ == rhs.prev_inj_multipliers_ &&
-               this->active_wgstate_ == rhs.active_wgstate_ &&
-               this->last_valid_wgstate_ == rhs.last_valid_wgstate_ &&
-               this->nupcol_wgstate_ == rhs.nupcol_wgstate_ &&
-               this->switched_prod_groups_ == rhs.switched_prod_groups_ &&
-               this->switched_inj_groups_ == rhs.switched_inj_groups_ &&
-               this->closed_offending_wells_ == rhs.closed_offending_wells_;            
-    }
+    bool operator==(const BlackoilWellModelGeneric& rhs) const;
 
     const ParallelWellInfo<Scalar>&
     parallelWellInfo(const std::size_t idx) const
@@ -472,6 +460,7 @@ protected:
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
+    BlackoilWellModelGasLiftGeneric<Scalar>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar> wbp_;
 
     PhaseUsage phase_usage_;
