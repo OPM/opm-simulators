@@ -749,7 +749,11 @@ run()
 
     // sub step time loop
     while (!this->substep_timer_.done()) {
-        maybeUpdateTuningAndTimeStep_();
+        // if we just chopped the timestep due to convergence i.e. restarts>0
+        // we dont what to update the next timestep based on Tuning
+        if (restarts == 0) {
+            maybeUpdateTuningAndTimeStep_();
+        }
         const double dt = this->substep_timer_.currentStepLength();
         if (timeStepVerbose_()) {
             detail::logTimer(this->substep_timer_);
