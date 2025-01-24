@@ -631,6 +631,16 @@ add_test_compareECLFiles(CASENAME reg_smry_in_fld_udq
                          DIR udq_actionx
                          TEST_ARGS --enable-tuning=true)
 
+# UDQ ASSIGN for subsets of group level UDQs.  Updates triggered from
+# ACTIONX blocks.
+add_test_compareECLFiles(CASENAME group_udq
+                         FILENAME UDQ_GRP-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR udq_actionx
+                         TEST_ARGS --solver-max-time-step-in-days=0.25)
+
 add_test_compareECLFiles(CASENAME udq_undefined_2
                          FILENAME UDQ-01
                          SIMULATOR flow
