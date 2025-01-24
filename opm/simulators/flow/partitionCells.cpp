@@ -330,9 +330,17 @@ void ZoltanPartitioner::connectWells(const Comm                                 
             continue;
         }
 
-        // Add all cells in this well to be merged into the first cell
+        const auto nc = cellIx.size();
+        for (auto ic1 = 0*nc; ic1 < nc; ++ic1) {
+            for (auto ic2 = ic1 + 1; ic2 < nc; ++ic2) {
+                this->partitioner_.registerConnection(cellIx[ic1], cellIx[ic2]);
+                this->partitioner_.registerConnection(cellIx[ic2], cellIx[ic1]);
+            }
+        }
+
+        // Collect all cells for the well into a vertex group
         if (!cellIx.empty()) {
-            this->partitioner_.mergeVertices(cellIx, cellIx.front());
+            this->partitioner_.addVertexGroup(cellIx);
         }
     }
 

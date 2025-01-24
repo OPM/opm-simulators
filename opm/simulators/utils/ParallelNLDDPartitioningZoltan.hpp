@@ -87,19 +87,16 @@ namespace Opm {
         std::vector<int>
         partitionElements(const ZoltanParamMap& params) const;
 
-        /// Merge vertices into a single vertex.
+        /// Add a group of vertices that should be merged together.
+        /// Must be called before compress().
         ///
-        /// \param[in] vertices Vertices to merge.
-        ///
-        /// \param[in] target Target vertex.
-        void mergeVertices(const std::vector<int>& vertices, const int target);
+        /// \param[in] vertices Vector of vertex IDs to merge
+        void addVertexGroup(const std::vector<int>& vertices);
 
     private:
         /// Connection/graph edge.
         using Connection = std::pair<std::size_t, std::size_t>;
-
-        /// Collection of vertices to be merged, mapping target vertex to list of vertices to merge into it
-        std::map<int, std::vector<int>> vertices_to_merge_{};
+        std::vector<std::vector<int>> vertexGroups_{};
 
         /// MPI communication object.  Needed by Zoltan.
         Parallel::Communication comm_{};

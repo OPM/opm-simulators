@@ -166,7 +166,7 @@ namespace {
                              const std::size_t            numVertices,
                              const std::vector<Edge>&     edges,
                              const EnumerateSeenVertices& vertexId,
-                             const std::map<int, std::vector<int>>& vertices_to_merge,
+                             const std::vector<std::vector<int>>& vertexGroups,
                              GlobalCellID&&               globalCell)
             : myRank_ { myRank }
         {
@@ -177,22 +177,12 @@ namespace {
             }
 
             // Apply any vertex merges that were collected
-            for (const auto& [target, vertices] : vertices_to_merge) {
-                this->graph_.mergeVertices(vertices, target);
+            for (const auto& group : vertexGroups) {
+                this->graph_.addVertexGroup(group);
             }
 
-            // Build set of all vertices that will be merged away
-            std::set<int> merged_vertices;
-            for (const auto& [target, sources] : vertices_to_merge) {
-                for (const auto& source : sources) {
-                    if (source != target) {  // Only count if not mapping to itself
-                        merged_vertices.insert(source);
-                    }
-                }
-            }
+            auto numVerticesAfterMerge = this->graph_.applyVertexMerges();
 
-            // Compress graph, taking into account the vertices that will be merged away
-            const auto numVerticesAfterMerge = vertexId.numVertices() - merged_vertices.size();
             this->graph_.compress(numVerticesAfterMerge);
 
             // Form local-to-global vertex ID mapping for reachable vertices.
@@ -569,9 +559,9 @@ extern "C" {
 
 } // Anonymous namespace
 
-void Opm::ParallelNLDDPartitioningZoltan::mergeVertices(const std::vector<int>& vertices, const int target)
+void Opm::ParallelNLDDPartitioningZoltan::addVertexGroup(const std::vector<int>& vertices)
 {
-    this->vertices_to_merge_[target].insert(this->vertices_to_merge_[target].end(), vertices.begin(), vertices.end());
+    vertexGroups_.push_back(vertices);
 }
 
 std::vector<int>
@@ -581,7 +571,7 @@ Opm::ParallelNLDDPartitioningZoltan::partitionElements(const ZoltanParamMap& par
 
     auto graph = VertexGraph {
         this->comm_.rank(), this->numElements_,
-        this->conns_, vertexId, this->vertices_to_merge_, this->globalCell_
+        this->conns_, vertexId, this->vertexGroups_, this->globalCell_
     };
 
     const auto partsForReachableCells = Partitioner {
