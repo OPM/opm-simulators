@@ -72,9 +72,9 @@ public:
 
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
 
-    static constexpr int numEq = BlackoilIndices::numEq;
+    using Eval = GetPropType<TypeTag, Properties::Evaluation>;
 
-    using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
+    static constexpr int numEq = BlackoilIndices::numEq;
 
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,

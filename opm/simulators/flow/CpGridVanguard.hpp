@@ -285,7 +285,7 @@ protected:
                                                     this->cartesianIndexMapper(),
                                                     this->grid(),
                                                     this->cellCentroids(),
-                                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                    getPropValue<TypeTag, Properties::EnableEnergy>() || getPropValue<TypeTag, Properties::EnableTemperature>(),
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
                                                     getPropValue<TypeTag, Properties::EnableDispersion>()));
         globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);

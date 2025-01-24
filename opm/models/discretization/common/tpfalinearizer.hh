@@ -335,6 +335,11 @@ public:
         return velocityInfo_;
     }
 
+    const auto& getNeighborInfo() const {
+        return neighborInfo_;
+    }
+
+
     void updateDiscretizationParameters()
     {
         updateStoredTransmissibilities();

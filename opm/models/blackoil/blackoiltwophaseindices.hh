@@ -96,6 +96,7 @@ struct BlackOilTwoPhaseIndices
     static constexpr int numEq = numPhases + numSolvents + numExtbos + numPolymers +
                                  numEnergy + numFoam + numBrine + numMICPs;
 
+    static constexpr int numDerivatives = numEq; //TODO + enableTemperature;
     //////////////////////////////
     // Primary variable indices
     //////////////////////////////

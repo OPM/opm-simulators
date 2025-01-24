@@ -417,6 +417,15 @@ public:
         rockFraction_ = elemCtx.problem().rockFraction(cell_idx, timeIdx);
     }
 
+    void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    {
+        throw std::logic_error("This updateTemperature_ should not be called when enableEnergy is true");
+    }
+    void updateEnergyQuantities_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    {
+        throw std::logic_error("This updateEnergyQuantities_ should not be called when enableEnergy is true");
+    }
+
     const Evaluation& rockInternalEnergy() const
     { return rockInternalEnergy_; }
 
@@ -444,58 +453,128 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, false>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using SolidEnergyLaw = GetPropType<TypeTag, Properties::SolidEnergyLaw>;
+    using ThermalConductionLaw = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+
 
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
 public:
-    void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
-                            [[maybe_unused]] unsigned dofIdx,
-                            [[maybe_unused]] unsigned timeIdx)
+
+    void updateTemperature_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
     {
+        auto& fs = asImp_().fluidState_;
+        const Scalar T = problem.temperature(globalDofIdx, timeIdx);
+        // if TEMP is used we solve for temperature seperatly
         if constexpr (enableTemperature) {
-            // even if energy is conserved, the temperature can vary over the spatial
-            // domain if the EnableTemperature property is set to true
-            auto& fs = asImp_().fluidState_;
-            const Scalar T = elemCtx.problem().temperature(elemCtx, dofIdx, timeIdx);
+            const Evaluation TE = Evaluation::createVariable(T, Indices::temperatureIdx);
+            fs.setTemperature(TE);
+        } else {
             fs.setTemperature(T);
         }
+    }
+
+    void updateTemperature_(const ElementContext& elemCtx,
+                            unsigned dofIdx,
+                            unsigned timeIdx)
+    {
+        updateTemperature_(elemCtx.problem(), elemCtx.globalSpaceIndex(dofIdx, timeIdx), timeIdx);
     }
 
     template<class Problem>
-    void updateTemperature_([[maybe_unused]] const Problem& problem,
+    void updateTemperature_(const Problem& problem,
                             [[maybe_unused]] const PrimaryVariables& priVars,
-                            [[maybe_unused]] unsigned globalDofIdx,
-                            [[maybe_unused]] unsigned timeIdx,
+                            unsigned globalDofIdx,
+                            unsigned timeIdx,
                             [[maybe_unused]] const LinearizationType& lintype
         )
     {
+        updateTemperature_(problem, globalDofIdx, timeIdx);
+    }
+
+    void updateEnergyQuantities_(const Problem& problem, unsigned globalDofIdx, unsigned timeIdx)
+    {
+        // TEMP is enabled
         if constexpr (enableTemperature) {
             auto& fs = asImp_().fluidState_;
-            // even if energy is conserved, the temperature can vary over the spatial
-            // domain if the EnableTemperature property is set to true
-            const Scalar T = problem.temperature(globalDofIdx, timeIdx);
-            fs.setTemperature(T);
+            // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
+            // and the thermal condictivity coefficients
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                const auto& h = FluidSystem::enthalpy(fs, phaseIdx, fs.pvtRegionIndex());
+                fs.setEnthalpy(phaseIdx, h);
+            }
+            const auto& solidEnergyLawParams = problem.solidEnergyLawParams(globalDofIdx, timeIdx);
+            rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs);
+
+            const auto& thermalConductionLawParams = problem.thermalConductionLawParams(globalDofIdx, timeIdx);
+            totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs);
+
+            // Retrieve the rock fraction from the problem
+            // Usually 1 - porosity, but if pvmult is used to modify porosity
+            // we will apply the same multiplier to the rock fraction
+            // i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
+            // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
+            rockFraction_ = problem.rockFraction(globalDofIdx, timeIdx);
         }
     }
 
-    void updateEnergyQuantities_(const ElementContext&,
-                                 unsigned,
-                                 unsigned,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
-    { }
+
+    void updateEnergyQuantities_(const ElementContext& elemCtx,
+                                 unsigned dofIdx,
+                                 unsigned timeIdx,
+                                 const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
+    {
+        if constexpr (enableTemperature) {
+            auto& fs = asImp_().fluidState_;
+
+            // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
+            // and the thermal condictivity coefficients
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+
+                const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+                fs.setEnthalpy(phaseIdx, h);
+            }
+            const auto& solidEnergyLawParams = elemCtx.problem().solidEnergyLawParams(elemCtx, dofIdx, timeIdx);
+            rockInternalEnergy_ = SolidEnergyLaw::solidInternalEnergy(solidEnergyLawParams, fs);
+
+            const auto& thermalConductionLawParams = elemCtx.problem().thermalConductionLawParams(elemCtx, dofIdx, timeIdx);
+            totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs);
+
+            // Retrieve the rock fraction from the problem
+            // Usually 1 - porosity, but if pvmult is used to modify porosity
+            // we will apply the same multiplier to the rock fraction
+            // i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
+            // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
+            const unsigned cell_idx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+            rockFraction_ = elemCtx.problem().rockFraction(cell_idx, timeIdx);
+        }
+    }
 
     const Evaluation& rockInternalEnergy() const
-    { throw std::logic_error("Requested the rock internal energy, which is "
-                             "unavailable because energy is not conserved"); }
+    { return rockInternalEnergy_; }
 
     const Evaluation& totalThermalConductivity() const
-    { throw std::logic_error("Requested the total thermal conductivity, which is "
-                             "unavailable because energy is not conserved"); }
+    { return totalThermalConductivity_; }
+
+    const Scalar& rockFraction() const
+    { return rockFraction_; }
 
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
+    Evaluation rockInternalEnergy_;
+    Evaluation totalThermalConductivity_;
+    Scalar rockFraction_;
 };
 
 
@@ -683,18 +762,60 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 public:
     template<class FluidState>
-    static void updateEnergy(Evaluation& /*energyFlux*/,
-                             const unsigned& /*focusDofIndex*/,
-                             const unsigned& /*inIdx*/,
-                             const unsigned& /*exIdx*/,
-                             const IntensiveQuantities& /*inIq*/,
-                             const IntensiveQuantities& /*exIq*/,
-                             const FluidState& /*inFs*/,
-                             const FluidState& /*exFs*/,
-                             const Scalar& /*inAlpha*/,
-                             const Scalar& /*outAlpha*/,
-                             const Scalar& /*faceArea*/)
-    {}
+    static void updateEnergy(Evaluation& energyFlux,
+                             const unsigned& focusDofIndex,
+                             const unsigned& inIdx,
+                             const unsigned& exIdx,
+                             const IntensiveQuantities& inIq,
+                             const IntensiveQuantities& exIq,
+                             const FluidState& inFs,
+                             const FluidState& exFs,
+                             const Scalar& inAlpha,
+                             const Scalar& outAlpha,
+                             const Scalar& faceArea)
+    {
+        // used by the TEMP option
+        Evaluation deltaT;
+        if (focusDofIndex == inIdx)
+            deltaT =
+                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
+                - inFs.temperature(/*phaseIdx=*/0);
+        else if (focusDofIndex == exIdx)
+            deltaT =
+                exFs.temperature(/*phaseIdx=*/0)
+                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        else
+            deltaT =
+                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
+                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+
+        Evaluation inLambda;
+        if (focusDofIndex == inIdx)
+            inLambda = inIq.totalThermalConductivity();
+        else
+            inLambda = decay<Scalar>(inIq.totalThermalConductivity());
+
+        Evaluation exLambda;
+        if (focusDofIndex == exIdx)
+            exLambda = exIq.totalThermalConductivity();
+        else
+            exLambda = decay<Scalar>(exIq.totalThermalConductivity());
+
+        Evaluation H;
+        const Evaluation& inH = inLambda*inAlpha;
+        const Evaluation& exH = exLambda*outAlpha;
+        if (inH > 0 && exH > 0) {
+            // compute the "thermal transmissibility". In contrast to the normal
+            // transmissibility this cannot be done as a preprocessing step because the
+            // average thermal conductivity is analogous to the permeability but
+            // depends on the solution.
+            H = 1.0/(1.0/inH + 1.0/exH);
+        }
+        else
+            H = 0.0;
+
+        energyFlux = deltaT * (-H/faceArea);
+    }
 
     void updateEnergy(const ElementContext&,
                       unsigned,
