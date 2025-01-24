@@ -30,8 +30,6 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/grid/utility/SparseTable.hpp>
-
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -41,7 +39,6 @@
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
-#include <opm/simulators/flow/SubDomain.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
@@ -80,6 +77,9 @@
 #include <vector>
 
 namespace Opm {
+
+template<class Scalar> class BlackoilWellModelNldd;
+template<class T> class SparseTable;
 
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
@@ -131,8 +131,6 @@ template<class Scalar> class WellContributions;
             // For computing average pressured used by gpmaint
             using AverageRegionalPressureType = RegionAverageCalculator::
                 AverageRegionalPressure<FluidSystem, std::vector<int> >;
-
-            using Domain = SubDomain<Grid>;
 
             explicit BlackoilWellModel(Simulator& simulator);
 
@@ -248,11 +246,6 @@ template<class Scalar> class WellContributions;
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false) const;
 
-            // Check if well equations are converged locally.
-            ConvergenceReport getDomainWellConvergence(const Domain& domain,
-                                                       const std::vector<Scalar>& B_avg,
-                                                       DeferredLogger& local_deferredLogger) const;
-
             const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const;
@@ -274,7 +267,6 @@ template<class Scalar> class WellContributions;
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
-            void initPrimaryVariablesEvaluationDomain(const Domain& domain) const;
 
             std::pair<bool, bool>
             updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
@@ -292,15 +284,23 @@ template<class Scalar> class WellContributions;
 
             using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
-            void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const;
-
-            void addWellPressureEquationsDomain([[maybe_unused]] PressureMatrix& jacobian,
-                                                [[maybe_unused]] const BVector& weights,
-                                                [[maybe_unused]] const bool use_well_weights,
-                                                [[maybe_unused]] const int domainIndex) const;
-
-
+            void addWellPressureEquations(PressureMatrix& jacobian,
+                                          const BVector& weights,
+                                          const bool use_well_weights) const;
             void addWellPressureEquationsStruct(PressureMatrix& jacobian) const;
+            void addWellPressureEquationsDomain(PressureMatrix& jacobian,
+                                                const BVector& weights,
+                                                const bool use_well_weights,
+                                                const int domainIndex) const
+            {
+                if (!nldd_) {
+                    OPM_THROW(std::logic_error, "Attempt to access NLDD data without a NLDD solver");
+                }
+                return nldd_->addWellPressureEquations(jacobian,
+                                                       weights,
+                                                       use_well_weights,
+                                                       domainIndex);
+            }
 
             /// \brief Get list of local nonshut wells
             const std::vector<WellInterfacePtr>& localNonshutWells() const
@@ -308,24 +308,32 @@ template<class Scalar> class WellContributions;
                 return well_container_;
             }
 
-            // prototype for assemble function for ASPIN solveLocal()
-            // will try to merge back to assemble() when done prototyping
-            void assembleDomain(const int iterationIdx,
-                                const double dt,
-                                const Domain& domain);
-            void updateWellControlsDomain(DeferredLogger& deferred_logger, const Domain& domain);
-
-            void setupDomains(const std::vector<Domain>& domains);
-
             const SparseTable<int>& well_local_cells() const
             {
-                return well_local_cells_;
+                if (!nldd_) {
+                    OPM_THROW(std::logic_error, "Attempt to access NLDD data without a NLDD solver");
+                }
+                return nldd_->well_local_cells();
             }
+
+            const std::map<std::string, int>& well_domain() const
+            {
+                if (!nldd_) {
+                    OPM_THROW(std::logic_error, "Attempt to access NLDD data without a NLDD solver");
+                }
+
+                return nldd_->well_domain();
+            }
+
             auto begin() const { return well_container_.begin(); }
             auto end() const { return well_container_.end(); }
             bool empty() const { return well_container_.empty(); }
 
-            bool addMatrixContributions() const { return param_.matrix_add_well_contributions_; }
+            bool addMatrixContributions() const
+            { return param_.matrix_add_well_contributions_; }
+
+            int numStrictIterations() const
+            { return param_.strict_outer_iter_wells_; }
 
             int compressedIndexForInterior(int cartesian_cell_idx) const override
             {
@@ -339,7 +347,16 @@ template<class Scalar> class WellContributions;
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellStateDomain(const BVector& x,
-                                                             const Domain& domain);
+                                                             const int domainIdx);
+
+            const Grid& grid() const
+            { return simulator_.vanguard().grid(); }
+
+            const Simulator& simulator() const
+            { return simulator_; }
+
+            void setNlddAdapter(BlackoilWellModelNldd<TypeTag>* mod)
+            { nldd_ = mod; }
 
         protected:
             Simulator& simulator_;
@@ -384,12 +401,6 @@ template<class Scalar> class WellContributions;
             void doPreStepNetworkRebalance(DeferredLogger& deferred_logger);
 
             std::vector<Scalar> B_avg_{};
-
-            // Store the local index of the wells perforated cells in the domain, if using subdomains
-            SparseTable<int> well_local_cells_;
-
-            const Grid& grid() const
-            { return simulator_.vanguard().grid(); }
 
             const EquilGrid& equilGrid() const
             { return simulator_.vanguard().equilGrid(); }
@@ -464,7 +475,6 @@ template<class Scalar> class WellContributions;
             int reportStepIndex() const;
 
             void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
-            void assembleWellEqDomain(const double dt, const Domain& domain, DeferredLogger& deferred_logger);
 
             void prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger);
 
@@ -495,6 +505,7 @@ template<class Scalar> class WellContributions;
             BlackoilWellModel(Simulator& simulator, const PhaseUsage& pu);
 
             BlackoilWellModelGasLift<TypeTag> gaslift_;
+            BlackoilWellModelNldd<TypeTag>* nldd_ = nullptr; //!< NLDD well model adapter (not owned)
 
             // These members are used to avoid reallocation in specific functions
             // instead of using local variables.

@@ -50,6 +50,8 @@
 
 #include <opm/simulators/utils/ComponentName.hpp>
 
+#include <opm/simulators/wells/BlackoilWellModelNldd.hpp>
+
 #include <fmt/format.h>
 
 #include <algorithm>
@@ -64,6 +66,7 @@
 #include <ios>
 #include <memory>
 #include <numeric>
+#include <set>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -76,7 +79,8 @@ template<class TypeTag> class BlackoilModel;
 
 /// A NLDD implementation for three-phase black oil.
 template <class TypeTag>
-class BlackoilModelNldd {
+class BlackoilModelNldd
+{
 public:
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -98,10 +102,15 @@ public:
     //! \param param param Model parameters
     //! \param compNames Names of the solution components
     explicit BlackoilModelNldd(BlackoilModel<TypeTag>& model)
-        : model_(model), rank_(model_.simulator().vanguard().grid().comm().rank())
+        : model_(model)
+        , wellModel_(model.wellModel())
+        , rank_(model_.simulator().vanguard().grid().comm().rank())
     {
         // Create partitions.
         const auto& [partition_vector, num_domains] = this->partitionCells();
+
+        // Set nldd handler in main well model
+        model.wellModel().setNlddAdapter(&wellModel_);
 
         // Scan through partitioning to get correct size for each.
         std::vector<int> sizes(num_domains, 0);
@@ -179,7 +188,7 @@ public:
     void prepareStep()
     {
         // Setup domain->well mapping.
-        model_.wellModel().setupDomains(domains_);
+        wellModel_.setupDomains(domains_);
     }
 
     //! \brief Do one non-linear NLDD iteration.
@@ -352,7 +361,6 @@ public:
     }
 
 private:
-
     //! \brief Solve the equation system for a single domain.
     std::pair<SimulatorReportSingle, ConvergenceReport>
     solveDomain(const Domain& domain,
@@ -380,9 +388,9 @@ private:
             modelSimulator.model().newtonMethod().setIterationIndex(iter);
             // TODO: we should have a beginIterationLocal function()
             // only handling the well model for now
-            modelSimulator.problem().wellModel().assembleDomain(modelSimulator.model().newtonMethod().numIterations(),
-                                                                modelSimulator.timeStepSize(),
-                                                               domain);
+            wellModel_.assemble(modelSimulator.model().newtonMethod().numIterations(),
+                                modelSimulator.timeStepSize(),
+                                domain);
             // Assemble reservoir locally.
             report += this->assembleReservoirDomain(domain);
             report.assemble_time += detailTimer.stop();
@@ -445,9 +453,9 @@ private:
             // TODO: we should have a beginIterationLocal function()
             // only handling the well model for now
             // Assemble reservoir locally.
-            modelSimulator.problem().wellModel().assembleDomain(modelSimulator.model().newtonMethod().numIterations(),
-                                                                modelSimulator.timeStepSize(),
-                                                                domain);
+            wellModel_.assemble(modelSimulator.model().newtonMethod().numIterations(),
+                                modelSimulator.timeStepSize(),
+                                domain);
             report += this->assembleReservoirDomain(domain);
             report.assemble_time += detailTimer.stop();
 
@@ -736,7 +744,7 @@ private:
                                                           logger,
                                                           B_avg,
                                                           residual_norms);
-        report += model_.wellModel().getDomainWellConvergence(domain, B_avg, logger);
+        report += wellModel_.getWellConvergence(domain, B_avg, logger);
         return report;
     }
 
@@ -815,7 +823,7 @@ private:
                            const SimulatorTimerInterface& timer,
                            const Domain& domain)
     {
-        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain.index);
+        auto initial_local_well_primary_vars = wellModel_.getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, false);
         local_report = res.first;
@@ -825,7 +833,7 @@ private:
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         } else {
-            model_.wellModel().setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
+            wellModel_.setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
@@ -840,7 +848,7 @@ private:
                                 const SimulatorTimerInterface& timer,
                                 const Domain& domain)
     {
-        auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain.index);
+        auto initial_local_well_primary_vars = wellModel_.getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, true);
         local_report = res.first;
@@ -881,7 +889,7 @@ private:
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
         } else {
-            model_.wellModel().setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
+            wellModel_.setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
@@ -996,6 +1004,7 @@ private:
     }
 
     BlackoilModel<TypeTag>& model_; //!< Reference to model
+    BlackoilWellModelNldd<TypeTag> wellModel_; //!< NLDD well model adapter
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
