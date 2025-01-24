@@ -57,6 +57,15 @@ public:
 
     bool terminalOutput() const { return terminal_output_; }
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(last_glift_opt_time_);
+    }
+
+    bool operator==(const BlackoilWellModelGasLiftGeneric& that) const
+    { return this->last_glift_opt_time_ == that.last_glift_opt_time_; }
+
 protected:
     void gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar>*>& well_container,
                            const WellState<Scalar>& wellState,

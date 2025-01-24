@@ -54,6 +54,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
@@ -87,6 +88,7 @@ namespace Opm {
 template<class Scalar>
 BlackoilWellModelGeneric<Scalar>::
 BlackoilWellModelGeneric(Schedule& schedule,
+                         BlackoilWellModelGasLiftGeneric<Scalar>& gaslift,
                          const SummaryState& summaryState,
                          const EclipseState& eclState,
                          const PhaseUsage& phase_usage,
@@ -95,6 +97,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , summaryState_(summaryState)
     , eclState_(eclState)
     , comm_(comm)
+    , gen_gaslift_(gaslift)
     , wbp_(*this)
     , phase_usage_(phase_usage)
     , terminal_output_(comm_.rank() == 0 &&
@@ -2106,7 +2109,8 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->nupcol_wgstate_ == rhs.nupcol_wgstate_
         && this->switched_prod_groups_ == rhs.switched_prod_groups_
         && this->switched_inj_groups_ == rhs.switched_inj_groups_
-        && this->closed_offending_wells_ == rhs.closed_offending_wells_;
+        && this->closed_offending_wells_ == rhs.closed_offending_wells_
+        && this->gen_gaslift_ == rhs.gen_gaslift_;
 }
 
 template class BlackoilWellModelGeneric<double>;

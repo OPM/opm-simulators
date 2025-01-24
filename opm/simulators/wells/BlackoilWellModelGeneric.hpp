@@ -55,6 +55,7 @@
 namespace Opm {
     class DeferredLogger;
     class EclipseState;
+    template<class Scalar> class BlackoilWellModelGasLiftGeneric;
     template<class Scalar> class GasLiftGroupInfo;
     template<class Scalar> class GasLiftSingleWellGeneric;
     template<class Scalar> class GasLiftWellState;
@@ -91,6 +92,7 @@ class BlackoilWellModelGeneric
 {
 public:
     BlackoilWellModelGeneric(Schedule& schedule,
+                             BlackoilWellModelGasLiftGeneric<Scalar>& gaslift,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsage& phase_usage,
@@ -458,6 +460,7 @@ protected:
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
+    BlackoilWellModelGasLiftGeneric<Scalar>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar> wbp_;
 
     PhaseUsage phase_usage_;
