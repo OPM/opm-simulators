@@ -57,6 +57,7 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using LocalFluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     enum {
@@ -91,6 +92,10 @@ public:
 
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
+
+        using DynamicFluidSystem = std::remove_reference_t<decltype(LocalFluidSystem::getNonStatic())>;
+        DynamicFluidSystem* fluidSystemInstance = &LocalFluidSystem::getNonStatic();
+
         this->invalidateIntensiveQuantitiesCache(timeIdx);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if constexpr (gridIsUnchanging) {
@@ -103,7 +108,8 @@ public:
                 for (auto it = grid_chunk_iterators_[chunk]; it != grid_chunk_iterators_[chunk+1]; ++it) {
                     const Element& elem = *it;
                     elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx, *fluidSystemInstance);
                 }
             }
         } else {
@@ -115,7 +121,7 @@ public:
             for (; it != end; ++it) {
                 const Element& elem = *it;
                 elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                elemCtx.updatePrimaryIntensiveQuantities(timeIdx, *fluidSystemInstance);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("InvalideAndUpdateIntensiveQuantities: state error", this->simulator_.vanguard().grid().comm());
