@@ -38,10 +38,7 @@
 
 // Helper functions
 namespace {
-    Opm::Connection createConnection(int i, int j, int k) {
-        // Calculate global index from i,j,k coordinates
-        // For this 1D test grid, global_index is just i since j=k=0
-        std::size_t global_index = i;
+    Opm::Connection createConnection(int i, int j, int k, int global_index) {
         return Opm::Connection(i, j, k,                           // i,j,k
                              global_index,                        // global_index
                              0,                                   // complnum
@@ -69,7 +66,7 @@ namespace {
         for (const auto& [well_name, cell_indices] : well_specs) {
             auto well_conn = std::make_shared<Opm::WellConnections>();
             for (int idx : cell_indices) {
-                well_conn->add(createConnection(idx, 0, 0));
+                well_conn->add(createConnection(idx, 0, 0, idx));
             }
             auto well = createWell(well_name);
             well.updateConnections(well_conn, true);
@@ -259,6 +256,228 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithOverlappingWellsTest)
     BOOST_CHECK_EQUAL(part[1], part[4]);
 
     // 4. Cells 0, 5, and 6 can be in any partition
+#endif
+}
+
+
+BOOST_AUTO_TEST_CASE(PartitionCellsWithOverlappingWells3DTest)
+{
+    // Create a 3x3x3 grid with three wells:
+    // - Well1: Vertical well through (1,1,0) -> (1,1,1) -> (1,1,2)
+    // - Well2: Diagonal well through (0,0,0) -> (1,1,1) -> (2,2,2)  [overlaps with Well1 at (1,1,1)]
+    // - Well3: Horizontal well through (0,2,0) -> (1,2,0) -> (2,2,0) [no overlap]
+
+    auto grid = createTestGrid({3, 3, 3}, {3.0, 3.0, 3.0});
+    using Entity = typename Dune::CpGrid::LeafGridView::template Codim<0>::Entity;
+    auto zoltan_ctrl = createZoltanControl<Entity>(grid);
+
+    // Helper to convert i,j,k coordinates to global index for 3x3x3 grid
+    auto ijkToGlobal = [](int i, int j, int k) { return i + (3 * j) + (9 * k); };
+
+    // Create wells with proper 3D connections
+    auto wells = std::vector<Dune::cpgrid::OpmWellType>();
+
+    // Well 1 - vertical well
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(1, 1, 0, ijkToGlobal(1, 1, 0)));  // Global index: 4
+        well_conn->add(createConnection(1, 1, 1, ijkToGlobal(1, 1, 1)));  // Global index: 13
+        well_conn->add(createConnection(1, 1, 2, ijkToGlobal(1, 1, 2)));  // Global index: 22
+        auto well = createWell("VERTICAL");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+    // Well 2 - diagonal well (overlaps with Well 1 at (1,1,1))
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(0, 0, 0, ijkToGlobal(0, 0, 0)));  // Global index: 0
+        well_conn->add(createConnection(1, 1, 1, ijkToGlobal(1, 1, 1)));  // Global index: 13
+        well_conn->add(createConnection(2, 2, 2, ijkToGlobal(2, 2, 2)));  // Global index: 26
+        auto well = createWell("DIAGONAL");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+    // Well 3 - horizontal well (no overlap)
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(0, 2, 0, ijkToGlobal(0, 2, 0)));  // Global index: 6
+        well_conn->add(createConnection(1, 2, 0, ijkToGlobal(1, 2, 0)));  // Global index: 7
+        well_conn->add(createConnection(2, 2, 0, ijkToGlobal(2, 2, 0)));  // Global index: 8
+        auto well = createWell("HORIZONTAL");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+    // Create well connections object
+    Dune::cpgrid::WellConnections wellConnections(wells, std::unordered_map<std::string, std::set<int>>{}, grid);
+
+#if HAVE_MPI && HAVE_ZOLTAN
+    // Test Zoltan partitioning with overlapping well cells
+    auto [part, num_part] = Opm::partitionCells("zoltan", 10, grid.leafGridView(),
+                                               wells,
+                                               std::unordered_map<std::string, std::set<int>>{},
+                                               zoltan_ctrl);
+
+    // Verify number of partitions
+    BOOST_CHECK_EQUAL(num_part, 10);
+    BOOST_CHECK_EQUAL(part.size(), 27);  // 3x3x3 grid
+
+    // The key tests:
+    // 1. All cells in Well 1 (vertical) should be in the same partition
+    BOOST_CHECK_EQUAL(part[ijkToGlobal(1,1,0)], part[ijkToGlobal(1,1,1)]);
+    BOOST_CHECK_EQUAL(part[ijkToGlobal(1,1,1)], part[ijkToGlobal(1,1,2)]);
+
+    // 2. All cells in Well 2 (diagonal) should be in the same partition
+    BOOST_CHECK_EQUAL(part[ijkToGlobal(0,0,0)], part[ijkToGlobal(1,1,1)]);
+    BOOST_CHECK_EQUAL(part[ijkToGlobal(1,1,1)], part[ijkToGlobal(2,2,2)]);
+
+    // 3. Due to overlap at (1,1,1), all cells from Well 1 and Well 2 should be in same partition
+    BOOST_CHECK_EQUAL(part[ijkToGlobal(1,1,0)], part[ijkToGlobal(0,0,0)]);
+    BOOST_CHECK_EQUAL(part[ijkToGlobal(1,1,2)], part[ijkToGlobal(2,2,2)]);
+
+    // 4. All cells in Well 3 (horizontal) should be in the same partition
+    BOOST_CHECK_EQUAL(part[ijkToGlobal(0,2,0)], part[ijkToGlobal(1,2,0)]);
+    BOOST_CHECK_EQUAL(part[ijkToGlobal(1,2,0)], part[ijkToGlobal(2,2,0)]);
+
+    // 5. Well 3 can be in a different partition from Well 1 and 2 since it doesn't overlap
+    // No test needed as it can be in any partition
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
+{
+    // Create a 5x5x4 grid to accommodate a complex well network
+    auto grid = createTestGrid({5, 5, 4}, {5.0, 5.0, 4.0});
+    using Entity = typename Dune::CpGrid::LeafGridView::template Codim<0>::Entity;
+    auto zoltan_ctrl = createZoltanControl<Entity>(grid);
+
+    // Helper to convert i,j,k coordinates to global index for 5x5x4 grid
+    auto ijkToGlobal = [](int i, int j, int k) { return i + (5 * j) + (25 * k); };
+
+    // Create wells with complex connections
+    auto wells = std::vector<Dune::cpgrid::OpmWellType>();
+
+    // Well 1 - Main vertical producer with two branches
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        // Main wellbore - vertical
+        well_conn->add(createConnection(2, 2, 0, ijkToGlobal(2, 2, 0)));  // Bottom
+        well_conn->add(createConnection(2, 2, 1, ijkToGlobal(2, 2, 1)));
+        well_conn->add(createConnection(2, 2, 2, ijkToGlobal(2, 2, 2)));
+        well_conn->add(createConnection(2, 2, 3, ijkToGlobal(2, 2, 3)));  // Top
+        // Branch 1 - horizontal in x direction
+        well_conn->add(createConnection(3, 2, 2, ijkToGlobal(3, 2, 2)));
+        well_conn->add(createConnection(4, 2, 2, ijkToGlobal(4, 2, 2)));
+        // Branch 2 - horizontal in y direction
+        well_conn->add(createConnection(2, 3, 1, ijkToGlobal(2, 3, 1)));
+        well_conn->add(createConnection(2, 4, 1, ijkToGlobal(2, 4, 1)));
+        auto well = createWell("PRODUCER1");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+    // Well 2 - Diagonal injector crossing the producer
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(0, 0, 0, ijkToGlobal(0, 0, 0)));
+        well_conn->add(createConnection(1, 1, 1, ijkToGlobal(1, 1, 1)));
+        well_conn->add(createConnection(2, 2, 2, ijkToGlobal(2, 2, 2)));  // Intersects with Well 1
+        well_conn->add(createConnection(3, 3, 3, ijkToGlobal(3, 3, 3)));
+        auto well = createWell("INJECTOR1");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+    // Well 3 - Horizontal well that crosses both previous wells
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(0, 2, 2, ijkToGlobal(0, 2, 2)));
+        well_conn->add(createConnection(1, 2, 2, ijkToGlobal(1, 2, 2)));
+        well_conn->add(createConnection(2, 2, 2, ijkToGlobal(2, 2, 2)));  // Intersects with Well 1 and 2
+        well_conn->add(createConnection(3, 2, 2, ijkToGlobal(3, 2, 2)));  // Intersects with Well 1's branch
+        well_conn->add(createConnection(4, 2, 2, ijkToGlobal(4, 2, 2)));
+        auto well = createWell("PRODUCER2");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+    // Well 4 - L-shaped well connecting to the network
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(2, 4, 1, ijkToGlobal(2, 4, 1)));  // Connects to Well 1's branch
+        well_conn->add(createConnection(2, 4, 2, ijkToGlobal(2, 4, 2)));
+        well_conn->add(createConnection(2, 4, 3, ijkToGlobal(2, 4, 3)));
+        well_conn->add(createConnection(3, 4, 3, ijkToGlobal(3, 4, 3)));
+        well_conn->add(createConnection(4, 4, 3, ijkToGlobal(4, 4, 3)));
+        auto well = createWell("PRODUCER3");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+    // Well 5 - Isolated well (not connected to the network)
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(0, 4, 0, ijkToGlobal(0, 4, 0)));
+        well_conn->add(createConnection(1, 4, 0, ijkToGlobal(1, 4, 0)));
+        auto well = createWell("ISOLATED");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+#if HAVE_MPI && HAVE_ZOLTAN
+    // Test Zoltan partitioning with complex well network
+    auto [part, num_part] = Opm::partitionCells("zoltan", 15, grid.leafGridView(),
+                                               wells,
+                                               std::unordered_map<std::string, std::set<int>>{},
+                                               zoltan_ctrl);
+
+    // Verify number of partitions and grid size
+    BOOST_CHECK_EQUAL(num_part, 15);
+    BOOST_CHECK_EQUAL(part.size(), 100);  // 5x5x4 grid
+
+    // Helper to check if two cells are in the same partition
+    auto inSamePartition = [&part](int idx1, int idx2) {
+        return part[idx1] == part[idx2];
+    };
+
+    // Test 1: All cells in Well 1 (main bore and branches) should be in the same partition
+    // Main wellbore
+    BOOST_CHECK(inSamePartition(ijkToGlobal(2,2,0), ijkToGlobal(2,2,1)));
+    BOOST_CHECK(inSamePartition(ijkToGlobal(2,2,1), ijkToGlobal(2,2,2)));
+    BOOST_CHECK(inSamePartition(ijkToGlobal(2,2,2), ijkToGlobal(2,2,3)));
+    // Branch 1
+    BOOST_CHECK(inSamePartition(ijkToGlobal(2,2,2), ijkToGlobal(3,2,2)));
+    BOOST_CHECK(inSamePartition(ijkToGlobal(3,2,2), ijkToGlobal(4,2,2)));
+    // Branch 2
+    BOOST_CHECK(inSamePartition(ijkToGlobal(2,2,1), ijkToGlobal(2,3,1)));
+    BOOST_CHECK(inSamePartition(ijkToGlobal(2,3,1), ijkToGlobal(2,4,1)));
+
+    // Test 2: Well 2 (diagonal) should be in same partition as Well 1 due to intersection
+    BOOST_CHECK(inSamePartition(ijkToGlobal(0,0,0), ijkToGlobal(2,2,2)));
+    BOOST_CHECK(inSamePartition(ijkToGlobal(3,3,3), ijkToGlobal(2,2,2)));
+
+    // Test 3: Well 3 (horizontal) should be in same partition as Well 1 and 2
+    BOOST_CHECK(inSamePartition(ijkToGlobal(0,2,2), ijkToGlobal(2,2,2)));
+    BOOST_CHECK(inSamePartition(ijkToGlobal(4,2,2), ijkToGlobal(2,2,2)));
+
+    // Test 4: Well 4 (L-shaped) should be in same partition as Well 1 due to connection
+    BOOST_CHECK(inSamePartition(ijkToGlobal(2,4,1), ijkToGlobal(2,2,1)));
+    BOOST_CHECK(inSamePartition(ijkToGlobal(4,4,3), ijkToGlobal(2,2,1)));
+
+    // Test 5: Well 5 (isolated) should maintain its own cells in same partition
+    BOOST_CHECK(inSamePartition(ijkToGlobal(0,4,0), ijkToGlobal(1,4,0)));
+    // But should be in different partition from the connected network
+    BOOST_CHECK(part[ijkToGlobal(0,4,0)] != part[ijkToGlobal(2,2,2)]);
+
+    // Test 6: Verify the connected network (Wells 1-4) forms a single partition
+    std::set<int> network_partition_ids;
+    network_partition_ids.insert(part[ijkToGlobal(2,2,2)]);  // Well 1
+    network_partition_ids.insert(part[ijkToGlobal(1,1,1)]);  // Well 2
+    network_partition_ids.insert(part[ijkToGlobal(2,2,2)]);  // Well 3
+    network_partition_ids.insert(part[ijkToGlobal(2,4,1)]);  // Well 4
+    BOOST_CHECK_EQUAL(network_partition_ids.size(), 1);
 #endif
 }
 
