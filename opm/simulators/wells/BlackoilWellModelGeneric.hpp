@@ -256,24 +256,10 @@ public:
         serializer(switched_prod_groups_);
         serializer(switched_inj_groups_);
         serializer(closed_offending_wells_);
+        serializer(gen_gaslift_);
     }
 
-    bool operator==(const BlackoilWellModelGeneric& rhs) const
-    {
-        return this->initial_step_ == rhs.initial_step_ &&
-               this->report_step_starts_ == rhs.report_step_starts_ &&
-               this->last_run_wellpi_ == rhs.last_run_wellpi_ &&
-               this->local_shut_wells_ == rhs.local_shut_wells_ &&
-               this->closed_this_step_ == rhs.closed_this_step_ &&
-               this->node_pressures_ == rhs.node_pressures_ &&
-               this->prev_inj_multipliers_ == rhs.prev_inj_multipliers_ &&
-               this->active_wgstate_ == rhs.active_wgstate_ &&
-               this->last_valid_wgstate_ == rhs.last_valid_wgstate_ &&
-               this->nupcol_wgstate_ == rhs.nupcol_wgstate_ &&
-               this->switched_prod_groups_ == rhs.switched_prod_groups_ &&
-               this->switched_inj_groups_ == rhs.switched_inj_groups_ &&
-               this->closed_offending_wells_ == rhs.closed_offending_wells_;            
-    }
+    bool operator==(const BlackoilWellModelGeneric& rhs) const;
 
     const ParallelWellInfo<Scalar>&
     parallelWellInfo(const std::size_t idx) const
