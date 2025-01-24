@@ -247,6 +247,7 @@ namespace Opm {
         DeferredLogger local_deferredLogger{};
 
         const auto& comm = this->simulator_.vanguard().grid().comm();
+        auto& cpgrid = this->simulator_.vanguard().grid();
 
         // Wells_ecl_ holds this rank's wells, both open and stopped/shut.
         this->wells_ecl_ = this->getLocalWells(reportStepIdx);
@@ -258,7 +259,7 @@ namespace Opm {
         // scope a bit.
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         {
-            this->initializeWellPerfData();
+            this->initializeWellPerfData(&cpgrid);
             this->initializeWellState(reportStepIdx);
             this->wbp_.initializeWBPCalculationService();
 
