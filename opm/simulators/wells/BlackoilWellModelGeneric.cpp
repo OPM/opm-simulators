@@ -96,46 +96,8 @@
 // #include <dune/grid/common/gridenums.hh>
 
 #include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractorGrid.hpp>
-#include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractorGrid_impl.hpp>
-
-namespace external {
-   void buildBoundingBoxTree(cvf::ref<cvf::BoundingBoxTree>& m_cellSearchTree, const ::Dune::CpGrid& grid);
-}
-//     using Grid = ::Dune::CpGrid;
-//         //using GridView = typename Grid::LeafGridView;
-// 	using GridView = typename Grid::LeafGridView;
-//         const auto& gv = grid.leafGridView();
-//         size_t cellCount = gv.size(0);
-//         std::vector<size_t>           cellIndicesForBoundingBoxes;
-//         std::vector<cvf::BoundingBox> cellBoundingBoxes;
-
-//         std::array<double, 3> cornerPointArray;
-//         cvf::Vec3d cornerPoint;
-//         using ElementMapper = ::Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
-//         ElementMapper mapper(gv, ::Dune::mcmgElementLayout()); // used id sets interally
-// 	for (const auto& element : ::Dune::elements(gv))
-//         {
-//             int index = mapper.index(element);
-//             auto geom = element.geometry();
-//             cvf::BoundingBox cellBB;
-//             cvf::Vec3d cornerPoint;
-//             //NB order should not matter when adding to bounding box: dune ordring and resinsight ordering is different
-//             // dune 0 1 2 3 4 5 6 7 is resinsight 0 1 3 2 4 5 7 6 (i think)
-//             for (std::size_t l = 0; l < geom.corners(); l++) {
-//                 auto cornerPointArray = geom.corner(l);
-//                 cornerPoint = cvf::Vec3d(cornerPointArray[0], cornerPointArray[1], cornerPointArray[2]);     
-//                 cellBB.add(cornerPoint);
-//             }
-//             cellIndicesForBoundingBoxes.emplace_back(index);
-//             cellBoundingBoxes.emplace_back( cellBB);
-//         }
-//         m_cellSearchTree = new cvf::BoundingBoxTree;
-//         m_cellSearchTree->buildTreeFromBoundingBoxes( cellBoundingBoxes, &cellIndicesForBoundingBoxes );
-//     }
-
-// }
-
-
+#include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractorGrid_impl.hpp>//hack
+#include "BoundingBoxTree.hpp"
 
 namespace Opm {
 
