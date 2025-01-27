@@ -71,10 +71,11 @@ namespace Opm {
     BlackoilWellModel(Simulator& simulator, const PhaseUsage& phase_usage)
         : WellConnectionModule(*this, simulator.gridView().comm())
         , BlackoilWellModelGeneric<Scalar>(simulator.vanguard().schedule(),
-                                            simulator.vanguard().summaryState(),
-                                            simulator.vanguard().eclState(),
-                                            phase_usage,
-                                            simulator.gridView().comm())
+                                           gaslift_,
+                                           simulator.vanguard().summaryState(),
+                                           simulator.vanguard().eclState(),
+                                           phase_usage,
+                                           simulator.gridView().comm())
         , simulator_(simulator)
         , gaslift_(this->terminal_output_, this->phase_usage_)
     {
