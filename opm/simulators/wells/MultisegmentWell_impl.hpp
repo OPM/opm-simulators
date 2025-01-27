@@ -1644,7 +1644,6 @@ namespace Opm
         Scalar relaxation_factor = 1.;
         const Scalar min_relaxation_factor = 0.6;
         bool converged = false;
-        [[maybe_unused]] int stagnate_count = 0;
         bool relax_convergence = false;
         this->regularize_ = false;
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -1740,21 +1739,6 @@ namespace Opm
                 if (is_oscillate || is_stagnate) {
                     // HACK!
                     std::string message;
-                    if (relaxation_factor == min_relaxation_factor) {
-                        ++stagnate_count;
-                        if (false) { // this disables the usage of the relaxed tolerance
-                            fmt::format_to(std::back_inserter(message), " Well {} observes severe stagnation and/or oscillation."
-                                                                        " We relax the tolerance and check for convergence. \n", this->name());
-                            const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_,
-                                                                       deferred_logger, true);
-                            if (reportStag.converged()) {
-                                converged = true;
-                                fmt::format_to(std::back_inserter(message), " Well {}  manages to get converged with relaxed tolerances in {} inner iterations", this->name(), it);
-                                deferred_logger.debug(message);
-                                return converged;
-                            }
-                        }
-                    }
 
                     // a factor value to reduce the relaxation_factor
                     constexpr Scalar reduction_mutliplier = 0.9;
