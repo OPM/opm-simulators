@@ -920,7 +920,14 @@ computeNetworkPressures(const Network::ExtNetwork& network,
         // Starting with the leaf nodes of the network, get the flow rates
         // from the corresponding groups.
         std::map<std::string, std::vector<Scalar>> node_inflows;
+        const std::vector<Scalar> zero_rates(3, 0.0);
         for (const auto& node : leaf_nodes) {
+            // Guard against empty leaf nodes (may not be present in GRUPTREE)
+            if (!group_state.has_production_rates(node)) {
+                node_inflows[node] = zero_rates;
+                continue;
+            }
+
             node_inflows[node] = group_state.production_rates(node);
             // Add the ALQ amounts to the gas rates if requested.
             if (network.node(node).add_gas_lift_gas()) {
