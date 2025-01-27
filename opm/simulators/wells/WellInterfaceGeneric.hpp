@@ -166,7 +166,7 @@ public:
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
     void reportWellSwitching(const SingleWellState<Scalar>& ws,
-                             DeferredLogger& deferred_logger) const;
+                             DeferredLogger& deferred_logger);
 
     bool changedToOpenThisStep() const { return this->changed_to_open_this_step_; }
 

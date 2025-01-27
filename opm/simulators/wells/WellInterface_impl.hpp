@@ -220,20 +220,58 @@ namespace Opm
         const int iterationIdx = simulator.model().newtonMethod().numIterations();
         const int nupcol = schedule[episodeIdx].nupcol();
         if (oscillating && iterationIdx > nupcol) {
-            // only output frist time
-            bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
-            if (output) {
+            if (from == "THP" || from == "BHP")
+                return false;
+
+            bool switched = false;
+            std::string to;
+            if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), "BHP") > 0) {
+                if (well.isInjector()) {
+                    ws.injection_cmode = Well::InjectorCMode::BHP;
+                } else {
+                    ws.production_cmode = Well::ProducerCMode::BHP;
+                }
+                to = "BHP";
+                updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+                updatePrimaryVariables(simulator, well_state, deferred_logger);
+                switched = true;
+
+            } else if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), "THP") > 0) {
+                if (well.isInjector()) {
+                    ws.injection_cmode = Well::InjectorCMode::THP;
+                } else { 
+                    ws.production_cmode = Well::ProducerCMode::THP;
+                }
+                to = "THP";
+                ws.thp = this->getTHPConstraint(summaryState);
+                updatePrimaryVariables(simulator, well_state, deferred_logger);
+                switched = true;
+            } else {
+                bool changed = this->checkIndividualConstraints(ws, summaryState, deferred_logger);
+                if (changed) {
+                    if (well.isInjector()) {
+                        to = WellInjectorCMode2String(ws.injection_cmode);
+                    } else {
+                        to = WellProducerCMode2String(ws.production_cmode);
+                    }
+                    switched = true;
+                } else {
+                    to = from;
+                }
+            }
+            if (switched) {
+                this->well_control_log_.push_back(from);
                 std::ostringstream ss;
                 ss << "    The control mode for well " << this->name()
-                   << " is oscillating\n"
-                   << "    We don't allow for more than "
-                   << this->param_.max_number_of_well_switches_
-                   << " switches. The control is kept at " << from;
+                << " is oscillating.\n"
+                << "       The individual control is fixed after  "
+                << this->param_.max_number_of_well_switches_
+                << " switches. The control is kept at " << to;
                 deferred_logger.info(ss.str());
-                // add one more to avoid outputting the same info again
-                this->well_control_log_.push_back(from);
+                updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+                updatePrimaryVariables(simulator, well_state, deferred_logger);
             }
-            return false;
+            return switched;
         }
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
@@ -293,8 +331,13 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
-
+        bool oscillating = false;
+        for (const auto& key : this->well_control_log_) {
+            if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), key) >= this->param_.max_number_of_well_switches_) {
+                oscillating = true;
+                break;
+            }
+        }
         if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
@@ -306,10 +349,18 @@ namespace Opm
                 return true;
             } else {
                 bool changed = false;
-                if (!fixed_control) {
-                    // Changing to group controls here may lead to inconsistencies in the group handling which in turn 
-                    // may result in excessive back and forth switching. However, we currently allow this by default.
-                    // The switch check_group_constraints_inner_well_iterations_ is a temporary solution.
+                bool oscillating = false;
+                for (const auto& key : this->well_control_log_) {
+                    if (std::count(this->well_control_log_.begin(), this->well_control_log_.end(), key) >= this->param_.max_number_of_well_switches_) {
+                        oscillating = true;
+                        break;
+                    }
+                }
+                if (!fixed_control && !oscillating) {
+                    // We don't allow changing to group controls here since this may lead to inconsistencies
+                    // in the group handling which in turn may result in excessive back and forth switching.
+                    // If we are to allow this change, one needs to make sure all necessary information propagates  
+                    // properly, but for now, we simply disallow it. The commented code below is kept for future reference  
                     
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
@@ -322,6 +373,7 @@ namespace Opm
                     }
 
                     if (changed) {
+                        this->well_control_log_.push_back(from);
                         const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
                                                                         ws.production_cmode == Well::ProducerCMode::THP;
                         if (!thp_controlled){
