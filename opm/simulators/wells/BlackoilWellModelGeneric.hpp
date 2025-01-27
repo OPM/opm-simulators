@@ -351,7 +351,8 @@ protected:
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 
     Scalar updateNetworkPressures(const int reportStepIdx,
-                                  const Scalar damping_factor);
+                                  const Scalar damping_factor,
+                                  const Scalar update_upper_bound);
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
