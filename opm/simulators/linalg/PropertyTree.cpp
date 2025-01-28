@@ -28,6 +28,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -95,6 +96,25 @@ PropertyTree::get_child_optional(const std::string& key) const
   return PropertyTree(pt.get());
 }
 
+template <typename T>
+std::optional<std::vector<T>>
+PropertyTree::get_child_items_as_vector(const std::string& child) const
+{
+    auto items = std::optional<std::vector<T>>{};
+
+    auto subTree = this->tree_->get_child_optional(child);
+    if (! subTree) {
+        return items;
+    }
+
+    items.emplace();
+    for (const auto& childItem : *subTree) {
+        items->push_back(childItem.second.template get_value<T>());
+    }
+
+    return items;
+}
+
 PropertyTree& PropertyTree::operator=(const PropertyTree& tree)
 {
   tree_ = std::make_unique<boost::property_tree::ptree>(*tree.tree_);
@@ -120,5 +140,10 @@ template float PropertyTree::get(const std::string& key, const float& defValue) 
 template int PropertyTree::get(const std::string& key, const int& defValue) const;
 template std::size_t PropertyTree::get(const std::string& key, const std::size_t& defValue) const;
 template bool PropertyTree::get(const std::string& key, const bool& defValue) const;
+
+template std::optional<std::vector<int>>
+PropertyTree::get_child_items_as_vector(const std::string& child) const;
+template std::optional<std::vector<double>>
+PropertyTree::get_child_items_as_vector(const std::string& child) const;
 
 } // namespace Opm
