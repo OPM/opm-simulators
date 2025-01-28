@@ -57,6 +57,8 @@ public:
 
     void init(const int num_conn);
 
+    void clear();
+
 private:
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
