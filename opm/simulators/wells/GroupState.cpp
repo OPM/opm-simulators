@@ -28,6 +28,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 
+#include <opm/common/TimingMacros.hpp>
 
 namespace Opm {
 
@@ -337,6 +338,7 @@ template<class Scalar>
 bool GroupState<Scalar>::
 has_production_control(const std::string& gname) const
 {
+    OPM_TIMEFUNCTION();
     auto group_iter = this->production_controls.find(gname);
     if (group_iter == this->production_controls.end())
         return false;
@@ -356,6 +358,7 @@ template<class Scalar>
 Group::ProductionCMode
 GroupState<Scalar>::production_control(const std::string& gname) const
 {
+    OPM_TIMEFUNCTION();
     auto group_iter = this->production_controls.find(gname);
     if (group_iter == this->production_controls.end())
         throw std::logic_error("Could not find any control for production group: " + gname);

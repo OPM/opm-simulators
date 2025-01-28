@@ -92,7 +92,7 @@ namespace Opm {
                       const int phasePos,
                       const bool injector)
     {
-
+        OPM_TIMEFUNCTION();
         Scalar rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const auto& groupTmp = schedule.getGroup(groupName, reportStepIdx);
@@ -102,6 +102,7 @@ namespace Opm {
 
         // only sum satelite production once
         if (wellState.isRank0() && !injector) {
+            OPM_TIMEBLOCK(sumWellPhaseRatesSatelite);
             const auto rateComp = selectRateComponent(wellState.phaseUsage(), phasePos);
             if (rateComp.has_value()) {
                 rate += satelliteProduction(schedule[reportStepIdx], group.groups(), *rateComp);
@@ -1055,6 +1056,7 @@ getGuideRate(const std::string& name,
              const GuideRateModel::Target target,
              const PhaseUsage& pu)
 {
+    OPM_TIMEFUNCTION();
     if (schedule.hasWell(name, reportStepIdx)) {
         if (guideRate->has(name) || guideRate->hasPotentials(name)) {
             return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
@@ -1167,6 +1169,8 @@ groupControlledWells(const Schedule& schedule,
     OPM_TIMEFUNCTION();
     const Group& group = schedule.getGroup(group_name, report_step);
     int num_wells = 0;
+    {
+        OPM_TIMEBLOCK(iterateGroups);
     for (const std::string& child_group : group.groups()) {
 
         bool included = (child_group == always_included_child);
@@ -1183,6 +1187,9 @@ groupControlledWells(const Schedule& schedule,
                 += groupControlledWells(schedule, well_state, group_state, summary_state, guideRate, report_step, child_group, always_included_child, is_production_group, injection_phase);
         }
     }
+    }
+    {
+        OPM_TIMEBLOCK(iterateWells);
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_production_group) {
@@ -1192,6 +1199,7 @@ groupControlledWells(const Schedule& schedule,
         }
         const auto ctrl1 = group_state.production_control(group.name());
         if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
+            OPM_TIMEBLOCK(chokeCalculations);
             // The auto choke group has not own group control but inherits control from an ancestor group.
             // Number of wells should be calculated as zero when wells of auto choke group do not deliver target.
             // This behaviour is then similar to no-autochoke group with wells not on GRUP control.
@@ -1258,6 +1266,7 @@ groupControlledWells(const Schedule& schedule,
         if (included) {
             ++num_wells;
         }
+    }
     }
     return num_wells;
 }
@@ -1450,6 +1459,7 @@ checkGroupConstraintsProd(const std::string& name,
     }
     // check whether guide rate is violated
     for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
+        OPM_TIMEBLOCK(checkGuideRateVialted);
         if (guideRate->has(chain[ii])) {
             const auto& guided_group = chain[ii];
             const Scalar grefficiency
@@ -1466,6 +1476,7 @@ checkGroupConstraintsProd(const std::string& name,
     // Compute portion of target corresponding to current_rate_available
     Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
+        OPM_TIMEBLOCK(computeTargetAvailable);
         if ((ii == 0) || guideRate->has(chain[ii])) {
             // Apply local reductions only at the control level
             // (top) and for levels where we have a specified

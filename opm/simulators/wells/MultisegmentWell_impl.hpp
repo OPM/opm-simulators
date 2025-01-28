@@ -1474,6 +1474,7 @@ namespace Opm
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
@@ -1627,6 +1628,7 @@ namespace Opm
                              const bool fixed_control /*false*/, 
                              const bool fixed_status /*false*/)
     {
+        OPM_TIMEFUNCTION();
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
 
         {

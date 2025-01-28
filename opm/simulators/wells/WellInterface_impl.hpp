@@ -1547,6 +1547,7 @@ namespace Opm
                                                          DeferredLogger& deferred_logger,
                                                          const std::optional<bool> group_control) const
     {
+        OPM_TIMEFUNCTION();
         // Check if well is under zero rate target from group
         const bool isGroupControlled = group_control.value_or(this->wellUnderGroupControl(well_state.well(this->index_of_well_)));
         if (isGroupControlled) {
