@@ -40,7 +40,7 @@ public:
     // the last primary variable will be the BHP
     // the one in the middle with will the mole fractions for the numWellEq - 1 components
     // this can be changed based on the implementation itself
-    static constexpr int QTotal = 0;
+    static constexpr int QTotal = 0; // TODO: for now, it is the total surface rate, but later, we might make it total mass rate
     static constexpr int Bhp = numWellEq - numWellControlEq;
 
     using Scalar = typename FluidSystem::Scalar;
