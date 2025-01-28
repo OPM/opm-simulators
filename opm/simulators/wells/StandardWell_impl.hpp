@@ -1751,7 +1751,7 @@ namespace Opm
                           std::vector<Scalar>& well_potentials,
                           DeferredLogger& deferred_logger) // const
     {
-        OPM_TIMEFUNCTION()
+        OPM_TIMEFUNCTION();
         const auto [compute_potential, bhp_controlled_well] =
             this->WellInterfaceGeneric<Scalar>::computeWellPotentials(well_potentials, well_state);
 
