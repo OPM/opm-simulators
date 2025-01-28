@@ -97,6 +97,9 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     deck_file_name_ = Parameters::Get<Parameters::EclDeckFileName>();
     network_max_strict_iterations_ = Parameters::Get<Parameters::NetworkMaxStrictIterations>();
     network_max_iterations_ = Parameters::Get<Parameters::NetworkMaxIterations>();
+    network_max_sub_iterations_ = Parameters::Get<Parameters::NetworkMaxSubIterations>();
+    network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
+    network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
     local_domain_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -220,6 +223,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Maximum iterations in network solver before relaxing tolerance");
     Parameters::Register<Parameters::NetworkMaxIterations>
         ("Maximum number of iterations in the network solver before giving up");
+    Parameters::Register<Parameters::NetworkMaxSubIterations>
+        ("Maximum number of sub-iterations to update network pressures (within a single well/group control update)");
+    Parameters::Register<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>
+        ("Damping factor in the inner network pressure update iterations");
+    Parameters::Register<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>
+        ("Maximum pressure update in the inner network pressure update iterations");
     Parameters::Register<Parameters::NonlinearSolver>
         ("Choose nonlinear solver. Valid choices are newton or nldd.");
     Parameters::Register<Parameters::LocalSolveApproach>

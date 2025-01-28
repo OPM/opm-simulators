@@ -1919,11 +1919,12 @@ namespace Opm {
             const double dt = this->simulator_.timeStepSize();
             // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
             bool well_group_thp_updated = computeWellGroupThp(dt, deferred_logger);
-            constexpr int max_number_of_sub_iterations = 20;
-            constexpr Scalar damping_factor = 0.1;
+            const int max_number_of_sub_iterations = param_.network_max_sub_iterations_;
+            const Scalar network_pressure_update_damping_factor = param_.network_pressure_update_damping_factor_;
+            const Scalar network_max_pressure_update = param_.network_max_pressure_update_in_bars_ * unit::barsa;
             bool more_network_sub_update = false;
             for (int i = 0; i < max_number_of_sub_iterations; i++) {
-                const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx, damping_factor);
+                const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx, network_pressure_update_damping_factor, network_max_pressure_update);
                 const Scalar network_imbalance = comm.max(local_network_imbalance);
                 const auto& balance = this->schedule()[episodeIdx].network_balance();
                 constexpr Scalar relaxation_factor = 10.0;
