@@ -569,9 +569,24 @@ Opm::ParallelNLDDPartitioningZoltan::partitionElements(const ZoltanParamMap& par
 {
     const auto vertexId = EnumerateSeenVertices { this->numElements_, this->conns_ };
 
+    // The vertexGraph is built using the reachable indices, so for the vertexGroups_
+    // we need to map the original local indices to the reachable indices
+    std::vector<std::vector<int>> reachableVertexGroups;
+    for (const auto& group : vertexGroups_) {
+        std::vector<int> reachableGroup;
+        for (const int originalLocalIdx : group) {
+            if (const int reachableIdx = vertexId[originalLocalIdx]; reachableIdx != -1) {
+                reachableGroup.push_back(reachableIdx);
+            }
+        }
+        if (!reachableGroup.empty()) {
+            reachableVertexGroups.push_back(reachableGroup);
+        }
+    }
+
     auto graph = VertexGraph {
         this->comm_.rank(), this->numElements_,
-        this->conns_, vertexId, this->vertexGroups_, this->globalCell_
+        this->conns_, vertexId, reachableVertexGroups, this->globalCell_
     };
 
     const auto partsForReachableCells = Partitioner {
