@@ -295,7 +295,16 @@ namespace Opm
         }
         const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
 
-        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        // do not check groups zero rate in second case
+        bool zero_target = false;
+        if(this->param_.check_group_constraints_inner_well_iterations_){
+            zero_target = this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
+        }else{
+            const auto& summaryState = simulator.vanguard().summaryState();
+            zero_target =  this->wellUnderZeroRateTargetIndividual(summaryState, well_state);
+        }
+
+        if (oscillating || zero_target || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
