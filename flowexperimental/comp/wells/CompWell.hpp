@@ -44,9 +44,20 @@ public:
     using PrimaryVariables = CompWellPrimaryVariables<FluidSystem, Indices>;
     using WellEquations = CompWellEquations<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
 
+
     constexpr static unsigned num_comp = FluidSystem::numComponents;
 
     using EvalWell = typename PrimaryVariables::EvalWell;
+
+    // TODO: this can be a rate converter role later
+    // currently, it has the surface densities for each phase and volume fractions for each phase
+    // it is part of the secondary variables used in the assembling the well equations
+    struct SurfaceConditons
+    {
+        static constexpr int num_phases = 2;
+        std::array<EvalWell, num_phases> surface_densities_{0.};
+        std::array<EvalWell, num_phases> volume_fractions_{0.};
+    };
 
     CompWell(const Well& well,
              int index_of_well,
@@ -60,7 +71,14 @@ public:
     void updatePrimaryVariables(const Simulator& simulator,
                                 const SingleCompWellState<Scalar>& well_state) override;
 
+    void updateSecondaryQuantities(const Simulator& simulator);
+
     void updatePrimaryVariableEvaluation(); // override;
+
+    // TODO: control should be passed in later
+    void assembleWellEq(const Simulator& simulator,
+                        const double dt,
+                        const SingleCompWellState<Scalar>& well_state);
 
 private:
 
@@ -75,14 +93,28 @@ private:
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
     EvalWell fluid_density_{0.};
+    // the original mass for each component in wellbore
+    std::array<Scalar, num_comp> component_masses_{0.};
+    // the new mass for each component in wellbore, derived from the primary variables
+    std::array<EvalWell, num_comp> new_component_masses_{0.};
+    // quantities used to calculate the quantities under the surface conditions
+    SurfaceConditons surface_conditions_;
 
     // following are some secondary property or variables to be used for later
     void calculateSingleConnectionRate(const Simulator& simulator,
                                        std::vector<EvalWell>& cq_s) const;
 
+    void updateTotalMass();
+    // TODO: a better name
+    void updateSurfaceQuantities(const Simulator& simulator);
+
     void getMoblity(const Simulator& simulator,
                     int connection_idx,
                     std::vector<EvalWell>& mob) const;
+
+
+    // TODO: the following assembling functions will be moved to a separate assmeble class
+    void assembleSourceTerm();
 };
 
 } // end of namespace Opm

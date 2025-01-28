@@ -38,7 +38,8 @@ CompWellPrimaryVariables<FluidSystem, Indices>::
 update(const SingleCompWellState<Scalar>& well_state)
 {
     value_[QTotal] = well_state.get_total_surface_rate();
-    for (int i = 0; i < numWellConservationEq; ++i) { // should be the same with numComponents
+    // the mole fractions of the first n-1 component
+    for (int i = 0; i < numWellConservationEq - 1; ++i) {
         value_[i + 1] = well_state.total_molar_fractions[i];
     }
     value_[Bhp] = well_state.bhp;
@@ -72,7 +73,7 @@ toFluidStateScalar() const
                                                                                  total_molar_fractions.end() - 1,
                                                                                  0.0);
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setMoleFraction(i, max(total_molar_fractions[i], 1.e-8));
+        fluid_state.setMoleFraction(i, std::max(total_molar_fractions[i], 1.e-10));
     }
 
     fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);

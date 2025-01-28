@@ -67,5 +67,16 @@ init(const int num_conn)
     // some others in the future
 }
 
+template <typename Scalar, int numWellEq, int numEq>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
+clear()
+{
+    duneB_ = 0.0;
+    duneC_ = 0.0;
+    duneD_ = 0.0;
+    resWell_ = 0.0;
+}
+
 
 } // end of namespace Opm
