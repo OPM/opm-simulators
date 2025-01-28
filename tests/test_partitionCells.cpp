@@ -33,6 +33,9 @@
 #include <opm/input/eclipse/Schedule/Well/Connection.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
 #include <opm/simulators/flow/partitionCells.hpp>
 
@@ -478,6 +481,139 @@ BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
     network_partition_ids.insert(part[ijkToGlobal(2,2,2)]);  // Well 3
     network_partition_ids.insert(part[ijkToGlobal(2,4,1)]);  // Well 4
     BOOST_CHECK_EQUAL(network_partition_ids.size(), 1);
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(PartitionCellsWithNonReachableCellsTest)
+{
+    // Create a 3x3x3 grid where:
+    // - cell (0,0,0) is isolated (surrounded by inactive cells)
+    // - cell (1,1,1) is isolated (surrounded by inactive cells)
+    // - cells needed for wells are active
+    // Grid structure (top view):
+    //   Layer k=0:      Layer k=1:       Layer k=2:     W  = well cells
+    //   [I][X][X ]      [X][  ][  ]      [X][  ][  ]    X  = inactive cells
+    //   [X][X][W2]      [X][W1][W2]      [X][W1][W2]    I  = isolated active cell
+    //   [I][X][  ]      [X][  ][  ]      [X][  ][  ]   [ ] = active cells
+    const std::string deckString =
+    R"(RUNSPEC
+
+    DIMENS
+    3 3 3 /
+
+    GRID
+    COORD
+    0 0 0  0 0 1
+    1 0 0  1 0 1
+    2 0 0  2 0 1
+    3 0 0  3 0 1
+    0 1 0  0 1 1
+    1 1 0  1 1 1
+    2 1 0  2 1 1
+    3 1 0  3 1 1
+    0 2 0  0 2 1
+    1 2 0  1 2 1
+    2 2 0  2 2 1
+    3 2 0  3 2 1
+    0 3 0  0 3 1
+    1 3 0  1 3 1
+    2 3 0  2 3 1
+    3 3 0  3 3 1
+    /
+
+    ZCORN
+    36*0
+    36*1
+    36*1
+    36*2
+    36*2
+    36*3
+    /
+
+    ACTNUM
+    -- First layer (3x3)
+    1 0 0  --  cell (0,0,0) is isolated
+    0 0 1
+    1 0 1  --  cell (1,1,1) is isolated
+    -- Middle layer (3x3)
+    0 1 1
+    0 1 1
+    0 1 1
+    -- Top layer (3x3)
+    0 1 1
+    0 1 1
+    0 1 1
+    /
+
+    END
+    )";
+
+    // Parse and create grid
+    Opm::Parser parser;
+    const auto deck = parser.parseString(deckString);
+    Opm::EclipseGrid ecl_grid(deck);
+    Dune::CpGrid grid;
+    grid.processEclipseFormat(&ecl_grid, nullptr, false, false, false);
+
+    // Verify grid properties
+    const auto& grid_view = grid.leafGridView();
+    const std::size_t num_active_cells = grid_view.size(0);
+    BOOST_CHECK_EQUAL(num_active_cells, 16);  // 27 total cells - 11 inactive = 16 active
+
+    // Helper functions
+    using Entity = typename Dune::CpGrid::LeafGridView::template Codim<0>::Entity;
+    auto zoltan_ctrl = createZoltanControl<Entity>(grid);
+    auto ijkToGlobal = [](int i, int j, int k) { return i + (3 * j) + (9 * k); };
+
+    auto wells = std::vector<Dune::cpgrid::OpmWellType>();
+    // Well 1 - Middle column well
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(1, 1, 1, ijkToGlobal(1, 1, 1)));
+        well_conn->add(createConnection(1, 1, 2, ijkToGlobal(1, 1, 2)));
+        auto well = createWell("WELL1");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+    // Well 2 - Right column well
+    {
+        auto well_conn = std::make_shared<Opm::WellConnections>();
+        well_conn->add(createConnection(2, 1, 0, ijkToGlobal(2, 1, 0)));
+        well_conn->add(createConnection(2, 1, 1, ijkToGlobal(2, 1, 1)));
+        well_conn->add(createConnection(2, 1, 2, ijkToGlobal(2, 1, 2)));
+        auto well = createWell("WELL2");
+        well.updateConnections(well_conn, true);
+        wells.push_back(well);
+    }
+
+#if HAVE_MPI && HAVE_ZOLTAN
+    auto [part, num_part] = Opm::partitionCells("zoltan", 5, grid.leafGridView(),
+                                               wells,
+                                               std::unordered_map<std::string, std::set<int>>{},
+                                               zoltan_ctrl);
+
+    // we get 7 partitions because the two isolated cells are assigned each their own partition
+    BOOST_CHECK_EQUAL(num_part, 7);
+    BOOST_CHECK_EQUAL(part.size(), 16);
+
+    // For this test global indices != local indices, so we need to
+    // create a map from global index to local index
+    std::map<int, int> g2l;
+    for (const auto& element : elements(grid.leafGridView(), Dune::Partitions::interior)) {
+        const auto globalIndex = grid.globalCell()[zoltan_ctrl.index(element)];
+        g2l[globalIndex] = zoltan_ctrl.index(element);
+    }
+
+    // Well 1: All cells should be in the same partition
+    BOOST_CHECK(part[g2l[ijkToGlobal(1,1,1)]] == part[g2l[ijkToGlobal(1,1,2)]]);
+
+    // Well 2: All cells should be in the same partition
+    BOOST_CHECK(part[g2l[ijkToGlobal(2,1,0)]] == part[g2l[ijkToGlobal(2,1,1)]]);
+    BOOST_CHECK(part[g2l[ijkToGlobal(2,1,1)]] == part[g2l[ijkToGlobal(2,1,2)]]);
+
+    // Wells can be in different partitions as they don't connect
+    BOOST_CHECK(part[g2l[ijkToGlobal(1,1,1)]] != part[g2l[ijkToGlobal(2,1,2)]]);
 #endif
 }
 
