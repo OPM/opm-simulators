@@ -352,7 +352,7 @@ void FlowGenericVanguard::init()
                 std::string message =
                         std::string("Option --allow-distributed-wells=true in a model with\n")
                         + "multisegment wells. This feature is still experimental. You can\n"
-                        + "set --enable-multisegment-wells=false to treat the existing \n"
+                        + "set --use-multisegment-well=false to treat the existing \n"
                         + "multisegment wells as standard wells.";
                 OpmLog::info(message);
             }
