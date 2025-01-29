@@ -384,10 +384,12 @@ public:
      * \brief Compute the intensive quantities needed to handle energy conservation
      *
      */
+    template <class FluidSystemT = FluidSystem>
     void updateEnergyQuantities_(const ElementContext& elemCtx,
                                  unsigned dofIdx,
                                  unsigned timeIdx,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
+                                 const typename FluidSystem::template ParameterCache<Evaluation>& paramCache,
+                                 const FluidSystemT& fluidSystem = FluidSystemT{})
     {
         auto& fs = asImp_().fluidState_;
 
@@ -398,7 +400,7 @@ public:
                 continue;
             }
 
-            const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+            const auto& h = fluidSystem.enthalpy(fs, paramCache, phaseIdx);
             fs.setEnthalpy(phaseIdx, h);
         }
 
@@ -479,10 +481,12 @@ public:
         }
     }
 
+    template <class FluidSystemT = FluidSystem>
     void updateEnergyQuantities_(const ElementContext&,
                                  unsigned,
                                  unsigned,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+                                 const typename FluidSystem::template ParameterCache<Evaluation>&,
+                                 const FluidSystemT&)
     { }
 
     const Evaluation& rockInternalEnergy() const
