@@ -296,7 +296,7 @@ namespace Opm
         debug_cost_counter_ = 0;
         bool converged_implicit = false;
         if (this->param_.local_well_solver_control_switching_) {
-            converged_implicit = computeWellPotentialsImplicit(simulator, well_potentials, deferred_logger);
+            converged_implicit = computeWellPotentialsImplicit(simulator, well_state, well_potentials, deferred_logger);
             if (!converged_implicit) {
                 deferred_logger.debug("Implicit potential calculations failed for well "
                                        + this->name() + ",  reverting to original aproach.");
@@ -516,6 +516,7 @@ namespace Opm
     bool
     MultisegmentWell<TypeTag>::
     computeWellPotentialsImplicit(const Simulator& simulator,
+                                  const WellState<Scalar>& well_state,
                                   std::vector<Scalar>& well_potentials,
                                   DeferredLogger& deferred_logger) const
     {
@@ -526,7 +527,7 @@ namespace Opm
         well_copy.debug_cost_counter_ = 0;
 
         // store a copy of the well state, we don't want to update the real well state
-        WellState<Scalar> well_state_copy = simulator.problem().wellModel().wellState();
+        WellState<Scalar> well_state_copy = well_state;
         const auto& group_state = simulator.problem().wellModel().groupState();
         auto& ws = well_state_copy.well(this->index_of_well_);
         
