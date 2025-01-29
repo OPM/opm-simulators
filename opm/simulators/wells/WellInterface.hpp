@@ -164,7 +164,7 @@ public:
     void assembleWellEq(const Simulator& simulator,
                         const double dt,
                         WellState<Scalar>& well_state,
-                        const GroupState<Scalar>& group_state,
+                        GroupState<Scalar>& group_state,
                         DeferredLogger& deferred_logger);
 
     void assembleWellEqWithoutIteration(const Simulator& simulator,
@@ -177,7 +177,7 @@ public:
     void prepareWellBeforeAssembling(const Simulator& simulator,
                                      const double dt,
                                      WellState<Scalar>& well_state,
-                                     const GroupState<Scalar>& group_state,
+                                     GroupState<Scalar>& group_state,
                                      DeferredLogger& deferred_logger);
 
 
@@ -248,7 +248,7 @@ public:
 
     bool updateWellControlAndStatusLocalIteration(const Simulator& simulator,
                                                   WellState<Scalar>& well_state,
-                                                  const GroupState<Scalar>& group_state,
+                                                  GroupState<Scalar>& group_state,
                                                   const Well::InjectionControls& inj_controls,
                                                   const Well::ProductionControls& prod_controls,
                                                   const Scalar WQTotal,
@@ -307,7 +307,7 @@ public:
     bool gliftBeginTimeStepWellTestIterateWellEquations(const Simulator& ebos_simulator,
                                                         const double dt,
                                                         WellState<Scalar>& well_state,
-                                                        const GroupState<Scalar>& group_state,
+                                                        GroupState<Scalar>& group_state,
                                                         DeferredLogger& deferred_logger);
 
     void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& simulator,
@@ -346,7 +346,7 @@ public:
 
     void solveWellEquation(const Simulator& simulator,
                            WellState<Scalar>& well_state,
-                           const GroupState<Scalar>& group_state,
+                           GroupState<Scalar>& group_state,
                            DeferredLogger& deferred_logger);
 
     const std::vector<RateVector>& connectionRates() const
@@ -370,7 +370,7 @@ public:
                                             const WellInjectionControls& inj_controls,
                                             const WellProductionControls& prod_controls,
                                             WellState<Scalar>& well_state,
-                                            const GroupState<Scalar>& group_state,
+                                            GroupState<Scalar>& group_state,
                                             DeferredLogger& deferred_logger, 
                                             const bool fixed_control = false, 
                                             const bool fixed_status = false) = 0;
@@ -434,7 +434,7 @@ protected:
     bool iterateWellEquations(const Simulator& simulator,
                               const double dt,
                               WellState<Scalar>& well_state,
-                              const GroupState<Scalar>& group_state,
+                              GroupState<Scalar>& group_state,
                               DeferredLogger& deferred_logger);
 
     bool solveWellWithTHPConstraint(const Simulator& simulator,
@@ -442,7 +442,7 @@ protected:
                                     const Well::InjectionControls& inj_controls,
                                     const Well::ProductionControls& prod_controls,
                                     WellState<Scalar>& well_state,
-                                    const GroupState<Scalar>& group_state,
+                                    GroupState<Scalar>& group_state,
                                     DeferredLogger& deferred_logger);
 
     std::optional<Scalar>
@@ -465,7 +465,7 @@ protected:
 
     bool solveWellForTesting(const Simulator& simulator,
                              WellState<Scalar>& well_state,
-                             const GroupState<Scalar>& group_state,
+                             GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger);
     
 

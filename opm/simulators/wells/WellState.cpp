@@ -956,9 +956,16 @@ void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& com
 }
 
 template<class Scalar>
-void WellState<Scalar>::updateGlobalIsGrup(const Parallel::Communication& comm)
+void WellState<Scalar>::updateGlobalIsGrupAndCommunicate(const Parallel::Communication& comm)
 {
     this->global_well_info.value().clear();
+    updateGlobalIsGrup();
+    this->global_well_info.value().communicate(comm);
+}
+
+template<class Scalar>
+void WellState<Scalar>::updateGlobalIsGrup()
+{
     for (std::size_t well_index = 0; well_index < this->size(); well_index++) {
         const auto& ws = this->well(well_index);
         this->global_well_info.value().update_efficiency_scaling_factor(well_index, ws.efficiency_scaling_factor);
@@ -967,7 +974,6 @@ void WellState<Scalar>::updateGlobalIsGrup(const Parallel::Communication& comm)
         else
             this->global_well_info.value().update_injector(well_index, ws.status, ws.injection_cmode);
     }
-    this->global_well_info.value().communicate(comm);
 }
 
 template<class Scalar>
