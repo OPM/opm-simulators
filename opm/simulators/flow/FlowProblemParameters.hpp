@@ -56,6 +56,9 @@ struct OutputMode { static constexpr auto value = "all"; };
 // between writing restart files
 struct RestartWritingInterval { static constexpr int value = 0xffffff; }; // disable
 
+// Conserve inner energy instead of enthalpy even if THERMAL is used
+struct ConserveInnerEnergyThermal { static constexpr bool value = false; };
+
 } // namespace Opm::Parameters
 
 namespace Opm {

@@ -126,6 +126,7 @@ struct Indices<TypeTag, TTag::BlackOilModel>
                                getPropValue<TypeTag, Properties::EnableExtbo>(),
                                getPropValue<TypeTag, Properties::EnablePolymer>(),
                                getPropValue<TypeTag, Properties::EnableEnergy>(),
+                               getPropValue<TypeTag, Properties::EnableTemperature>(),
                                getPropValue<TypeTag, Properties::EnableFoam>(),
                                getPropValue<TypeTag, Properties::EnableBrine>(),
                                /*PVOffset=*/0,

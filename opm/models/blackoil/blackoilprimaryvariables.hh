@@ -1036,11 +1036,8 @@ private:
     {
         if constexpr (enableEnergy)
             return (*this)[Indices::temperatureIdx];
-        else if constexpr( enableTemperature)
-            return problem.temperature(globalDofIdx, /*timeIdx*/ 0);
-
         else
-            return FluidSystem::reservoirTemperature();
+            return problem.temperature(globalDofIdx, /*timeIdx*/ 0);
     }
 
     Scalar microbialConcentration_() const

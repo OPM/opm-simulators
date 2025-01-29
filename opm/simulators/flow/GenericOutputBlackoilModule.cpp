@@ -1215,7 +1215,7 @@ doAllocBuffers(const unsigned bufferSize,
 
     // If TEMP is set in RPTRST we output temperature even if THERMAL
     // is not activated
-    if (enableEnergy_ || rstKeywords["TEMP"] > 0) {
+    if (enableEnergy_ || enableTemperature_ || rstKeywords["TEMP"] > 0 ) {
         this->temperature_.resize(bufferSize, 0.0);
         rstKeywords["TEMP"] = 0;
     }
