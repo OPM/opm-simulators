@@ -36,9 +36,11 @@
 
 #include <opm/common/utility/FileSystem.hpp>
 
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <ios>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -86,6 +88,21 @@ BOOST_AUTO_TEST_CASE(Top_Node_Only)
         const auto dd = t.get("dd", -1.618f);
         BOOST_CHECK_CLOSE(dd, -1.618f, 1.0e-6f);
     }
+}
+
+BOOST_AUTO_TEST_CASE(Size_T)
+{
+    auto t = Opm::PropertyTree{};
+
+    t.put("s.ramanujan", std::size_t{1729});
+    BOOST_CHECK_EQUAL(t.get<std::size_t>("s.ramanujan"), std::size_t{1729});
+
+    t.put("m", static_cast<std::size_t>(-1));
+    BOOST_CHECK_EQUAL(t.get<std::size_t>("m"), std::numeric_limits<std::size_t>::max());
+
+    // Conversion: int -> std::size_t
+    t.put("n", -1);
+    BOOST_CHECK_EQUAL(t.get<std::size_t>("n"), std::numeric_limits<std::size_t>::max());
 }
 
 BOOST_AUTO_TEST_CASE(Missing_Keys)
