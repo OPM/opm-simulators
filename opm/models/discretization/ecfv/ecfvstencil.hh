@@ -258,6 +258,13 @@ public:
         , elementMapper_(mapper)
     {
         // try to ensure that the mapper passed indeed maps elements
+        // gridView.grid().switchToGlobalView(); // I would like to switch here (only relevant for CpGrid with LGRs)
+        // What we actually want is data_[0]
+        // which can be done with:
+        // gridView.grid().switchToGlobalView();
+        // gridView.grid().currentData().front(); This works only for CpGrid ...
+        std::cout<< "gridView size: " << gridView.size(/*codim=*/0) << " vs elemMapper_ size: " <<
+                 elementMapper_.size()<< std::endl;
         assert(int(gridView.size(/*codim=*/0)) == int(elementMapper_.size()));
     }
 
