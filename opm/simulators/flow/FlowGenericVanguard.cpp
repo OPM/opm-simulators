@@ -349,12 +349,10 @@ void FlowGenericVanguard::init()
         {
             if (comm.rank() == 0)
             {
-                std::string message =
-                        std::string("Option --allow-distributed-wells=true in a model with\n")
-                        + "multisegment wells. This feature is still experimental. You can\n"
-                        + "set --use-multisegment-well=false to treat the existing \n"
-                        + "multisegment wells as standard wells.";
-                OpmLog::info(message);
+                OpmLog::info("Option --allow-distributed-wells=true in a model with\n"
+                             "multisegment wells. This feature is still experimental. You can\n"
+                             "set --use-multisegment-well=false to treat the existing\n"
+                             "multisegment wells as standard wells.");
             }
             comm.barrier();
         }
