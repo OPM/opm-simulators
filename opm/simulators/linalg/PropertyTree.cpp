@@ -23,12 +23,11 @@
 
 #include <boost/property_tree/json_parser.hpp>
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
-
-#include <stddef.h>
 
 namespace Opm {
 
@@ -102,23 +101,24 @@ PropertyTree& PropertyTree::operator=(const PropertyTree& tree)
   return *this;
 }
 
+template void PropertyTree::put(const std::string& key, const std::string& value);
+template void PropertyTree::put(const std::string& key, const double& value);
+template void PropertyTree::put(const std::string& key, const float& value);
+template void PropertyTree::put(const std::string& key, const int& value);
+template void PropertyTree::put(const std::string& key, const std::size_t& value);
+
 template std::string PropertyTree::get(const std::string& key) const;
 template double PropertyTree::get(const std::string& key) const;
 template float PropertyTree::get(const std::string& key) const;
 template int PropertyTree::get(const std::string& key) const;
-template size_t PropertyTree::get(const std::string& key) const;
+template std::size_t PropertyTree::get(const std::string& key) const;
 template bool PropertyTree::get(const std::string& key) const;
 
 template std::string PropertyTree::get(const std::string& key, const std::string& defValue) const;
 template double PropertyTree::get(const std::string& key, const double& defValue) const;
 template float PropertyTree::get(const std::string& key, const float& defValue) const;
 template int PropertyTree::get(const std::string& key, const int& defValue) const;
-template size_t PropertyTree::get(const std::string& key, const size_t& defValue) const;
+template std::size_t PropertyTree::get(const std::string& key, const std::size_t& defValue) const;
 template bool PropertyTree::get(const std::string& key, const bool& defValue) const;
-
-template void PropertyTree::put(const std::string& key, const std::string& value);
-template void PropertyTree::put(const std::string& key, const float& value);
-template void PropertyTree::put(const std::string& key, const double& value);
-template void PropertyTree::put(const std::string& key, const int& value);
 
 } // namespace Opm
