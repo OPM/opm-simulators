@@ -259,4 +259,37 @@ BOOST_AUTO_TEST_CASE(Hierarchy)
     }
 }
 
+BOOST_AUTO_TEST_CASE(Vector)
+{
+    auto f = TempFile{};
+    f.append(R"({
+ "a" : [ 1, 2, 3, 4 ],
+ "b" : [ 11.22, 33.44 ]
+})");
+
+    const auto t = Opm::PropertyTree { f.name() };
+
+    {
+        const auto a = t.get_child_items_as_vector<int>("a");
+        BOOST_REQUIRE_MESSAGE(a.has_value(), R"(Node "a" must exist)");
+
+        const auto expect = std::vector { 1, 2, 3, 4, };
+        BOOST_CHECK_EQUAL_COLLECTIONS(a    ->begin(), a    ->end(),
+                                      expect.begin(), expect.end());
+    }
+
+    {
+        const auto b = t.get_child_items_as_vector<double>("b");
+        BOOST_REQUIRE_MESSAGE(b.has_value(), R"(Node "b" must exist)");
+
+        const auto expect = std::vector { 11.22, 33.44, };
+        BOOST_REQUIRE_EQUAL(b->size(), expect.size());
+
+        for (auto i = 0*b->size(); i < b->size(); ++i) {
+            BOOST_TEST_MESSAGE("Element " << i);
+            BOOST_CHECK_CLOSE((*b)[i], expect[i], 1.0e-8);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END() // Load_From_File

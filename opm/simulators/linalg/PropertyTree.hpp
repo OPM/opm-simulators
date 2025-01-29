@@ -25,6 +25,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace boost::property_tree {
     template<class T1, class T2, class T3> class basic_ptree;
@@ -127,6 +128,23 @@ public:
     /// sub tree exists that is rooted at \p key.
     std::optional<PropertyTree>
     get_child_optional(const std::string& key) const;
+
+    /// Retrieve node items as linearised vector.
+    ///
+    /// Assumes that the node's child is an array type of homongeneous
+    /// elements.
+    ///
+    /// \tparam T Array element type.
+    ///
+    /// \param[in] child Property key.  Expected to be in hierarchical
+    /// notation for subtrees--i.e., using periods ('.') to separate
+    /// hierarchy levels.
+    ///
+    /// \return Array of property values.  Nullopt if no node named by \p
+    /// child exists.
+    template <typename T>
+    std::optional<std::vector<T>>
+    get_child_items_as_vector(const std::string& child) const;
 
     /// Emit a textual representation of the property tree in JSON form
     ///
