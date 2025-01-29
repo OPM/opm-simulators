@@ -228,6 +228,18 @@ public:
         checkParallelException("Could not initialize the problem: ",
                                exceptionThrown, what);
 
+        // Potential place to add LGRs??
+        /*   if (verbose_)
+            std::cout << "Adding LGRs, if any\n" << std::flush;
+
+        try
+        { vanguard_->addLgrs(); } // Each Vanguard should have such a method, only supported for CpGrid though
+        catch (const std::exception& e) {
+            catchAction(e, verbose_);
+        }
+        checkParallelException("Could not add LGRs into the vanguard data: ",
+        exceptionThrown, what);*/
+
         setupTimer_.stop();
 
         if (verbose_)
