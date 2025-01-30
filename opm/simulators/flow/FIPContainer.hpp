@@ -44,6 +44,7 @@ public:
     using FIPMap = std::unordered_map<Inplace::Phase, std::vector<Scalar>>;
 
     static constexpr auto numPhases = FluidSystem::numPhases;
+    static constexpr auto gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
@@ -76,6 +77,9 @@ public:
                         const std::array<Scalar, numPhases>& fip,
                         const Scalar    gasInPlaceWater,
                         const Scalar    waterInPlaceGas);
+
+    void assignVolumesSurface(const unsigned globalDofIdx,
+                              const std::array<Scalar, numPhases>& fip);
 
 private:
     FIPMap& fip_;

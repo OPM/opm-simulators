@@ -184,6 +184,43 @@ assignGasWater(const unsigned  globalDofIdx,
     }
 }
 
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignVolumesSurface(const unsigned globalDofIdx,
+                     const std::array<Scalar, numPhases>& fip)
+{
+    if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+        !this->fip_[Inplace::Phase::OIL].empty())
+    {
+        this->fip_[Inplace::Phase::OIL][globalDofIdx] = fip[oilPhaseIdx];
+    }
+
+    if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+        !this->fip_[Inplace::Phase::OilInLiquidPhase].empty())
+    {
+        this->fip_[Inplace::Phase::OilInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
+    }
+
+    if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+        !this->fip_[Inplace::Phase::GAS].empty())
+    {
+        this->fip_[Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
+    }
+
+    if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+        !this->fip_[Inplace::Phase::GasInGasPhase].empty())
+    {
+        this->fip_[Inplace::Phase::GasInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
+    }
+
+    if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+        !this->fip_[Inplace::Phase::WATER].empty())
+    {
+        this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
+    }
+}
+
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
 
 #define INSTANTIATE_TYPE(T) \
