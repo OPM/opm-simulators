@@ -231,7 +231,7 @@ template<class Scalar>
 void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
                                        const std::vector<Scalar>& cellTemperatures,
                                        const Well& well,
-                                       const std::vector<PerforationData<Scalar>>& well_perf_data,
+                                       const std::vector<PerforationData<Scalar>>& well_perf_data, //this variable contains only the perforation data on this process!
                                        const ParallelWellInfo<Scalar>& well_info,
                                        const SummaryState& summary_state)
 {
@@ -239,6 +239,7 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
     if (!well_perf_data.empty()) {
         pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
     }
+    // The following call is neccessary to ensure that processes that do not contain the first perforation get the correct value
     pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
 
     if (well.isInjector()) {
@@ -246,6 +247,7 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
         if (!well_perf_data.empty()) {
             temperature_first_connection = cellTemperatures[well_perf_data[0].cell_index];
         }
+        // The following call is neccessary to ensure that processes that do not contain the first perforation get the correct value
         temperature_first_connection = well_info.broadcastFirstPerforationValue(temperature_first_connection);
         this->initSingleInjector(well, well_info, pressure_first_connection, temperature_first_connection,
                                  well_perf_data, summary_state);
