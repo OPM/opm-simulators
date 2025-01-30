@@ -401,21 +401,42 @@ updateGroupTargetReduction(const Group& group,
                            GroupState<Scalar>& group_state,
                            std::vector<Scalar>& groupTargetReduction)
 {
+    int num_group_controlled_wells = 0;
+    updateGroupTargetReductionRecurse(group, schedule, reportStepIdx, isInjector, pu, guide_rate,
+                                      wellState, summaryState, group_state, groupTargetReduction,
+                                      num_group_controlled_wells);
+}
+
+template<class Scalar>
+void WellGroupHelpers<Scalar>::
+updateGroupTargetReductionRecurse(const Group& group,
+                                  const Schedule& schedule,
+                                  const int reportStepIdx,
+                                  const bool isInjector,
+                                  const PhaseUsage& pu,
+                                  const GuideRate& guide_rate,
+                                  const WellState<Scalar>& wellState,
+                                  const SummaryState& summaryState,
+                                  GroupState<Scalar>& group_state,
+                                  std::vector<Scalar>& groupTargetReduction,
+                                  int& num_group_controlled_wells)
+{
     OPM_TIMEFUNCTION();
     const int np = wellState.numPhases();
     for (const std::string& subGroupName : group.groups()) {
         std::vector<Scalar> subGroupTargetReduction(np, 0.0);
         const Group& subGroup = schedule.getGroup(subGroupName, reportStepIdx);
-        updateGroupTargetReduction(subGroup,
-                                   schedule,
-                                   reportStepIdx,
-                                   isInjector,
-                                   pu,
-                                   guide_rate,
-                                   wellState,
-                                   summaryState,
-                                   group_state,
-                                   subGroupTargetReduction);
+        updateGroupTargetReductionRecurse(subGroup,
+                                          schedule,
+                                          reportStepIdx,
+                                          isInjector,
+                                          pu,
+                                          guide_rate,
+                                          wellState,
+                                          summaryState,
+                                          group_state,
+                                          subGroupTargetReduction,
+                                          num_group_controlled_wells);
 
         const Scalar subGroupEfficiency = subGroup.getGroupEfficiencyFactor();
 
@@ -454,8 +475,6 @@ updateGroupTargetReduction(const Group& group,
                         = group_state.injection_control(subGroup.name(), phase);
                 const bool individual_control = (currentGroupControl != Group::InjectionCMode::FLD
                         && currentGroupControl != Group::InjectionCMode::NONE);
-                const int num_group_controlled_wells
-                        = groupControlledWells(schedule, wellState, group_state, summaryState, &guide_rate, reportStepIdx, subGroupName, "", !isInjector, phase);
                 if (individual_control || num_group_controlled_wells == 0) {
                     groupTargetReduction[phase_pos]
                         += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase_pos, isInjector);
@@ -470,8 +489,7 @@ updateGroupTargetReduction(const Group& group,
             const Group::ProductionCMode& currentGroupControl = group_state.production_control(subGroupName);
             const bool individual_control = (currentGroupControl != Group::ProductionCMode::FLD
                                              && currentGroupControl != Group::ProductionCMode::NONE);
-            const int num_group_controlled_wells
-                = groupControlledWells(schedule, wellState, group_state, summaryState, &guide_rate, reportStepIdx, subGroupName, "", !isInjector, /*injectionPhaseNotUsed*/Phase::OIL);
+
             if (individual_control || num_group_controlled_wells == 0) {
                 for (int phase = 0; phase < np; phase++) {
                     groupTargetReduction[phase]
@@ -508,6 +526,13 @@ updateGroupTargetReduction(const Group& group,
         if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
         {
             continue;
+        }
+
+        const bool group_controlled = wellIsUnderGroupControl(schedule, group, wellState, group_state,
+                                                              summaryState, &guide_rate, reportStepIdx,
+                                                              wellName, "", !isInjector);
+        if (group_controlled) {
+            ++num_group_controlled_wells;
         }
 
         const Scalar efficiency = wellTmp.getEfficiencyFactor() *

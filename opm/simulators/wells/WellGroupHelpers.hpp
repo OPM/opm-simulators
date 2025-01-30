@@ -119,6 +119,18 @@ public:
                                            GroupState<Scalar>& group_state,
                                            std::vector<Scalar>& groupTargetReduction);
 
+    static void updateGroupTargetReductionRecurse(const Group& group,
+                                                  const Schedule& schedule,
+                                                  const int reportStepIdx,
+                                                  const bool isInjector,
+                                                  const PhaseUsage& pu,
+                                                  const GuideRate& guide_rate,
+                                                  const WellState<Scalar>& wellState,
+                                                  const SummaryState& summaryState,
+                                                  GroupState<Scalar>& group_state,
+                                                  std::vector<Scalar>& groupTargetReduction,
+                                                  int& num_group_controlled_wells);
+
     static void updateGuideRates(const Group& group,
                                  const Schedule& schedule,
                                  const SummaryState& summary_state,
