@@ -749,9 +749,9 @@ namespace Opm
                             WellState<Scalar>& well_state,
                             DeferredLogger& deferred_logger) const
     {
-        auto fluidState = [&simulator, this](const int perf)
+        auto fluidState = [&simulator, this](const int local_perf_index)
         {
-            const auto cell_idx = this->well_cells_[perf];
+            const auto cell_idx = this->well_cells_[local_perf_index];
             return simulator.model()
                .intensiveQuantities(cell_idx, /*timeIdx=*/ 0).fluidState();
         };
@@ -789,7 +789,7 @@ namespace Opm
             // The subsetPerfID loops over 0 .. this->perf_data_->size().
             // *(this->perf_data_) contains info about the local processes only,
             // hence subsetPerfID is a local perf id and we can call getMobility
-            // directly with that.
+            // as well as fluidState directly with that.
             getMobility(simulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
