@@ -23,7 +23,17 @@
 #ifndef OPM_PYMAIN_HEADER_INCLUDED
 #define OPM_PYMAIN_HEADER_INCLUDED
 
+#include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
+
+#include <flow/flow_blackoil.hpp>
+
+#include <cstddef>
+#include <cstdlib>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -32,6 +42,8 @@ namespace Opm {
 class PyMain : public Main
 {
 public:
+    using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
+
     using Main::Main;
 
     void setArguments(const std::vector<std::string>& args)
@@ -40,10 +52,9 @@ public:
             return;
         }
 
-        // We have the two arguments previously setup
-        // (binary name and input case name) by the main
-        // class plus whichever args are in the parameter
-        // that was passed from the python side.
+        // We have the two arguments previously setup (binary name and input
+        // case name) by the main class plus whichever args are in the
+        // parameter that was passed from the python side.
         this->argc_ = 2 + args.size();
 
         // Setup our vector of char*'s
@@ -54,29 +65,30 @@ public:
             argv_python_[i+2] = const_cast<char*>(args[i].c_str());
         }
 
-        // Finally set the main class' argv pointer to
-        // the combined parameter list.
+        // Finally set the main class' argv pointer to the combined
+        // parameter list.
         this->argv_ = argv_python_.data();
     }
 
-    using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
-    // To be called from the Python interface code. Only do the
-    // initialization and then return a pointer to the FlowMain
-    // object that can later be accessed directly from the Python interface
-    // to e.g. advance the simulator one report step
+    // To be called from the Python interface code.  Only do the
+    // initialization and then return a pointer to the FlowMain object that
+    // can later be accessed directly from the Python interface to
+    // e.g. advance the simulator one report step
     std::unique_ptr<FlowMainType> initFlowBlackoil(int& exitCode)
     {
         exitCode = EXIT_SUCCESS;
-        if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode, true)) {
+
+        if (this->initialize_<Properties::TTag::FlowEarlyBird>(exitCode, true)) {
             // TODO: check that this deck really represents a blackoil
             // case. E.g. check that number of phases == 3
             this->setupVanguard();
-            return flowBlackoilTpfaMainInit(
-                argc_, argv_, outputCout_, outputFiles_);
-        } else {
-            //NOTE: exitCode was set by initialize_() above;
-            return std::unique_ptr<FlowMainType>(); // nullptr
+
+            return flowBlackoilTpfaMainInit
+                (argc_, argv_, outputCout_, outputFiles_);
         }
+
+        // NOTE: exitCode was set by initialize_() above;
+        return {}; // nullptr
     }
 
 private:

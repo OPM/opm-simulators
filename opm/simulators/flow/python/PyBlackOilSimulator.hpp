@@ -21,15 +21,24 @@
 #define OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
 
 #include <python/simulators/PyMain.hpp>
-#include <opm/simulators/flow/FlowMain.hpp>
-#include <opm/models/utils/propertysystem.hh>
+
 #include <opm/models/utils/parametersystem.hpp>
-#include <opm/simulators/flow/python/Pybind11Exporter.hpp>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/simulators/flow/FlowMain.hpp>
+#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
 #include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
+#include <opm/simulators/flow/python/Pybind11Exporter.hpp>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace Opm::Pybind {
 
