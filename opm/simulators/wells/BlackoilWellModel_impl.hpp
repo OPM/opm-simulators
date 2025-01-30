@@ -37,6 +37,7 @@
 #include <opm/input/eclipse/Schedule/Well/PAvgDynamicSourceData.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEconProductionLimits.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
@@ -815,7 +816,8 @@ namespace Opm {
                               }
 
                               constexpr auto events_mask = ScheduleEvents::WELL_STATUS_CHANGE |
-                                                           ScheduleEvents::REQUEST_OPEN_WELL;
+                                                           ScheduleEvents::REQUEST_OPEN_WELL |
+                                                           ScheduleEvents::REQUEST_SHUT_WELL;
                               const bool well_status_change =
                                   this->report_step_starts_ &&
                                   wg_events.hasEvent(well_ecl.name(), events_mask);
@@ -850,18 +852,15 @@ namespace Opm {
                 const auto well_status = this->schedule()
                     .getWell(well_name, report_step).getStatus();
 
-                if ((well_ecl.getStatus() == Well::Status::SHUT) ||
-                    (well_status          == Well::Status::SHUT))
-                {
-                    // Due to ACTIONX the well might have been closed behind our back.
-                    if (well_ecl.getStatus() != Well::Status::SHUT) {
-                        this->closed_this_step_.insert(well_name);
-                        this->wellState().shutWell(w);
-                    }
+                const bool shut_event = this->wellState().well(w).events.hasEvent(ScheduleEvents::REQUEST_SHUT_WELL);
+                const bool open_event = this->wellState().well(w).events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL);
+                const auto& ws = this->wellState().well(well_name);
 
-                    this->well_open_times_.erase(well_name);
-                    this->well_close_times_.erase(well_name);
-                    continue;
+                if (shut_event && ws.status != Well::Status::SHUT) {
+                    this->closed_this_step_.insert(well_name);
+                    this->wellState().shutWell(w);
+                } else if (open_event && ws.status != Well::Status::OPEN) {
+                    this->wellState().openWell(w);
                 }
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
@@ -927,23 +926,28 @@ namespace Opm {
                     }
                 }
 
-                if (well_status == Well::Status::STOP) {
-                    this->wellState().stopWell(w);
-                    this->well_close_times_.erase(well_name);
-                    this->well_open_times_.erase(well_name);
-                    wellIsStopped = true;
-                }
-
                 if (!wcycle.empty()) {
                     const auto it = cycle_states.find(well_name);
                     if (it != cycle_states.end()) {
-                        if (!it->second) {
+                        // If well is shut in schedule we keep it shut
+                        if (!it->second || well_status == Well::Status::SHUT) {
                             this->wellState().shutWell(w);
                             continue;
                         } else {
                             this->wellState().openWell(w);
                         }
                     }
+                }
+
+                if (ws.status == Well::Status::SHUT) {
+                    continue;
+                }
+
+                if (ws.status == Well::Status::STOP) {
+                    this->wellState().stopWell(w);
+                    this->well_close_times_.erase(well_name);
+                    this->well_open_times_.erase(well_name);
+                    wellIsStopped = true;
                 }
 
                 well_container_.emplace_back(this->createWellPointer(w, report_step));
@@ -1970,7 +1974,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const
+    updateWellTestState(const double& simulationTime, WellTestState& wellTestState)
     {
         OPM_TIMEFUNCTION();
         DeferredLogger local_deferredLogger;
@@ -1993,6 +1997,18 @@ namespace Opm {
 
             if (!wasClosed && wellTestState.well_is_closed(wname)) {
                 this->closed_this_step_.insert(wname);
+
+                // maybe open a new well
+                const WellEconProductionLimits& econ_production_limits = well->wellEcl().getEconLimits();
+                if (econ_production_limits.validFollowonWell()) {
+                    auto& ws = this->wellState().well(econ_production_limits.followonWell());
+                    bool success = ws.updateStatus(WellStatus::OPEN);
+                    if (success) {
+                        const std::string msg = std::string("well ") + econ_production_limits.followonWell() + std::string(" opens instead");
+                        local_deferredLogger.info(msg);
+                    }
+                }
+
             }
         }
 

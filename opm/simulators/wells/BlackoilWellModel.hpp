@@ -528,7 +528,7 @@ template<class Scalar> class WellContributions;
             void extractLegacyDepth_();
 
             /// upate the wellTestState related to economic limits
-            void updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const;
+            void updateWellTestState(const double& simulationTime, WellTestState& wellTestState);
 
             void wellTesting(const int timeStepIdx, const double simulationTime, DeferredLogger& deferred_logger);
 

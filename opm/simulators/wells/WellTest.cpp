@@ -355,10 +355,6 @@ updateWellTestStateEconomic(const SingleWellState<Scalar, IndexTraits>& ws,
             deferred_logger.warning("NOT_SUPPORTING_ENDRUN", warning_message);
         }
 
-        if (econ_production_limits.validFollowonWell()) {
-            deferred_logger.warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
-        }
-
         well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
         if (write_message_to_opmlog) {
             if (well_.wellEcl().getAutomaticShutIn()) {
