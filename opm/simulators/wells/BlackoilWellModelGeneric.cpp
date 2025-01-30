@@ -605,23 +605,21 @@ checkGconsaleLimits(const Group& group,
 }
 
 template<class Scalar>
-bool BlackoilWellModelGeneric<Scalar>::
-checkGroupHigherConstraints(const Group& group,
-                            DeferredLogger& deferred_logger,
-                            const int reportStepIdx,
-                            const int max_number_of_group_switch)
+std::pair<int, int>
+BlackoilWellModelGeneric<Scalar>::
+getGroupFipnumAndPvtreg() const
 {
     // Set up coefficients for RESV <-> surface rate conversion.
     // Use the pvtRegionIdx from the top cell of the first well.
     // TODO fix this!
     // This is only used for converting RESV rates.
     // What is the proper approach?
+    // See discussion in: https://github.com/OPM/opm-simulators/issues/2921 for more details.
     const int fipnum = 0;
     int pvtreg = well_perf_data_.empty() || well_perf_data_[0].empty()
         ? pvt_region_idx_[0]
         : pvt_region_idx_[well_perf_data_[0][0].cell_index];
 
-    bool changed = false;
     if ( comm_.size() > 1)
     {
         // Just like in the sequential case the pvtregion is determined
@@ -636,7 +634,18 @@ checkGroupHigherConstraints(const Group& group,
                                   [](const auto& p1, const auto& p2){ return p1.second < p2.second;})
             ->first;
     }
+    return std::make_pair(fipnum, pvtreg);
+}
 
+template<class Scalar>
+bool BlackoilWellModelGeneric<Scalar>::
+checkGroupHigherConstraints(const Group& group,
+                            DeferredLogger& deferred_logger,
+                            const int reportStepIdx,
+                            const int max_number_of_group_switch)
+{
+    bool changed = false;
+    auto [fipnum, pvtreg] = this->getGroupFipnumAndPvtreg();
     std::vector<Scalar> rates(phase_usage_.num_phases, 0.0);
 
     bool isField = group.name() == "FIELD";

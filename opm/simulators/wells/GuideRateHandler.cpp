@@ -108,6 +108,8 @@ receiveMasterGroupPotentialsFromSlaves()
 #endif
 
 #ifdef RESERVOIR_COUPLING_ENABLED
+// Send slave production group potentials to the master process. Injection groups do not use
+// potentials to compute guide rates, so we send dummy values (0.0) for the potentials of those groups.
 template<class Scalar>
 void
 GuideRateHandler<Scalar>::
@@ -126,7 +128,7 @@ sendSlaveGroupPotentialsToMaster(const GroupState<Scalar>& group_state)
             Potentials pot;
             // For injection groups, we do not have potentials. In that case,
             //  we will send dummy values (0.0) for the potentials.
-            if (this->guide_rate_.hasPotentials(slave_group_name)) {
+            if (group_state.has_production_group_potential(slave_group_name)) {
                 const auto& gr_pot = group_state.get_production_group_potential(slave_group_name);
                 pot[Potentials::Phase::Oil] = gr_pot.oil_rate;
                 pot[Potentials::Phase::Gas] = gr_pot.gas_rate;
@@ -310,14 +312,14 @@ getGroupGuideRatesProduction_(
     const auto& name = group.name();
     if (wm_guide_rate.has(name)) {  // Check if group has production guiderates
         using Value = data::GuideRateValue::Item;
-        static const std::array<std::tuple<Value, std::string_view>, 4> value_types = {{
+        static const std::array<std::tuple<Value, std::string_view>, 4> items = {{
             {Value::Oil, "oil"},
             {Value::Gas, "gas"},
             {Value::Water, "water"},
             {Value::ResV, "resv"}
         }};
         const auto& guide_rate_value = group_guide_rate.production;
-        for (const auto& [value_type, phase_str] : value_types) {
+        for (const auto& [value_type, phase_str] : items) {
             if (guide_rate_value.has(value_type)) {
                 msg_items.push_back(
                     fmt::format(
@@ -408,13 +410,13 @@ printWellGuideRates_(const Well& well, int level)
     const auto& guide_rate_value = gr_itr->second;
     std::vector<std::string> msg_items;
     using Value = data::GuideRateValue::Item;
-    static const std::array<std::tuple<Value, std::string_view>, 3> value_types = {{
+    static const std::array<std::tuple<Value, std::string_view>, 3> items = {{
         {Value::Oil, "oil"},
         {Value::Gas, "gas"},
         {Value::Water, "water"}
     }};
     const std::string well_type = well.isInjector() ? "Inj" : "Prod";
-    for (const auto& [value_type, phase_str] : value_types) {
+    for (const auto& [value_type, phase_str] : items) {
         if (guide_rate_value.has(value_type)) {
             msg_items.push_back(
                 fmt::format(
