@@ -113,7 +113,38 @@ public:
     void buildLocalGraph(const GridView&                                       grid_view,
                          const std::vector<Opm::Well>&                         wells,
                          const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                         const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl);
+                         const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl,
+                         const int                                             num_neighbor_levels);
+
+    /// Find all neighbors of a given cell.
+    ///
+    /// \tparam GridView DUNE grid view type
+    ///
+    /// \param[in] grid_view Current rank's reachable cells.
+    /// \param[in] cell_index Index of the cell to find neighbors for.
+    /// \param[in] zoltan_ctrl Control parameters for on-rank subdomain partitioning.
+    ///
+    /// \return Set of neighbor cell indices.
+    template <class GridView, class Element>
+    std::set<int> findNeighbors(const GridView& grid_view,
+                               const int cell_index,
+                               const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl) const;
+
+    /// Connect neighbors of cells up to a specified level.
+    ///
+    /// \tparam GridView DUNE grid view type
+    ///
+    /// \param[in] grid_view Current rank's reachable cells.
+    /// \param[in] cells Initial set of cells.
+    /// \param[in] num_levels Number of neighbor levels to include.
+    /// \param[in] zoltan_ctrl Control parameters for on-rank subdomain partitioning.
+    ///
+    /// \return Set of all connected cells including neighbors up to specified level.
+    template <class GridView, class Element>
+    std::set<int> connectNeighbors(const GridView& grid_view,
+                                  const std::set<int>& cells,
+                                  const int num_levels,
+                                  const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl) const;
 
     /// Partition rank's interior cells into non-overlapping domains using
     /// the Zoltan graph partitioning software package.
@@ -182,11 +213,17 @@ private:
     ///
     /// \param[in] g2l Mapping from globally unique cell IDs to local,
     ///   on-rank active cell IDs.  Return value from \c connectElements().
-    template <typename Comm>
+    ///
+    /// \param[in] num_neighbor_levels Number of neighbor levels to include when connecting well cells.
+    ///   Default is 0, which means only direct well connections are considered.
+    template <typename Comm, class GridView, class Element>
     void connectWells(const Comm                                     comm,
+                      const GridView&                                grid_view,
                       const std::vector<Opm::Well>&                  wells,
                       std::unordered_map<std::string, std::set<int>> possibleFutureConnections,
-                      const std::unordered_map<int, int>&            g2l);
+                      const std::unordered_map<int, int>&            g2l,
+                      const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl,
+                      const int                                      num_neighbor_levels);
 };
 
 // Note: "grid_view.size(0)" is intentional here.  It is not an error.  The
@@ -203,9 +240,77 @@ template <class GridView, class Element>
 void ZoltanPartitioner::buildLocalGraph(const GridView&                                       grid_view,
                                         const std::vector<Opm::Well>&                         wells,
                                         const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                                        const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl)
+                                        const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl,
+                                        const int                                             num_neighbor_levels)
 {
-    this->connectWells(grid_view.comm(), wells, possibleFutureConnections, this->connectElements(grid_view, zoltan_ctrl));
+    this->connectWells(grid_view.comm(), grid_view, wells, possibleFutureConnections,
+                      this->connectElements(grid_view, zoltan_ctrl), zoltan_ctrl, num_neighbor_levels);
+}
+
+template <class GridView, class Element>
+std::set<int> ZoltanPartitioner::findNeighbors(const GridView& grid_view,
+                                              const int cell_index,
+                                              const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl) const
+{
+    std::set<int> neighbors;
+
+    for (const auto& element : elements(grid_view, Dune::Partitions::interior)) {
+        if (zoltan_ctrl.index(element) != cell_index) {
+            continue;
+        }
+
+        for (const auto& is : intersections(grid_view, element)) {
+            if (!is.neighbor()) {
+                continue;
+            }
+
+            const auto& out = is.outside();
+            if (out.partitionType() != Dune::InteriorEntity) {
+                continue;
+            }
+
+            neighbors.insert(zoltan_ctrl.index(out));
+        }
+        break;
+    }
+
+    return neighbors;
+}
+
+template <class GridView, class Element>
+std::set<int> ZoltanPartitioner::connectNeighbors(const GridView& grid_view,
+                                                 const std::set<int>& cells,
+                                                 const int num_levels,
+                                                 const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl) const
+{
+    if (num_levels <= 0) {
+        return cells;
+    }
+    std::set<int> all_cells = cells;
+    std::set<int> frontier = cells;
+
+    for (int level = 0; level < num_levels; ++level) {
+        std::set<int> new_frontier;
+
+        for (const int cell : frontier) {
+            auto neighbors = findNeighbors(grid_view, cell, zoltan_ctrl);
+            new_frontier.insert(neighbors.begin(), neighbors.end());
+        }
+
+        // Remove cells we've already processed
+        for (const int cell : all_cells) {
+            new_frontier.erase(cell);
+        }
+
+        // If no new cells found, we can stop
+        if (new_frontier.empty()) {
+            break;
+        }
+
+        all_cells.insert(new_frontier.begin(), new_frontier.end());
+        frontier = std::move(new_frontier);
+    }
+    return all_cells;
 }
 
 template <class GridView, class Element>
@@ -275,11 +380,14 @@ ZoltanPartitioner::connectElements(const GridView&                              
     return g2l;
 }
 
-template <typename Comm>
+template <typename Comm, class GridView, class Element>
 void ZoltanPartitioner::connectWells(const Comm                                     comm,
+                                     const GridView&                                grid_view,
                                      const std::vector<Opm::Well>&                  wells,
                                      std::unordered_map<std::string, std::set<int>> possibleFutureConnections,
-                                     const std::unordered_map<int, int>&            g2l)
+                                     const std::unordered_map<int, int>&            g2l,
+                                     const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl,
+                                     const int                                      num_neighbor_levels)
 {
     auto distributedWells = 0;
 
@@ -290,6 +398,7 @@ void ZoltanPartitioner::connectWells(const Comm                                 
     for (const auto& well : wells) {
         auto cellIx = std::vector<int>{};
         auto otherProc = 0;
+        std::set<int> wellCells;
 
         for (const auto& conn : well.getConnections()) {
             auto locPos = g2l.find(conn.global_index());
@@ -297,7 +406,7 @@ void ZoltanPartitioner::connectWells(const Comm                                 
                 ++otherProc;
                 continue;
             }
-
+            wellCells.insert(locPos->second);
             cellIx.push_back(locPos->second);
         }
         const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
@@ -308,6 +417,7 @@ void ZoltanPartitioner::connectWells(const Comm                                 
                     ++otherProc;
                     continue;
                 }
+                wellCells.insert(locPos->second);
                 cellIx.push_back(locPos->second);
             }
         }
@@ -315,6 +425,13 @@ void ZoltanPartitioner::connectWells(const Comm                                 
         if ((otherProc > 0) && !cellIx.empty()) {
             ++distributedWells;
             continue;
+        }
+
+        // If neighbor levels > 0, expand the well cells to include neighbors
+        if (num_neighbor_levels > 0 && !wellCells.empty()) {
+            wellCells = connectNeighbors(grid_view, wellCells, num_neighbor_levels, zoltan_ctrl);
+            cellIx.clear();
+            cellIx.insert(cellIx.end(), wellCells.begin(), wellCells.end());
         }
 
         const auto nc = cellIx.size();
@@ -352,7 +469,8 @@ partitionCellsZoltan(const int                                             num_d
                      const GridView&                                       grid_view,
                      const std::vector<Opm::Well>&                         wells,
                      const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                     const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl)
+                     const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl,
+                     const int                                             num_neighbor_levels)
 {
     if (num_domains <= 1) {     // No partitioning => every cell in domain zero.
         const auto num_interior_cells =
@@ -366,7 +484,8 @@ partitionCellsZoltan(const int                                             num_d
     }
 
     auto partitioner = ZoltanPartitioner { grid_view, zoltan_ctrl.local_to_global };
-    partitioner.buildLocalGraph(grid_view, wells, possibleFutureConnections, zoltan_ctrl);
+
+    partitioner.buildLocalGraph(grid_view, wells, possibleFutureConnections, zoltan_ctrl, num_neighbor_levels);
 
     return partitioner.partition(num_domains, grid_view, zoltan_ctrl);
 }
@@ -587,12 +706,13 @@ Opm::partitionCells(const std::string& method,
                     const GridView&    grid_view,
                     [[maybe_unused]] const std::vector<Well>&                              wells,
                     [[maybe_unused]] const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                    [[maybe_unused]] const ZoltanPartitioningControl<Element>&             zoltan_ctrl)
+                    [[maybe_unused]] const ZoltanPartitioningControl<Element>&             zoltan_ctrl,
+                    const int                                             num_neighbor_levels)
 {
     if (method == "zoltan") {
 #if HAVE_MPI && HAVE_ZOLTAN
 
-        return partitionCellsZoltan(num_local_domains, grid_view, wells, possibleFutureConnections, zoltan_ctrl);
+        return partitionCellsZoltan(num_local_domains, grid_view, wells, possibleFutureConnections, zoltan_ctrl, num_neighbor_levels);
 
 #else // !HAVE_MPI || !HAVE_ZOLTAN
 
@@ -687,7 +807,8 @@ Opm::partitionCellsSimple(const int num_cells, const int num_domains)
                         const std::unordered_map<std::string, std::set<int>>&, \
                         const Opm::ZoltanPartitioningControl<                  \
                         typename std::remove_cv_t<std::remove_reference_t<     \
-                        decltype(std::declval<Grid>().leafGridView())>>::template Codim<0>::Entity>&)
+                        decltype(std::declval<Grid>().leafGridView())>>::template Codim<0>::Entity>&, \
+                        const int)
 
 // ---------------------------------------------------------------------------
 // Grid types built into Flow.

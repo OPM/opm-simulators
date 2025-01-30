@@ -991,10 +991,12 @@ private:
         const int num_domains = (param.num_local_domains_ > 0)
             ? param.num_local_domains_
             : detail::countGlobalCells(grid) / default_cells_per_domain;
-
+        // TODO: Make this a parameter
+        const int num_neighbor_levels = 1;
         return ::Opm::partitionCells(param.local_domain_partition_method_,
                                      num_domains, grid.leafGridView(), wells,
-                                     possibleFutureConnectionSet, zoltan_ctrl);
+                                     possibleFutureConnectionSet, zoltan_ctrl,
+                                     num_neighbor_levels);
     }
 
     std::vector<int> reconstitutePartitionVector() const

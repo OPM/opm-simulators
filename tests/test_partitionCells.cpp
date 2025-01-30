@@ -620,6 +620,49 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithNonReachableCellsTest)
 #endif
 }
 
+BOOST_AUTO_TEST_CASE(PartitionCellsWithNeighborConnectivityTest)
+{
+    // Create a 1D grid with 7 cells and two wells that are not directly connected
+    // but will be connected through their neighboring cells when using neighbor_levels=1
+    // Visual representation:
+    // Cell indices:    0    1    2    3    4    5    6
+    // Well layout:          W1        W2
+    // Connected:       *    *    *    *    *
+    // The wells will be connected because cell 2 is a neighbor of W1 and W2
+    auto grid = createTestGrid({7, 1, 1}, {7.0, 1.0, 1.0});
+    using Entity = typename Dune::CpGrid::LeafGridView::template Codim<0>::Entity;
+    auto zoltan_ctrl = createZoltanControl<Entity>(grid);
+
+    // Create two wells that are not directly connected
+    auto wells = createWellsWithConnections({
+        {"WELL1", {1}},    // Well 1 in cell 1
+        {"WELL2", {3}}     // Well 2 in cell 3 (not adjacent to Well 1)
+    });
+
+#if HAVE_MPI && HAVE_ZOLTAN
+    // Test Zoltan partitioning with neighbor connectivity
+    auto [part, num_part] = Opm::partitionCells("zoltan", 3, grid.leafGridView(),
+                                               wells,
+                                               std::unordered_map<std::string, std::set<int>>{},
+                                               zoltan_ctrl,
+                                               1);
+
+    // Verify number of partitions
+    BOOST_CHECK_EQUAL(num_part, 3);
+    BOOST_CHECK_EQUAL(part.size(), 7);  // 7x1x1 grid
+
+    // Check that the wells are connected through their neighbors
+    BOOST_CHECK(part[0] == part[1]);
+    BOOST_CHECK(part[1] == part[2]);
+    BOOST_CHECK(part[2] == part[3]);
+    BOOST_CHECK(part[3] == part[4]);
+
+    // Check that the remaining cells are in different partitions
+    BOOST_CHECK(part[0] != part[5]);
+    BOOST_CHECK(part[5] != part[6]);
+#endif
+}
+
 bool
 init_unit_test_func()
 {
