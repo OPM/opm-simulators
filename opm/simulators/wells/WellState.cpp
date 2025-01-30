@@ -382,10 +382,6 @@ init(const std::vector<Scalar>& cellPressures,
     // order may change so the mapping is based on the well name
     if ((prevState != nullptr) && (prevState->size() > 0)) {
         for (int w = 0; w < nw; ++w) {
-            if (wells_ecl[w].getStatus() == Well::Status::SHUT) {
-                continue;
-            }
-
             const auto old_index = prevState->index(wells_ecl[w].name());
             if (! old_index.has_value()) {
                 continue;
@@ -400,6 +396,8 @@ init(const std::vector<Scalar>& cellPressures,
                 // Well was shut in previous state, do not use its values.
                 continue;
             }
+
+            new_well.status = prev_well.status;
 
             if (new_well.producer != prev_well.producer) {
                 // Well changed to/from injector from/to producer, do not
