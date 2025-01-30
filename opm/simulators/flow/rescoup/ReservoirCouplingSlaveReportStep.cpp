@@ -104,6 +104,87 @@ sendDataToMaster_(
     }
 }
 
+std::pair<std::size_t, std::size_t>
+ReservoirCouplingSlaveReportStep<Scalar>::
+receiveNumGroupTargetsFromMaster() const {
+    std::vector<std::size_t> num_group_targets(2);
+    if (this->comm().rank() == 0) {
+        auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            num_group_targets.data(),
+            /*count=*/2,
+            /*datatype=*/MPI_SIZE_T_TYPE,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupTargets),
+            this->getSlaveMasterComm(),
+            MPI_STATUS_IGNORE
+        );
+        this->logger().info("Received number of slave group targets from master process rank 0");
+    }
+    this->comm().broadcast(num_group_targets.data(), /*count=*/2, /*emitter_rank=*/0);
+    auto num_injection_targets = num_group_targets[0];
+    auto num_production_targets = num_group_targets[1];
+    this->logger().info(fmt::format("Received number of injection targets: {} and "
+                             "production targets: {} from master process",
+                             num_injection_targets, num_production_targets));
+    return std::make_pair(num_injection_targets, num_production_targets);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const
+{
+    std::vector<InjectionGroupTarget> injection_targets(num_targets);
+    if (this->comm().rank() == 0) {
+        auto MPI_INJECTION_GROUP_TARGET_TYPE = Dune::MPITraits<InjectionGroupTarget>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            injection_targets.data(),
+            /*count=*/num_targets,
+            /*datatype=*/MPI_INJECTION_GROUP_TARGET_TYPE,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::InjectionGroupTargets),
+            this->getSlaveMasterComm(),
+            MPI_STATUS_IGNORE
+        );
+        this->logger().info(fmt::format(
+            "Received injection {} group targets from master process rank 0", num_targets
+        ));
+    }
+    this->comm().broadcast(
+        injection_targets.data(), num_targets, /*emitter_rank=*/0
+    );
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+receiveProductionGroupTargetsFromMaster(std::size_t num_targets) const
+{
+    std::vector<ProductionGroupTarget> production_targets(num_targets);
+    if (this->comm().rank() == 0) {
+        auto MPI_PRODUCTION_GROUP_TARGET_TYPE = Dune::MPITraits<ProductionGroupTarget>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            production_targets.data(),
+            /*count=*/num_targets,
+            /*datatype=*/MPI_PRODUCTION_GROUP_TARGET_TYPE,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::ProductionGroupTargets),
+            this->getSlaveMasterComm(),
+            MPI_STATUS_IGNORE
+        );
+        this->logger().info(fmt::format(
+            "Received production {} group targets from master process rank 0", num_targets
+        ));
+    }
+    this->comm().broadcast(
+        production_targets.data(), num_targets, /*emitter_rank=*/0
+    );
+}
+
 // Explicit instantiations
 template class ReservoirCouplingSlaveReportStep<double>;
 #if FLOW_INSTANTIATE_FLOAT

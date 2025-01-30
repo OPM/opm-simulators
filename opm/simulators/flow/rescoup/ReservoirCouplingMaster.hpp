@@ -41,6 +41,9 @@ public:
     using Seconds = ReservoirCoupling::Seconds;
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
+    using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
+
     ReservoirCouplingMaster(
         const Parallel::Communication &comm,
         const Schedule &schedule,
@@ -85,14 +88,15 @@ public:
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }
+    double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
     double getSlaveActivationDate(int index) const { return this->slave_activation_dates_[index]; }
     const double *getSlaveActivationDates() const { return this->slave_activation_dates_.data(); }
+    MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
     std::map<std::string, std::vector<std::string>> &getSlaveNameToMasterGroupsMap() {
         return this->slave_name_to_master_groups_map_;
     }
-    double getSimulationStartDate() const { return this->schedule_.getStartTime(); }
-    MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name);
+    int getSlaveIdx(const std::string &slave_name) const;
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
     double getSlaveStartDate(int index) const { return this->slave_start_dates_[index]; }
     const double *getSlaveStartDates() { return this->slave_start_dates_.data(); }
@@ -104,6 +108,7 @@ public:
     double maybeChopSubStep(double suggested_timestep, double current_time) const;
     void maybeSpawnSlaveProcesses(int report_step);
     std::size_t numSlaveGroups(unsigned int index);
+    std::size_t numSlaves() const { return this->numSlavesStarted(); }
     std::size_t numSlavesStarted() const;
     void rebuildSlaveIdxToMasterGroupsVector();
     void receiveNextReportDateFromSlaves();
@@ -116,6 +121,20 @@ public:
     void sendNextTimeStepToSlaves(double next_time_step) {
         this->time_stepper_->sendNextTimeStepToSlaves(next_time_step);
     }
+    void sendInjectionTargetsToSlave(
+        std::size_t slave_idx,
+        const std::vector<InjectionGroupTarget>& injection_targets
+    ) const;
+    void sendNumGroupTargetsToSlave(
+        std::size_t slave_idx,
+        std::size_t num_injection_targets,
+        std::size_t num_production_targets
+    ) const;
+    void sendProductionTargetsToSlave(
+        std::size_t slave_idx,
+        const std::vector<ProductionGroupTarget>& production_targets
+    ) const;
+    void resizeNextReportDates(int size);
     void setDeferredLogger(DeferredLogger *deferred_logger) {
          this->logger_.setDeferredLogger(deferred_logger);
     }

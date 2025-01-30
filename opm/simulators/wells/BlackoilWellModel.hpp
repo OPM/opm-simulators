@@ -418,6 +418,9 @@ template<class Scalar> class WellContributions;
             /// \brief Receive comprehensive slave group data from slaves
             void receiveSlaveGroupData();
 
+            void receiveGroupTargetsFromMaster(const int reportStepIdx);
+            void sendMasterGroupTargetsToSlaves(const int reportStepIdx);
+
             /// \brief Setup RAII guard for reservoir coupling logger
             ///
             /// Creates a scoped logger guard that automatically clears the logger
@@ -570,11 +573,11 @@ template<class Scalar> class WellContributions;
             void calcResvCoeff(const int fipnum,
                                const int pvtreg,
                                const std::vector<Scalar>& production_rates,
-                               std::vector<Scalar>& resv_coeff) override;
+                               std::vector<Scalar>& resv_coeff) const override;
 
             void calcInjResvCoeff(const int fipnum,
                                   const int pvtreg,
-                                  std::vector<Scalar>& resv_coeff) override;
+                                  std::vector<Scalar>& resv_coeff) const override;
 
             void computeWellTemperature();
 

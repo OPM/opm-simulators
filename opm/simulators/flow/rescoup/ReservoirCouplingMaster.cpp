@@ -96,6 +96,27 @@ getMasterGroupCanonicalIdx(
 }
 
 template <class Scalar>
+const ReservoirCoupling::Potentials<Scalar>&
+ReservoirCouplingMaster<Scalar>::
+getSlaveGroupPotentials(const std::string &master_group_name)
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->getSlaveGroupPotentials(master_group_name);
+}
+
+template <class Scalar>
+int
+ReservoirCouplingMaster<Scalar>::
+getSlaveIdx(const std::string &slave_name) const
+{
+    auto it = std::find(this->slave_names_.begin(), this->slave_names_.end(), slave_name);
+    if (it != this->slave_names_.end()) {
+        return std::distance(this->slave_names_.begin(), it);
+    }
+    OPM_THROW(std::runtime_error, "Slave name not found: " + slave_name);
+}
+
+template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
 initTimeStepping()
@@ -281,21 +302,43 @@ receiveProductionDataFromSlaves()
 }
 
 template <class Scalar>
-const ReservoirCoupling::Potentials<Scalar>&
-ReservoirCouplingMaster<Scalar>::
-getSlaveGroupPotentials(const std::string &master_group_name)
-{
-    assert(this->report_step_data_);
-    return this->report_step_data_->getSlaveGroupPotentials(master_group_name);
-}
-
-template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
 resizeNextReportDates(int size)
 {
     assert(this->time_stepper_);
     this->time_stepper_->resizeNextReportDates(size);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendInjectionTargetsToSlave(std::size_t slave_idx,
+                            const std::vector<InjectionGroupTarget>& injection_targets) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendInjectionTargetsToSlave(slave_idx, injection_targets);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendNumGroupTargetsToSlave(std::size_t slave_idx,
+                           std::size_t num_injection_targets,
+                           std::size_t num_production_targets) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendNumGroupTargetsToSlave(slave_idx, num_injection_targets, num_production_targets);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+sendProductionTargetsToSlave(std::size_t slave_idx,
+                             const std::vector<ProductionGroupTarget>& production_targets) const
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->sendProductionTargetsToSlave(slave_idx, production_targets);
 }
 
 template <class Scalar>

@@ -20,6 +20,7 @@
 #ifndef OPM_RESERVOIR_COUPLING_HPP
 #define OPM_RESERVOIR_COUPLING_HPP
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
 #include <dune/common/parallel/mpitraits.hh>
@@ -119,10 +120,13 @@ private:
 };
 
 enum class MessageTag : int {
-    MasterGroupInfo,
+    InjectionGroupTargets,
     MasterGroupNames,
     MasterGroupNamesSize,
     MasterStartOfReportStep,
+    NumSlaveGroupTargets,
+    ProductionGroupTargets,
+    SlaveSimulationStartDate,
     SlaveActivationDate,
     SlaveActivationHandshake,
     SlaveInjectionData,
@@ -200,6 +204,24 @@ struct SlaveGroupInjectionData {
     InjectionRates<Scalar> reservoir_rates;  // Reservoir injection rates by phase
 };
 
+template <class Scalar>
+struct InjectionGroupTarget {
+    // To save memory and avoid varying size of the struct when serializing
+    // and deserializing the group name, we use an index instead of the full name.
+    std::size_t group_name_idx;   // Index of group name in the master group names vector
+    Scalar target;                // Target rate for the group
+    Group::InjectionCMode cmode;  // Control mode for the group
+    Phase phase;                  // Phase the target applies to
+};
+
+template <class Scalar>
+struct ProductionGroupTarget {
+    // To save memory and avoid varying size of the struct when serializing
+    // and deserializing the group name, we use an index instead of the full name.
+    std::size_t group_name_idx;   // Index of group name in the master group names vector
+    Scalar target;                // Target rate for the group
+    Group::ProductionCMode cmode;  // Control mode for the group
+};
 
 // Helper functions
 void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg);

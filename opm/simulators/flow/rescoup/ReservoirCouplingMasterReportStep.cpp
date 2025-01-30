@@ -180,6 +180,91 @@ receiveProductionDataFromSlaves()
 template <class Scalar>
 void
 ReservoirCouplingMasterReportStep<Scalar>::
+sendInjectionTargetsToSlave(std::size_t slave_idx,
+                            const std::vector<InjectionGroupTarget>& injection_targets) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm().rank() == 0) {
+        auto num_injection_targets = injection_targets.size();
+        auto MPI_INJECTION_TARGETS_TYPE = Dune::MPITraits<InjectionGroupTarget>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            injection_targets.data(),
+            /*count=*/num_injection_targets,
+            /*datatype=*/MPI_INJECTION_TARGETS_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::InjectionGroupTargets),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger().info(fmt::format(
+            "Sent {} injection targets to slave process with name: {}",
+            num_injection_targets, this->slaveName(slave_idx)
+        ));
+    }
+}
+
+// The slave process will use this information to determine how many targets to expect
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+sendNumGroupTargetsToSlave(std::size_t slave_idx,
+                           std::size_t num_injection_targets,
+                           std::size_t num_production_targets) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm().rank() == 0) {
+        std::vector<std::size_t> num_targets(2);
+        num_targets[0] = num_injection_targets;
+        num_targets[1] = num_production_targets;
+        auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            num_targets.data(),
+            /*count=*/2,
+            /*datatype=*/MPI_SIZE_T_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupTargets),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger().info(fmt::format(
+            "Sent number of injection targets {} and production targets {} to slave process with name: {}",
+            num_injection_targets, num_production_targets, this->slaveName(slave_idx)
+        ));
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+sendProductionTargetsToSlave(std::size_t slave_idx,
+                             const std::vector<ProductionGroupTarget>& production_targets) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm().rank() == 0) {
+        auto num_production_targets = production_targets.size();
+        auto MPI_PRODUCTION_TARGETS_TYPE = Dune::MPITraits<ProductionGroupTarget>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            production_targets.data(),
+            /*count=*/num_production_targets,
+            /*datatype=*/MPI_PRODUCTION_TARGETS_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::ProductionGroupTargets),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger().info(fmt::format(
+            "Sent {} production targets to slave process with name: {}",
+            num_production_targets, this->slaveName(slave_idx)
+        ));
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
 setReportStepIdx(int report_step_idx)
 {
     this->report_step_idx_ = report_step_idx;

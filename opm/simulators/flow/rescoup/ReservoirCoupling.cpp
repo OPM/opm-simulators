@@ -147,6 +147,13 @@ bool Seconds::compare_lt_or_eq(double a, double b)
     return a < b;
 }
 
+template class InjectionGroupTarget<double>;
+template class ProductionGroupTarget<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class InjectionGroupTarget<float>;
+template class ProductionGroupTarget<float>;
+#endif
 
 } // namespace ReservoirCoupling
 } // namespace Opm

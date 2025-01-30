@@ -62,6 +62,8 @@ public:
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
+    using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
 
     /// @brief Construct a report step manager for the master process
     /// @param master Reference to the parent ReservoirCouplingMaster object
@@ -103,12 +105,6 @@ public:
     /// @return Reference to the potentials data for the specified group
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name) const;
 
-    /// @brief Receive group information from slaves if needed
-    ///
-    /// This method conditionally receives group information from slave processes.
-    /// The reception is triggered based on simulation state and timing requirements.
-    void maybeReceiveGroupInfoFromSlaves();
-
     /// @brief Get the number of slave groups for a specific slave process
     /// @param index Index of the slave process
     /// @return Number of groups managed by the specified slave
@@ -147,13 +143,15 @@ public:
     /// @return Reference to the Schedule object containing well and group definitions
     const Schedule &schedule() const { return this->master_.schedule(); }
 
-    /// @brief Send group control information to all slaves for a specific report step
-    /// @param report_step_idx Index of the report step for which to send group info
-    ///
-    /// This method sends group control information (targets, constraints, well controls)
-    /// from the master to each slave process. Each slave receives the information
-    /// relevant to the groups it manages.
-    void sendGroupInfoToSlaves(int report_step_idx);
+    void sendInjectionTargetsToSlave(
+        std::size_t slave_idx, const std::vector<InjectionGroupTarget>& injection_targets
+    ) const;
+    void sendNumGroupTargetsToSlave(
+        std::size_t slave_idx, std::size_t num_injection_targets, std::size_t num_production_targets
+    ) const;
+    void sendProductionTargetsToSlave(
+        std::size_t slave_idx, const std::vector<ProductionGroupTarget>& production_targets
+    ) const;
 
     /// @brief Set the current report step index
     /// @param report_step_idx The report step index to set
@@ -173,14 +171,6 @@ public:
     const std::string &slaveName(int index) const { return this->master_.getSlaveName(index); }
 
 private:
-    /// @brief Receive group information from a specific slave process
-    /// @param slave_idx Index of the slave process to receive from
-    void receiveGroupInfoFromSlave_(unsigned int slave_idx);
-
-    /// @brief Send injector and producer information for master groups to a slave
-    /// @param slave_idx Index of the slave process to send to
-    /// @param report_step_idx Index of the report step
-    void sendMasterGroupInjectorProducerInfoToSlave_(unsigned int slave_idx, int report_step_idx);
 
     /// Reference to the parent ReservoirCouplingMaster object
     ReservoirCouplingMaster<Scalar> &master_;

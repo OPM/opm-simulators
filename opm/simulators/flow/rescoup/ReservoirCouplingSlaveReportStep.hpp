@@ -97,6 +97,9 @@ public:
     /// @brief Get the name of this slave process
     /// @return Reference to the name string for this slave
     const std::string& slaveName() const { return this->slave_.getSlaveName(); }
+    std::pair<std::size_t, std::size_t> receiveNumGroupTargetsFromMaster() const;
+    void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const;
+    void receiveProductionGroupTargetsFromMaster(std::size_t num_targets) const;
 
 private:
     /// @brief Generic helper method for sending data to the master process via MPI

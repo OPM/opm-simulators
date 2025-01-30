@@ -43,6 +43,8 @@ public:
     using Potentials = ReservoirCoupling::Potentials<Scalar>;
     using SlaveGroupInjectionData = ReservoirCoupling::SlaveGroupInjectionData<Scalar>;
     using SlaveGroupProductionData = ReservoirCoupling::SlaveGroupProductionData<Scalar>;
+    using InjectionGroupTarget = ReservoirCoupling::InjectionGroupTarget<Scalar>;
+    using ProductionGroupTarget = ReservoirCoupling::ProductionGroupTarget<Scalar>;
 
     ReservoirCouplingSlave(
         const Parallel::Communication &comm, const Schedule &schedule, const SimulatorTimer &timer
@@ -59,6 +61,9 @@ public:
     void maybeActivate(int report_step);
     std::size_t numSlaveGroups() const { return this->slave_group_order_.size(); }
     double receiveNextTimeStepFromMaster();
+    std::pair<std::size_t, std::size_t> receiveNumGroupTargetsFromMaster() const;
+    void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets) const;
+    void receiveProductionGroupTargetsFromMaster(std::size_t num_targets) const;
     void sendAndReceiveInitialData();
     void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
     void sendNextReportDateToMasterProcess() const;
