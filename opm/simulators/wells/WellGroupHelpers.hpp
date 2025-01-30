@@ -272,6 +272,17 @@ public:
                                     const bool is_production_group,
                                     const Phase injection_phase);
 
+    static bool wellIsUnderGroupControl(const Schedule& schedule,
+                                        const Group& group,
+                                        const WellState<Scalar>& well_state,
+                                        const GroupState<Scalar>& group_state,
+                                        const SummaryState& summary_state,
+                                        const GuideRate* guideRate,
+                                        const int report_step,
+                                        const std::string& well_name,
+                                        const std::string& always_included_child,
+                                        const bool is_production_group);
+
     static std::pair<bool, Scalar>
     checkGroupConstraintsInj(const std::string& name,
                              const std::string& parent,

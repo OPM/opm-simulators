@@ -1209,11 +1209,35 @@ groupControlledWells(const Schedule& schedule,
         }
     }
     for (const std::string& child_well : group.wells()) {
-        bool included = (child_well == always_included_child);
+        if (wellIsUnderGroupControl(schedule, group, well_state, group_state,
+                                    summary_state, guideRate, report_step,
+                                    child_well, always_included_child, is_production_group)) {
+            ++num_wells;
+        }
+    }
+    return num_wells;
+}
+
+template<class Scalar>
+bool
+WellGroupHelpers<Scalar>::
+wellIsUnderGroupControl(const Schedule& schedule,
+                        const Group& group,
+                        const WellState<Scalar>& well_state,
+                        const GroupState<Scalar>& group_state,
+                        const SummaryState& summary_state,
+                        const GuideRate* guideRate,
+                        const int report_step,
+                        const std::string& well_name,
+                        const std::string& always_included_child,
+                        const bool is_production_group)
+{
+    bool included = (well_name == always_included_child);
+    {
         if (is_production_group) {
-                included = included || well_state.isProductionGrup(child_well) || group.as_choke();
+            included = included || well_state.isProductionGrup(well_name) || group.as_choke();
         } else {
-            included = included || well_state.isInjectionGrup(child_well);
+            included = included || well_state.isInjectionGrup(well_name);
         }
         const auto ctrl1 = group_state.production_control(group.name());
         if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
@@ -1258,8 +1282,8 @@ groupControlledWells(const Schedule& schedule,
                 auto deferred_logger = Opm::DeferredLogger();
                 const auto& control_group_target = tcalc.groupTarget(ctrl, deferred_logger);
 
-                // Calculates the guide rate of the parent group with control. 
-                // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups 
+                // Calculates the guide rate of the parent group with control.
+                // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups
                 const auto& control_group_guide_rate = getGuideRate(control_group_name,
                                                     schedule,
                                                     well_state,
@@ -1279,12 +1303,8 @@ groupControlledWells(const Schedule& schedule,
                 }
             }
         }
-
-        if (included) {
-            ++num_wells;
-        }
     }
-    return num_wells;
+    return included;
 }
 
 template<class Scalar>
