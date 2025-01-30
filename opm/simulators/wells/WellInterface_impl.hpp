@@ -1599,6 +1599,8 @@ namespace Opm
         for (int perf = 0; perf < nperf; ++perf) {
             total_tw += this->well_index_[perf];
         }
+        total_tw = this->parallelWellInfo().communication().sum(total_tw);
+
         for (int perf = 0; perf < nperf; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
