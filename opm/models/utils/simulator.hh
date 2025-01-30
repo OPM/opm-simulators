@@ -28,6 +28,14 @@
 #ifndef EWOMS_SIMULATOR_HH
 #define EWOMS_SIMULATOR_HH
 
+#if HAVE_MPI
+#define RESERVOIR_COUPLING_ENABLED
+#endif
+#ifdef RESERVOIR_COUPLING_ENABLED
+#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
+#endif
+
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
@@ -808,6 +816,25 @@ public:
         EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(problem_->finalize());
     }
 
+#ifdef RESERVOIR_COUPLING_ENABLED
+    ReservoirCouplingMaster* reservoirCouplingMaster() const
+    {
+        return reservoirCouplingMaster_;
+    }
+    ReservoirCouplingSlave* reservoirCouplingSlave() const
+    {
+        return reservoirCouplingSlave_;
+    }
+    void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoirCouplingMaster)
+    {
+        this->reservoirCouplingMaster_ = reservoirCouplingMaster;
+    }
+    void setReservoirCouplingSlave(ReservoirCouplingSlave *reservoirCouplingSlave)
+    {
+        this->reservoirCouplingSlave_ = reservoirCouplingSlave;
+    }
+#endif
+
     /*!
      * \name Saving/restoring the simulation state
      * \{
@@ -921,6 +948,12 @@ private:
 
     bool finished_;
     bool verbose_;
+
+#ifdef RESERVOIR_COUPLING_ENABLED
+    ReservoirCouplingMaster *reservoirCouplingMaster_ = nullptr;
+    ReservoirCouplingSlave *reservoirCouplingSlave_ = nullptr;
+#endif
+
 };
 
 namespace Properties {
