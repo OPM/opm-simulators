@@ -23,8 +23,14 @@
 
 #include <boost/property_tree/json_parser.hpp>
 
-namespace Opm
-{
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <string>
+#include <vector>
+
+namespace Opm {
 
 PropertyTree::PropertyTree()
     : tree_(std::make_unique<boost::property_tree::ptree>())
@@ -90,29 +96,54 @@ PropertyTree::get_child_optional(const std::string& key) const
   return PropertyTree(pt.get());
 }
 
+template <typename T>
+std::optional<std::vector<T>>
+PropertyTree::get_child_items_as_vector(const std::string& child) const
+{
+    auto items = std::optional<std::vector<T>>{};
+
+    auto subTree = this->tree_->get_child_optional(child);
+    if (! subTree) {
+        return items;
+    }
+
+    items.emplace();
+    for (const auto& childItem : *subTree) {
+        items->push_back(childItem.second.template get_value<T>());
+    }
+
+    return items;
+}
+
 PropertyTree& PropertyTree::operator=(const PropertyTree& tree)
 {
   tree_ = std::make_unique<boost::property_tree::ptree>(*tree.tree_);
   return *this;
 }
 
-template std::string PropertyTree::get<std::string>(const std::string& key) const;
-template std::string PropertyTree::get<std::string>(const std::string& key, const std::string& defValue) const;
-template double PropertyTree::get<double>(const std::string& key) const;
-template double PropertyTree::get<double>(const std::string& key, const double& defValue) const;
-template float PropertyTree::get<float>(const std::string& key) const;
-template float PropertyTree::get<float>(const std::string& key, const float& defValue) const;
-template int PropertyTree::get<int>(const std::string& key) const;
-template int PropertyTree::get<int>(const std::string& key, const int& defValue) const;
-template size_t PropertyTree::get<size_t>(const std::string& key) const;
-template size_t PropertyTree::get<size_t>(const std::string& key, const size_t& defValue) const;
-template bool PropertyTree::get<bool>(const std::string& key) const;
-template bool PropertyTree::get<bool>(const std::string& key, const bool& defValue) const;
+template void PropertyTree::put(const std::string& key, const std::string& value);
+template void PropertyTree::put(const std::string& key, const double& value);
+template void PropertyTree::put(const std::string& key, const float& value);
+template void PropertyTree::put(const std::string& key, const int& value);
+template void PropertyTree::put(const std::string& key, const std::size_t& value);
 
-template void PropertyTree::put<std::string>(const std::string& key, const std::string& value);
-template void PropertyTree::put<float>(const std::string& key, const float& value);
-template void PropertyTree::put<double>(const std::string& key, const double& value);
-template void PropertyTree::put<int>(const std::string& key, const int& value);
+template std::string PropertyTree::get(const std::string& key) const;
+template double PropertyTree::get(const std::string& key) const;
+template float PropertyTree::get(const std::string& key) const;
+template int PropertyTree::get(const std::string& key) const;
+template std::size_t PropertyTree::get(const std::string& key) const;
+template bool PropertyTree::get(const std::string& key) const;
 
+template std::string PropertyTree::get(const std::string& key, const std::string& defValue) const;
+template double PropertyTree::get(const std::string& key, const double& defValue) const;
+template float PropertyTree::get(const std::string& key, const float& defValue) const;
+template int PropertyTree::get(const std::string& key, const int& defValue) const;
+template std::size_t PropertyTree::get(const std::string& key, const std::size_t& defValue) const;
+template bool PropertyTree::get(const std::string& key, const bool& defValue) const;
+
+template std::optional<std::vector<int>>
+PropertyTree::get_child_items_as_vector(const std::string& child) const;
+template std::optional<std::vector<double>>
+PropertyTree::get_child_items_as_vector(const std::string& child) const;
 
 } // namespace Opm
