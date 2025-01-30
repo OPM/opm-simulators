@@ -1483,7 +1483,7 @@ private:
             fip [phaseIdx] = b * fipr[phaseIdx];
         }
 
-        this->updateInplaceVolumesSurface(globalDofIdx, fip);
+        this->fipC_.assignVolumesSurface(globalDofIdx, fip);
         this->updateInplaceVolumesReservoir(globalDofIdx, fs, fipr);
 
         if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
@@ -1524,41 +1524,6 @@ private:
              FluidSystem::phaseIsActive(oilPhaseIdx)))
         {
             this->updateCO2InWater(globalDofIdx, pv, fs);
-        }
-    }
-
-    template <typename FIPArray>
-    void updateInplaceVolumesSurface(const unsigned  globalDofIdx,
-                                     const FIPArray& fip)
-    {
-        if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
-            !this->fip_[Inplace::Phase::OIL].empty())
-        {
-            this->fip_[Inplace::Phase::OIL][globalDofIdx] = fip[oilPhaseIdx];
-        }
-
-        if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
-            !this->fip_[Inplace::Phase::OilInLiquidPhase].empty())
-        {
-            this->fip_[Inplace::Phase::OilInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
-        }
-
-        if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
-            !this->fip_[Inplace::Phase::GAS].empty())
-        {
-            this->fip_[Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
-        }
-
-        if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
-            !this->fip_[Inplace::Phase::GasInGasPhase].empty())
-        {
-            this->fip_[Inplace::Phase::GasInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
-        }
-
-        if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
-            !this->fip_[Inplace::Phase::WATER].empty())
-        {
-            this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
         }
     }
 
