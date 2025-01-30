@@ -507,7 +507,7 @@ namespace Opm {
 
                 if (event || dyn_status_change) {
                     try {
-                        well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), local_deferredLogger);
+                        well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), local_deferredLogger, /*initialize*/ true);
                         well->calculateExplicitQuantities(simulator_, this->wellState(), local_deferredLogger);
                         well->solveWellEquation(simulator_, this->wellState(), this->groupState(), local_deferredLogger);
                     } catch (const std::exception& e) {
@@ -1861,7 +1861,7 @@ namespace Opm {
                 ws.injection_cmode == Well::InjectorCMode::GRUP)
             {
                 well->updateWellStateWithTarget(simulator_, this->groupState(),
-                                                this->wellState(), deferred_logger);
+                                                this->wellState(), deferred_logger, /*initialize*/ false);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
@@ -2082,7 +2082,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState<Scalar>::event_mask)) {
-                well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
+                well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger, /*initialize*/ true);
                 well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
                 well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,

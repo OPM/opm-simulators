@@ -92,7 +92,8 @@ namespace Opm {
         void updateWellStateWithTarget(const Simulator& simulator,
                                        const GroupState<Scalar>& group_state,
                                        WellState<Scalar>& well_state,
-                                       DeferredLogger& deferred_logger) const override;
+                                       DeferredLogger& deferred_logger, 
+                                       const bool initialize = true) override;
 
         /// check whether the well equations get converged for this well
         ConvergenceReport getWellConvergence(const Simulator& simulator,
