@@ -233,19 +233,6 @@ ZoltanPartitioner::partition(const int                                      num_
             num_domains = domainId + 1;
         }
     }
-
-    // Fix-up for an extreme case: Interior cells whose neighbours are all
-    // on a different rank--i.e., interior cells which do not have on-rank
-    // neighbours.  Make each such cell be a separate domain on this rank.
-    // Don't remove this code unless you've taken remedial action elsewhere
-    // to ensure the situation doesn't happen.  For what it's worth, we've
-    // seen this case occur in practice when testing on field cases.
-    for (auto& domainId : domains) {
-        if (domainId < 0) {
-            domainId = num_domains++;
-        }
-    }
-
     return partition;
 }
 

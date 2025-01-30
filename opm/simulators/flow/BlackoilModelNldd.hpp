@@ -107,7 +107,26 @@ public:
         , rank_(model_.simulator().vanguard().grid().comm().rank())
     {
         // Create partitions.
-        const auto& [partition_vector, num_domains] = this->partitionCells();
+        const auto& [partition_vector_initial, num_domains_initial] = this->partitionCells();
+
+        int num_domains = num_domains_initial;
+        std::vector<int> partition_vector = partition_vector_initial;
+
+        // Fix-up for an extreme case: Interior cells who do not have any on-rank
+        // neighbours. Move all such cells into a single domain on this rank,
+        // and mark the domain for skipping. For what it's worth, we've seen this
+        // case occur in practice when testing on field cases.
+        bool isolated_cells = false;
+        for (auto& domainId : partition_vector) {
+            if (domainId < 0) {
+                domainId = num_domains;
+                domains_to_skip_.push_back(domainId);
+                isolated_cells = true;
+            }
+        }
+        if (isolated_cells) {
+            num_domains++;
+        }
 
         // Set nldd handler in main well model
         model.wellModel().setNlddAdapter(&wellModel_);
@@ -222,6 +241,9 @@ public:
         for (const int domain_index : domain_order) {
             const auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
+            if (std::find(domains_to_skip_.begin(), domains_to_skip_.end(), domain.index) != domains_to_skip_.end()) {
+                continue;
+            }
             try {
                 switch (model_.param().local_solve_approach_) {
                 case DomainSolveApproach::Jacobi:
@@ -1008,6 +1030,7 @@ private:
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
+    std::vector<int> domains_to_skip_; //!< Vector of domains to skip
     SimulatorReportSingle local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers
     int rank_ = 0; //!< MPI rank of this process
 };

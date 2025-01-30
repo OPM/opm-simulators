@@ -488,7 +488,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithNonReachableCellsTest)
 {
     // Create a 3x3x3 grid where:
     // - cell (0,0,0) is isolated (surrounded by inactive cells)
-    // - cell (1,1,1) is isolated (surrounded by inactive cells)
+    // - cell (0,2,0) is isolated (surrounded by inactive cells)
     // - cells needed for wells are active
     // Grid structure (top view):
     //   Layer k=0:      Layer k=1:       Layer k=2:     W  = well cells
@@ -593,8 +593,7 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithNonReachableCellsTest)
                                                std::unordered_map<std::string, std::set<int>>{},
                                                zoltan_ctrl);
 
-    // we get 7 partitions because the two isolated cells are assigned each their own partition
-    BOOST_CHECK_EQUAL(num_part, 7);
+    BOOST_CHECK_EQUAL(num_part, 5);
     BOOST_CHECK_EQUAL(part.size(), 16);
 
     // For this test global indices != local indices, so we need to
@@ -604,6 +603,10 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithNonReachableCellsTest)
         const auto globalIndex = grid.globalCell()[zoltan_ctrl.index(element)];
         g2l[globalIndex] = zoltan_ctrl.index(element);
     }
+
+    // Verify that the two isolated cells are assigned to the -1 partition
+    BOOST_CHECK_EQUAL(part[g2l[ijkToGlobal(0,0,0)]], -1);
+    BOOST_CHECK_EQUAL(part[g2l[ijkToGlobal(0,2,0)]], -1);
 
     // Well 1: All cells should be in the same partition
     BOOST_CHECK(part[g2l[ijkToGlobal(1,1,1)]] == part[g2l[ijkToGlobal(1,1,2)]]);
