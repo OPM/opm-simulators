@@ -1233,74 +1233,72 @@ wellIsUnderGroupControl(const Schedule& schedule,
                         const bool is_production_group)
 {
     bool included = (well_name == always_included_child);
-    {
-        if (is_production_group) {
-            included = included || well_state.isProductionGrup(well_name) || group.as_choke();
-        } else {
-            included = included || well_state.isInjectionGrup(well_name);
+    if (is_production_group) {
+        included = included || well_state.isProductionGrup(well_name) || group.as_choke();
+    } else {
+        included = included || well_state.isInjectionGrup(well_name);
+    }
+    const auto ctrl1 = group_state.production_control(group.name());
+    if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
+        // The auto choke group has not own group control but inherits control from an ancestor group.
+        // Number of wells should be calculated as zero when wells of auto choke group do not deliver target.
+        // This behaviour is then similar to no-autochoke group with wells not on GRUP control.
+        // The rates of these wells are summed up. The parent group target is reduced with this rate.
+        // This reduced target becomes the target of the other child group of this parent.
+        const PhaseUsage& pu = well_state.phaseUsage();
+        std::vector<Scalar> rates(pu.num_phases, 0.0);
+        for (int phase_pos = 0; phase_pos < pu.num_phases; ++phase_pos) {
+            rates[phase_pos] = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
+                                                                             schedule,
+                                                                             well_state,
+                                                                             report_step,
+                                                                             phase_pos,
+                                                                             false);
         }
-        const auto ctrl1 = group_state.production_control(group.name());
-        if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
-            // The auto choke group has not own group control but inherits control from an ancestor group.
-            // Number of wells should be calculated as zero when wells of auto choke group do not deliver target.
-            // This behaviour is then similar to no-autochoke group with wells not on GRUP control.
-            // The rates of these wells are summed up. The parent group target is reduced with this rate.
-            // This reduced target becomes the target of the other child group of this parent.
-            const PhaseUsage& pu = well_state.phaseUsage();
-            std::vector<Scalar> rates(pu.num_phases, 0.0);
-            for (int phase_pos = 0; phase_pos < pu.num_phases; ++phase_pos) {
-                 rates[phase_pos] = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
-                                                                                  schedule,
-                                                                                  well_state,
-                                                                                  report_step,
-                                                                                  phase_pos,
-                                                                                  false);
-            }
 
-            // Get the ancestor of the auto choke group that has group control (cmode != FLD, NONE)
-            const auto& control_group_name = control_group(group, group_state, report_step, schedule);
-            const auto& control_group = schedule.getGroup(control_group_name, report_step);
-            const auto& ctrl = control_group.productionControls(summary_state);
-            const auto& control_group_cmode = ctrl.cmode;
+        // Get the ancestor of the auto choke group that has group control (cmode != FLD, NONE)
+        const auto& control_group_name = control_group(group, group_state, report_step, schedule);
+        const auto& control_group = schedule.getGroup(control_group_name, report_step);
+        const auto& ctrl = control_group.productionControls(summary_state);
+        const auto& control_group_cmode = ctrl.cmode;
 
-            const auto& group_guide_rate = group.productionControls(summary_state).guide_rate;
+        const auto& group_guide_rate = group.productionControls(summary_state).guide_rate;
 
-            if (group_guide_rate > 0) {
-                // Guide rate is not default for the auto choke group
-                Scalar gratTargetFromSales = 0.0;
-                if (group_state.has_grat_sales_target(control_group_name))
-                    gratTargetFromSales = group_state.grat_sales_target(control_group_name);
+        if (group_guide_rate > 0) {
+            // Guide rate is not default for the auto choke group
+            Scalar gratTargetFromSales = 0.0;
+            if (group_state.has_grat_sales_target(control_group_name))
+                gratTargetFromSales = group_state.grat_sales_target(control_group_name);
 
-                std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
-                WGHelpers::TargetCalculator tcalc(control_group_cmode,
-                                                pu,
-                                                resv_coeff,
-                                                gratTargetFromSales,
-                                                group.name(),
-                                                group_state,
-                                                group.has_gpmaint_control(control_group_cmode));
-                auto deferred_logger = Opm::DeferredLogger();
-                const auto& control_group_target = tcalc.groupTarget(ctrl, deferred_logger);
+            std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
+            WGHelpers::TargetCalculator tcalc(control_group_cmode,
+                                              pu,
+                                              resv_coeff,
+                                              gratTargetFromSales,
+                                              group.name(),
+                                              group_state,
+                                              group.has_gpmaint_control(control_group_cmode));
+            auto deferred_logger = Opm::DeferredLogger();
+            const auto& control_group_target = tcalc.groupTarget(ctrl, deferred_logger);
 
-                // Calculates the guide rate of the parent group with control.
-                // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups
-                const auto& control_group_guide_rate = getGuideRate(control_group_name,
-                                                    schedule,
-                                                    well_state,
-                                                    group_state,
-                                                    report_step,
-                                                    guideRate,
-                                                    tcalc.guideTargetMode(),
-                                                    pu);
+            // Calculates the guide rate of the parent group with control.
+            // It is allowed that the guide rate of this group is defaulted. The guide rate will be derived from the children groups
+            const auto& control_group_guide_rate = getGuideRate(control_group_name,
+                                                                schedule,
+                                                                well_state,
+                                                                group_state,
+                                                                report_step,
+                                                                guideRate,
+                                                                tcalc.guideTargetMode(),
+                                                                pu);
 
-                if (control_group_guide_rate > 0) {
-                    // Target rate for the auto choke group
-                    const Scalar target_rate = control_group_target * group_guide_rate / control_group_guide_rate;
-                    const Scalar current_rate = tcalc.calcModeRateFromRates(rates);
+            if (control_group_guide_rate > 0) {
+                // Target rate for the auto choke group
+                const Scalar target_rate = control_group_target * group_guide_rate / control_group_guide_rate;
+                const Scalar current_rate = tcalc.calcModeRateFromRates(rates);
 
-                    if (current_rate < target_rate)
-                        included = false;
-                }
+                if (current_rate < target_rate)
+                    included = false;
             }
         }
     }
