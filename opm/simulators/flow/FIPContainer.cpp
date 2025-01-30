@@ -221,6 +221,39 @@ assignVolumesSurface(const unsigned globalDofIdx,
     }
 }
 
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignVolumesReservoir(const unsigned    globalDofIdx,
+                       const Scalar      saltConcentration,
+                       const std::array<Scalar, numPhases>& fipr)
+{
+    if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+        !this->fip_[Inplace::Phase::OilResVolume].empty())
+    {
+        this->fip_[Inplace::Phase::OilResVolume][globalDofIdx] = fipr[oilPhaseIdx];
+    }
+
+    if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+        !this->fip_[Inplace::Phase::GasResVolume].empty())
+    {
+        this->fip_[Inplace::Phase::GasResVolume][globalDofIdx] = fipr[gasPhaseIdx];
+    }
+
+    if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+        !this->fip_[Inplace::Phase::WaterResVolume].empty())
+    {
+        this->fip_[Inplace::Phase::WaterResVolume][globalDofIdx] = fipr[waterPhaseIdx];
+    }
+
+    if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+        !this->fip_[Inplace::Phase::SALT].empty())
+    {
+        this->fip_[Inplace::Phase::SALT][globalDofIdx] =
+            fipr[waterPhaseIdx] * saltConcentration;
+    }
+}
+
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
 
 #define INSTANTIATE_TYPE(T) \
