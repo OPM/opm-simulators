@@ -81,6 +81,10 @@ public:
     void assignVolumesSurface(const unsigned globalDofIdx,
                               const std::array<Scalar, numPhases>& fip);
 
+    void assignVolumesReservoir(const unsigned    globalDofIdx,
+                                const Scalar      saltConcentration,
+                                const std::array<Scalar, numPhases>& fipr);
+
 private:
     FIPMap& fip_;
     std::size_t bufferSize_ = 0;
