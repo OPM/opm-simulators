@@ -81,6 +81,8 @@ public:
 
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+
     template <class Solver>
     class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
     {
@@ -201,10 +203,6 @@ public:
     bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs);
 
     static void registerParameters();
-#ifdef RESERVOIR_COUPLING_ENABLED
-    void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master);
-    void setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave);
-#endif
     void setSuggestedNextStep(const double x);
     double suggestedNextStep() const;
     const TimeStepControlInterface& timeStepControl() const;
@@ -265,11 +263,15 @@ protected:
     bool use_newton_iteration_{false};       //!< use newton iteration count for adaptive time step control
 
     //! < shut problematic wells when time step size in days are less than this
+<<<<<<< HEAD
     double min_time_step_before_shutting_problematic_wells_{};
 #ifdef RESERVOIR_COUPLING_ENABLED
     ReservoirCouplingMaster *reservoir_coupling_master_ = nullptr;
     ReservoirCouplingSlave *reservoir_coupling_slave_ = nullptr;
 #endif
+=======
+    double min_time_step_before_shutting_problematic_wells_;
+>>>>>>> 59daa3da8 (Communicate group potentials)
     // We store a copy of the full simulator run report for output purposes,
     // so it can be updated and passed to the summary writing code every
     // substep (not just every report step).

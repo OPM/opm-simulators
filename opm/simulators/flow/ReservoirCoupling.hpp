@@ -19,27 +19,73 @@
 
 #ifndef OPM_RESERVOIR_COUPLING_HPP
 #define OPM_RESERVOIR_COUPLING_HPP
+#include <opm/simulators/utils/DeferredLogger.hpp>
+
 #include <mpi.h>
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 namespace Opm {
 namespace ReservoirCoupling {
 
+class Logger {
+public:
+    Logger() = default;
+    void clearDeferredLogger() { deferred_logger_ = nullptr; }
+    bool haveDeferredLogger() const { return deferred_logger_ != nullptr; }
+    void info(const std::string &msg) const;
+    void setDeferredLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
+
+private:
+    DeferredLogger *deferred_logger_ = nullptr;
+};
+
 enum class MessageTag : int {
+    MasterGroupNames,
+    MasterGroupNamesSize,
+    Potentials,
+    PotentialsSize,
     SlaveSimulationStartDate,
     SlaveActivationDate,
     SlaveProcessTermination,
+    SlaveName,
+    SlaveNameSize,
     SlaveNextReportDate,
     SlaveNextTimeStep,
-    MasterGroupNames,
-    MasterGroupNamesSize,
+};
+
+// Used to communicate potentials for oil, gas, and water rates between slave and master processes
+struct Potentials {
+    // Define a num_fields constant to be used in MPI communication to simplify serialization
+    // and deserialization of the struct. Note that sizeof(Potentials)/sizeof(double) is not
+    // guaranteed to be equal to num_fields due to padding.
+    static constexpr std::size_t num_fields = 3;
+    // These indices are used to access the oil, gas, and water rates when deserializing
+    // IMPORTANT: They must correspond to the order of the fields in the struct below
+    static constexpr std::size_t OIL_IDX = 0;
+    static constexpr std::size_t GAS_IDX = 1;
+    static constexpr std::size_t WATER_IDX = 2;
+    // Disallow construction by {x, y, z} or Potentials(x, y, z) to prevent accidental
+    // construction with the wrong order of arguments
+    Potentials(double, double, double) = delete;
+    // In the case a master group does not have potentials (i.e. for injection groups),
+    // we will send dummy values (0.0) for the potentials.
+    Potentials() {
+        oil_rate = 0.0;
+        gas_rate = 0.0;
+        water_rate = 0.0;
+    };
+    double oil_rate;
+    double gas_rate;
+    double water_rate;
 };
 
 // Helper functions
 void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg);
 void setErrhandler(MPI_Comm comm, bool is_master);
+std::pair<std::vector<char>, std::size_t> serializeStrings(const std::vector<std::string>& data);
 
 /// \brief Utility class for comparing double values representing epoch dates or elapsed time.
 ///

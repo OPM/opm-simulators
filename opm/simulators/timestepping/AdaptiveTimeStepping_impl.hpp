@@ -53,7 +53,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
-
 namespace Opm {
 /*********************************************
  * Public methods of AdaptiveTimeStepping
@@ -183,24 +182,6 @@ registerParameters()
     registerEclTimeSteppingParameters<Scalar>();
     detail::registerAdaptiveParameters();
 }
-
-#ifdef RESERVOIR_COUPLING_ENABLED
-template<class TypeTag>
-void
-AdaptiveTimeStepping<TypeTag>::
-setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master)
-{
-    this->reservoir_coupling_master_ = reservoir_coupling_master;
-}
-
-template<class TypeTag>
-void
-AdaptiveTimeStepping<TypeTag>::
-setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave)
-{
-    this->reservoir_coupling_slave_ = reservoir_coupling_slave;
-}
-#endif
 
 /** \brief  step method that acts like the solver::step method
             in a sub cycle of time steps
@@ -474,6 +455,7 @@ SubStepper(AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
     , solver_{solver}
     , is_event_{is_event}
     , tuning_updater_{tuning_updater}
+    , simulator_{solver.model().simulator()}
 {
 }
 
@@ -518,7 +500,7 @@ bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 isReservoirCouplingMaster_() const
 {
-    return this->adaptive_time_stepping_.reservoir_coupling_master_ != nullptr;
+    return this->simulator_.reservoirCouplingMaster() != nullptr;
 }
 
 template<class TypeTag>
@@ -527,7 +509,7 @@ bool
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 isReservoirCouplingSlave_() const
 {
-    return this->adaptive_time_stepping_.reservoir_coupling_slave_ != nullptr;
+    return this->simulator_.reservoirCouplingSlave() != nullptr;
 }
 #endif
 
@@ -594,7 +576,7 @@ ReservoirCouplingMaster&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingMaster_()
 {
-    return *adaptive_time_stepping_.reservoir_coupling_master_;
+    return *(this->simulator_.reservoirCouplingMaster());
 }
 #endif
 
@@ -605,7 +587,7 @@ ReservoirCouplingSlave&
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 reservoirCouplingSlave_()
 {
-    return *this->adaptive_time_stepping_.reservoir_coupling_slave_;
+    return *(this->simulator_.reservoirCouplingSlave());
 }
 #endif
 
@@ -776,7 +758,7 @@ run()
     // sub step time loop
     while (!this->substep_timer_.done()) {
         // if we just chopped the timestep due to convergence i.e. restarts>0
-        // we dont what to update the next timestep based on Tuning
+        // we dont want to update the next timestep based on Tuning
         if (restarts == 0) {
             maybeUpdateTuningAndTimeStep_();
         }
