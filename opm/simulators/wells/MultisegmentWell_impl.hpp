@@ -1279,7 +1279,7 @@ namespace Opm
                 const auto& int_quantities = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 const auto& fs = int_quantities.fluidState();
                 // pressure difference between the segment and the perforation
-                const Scalar perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
+                const Scalar perf_seg_press_diff = this->segments_.getPressureDiffSegGlobalPerf(seg, perf);
                 // pressure difference between the perforation and the grid cell
                 const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
                 const Scalar pressure_cell = this->getPerfCellPressure(fs).value();
@@ -2011,7 +2011,7 @@ namespace Opm
                 const auto& fs = intQuants.fluidState();
 
                 // pressure difference between the segment and the perforation
-                const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
+                const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegGlobalPerf(seg, perf);
                 // pressure difference between the perforation and the grid cell
                 const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
 

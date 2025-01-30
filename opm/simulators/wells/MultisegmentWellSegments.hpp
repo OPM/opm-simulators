@@ -65,8 +65,8 @@ public:
                                   const int seg_side) const;
 
     //! Pressure difference between segment and perforation.
-    Scalar getPressureDiffSegPerf(const int seg,
-                                  const int perf) const;
+    Scalar getPressureDiffSegGlobalPerf(const int seg,
+                                        const int global_perf_index) const;
 
     EvalWell getSurfaceVolume(const EvalWell& temperature,
                               const EvalWell& saltConcentration,
@@ -128,7 +128,7 @@ public:
 
     Scalar perforation_depth_diff(const int perf) const
     {
-        return perforation_depth_diffs_[perf];
+        return global_perforation_depth_diffs_[perf];
     }
 
     void copyPhaseDensities(const PhaseUsage& pu,
@@ -152,7 +152,7 @@ private:
     // This vector contains the depth differences for *all* perforations across all processes
     // that this well lies on, its size is well.wellEcl().getConnections().size(),
     // also it works with *global* perforation indices!
-    std::vector<Scalar> perforation_depth_diffs_;
+    std::vector<Scalar> global_perforation_depth_diffs_;
 
     // the inlet segments for each segment. It is for convenience and efficiency reason
     std::vector<std::vector<int>> inlets_;

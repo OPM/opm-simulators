@@ -63,7 +63,7 @@ MultisegmentWellSegments(const int numSegments,
                          const int num_perfs_whole_mswell,
                          WellInterfaceGeneric<Scalar>& well)
     : perforations_(numSegments)
-    , perforation_depth_diffs_(num_perfs_whole_mswell, 0.0)
+    , global_perforation_depth_diffs_(num_perfs_whole_mswell, 0.0)
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
     , densities_(numSegments, 0.0)
@@ -103,7 +103,7 @@ MultisegmentWellSegments(const int numSegments,
             perforations_[segment_index].push_back(i_perf_wells);
             well.perfDepth()[i_perf_wells] = connection.depth();
             const Scalar segment_depth = segment_set[segment_index].depth();
-            perforation_depth_diffs_[i_perf_wells] = well_.perfDepth()[i_perf_wells] - segment_depth;
+            global_perforation_depth_diffs_[i_perf_wells] = well_.perfDepth()[i_perf_wells] - segment_depth;
             i_perf_wells++;
         }
     }
@@ -344,10 +344,10 @@ getHydroPressureLoss(const int seg,
 template<class FluidSystem, class Indices>
 typename MultisegmentWellSegments<FluidSystem,Indices>::Scalar
 MultisegmentWellSegments<FluidSystem,Indices>::
-getPressureDiffSegPerf(const int seg,
-                       const int perf) const
+getPressureDiffSegGlobalPerf(const int seg,
+                             const int global_perf_index) const
 {
-    return well_.gravity() * densities_[seg].value() * perforation_depth_diffs_[perf];
+    return well_.gravity() * densities_[seg].value() * global_perforation_depth_diffs_[global_perf_index];
 }
 
 template<class FluidSystem, class Indices>
