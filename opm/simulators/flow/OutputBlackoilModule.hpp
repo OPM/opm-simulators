@@ -1629,29 +1629,7 @@ private:
         const auto gasInPlaceWater = getValue(fs.Rsw()) * fip[waterPhaseIdx];
         const auto waterInPlaceGas = getValue(fs.Rvw()) * fip[gasPhaseIdx];
 
-        if (!this->fip_[Inplace::Phase::WaterInGasPhase].empty()) {
-            this->fip_[Inplace::Phase::WaterInGasPhase][globalDofIdx] = waterInPlaceGas;
-        }
-
-        if (!this->fip_[Inplace::Phase::WaterInWaterPhase].empty()) {
-            this->fip_[Inplace::Phase::WaterInWaterPhase][globalDofIdx] = fip[waterPhaseIdx];
-        }
-
-        // For water+gas cases the gas in water is added to the GIPL value
-        if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty() &&
-            !FluidSystem::phaseIsActive(oilPhaseIdx))
-        {
-            this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceWater;
-        }
-
-        // Add dissolved gas and vaporized water to total Fip
-        if (!this->fip_[Inplace::Phase::WATER].empty()) {
-            this->fip_[Inplace::Phase::WATER][globalDofIdx] += waterInPlaceGas;
-        }
-
-        if (!this->fip_[Inplace::Phase::GAS].empty()) {
-            this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceWater;
-        }
+        this->fipC_.assignGasWater(globalDofIdx, fip, gasInPlaceWater, waterInPlaceGas);
     }
 
     template <typename IntensiveQuantities>

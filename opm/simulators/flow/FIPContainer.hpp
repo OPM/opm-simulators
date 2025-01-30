@@ -28,6 +28,7 @@
 
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <array>
 #include <cstddef>
 #include <unordered_map>
 #include <vector>
@@ -41,6 +42,10 @@ class FIPContainer {
 public:
     using Scalar = typename FluidSystem::Scalar;
     using FIPMap = std::unordered_map<Inplace::Phase, std::vector<Scalar>>;
+
+    static constexpr auto numPhases = FluidSystem::numPhases;
+    static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
     // Temporary constructor until we are ready to own the map
     explicit FIPContainer(FIPMap& fip)
@@ -66,6 +71,11 @@ public:
 
     void assignCo2InGas(const unsigned globalDofIdx,
                       const Co2InGasInput& v);
+
+    void assignGasWater(const unsigned  globalDofIdx,
+                        const std::array<Scalar, numPhases>& fip,
+                        const Scalar    gasInPlaceWater,
+                        const Scalar    waterInPlaceGas);
 
 private:
     FIPMap& fip_;

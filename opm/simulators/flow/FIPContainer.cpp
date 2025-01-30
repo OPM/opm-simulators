@@ -151,6 +151,39 @@ assignCo2InGas(const unsigned globalDofIdx, const Co2InGasInput& v)
     }
 }
 
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignGasWater(const unsigned  globalDofIdx,
+               const std::array<Scalar, numPhases>& fip,
+               const Scalar    gasInPlaceWater,
+               const Scalar    waterInPlaceGas)
+{
+    if (!this->fip_[Inplace::Phase::WaterInGasPhase].empty()) {
+        this->fip_[Inplace::Phase::WaterInGasPhase][globalDofIdx] = waterInPlaceGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::WaterInWaterPhase].empty()) {
+        this->fip_[Inplace::Phase::WaterInWaterPhase][globalDofIdx] = fip[waterPhaseIdx];
+    }
+
+           // For water+gas cases the gas in water is added to the GIPL value
+    if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty() &&
+        !FluidSystem::phaseIsActive(oilPhaseIdx))
+    {
+        this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceWater;
+    }
+
+    // Add dissolved gas and vaporized water to total Fip
+    if (!this->fip_[Inplace::Phase::WATER].empty()) {
+        this->fip_[Inplace::Phase::WATER][globalDofIdx] += waterInPlaceGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::GAS].empty()) {
+        this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceWater;
+    }
+}
+
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
 
 #define INSTANTIATE_TYPE(T) \
