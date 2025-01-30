@@ -94,13 +94,8 @@ public:
     /// and Ux = z
     /// \param[in]  y  Input y vector
     /// \param[out] x  Output x vector
-    void apply(Scalar& y,
+    void apply(const Scalar& y,
                Scalar& x) override;
-
-#if HAVE_OPENCL
-    // apply preconditioner, x = prec(y)
-    void apply(const cl::Buffer&, cl::Buffer&) override {}
-#endif
 
     /// Copy matrix A values to GPU
     /// \param[in]  mVals  Input values
