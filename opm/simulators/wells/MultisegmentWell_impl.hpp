@@ -1115,8 +1115,12 @@ namespace Opm
         // TODO: later to investigate how to handle the pvt region
         int pvt_region_index;
         {
-            // using the first perforated cell
-            const int cell_idx = this->well_cells_[0];
+            // using the first perforated cell, so we look for global index 0
+
+            int cell_idx = this->well_cells_[0];
+            // The following call is neccessary to ensure that processes that do not contain the first perforation get the correct value
+            cell_idx = this->pw_info_.broadcastFirstPerforationValue(cell_idx);
+
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
             temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
@@ -2063,9 +2067,12 @@ namespace Opm
         EvalWell saltConcentration;
         int pvt_region_index;
         {
-            // using the pvt region of first perforated cell
             // TODO: it should be a member of the WellInterface, initialized properly
-            const int cell_idx = this->well_cells_[0];
+            // using the pvt region of first perforated cell, so we look for global index 0
+            int cell_idx = this->well_cells_[0];
+            // The following call is neccessary to ensure that processes that do not contain the first perforation get the correct value
+            cell_idx = this->pw_info_.broadcastFirstPerforationValue(cell_idx);
+
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
             temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
