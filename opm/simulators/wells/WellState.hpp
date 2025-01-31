@@ -103,7 +103,7 @@ public:
               const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
               const int report_step,
               const WellState* prevState,
-              const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
+              const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data, //this variable contains only the perforation data on this process!
               const SummaryState& summary_state,
               const bool enableDistributedWells);
 
@@ -112,7 +112,7 @@ public:
                 const Schedule& schedule,
                 const bool handle_ms_well,
                 const std::size_t numCells,
-                const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
+                const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data, //this variable contains only the perforation data on this process!
                 const SummaryState& summary_state);
 
     void setCurrentWellRates(const std::string& wellName,

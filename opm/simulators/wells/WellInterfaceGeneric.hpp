@@ -128,7 +128,7 @@ public:
 
     int numPhases() const { return number_of_phases_; }
 
-    int numPerfs() const { return number_of_perforations_; }
+    int numPerfs() const { return local_number_of_perforations_; }
 
     Scalar refDepth() const { return ref_depth_; }
 
@@ -326,7 +326,7 @@ protected:
     std::vector<Scalar> well_index_;
 
     // number of the perforations for this well on this process
-    int number_of_perforations_;
+    int local_number_of_perforations_;
 
     // depth for each perforation
     std::vector<Scalar> perf_depth_;
