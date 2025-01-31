@@ -135,6 +135,14 @@ getBhp() const
 template <typename FluidSystem, typename Indices>
 typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
 CompWellPrimaryVariables<FluidSystem, Indices>::
+getTotalRate() const
+{
+        return evaluation_[QTotal];
+}
+
+template <typename FluidSystem, typename Indices>
+typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
+CompWellPrimaryVariables<FluidSystem, Indices>::
 extendEval(const Eval& in)
 {
     EvalWell out = 0.0;
