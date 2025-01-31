@@ -73,6 +73,10 @@ public:
     void assignCo2InGas(const unsigned globalDofIdx,
                       const Co2InGasInput& v);
 
+    void assignCo2InWater(const unsigned globalDofIdx,
+                          const Scalar   co2InWater,
+                          const Scalar   mM);
+
     void assignGasWater(const unsigned  globalDofIdx,
                         const std::array<Scalar, numPhases>& fip,
                         const Scalar    gasInPlaceWater,

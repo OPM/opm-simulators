@@ -257,6 +257,24 @@ assignVolumesReservoir(const unsigned    globalDofIdx,
 template<class FluidSystem>
 void
 FIPContainer<FluidSystem>::
+assignCo2InWater(const unsigned globalDofIdx,
+                 const Scalar   co2InWater,
+                 const Scalar   mM)
+{
+    if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
+        this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] += co2InWater  * mM;
+    }
+    if (!this->fip_[Inplace::Phase::CO2MassInWaterPhase].empty()) {
+        this->fip_[Inplace::Phase::CO2MassInWaterPhase][globalDofIdx] = co2InWater  * mM;
+    }
+    if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
+        this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2InWater;
+    }
+}
+
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
 assignOilGasDistribution(const unsigned globalDofIdx,
                          const Scalar   gasInPlaceLiquid,
                          const Scalar   oilInPlaceGas)

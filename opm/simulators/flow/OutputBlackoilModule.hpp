@@ -1616,15 +1616,8 @@ private:
             : this->co2InWaterFromWater(fs, pv);
 
         const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
-        if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
-            this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] += co2InWater  * mM;
-        }
-        if (!this->fip_[Inplace::Phase::CO2MassInWaterPhase].empty()) {
-            this->fip_[Inplace::Phase::CO2MassInWaterPhase][globalDofIdx] = co2InWater  * mM;
-        }
-        if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
-            this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2InWater;
-        }
+
+        this->fipC_.assignCo2InWater(globalDofIdx, co2InWater, mM);
     }
 
     template <typename FluidState>
