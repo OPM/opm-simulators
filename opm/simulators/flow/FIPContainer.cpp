@@ -83,6 +83,15 @@ FIPContainer<FluidSystem>::add(const Inplace::Phase phase)
 }
 
 template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+has(const Inplace::Phase phase) const
+{
+    const auto it = this->fip_.find(phase);
+    return it != this->fip_.end() && !it->second.empty();
+}
+
+template<class FluidSystem>
 void
 FIPContainer<FluidSystem>::
 assignCo2InGas(const unsigned globalDofIdx, const Co2InGasInput& v)
