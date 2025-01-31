@@ -66,107 +66,6 @@
 
 namespace {
 
-std::string EclString(const Opm::Inplace::Phase phase)
-{
-    switch (phase) {
-    case Opm::Inplace::Phase::WATER:
-        return "WIP";
-
-    case Opm::Inplace::Phase::OIL:
-        return "OIP";
-
-    case Opm::Inplace::Phase::GAS:
-        return "GIP";
-
-    case Opm::Inplace::Phase::OilInLiquidPhase:
-        return "OIPL";
-
-    case Opm::Inplace::Phase::OilInGasPhase:
-        return "OIPG";
-
-    case Opm::Inplace::Phase::GasInLiquidPhase:
-        return "GIPL";
-
-    case Opm::Inplace::Phase::GasInGasPhase:
-        return "GIPG";
-
-    case Opm::Inplace::Phase::PoreVolume:
-        return "RPV";
-
-    case Opm::Inplace::Phase::WaterResVolume:
-        return "WIPR";
-
-    case Opm::Inplace::Phase::OilResVolume:
-        return "OIPR";
-
-    case Opm::Inplace::Phase::GasResVolume:
-        return "GIPR";
-
-    case Opm::Inplace::Phase::SALT:
-        return "SIP";
-
-    case Opm::Inplace::Phase::CO2InWaterPhase:
-        return "WCD";
-
-    case Opm::Inplace::Phase::CO2InGasPhaseInMob:
-        return "GCDI";
-
-    case Opm::Inplace::Phase::CO2InGasPhaseMob:
-        return "GCDM";
-
-    case Opm::Inplace::Phase::CO2InGasPhaseInMobKrg:
-        return "GKDI";
-
-    case Opm::Inplace::Phase::CO2InGasPhaseMobKrg:
-        return "GKDM";
-
-    case Opm::Inplace::Phase::WaterInGasPhase:
-        return "WIPG";
-
-    case Opm::Inplace::Phase::WaterInWaterPhase:
-        return "WIPL";
-
-    case Opm::Inplace::Phase::CO2Mass:
-        return "GMIP";
-
-    case Opm::Inplace::Phase::CO2MassInWaterPhase:
-        return "GMDS";
-
-    case Opm::Inplace::Phase::CO2MassInGasPhase:
-        return "GMGP";
-
-    case Opm::Inplace::Phase::CO2MassInGasPhaseInMob:
-        return "GCDI_KG"; //Not used
-        
-    case Opm::Inplace::Phase::CO2MassInGasPhaseMob:
-        return "GKDM_KG"; //Not used
-
-    case Opm::Inplace::Phase::CO2MassInGasPhaseInMobKrg:
-        return "GKTR";
-        
-    case Opm::Inplace::Phase::CO2MassInGasPhaseMobKrg:
-        return "GKMO";
-
-    case Opm::Inplace::Phase::CO2MassInGasPhaseMaximumTrapped:
-        return "GMTR";
-
-    case Opm::Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped:
-        return "GMMO";
-
-    case Opm::Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped:
-        return "GMST";
-
-    case Opm::Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped:
-        return "GMUS";
-
-    default:
-        throw std::logic_error {
-            fmt::format("Phase enum with integer value: "
-                        "{} not recognized", static_cast<int>(phase))
-        };
-    }
-}
-
     std::size_t numCells(const Opm::EclipseState& eclState)
     {
         return eclState.fieldProps().get_int("FIPNUM").size();
@@ -239,7 +138,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     this->RPRPNodes_ = summaryConfig_.keywords("RPRP*");
 
     for (const auto& phase : Inplace::phases()) {
-        std::string key_pattern = "R" + EclString(phase) + "*";
+        std::string key_pattern = "R" + Inplace::EclString(phase) + "*";
         this->regionNodes_[phase] = summaryConfig_.keywords(key_pattern);
     }
 
@@ -837,7 +736,7 @@ assignToSolution(data::Solution& sol)
 
         for (const auto& phase : Inplace::mixingPhases()) {
             if (! this->fip_[phase].empty()) {
-                sol.insert(EclString(phase),
+                sol.insert(Inplace::EclString(phase),
                            UnitSystem::measure::volume,
                            this->fip_[phase],
                            data::TargetType::SUMMARY);
@@ -1048,7 +947,7 @@ doAllocBuffers(const unsigned bufferSize,
         }
 
         for (const auto& phase : Inplace::phases()) {
-            if (!substep || summaryConfig_.require3DField(EclString(phase))) {
+            if (!substep || summaryConfig_.require3DField(Inplace::EclString(phase))) {
                 this->fip_[phase].resize(bufferSize, 0.0);
                 this->computeFip_ = true;
             }
@@ -1737,7 +1636,7 @@ updateSummaryRegionValues(const Inplace& inplace,
     // The field summary vectors should only use the FIPNUM based region sum.
     {
         for (const auto& phase : Inplace::phases()) {
-            const std::string key = "F" + EclString(phase);
+            const std::string key = "F" + Inplace::EclString(phase);
             if (this->summaryConfig_.hasKeyword(key)) {
                 miscSummaryData[key] = inplace.get(phase);
             }
