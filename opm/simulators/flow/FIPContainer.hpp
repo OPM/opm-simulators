@@ -54,10 +54,6 @@ public:
     static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
-    // Temporary constructor until we are ready to own the map
-    explicit FIPContainer(FIPMap& fip)
-        : fip_(fip) {}
-
     bool allocate(const std::size_t bufferSize,
                   const SummaryConfig& summaryConfig,
                   const bool forceAlloc,
@@ -112,7 +108,7 @@ public:
     void outputRestart(data::Solution& sol);
 
 private:
-    FIPMap& fip_;
+    FIPMap fip_{};
     std::size_t bufferSize_ = 0;
 
     struct OutputRestart

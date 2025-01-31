@@ -438,7 +438,6 @@ protected:
     bool enableFlowsn_{false};
     bool enableFloresn_{false};
 
-    std::unordered_map<Inplace::Phase, ScalarBuffer> fip_;
     FIPContainer<FluidSystem> fipC_;
     std::unordered_map<std::string, std::vector<int>> regions_;
     std::unordered_map<Inplace::Phase, std::vector<SummaryConfigNode>> regionNodes_;
