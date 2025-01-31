@@ -117,6 +117,7 @@ update_injector_targets(const Well& well,
 template <typename Scalar>
 void SingleCompWellState<Scalar>::
 update_producer_targets(const Well& well,
+                        const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const SummaryState& st)
 {
     const auto& prod_controls = well.productionControls(st);
@@ -124,6 +125,8 @@ update_producer_targets(const Well& well,
     const auto cmode_is_undefined = (prod_controls.cmode == Well::ProducerCMode::CMODE_UNDEFINED);
     const auto cmode_is_bhp = (prod_controls.cmode == Well::ProducerCMode::BHP);
     assert((cmode_is_undefined || cmode_is_bhp) && "Only BHP control mode is supported for now");
+
+    this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
 
     this->bhp = prod_controls.bhp_limit;
     this->production_cmode = Well::ProducerCMode::BHP;
