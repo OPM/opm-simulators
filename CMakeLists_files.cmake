@@ -584,6 +584,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilboundaryratevector.hh
   opm/models/blackoil/blackoilbrinemodules.hh
   opm/models/blackoil/blackoilbrineparams.hpp
+  opm/models/blackoil/blackoilconvectivemixingmodule.hh
   opm/models/blackoil/blackoildarcyfluxmodule.hh
   opm/models/blackoil/blackoildiffusionmodule.hh
   opm/models/blackoil/blackoildispersionmodule.hh
@@ -917,6 +918,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/overlaptypes.hh
   opm/simulators/linalg/OwningBlockPreconditioner.hpp
   opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp
+  opm/simulators/linalg/MILU.hpp
   opm/simulators/linalg/parallelamgbackend.hh
   opm/simulators/linalg/parallelbasebackend.hh
   opm/simulators/linalg/parallelbicgstabbackend.hh
@@ -924,10 +926,13 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ParallelIstlInformation.hpp
   opm/simulators/linalg/ParallelOverlappingILU0.hpp
   opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp
+  opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp
+  opm/simulators/linalg/PreconditionerFactory.hpp
+  opm/simulators/linalg/PreconditionerFactory_impl.hpp
+  opm/simulators/linalg/PreconditionerWithUpdate.hpp
+  opm/simulators/linalg/PressureBhpTransferPolicy.hpp
   opm/simulators/linalg/PressureSolverPolicy.hpp
   opm/simulators/linalg/PressureTransferPolicy.hpp
-  opm/simulators/linalg/PreconditionerFactory.hpp
-  opm/simulators/linalg/PreconditionerWithUpdate.hpp
   opm/simulators/linalg/PropertyTree.hpp
   opm/simulators/linalg/residreductioncriterion.hh
   opm/simulators/linalg/SmallDenseMatrixUtils.hpp
@@ -965,6 +970,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/utils/phaseUsageFromDeck.hpp
+  opm/simulators/utils/ParallelCommunication.hpp
+  opm/simulators/utils/ParallelSerialization.hpp
   opm/simulators/utils/readDeck.hpp
   opm/simulators/utils/satfunc/RelpermDiagnostics.hpp
   opm/simulators/wells/ALQState.hpp
@@ -1032,14 +1039,16 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellGroupControls.hpp
   opm/simulators/wells/WellGroupHelpers.hpp
   opm/simulators/wells/WellHelpers.hpp
-  opm/simulators/wells/WellInterface.hpp
+  opm/simulators/wells/WellInterfaceFluidSystem.hpp
   opm/simulators/wells/WellInterfaceGeneric.hpp
+  opm/simulators/wells/WellInterface.hpp
   opm/simulators/wells/WellInterface_impl.hpp
+  opm/simulators/wells/WellInterfaceIndices.hpp
   opm/simulators/wells/WellProdIndexCalculator.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WGState.hpp
-  )
+)
 if (USE_GPU_BRIDGE)
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/linalg/gpubridge/amgclSolverBackend.hpp
