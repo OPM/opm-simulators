@@ -169,7 +169,7 @@ updateTotalMass()
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
         this->new_component_masses_[compidx] = (oil_mass_fractions[compidx] * density_oil * So +
                                       gas_mass_fractions[compidx] * density_gas * Sg) * wellbore_volume;
-        total_mass += component_masses_[compidx];
+        total_mass += this->new_component_masses_[compidx];
     }
     // TODO: checking all the calculation's here
     // TODO: some properties should go to the fluid_state?
@@ -177,7 +177,7 @@ updateTotalMass()
 
     // TODO: the derivative of the mass fradtions does not look correct
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        mass_fractions_[compidx] = component_masses_[compidx] / total_mass;
+        mass_fractions_[compidx] = this->new_component_masses_[compidx] / total_mass;
     }
 }
 
@@ -236,11 +236,11 @@ updateSurfaceQuantities(const Simulator& simulator)
         const auto density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
         const auto density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
 
-        std::array<Scalar, FluidSystem::numComponents> oil_mass_fractions;
-        std::array<Scalar, FluidSystem::numComponents> gas_mass_fractions;
         for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-            oil_mass_fractions[compidx] = fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
-            gas_mass_fractions[compidx] = fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
+            this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
+                    fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
+            this->surface_conditions_.mass_fractions_[FluidSystem::gasPhaseIdx][compidx] =
+                    fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
         }
         this->surface_conditions_.surface_densities_[FluidSystem::oilPhaseIdx] = density_oil;
         this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
@@ -291,11 +291,11 @@ updateSurfaceQuantities(const Simulator& simulator)
         const auto density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
         const auto density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
 
-        std::array<EvalWell, FluidSystem::numComponents> oil_mass_fractions;
-        std::array<EvalWell, FluidSystem::numComponents> gas_mass_fractions;
         for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-            oil_mass_fractions[compidx] = fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
-            gas_mass_fractions[compidx] = fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
+            this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
+                    fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
+            this->surface_conditions_.mass_fractions_[FluidSystem::gasPhaseIdx][compidx] =
+                    fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
         }
         this->surface_conditions_.surface_densities_[FluidSystem::oilPhaseIdx] = density_oil;
         this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
@@ -397,6 +397,8 @@ assembleWellEq(const Simulator& simulator,
     std::vector<EvalWell> connection_rates(FluidSystem::numComponents, 0.);
     calculateSingleConnectionRate(simulator, connection_rates);
 
+    assembleSourceTerm(dt);
+
     // there will be num_comp mass balance equations for each component and one for the well control equations
     // for the mass balance equations, it will be the sum of the connection rates for each component,
     // add minus the production rate for each component, will equal to the mass change for each component
@@ -406,17 +408,27 @@ assembleWellEq(const Simulator& simulator,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-assembleSourceTerm()
+assembleSourceTerm(const Scalar dt)
 {
-    for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-        EvalWell residual = this->new_component_masses_[comp_idx] - this->component_masses_[comp_idx];
-
-//        this->well_equations_.residual()[comp_idx][PrimaryVariables::Bhp] = 0.;
-//        for (unsigned con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
-//            this->well_equations_.residual()[comp_idx][PrimaryVariables::Bhp] += this->well_equations_.residual()[comp_idx][con_idx];
-//        }
-//        this->well_equations_.residual()[comp_idx][PrimaryVariables::Bhp] -= this->component_masses_[comp_idx];
+    // calculating the injection mass rate for each component
+    const EvalWell total_surface_rate = this->primary_variables_.getTotalRate();
+    const EvalWell density = this->surface_conditions_.density();
+    const EvalWell total_mass_rate = total_surface_rate * density;
+    std::array<EvalWell, FluidSystem::numComponents> component_mass_rates;
+    for (unsigned  comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+        component_mass_rates[comp_idx] = total_mass_rate * this->surface_conditions_.massFraction(comp_idx);
     }
+//    std::array<EvalWell, FluidSystem::numComponents> mass_fractions;
+//    for (unsigned  comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+//        mass_fractions[comp_idx] = this->surface_conditions_.massFraction(comp_idx);
+//    }
+
+    for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+        EvalWell residual = (this->new_component_masses_[comp_idx] - this->component_masses_[comp_idx]) / dt;
+    }
+
+    // The source term will be  M - M0 / dt + Q;
+    // then we need to incoporate the connection rates for each component
 
 }
 
