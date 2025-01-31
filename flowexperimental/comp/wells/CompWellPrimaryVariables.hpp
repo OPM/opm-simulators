@@ -66,6 +66,8 @@ public:
 
     EvalWell getBhp() const;
 
+    EvalWell getTotalRate() const;
+
     static EvalWell extendEval(const Eval& in);
 private:
     std::array<Scalar, numWellEq> value_;

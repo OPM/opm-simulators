@@ -57,6 +57,24 @@ public:
         static constexpr int num_phases = 2;
         std::array<EvalWell, num_phases> surface_densities_{0.};
         std::array<EvalWell, num_phases> volume_fractions_{0.};
+        std::array<std::array<EvalWell, num_phases>, num_comp> mass_fractions_{0.};
+
+        EvalWell density() const {
+            EvalWell density = 0.;
+            for (int i = 0; i < num_phases; ++i) {
+                density += surface_densities_[i] * volume_fractions_[i];
+            }
+            return density;
+        }
+
+        // TODO: it looks like that we can have a concept of component mass density?
+        EvalWell massFraction(int comp_idx) const {
+            EvalWell mass = 0.;
+            for (unsigned  p = 0; p < num_phases; ++p) {
+                mass += surface_densities_[p] * volume_fractions_[p] * mass_fractions_[p][comp_idx];
+            }
+            return mass / density();
+        }
     };
 
     CompWell(const Well& well,
@@ -114,7 +132,7 @@ private:
 
 
     // TODO: the following assembling functions will be moved to a separate assmeble class
-    void assembleSourceTerm();
+    void assembleSourceTerm(const Scalar dt);
 };
 
 } // end of namespace Opm
