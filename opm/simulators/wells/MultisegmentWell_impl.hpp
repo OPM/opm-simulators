@@ -527,7 +527,7 @@ namespace Opm
 
         // store a copy of the well state, we don't want to update the real well state
         WellState<Scalar> well_state_copy = simulator.problem().wellModel().wellState();
-        const auto& group_state = simulator.problem().wellModel().groupState();
+        auto group_state = simulator.problem().wellModel().groupState();
         auto& ws = well_state_copy.well(this->index_of_well_);
         
         // get current controls        
@@ -1622,7 +1622,7 @@ namespace Opm
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
                              WellState<Scalar>& well_state,
-                             const GroupState<Scalar>& group_state,
+                             GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger, 
                              const bool fixed_control /*false*/, 
                              const bool fixed_status /*false*/)
