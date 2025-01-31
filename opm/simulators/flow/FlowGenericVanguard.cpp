@@ -118,6 +118,8 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
 
         ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
 #if HAVE_MPI
+        numOverlap_ = Parameters::Get<Parameters::NumOverlap>();
+        addCorners_ = Parameters::Get<Parameters::AddCorners>();
         partitionMethod_   = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
         serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
         zoltanParams_ = Parameters::Get<Parameters::ZoltanParams>();
@@ -452,8 +454,13 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::OwnerCellsFirst>
         ("Order cells owned by rank before ghost/overlap cells.");
 #if HAVE_MPI
+    Parameters::Register<Parameters::AddCorners>
+        ("Add corners to partition.");
+    Parameters::Register<Parameters::NumOverlap>
+        ("Numbers of layers overlap in parallel partition");
     Parameters::Register<Parameters::PartitionMethod>
-        ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS, 3=Zoltan with all cells of well represented by one vertex.");
+        ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS, "
+         "3=Zoltan with all cells of well represented by one vertex.");
     Parameters::Register<Parameters::SerialPartitioning>
         ("Perform partitioning for parallel runs on a single process.");
     Parameters::Register<Parameters::ZoltanImbalanceTol<Scalar>>
