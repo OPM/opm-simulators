@@ -46,7 +46,8 @@ void solveUpperLevelSet(T* reorderedMat,
                         int startIdx,
                         int rowsInLevelSet,
                         T* v,
-                        int threadBlockSize);
+                        int threadBlockSize,
+                        cudaStream_t stream);
 
 /**
  * @brief Perform a lower solve on certain rows in a matrix that can safely be computed in parallel
@@ -72,7 +73,8 @@ void solveLowerLevelSet(T* reorderedMat,
                         int rowsInLevelSet,
                         const T* d,
                         T* v,
-                        int threadBlockSize);
+                        int threadBlockSize,
+                        cudaStream_t stream);
 
 /**
  * @brief Perform an upper solve on certain rows in a matrix that can safely be computed in parallel
@@ -99,7 +101,8 @@ void solveUpperLevelSetSplit(MatrixScalar* reorderedMat,
                              int rowsInLevelSet,
                              const DiagonalScalar* dInv,
                              LinearSolverScalar* v,
-                             int threadBlockSize);
+                             int threadBlockSize,
+                             cudaStream_t stream);
 
 /**
  * @brief Perform an lower solve on certain rows in a matrix that can safely be computed in parallel
@@ -127,7 +130,8 @@ void solveLowerLevelSetSplit(MatrixScalar* reorderedLowerMat,
                              int rowsInLevelSet,
                              const LinearSolverScalar* d,
                              LinearSolverScalar* v,
-                             int threadBlockSize);
+                             int threadBlockSize,
+                             cudaStream_t stream);
 
 /**
  * @brief Computes the ILU Factorization of the input bcsr matrix, which is stored in a reordered way. The diagonal
