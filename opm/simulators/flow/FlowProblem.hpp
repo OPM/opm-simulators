@@ -1704,7 +1704,6 @@ protected:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool first_step_ = true;
-
 };
 
 } // namespace Opm
