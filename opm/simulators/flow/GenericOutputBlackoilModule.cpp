@@ -696,53 +696,7 @@ assignToSolution(data::Solution& sol)
     }
 
     // Fluid in place
-    if (this->outputFipRestart_) {
-        using namespace std::string_literals;
-
-        using M = UnitSystem::measure;
-        using FIPEntry = std::tuple<std::string, M, Inplace::Phase>;
-
-        auto fipArrays = std::vector<FIPEntry> {};
-        if (this->outputFipRestart_.surface) {
-            fipArrays.insert(fipArrays.end(), {
-                    FIPEntry {"SFIPOIL"s, M::liquid_surface_volume, Inplace::Phase::OIL   },
-                    FIPEntry {"SFIPWAT"s, M::liquid_surface_volume, Inplace::Phase::WATER },
-                    FIPEntry {"SFIPGAS"s, M::gas_surface_volume,    Inplace::Phase::GAS   },
-                });
-        }
-
-        if (this->outputFipRestart_.reservoir) {
-            fipArrays.insert(fipArrays.end(), {
-                    FIPEntry {"RFIPOIL"s, M::volume, Inplace::Phase::OilResVolume   },
-                    FIPEntry {"RFIPWAT"s, M::volume, Inplace::Phase::WaterResVolume },
-                    FIPEntry {"RFIPGAS"s, M::volume, Inplace::Phase::GasResVolume   },
-                });
-        }
-
-        if (this->outputFipRestart_.noPrefix && !this->outputFipRestart_.surface) {
-            fipArrays.insert(fipArrays.end(), {
-                    FIPEntry { "FIPOIL"s, M::liquid_surface_volume, Inplace::Phase::OIL   },
-                    FIPEntry { "FIPWAT"s, M::liquid_surface_volume, Inplace::Phase::WATER },
-                    FIPEntry { "FIPGAS"s, M::gas_surface_volume,    Inplace::Phase::GAS   },
-                });
-        }
-
-        for (const auto& [mnemonic, unit, phase] : fipArrays) {
-            if (! this->fip_[phase].empty()) {
-                sol.insert(mnemonic, unit, std::move(this->fip_[phase]),
-                           data::TargetType::RESTART_SOLUTION);
-            }
-        }
-
-        for (const auto& phase : Inplace::mixingPhases()) {
-            if (! this->fip_[phase].empty()) {
-                sol.insert(Inplace::EclString(phase),
-                           UnitSystem::measure::volume,
-                           this->fip_[phase],
-                           data::TargetType::SUMMARY);
-            }
-        }
-    }
+    this->fipC_.outputRestart(sol);
 
     // Tracers
     if (! this->freeTracerConcentrations_.empty()) {
@@ -925,37 +879,10 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     // Fluid in place
-    {
-        using namespace std::string_literals;
-
-        const auto fipctrl = std::array {
-            std::pair { "FIP"s , &OutputFIPRestart::noPrefix  },
-            std::pair { "SFIP"s, &OutputFIPRestart::surface   },
-            std::pair { "RFIP"s, &OutputFIPRestart::reservoir },
-        };
-
-        this->outputFipRestart_.clearBits();
-        this->computeFip_ = false;
-
-        for (const auto& [mnemonic, kind] : fipctrl) {
-            if (auto fipPos = rstKeywords.find(mnemonic);
-                fipPos != rstKeywords.end())
-            {
-                fipPos->second = 0;
-                this->outputFipRestart_.*kind = true;
-            }
-        }
-
-        for (const auto& phase : Inplace::phases()) {
-            if (!substep || summaryConfig_.require3DField(Inplace::EclString(phase))) {
-                this->fip_[phase].resize(bufferSize, 0.0);
-                this->computeFip_ = true;
-            }
-            else {
-                this->fip_[phase].clear();
-            }
-        }
-    }
+    this->computeFip_ = this->fipC_.allocate(bufferSize,
+                                             summaryConfig_,
+                                             !substep,
+                                             rstKeywords);
 
     const auto needAvgPress = !substep         ||
         !this->RPRNodes_.empty()               ||
@@ -967,7 +894,7 @@ doAllocBuffers(const unsigned bufferSize,
         this->summaryConfig_.match("RHPV*");
 
     if (needPoreVolume) {
-        this->fip_[Inplace::Phase::PoreVolume].resize(bufferSize, 0.0);
+        this->fipC_.add(Inplace::Phase::PoreVolume);
         this->dynamicPoreVolume_.resize(bufferSize, 0.0);
         this->hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
     }
@@ -1590,10 +1517,7 @@ makeRegionSum(Inplace& inplace,
                    this->dynamicPoreVolume_);
 
     for (const auto& phase : Inplace::phases()) {
-        auto fipPos = this->fip_.find(phase);
-        if (fipPos != this->fip_.end()) {
-            update_inplace(phase, fipPos->second);
-        }
+        update_inplace(phase, this->fipC_.get(phase));
     }
 }
 

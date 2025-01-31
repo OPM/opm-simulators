@@ -93,6 +93,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/EclGenericWriter.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
+  opm/simulators/flow/FIPContainer.cpp
   opm/simulators/flow/FlowGenericProblem.cpp
   opm/simulators/flow/FlowGenericVanguard.cpp
   opm/simulators/flow/FlowProblemParameters.cpp
@@ -816,6 +817,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FIBlackoilModel.hpp
+  opm/simulators/flow/FIPContainer.hpp
   opm/simulators/flow/FlowBaseProblemProperties.hpp
   opm/simulators/flow/FlowBaseVanguard.hpp
   opm/simulators/flow/FlowGenericProblem.hpp
