@@ -125,6 +125,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
     , isCompositional_(isCompositional)
+    , fipC_(fip_)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -946,15 +947,9 @@ doAllocBuffers(const unsigned bufferSize,
             }
         }
 
-        for (const auto& phase : Inplace::phases()) {
-            if (!substep || summaryConfig_.require3DField(Inplace::EclString(phase))) {
-                this->fip_[phase].resize(bufferSize, 0.0);
-                this->computeFip_ = true;
-            }
-            else {
-                this->fip_[phase].clear();
-            }
-        }
+        this->computeFip_ = this->fipC_.allocate(bufferSize,
+                                                 summaryConfig_,
+                                                 !substep);
     }
 
     const auto needAvgPress = !substep         ||
@@ -967,7 +962,7 @@ doAllocBuffers(const unsigned bufferSize,
         this->summaryConfig_.match("RHPV*");
 
     if (needPoreVolume) {
-        this->fip_[Inplace::Phase::PoreVolume].resize(bufferSize, 0.0);
+        this->fipC_.add(Inplace::Phase::PoreVolume);
         this->dynamicPoreVolume_.resize(bufferSize, 0.0);
         this->hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
     }
