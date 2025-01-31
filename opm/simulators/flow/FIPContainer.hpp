@@ -52,6 +52,21 @@ public:
 
     void add(const Inplace::Phase phase);
 
+    struct Co2InGasInput
+    {
+        double pv;
+        Scalar sg;
+        Scalar sgcr;
+        Scalar rhog;
+        Scalar xgW;
+        Scalar mM;
+        Scalar trappedGas;
+        Scalar strandedGas;
+    };
+
+    void assignCo2InGas(const unsigned globalDofIdx,
+                      const Co2InGasInput& v);
+
 private:
     FIPMap& fip_;
     std::size_t bufferSize_ = 0;
