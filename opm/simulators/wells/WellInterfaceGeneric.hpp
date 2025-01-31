@@ -26,6 +26,7 @@
 
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/wells/RuntimePerforation.hpp>
 
 #include <map>
 #include <optional>
@@ -189,7 +190,6 @@ public:
 
     void resetWellOperability();
 
-
     virtual std::vector<Scalar> getPrimaryVars() const
     {
         return {};
@@ -202,6 +202,8 @@ public:
 
     virtual Scalar connectionDensity(const int globalConnIdx,
                                      const int openConnIdx) const = 0;
+
+    void addPerforations(const std::vector<RuntimePerforation>& perfs);
 
 protected:
     bool getAllowCrossFlow() const;

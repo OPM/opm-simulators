@@ -1029,6 +1029,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/RatioCalculator.hpp
   opm/simulators/wells/RegionAttributeHelpers.hpp
   opm/simulators/wells/RegionAverageCalculator.hpp
+  opm/simulators/wells/RuntimePerforation.hpp
   opm/simulators/wells/SingleWellState.hpp
   opm/simulators/wells/StandardWell.hpp
   opm/simulators/wells/StandardWell_impl.hpp
