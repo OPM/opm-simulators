@@ -35,11 +35,12 @@ void CompWellState<Scalar>::
 init(const Schedule& schedule,
      const std::vector<Well>& wells_ecl,
      const std::vector<Scalar>& cell_pressures,
+     const std::vector<std::vector<Scalar>>& cell_mole_fractions,
      const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
      const SummaryState& summary_state,
      const CompWellState* prev_well_state)
 {
-    this->base_init(wells_ecl, cell_pressures, well_connection_data, summary_state);
+    this->base_init(wells_ecl, cell_pressures, cell_mole_fractions, well_connection_data, summary_state);
 
     // TODO: for the simple case we have, I think we can just copy from the prev_well_state
     // let us see how we gonna use it though
@@ -49,6 +50,7 @@ template <typename Scalar>
 void CompWellState<Scalar>::
 base_init(const std::vector<Well>& wells_ecl,
           const std::vector<Scalar>& cell_pressures,
+          const std::vector<std::vector<Scalar>>& cell_mole_fractions,
           const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
           const SummaryState& summary_state)
 {
@@ -59,7 +61,7 @@ base_init(const std::vector<Well>& wells_ecl,
     for (auto w = 0*num_wells; w < num_wells; ++w) {
         const Well& well = wells_ecl[w];
         const auto& conn_data = well_connection_data[w];
-        initSingleWell(well, cell_pressures, conn_data, summary_state);
+        initSingleWell(well, cell_pressures, cell_mole_fractions, conn_data, summary_state);
     }
 
 }
@@ -68,13 +70,14 @@ template <typename Scalar>
 void CompWellState<Scalar>::
 initSingleWell(const Well& well,
                const std::vector<Scalar>& cell_pressures,
+               const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                const std::vector<CompConnectionData<Scalar> >& conn_data,
                const SummaryState& summary_state)
 {
     if (well.isInjector()) {
         initSingleInjector(well, cell_pressures, conn_data, summary_state);
     } else {
-        initSingleProducer(well, cell_pressures, conn_data, summary_state);
+        initSingleProducer(well, cell_pressures, cell_mole_fractions, conn_data, summary_state);
     }
 
 }
@@ -99,6 +102,7 @@ template <typename Scalar>
 void CompWellState<Scalar>::
 initSingleProducer(const Well& well,
                    const std::vector<Scalar>& /* cell_pressures */,
+                   const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                    const std::vector<CompConnectionData<Scalar> >& conn_data,
                    const SummaryState& summary_state)
 {
@@ -108,7 +112,7 @@ initSingleProducer(const Well& well,
                                     this->phase_usage_,
                                     conn_data,
                                     true) );
-    ws.update_producer_targets(well, summary_state);
+    ws.update_producer_targets(well, cell_mole_fractions, summary_state);
 }
 
 template <typename Scalar>
