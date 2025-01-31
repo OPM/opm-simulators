@@ -125,7 +125,6 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
     , isCompositional_(isCompositional)
-    , fipC_(fip_)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
