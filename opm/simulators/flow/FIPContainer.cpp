@@ -29,6 +29,8 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
 
+#include <opm/output/data/Solution.hpp>
+
 namespace Opm {
 
 template<class FluidSystem>
@@ -36,8 +38,28 @@ bool
 FIPContainer<FluidSystem>::
 allocate(const std::size_t bufferSize,
          const SummaryConfig& summaryConfig,
-         const bool forceAlloc)
+         const bool forceAlloc,
+         std::map<std::string, int>& rstKeywords)
 {
+    using namespace std::string_literals;
+
+    const auto fipctrl = std::array {
+        std::pair { "FIP"s , &OutputRestart::noPrefix  },
+        std::pair { "SFIP"s, &OutputRestart::surface   },
+        std::pair { "RFIP"s, &OutputRestart::reservoir },
+    };
+
+    this->outputRestart_.clearBits();
+
+    for (const auto& [mnemonic, kind] : fipctrl) {
+        if (auto fipPos = rstKeywords.find(mnemonic);
+            fipPos != rstKeywords.end())
+        {
+            fipPos->second = 0;
+            this->outputRestart_.*kind = true;
+        }
+    }
+
     bool computeFip = false;
     bufferSize_ = bufferSize;
     for (const auto& phase : Inplace::phases()) {
@@ -294,6 +316,62 @@ assignOilGasDistribution(const unsigned globalDofIdx,
 
     if (!this->fip_[Inplace::Phase::GAS].empty()) {
         this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
+    }
+}
+
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+outputRestart(data::Solution& sol)
+{
+    if (!this->outputRestart_) {
+        return;
+    }
+
+    using namespace std::string_literals;
+
+    using M = UnitSystem::measure;
+    using FIPEntry = std::tuple<std::string, M, Inplace::Phase>;
+
+    auto fipArrays = std::vector<FIPEntry> {};
+    if (this->outputRestart_.surface) {
+        fipArrays.insert(fipArrays.end(), {
+                FIPEntry {"SFIPOIL"s, M::liquid_surface_volume, Inplace::Phase::OIL   },
+                FIPEntry {"SFIPWAT"s, M::liquid_surface_volume, Inplace::Phase::WATER },
+                FIPEntry {"SFIPGAS"s, M::gas_surface_volume,    Inplace::Phase::GAS   },
+            });
+    }
+
+    if (this->outputRestart_.reservoir) {
+        fipArrays.insert(fipArrays.end(), {
+                FIPEntry {"RFIPOIL"s, M::volume, Inplace::Phase::OilResVolume   },
+                FIPEntry {"RFIPWAT"s, M::volume, Inplace::Phase::WaterResVolume },
+                FIPEntry {"RFIPGAS"s, M::volume, Inplace::Phase::GasResVolume   },
+            });
+    }
+
+    if (this->outputRestart_.noPrefix && !this->outputRestart_.surface) {
+        fipArrays.insert(fipArrays.end(), {
+                FIPEntry { "FIPOIL"s, M::liquid_surface_volume, Inplace::Phase::OIL   },
+                FIPEntry { "FIPWAT"s, M::liquid_surface_volume, Inplace::Phase::WATER },
+                FIPEntry { "FIPGAS"s, M::gas_surface_volume,    Inplace::Phase::GAS   },
+            });
+    }
+
+    for (const auto& [mnemonic, unit, phase] : fipArrays) {
+        if (! this->fip_[phase].empty()) {
+            sol.insert(mnemonic, unit, std::move(this->fip_[phase]),
+                       data::TargetType::RESTART_SOLUTION);
+        }
+    }
+
+    for (const auto& phase : Inplace::mixingPhases()) {
+        if (! this->fip_[phase].empty()) {
+            sol.insert(Inplace::EclString(phase),
+                       UnitSystem::measure::volume,
+                       this->fip_[phase],
+                       data::TargetType::SUMMARY);
+        }
     }
 }
 
