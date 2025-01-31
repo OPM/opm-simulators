@@ -254,6 +254,31 @@ assignVolumesReservoir(const unsigned    globalDofIdx,
     }
 }
 
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignOilGasDistribution(const unsigned globalDofIdx,
+                         const Scalar   gasInPlaceLiquid,
+                         const Scalar   oilInPlaceGas)
+{
+    if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty()) {
+        this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
+    }
+
+    if (!this->fip_[Inplace::Phase::OilInGasPhase].empty()) {
+        this->fip_[Inplace::Phase::OilInGasPhase][globalDofIdx] = oilInPlaceGas;
+    }
+
+    // Add dissolved gas and vaporized oil to total Fip
+    if (!this->fip_[Inplace::Phase::OIL].empty()) {
+        this->fip_[Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::GAS].empty()) {
+        this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
+    }
+}
+
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
 
 #define INSTANTIATE_TYPE(T) \
