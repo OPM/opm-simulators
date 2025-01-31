@@ -113,28 +113,33 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
     edgeWeightsMethod_   = Dune::EdgeWeightMethod(Parameters::Get<Parameters::EdgeWeightsMethod>());
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
-        numJacobiBlocks_ = Parameters::Get<Parameters::NumJacobiBlocks>();
+    numJacobiBlocks_ = Parameters::Get<Parameters::NumJacobiBlocks>();
 #endif
 
-        ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
+    ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
+
 #if HAVE_MPI
-        partitionMethod_   = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
-        serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
-        zoltanParams_ = Parameters::Get<Parameters::ZoltanParams>();
+    edgeConformal_ = Parameters::Get<Parameters::EdgeConformal>();
+    partitionMethod_ = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
+    serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
+    zoltanParams_ = Parameters::Get<Parameters::ZoltanParams>();
 
-        metisParams_ = Parameters::Get<Parameters::MetisParams>();
+    metisParams_ = Parameters::Get<Parameters::MetisParams>();
 
-        externalPartitionFile_ = Parameters::Get<Parameters::ExternalPartition>();
+    externalPartitionFile_ = Parameters::Get<Parameters::ExternalPartition>();
 #endif
-        enableDistributedWells_ = Parameters::Get<Parameters::AllowDistributedWells>();
-        enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
-        allow_splitting_inactive_wells_ = Parameters::Get<Parameters::AllowSplittingInactiveWells>();
-        ignoredKeywords_ = Parameters::Get<Parameters::IgnoreKeywords>();
-        int output_param = Parameters::Get<Parameters::EclOutputInterval>();
-        if (output_param >= 0) {
-            outputInterval_ = output_param;
-        }
-        useMultisegmentWell_ = Parameters::Get<Parameters::UseMultisegmentWell>();
+
+    enableDistributedWells_ = Parameters::Get<Parameters::AllowDistributedWells>();
+    enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
+    allow_splitting_inactive_wells_ = Parameters::Get<Parameters::AllowSplittingInactiveWells>();
+    ignoredKeywords_ = Parameters::Get<Parameters::IgnoreKeywords>();
+
+    const int output_param = Parameters::Get<Parameters::EclOutputInterval>();
+    if (output_param >= 0) {
+        outputInterval_ = output_param;
+    }
+
+    useMultisegmentWell_ = Parameters::Get<Parameters::UseMultisegmentWell>();
 }
 
 FlowGenericVanguard::SimulationModelParams
@@ -451,6 +456,8 @@ void FlowGenericVanguard::registerParameters_()
 
     Parameters::Register<Parameters::OwnerCellsFirst>
         ("Order cells owned by rank before ghost/overlap cells.");
+    Parameters::Register<Parameters::EdgeConformal>
+        ("Edge conformal cornerpoint processing.");
 #if HAVE_MPI
     Parameters::Register<Parameters::PartitionMethod>
         ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS, 3=Zoltan with all cells of well represented by one vertex.");
