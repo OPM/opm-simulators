@@ -58,6 +58,8 @@
 #include <opm/simulators/linalg/AmgxPreconditioner.hpp>
 #endif
 
+#include <cassert>
+
 namespace Opm {
 
 template <class Smoother>
@@ -396,6 +398,7 @@ struct StandardPreconditioners {
         // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
         if (ilulevel == 0) {
             const std::size_t num_interior = interiorIfGhostLast(comm);
+            assert(num_interior <= op.getmat().N());
             return std::make_shared<ParallelOverlappingILU0<M, V, V, Comm>>(
                 op.getmat(), comm, w, MILU_VARIANT::ILU, num_interior, redblack, reorder_spheres);
         } else {
