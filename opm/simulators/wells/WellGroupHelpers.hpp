@@ -118,6 +118,18 @@ public:
                                            GroupState<Scalar>& group_state,
                                            std::vector<Scalar>& groupTargetReduction);
 
+    static void updateGroupTargetReductionRecurse(const Group& group,
+                                                  const Schedule& schedule,
+                                                  const int reportStepIdx,
+                                                  const bool isInjector,
+                                                  const PhaseUsage& pu,
+                                                  const GuideRate& guide_rate,
+                                                  const WellState<Scalar>& wellState,
+                                                  const SummaryState& summaryState,
+                                                  GroupState<Scalar>& group_state,
+                                                  std::vector<Scalar>& groupTargetReduction,
+                                                  int& num_group_controlled_wells);
+
     static void updateGuideRates(const Group& group,
                                  const Schedule& schedule,
                                  const SummaryState& summary_state,
@@ -264,6 +276,17 @@ public:
                                     const std::string& always_included_child,
                                     const bool is_production_group,
                                     const Phase injection_phase);
+
+    static bool wellIsUnderGroupControl(const Schedule& schedule,
+                                        const Group& group,
+                                        const WellState<Scalar>& well_state,
+                                        const GroupState<Scalar>& group_state,
+                                        const SummaryState& summary_state,
+                                        const GuideRate* guideRate,
+                                        const int report_step,
+                                        const std::string& well_name,
+                                        const std::string& always_included_child,
+                                        const bool is_production_group);
 
     static std::pair<bool, Scalar>
     checkGroupConstraintsInj(const std::string& name,
