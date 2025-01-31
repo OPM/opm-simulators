@@ -1538,22 +1538,7 @@ private:
         const auto gasInPlaceLiquid = getValue(fs.Rs()) * fip[oilPhaseIdx];
         const auto oilInPlaceGas    = getValue(fs.Rv()) * fip[gasPhaseIdx];
 
-        if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty()) {
-            this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
-        }
-
-        if (!this->fip_[Inplace::Phase::OilInGasPhase].empty()) {
-            this->fip_[Inplace::Phase::OilInGasPhase][globalDofIdx] = oilInPlaceGas;
-        }
-
-        // Add dissolved gas and vaporized oil to total Fip
-        if (!this->fip_[Inplace::Phase::OIL].empty()) {
-            this->fip_[Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
-        }
-
-        if (!this->fip_[Inplace::Phase::GAS].empty()) {
-            this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
-        }
+        this->fipC_.assignOilGasDistribution(globalDofIdx, gasInPlaceLiquid, oilInPlaceGas);
     }
 
     template <typename FluidState, typename FIPArray>

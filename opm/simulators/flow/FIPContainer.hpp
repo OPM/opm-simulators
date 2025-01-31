@@ -78,6 +78,10 @@ public:
                         const Scalar    waterInPlaceGas,
                         const Scalar    gasInPlaceWater);
 
+    void assignOilGasDistribution(const unsigned globalDofIdx,
+                                  const Scalar   gasInPlaceLiquid,
+                                  const Scalar   oilInPlaceGas);
+
     void assignVolumesSurface(const unsigned globalDofIdx,
                               const std::array<Scalar, numPhases>& fip);
 
