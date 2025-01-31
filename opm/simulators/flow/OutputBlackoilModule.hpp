@@ -1569,8 +1569,9 @@ private:
         }
 
         Scalar trappedGasSaturation = scaledDrainageInfo.Sgcr;
-        if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped].empty() ||
-            !this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped].empty() ) {
+        if (this->fipC_.has(Inplace::Phase::CO2MassInGasPhaseMaximumTrapped) ||
+            this->fipC_.has(Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped))
+        {
             if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
                 const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);
                 // Get the maximum trapped gas saturation
@@ -1580,8 +1581,8 @@ private:
 
         const Scalar sg = getValue(fs.saturation(gasPhaseIdx));
         Scalar strandedGasSaturation = scaledDrainageInfo.Sgcr;
-        if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped].empty() ||
-            !this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped].empty())
+        if (this->fipC_.has(Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped) ||
+            this->fipC_.has(Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped))
         {
             if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
                 const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);

@@ -77,6 +77,8 @@ public:
         Scalar strandedGas;
     };
 
+    bool has(const Inplace::Phase phase) const;
+
     void assignCo2InGas(const unsigned globalDofIdx,
                       const Co2InGasInput& v);
 
