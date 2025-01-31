@@ -314,6 +314,21 @@ assignVolumesReservoir(const unsigned    globalDofIdx,
 }
 
 template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+hasCo2InWater() const
+{
+    static const auto phases = std::array {
+        Inplace::Phase::CO2InWaterPhase,
+        Inplace::Phase::CO2MassInWaterPhase,
+        Inplace::Phase::CO2Mass,
+    };
+
+    return std::any_of(phases.begin(), phases.end(),
+                       [this](const auto phase) { return has(phase); });
+}
+
+template<class FluidSystem>
 void
 FIPContainer<FluidSystem>::
 assignCo2InWater(const unsigned globalDofIdx,

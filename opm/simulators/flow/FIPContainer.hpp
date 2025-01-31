@@ -83,6 +83,7 @@ public:
     void assignCo2InGas(const unsigned globalDofIdx,
                       const Co2InGasInput& v);
 
+    bool hasCo2InWater() const;
     void assignCo2InWater(const unsigned globalDofIdx,
                           const Scalar   co2InWater,
                           const Scalar   mM);

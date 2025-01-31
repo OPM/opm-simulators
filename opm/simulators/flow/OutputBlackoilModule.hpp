@@ -1506,9 +1506,7 @@ private:
             this->updateCO2InGas(globalDofIdx, pv, intQuants);
         }
         
-        if ((!this->fip_[Inplace::Phase::CO2InWaterPhase].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInWaterPhase].empty() ||
-             !this->fip_[Inplace::Phase::CO2Mass].empty()) &&
+        if (this->fipC_.hasCo2InWater() &&
             (FluidSystem::phaseIsActive(waterPhaseIdx) ||
              FluidSystem::phaseIsActive(oilPhaseIdx)))
         {
