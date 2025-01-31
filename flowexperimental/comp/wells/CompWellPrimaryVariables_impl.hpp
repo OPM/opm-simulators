@@ -107,7 +107,7 @@ toFluidState() const
     total_molar_fractions[FluidSystem::numComponents - 1] = 1.0 - sum;
 
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setMoleFraction(i, max(total_molar_fractions[i], 1.e-8));
+        fluid_state.setMoleFraction(i, max(total_molar_fractions[i], 1.e-10));
     }
 
     fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);

@@ -43,6 +43,7 @@ public:
     void init(const Schedule& schedule,
               const std::vector<Well>& wells_ecl,
               const std::vector<Scalar>& cell_pressures,
+              const std::vector<std::vector<Scalar>>& cell_mole_fractions,
               const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
               const SummaryState& sumary_state,
               const CompWellState* prev_well_state = nullptr);
@@ -57,11 +58,13 @@ private:
 
     void base_init(const std::vector<Well>& wells_ecl,
                    const std::vector<Scalar>& cell_pressures,
+                   const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                    const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
                    const SummaryState& summary_state);
 
     void initSingleWell(const Well& well,
                         const std::vector<Scalar>& cell_pressures,
+                        const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const std::vector<CompConnectionData<Scalar> >& conn_data,
                         const SummaryState& summary_state);
 
@@ -72,6 +75,7 @@ private:
 
     void initSingleProducer(const Well& well,
                             const std::vector<Scalar>& cell_pressures,
+                            const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                             const std::vector<CompConnectionData<Scalar> >& conn_data,
                             const SummaryState& summary_state);
 };
