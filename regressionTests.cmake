@@ -787,6 +787,10 @@ if (opm-common_EMBEDDED_PYTHON)
                            REL_TOL ${rel_tol}
                            DIR udq_actionx
                            TEST_ARGS --solver-max-time-step-in-days=10)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+    set_tests_properties(compareECLFiles_flow+PYACTION_WCONPROD PROPERTIES
+                          ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_append:${opm-common_DIR}/python)
+  endif()
 endif()
 
 add_test_compareECLFiles(CASENAME multxyz_model2
