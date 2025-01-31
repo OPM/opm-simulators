@@ -1622,6 +1622,7 @@ namespace Opm
     bool
     StandardWell<TypeTag>::
     computeWellPotentialsImplicit(const Simulator& simulator,
+                                  const WellState<Scalar>& well_state,
                                   std::vector<Scalar>& well_potentials,
                                   DeferredLogger& deferred_logger) const
     {
@@ -1631,7 +1632,7 @@ namespace Opm
         StandardWell<TypeTag> well_copy(*this);
 
         // store a copy of the well state, we don't want to update the real well state
-        WellState<Scalar> well_state_copy = simulator.problem().wellModel().wellState();
+        WellState<Scalar> well_state_copy = well_state;
         const auto& group_state = simulator.problem().wellModel().groupState();
         auto& ws = well_state_copy.well(this->index_of_well_);
 
@@ -1762,7 +1763,7 @@ namespace Opm
         // group controlled wells with defaulted guiderates will have zero targets as
         // the potentials are used to compute the well fractions.
         if (this->param_.local_well_solver_control_switching_ && !(this->changed_to_open_this_step_ && this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger))) {
-            converged_implicit = computeWellPotentialsImplicit(simulator, well_potentials, deferred_logger);
+            converged_implicit = computeWellPotentialsImplicit(simulator, well_state, well_potentials, deferred_logger);
         }
         if (!converged_implicit) {
             // does the well have a THP related constraint?
