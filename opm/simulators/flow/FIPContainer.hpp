@@ -30,8 +30,14 @@
 
 #include <array>
 #include <cstddef>
+#include <map>
 #include <unordered_map>
+#include <string>
 #include <vector>
+
+namespace Opm::data {
+class Solution;
+}
 
 namespace Opm {
 
@@ -54,7 +60,8 @@ public:
 
     bool allocate(const std::size_t bufferSize,
                   const SummaryConfig& summaryConfig,
-                  const bool forceAlloc);
+                  const bool forceAlloc,
+                  std::map<std::string, int>& rstKeywords);
 
     void add(const Inplace::Phase phase);
 
@@ -96,9 +103,36 @@ public:
                                 const Scalar      saltConcentration,
                                 const std::array<Scalar, numPhases>& fipr);
 
+    void outputRestart(data::Solution& sol);
+
 private:
     FIPMap& fip_;
     std::size_t bufferSize_ = 0;
+
+    struct OutputRestart
+    {
+        /// Whether or not run requests (surface condition) fluid-in-place
+        /// restart file output using the 'FIP' mnemonic.
+        bool noPrefix {false};
+
+        /// Whether or not run requests surface condition fluid-in-place
+        /// restart file output using the 'SFIP' mnemonic.
+        bool surface {false};
+
+        /// Whether or not run requests reservoir condition fluid-in-place
+        /// restart file output using the 'RFIP' mnemonic.
+        bool reservoir {false};
+
+        void clearBits()
+        {
+            this->noPrefix = this->surface = this->reservoir = false;
+        }
+
+        explicit operator bool() const
+        {
+            return this->noPrefix || this->surface || this->reservoir;
+        }
+    } outputRestart_{};
 };
 
 } // namespace Opm
