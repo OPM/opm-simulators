@@ -56,8 +56,6 @@
 #include <cstring>
 #include <utility>
 
-#include <fmt/format.h>
-
 namespace Opm {
 /*!
  * \ingroup BlackOilModel
