@@ -92,7 +92,7 @@ namespace Opm {
                       const int phasePos,
                       const bool injector)
     {
-
+        OPM_TIMEFUNCTION();
         Scalar rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const auto& groupTmp = schedule.getGroup(groupName, reportStepIdx);
