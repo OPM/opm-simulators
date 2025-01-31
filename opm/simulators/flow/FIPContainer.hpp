@@ -79,6 +79,7 @@ public:
 
     bool has(const Inplace::Phase phase) const;
 
+    bool hasCo2InGas() const;
     void assignCo2InGas(const unsigned globalDofIdx,
                       const Co2InGasInput& v);
 

@@ -31,6 +31,8 @@
 
 #include <opm/output/data/Solution.hpp>
 
+#include <algorithm>
+
 namespace Opm {
 
 template<class FluidSystem>
@@ -89,6 +91,32 @@ has(const Inplace::Phase phase) const
 {
     const auto it = this->fip_.find(phase);
     return it != this->fip_.end() && !it->second.empty();
+}
+
+template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+hasCo2InGas() const
+{
+    static const auto phases = std::array {
+        Inplace::Phase::CO2InGasPhaseInMob,
+        Inplace::Phase::CO2InGasPhaseMob,
+        Inplace::Phase::CO2MassInGasPhaseInMob,
+        Inplace::Phase::CO2MassInGasPhaseMob,
+        Inplace::Phase::CO2Mass,
+        Inplace::Phase::CO2MassInGasPhase,
+        Inplace::Phase::CO2InGasPhaseInMobKrg,
+        Inplace::Phase::CO2InGasPhaseMobKrg,
+        Inplace::Phase::CO2MassInGasPhaseInMobKrg,
+        Inplace::Phase::CO2MassInGasPhaseMobKrg,
+        Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped,
+        Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped,
+        Inplace::Phase::CO2MassInGasPhaseMaximumTrapped,
+        Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped,
+    };
+
+    return std::any_of(phases.begin(), phases.end(),
+                       [this](const auto phase) { return has(phase); });
 }
 
 template<class FluidSystem>
