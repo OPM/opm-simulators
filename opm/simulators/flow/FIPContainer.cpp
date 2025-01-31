@@ -60,6 +60,97 @@ FIPContainer<FluidSystem>::add(const Inplace::Phase phase)
     this->fip_[phase].resize(bufferSize_, 0.0);
 }
 
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignCo2InGas(const unsigned globalDofIdx, const Co2InGasInput& v)
+{
+    const Scalar massGas = (1.0 - v.xgW) * v.pv * v.rhog;
+    if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
+        this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] = massGas * v.sg;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhase].empty()) {
+        this->fip_[Inplace::Phase::CO2MassInGasPhase][globalDofIdx] = massGas * v.sg;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty()) {
+        const Scalar imMobileGas = massGas / v.mM * std::min(v.sgcr , v.sg);
+        this->fip_[Inplace::Phase::CO2InGasPhaseInMob][globalDofIdx] = imMobileGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty()) {
+        const Scalar mobileGas = massGas / v.mM * std::max(Scalar{0.0}, v.sg - v.sgcr);
+        this->fip_[Inplace::Phase::CO2InGasPhaseMob][globalDofIdx] = mobileGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg].empty()) {
+        if (v.sgcr >= v.sg) {
+            const Scalar imMobileGasKrg = massGas / v.mM * v.sg;
+            this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg][globalDofIdx] = imMobileGasKrg;
+        } else {
+            this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg][globalDofIdx] = 0;
+        }
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg].empty()) {
+        if (v.sg > v.sgcr) {
+            const Scalar mobileGasKrg = massGas / v.mM * v.sg;
+            this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg][globalDofIdx] = mobileGasKrg;
+        } else {
+            this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg][globalDofIdx] = 0;
+        }
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob].empty()) {
+        const Scalar imMobileMassGas = massGas * std::min(v.sgcr , v.sg);
+        this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob][globalDofIdx] = imMobileMassGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMob].empty()) {
+        const Scalar mobileMassGas = massGas * std::max(Scalar{0.0}, v.sg - v.sgcr);
+        this->fip_[Inplace::Phase::CO2MassInGasPhaseMob][globalDofIdx] = mobileMassGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg].empty()) {
+        if (v.sgcr >= v.sg) {
+            const Scalar imMobileMassGasKrg = massGas * v.sg;
+            this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg][globalDofIdx] = imMobileMassGasKrg;
+        } else {
+            this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg][globalDofIdx] = 0;
+        }
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg].empty()) {
+        if (v.sg > v.sgcr) {
+            const Scalar mobileMassGasKrg = massGas * v.sg;
+            this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg][globalDofIdx] = mobileMassGasKrg;
+        } else {
+            this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg][globalDofIdx] = 0;
+        }
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped].empty()) {
+        const Scalar imMobileMassGas = massGas * std::min(v.trappedGas, v.sg);
+        this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped][globalDofIdx] = imMobileMassGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped].empty()) {
+        const Scalar mobileMassGas = massGas * std::max(Scalar{0.0}, v.sg - v.trappedGas);
+        this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped][globalDofIdx] = mobileMassGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped].empty()) {
+        const Scalar imMobileMassGas = massGas * std::min(v.strandedGas, v.sg);
+        this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped][globalDofIdx] = imMobileMassGas;
+    }
+
+    if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped].empty()) {
+        const Scalar mobileMassGas = massGas * std::max(Scalar{0.0}, v.sg - v.strandedGas);
+        this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped][globalDofIdx] = mobileMassGas;
+    }
+}
+
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
 
 #define INSTANTIATE_TYPE(T) \
