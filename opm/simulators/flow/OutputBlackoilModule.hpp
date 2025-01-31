@@ -1501,20 +1501,7 @@ private:
         }
 
         if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
-            (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty() ||
-             !this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMob].empty() ||
-             !this->fip_[Inplace::Phase::CO2Mass].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhase].empty() ||
-             !this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg].empty() ||
-             !this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped].empty()))
+            this->fipC_.hasCo2InGas())
         {
             this->updateCO2InGas(globalDofIdx, pv, intQuants);
         }
