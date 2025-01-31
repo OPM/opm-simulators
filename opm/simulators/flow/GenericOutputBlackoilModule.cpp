@@ -1756,6 +1756,8 @@ INSTANTIATE_TYPE(float)
     template<class T> using FS##NUM = GenericOilGasFluidSystem<T, NUM>; \
     template class GenericOutputBlackoilModule<FS##NUM<double>>;
 
+INSTANTIATE_COMP(0) // \Note: to register the parameter ForceDisableFluidInPlaceOutput
+
 INSTANTIATE_COMP(2)
 INSTANTIATE_COMP(3)
 INSTANTIATE_COMP(4)
