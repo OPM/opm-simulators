@@ -1427,8 +1427,8 @@ private:
         const auto hydrocarbon = this->hydroCarbonFraction(fs);
 
         if (! this->hydrocarbonPoreVolume_.empty()) {
-            this->fip_[Inplace::Phase::PoreVolume][globalDofIdx] =
-                totVolume * intQuants.referencePorosity();
+            this->fipC_.assignPoreVolume(globalDofIdx,
+                                         totVolume * intQuants.referencePorosity());
 
             this->dynamicPoreVolume_[globalDofIdx] = pv;
             this->hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;

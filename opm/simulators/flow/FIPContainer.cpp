@@ -297,6 +297,15 @@ assignOilGasDistribution(const unsigned globalDofIdx,
     }
 }
 
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignPoreVolume(const unsigned globalDofIdx,
+                 const Scalar   value)
+{
+    this->fip_[Inplace::Phase::PoreVolume][globalDofIdx] = value;
+}
+
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
 
 #define INSTANTIATE_TYPE(T) \
