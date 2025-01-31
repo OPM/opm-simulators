@@ -41,6 +41,7 @@
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
+#include <opm/simulators/wells/BlackoilWellModelNldd.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -1459,64 +1460,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleDomain([[maybe_unused]] const int iterationIdx,
-                   const double dt,
-                   const Domain& domain)
-    {
-        last_report_ = SimulatorReportSingle();
-        Dune::Timer perfTimer;
-        perfTimer.start();
-
-        {
-            const int episodeIdx = simulator_.episodeIndex();
-            const auto& network = this->schedule()[episodeIdx].network();
-            if (!this->wellsActive() && !network.active()) {
-                return;
-            }
-        }
-
-        // We assume that calculateExplicitQuantities() and
-        // prepareTimeStep() have been called already for the entire
-        // well model, so we do not need to do it here (when
-        // iterationIdx is 0).
-
-        DeferredLogger local_deferredLogger;
-        updateWellControlsDomain(local_deferredLogger, domain);
-        initPrimaryVariablesEvaluationDomain(domain);
-        assembleWellEqDomain(dt, domain, local_deferredLogger);
-
-        // TODO: errors here must be caught higher up, as this method is not called in parallel.
-        // We will log errors on rank 0, but not other ranks for now.
-        if (this->terminal_output_) {
-            local_deferredLogger.logMessages();
-        }
-
-        last_report_.converged = true;
-        last_report_.assemble_time_well += perfTimer.stop();
-    }
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
     assembleWellEq(const double dt, DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
         for (auto& well : well_container_) {
             well->assembleWellEq(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
-        }
-    }
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    assembleWellEqDomain(const double dt, const Domain& domain, DeferredLogger& deferred_logger)
-    {
-        for (auto& well : well_container_) {
-            if (this->well_domain_.at(well->name()) == domain.index) {
-                well->assembleWellEq(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
-            }
         }
     }
 
@@ -1623,31 +1571,6 @@ namespace Opm {
         }
     }
 
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    addWellPressureEquationsDomain([[maybe_unused]] PressureMatrix& jacobian,
-                                   [[maybe_unused]] const BVector& weights,
-                                   [[maybe_unused]] const bool use_well_weights,
-                                   [[maybe_unused]] const int domainIndex) const
-    {
-        throw std::logic_error("CPRW is not yet implemented for NLDD subdomains");
-        // To fix this function, rdofs should be the size of the domain, and the nw should be the number of wells in the domain
-        // int nw = this->numLocalWellsEnd(); // should number of wells in the domain
-        // int rdofs = local_num_cells_;  // should be the size of the domain
-        // for ( int i = 0; i < nw; i++ ) {
-        //     int wdof = rdofs + i;
-        //     jacobian[wdof][wdof] = 1.0;// better scaling ?
-        // }
-
-        // for ( const auto& well : well_container_ ) {
-        //     if (well_domain_.at(well->name()) == domainIndex) {
-                   // weights should be the size of the domain
-        //         well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
-        //     }
-        // }
-    }
-
     template <typename TypeTag>
     void BlackoilWellModel<TypeTag>::
     addReservoirSourceTerms(GlobalEqVector& residual,
@@ -1728,30 +1651,13 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    recoverWellSolutionAndUpdateWellStateDomain(const BVector& x, const Domain& domain)
+    recoverWellSolutionAndUpdateWellStateDomain(const BVector& x, const int domainIdx)
     {
-        // Note: no point in trying to do a parallel gathering
-        // try/catch here, as this function is not called in
-        // parallel but for each individual domain of each rank.
-        DeferredLogger local_deferredLogger;
-        for (auto& well : well_container_) {
-            if (this->well_domain_.at(well->name()) == domain.index) {
-                const auto& cells = well->cells();
-                x_local_.resize(cells.size());
+        if (!nldd_) {
+            OPM_THROW(std::logic_error, "Attempt to call NLDD method without a NLDD solver");
+        }
 
-                for (size_t i = 0; i < cells.size(); ++i) {
-                    x_local_[i] = x[cells[i]];
-                }
-                well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_,
-                                                            this->wellState(),
-                                                            local_deferredLogger);
-            }
-        }
-        // TODO: avoid losing the logging information that could
-        // be stored in the local_deferredlogger in a parallel case.
-        if (this->terminal_output_) {
-            local_deferredLogger.logMessages();
-        }
+        return nldd_->recoverWellSolutionAndUpdateWellState(x, domainIdx);
     }
 
 
@@ -1764,68 +1670,6 @@ namespace Opm {
             well->initPrimaryVariablesEvaluation();
         }
     }
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    initPrimaryVariablesEvaluationDomain(const Domain& domain) const
-    {
-        for (auto& well : well_container_) {
-            if (this->well_domain_.at(well->name()) == domain.index) {
-                well->initPrimaryVariablesEvaluation();
-            }
-        }
-    }
-
-
-
-
-
-
-    template<typename TypeTag>
-    ConvergenceReport
-    BlackoilWellModel<TypeTag>::
-    getDomainWellConvergence(const Domain& domain,
-                             const std::vector<Scalar>& B_avg,
-                             DeferredLogger& local_deferredLogger) const
-    {
-        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
-        const bool relax_tolerance = iterationIdx > param_.strict_outer_iter_wells_;
-
-        ConvergenceReport report;
-        for (const auto& well : well_container_) {
-            if ((this->well_domain_.at(well->name()) == domain.index)) {
-                if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                    report += well->getWellConvergence(simulator_,
-                                                       this->wellState(),
-                                                       B_avg,
-                                                       local_deferredLogger,
-                                                       relax_tolerance);
-                } else {
-                    ConvergenceReport xreport;
-                    using CR = ConvergenceReport;
-                    xreport.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
-                    report += xreport;
-                }
-            }
-        }
-
-        // Log debug messages for NaN or too large residuals.
-        if (this->terminal_output_) {
-            for (const auto& f : report.wellFailures()) {
-                if (f.severity() == ConvergenceReport::Severity::NotANumber) {
-                    local_deferredLogger.debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
-                } else if (f.severity() == ConvergenceReport::Severity::TooLarge) {
-                    local_deferredLogger.debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
-                }
-            }
-        }
-        return report;
-    }
-
-
-
 
 
     template<typename TypeTag>
@@ -1993,29 +1837,6 @@ namespace Opm {
 
         return { changed_well_group, more_network_update };
     }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    updateWellControlsDomain(DeferredLogger& deferred_logger, const Domain& domain)
-    {
-        if ( !this->wellsActive() ) return ;
-
-        // TODO: decide on and implement an approach to handling of
-        // group controls, network and similar for domain solves.
-
-        // Check only individual well constraints and communicate.
-        for (const auto& well : well_container_) {
-            if (this->well_domain_.at(well->name()) == domain.index) {
-                const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
-                well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-            }
-        }
-    }
-
-
-
-
 
     template<typename TypeTag>
     void
@@ -2502,87 +2323,6 @@ namespace Opm {
                 well_info.communication().sum(weighted.data(), 2);
                 this->wellState().well(wellID).temperature = weighted_temperature / total_weight;
             }
-        }
-    }
-
-
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    setupDomains(const std::vector<Domain>& domains)
-    {
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        // TODO: This loop nest may be slow for very large numbers of
-        // domains and wells, but that has not been observed on tests so
-        // far.  Using the partition vector instead would be faster if we
-        // need to change.
-        for (const auto& wellPtr : this->well_container_) {
-            const int first_well_cell = wellPtr->cells().front();
-            for (const auto& domain : domains) {
-                auto cell_present = [&domain](const auto cell)
-                {
-                    return std::binary_search(domain.cells.begin(),
-                                              domain.cells.end(), cell);
-                };
-
-                if (cell_present(first_well_cell)) {
-                    // Assuming that if the first well cell is found in a domain,
-                    // then all of that well's cells are in that same domain.
-                    this->well_domain_[wellPtr->name()] = domain.index;
-
-                    // Verify that all of that well's cells are in that same domain.
-                    for (int well_cell : wellPtr->cells()) {
-                        if (! cell_present(well_cell)) {
-                            OPM_THROW(std::runtime_error,
-                                      fmt::format("Well '{}' found on multiple domains.",
-                                                  wellPtr->name()));
-                        }
-                    }
-                }
-            }
-        }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::setupDomains(): well found on multiple domains.",
-                                   simulator_.gridView().comm());
-
-        // Write well/domain info to the DBG file.
-        const Opm::Parallel::Communication& comm = grid().comm();
-        const int rank = comm.rank();
-        DeferredLogger local_log;
-        if (!this->well_domain_.empty()) {
-            std::ostringstream os;
-            os << "Well name      Rank      Domain\n";
-            for (const auto& [wname, domain] : this->well_domain_) {
-                os << wname << std::setw(19 - wname.size()) << rank << std::setw(12) << domain << '\n';
-            }
-            local_log.debug(os.str());
-        }
-        auto global_log = gatherDeferredLogger(local_log, comm);
-        if (this->terminal_output_) {
-            global_log.logMessages();
-        }
-
-        // Pre-calculate the local cell indices for each well
-        well_local_cells_.clear();
-        well_local_cells_.reserve(well_container_.size(), 10);
-        std::vector<int> local_cells;
-        for (const auto& well : well_container_) {
-            const auto& global_cells = well->cells();
-            const int domain_index = this->well_domain_.at(well->name());
-            const auto& domain_cells = domains[domain_index].cells;
-            local_cells.resize(global_cells.size());
-
-            // find the local cell index for each well cell in the domain
-            // assume domain_cells is sorted
-            for (size_t i = 0; i < global_cells.size(); ++i) {
-                auto it = std::lower_bound(domain_cells.begin(), domain_cells.end(), global_cells[i]);
-                if (it != domain_cells.end() && *it == global_cells[i]) {
-                    local_cells[i] = std::distance(domain_cells.begin(), it);
-                } else {
-                    OPM_THROW(std::runtime_error, fmt::format("Cell {} not found in domain {}",
-                                                              global_cells[i], domain_index));
-                }
-            }
-            well_local_cells_.appendRow(local_cells.begin(), local_cells.end());
         }
     }
 } // namespace Opm
