@@ -227,6 +227,7 @@ public:
         }
 
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
+                             this->addCorners(), this->numOverlap(),
                              this->partitionMethod(), this->serialPartitioning(),
                              this->enableDistributedWells(),
                              this->allow_splitting_inactive_wells_,
