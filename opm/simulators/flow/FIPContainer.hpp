@@ -77,6 +77,8 @@ public:
         Scalar strandedGas;
     };
 
+    const std::vector<Scalar>& get(const Inplace::Phase phase) const;
+
     bool has(const Inplace::Phase phase) const;
 
     bool hasCo2InGas() const;
