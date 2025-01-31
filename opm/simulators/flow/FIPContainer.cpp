@@ -79,9 +79,18 @@ allocate(const std::size_t bufferSize,
 
 template<class FluidSystem>
 void
-FIPContainer<FluidSystem>::add(const Inplace::Phase phase)
+FIPContainer<FluidSystem>::
+add(const Inplace::Phase phase)
 {
     this->fip_[phase].resize(bufferSize_, 0.0);
+}
+
+template<class FluidSystem>
+const std::vector<typename FIPContainer<FluidSystem>::Scalar>&
+FIPContainer<FluidSystem>::
+get(const Inplace::Phase phase) const
+{
+    return this->fip_.at(phase);
 }
 
 template<class FluidSystem>

@@ -1438,7 +1438,7 @@ private:
             !this->pressureTimesPoreVolume_.empty())
         {
             assert(this->hydrocarbonPoreVolume_.size() == this->pressureTimesHydrocarbonVolume_.size());
-            assert(this->fip_[Inplace::Phase::PoreVolume].size() == this->pressureTimesPoreVolume_.size());
+            assert(this->fipC_.get(Inplace::Phase::PoreVolume).size() == this->pressureTimesPoreVolume_.size());
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 this->pressureTimesPoreVolume_[globalDofIdx] =

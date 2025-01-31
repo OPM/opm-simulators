@@ -1518,10 +1518,7 @@ makeRegionSum(Inplace& inplace,
                    this->dynamicPoreVolume_);
 
     for (const auto& phase : Inplace::phases()) {
-        auto fipPos = this->fip_.find(phase);
-        if (fipPos != this->fip_.end()) {
-            update_inplace(phase, fipPos->second);
-        }
+        update_inplace(phase, this->fipC_.get(phase));
     }
 }
 
