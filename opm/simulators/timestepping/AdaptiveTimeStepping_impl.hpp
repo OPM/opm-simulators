@@ -189,13 +189,13 @@ setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave)
 }
 #endif
 
+
 /** \brief  step method that acts like the solver::step method
             in a sub cycle of time steps
     \param tuningUpdater Function used to update TUNING parameters before each
                          time step. ACTIONX might change tuning.
 */
 template<class TypeTag>
-template <class Solver>
 SimulatorReport
 AdaptiveTimeStepping<TypeTag>::
 step(const SimulatorTimer& simulator_timer,
@@ -207,8 +207,8 @@ step(const SimulatorTimer& simulator_timer,
                              )> tuning_updater
 )
 {
-    SubStepper<Solver> sub_stepper{
-        *this, simulator_timer, solver, is_event, tuning_updater,
+    SubStepper sub_stepper{
+        *this, solver, simulator_timer, is_event, tuning_updater,
     };
     return sub_stepper.run();
 }
@@ -426,12 +426,11 @@ init_(const UnitSystem& unitSystem)
  ************************************************/
 
 template<class TypeTag>
-template<class Solver>
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 SubStepper(
     AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
-    const SimulatorTimer& simulator_timer,
     Solver& solver,
+    const SimulatorTimer& simulator_timer,
     const bool is_event,
     const std::function<bool(const double /*current_time*/,
                              const double /*dt*/,
@@ -440,26 +439,25 @@ SubStepper(
 
 )
     : adaptive_time_stepping_{adaptive_time_stepping}
-    , simulator_timer_{simulator_timer}
     , solver_{solver}
+    , simulator_timer_{simulator_timer}
     , is_event_{is_event}
     , tuning_updater_{tuning_updater}
+    , simulator_{solver.model().simulator()}
 {
 }
 
 template<class TypeTag>
-template<class Solver>
 AdaptiveTimeStepping<TypeTag>&
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 getAdaptiveTimerStepper()
 {
     return adaptive_time_stepping_;
 }
 
 template<class TypeTag>
-template<class Solver>
 SimulatorReport
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 run()
 {
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -483,27 +481,24 @@ run()
 
 
 template<class TypeTag>
-template<class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 isReservoirCouplingMaster_() const
 {
-    return this->adaptive_time_stepping_.reservoir_coupling_master_ != nullptr;
+    return this->simulator_.reservoirCouplingMaster() != nullptr;
 }
 
 template<class TypeTag>
-template<class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 isReservoirCouplingSlave_() const
 {
-    return this->adaptive_time_stepping_.reservoir_coupling_slave_ != nullptr;
+    return this->simulator_.reservoirCouplingSlave() != nullptr;
 }
 
 template<class TypeTag>
-template<class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_step)
 {
     this->adaptive_time_stepping_.maybeModifySuggestedTimeStepAtBeginningOfReportStep_(
@@ -515,27 +510,24 @@ maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_
 // It has to be called for each substep since TUNING might have been changed for next sub step due
 // to ACTIONX (via NEXTSTEP) or WCYCLE keywords.
 template<class TypeTag>
-template<class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 maybeUpdateTuning_(double elapsed, double dt, int sub_step_number) const
 {
     return this->tuning_updater_(elapsed, dt, sub_step_number);
 }
 
 template<class TypeTag>
-template<class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 maxTimeStep_() const
 {
     return this->adaptive_time_stepping_.max_time_step_;
 }
 
 template <class TypeTag>
-template <class Solver>
 SimulatorReport
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 runStepOriginal_()
 {
     auto elapsed = this->simulator_timer_.simulationTimeElapsed();
@@ -552,29 +544,27 @@ runStepOriginal_()
         report_step,
         maxTimeStep_()
     };
-    SubStepIteration<Solver> substepIteration{*this, substep_timer, original_time_step, /*final_step=*/true};
+    SubStepIteration substepIteration{*this, substep_timer, original_time_step, /*final_step=*/true};
     return substepIteration.run();
 }
 
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
-template <class Solver>
 ReservoirCouplingMaster&
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 reservoirCouplingMaster_()
 {
-    return *adaptive_time_stepping_.reservoir_coupling_master_;
+    return *(this->simulator_.reservoirCouplingMaster());
 }
 #endif
 
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
-template <class Solver>
 ReservoirCouplingSlave&
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 reservoirCouplingSlave_()
 {
-    return *this->adaptive_time_stepping_.reservoir_coupling_slave_;
+    return *(this->simulator_.reservoirCouplingSlave());
 }
 #endif
 
@@ -610,9 +600,8 @@ reservoirCouplingSlave_()
 // report step.
 
 template <class TypeTag>
-template <class Solver>
 SimulatorReport
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 runStepReservoirCouplingMaster_()
 {
     bool substep_done = false;
@@ -644,7 +633,7 @@ runStepReservoirCouplingMaster_()
         bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + current_step_length, step_end_time
         );
-        SubStepIteration<Solver> substepIteration{*this, substep_timer, current_step_length, final_step};
+        SubStepIteration substepIteration{*this, substep_timer, current_step_length, final_step};
         auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
         current_time += current_step_length;
@@ -659,9 +648,8 @@ runStepReservoirCouplingMaster_()
 
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <class TypeTag>
-template <class Solver>
 SimulatorReport
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 runStepReservoirCouplingSlave_()
 {
     bool substep_done = false;
@@ -688,7 +676,7 @@ runStepReservoirCouplingSlave_()
         bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + timestep, step_end_time
         );
-        SubStepIteration<Solver> substepIteration{*this, substep_timer, timestep, final_step};
+        SubStepIteration substepIteration{*this, substep_timer, timestep, final_step};
         auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
         current_time += timestep;
@@ -704,9 +692,8 @@ runStepReservoirCouplingSlave_()
 #endif
 
 template <class TypeTag>
-template <class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepper::
 suggestedNextTimestep_() const
 {
     return this->adaptive_time_stepping_.suggestedNextStep();
@@ -719,10 +706,9 @@ suggestedNextTimestep_() const
  ************************************************/
 
 template<class TypeTag>
-template<class Solver>
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 SubStepIteration(
-    SubStepper<Solver>& substepper,
+    SubStepper& substepper,
     AdaptiveSimulatorTimer& substep_timer,
     const double original_time_step,
     bool final_step
@@ -736,9 +722,8 @@ SubStepIteration(
 }
 
 template <class TypeTag>
-template <class Solver>
 SimulatorReport
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 run()
 {
     auto& simulator = solver_().model().simulator();
@@ -824,9 +809,8 @@ run()
 
 
 template<class TypeTag>
-template<class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 checkContinueOnUnconvergedSolution_(double dt) const
 {
     bool continue_on_uncoverged_solution = ignoreConvergenceFailure_() && dt <= minTimeStep_();
@@ -843,9 +827,8 @@ checkContinueOnUnconvergedSolution_(double dt) const
 }
 
 template<class TypeTag>
-template<class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 checkTimeStepMaxRestartLimit_(const int restarts) const
 {
    // If we have restarted (i.e. cut the timestep) too
@@ -863,9 +846,8 @@ checkTimeStepMaxRestartLimit_(const int restarts) const
 }
 
 template<class TypeTag>
-template<class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 checkTimeStepMinLimit_(const int new_time_step) const
 {
     // If we have restarted (i.e. cut the timestep) too
@@ -885,9 +867,8 @@ checkTimeStepMinLimit_(const int new_time_step) const
 }
 
 template<class TypeTag>
-template<class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 chopTimeStep_(const double new_time_step)
 {
     setTimeStep_(new_time_step);
@@ -900,9 +881,8 @@ chopTimeStep_(const double new_time_step)
 }
 
 template<class TypeTag>
-template<class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 chopTimeStepOrCloseFailingWells_(const int new_time_step)
 {
     bool wells_shut = false;
@@ -956,18 +936,16 @@ chopTimeStepOrCloseFailingWells_(const int new_time_step)
 }
 
 template<class TypeTag>
-template<class Solver>
 boost::posix_time::ptime
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 currentDateTime_() const
 {
     return simulatorTimer_().currentDateTime();
 }
 
 template<class TypeTag>
-template<class Solver>
 int
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 getNumIterations_(const SimulatorReportSingle &substep_report) const
 {
     if (useNewtonIteration_()) {
@@ -979,36 +957,32 @@ getNumIterations_(const SimulatorReportSingle &substep_report) const
 }
 
 template<class TypeTag>
-template<class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 growthFactor_() const
 {
     return this->adaptive_time_stepping_.growth_factor_;
 }
 
 template<class TypeTag>
-template<class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 ignoreConvergenceFailure_() const
 {
     return adaptive_time_stepping_.ignore_convergence_failure_;
 }
 
 template<class TypeTag>
-template<class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 maxGrowth_() const
 {
     return this->adaptive_time_stepping_.max_growth_;
 }
 
 template<class TypeTag>
-template<class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 maybeReportSubStep_(SimulatorReportSingle substep_report) const
 {
     if (timeStepVerbose_()) {
@@ -1019,9 +993,8 @@ maybeReportSubStep_(SimulatorReportSingle substep_report) const
 }
 
 template<class TypeTag>
-template<class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 maybeRestrictTimeStepGrowth_(const double dt, double dt_estimate, const int restarts) const
 {
     // limit the growth of the timestep size by the growth factor
@@ -1039,9 +1012,8 @@ maybeRestrictTimeStepGrowth_(const double dt, double dt_estimate, const int rest
 // It has to be called for each substep since TUNING might have been changed for next sub step due
 // to ACTIONX (via NEXTSTEP) or WCYCLE keywords.
 template<class TypeTag>
-template<class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 maybeUpdateTuningAndTimeStep_()
 {
     // TODO: This function is currently only called if NEXTSTEP is activated from ACTIONX or
@@ -1066,36 +1038,32 @@ maybeUpdateTuningAndTimeStep_()
 }
 
 template<class TypeTag>
-template<class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 minTimeStepBeforeClosingWells_() const
 {
     return this->adaptive_time_stepping_.min_time_step_before_shutting_problematic_wells_;
 }
 
 template<class TypeTag>
-template<class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 minTimeStep_() const
 {
     return this->adaptive_time_stepping_.min_time_step_;
 }
 
 template<class TypeTag>
-template<class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 restartFactor_() const
 {
     return this->adaptive_time_stepping_.restart_factor_;
 }
 
 template<class TypeTag>
-template<class Solver>
 SimulatorReportSingle
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 runSubStep_()
 {
     SimulatorReportSingle substep_report;
@@ -1147,18 +1115,16 @@ runSubStep_()
 }
 
 template<class TypeTag>
-template<class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 setTimeStep_(double dt_estimate)
 {
     this->substep_timer_.provideTimeStepEstimate(dt_estimate);
 }
 
 template<class TypeTag>
-template<class Solver>
-Solver&
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+typename AdaptiveTimeStepping<TypeTag>::Solver&
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 solver_() const
 {
     return this->substepper_.solver_;
@@ -1166,75 +1132,67 @@ solver_() const
 
 
 template<class TypeTag>
-template<class Solver>
 int
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 solverRestartMax_() const
 {
     return this->adaptive_time_stepping_.solver_restart_max_;
 }
 
 template<class TypeTag>
-template<class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 setSuggestedNextStep_(double step)
 {
     this->adaptive_time_stepping_.setSuggestedNextStep(step);
 }
 
 template <class TypeTag>
-template <class Solver>
 const SimulatorTimer&
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 simulatorTimer_() const
 {
     return this->substepper_.simulator_timer_;
 }
 
 template <class TypeTag>
-template <class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 solverVerbose_() const
 {
     return this->adaptive_time_stepping_.solver_verbose_;
 }
 
 template<class TypeTag>
-template<class Solver>
 boost::posix_time::ptime
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 startDateTime_() const
 {
     return simulatorTimer_().startDateTime();
 }
 
 template <class TypeTag>
-template <class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 suggestedNextTimestep_() const
 {
     return this->adaptive_time_stepping_.suggestedNextStep();
 }
 
 template <class TypeTag>
-template <class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 timeStepControlComputeEstimate_(const double dt, const int iterations, double elapsed) const
 {
     // create object to compute the time error, simply forwards the call to the model
-    SolutionTimeErrorSolverWrapper<Solver> relative_change{solver_()};
+    SolutionTimeErrorSolverWrapper relative_change{solver_()};
     return this->adaptive_time_stepping_.time_step_control_->computeTimeStepSize(
         dt, iterations, relative_change, elapsed);
 }
 
 template <class TypeTag>
-template <class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 timeStepVerbose_() const
 {
     return this->adaptive_time_stepping_.timestep_verbose_;
@@ -1248,9 +1206,8 @@ timeStepVerbose_() const
 // (and the begginning of each report step). Note that the WCYCLE keyword can also update the
 // suggested time step via the maybeUpdateTuning_() method.
 template <class TypeTag>
-template <class Solver>
 void
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 updateSuggestedNextStep_()
 {
     auto suggested_next_step = this->substep_timer_.currentStepLength();
@@ -1268,18 +1225,16 @@ updateSuggestedNextStep_()
 }
 
 template <class TypeTag>
-template <class Solver>
 bool
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 useNewtonIteration_() const
 {
     return this->adaptive_time_stepping_.use_newton_iteration_;
 }
 
 template <class TypeTag>
-template <class Solver>
 double
-AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
+AdaptiveTimeStepping<TypeTag>::SubStepIteration::
 writeOutput_() const
 {
     time::StopWatch perf_timer;
@@ -1294,16 +1249,14 @@ writeOutput_() const
  * **********************************************/
 
 template<class TypeTag>
-template<class Solver>
-AdaptiveTimeStepping<TypeTag>::SolutionTimeErrorSolverWrapper<Solver>::SolutionTimeErrorSolverWrapper(
+AdaptiveTimeStepping<TypeTag>::SolutionTimeErrorSolverWrapper::SolutionTimeErrorSolverWrapper(
     const Solver& solver
 )
     : solver_{solver}
 {}
 
 template<class TypeTag>
-template<class Solver>
-double AdaptiveTimeStepping<TypeTag>::SolutionTimeErrorSolverWrapper<Solver>::relativeChange() const
+double AdaptiveTimeStepping<TypeTag>::SolutionTimeErrorSolverWrapper::relativeChange() const
 {
     // returns:   || u^n+1 - u^n || / || u^n+1 ||
     return solver_.model().relativeChange();

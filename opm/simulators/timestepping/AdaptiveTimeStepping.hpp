@@ -13,6 +13,7 @@
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -79,8 +80,11 @@ template<class TypeTag>
 class AdaptiveTimeStepping
 {
 private:
+    using Model = GetPropType<TypeTag, Properties::Model>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    template <class Solver>
+    using Solver = NonlinearSolver<TypeTag, Model>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+
     class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
     {
     public:
@@ -91,25 +95,21 @@ private:
         const Solver& solver_;
     };
 
-    // Forward declaration of SubStepIteration
-    // TODO: This forward declaration is not enough for GCC version 9.4.0 (released June 2021),
-    //  but it works fine with GCC version 13.2.0 (released July 2023).
-    template <class Solver> class SubStepIteration;
+    class SubStepIteration;
 
-    template <class Solver>
     class SubStepper {
     public:
         SubStepper(
             AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
+            Solver &solver,
             const SimulatorTimer& simulator_timer,
-            Solver& solver,
             const bool is_event,
             const std::function<bool(const double, const double, const int)>& tuning_updater
         );
 
         AdaptiveTimeStepping<TypeTag>& getAdaptiveTimerStepper();
         SimulatorReport run();
-        friend class AdaptiveTimeStepping<TypeTag>::template SubStepIteration<Solver>;
+        friend class AdaptiveTimeStepping<TypeTag>::SubStepIteration;
 
     private:
         bool isReservoirCouplingMaster_() const;
@@ -127,17 +127,17 @@ private:
         double suggestedNextTimestep_() const;
 
         AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping_;
-        const SimulatorTimer& simulator_timer_;
         Solver& solver_;
+        const SimulatorTimer& simulator_timer_;
         const bool is_event_;
         const std::function<bool(double elapsed, double dt, int sub_step_number)>& tuning_updater_;
+        Simulator& simulator_;
     };
 
-    template <class Solver>
     class SubStepIteration {
     public:
         SubStepIteration(
-            SubStepper<Solver>& substepper,
+            SubStepper& substepper,
             AdaptiveSimulatorTimer& substep_timer,
             const double original_time_step,
             const bool final_step
@@ -179,7 +179,7 @@ private:
         bool useNewtonIteration_() const;
         double writeOutput_() const;
 
-        SubStepper<Solver>& substepper_;
+        SubStepper& substepper_;
         AdaptiveSimulatorTimer& substep_timer_;
         const double original_time_step_;
         const bool final_step_;
@@ -209,10 +209,10 @@ public:
     void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master);
     void setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave);
 #endif
+
     void setSuggestedNextStep(const double x);
     double suggestedNextStep() const;
 
-    template <class Solver>
     SimulatorReport step(const SimulatorTimer& simulator_timer,
                          Solver& solver,
                          const bool is_event,
