@@ -49,6 +49,8 @@ public:
               const CompWellState* prev_well_state = nullptr);
 
     const SingleCompWellState<Scalar>& operator[](const std::string& well_name) const;
+
+    SingleCompWellState<Scalar>& operator[](const std::string& well_name);
 private:
     WellContainer<SingleCompWellState<Scalar>> wells_;
 
