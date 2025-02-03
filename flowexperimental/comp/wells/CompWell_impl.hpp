@@ -388,16 +388,45 @@ void
 CompWell<TypeTag>::
 assembleWellEq(const Simulator& simulator,
                const double dt,
+               const Well::InjectionControls& inj_controls,
+               const Well::ProductionControls& prod_controls,
                const SingleCompWellState<Scalar>& well_state)
 {
     this->well_equations_.clear();
 
     this->updateSecondaryQuantities(simulator);
 
+    assembleSourceTerm(dt);
+
     std::vector<EvalWell> connection_rates(FluidSystem::numComponents, 0.);
     calculateSingleConnectionRate(simulator, connection_rates);
 
-    assembleSourceTerm(dt);
+    std::cout << " NumComponents " << FluidSystem::numComponents << std::endl;
+    const unsigned cell_idx = this->well_cells_[0];
+    // assebmle the well equations related to the produciton/injection mass rates for each component
+    for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+        // the signs need to be checked
+        this->well_equations_.residual()[0][comp_idx] -= connection_rates[comp_idx].value();
+        for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
+            // C, needs the cell_idx
+            this->well_equations_.C()[0][cell_idx][pvIdx][comp_idx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.D()[0][0][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+        }
+
+        for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numResEq; ++pvIdx) {
+            this->well_equations_.D()[0][cell_idx][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx);
+        }
+    }
+
+    // assemble the well equations related to the well control equations
+    // currently we are dealiing with BHP control equations only
+    const Scalar bhp_limit = this->well_ecl_.isInjector() ? inj_controls.bhp_limit : prod_controls.bhp_limit;
+    const EvalWell control_eq = this->primary_variables_.getBhp() - bhp_limit;
+
+    this->well_equations_.residual()[0][PrimaryVariables::Bhp] = control_eq.value();
+    for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
+        this->well_equations_.D()[0][0][PrimaryVariables::Bhp][pvIdx] = control_eq.derivative(pvIdx + PrimaryVariables::numResEq);
+    }
 
     // there will be num_comp mass balance equations for each component and one for the well control equations
     // for the mass balance equations, it will be the sum of the connection rates for each component,
@@ -418,18 +447,15 @@ assembleSourceTerm(const Scalar dt)
     for (unsigned  comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
         component_mass_rates[comp_idx] = total_mass_rate * this->surface_conditions_.massFraction(comp_idx);
     }
-//    std::array<EvalWell, FluidSystem::numComponents> mass_fractions;
-//    for (unsigned  comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-//        mass_fractions[comp_idx] = this->surface_conditions_.massFraction(comp_idx);
-//    }
 
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-        EvalWell residual = (this->new_component_masses_[comp_idx] - this->component_masses_[comp_idx]) / dt;
+        const EvalWell residual = (this->new_component_masses_[comp_idx] - this->component_masses_[comp_idx]) / dt + component_mass_rates[comp_idx];
+        // let us put it in the well equation
+        for (int pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
+            this->well_equations_.D()[0][0][comp_idx][pvIdx] += residual.derivative(pvIdx + PrimaryVariables::numResEq);
+        }
+        this->well_equations_.residual()[0][comp_idx] = residual.value();
     }
-
-    // The source term will be  M - M0 / dt + Q;
-    // then we need to incoporate the connection rates for each component
-
 }
 
 } // end of namespace Opm
