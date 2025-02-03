@@ -325,6 +325,7 @@ namespace Opm
                                     const WellState<Scalar>& well_state) const;
 
         bool computeWellPotentialsImplicit(const Simulator& ebos_simulator,
+                                           const WellState<Scalar>& well_state,
                                            std::vector<Scalar>& well_potentials,
                                            DeferredLogger& deferred_logger) const;               
 
