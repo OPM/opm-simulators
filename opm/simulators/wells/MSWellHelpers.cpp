@@ -54,12 +54,14 @@ ValueType haalandFormular(const ValueType& re,
                           const Scalar diameter,
                           const Scalar roughness)
 {
-    const ValueType value = -3.6 * log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
-
-    // sqrt(1/f) should be non-positive
-    assert(value >= 0.0);
-
-    return 1. / (value * value);
+    // Since we currently do not guard for high roughness values in input we can end up with unrealistic friction factors.
+    // In particular, there could be a singularity in f(Re) if 1 \in image(X) in log10(X) below. In calculations we therefore
+    // limit the relative roughness to ensure the singularity never occurs in the relevant range (Re >= 4000).
+    assert( re >= 4000. );
+    constexpr Scalar MAX_REL_ROUGHNESS = 3.7 * std::pow((1.0 - 1.0e-6) - 6.9/4000.0, 9. / 10.);
+    const Scalar rel_roughness = std::min(MAX_REL_ROUGHNESS, roughness/diameter);
+    const ValueType value = -3.6 * log10(6.9 / re + std::pow(rel_roughness / 3.7, 10. / 9.) );
+    return 1.0 / (value*value);
 }
 
 // water in oil emulsion viscosity
