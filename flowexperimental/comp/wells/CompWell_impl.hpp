@@ -98,7 +98,7 @@ calculateExplicitQuantities(const Simulator& simulator,
                                           gas_mass_fractions[compidx] * density_gas * Sg) * wellbore_volume;
         }
     }
-    assembleWellEq(simulator, 1.0, well_state);
+    // assembleWellEq(simulator, 1.0, well_state);
 }
 
 template <typename TypeTag>
@@ -428,6 +428,7 @@ assembleWellEq(const Simulator& simulator,
         this->well_equations_.D()[0][0][PrimaryVariables::Bhp][pvIdx] = control_eq.derivative(pvIdx + PrimaryVariables::numResEq);
     }
 
+    this->well_equations_.invert();
     // there will be num_comp mass balance equations for each component and one for the well control equations
     // for the mass balance equations, it will be the sum of the connection rates for each component,
     // add minus the production rate for each component, will equal to the mass change for each component
@@ -456,6 +457,69 @@ assembleSourceTerm(const Scalar dt)
         }
         this->well_equations_.residual()[0][comp_idx] = residual.value();
     }
+}
+
+template <typename TypeTag>
+bool
+CompWell<TypeTag>::
+iterateWellEq(const Simulator& simulator,
+              const Scalar dt,
+              SingleCompWellState<Scalar>& well_state)
+{
+    constexpr int max_iter = 20;
+    const auto& summary_state = simulator.vanguard().summaryState();
+    const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+    const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+
+    int it = 0;
+    bool converged = false;
+
+    do {
+        assembleWellEq(simulator, dt, inj_controls, prod_controls, well_state);
+
+        std::cout << std::endl << " residuals ";
+        for (const auto& val : this->well_equations_.residual()[0]) {
+            std::cout << val << " ";
+        }
+        std::cout << std::endl;
+
+        // get convergence
+        converged = true;
+        for (const auto& val : this->well_equations_.residual()[0]) {
+            converged = converged && (std::abs(val) < 1.e-6);
+        }
+
+        if (converged) {
+            break;
+        }
+
+        ++it;
+
+        solveEqAndUpdateWellState(simulator, well_state);
+
+    } while (it < max_iter);
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+solveEqAndUpdateWellState(const Simulator& simulator,
+                          SingleCompWellState<Scalar>& well_state)
+{
+   BVectorWell dx_well(1);
+
+   this->well_equations_.solve(dx_well);
+
+   this->updatePrimaryVariablesNewton(dx_well);
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updatePrimaryVariablesNewton(const BVectorWell& dwells)
+{
+    this->primary_variables_.updateNewton(dwells);
+
 }
 
 } // end of namespace Opm
