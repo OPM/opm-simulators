@@ -53,6 +53,15 @@ public:
     virtual void updatePrimaryVariables(const Simulator& simulator,
                                         const SingleCompWellState<Scalar>& well_state) = 0;
 
+    // TODO: not sure this funciton will be used
+    // but leaviing it here for protoyping purpsoe
+    void solveWellEq(const Simulator& simulator,
+                     SingleCompWellState<Scalar>& well_state);
+
+    virtual bool iterateWellEq(const Simulator& simulator,
+                               const Scalar dt,
+                               SingleCompWellState<Scalar>& well_state) = 0;
+
 protected:
 
     const Well& well_ecl_;

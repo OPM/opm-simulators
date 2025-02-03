@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/simulators/linalg/matrixblock.hh>
+
 namespace Opm
 {
 
@@ -76,6 +78,31 @@ clear()
     duneC_ = 0.0;
     duneD_ = 0.0;
     resWell_ = 0.0;
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
+solve(BVectorWell& dx_well) const
+{
+    invDuneD_.mv(resWell_, dx_well);
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
+invert()
+{
+    try {
+        invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
+        detail::invertMatrix(invDuneD_[0][0]);
+    } catch (NumericalProblem&) {
+        // for singular matrices, use identity as the inverse
+        invDuneD_[0][0] = 0.0;
+        for (std::size_t i = 0; i < invDuneD_[0][0].rows; ++i) {
+           invDuneD_[0][0][i][i] = 1.0;
+        }
+    }
 }
 
 

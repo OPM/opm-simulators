@@ -22,6 +22,8 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <flowexperimental/comp/wells/CompWellEquations.hpp>
+
 #include <array>
 
 namespace Opm {
@@ -52,6 +54,8 @@ public:
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq + numResEq>;
     using Eval = DenseAd::Evaluation<Scalar, numResEq>;
 
+    using BVectorWell = typename CompWellEquations<Scalar, numWellEq, numResEq>::BVectorWell;
+
     // TODO: trying to refactor to avoid duplication
     using FluidStateScalar = CompositionalFluidState<Scalar, FluidSystem>;
     using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
@@ -69,6 +73,8 @@ public:
     EvalWell getTotalRate() const;
 
     static EvalWell extendEval(const Eval& in);
+
+    void updateNewton(const BVectorWell& dwells);
 private:
     std::array<Scalar, numWellEq> value_;
     std::array<EvalWell, numWellEq> evaluation_;

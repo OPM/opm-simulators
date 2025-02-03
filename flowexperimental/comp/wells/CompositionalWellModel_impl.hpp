@@ -40,7 +40,10 @@ beginTimeStep()
     createWellContainer();
     initWellContainer();
     for (auto& well : well_container_) {
-        well->calculateExplicitQuantities(simulator_, comp_well_states_[well->name()]);
+        auto& well_state = comp_well_states_[well->name()];
+        well->calculateExplicitQuantities(simulator_, well_state);
+        well->updateSecondaryQuantities(simulator_);
+        well->solveWellEq(simulator_, well_state);
     }
 }
 

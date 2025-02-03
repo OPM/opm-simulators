@@ -48,6 +48,7 @@ public:
     constexpr static unsigned num_comp = FluidSystem::numComponents;
 
     using EvalWell = typename PrimaryVariables::EvalWell;
+    using BVectorWell = typename WellEquations::BVectorWell;
 
     // TODO: this can be a rate converter role later
     // currently, it has the surface densities for each phase and volume fractions for each phase
@@ -100,6 +101,14 @@ public:
                         const Well::ProductionControls& prod_controls,
                         const SingleCompWellState<Scalar>& well_state);
 
+    bool iterateWellEq(const Simulator& simulator,
+                       const Scalar dt,
+                       SingleCompWellState<Scalar>& well_state);
+
+    void solveEqAndUpdateWellState(const Simulator& simulator,
+                                   SingleCompWellState<Scalar>& well_state);
+
+
 private:
 
     // primary variables
@@ -135,6 +144,8 @@ private:
 
     // TODO: the following assembling functions will be moved to a separate assmeble class
     void assembleSourceTerm(const Scalar dt);
+
+    void updatePrimaryVariablesNewton(const BVectorWell& dwells);
 };
 
 } // end of namespace Opm

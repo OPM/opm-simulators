@@ -79,6 +79,9 @@ public:
         return resWell_;
     }
 
+    void solve(BVectorWell& dx_well) const;
+
+    void invert();
 
 private:
     // two off-diagonal matrices

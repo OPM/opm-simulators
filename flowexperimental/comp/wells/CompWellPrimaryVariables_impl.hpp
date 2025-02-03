@@ -153,4 +153,21 @@ extendEval(const Eval& in)
     return out;
 }
 
+template <typename FluidSystem, typename Indices>
+void
+CompWellPrimaryVariables<FluidSystem, Indices>::
+updateNewton(const BVectorWell& dwells) {
+    std::cout << " the current values ";
+    for (const auto& val : value_) {
+        std::cout << val << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << " dwells ";
+    for (unsigned i = 0; i < dwells[0].size(); ++i) {
+        std::cout << dwells[0][i] << " ";
+    }
+    std::cout << std::endl;
 }
+
+} // end of namespace Opm

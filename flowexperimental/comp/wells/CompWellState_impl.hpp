@@ -123,5 +123,13 @@ operator[](const std::string& well_name) const
     return this->wells_[well_name];
 }
 
+template <typename Scalar>
+SingleCompWellState<Scalar>&
+CompWellState<Scalar>::
+operator[](const std::string& well_name)
+{
+    return this->wells_[well_name];
+}
+
 
 } // end of namespace Opm
