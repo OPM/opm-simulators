@@ -96,6 +96,8 @@ public:
     // TODO: control should be passed in later
     void assembleWellEq(const Simulator& simulator,
                         const double dt,
+                        const Well::InjectionControls& inj_controls,
+                        const Well::ProductionControls& prod_controls,
                         const SingleCompWellState<Scalar>& well_state);
 
 private:

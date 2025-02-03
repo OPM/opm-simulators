@@ -59,6 +59,27 @@ public:
 
     void clear();
 
+    DiagMatWell& D()
+    {
+        return duneD_;
+    }
+
+    OffDiagMatWell& B()
+    {
+        return duneB_;
+    }
+
+    OffDiagMatWell& C()
+    {
+        return duneC_;
+    }
+
+    BVectorWell& residual()
+    {
+        return resWell_;
+    }
+
+
 private:
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
