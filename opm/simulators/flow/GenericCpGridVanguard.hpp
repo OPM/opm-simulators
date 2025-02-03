@@ -158,6 +158,8 @@ protected:
 #if HAVE_MPI
     void doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                         const bool                               ownersFirst,
+                        const bool                               addCorners,
+                        const int                                numOverlap,
                         const Dune::PartitionMethod              partitionMethod,
                         const bool                               serialPartitioning,
                         const bool                               enableDistributedWells,
@@ -177,6 +179,8 @@ private:
 
     void distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
                         const bool                                            ownersFirst,
+                        const bool                                            addCorners,
+                        const int                                             numOverlap,
                         const Dune::PartitionMethod                           partitionMethod,
                         const bool                                            serialPartitioning,
                         const bool                                            enableDistributedWells,
@@ -190,6 +194,8 @@ private:
 
     void distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
                         const bool                                            ownersFirst,
+                        const bool                                            addCorners,
+                        const int                                             numOverlap,
                         const Dune::PartitionMethod                           partitionMethod,
                         const bool                                            serialPartitioning,
                         const bool                                            enableDistributedWells,
