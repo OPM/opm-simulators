@@ -58,7 +58,7 @@ ValueType haalandFormular(const ValueType& re,
     // In particular, there could be a singularity in f(Re) if 1 \in image(X) in log10(X) below. In calculations we therefore
     // limit the relative roughness to ensure the singularity never occurs in the relevant range (Re >= 4000).
     assert( re >= 4000. );
-    constexpr Scalar MAX_REL_ROUGHNESS = 3.7 * std::pow((1.0 - 1.0e-6) - 6.9/4000.0, 9. / 10.);
+    constexpr Scalar MAX_REL_ROUGHNESS = 3.7 * std::pow((1.0 - 1.0e-3) - 6.9/4000.0, 9. / 10.);
     const Scalar rel_roughness = std::min(MAX_REL_ROUGHNESS, roughness/diameter);
     const ValueType value = -3.6 * log10(6.9 / re + std::pow(rel_roughness / 3.7, 10. / 9.) );
     return 1.0 / (value*value);
