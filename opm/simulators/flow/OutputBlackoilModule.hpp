@@ -196,7 +196,7 @@ public:
     void processElementMech(const ElementContext& elemCtx)
     {
         if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
-            if (this->mech_.potentialForce_.empty()) {
+            if (!this->mech_.allocated()) {
                 return;
             }
 
