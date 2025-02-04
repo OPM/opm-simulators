@@ -23,6 +23,12 @@
 #include <config.h>
 #include <opm/simulators/flow/MechContainer.hpp>
 
+#include <opm/output/data/Solution.hpp>
+
+#include <algorithm>
+#include <array>
+#include <tuple>
+
 namespace Opm {
 
 template<class Scalar>
@@ -109,6 +115,73 @@ allocate(const std::size_t bufferSize,
     rstKeywords["LINSTRYZ"] = 0;
 
     allocated_ = true;
+}
+
+template<class Scalar>
+void MechContainer<Scalar>::
+outputRestart(data::Solution& sol) const
+{
+    if (!allocated_) {
+        return;
+    }
+    using DataEntry =
+        std::tuple<std::string, UnitSystem::measure, const std::vector<Scalar>&>;
+
+    auto doInsert = [&sol](const DataEntry&       entry,
+                           const data::TargetType target)
+    {
+        if (std::get<2>(entry).empty()) {
+            return;
+        }
+
+        sol.insert(std::get<std::string>(entry),
+                   std::get<UnitSystem::measure>(entry),
+                   std::move(std::get<2>(entry)),
+                   target);
+    };
+
+    const auto solutionVectors = std::array{
+        DataEntry{"DELSTRXX", UnitSystem::measure::pressure, delstressXX_},
+        DataEntry{"DELSTRYY", UnitSystem::measure::pressure, delstressYY_},
+        DataEntry{"DELSTRZZ", UnitSystem::measure::pressure, delstressZZ_},
+        DataEntry{"DELSTRXY", UnitSystem::measure::pressure, delstressXY_},
+        DataEntry{"DELSTRXZ", UnitSystem::measure::pressure, delstressXZ_},
+        DataEntry{"DELSTRYZ", UnitSystem::measure::pressure, delstressYZ_},
+        DataEntry{"DISPX",    UnitSystem::measure::length,   dispX_},
+        DataEntry{"DISPY",    UnitSystem::measure::length,   dispY_},
+        DataEntry{"DISPZ",    UnitSystem::measure::length,   dispZ_},
+        DataEntry{"FRCSTRXX", UnitSystem::measure::pressure, fracstressXX_},
+        DataEntry{"FRCSTRYY", UnitSystem::measure::pressure, fracstressYY_},
+        DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure, fracstressZZ_},
+        DataEntry{"FRCSTRXY", UnitSystem::measure::pressure, fracstressXY_},
+        DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure, fracstressXZ_},
+        DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure, fracstressYZ_},
+        DataEntry{"LINSTRXX", UnitSystem::measure::pressure, linstressXX_},
+        DataEntry{"LINSTRYY", UnitSystem::measure::pressure, linstressYY_},
+        DataEntry{"LINSTRZZ", UnitSystem::measure::pressure, linstressZZ_},
+        DataEntry{"LINSTRXY", UnitSystem::measure::pressure, linstressXY_},
+        DataEntry{"LINSTRXZ", UnitSystem::measure::pressure, linstressXZ_},
+        DataEntry{"LINSTRYZ", UnitSystem::measure::pressure, linstressYZ_},
+        DataEntry{"MECHPOTF", UnitSystem::measure::pressure, potentialForce_},
+        DataEntry{"PRESPOTF", UnitSystem::measure::pressure, potentialPressForce_},
+        DataEntry{"STRAINXX", UnitSystem::measure::identity, strainXX_},
+        DataEntry{"STRAINYY", UnitSystem::measure::identity, strainYY_},
+        DataEntry{"STRAINZZ", UnitSystem::measure::identity, strainZZ_},
+        DataEntry{"STRAINXY", UnitSystem::measure::identity, strainXY_},
+        DataEntry{"STRAINXZ", UnitSystem::measure::identity, strainXZ_},
+        DataEntry{"STRAINYZ", UnitSystem::measure::identity, strainYZ_},
+        DataEntry{"STRESSXX", UnitSystem::measure::length,   stressXX_},
+        DataEntry{"STRESSYY", UnitSystem::measure::length,   stressYY_},
+        DataEntry{"STRESSZZ", UnitSystem::measure::length,   stressZZ_},
+        DataEntry{"STRESSXY", UnitSystem::measure::length,   stressXY_},
+        DataEntry{"STRESSXZ", UnitSystem::measure::length,   stressXZ_},
+        DataEntry{"STRESSYZ", UnitSystem::measure::length,   stressYZ_},
+        DataEntry{"TEMPPOTF", UnitSystem::measure::pressure, potentialTempForce_},
+    };
+
+    std::for_each(solutionVectors.begin(), solutionVectors.end(),
+                  [doInsert](const auto& array)
+                  { doInsert(array, data::TargetType::RESTART_OPM_EXTENDED); });
 }
 
 template class MechContainer<double>;

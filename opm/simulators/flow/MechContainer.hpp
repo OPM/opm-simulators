@@ -33,6 +33,8 @@
 
 namespace Opm {
 
+namespace data { class Solution; }
+
 template<class Scalar>
 class MechContainer
 {
@@ -41,6 +43,8 @@ class MechContainer
 public:
     void allocate(const std::size_t bufferSize,
                   std::map<std::string, int>& rstKeywords);
+
+    void outputRestart(data::Solution& sol) const;
 
     bool allocated() const
     { return allocated_; }

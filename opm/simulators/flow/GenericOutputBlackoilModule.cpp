@@ -513,22 +513,11 @@ assignToSolution(data::Solution& sol)
     const auto extendedSolutionArrays = std::array {
         DataEntry{"BIOFILM",  UnitSystem::measure::identity,           cBiofilm_},
         DataEntry{"CALCITE",  UnitSystem::measure::identity,           cCalcite_},
-        DataEntry{"DELSTRXX", UnitSystem::measure::pressure,           mech_.delstressXX_},
-        DataEntry{"DELSTRYY", UnitSystem::measure::pressure,           mech_.delstressYY_},
-        DataEntry{"DELSTRZZ", UnitSystem::measure::pressure,           mech_.delstressZZ_},
-        DataEntry{"DELSTRXY", UnitSystem::measure::pressure,           mech_.delstressXY_},
-        DataEntry{"DELSTRXZ", UnitSystem::measure::pressure,           mech_.delstressXZ_},
-        DataEntry{"DELSTRYZ", UnitSystem::measure::pressure,           mech_.delstressYZ_},
-        DataEntry{"DISPX",    UnitSystem::measure::length,             mech_.dispX_},
-        DataEntry{"DISPY",    UnitSystem::measure::length,             mech_.dispY_},
-        DataEntry{"DISPZ",    UnitSystem::measure::length,             mech_.dispZ_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
-        DataEntry{"MECHPOTF", UnitSystem::measure::pressure,           mech_.potentialForce_},
         DataEntry{"MICROBES", UnitSystem::measure::density,            cMicrobes_},
         DataEntry{"OXYGEN",   UnitSystem::measure::density,            cOxygen_},
         DataEntry{"PERMFACT", UnitSystem::measure::identity,           permFact_},
         DataEntry{"PORV_RC",  UnitSystem::measure::identity,           rockCompPorvMultiplier_},
-        DataEntry{"PRESPOTF", UnitSystem::measure::pressure,           mech_.potentialPressForce_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
         DataEntry{"RSW",      UnitSystem::measure::gas_oil_ratio,      rsw_},
         DataEntry{"RSWSAT",   UnitSystem::measure::gas_oil_ratio,      gasDissolutionFactorInWater_},
@@ -542,31 +531,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"STD_CO2",  UnitSystem::measure::identity,           mFracCo2_},
         DataEntry{"STD_GAS",  UnitSystem::measure::identity,           mFracGas_},
         DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
-        DataEntry{"STRAINXX", UnitSystem::measure::identity,           mech_.strainXX_},
-        DataEntry{"STRAINYY", UnitSystem::measure::identity,           mech_.strainYY_},
-        DataEntry{"STRAINZZ", UnitSystem::measure::identity,           mech_.strainZZ_},
-        DataEntry{"STRAINXY", UnitSystem::measure::identity,           mech_.strainXY_},
-        DataEntry{"STRAINXZ", UnitSystem::measure::identity,           mech_.strainXZ_},
-        DataEntry{"STRAINYZ", UnitSystem::measure::identity,           mech_.strainYZ_},
-        DataEntry{"STRESSXX", UnitSystem::measure::pressure,           mech_.stressXX_},
-        DataEntry{"STRESSYY", UnitSystem::measure::pressure,           mech_.stressYY_},
-        DataEntry{"STRESSZZ", UnitSystem::measure::pressure,           mech_.stressZZ_},
-        DataEntry{"STRESSXY", UnitSystem::measure::pressure,           mech_.stressXY_},
-        DataEntry{"STRESSXZ", UnitSystem::measure::pressure,           mech_.stressXZ_},
-        DataEntry{"STRESSYZ", UnitSystem::measure::pressure,           mech_.stressYZ_},
-        DataEntry{"LINSTRXX", UnitSystem::measure::pressure,           mech_.linstressXX_},
-        DataEntry{"LINSTRYY", UnitSystem::measure::pressure,           mech_.linstressYY_},
-        DataEntry{"LINSTRZZ", UnitSystem::measure::pressure,           mech_.linstressZZ_},
-        DataEntry{"LINSTRXY", UnitSystem::measure::pressure,           mech_.linstressXY_},
-        DataEntry{"LINSTRXZ", UnitSystem::measure::pressure,           mech_.linstressXZ_},
-        DataEntry{"LINSTRYZ", UnitSystem::measure::pressure,           mech_.linstressYZ_},
-        DataEntry{"FRCSTRXX", UnitSystem::measure::pressure,           mech_.fracstressXX_},
-        DataEntry{"FRCSTRYY", UnitSystem::measure::pressure,           mech_.fracstressYY_},
-        DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure,           mech_.fracstressZZ_},
-        DataEntry{"FRCSTRXY", UnitSystem::measure::pressure,           mech_.fracstressXY_},
-        DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure,           mech_.fracstressXZ_},
-        DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure,           mech_.fracstressYZ_},
-        DataEntry{"TEMPPOTF", UnitSystem::measure::pressure,           mech_.potentialTempForce_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
         DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
     };
@@ -616,6 +580,8 @@ assignToSolution(data::Solution& sol)
     for (const auto& array : extendedSolutionArrays) {
         doInsert(array, data::TargetType::RESTART_OPM_EXTENDED);
     }
+
+    this->mech_.outputRestart(sol);
 
     if (! this->temperature_.empty())
     {
