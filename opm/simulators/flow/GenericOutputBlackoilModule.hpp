@@ -36,6 +36,7 @@
 #include <opm/simulators/flow/FlowsData.hpp>
 #include <opm/simulators/flow/InterRegFlows.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
+#include <opm/simulators/flow/MechContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -503,43 +504,7 @@ protected:
     ScalarBuffer pcog_;
 
     // buffers for mechanical output
-    ScalarBuffer mechPotentialForce_;
-    ScalarBuffer mechPotentialPressForce_;
-    ScalarBuffer mechPotentialTempForce_;
-
-    ScalarBuffer dispX_;
-    ScalarBuffer dispY_;
-    ScalarBuffer dispZ_;
-    ScalarBuffer stressXX_;
-    ScalarBuffer stressYY_;
-    ScalarBuffer stressZZ_;
-    ScalarBuffer stressXY_;
-    ScalarBuffer stressXZ_;
-    ScalarBuffer stressYZ_;
-    ScalarBuffer delstressXX_;
-    ScalarBuffer delstressYY_;
-    ScalarBuffer delstressZZ_;
-    ScalarBuffer delstressXY_;
-    ScalarBuffer delstressXZ_;
-    ScalarBuffer delstressYZ_;
-    ScalarBuffer linstressXX_;
-    ScalarBuffer linstressYY_;
-    ScalarBuffer linstressZZ_;
-    ScalarBuffer linstressXY_;
-    ScalarBuffer linstressXZ_;
-    ScalarBuffer linstressYZ_;
-    ScalarBuffer fracstressXX_;
-    ScalarBuffer fracstressYY_;
-    ScalarBuffer fracstressZZ_;
-    ScalarBuffer fracstressXY_;
-    ScalarBuffer fracstressXZ_;
-    ScalarBuffer fracstressYZ_;
-    ScalarBuffer strainXX_;
-    ScalarBuffer strainYY_;
-    ScalarBuffer strainZZ_;
-    ScalarBuffer strainXY_;
-    ScalarBuffer strainXZ_;
-    ScalarBuffer strainYZ_;
+    MechContainer<Scalar> mech_;
 
     std::array<ScalarBuffer, numPhases> saturation_;
     std::array<ScalarBuffer, numPhases> invB_;

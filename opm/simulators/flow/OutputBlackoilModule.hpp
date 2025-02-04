@@ -196,7 +196,7 @@ public:
     void processElementMech(const ElementContext& elemCtx)
     {
         if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
-            if (this->mechPotentialForce_.empty()) {
+            if (this->mech_.potentialForce_.empty()) {
                 return;
             }
 
@@ -209,57 +209,57 @@ public:
                 const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
                 // Assume all mechanical things should be written
-                this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
-                this->mechPotentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
-                this->mechPotentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
+                this->mech_.potentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
+                this->mech_.potentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
+                this->mech_.potentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
 
                 const auto disp = model.disp(globalDofIdx, /*include_fracture*/true);
-                this->dispX_[globalDofIdx] = disp[Voigt::XX];
-                this->dispY_[globalDofIdx] = disp[Voigt::YY];
-                this->dispZ_[globalDofIdx] = disp[Voigt::ZZ];
+                this->mech_.dispX_[globalDofIdx] = disp[Voigt::XX];
+                this->mech_.dispY_[globalDofIdx] = disp[Voigt::YY];
+                this->mech_.dispZ_[globalDofIdx] = disp[Voigt::ZZ];
 
                 // Total stress is not stored but calculated result is Voigt notation
                 const auto stress = model.stress(globalDofIdx, /*include_fracture*/true);
-                this->stressXX_[globalDofIdx] = stress[Voigt::XX];
-                this->stressYY_[globalDofIdx] = stress[Voigt::YY];
-                this->stressZZ_[globalDofIdx] = stress[Voigt::ZZ];
-                this->stressXY_[globalDofIdx] = stress[Voigt::XY];
-                this->stressXZ_[globalDofIdx] = stress[Voigt::XZ];
-                this->stressYZ_[globalDofIdx] = stress[Voigt::YZ];
+                this->mech_.stressXX_[globalDofIdx] = stress[Voigt::XX];
+                this->mech_.stressYY_[globalDofIdx] = stress[Voigt::YY];
+                this->mech_.stressZZ_[globalDofIdx] = stress[Voigt::ZZ];
+                this->mech_.stressXY_[globalDofIdx] = stress[Voigt::XY];
+                this->mech_.stressXZ_[globalDofIdx] = stress[Voigt::XZ];
+                this->mech_.stressYZ_[globalDofIdx] = stress[Voigt::YZ];
 
                 const auto strain = model.strain(globalDofIdx, /*include_fracture*/true);
-                this->strainXX_[globalDofIdx] = strain[Voigt::XX];
-                this->strainYY_[globalDofIdx] = strain[Voigt::YY];
-                this->strainZZ_[globalDofIdx] = strain[Voigt::ZZ];
-                this->strainXY_[globalDofIdx] = strain[Voigt::XY];
-                this->strainXZ_[globalDofIdx] = strain[Voigt::XZ];
-                this->strainYZ_[globalDofIdx] = strain[Voigt::YZ];
+                this->mech_.strainXX_[globalDofIdx] = strain[Voigt::XX];
+                this->mech_.strainYY_[globalDofIdx] = strain[Voigt::YY];
+                this->mech_.strainZZ_[globalDofIdx] = strain[Voigt::ZZ];
+                this->mech_.strainXY_[globalDofIdx] = strain[Voigt::XY];
+                this->mech_.strainXZ_[globalDofIdx] = strain[Voigt::XZ];
+                this->mech_.strainYZ_[globalDofIdx] = strain[Voigt::YZ];
 
                 // Not including fracture
                 const auto delstress = model.delstress(globalDofIdx);
-                this->delstressXX_[globalDofIdx] = delstress[Voigt::XX];
-                this->delstressYY_[globalDofIdx] = delstress[Voigt::YY];
-                this->delstressZZ_[globalDofIdx] = delstress[Voigt::ZZ];
-                this->delstressXY_[globalDofIdx] = delstress[Voigt::XY];
-                this->delstressXZ_[globalDofIdx] = delstress[Voigt::XZ];
-                this->delstressYZ_[globalDofIdx] = delstress[Voigt::YZ];
+                this->mech_.delstressXX_[globalDofIdx] = delstress[Voigt::XX];
+                this->mech_.delstressYY_[globalDofIdx] = delstress[Voigt::YY];
+                this->mech_.delstressZZ_[globalDofIdx] = delstress[Voigt::ZZ];
+                this->mech_.delstressXY_[globalDofIdx] = delstress[Voigt::XY];
+                this->mech_.delstressXZ_[globalDofIdx] = delstress[Voigt::XZ];
+                this->mech_.delstressYZ_[globalDofIdx] = delstress[Voigt::YZ];
 
                 const auto linstress = model.linstress(globalDofIdx);
-                this->linstressXX_[globalDofIdx] = linstress[Voigt::XX];
-                this->linstressYY_[globalDofIdx] = linstress[Voigt::YY];
-                this->linstressZZ_[globalDofIdx] = linstress[Voigt::ZZ];
-                this->linstressXY_[globalDofIdx] = linstress[Voigt::XY];
-                this->linstressXZ_[globalDofIdx] = linstress[Voigt::XZ];
-                this->linstressYZ_[globalDofIdx] = linstress[Voigt::YZ];
+                this->mech_.linstressXX_[globalDofIdx] = linstress[Voigt::XX];
+                this->mech_.linstressYY_[globalDofIdx] = linstress[Voigt::YY];
+                this->mech_.linstressZZ_[globalDofIdx] = linstress[Voigt::ZZ];
+                this->mech_.linstressXY_[globalDofIdx] = linstress[Voigt::XY];
+                this->mech_.linstressXZ_[globalDofIdx] = linstress[Voigt::XZ];
+                this->mech_.linstressYZ_[globalDofIdx] = linstress[Voigt::YZ];
 
                 // is the tresagii stress which make rock fracture
                 const auto fracstress = model.fractureStress(globalDofIdx);
-                this->fracstressXX_[globalDofIdx] = fracstress[Voigt::XX];
-                this->fracstressYY_[globalDofIdx] = fracstress[Voigt::YY];
-                this->fracstressZZ_[globalDofIdx] = fracstress[Voigt::ZZ];
-                this->fracstressXY_[globalDofIdx] = fracstress[Voigt::XY];
-                this->fracstressXZ_[globalDofIdx] = fracstress[Voigt::XZ];
-                this->fracstressYZ_[globalDofIdx] = fracstress[Voigt::YZ];
+                this->mech_.fracstressXX_[globalDofIdx] = fracstress[Voigt::XX];
+                this->mech_.fracstressYY_[globalDofIdx] = fracstress[Voigt::YY];
+                this->mech_.fracstressZZ_[globalDofIdx] = fracstress[Voigt::ZZ];
+                this->mech_.fracstressXY_[globalDofIdx] = fracstress[Voigt::XY];
+                this->mech_.fracstressXZ_[globalDofIdx] = fracstress[Voigt::XZ];
+                this->mech_.fracstressYZ_[globalDofIdx] = fracstress[Voigt::YZ];
             }
         }
     }

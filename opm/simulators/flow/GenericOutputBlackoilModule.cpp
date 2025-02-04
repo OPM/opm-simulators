@@ -513,22 +513,22 @@ assignToSolution(data::Solution& sol)
     const auto extendedSolutionArrays = std::array {
         DataEntry{"BIOFILM",  UnitSystem::measure::identity,           cBiofilm_},
         DataEntry{"CALCITE",  UnitSystem::measure::identity,           cCalcite_},
-        DataEntry{"DELSTRXX", UnitSystem::measure::pressure,           delstressXX_},
-        DataEntry{"DELSTRYY", UnitSystem::measure::pressure,           delstressYY_},
-        DataEntry{"DELSTRZZ", UnitSystem::measure::pressure,           delstressZZ_},
-        DataEntry{"DELSTRXY", UnitSystem::measure::pressure,           delstressXY_},
-        DataEntry{"DELSTRXZ", UnitSystem::measure::pressure,           delstressXZ_},
-        DataEntry{"DELSTRYZ", UnitSystem::measure::pressure,           delstressYZ_},
-        DataEntry{"DISPX",    UnitSystem::measure::length,             dispX_},
-        DataEntry{"DISPY",    UnitSystem::measure::length,             dispY_},
-        DataEntry{"DISPZ",    UnitSystem::measure::length,             dispZ_},
+        DataEntry{"DELSTRXX", UnitSystem::measure::pressure,           mech_.delstressXX_},
+        DataEntry{"DELSTRYY", UnitSystem::measure::pressure,           mech_.delstressYY_},
+        DataEntry{"DELSTRZZ", UnitSystem::measure::pressure,           mech_.delstressZZ_},
+        DataEntry{"DELSTRXY", UnitSystem::measure::pressure,           mech_.delstressXY_},
+        DataEntry{"DELSTRXZ", UnitSystem::measure::pressure,           mech_.delstressXZ_},
+        DataEntry{"DELSTRYZ", UnitSystem::measure::pressure,           mech_.delstressYZ_},
+        DataEntry{"DISPX",    UnitSystem::measure::length,             mech_.dispX_},
+        DataEntry{"DISPY",    UnitSystem::measure::length,             mech_.dispY_},
+        DataEntry{"DISPZ",    UnitSystem::measure::length,             mech_.dispZ_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
-        DataEntry{"MECHPOTF", UnitSystem::measure::pressure,           mechPotentialForce_},
+        DataEntry{"MECHPOTF", UnitSystem::measure::pressure,           mech_.potentialForce_},
         DataEntry{"MICROBES", UnitSystem::measure::density,            cMicrobes_},
         DataEntry{"OXYGEN",   UnitSystem::measure::density,            cOxygen_},
         DataEntry{"PERMFACT", UnitSystem::measure::identity,           permFact_},
         DataEntry{"PORV_RC",  UnitSystem::measure::identity,           rockCompPorvMultiplier_},
-        DataEntry{"PRESPOTF", UnitSystem::measure::pressure,           mechPotentialPressForce_},
+        DataEntry{"PRESPOTF", UnitSystem::measure::pressure,           mech_.potentialPressForce_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
         DataEntry{"RSW",      UnitSystem::measure::gas_oil_ratio,      rsw_},
         DataEntry{"RSWSAT",   UnitSystem::measure::gas_oil_ratio,      gasDissolutionFactorInWater_},
@@ -542,31 +542,31 @@ assignToSolution(data::Solution& sol)
         DataEntry{"STD_CO2",  UnitSystem::measure::identity,           mFracCo2_},
         DataEntry{"STD_GAS",  UnitSystem::measure::identity,           mFracGas_},
         DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
-        DataEntry{"STRAINXX", UnitSystem::measure::identity,           strainXX_},
-        DataEntry{"STRAINYY", UnitSystem::measure::identity,           strainYY_},
-        DataEntry{"STRAINZZ", UnitSystem::measure::identity,           strainZZ_},
-        DataEntry{"STRAINXY", UnitSystem::measure::identity,           strainXY_},
-        DataEntry{"STRAINXZ", UnitSystem::measure::identity,           strainXZ_},
-        DataEntry{"STRAINYZ", UnitSystem::measure::identity,           strainYZ_},
-        DataEntry{"STRESSXX", UnitSystem::measure::pressure,           stressXX_},
-        DataEntry{"STRESSYY", UnitSystem::measure::pressure,           stressYY_},
-        DataEntry{"STRESSZZ", UnitSystem::measure::pressure,           stressZZ_},
-        DataEntry{"STRESSXY", UnitSystem::measure::pressure,           stressXY_},
-        DataEntry{"STRESSXZ", UnitSystem::measure::pressure,           stressXZ_},
-        DataEntry{"STRESSYZ", UnitSystem::measure::pressure,           stressYZ_},
-        DataEntry{"LINSTRXX", UnitSystem::measure::pressure,           linstressXX_},
-        DataEntry{"LINSTRYY", UnitSystem::measure::pressure,           linstressYY_},
-        DataEntry{"LINSTRZZ", UnitSystem::measure::pressure,           linstressZZ_},
-        DataEntry{"LINSTRXY", UnitSystem::measure::pressure,           linstressXY_},
-        DataEntry{"LINSTRXZ", UnitSystem::measure::pressure,           linstressXZ_},
-        DataEntry{"LINSTRYZ", UnitSystem::measure::pressure,           linstressYZ_},
-        DataEntry{"FRCSTRXX", UnitSystem::measure::pressure,           fracstressXX_},
-        DataEntry{"FRCSTRYY", UnitSystem::measure::pressure,           fracstressYY_},
-        DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure,           fracstressZZ_},
-        DataEntry{"FRCSTRXY", UnitSystem::measure::pressure,           fracstressXY_},
-        DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure,           fracstressXZ_},
-        DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure,           fracstressYZ_},
-        DataEntry{"TEMPPOTF", UnitSystem::measure::pressure,           mechPotentialTempForce_},
+        DataEntry{"STRAINXX", UnitSystem::measure::identity,           mech_.strainXX_},
+        DataEntry{"STRAINYY", UnitSystem::measure::identity,           mech_.strainYY_},
+        DataEntry{"STRAINZZ", UnitSystem::measure::identity,           mech_.strainZZ_},
+        DataEntry{"STRAINXY", UnitSystem::measure::identity,           mech_.strainXY_},
+        DataEntry{"STRAINXZ", UnitSystem::measure::identity,           mech_.strainXZ_},
+        DataEntry{"STRAINYZ", UnitSystem::measure::identity,           mech_.strainYZ_},
+        DataEntry{"STRESSXX", UnitSystem::measure::pressure,           mech_.stressXX_},
+        DataEntry{"STRESSYY", UnitSystem::measure::pressure,           mech_.stressYY_},
+        DataEntry{"STRESSZZ", UnitSystem::measure::pressure,           mech_.stressZZ_},
+        DataEntry{"STRESSXY", UnitSystem::measure::pressure,           mech_.stressXY_},
+        DataEntry{"STRESSXZ", UnitSystem::measure::pressure,           mech_.stressXZ_},
+        DataEntry{"STRESSYZ", UnitSystem::measure::pressure,           mech_.stressYZ_},
+        DataEntry{"LINSTRXX", UnitSystem::measure::pressure,           mech_.linstressXX_},
+        DataEntry{"LINSTRYY", UnitSystem::measure::pressure,           mech_.linstressYY_},
+        DataEntry{"LINSTRZZ", UnitSystem::measure::pressure,           mech_.linstressZZ_},
+        DataEntry{"LINSTRXY", UnitSystem::measure::pressure,           mech_.linstressXY_},
+        DataEntry{"LINSTRXZ", UnitSystem::measure::pressure,           mech_.linstressXZ_},
+        DataEntry{"LINSTRYZ", UnitSystem::measure::pressure,           mech_.linstressYZ_},
+        DataEntry{"FRCSTRXX", UnitSystem::measure::pressure,           mech_.fracstressXX_},
+        DataEntry{"FRCSTRYY", UnitSystem::measure::pressure,           mech_.fracstressYY_},
+        DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure,           mech_.fracstressZZ_},
+        DataEntry{"FRCSTRXY", UnitSystem::measure::pressure,           mech_.fracstressXY_},
+        DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure,           mech_.fracstressXZ_},
+        DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure,           mech_.fracstressYZ_},
+        DataEntry{"TEMPPOTF", UnitSystem::measure::pressure,           mech_.potentialTempForce_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
         DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
     };
@@ -992,92 +992,92 @@ doAllocBuffers(const unsigned bufferSize,
     rstKeywords["PRESSURE"] = 0;
 
     if (enableMech_ && eclState_.runspec().mech()) {
-        this->mechPotentialForce_.resize(bufferSize,0.0);
+        this->mech_.potentialForce_.resize(bufferSize,0.0);
         rstKeywords["MECHPOTF"] = 0;
-        this->mechPotentialTempForce_.resize(bufferSize,0.0);
+        this->mech_.potentialTempForce_.resize(bufferSize,0.0);
         rstKeywords["TEMPPOTF"] = 0;
-        this->mechPotentialPressForce_.resize(bufferSize,0.0);
+        this->mech_.potentialPressForce_.resize(bufferSize,0.0);
         rstKeywords["PRESPOTF"] = 0;
 
-        this->dispX_.resize(bufferSize,0.0);
+        this->mech_.dispX_.resize(bufferSize,0.0);
         rstKeywords["DISPX"] = 0;
-        this->dispY_.resize(bufferSize,0.0);
+        this->mech_.dispY_.resize(bufferSize,0.0);
         rstKeywords["DISPY"] = 0;
-        this->dispZ_.resize(bufferSize,0.0);
+        this->mech_.dispZ_.resize(bufferSize,0.0);
         rstKeywords["DISPZ"] = 0;
-        this->stressXX_.resize(bufferSize,0.0);
+        this->mech_.stressXX_.resize(bufferSize,0.0);
         rstKeywords["STRESSXX"] = 0;
-        this->stressYY_.resize(bufferSize,0.0);
+        this->mech_.stressYY_.resize(bufferSize,0.0);
         rstKeywords["STRESSYY"] = 0;
-        this->stressZZ_.resize(bufferSize,0.0);
+        this->mech_.stressZZ_.resize(bufferSize,0.0);
         rstKeywords["STRESSZZ"] = 0;
-        this->stressXY_.resize(bufferSize,0.0);
+        this->mech_.stressXY_.resize(bufferSize,0.0);
         rstKeywords["STRESSXY"] = 0;
-        this->stressXZ_.resize(bufferSize,0.0);
+        this->mech_.stressXZ_.resize(bufferSize,0.0);
         rstKeywords["STRESSXZ"] = 0;
-        this->stressXY_.resize(bufferSize,0.0);
+        this->mech_.stressXY_.resize(bufferSize,0.0);
         rstKeywords["STRESSXY"] = 0;
-        this->stressYZ_.resize(bufferSize,0.0);
+        this->mech_.stressYZ_.resize(bufferSize,0.0);
         rstKeywords["STRESSYZ"] = 0;
 
-        this->strainXX_.resize(bufferSize,0.0);
+        this->mech_.strainXX_.resize(bufferSize,0.0);
         rstKeywords["STRAINXX"] = 0;
-        this->strainYY_.resize(bufferSize,0.0);
+        this->mech_.strainYY_.resize(bufferSize,0.0);
         rstKeywords["STRAINYY"] = 0;
-        this->strainZZ_.resize(bufferSize,0.0);
+        this->mech_.strainZZ_.resize(bufferSize,0.0);
         rstKeywords["STRAINZZ"] = 0;
-        this->strainXY_.resize(bufferSize,0.0);
+        this->mech_.strainXY_.resize(bufferSize,0.0);
         rstKeywords["STRAINXY"] = 0;
-        this->strainXZ_.resize(bufferSize,0.0);
+        this->mech_.strainXZ_.resize(bufferSize,0.0);
         rstKeywords["STRAINXZ"] = 0;
-        this->strainXY_.resize(bufferSize,0.0);
+        this->mech_.strainXY_.resize(bufferSize,0.0);
         rstKeywords["STRAINXY"] = 0;
-        this->strainYZ_.resize(bufferSize,0.0);
+        this->mech_.strainYZ_.resize(bufferSize,0.0);
         rstKeywords["STRAINYZ"] = 0;
 
-        this->delstressXX_.resize(bufferSize,0.0);
+        this->mech_.delstressXX_.resize(bufferSize,0.0);
         rstKeywords["DELSTRXX"] = 0;
-        this->delstressYY_.resize(bufferSize,0.0);
+        this->mech_.delstressYY_.resize(bufferSize,0.0);
         rstKeywords["DELSTRYY"] = 0;
-        this->delstressZZ_.resize(bufferSize,0.0);
+        this->mech_.delstressZZ_.resize(bufferSize,0.0);
         rstKeywords["DELSTRZZ"] = 0;
-        this->delstressXY_.resize(bufferSize,0.0);
+        this->mech_.delstressXY_.resize(bufferSize,0.0);
         rstKeywords["DELSTRXY"] = 0;
-        this->delstressXZ_.resize(bufferSize,0.0);
+        this->mech_.delstressXZ_.resize(bufferSize,0.0);
         rstKeywords["DELSTRXZ"] = 0;
-        this->delstressXY_.resize(bufferSize,0.0);
+        this->mech_.delstressXY_.resize(bufferSize,0.0);
         rstKeywords["DELSTRXY"] = 0;
-        this->delstressYZ_.resize(bufferSize,0.0);
+        this->mech_.delstressYZ_.resize(bufferSize,0.0);
         rstKeywords["DELSTRYZ"] = 0;
 
-        this->fracstressXX_.resize(bufferSize,0.0);
+        this->mech_.fracstressXX_.resize(bufferSize,0.0);
         rstKeywords["FRCSTRXX"] = 0;
-        this->fracstressYY_.resize(bufferSize,0.0);
+        this->mech_.fracstressYY_.resize(bufferSize,0.0);
         rstKeywords["FRCSTRYY"] = 0;
-        this->fracstressZZ_.resize(bufferSize,0.0);
+        this->mech_.fracstressZZ_.resize(bufferSize,0.0);
         rstKeywords["FRCSTRZZ"] = 0;
-        this->fracstressXY_.resize(bufferSize,0.0);
+        this->mech_.fracstressXY_.resize(bufferSize,0.0);
         rstKeywords["FRCSTRXY"] = 0;
-        this->fracstressXZ_.resize(bufferSize,0.0);
+        this->mech_.fracstressXZ_.resize(bufferSize,0.0);
         rstKeywords["FRCSTRXZ"] = 0;
-        this->fracstressXY_.resize(bufferSize,0.0);
+        this->mech_.fracstressXY_.resize(bufferSize,0.0);
         rstKeywords["FRCSTRXY"] = 0;
-        this->fracstressYZ_.resize(bufferSize,0.0);
+        this->mech_.fracstressYZ_.resize(bufferSize,0.0);
         rstKeywords["FRCSTRYZ"] = 0;
 
-        this->linstressXX_.resize(bufferSize,0.0);
+        this->mech_.linstressXX_.resize(bufferSize,0.0);
         rstKeywords["LINSTRXX"] = 0;
-        this->linstressYY_.resize(bufferSize,0.0);
+        this->mech_.linstressYY_.resize(bufferSize,0.0);
         rstKeywords["LINSTRYY"] = 0;
-        this->linstressZZ_.resize(bufferSize,0.0);
+        this->mech_.linstressZZ_.resize(bufferSize,0.0);
         rstKeywords["LINSTRZZ"] = 0;
-        this->linstressXY_.resize(bufferSize,0.0);
+        this->mech_.linstressXY_.resize(bufferSize,0.0);
         rstKeywords["LINSTRXY"] = 0;
-        this->linstressXZ_.resize(bufferSize,0.0);
+        this->mech_.linstressXZ_.resize(bufferSize,0.0);
         rstKeywords["LINSTRXZ"] = 0;
-        this->linstressXY_.resize(bufferSize,0.0);
+        this->mech_.linstressXY_.resize(bufferSize,0.0);
         rstKeywords["LINSTRXY"] = 0;
-        this->linstressYZ_.resize(bufferSize,0.0);
+        this->mech_.linstressYZ_.resize(bufferSize,0.0);
         rstKeywords["LINSTRYZ"] = 0;
     }
 
