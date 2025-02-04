@@ -676,43 +676,12 @@ public:
                 const auto& flowsInf = problem.model().linearizer().getFlowsInfo();
                 auto flowsInfos = flowsInf[globalDofIdx];
                 for (const auto& flowsInfo : flowsInfos) {
-                    if (flowsInfo.faceId >= 0) {
-                        if constexpr (gas_idx >= 0) {
-                            if (!this->flowsC_.flows_[flowsInfo.faceId][gasCompIdx].empty()) {
-                                this->flowsC_.flows_[flowsInfo.faceId][gasCompIdx][globalDofIdx]
-                                    = flowsInfo.flow[gas_idx];
-                            }
-                        }
-                        if constexpr (oil_idx >= 0) {
-                            if (!this->flowsC_.flows_[flowsInfo.faceId][oilCompIdx].empty()) {
-                                this->flowsC_.flows_[flowsInfo.faceId][oilCompIdx][globalDofIdx]
-                                    = flowsInfo.flow[oil_idx];
-                            }
-                        }
-                        if constexpr (water_idx >= 0) {
-                            if (!this->flowsC_.flows_[flowsInfo.faceId][waterCompIdx].empty()) {
-                                this->flowsC_.flows_[flowsInfo.faceId][waterCompIdx][globalDofIdx]
-                                    = flowsInfo.flow[water_idx];
-                            }
-                        }
-                    }
-                    if (flowsInfo.faceId == -2) {
-                        if (!this->flowsC_.flowsn_[gasCompIdx].indices.empty()) {
-                            this->flowsC_.flowsn_[gasCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsC_.flowsn_[gasCompIdx].values[flowsInfo.nncId]
-                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
-                        }
-                        if (!this->flowsC_.flowsn_[oilCompIdx].indices.empty()) {
-                            this->flowsC_.flowsn_[oilCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsC_.flowsn_[oilCompIdx].values[flowsInfo.nncId]
-                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
-                        }
-                        if (!this->flowsC_.flowsn_[waterCompIdx].indices.empty()) {
-                            this->flowsC_.flowsn_[waterCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsC_.flowsn_[waterCompIdx].values[flowsInfo.nncId]
-                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
-                        }
-                    }
+                    this->flowsC_.assignFlows(globalDofIdx,
+                                              flowsInfo.faceId,
+                                              flowsInfo.nncId,
+                                              value_or_zero<gas_idx>(flowsInfo.flow),
+                                              value_or_zero<oil_idx>(flowsInfo.flow),
+                                              value_or_zero<water_idx>(flowsInfo.flow));
                 }
             }
 
@@ -1643,6 +1612,16 @@ private:
     }
 
     const Simulator& simulator_;
+
+    template<int idx, class VectorType>
+    Scalar value_or_zero(const VectorType& v)
+    {
+        if constexpr (idx == -1) {
+            return 0.0;
+        } else {
+            return v.empty() ? 0.0 : v[idx];
+        }
+    }
 };
 
 } // namespace Opm

@@ -51,6 +51,31 @@ namespace {
         }
     }
 
+    template<int idx, class Array, class Scalar>
+    void assignToVec(Array& array,
+                     const unsigned globalDofIdx,
+                     const Scalar value)
+    {
+        if constexpr (idx != -1) {
+            if (!array[idx].empty()) {
+                array[idx][globalDofIdx] = value;
+            }
+        }
+    }
+
+    template<int idx, class Array, class Scalar>
+    void assignToNnc(Array& array,
+                     unsigned nncId,
+                     const Scalar value)
+    {
+        if constexpr (idx != -1) {
+            if (!array[idx].indices.empty()) {
+                array[idx].indices[nncId] = nncId;
+                array[idx].values[nncId] = value;
+            }
+        }
+    }
+
 }
 
 namespace Opm {
@@ -183,6 +208,27 @@ allocate(const std::size_t bufferSize,
         if (rstKeywords["FLORES-"] > 0) {
             rstKeywords["FLORES-"] = 0;
         }
+    }
+}
+
+template<class FluidSystem>
+void FlowsContainer<FluidSystem>::
+assignFlows(const unsigned globalDofIdx,
+            const int faceId,
+            const unsigned nncId,
+            const Scalar gas,
+            const Scalar oil,
+            const Scalar water)
+{
+    if (faceId >= 0) {
+        assignToVec<gasCompIdx>(this->flows_[faceId], globalDofIdx, gas);
+        assignToVec<oilCompIdx>(this->flows_[faceId], globalDofIdx, oil);
+        assignToVec<waterCompIdx>(this->flows_[faceId], globalDofIdx, water);
+    }
+    else if (faceId == -2) {
+        assignToNnc<gasCompIdx>(this->flowsn_, nncId, gas);
+        assignToNnc<oilCompIdx>(this->flowsn_, nncId, oil);
+        assignToNnc<waterCompIdx>(this->flowsn_, nncId, water);
     }
 }
 
