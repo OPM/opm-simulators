@@ -236,6 +236,27 @@ assignFlows(const unsigned globalDofIdx,
 
 template<class FluidSystem>
 void FlowsContainer<FluidSystem>::
+assignFlores(const unsigned globalDofIdx,
+             const int faceId,
+             const unsigned nncId,
+             const Scalar gas,
+             const Scalar oil,
+             const Scalar water)
+{
+    if (faceId >= 0) {
+        assignToVec<gasCompIdx>(this->flores_[faceId], globalDofIdx, gas);
+        assignToVec<oilCompIdx>(this->flores_[faceId], globalDofIdx, oil);
+        assignToVec<waterCompIdx>(this->flores_[faceId], globalDofIdx, water);
+    }
+    else if (faceId == -2) {
+        assignToNnc<gasCompIdx>(this->floresn_, nncId, gas);
+        assignToNnc<oilCompIdx>(this->floresn_, nncId, oil);
+        assignToNnc<waterCompIdx>(this->floresn_, nncId, water);
+    }
+}
+
+template<class FluidSystem>
+void FlowsContainer<FluidSystem>::
 outputRestart(data::Solution& sol) const
 {
     auto doInsert = [&sol](const DataEntry<Scalar>& entry,

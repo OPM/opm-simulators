@@ -67,6 +67,13 @@ public:
                      const Scalar oil,
                      const Scalar water);
 
+    void assignFlores(const unsigned globalDofIdx,
+                      const int faceId,
+                      const unsigned nncId,
+                      const Scalar gas,
+                      const Scalar oil,
+                      const Scalar water);
+
     void outputRestart(data::Solution& sol) const;
 
     const std::array<FlowsData<double>, 3>& getFlowsn() const
