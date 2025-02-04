@@ -2022,35 +2022,6 @@ logPrimaryVars() const
 }
 
 template<class Scalar>
-std::vector<Scalar>
-BlackoilWellModelGeneric<Scalar>::
-getPrimaryVarsDomain(const int domainIdx) const
-{
-    std::vector<Scalar> ret;
-    for (const auto& well : this->well_container_generic_) {
-        if (this->well_domain_.at(well->name()) == domainIdx) {
-            const auto& pv = well->getPrimaryVars();
-            ret.insert(ret.end(), pv.begin(), pv.end());
-        }
-    }
-    return ret;
-}
-
-template<class Scalar>
-void BlackoilWellModelGeneric<Scalar>::
-setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
-{
-    std::size_t offset = 0;
-    for (auto& well : this->well_container_generic_) {
-        if (this->well_domain_.at(well->name()) == domainIdx) {
-            int num_pri_vars = well->setPrimaryVars(vars.begin() + offset);
-            offset += num_pri_vars;
-        }
-    }
-    assert(offset == vars.size());
-}
-
-template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 reportGroupSwitching(DeferredLogger& local_deferredLogger) const
 {

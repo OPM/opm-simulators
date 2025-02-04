@@ -120,7 +120,12 @@ public:
     // whether there exists any multisegment well open on this process
     bool anyMSWellOpenLocal() const;
 
-    const std::vector<Well>& eclWells() const { return wells_ecl_; }
+    const std::vector<Well>& eclWells() const
+    { return wells_ecl_; }
+
+    bool terminalOutput() const
+    { return terminal_output_; }
+
     const Well& getWellEcl(const std::string& well_name) const;
     std::vector<Well> getLocalWells(const int timeStepIdx) const;
     const Schedule& schedule() const { return schedule_; }
@@ -128,6 +133,9 @@ public:
     const GroupState<Scalar>& groupState() const { return this->active_wgstate_.group_state; }
     std::vector<const WellInterfaceGeneric<Scalar>*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
+
+    std::vector<WellInterfaceGeneric<Scalar>*> genericWells()
+    { return well_container_generic_; }
 
     /*
       Immutable version of the currently active wellstate.
@@ -219,11 +227,6 @@ public:
     const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
     const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
 
-    const std::map<std::string, int>& well_domain() const
-    {
-        return well_domain_;
-    }
-
     std::vector<int> getCellsForConnections(const Well& well) const;
 
     bool reportStepStarts() const { return report_step_starts_; }
@@ -238,8 +241,6 @@ public:
     bool wasDynamicallyShutThisTimeStep(const std::string& well_name) const;
 
     void logPrimaryVars() const;
-    std::vector<Scalar> getPrimaryVarsDomain(const int domainIdx) const;
-    void setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars);
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -526,9 +527,6 @@ protected:
     std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>> switched_inj_groups_;
     // Store map of group name and close offending well for output
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
-
-    // Keep track of the domain of each well, if using subdomains.
-    std::map<std::string, int> well_domain_;
 
 private:
     WellInterfaceGeneric<Scalar>* getGenWell(const std::string& well_name);

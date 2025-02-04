@@ -39,6 +39,10 @@ namespace Opm {
 
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
+#include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/simulators/linalg/linalgproperties.hh>
+
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
