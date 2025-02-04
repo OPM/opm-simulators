@@ -25,6 +25,9 @@
 #include <opm/simulators/flow/FlowsData.hpp>
 
 #include <array>
+#include <cstddef>
+#include <map>
+#include <string>
 #include <vector>
 
 namespace Opm {
@@ -39,10 +42,22 @@ class FlowsContainer
     using ScalarBuffer = std::vector<Scalar>;
 
     static constexpr auto numPhases = FluidSystem::numPhases;
+    static constexpr auto gasPhaseIdx = FluidSystem::gasPhaseIdx;
+    static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
+
+    static constexpr auto gasCompIdx = FluidSystem::gasCompIdx;
+    static constexpr auto oilCompIdx = FluidSystem::oilCompIdx;
+    static constexpr auto waterCompIdx = FluidSystem::waterCompIdx;
 
 public:
     FlowsContainer(const Schedule& schedule,
                    const SummaryConfig& summaryConfig);
+
+    void allocate(const std::size_t bufferSize,
+                  const unsigned numOutputNnc,
+                  const bool allocRestart,
+                  std::map<std::string, int>& rstKeywords);
 
     const std::array<FlowsData<double>, 3>& getFlowsn() const
     { return this->flowsn_; }
