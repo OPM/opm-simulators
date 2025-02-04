@@ -22,6 +22,7 @@
 #ifndef OPM_FLOWS_CONTAINER_HPP
 #define OPM_FLOWS_CONTAINER_HPP
 
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/simulators/flow/FlowsData.hpp>
 
 #include <array>
@@ -102,6 +103,11 @@ public:
 
     bool anyFlores() const
     { return anyFlores_; }
+
+    Scalar getFlow(const unsigned globalDofIdx,
+                   const FaceDir::DirEnum dir,
+                   const int comp_idx) const
+    { return flows_[FaceDir::ToIntersectionIndex(dir)][comp_idx][globalDofIdx]; }
 
     bool anyFlows_{false};
     bool anyFlores_{false};
