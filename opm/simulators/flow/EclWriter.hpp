@@ -423,11 +423,11 @@ public:
         auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
         auto localWellTestState = simulator_.problem().wellModel().wellTestState();
 
-        const bool isFlowsn = this->outputModule_->hasFlowsn();
-        auto flowsn = this->outputModule_->getFlowsn();
+        const bool isFlowsn = this->outputModule_->getFlows().hasFlowsn();
+        auto flowsn = this->outputModule_->getFlows().getFlowsn();
 
-        const bool isFloresn = this->outputModule_->hasFloresn();
-        auto floresn = this->outputModule_->getFloresn();
+        const bool isFloresn = this->outputModule_->getFlows().hasFloresn();
+        auto floresn = this->outputModule_->getFlows().getFloresn();
 
         if (! isSubStep || Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
 
