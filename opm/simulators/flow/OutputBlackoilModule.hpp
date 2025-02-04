@@ -928,16 +928,19 @@ public:
                              (key.first == "BFLOWJ") ||
                              (key.first == "BFLOWK"))
                     {
-                        auto dir = FaceDir::ToIntersectionIndex(Dir::XPlus);
+                        FaceDir::DirEnum dir;
 
                         if (key.first == "BFLOWJ") {
-                            dir = FaceDir::ToIntersectionIndex(Dir::YPlus);
+                            dir = Dir::YPlus;
                         }
                         else if (key.first == "BFLOWK") {
-                            dir = FaceDir::ToIntersectionIndex(Dir::ZPlus);
+                            dir = Dir::ZPlus;
+                        }
+                        else { // key.first == BFLOWI
+                            dir = Dir::XPlus;
                         }
 
-                        val.second = this->flowsC_.flows_[dir][waterCompIdx][globalDofIdx];
+                        val.second = this->flowsC_.getFlow(globalDofIdx, dir, waterCompIdx);
                     }
                     else {
                         std::string logstring = "Keyword '";
