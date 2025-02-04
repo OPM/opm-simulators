@@ -32,12 +32,16 @@
 #include <opm/simulators/utils/moduleVersion.hpp>
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
@@ -188,19 +192,19 @@ public:
             }
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (this->moleFractions_[compIdx].empty()) continue;
+                if (this->compC_.moleFractions_[compIdx].empty()) continue;
 
-                this->moleFractions_[compIdx][globalDofIdx] = getValue(fs.moleFraction(compIdx));
+                this->compC_.moleFractions_[compIdx][globalDofIdx] = getValue(fs.moleFraction(compIdx));
             }
             // XMF and YMF
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    if (this->phaseMoleFractions_[oilPhaseIdx][compIdx].empty()) continue;
-                    this->phaseMoleFractions_[oilPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(oilPhaseIdx, compIdx));
+                    if (this->compC_.phaseMoleFractions_[oilPhaseIdx][compIdx].empty()) continue;
+                    this->compC_.phaseMoleFractions_[oilPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(oilPhaseIdx, compIdx));
                 }
                 if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    if (this->phaseMoleFractions_[gasPhaseIdx][compIdx].empty()) continue;
-                    this->phaseMoleFractions_[gasPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(gasPhaseIdx, compIdx));
+                    if (this->compC_.phaseMoleFractions_[gasPhaseIdx][compIdx].empty()) continue;
+                    this->compC_.phaseMoleFractions_[gasPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(gasPhaseIdx, compIdx));
                 }
             }
 

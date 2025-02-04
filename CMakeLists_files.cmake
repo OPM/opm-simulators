@@ -90,6 +90,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/BlackoilModelParameters.cpp
   opm/simulators/flow/BlackoilModelConvergenceMonitor.cpp
   opm/simulators/flow/CollectDataOnIORank.cpp
+  opm/simulators/flow/CompositionalContainer.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/EclGenericWriter.cpp
   opm/simulators/flow/ExtboContainer.cpp
@@ -821,6 +822,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/BlackoilModelProperties.hpp
   opm/simulators/flow/CollectDataOnIORank.hpp
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
+  opm/simulators/flow/CompositionalContainer.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/CpGridVanguard.hpp

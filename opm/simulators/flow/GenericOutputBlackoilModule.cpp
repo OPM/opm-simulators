@@ -536,21 +536,21 @@ assignToSolution(data::Solution& sol)
             // ZMF
             for (int i = 0; i < numComponents; ++i) {
                 const auto name = fmt::format("ZMF{}", i + 1);  // Generate ZMF1, ZMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity, moleFractions_[i]);
+                compositionalEntries.emplace_back(name, UnitSystem::measure::identity, compC_.moleFractions_[i]);
             }
 
             // XMF
             for (int i = 0; i < numComponents; ++i) {
                 const auto name = fmt::format("XMF{}", i + 1);  // Generate XMF1, XMF2, ...
                 compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
-                                                  phaseMoleFractions_[oilPhaseIdx][i]);
+                                                  compC_.phaseMoleFractions_[oilPhaseIdx][i]);
             }
 
             // YMF
             for (int i = 0; i < numComponents; ++i) {
                 const auto name = fmt::format("YMF{}", i + 1);  // Generate YMF1, YMF2, ...
                 compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
-                                                  phaseMoleFractions_[gasPhaseIdx][i]);
+                                                  compC_.phaseMoleFractions_[gasPhaseIdx][i]);
             }
         }
 
@@ -1297,21 +1297,21 @@ doAllocBuffers(const unsigned bufferSize,
         if (rstKeywords["ZMF"] > 0) {
             rstKeywords["ZMF"] = 0;
             for (int i = 0; i < numComponents; ++i) {
-                moleFractions_[i].resize(bufferSize, 0.0);
+                compC_.moleFractions_[i].resize(bufferSize, 0.0);
             }
         }
 
         if (rstKeywords["XMF"] > 0 && FluidSystem::phaseIsActive(oilPhaseIdx)) {
             rstKeywords["XMF"] = 0;
             for (int i = 0; i < numComponents; ++i) {
-                phaseMoleFractions_[oilPhaseIdx][i].resize(bufferSize, 0.0);
+                compC_.phaseMoleFractions_[oilPhaseIdx][i].resize(bufferSize, 0.0);
             }
         }
 
         if (rstKeywords["YMF"] > 0 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
             rstKeywords["YMF"] = 0;
             for (int i = 0; i < numComponents; ++i) {
-                phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
+                compC_.phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
             }
         }
     }

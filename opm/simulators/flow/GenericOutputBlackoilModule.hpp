@@ -32,6 +32,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/CompositionalContainer.hpp>
 #include <opm/simulators/flow/ExtboContainer.hpp>
 #include <opm/simulators/flow/FIPContainer.hpp>
 #include <opm/simulators/flow/FlowsData.hpp>
@@ -468,10 +469,7 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
-    // total mole fractions for each component
-    std::array<ScalarBuffer, numComponents> moleFractions_;
-    // mole fractions for each component in each phase
-    std::array<std::array<ScalarBuffer, numComponents>, numPhases> phaseMoleFractions_;
+    CompositionalContainer<FluidSystem> compC_;
     std::vector<ScalarBuffer> freeTracerConcentrations_;
     std::vector<ScalarBuffer> solTracerConcentrations_;
 
