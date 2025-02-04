@@ -514,11 +514,11 @@ assignToSolution(data::Solution& sol)
     addEntry(flowsSolutionVector, "FLRWATK-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][waterCompIdx], waterCompIdx);
 
     auto extendedSolutionArrays = std::array {
-        DataEntry{"BIOFILM",  UnitSystem::measure::identity,           cBiofilm_},
-        DataEntry{"CALCITE",  UnitSystem::measure::identity,           cCalcite_},
+        DataEntry{"BIOFILM",  UnitSystem::measure::identity,           micpC_.cBiofilm_},
+        DataEntry{"CALCITE",  UnitSystem::measure::identity,           micpC_.cCalcite_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
-        DataEntry{"MICROBES", UnitSystem::measure::density,            cMicrobes_},
-        DataEntry{"OXYGEN",   UnitSystem::measure::density,            cOxygen_},
+        DataEntry{"MICROBES", UnitSystem::measure::density,            micpC_.cMicrobes_},
+        DataEntry{"OXYGEN",   UnitSystem::measure::density,            micpC_.cOxygen_},
         DataEntry{"PERMFACT", UnitSystem::measure::identity,           permFact_},
         DataEntry{"PORV_RC",  UnitSystem::measure::identity,           rockCompPorvMultiplier_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
@@ -535,7 +535,7 @@ assignToSolution(data::Solution& sol)
         DataEntry{"STD_GAS",  UnitSystem::measure::identity,           mFracGas_},
         DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
-        DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
+        DataEntry{"UREA",     UnitSystem::measure::density,            micpC_.cUrea_},
     };
 
     // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
@@ -763,11 +763,11 @@ setRestart(const data::Solution& sol,
     };
 
     const auto fields = std::array{
-        std::pair{"BIOFILM",  &cBiofilm_},
-        std::pair{"CALCITE",  &cCalcite_},
+        std::pair{"BIOFILM",  &micpC_.cBiofilm_},
+        std::pair{"CALCITE",  &micpC_.cCalcite_},
         std::pair{"FOAM",     &cFoam_},
-        std::pair{"MICROBES", &cMicrobes_},
-        std::pair{"OXYGEN",   &cOxygen_},
+        std::pair{"MICROBES", &micpC_.cMicrobes_},
+        std::pair{"OXYGEN",   &micpC_.cOxygen_},
         std::pair{"PERMFACT", &permFact_},
         std::pair{"POLYMER",  &cPolymer_},
         std::pair{"PPCW",     &ppcw_},
@@ -785,7 +785,7 @@ setRestart(const data::Solution& sol,
         std::pair{"SWHY1",    &swmin_},
         std::pair{"SWMAX",    &swMax_},
         std::pair{"TEMP",     &temperature_},
-        std::pair{"UREA",     &cUrea_},
+        std::pair{"UREA",     &micpC_.cUrea_},
     };
 
     std::for_each(fields.begin(), fields.end(),
@@ -1036,11 +1036,11 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (enableMICP_) {
-        cMicrobes_.resize(bufferSize, 0.0);
-        cOxygen_.resize(bufferSize, 0.0);
-        cUrea_.resize(bufferSize, 0.0);
-        cBiofilm_.resize(bufferSize, 0.0);
-        cCalcite_.resize(bufferSize, 0.0);
+        micpC_.cMicrobes_.resize(bufferSize, 0.0);
+        micpC_.cOxygen_.resize(bufferSize, 0.0);
+        micpC_.cUrea_.resize(bufferSize, 0.0);
+        micpC_.cBiofilm_.resize(bufferSize, 0.0);
+        micpC_.cCalcite_.resize(bufferSize, 0.0);
     }
 
     if (vapparsActive) {

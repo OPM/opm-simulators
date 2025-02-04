@@ -1180,11 +1180,11 @@ protected:
             if constexpr (enablePolymer)
                 this->polymer_.concentration[elemIdx] = this->eclWriter_->outputModule().getPolymerConcentration(elemIdx);
             if constexpr (enableMICP){
-                this->micp_.microbialConcentration[elemIdx] = this->eclWriter_->outputModule().getMicrobialConcentration(elemIdx);
-                this->micp_.oxygenConcentration[elemIdx] = this->eclWriter_->outputModule().getOxygenConcentration(elemIdx);
-                this->micp_.ureaConcentration[elemIdx] = this->eclWriter_->outputModule().getUreaConcentration(elemIdx);
-                this->micp_.biofilmConcentration[elemIdx] = this->eclWriter_->outputModule().getBiofilmConcentration(elemIdx);
-                this->micp_.calciteConcentration[elemIdx] = this->eclWriter_->outputModule().getCalciteConcentration(elemIdx);
+                this->micp_.microbialConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getMicrobialConcentration(elemIdx);
+                this->micp_.oxygenConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getOxygenConcentration(elemIdx);
+                this->micp_.ureaConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getUreaConcentration(elemIdx);
+                this->micp_.biofilmConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getBiofilmConcentration(elemIdx);
+                this->micp_.calciteConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getCalciteConcentration(elemIdx);
             }
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
