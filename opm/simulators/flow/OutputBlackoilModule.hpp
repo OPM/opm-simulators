@@ -96,14 +96,14 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Dir = FaceDir::DirEnum;
 
-    enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { numPhases = FluidSystem::numPhases };
-    enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
-    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
-    enum { gasCompIdx = FluidSystem::gasCompIdx };
-    enum { oilCompIdx = FluidSystem::oilCompIdx };
-    enum { waterCompIdx = FluidSystem::waterCompIdx };
+    static constexpr int conti0EqIdx = Indices::conti0EqIdx;
+    static constexpr int numPhases = FluidSystem::numPhases;
+    static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
+    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
+    static constexpr int gasCompIdx = FluidSystem::gasCompIdx;
+    static constexpr int oilCompIdx = FluidSystem::oilCompIdx;
+    static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
 public:
@@ -705,25 +705,36 @@ public:
             return;
 
         const auto& problem = elemCtx.simulator().problem();
+        constexpr auto gas_idx = Indices::gasEnabled ?
+            conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx) : -1;
+        constexpr auto oil_idx = Indices::oilEnabled ?
+            conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx) : -1;
+        constexpr auto water_idx = Indices::waterEnabled ?
+            conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx) : -1;
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             if (!problem.model().linearizer().getFlowsInfo().empty()) {
                 const auto& flowsInf = problem.model().linearizer().getFlowsInfo();
                 auto flowsInfos = flowsInf[globalDofIdx];
                 for (const auto& flowsInfo : flowsInfos) {
                     if (flowsInfo.faceId >= 0) {
-                        if (!this->flows_[flowsInfo.faceId][gasCompIdx].empty()) {
-                            this->flows_[flowsInfo.faceId][gasCompIdx][globalDofIdx]
-                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        if constexpr (gas_idx >= 0) {
+                            if (!this->flows_[flowsInfo.faceId][gasCompIdx].empty()) {
+                                this->flows_[flowsInfo.faceId][gasCompIdx][globalDofIdx]
+                                    = flowsInfo.flow[gas_idx];
+                            }
                         }
-                        if (!this->flows_[flowsInfo.faceId][oilCompIdx].empty()) {
-                            this->flows_[flowsInfo.faceId][oilCompIdx][globalDofIdx]
-                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        if constexpr (oil_idx >= 0) {
+                            if (!this->flows_[flowsInfo.faceId][oilCompIdx].empty()) {
+                                this->flows_[flowsInfo.faceId][oilCompIdx][globalDofIdx]
+                                    = flowsInfo.flow[oil_idx];
+                            }
                         }
-                        if (!this->flows_[flowsInfo.faceId][waterCompIdx].empty()) {
-                            this->flows_[flowsInfo.faceId][waterCompIdx][globalDofIdx]
-                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        if constexpr (water_idx >= 0) {
+                            if (!this->flows_[flowsInfo.faceId][waterCompIdx].empty()) {
+                                this->flows_[flowsInfo.faceId][waterCompIdx][globalDofIdx]
+                                    = flowsInfo.flow[water_idx];
+                            }
                         }
                     }
                     if (flowsInfo.faceId == -2) {
@@ -749,20 +760,26 @@ public:
             // flores
             if (!problem.model().linearizer().getFloresInfo().empty()) {
                 const auto& floresInf = problem.model().linearizer().getFloresInfo();
-                auto floresInfos =floresInf[globalDofIdx];
+                auto floresInfos = floresInf[globalDofIdx];
                 for (const auto& floresInfo : floresInfos) {
                     if (floresInfo.faceId >= 0) {
-                        if (!this->flores_[floresInfo.faceId][gasCompIdx].empty()) {
-                            this->flores_[floresInfo.faceId][gasCompIdx][globalDofIdx]
-                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        if constexpr (gas_idx >= 0) {
+                            if (!this->flores_[floresInfo.faceId][gasCompIdx].empty()) {
+                                this->flores_[floresInfo.faceId][gasCompIdx][globalDofIdx]
+                                    = floresInfo.flow[gas_idx];
+                            }
                         }
-                        if (!this->flores_[floresInfo.faceId][oilCompIdx].empty()) {
-                            this->flores_[floresInfo.faceId][oilCompIdx][globalDofIdx]
-                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        if constexpr (oil_idx >= 0) {
+                            if (!this->flores_[floresInfo.faceId][oilCompIdx].empty()) {
+                                this->flores_[floresInfo.faceId][oilCompIdx][globalDofIdx]
+                                    = floresInfo.flow[oil_idx];
+                            }
                         }
-                        if (!this->flores_[floresInfo.faceId][waterCompIdx].empty()) {
-                            this->flores_[floresInfo.faceId][waterCompIdx][globalDofIdx]
-                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        if constexpr (water_idx >= 0) {
+                            if (!this->flores_[floresInfo.faceId][waterCompIdx].empty()) {
+                                this->flores_[floresInfo.faceId][waterCompIdx][globalDofIdx]
+                                    = floresInfo.flow[water_idx];
+                            }
                         }
                     }
                    
