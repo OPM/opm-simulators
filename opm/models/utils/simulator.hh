@@ -228,6 +228,10 @@ public:
         checkParallelException("Could not initialize the problem: ",
                                exceptionThrown, what);
 
+        // Only relevant for CpGrid
+        std::cout << "Adding LGRs, if any\n" << std::flush;
+        vanguard_->addLgrs();
+
         setupTimer_.stop();
 
         if (verbose_)
