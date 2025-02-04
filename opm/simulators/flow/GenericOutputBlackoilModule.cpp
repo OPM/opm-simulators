@@ -707,25 +707,14 @@ doAllocBuffers(const unsigned bufferSize,
         this->rftC_.allocate(reportStepNum);
     }
 
-    // Flows may need to be allocated even when there is no restart due to BFLOW* summary keywords
-    if (flowsC_.blockFlows_ ) {
-        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
-
-        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
-            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
-                flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-            }
-        }
-    }
+    const bool alloc_fields = isRestart || (schedule_.write_rst_file(reportStepNum) && !substep);
+    this->flowsC_.allocate(bufferSize, numOutputNnc, alloc_fields, rstKeywords);
 
     // Field data should be allocated
     // 1) When we want to restart
     // 2) When it is ask for by the user via restartConfig
     // 3) When it is not a substep
-    if (!isRestart && (!schedule_.write_rst_file(reportStepNum) || substep)) {
+    if (!alloc_fields) {
         return;
     }
 
@@ -961,79 +950,6 @@ doAllocBuffers(const unsigned bufferSize,
 
     if (enableMICP_) {
         this->micpC_.allocate(bufferSize);
-    }
-
-    const bool rstFlows = (rstKeywords["FLOWS"] > 0);
-    if (rstFlows) {
-        rstKeywords["FLOWS"] = 0;
-       flowsC_. enableFlows_ = true;
-
-        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
-        const auto rstName = std::array { "FLOGASN+", "FLOOILN+", "FLOWATN+" };
-
-        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
-            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
-                if (!flowsC_.blockFlows_) { // Already allocated if summary vectors requested
-                    flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                }
-
-                if (rstKeywords["FLOWS-"] > 0) {
-                    flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flowsC_.flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                }
-
-                if (numOutputNnc > 0) {
-                    flowsC_.enableFlowsn_ = true;
-
-                    flowsC_.flowsn_[compIdxs[ii]].name = rstName[ii];
-                    flowsC_.flowsn_[compIdxs[ii]].indices.resize(numOutputNnc, -1);
-                    flowsC_.flowsn_[compIdxs[ii]].values.resize(numOutputNnc, 0.0);
-                }
-            }
-        }
-        if (rstKeywords["FLOWS-"] > 0) {
-            rstKeywords["FLOWS-"] = 0;
-        }
-    }
-
-    flowsC_.enableFlores_ = false;
-    flowsC_.enableFloresn_ = false;
-    if (rstKeywords["FLORES"] > 0) {
-        rstKeywords["FLORES"] = 0;
-        flowsC_.enableFlores_ = true;
-
-        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
-        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
-        const auto rstName = std::array{ "FLRGASN+", "FLROILN+", "FLRWATN+" };
-
-        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
-            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
-                flowsC_.flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                flowsC_.flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                flowsC_.flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-
-                if (rstKeywords["FLORES-"] > 0) {
-                    flowsC_.flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flowsC_.flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flowsC_.flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                }
-
-                if (numOutputNnc > 0) {
-                    flowsC_.enableFloresn_ = true;
-
-                    flowsC_.floresn_[compIdxs[ii]].name = rstName[ii];
-                    flowsC_.floresn_[compIdxs[ii]].indices.resize(numOutputNnc, -1);
-                    flowsC_.floresn_[compIdxs[ii]].values.resize(numOutputNnc, 0.0);
-                }
-            }
-        }
-        if (rstKeywords["FLORES-"] > 0) {
-            rstKeywords["FLORES-"] = 0;
-        }
     }
 
     // tracers

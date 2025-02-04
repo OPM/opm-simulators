@@ -61,6 +61,109 @@ FlowsContainer(const Schedule& schedule,
                             });
 }
 
+template<class FluidSystem>
+void FlowsContainer<FluidSystem>::
+allocate(const std::size_t bufferSize,
+         const unsigned numOutputNnc,
+         const bool allocRestart,
+         std::map<std::string, int>& rstKeywords)
+{
+    using Dir = FaceDir::DirEnum;
+
+    // Flows may need to be allocated even when there is no restart due to BFLOW* summary keywords
+    if (blockFlows_ ) {
+        const std::array<int, 3> phaseIdxs { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs { gasCompIdx, oilCompIdx, waterCompIdx };
+
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+            }
+        }
+    }
+
+    if (!allocRestart) {
+        return ;
+    }
+
+    enableFlows_ = false;
+    enableFlowsn_ = false;
+    const bool rstFlows = (rstKeywords["FLOWS"] > 0);
+    if (rstFlows) {
+        rstKeywords["FLOWS"] = 0;
+        enableFlows_ = true;
+
+        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        const auto rstName = std::array { "FLOGASN+", "FLOOILN+", "FLOWATN+" };
+
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                if (!blockFlows_) { // Already allocated if summary vectors requested
+                    flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                }
+
+                if (rstKeywords["FLOWS-"] > 0) {
+                    flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                }
+
+                if (numOutputNnc > 0) {
+                    enableFlowsn_ = true;
+
+                    flowsn_[compIdxs[ii]].name = rstName[ii];
+                    flowsn_[compIdxs[ii]].indices.resize(numOutputNnc, -1);
+                    flowsn_[compIdxs[ii]].values.resize(numOutputNnc, 0.0);
+                }
+            }
+        }
+        if (rstKeywords["FLOWS-"] > 0) {
+            rstKeywords["FLOWS-"] = 0;
+        }
+    }
+
+    enableFlores_ = false;
+    enableFloresn_ = false;
+    if (rstKeywords["FLORES"] > 0) {
+        rstKeywords["FLORES"] = 0;
+        enableFlores_ = true;
+
+        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        const auto rstName = std::array{ "FLRGASN+", "FLROILN+", "FLRWATN+" };
+
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+
+                if (rstKeywords["FLORES-"] > 0) {
+                    flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                }
+
+                if (numOutputNnc > 0) {
+                    enableFloresn_ = true;
+
+                    floresn_[compIdxs[ii]].name = rstName[ii];
+                    floresn_[compIdxs[ii]].indices.resize(numOutputNnc, -1);
+                    floresn_[compIdxs[ii]].values.resize(numOutputNnc, 0.0);
+                }
+            }
+        }
+        if (rstKeywords["FLORES-"] > 0) {
+            rstKeywords["FLORES-"] = 0;
+        }
+    }
+}
+
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
 
 #define INSTANTIATE_TYPE(T) \
