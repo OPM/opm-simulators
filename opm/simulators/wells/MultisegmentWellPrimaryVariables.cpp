@@ -152,7 +152,7 @@ update(const WellState<Scalar>& well_state,
             }
         }
     }
-    //init();
+    init();
 }
 
 template<class FluidSystem, class Indices>
@@ -209,7 +209,7 @@ updateNewton(const BVectorWell& dwells,
     if (stop_or_zero_rate_target) {
         value_[0][WQTotal] = 0.;
     }
-    //init();
+    init();
 }
 
 template<class FluidSystem, class Indices>
