@@ -126,6 +126,7 @@ template void PropertyTree::put(const std::string& key, const double& value);
 template void PropertyTree::put(const std::string& key, const float& value);
 template void PropertyTree::put(const std::string& key, const int& value);
 template void PropertyTree::put(const std::string& key, const std::size_t& value);
+template void PropertyTree::put(const std::string& key, const bool& value);
 
 template std::string PropertyTree::get(const std::string& key) const;
 template double PropertyTree::get(const std::string& key) const;

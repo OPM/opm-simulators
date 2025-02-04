@@ -56,6 +56,7 @@ BOOST_AUTO_TEST_CASE(Top_Node_Only)
     t.put("b", 123.4);
     t.put("c", std::string { "hello" });
     t.put("d", 12.34f);
+    t.put("e", true);
 
     {
         const auto a = t.get<int>("a");
@@ -87,6 +88,14 @@ BOOST_AUTO_TEST_CASE(Top_Node_Only)
 
         const auto dd = t.get("dd", -1.618f);
         BOOST_CHECK_CLOSE(dd, -1.618f, 1.0e-6f);
+    }
+
+    {
+        const auto e = t.get<bool>("e");
+        BOOST_CHECK_EQUAL(e, true);
+
+        const auto ee = t.get<bool>("ee", false);
+        BOOST_CHECK_EQUAL(ee, false);
     }
 }
 
@@ -276,6 +285,11 @@ BOOST_AUTO_TEST_CASE(Vector)
         const auto expect = std::vector { 1, 2, 3, 4, };
         BOOST_CHECK_EQUAL_COLLECTIONS(a    ->begin(), a    ->end(),
                                       expect.begin(), expect.end());
+    }
+
+    {
+        const auto aa = t.get_child_items_as_vector<int>("aa");
+        BOOST_CHECK_MESSAGE(!aa.has_value(), R"(Node "aa" must NOT exist)");
     }
 
     {
