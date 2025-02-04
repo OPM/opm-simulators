@@ -32,6 +32,7 @@
 
 namespace Opm {
 
+namespace data { class Solution; }
 class Schedule;
 class SummaryConfig;
 
@@ -58,6 +59,8 @@ public:
                   const unsigned numOutputNnc,
                   const bool allocRestart,
                   std::map<std::string, int>& rstKeywords);
+
+    void outputRestart(data::Solution& sol);
 
     const std::array<FlowsData<double>, 3>& getFlowsn() const
     { return this->flowsn_; }
