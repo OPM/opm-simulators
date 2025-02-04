@@ -631,40 +631,40 @@ assignToSolution(data::Solution& sol)
     this->fipC_.outputRestart(sol);
 
     // Tracers
-    if (! this->freeTracerConcentrations_.empty()) {
+    if (! this->tracerC_.freeConcentrations_.empty()) {
         const auto& tracers = this->eclState_.tracer();
         for (auto tracerIdx = 0*tracers.size();
              tracerIdx < tracers.size(); ++tracerIdx)
         {
             sol.insert(tracers[tracerIdx].fname(),
                        UnitSystem::measure::identity,
-                       std::move(freeTracerConcentrations_[tracerIdx]),
+                       std::move(this->tracerC_.freeConcentrations_[tracerIdx]),
                        data::TargetType::RESTART_TRACER_SOLUTION);
         }
 
         // Put freeTracerConcentrations container into a valid state.  Otherwise
         // we'll move from vectors that have already been moved from if we
         // get here and it's not a restart step.
-        this->freeTracerConcentrations_.clear();
+        this->tracerC_.freeConcentrations_.clear();
     }
-    if (! this->solTracerConcentrations_.empty()) {
+    if (! this->tracerC_.solConcentrations_.empty()) {
         const auto& tracers = this->eclState_.tracer();
         for (auto tracerIdx = 0*tracers.size();
              tracerIdx < tracers.size(); ++tracerIdx)
         {
-            if (solTracerConcentrations_[tracerIdx].empty())
+            if (this->tracerC_.solConcentrations_[tracerIdx].empty())
                 continue;
 
             sol.insert(tracers[tracerIdx].sname(),
                        UnitSystem::measure::identity,
-                       std::move(solTracerConcentrations_[tracerIdx]),
+                       std::move(this->tracerC_.solConcentrations_[tracerIdx]),
                        data::TargetType::RESTART_TRACER_SOLUTION);
         }
 
         // Put solTracerConcentrations container into a valid state.  Otherwise
         // we'll move from vectors that have already been moved from if we
         // get here and it's not a restart step.
-        this->solTracerConcentrations_.clear();
+        this->tracerC_.solConcentrations_.clear();
     }
 }
 
@@ -1221,16 +1221,16 @@ doAllocBuffers(const unsigned bufferSize,
 
     // tracers
     if (numTracers > 0) {
-        freeTracerConcentrations_.resize(numTracers);
+        tracerC_.freeConcentrations_.resize(numTracers);
         for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
         {
-            freeTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
+            tracerC_.freeConcentrations_[tracerIdx].resize(bufferSize, 0.0);
         }
-        solTracerConcentrations_.resize(numTracers);
+        tracerC_.solConcentrations_.resize(numTracers);
         for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
         {
             if (enableSolTracers[tracerIdx])
-                solTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
+                tracerC_.solConcentrations_[tracerIdx].resize(bufferSize, 0.0);
         }
     }
 

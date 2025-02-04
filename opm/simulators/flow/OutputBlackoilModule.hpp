@@ -647,21 +647,21 @@ public:
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();
-            if (! this->freeTracerConcentrations_.empty()) {
+            if (! this->tracerC_.freeConcentrations_.empty()) {
                 for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
-                    if (this->freeTracerConcentrations_[tracerIdx].empty()) {
+                    if (this->tracerC_.freeConcentrations_[tracerIdx].empty()) {
                         continue;
                     }
-                    this->freeTracerConcentrations_[tracerIdx][globalDofIdx] =
+                    this->tracerC_.freeConcentrations_[tracerIdx][globalDofIdx] =
                         tracerModel.freeTracerConcentration(tracerIdx, globalDofIdx);
                 }
             }
-            if (! this->solTracerConcentrations_.empty()) {
+            if (! this->tracerC_.solConcentrations_.empty()) {
                 for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
-                    if (this->solTracerConcentrations_[tracerIdx].empty()) {
+                    if (this->tracerC_.solConcentrations_[tracerIdx].empty()) {
                         continue;
                     }
-                    this->solTracerConcentrations_[tracerIdx][globalDofIdx] =
+                    this->tracerC_.solConcentrations_[tracerIdx][globalDofIdx] =
                         tracerModel.solTracerConcentration(tracerIdx, globalDofIdx);
                     
                 }

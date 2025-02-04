@@ -40,6 +40,7 @@
 #include <opm/simulators/flow/MechContainer.hpp>
 #include <opm/simulators/flow/MICPContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
+#include <opm/simulators/flow/TracerContainer.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -330,7 +331,7 @@ protected:
                         const bool enablePCHysteresis = false,
                         const bool enableNonWettingHysteresis = false,
                         const bool enableWettingHysteresis = false,
-                        unsigned numTracers = 0,
+                        const unsigned numTracers = 0,
                         const std::vector<bool>& enableSolTracers = {},
                         unsigned numOutputNnc = 0,
                         std::map<std::string, int> rstKeywords = {});
@@ -467,8 +468,7 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
-    std::vector<ScalarBuffer> freeTracerConcentrations_;
-    std::vector<ScalarBuffer> solTracerConcentrations_;
+    TracerContainer<FluidSystem> tracerC_;
 
     std::array<ScalarBuffer, numPhases> residual_;
 
