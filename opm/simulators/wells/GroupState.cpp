@@ -374,8 +374,8 @@ has_injection_control(const std::string& gname, Phase phase) const
 
 template<class Scalar>
 void GroupState<Scalar>::
-injection_control(const std::string& gname,
-                  Phase phase, Group::InjectionCMode cmode)
+set_injection_control(const std::string& gname,
+                      Phase phase, Group::InjectionCMode cmode)
 {
     this->injection_controls[ std::make_pair(phase, gname) ] = cmode;
 }
