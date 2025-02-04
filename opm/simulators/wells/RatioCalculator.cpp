@@ -51,9 +51,9 @@ namespace Opm {
 
 template<class Value>
 RatioCalculator<Value>::
-RatioCalculator(unsigned gasCompIdx,
-                unsigned oilCompIdx,
-                unsigned waterCompIdx,
+RatioCalculator(int gasCompIdx,
+                int oilCompIdx,
+                int waterCompIdx,
                 std::string_view name)
     : gasComp_{gasCompIdx}
     , oilComp_(oilCompIdx)

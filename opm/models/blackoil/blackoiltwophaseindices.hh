@@ -181,7 +181,7 @@ struct BlackOilTwoPhaseIndices
     //////////////////////
 
     //! \brief returns the index of "active" component
-    static constexpr unsigned canonicalToActiveComponentIndex(const unsigned compIdx)
+    static constexpr int canonicalToActiveComponentIndex(const int compIdx)
     {
         // assumes canonical oil = 0, water = 1, gas = 2;
         if (!gasEnabled) {
@@ -201,10 +201,10 @@ struct BlackOilTwoPhaseIndices
         return compIdx - 1;
     }
 
-    static unsigned activeToCanonicalComponentIndex(unsigned compIdx)
+    static constexpr int activeToCanonicalComponentIndex(const int compIdx)
     {
         // assumes canonical oil = 0, water = 1, gas = 2;
-        assert(compIdx < 2);
+        constexpr_assert(compIdx < 2);
         if (!gasEnabled) {
             // oil = 0, water = 1
             return compIdx;
@@ -212,7 +212,7 @@ struct BlackOilTwoPhaseIndices
             // oil = 0, gas = 1
             return compIdx * 2;
         } else {
-            assert(!oilEnabled);
+            constexpr_assert(!oilEnabled);
         }
 
         // water = 0, gas = 1;

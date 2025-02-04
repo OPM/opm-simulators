@@ -115,7 +115,7 @@ public:
     //! \brief Returns upwinding rate for a component in a segment.
     EvalWell getSegmentRateUpwinding(const int seg,
                                      const int seg_upwind,
-                                     const std::size_t comp_idx) const;
+                                     const int comp_idx) const;
 
     //! \brief Get bottomhole pressure.
     EvalWell getBhp() const;
@@ -154,7 +154,7 @@ private:
 
     //! \brief Returns volume fraction for component in a segment.
     EvalWell volumeFraction(const int seg,
-                            const unsigned compIdx) const;
+                            const int compIdx) const;
 
     //! \brief The values for the primary variables
     //! \details Based on different solution strategies, the wells can have different primary variables
