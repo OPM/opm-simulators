@@ -34,7 +34,7 @@
 
 #include <opm/simulators/flow/ExtboContainer.hpp>
 #include <opm/simulators/flow/FIPContainer.hpp>
-#include <opm/simulators/flow/FlowsData.hpp>
+#include <opm/simulators/flow/FlowsContainer.hpp>
 #include <opm/simulators/flow/InterRegFlows.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
 #include <opm/simulators/flow/MechContainer.hpp>
@@ -199,50 +199,8 @@ public:
     const MICPContainer<Scalar>& getMICP() const
     { return this->micpC_; }
 
-    const std::array<FlowsData<double>, 3>& getFlowsn() const
-    {
-        return this->flowsn_;
-    }
-
-    bool hasFlowsn() const
-    {
-        return enableFlowsn_;
-    }
-
-    bool hasFlows() const
-    {
-        return enableFlows_;
-    }
-
-    bool hasBlockFlows() const
-    {
-        return blockFlows_;
-    }
-
-    bool anyFlows() const
-    {
-        return anyFlows_;
-    }
-
-    const std::array<FlowsData<double>, 3>& getFloresn() const
-    {
-        return this->floresn_;
-    }
-
-    bool hasFloresn() const
-    {
-        return enableFloresn_;
-    }
-
-    bool hasFlores() const
-    {
-        return enableFlores_;
-    }
-
-    bool anyFlores() const
-    {
-        return anyFlores_;
-    }
+    const FlowsContainer<FluidSystem>& getFlows() const
+    { return this->flowsC_; }
 
     bool needInterfaceFluxes([[maybe_unused]] const bool isSubStep) const
     {
@@ -384,14 +342,6 @@ protected:
     bool forceDisableFipresvOutput_{false};
     bool computeFip_{false};
 
-    bool anyFlows_{false};
-    bool anyFlores_{false};
-    bool blockFlows_{false};
-    bool enableFlows_{false};
-    bool enableFlores_{false};
-    bool enableFlowsn_{false};
-    bool enableFloresn_{false};
-
     FIPContainer<FluidSystem> fipC_;
     std::unordered_map<std::string, std::vector<int>> regions_;
     std::unordered_map<Inplace::Phase, std::vector<SummaryConfigNode>> regionNodes_;
@@ -460,11 +410,7 @@ protected:
 
     std::array<ScalarBuffer, numPhases> residual_;
 
-    std::array<std::array<ScalarBuffer, numPhases>, 6> flows_;
-    std::array<std::array<ScalarBuffer, numPhases>, 6> flores_;
-
-    std::array<FlowsData<double>, 3> floresn_;
-    std::array<FlowsData<double>, 3> flowsn_;
+    FlowsContainer<FluidSystem> flowsC_;
 
     RFTContainer<FluidSystem> rftC_;
     std::map<std::pair<std::string, int>, double> blockData_;

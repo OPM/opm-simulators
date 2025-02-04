@@ -678,38 +678,38 @@ public:
                 for (const auto& flowsInfo : flowsInfos) {
                     if (flowsInfo.faceId >= 0) {
                         if constexpr (gas_idx >= 0) {
-                            if (!this->flows_[flowsInfo.faceId][gasCompIdx].empty()) {
-                                this->flows_[flowsInfo.faceId][gasCompIdx][globalDofIdx]
+                            if (!this->flowsC_.flows_[flowsInfo.faceId][gasCompIdx].empty()) {
+                                this->flowsC_.flows_[flowsInfo.faceId][gasCompIdx][globalDofIdx]
                                     = flowsInfo.flow[gas_idx];
                             }
                         }
                         if constexpr (oil_idx >= 0) {
-                            if (!this->flows_[flowsInfo.faceId][oilCompIdx].empty()) {
-                                this->flows_[flowsInfo.faceId][oilCompIdx][globalDofIdx]
+                            if (!this->flowsC_.flows_[flowsInfo.faceId][oilCompIdx].empty()) {
+                                this->flowsC_.flows_[flowsInfo.faceId][oilCompIdx][globalDofIdx]
                                     = flowsInfo.flow[oil_idx];
                             }
                         }
                         if constexpr (water_idx >= 0) {
-                            if (!this->flows_[flowsInfo.faceId][waterCompIdx].empty()) {
-                                this->flows_[flowsInfo.faceId][waterCompIdx][globalDofIdx]
+                            if (!this->flowsC_.flows_[flowsInfo.faceId][waterCompIdx].empty()) {
+                                this->flowsC_.flows_[flowsInfo.faceId][waterCompIdx][globalDofIdx]
                                     = flowsInfo.flow[water_idx];
                             }
                         }
                     }
                     if (flowsInfo.faceId == -2) {
-                        if (!this->flowsn_[gasCompIdx].indices.empty()) {
-                            this->flowsn_[gasCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsn_[gasCompIdx].values[flowsInfo.nncId]
+                        if (!this->flowsC_.flowsn_[gasCompIdx].indices.empty()) {
+                            this->flowsC_.flowsn_[gasCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsC_.flowsn_[gasCompIdx].values[flowsInfo.nncId]
                                 = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
                         }
-                        if (!this->flowsn_[oilCompIdx].indices.empty()) {
-                            this->flowsn_[oilCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsn_[oilCompIdx].values[flowsInfo.nncId]
+                        if (!this->flowsC_.flowsn_[oilCompIdx].indices.empty()) {
+                            this->flowsC_.flowsn_[oilCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsC_.flowsn_[oilCompIdx].values[flowsInfo.nncId]
                                 = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
                         }
-                        if (!this->flowsn_[waterCompIdx].indices.empty()) {
-                            this->flowsn_[waterCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsn_[waterCompIdx].values[flowsInfo.nncId]
+                        if (!this->flowsC_.flowsn_[waterCompIdx].indices.empty()) {
+                            this->flowsC_.flowsn_[waterCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsC_.flowsn_[waterCompIdx].values[flowsInfo.nncId]
                                 = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
                         }
                     }
@@ -723,39 +723,39 @@ public:
                 for (const auto& floresInfo : floresInfos) {
                     if (floresInfo.faceId >= 0) {
                         if constexpr (gas_idx >= 0) {
-                            if (!this->flores_[floresInfo.faceId][gasCompIdx].empty()) {
-                                this->flores_[floresInfo.faceId][gasCompIdx][globalDofIdx]
+                            if (!this->flowsC_.flores_[floresInfo.faceId][gasCompIdx].empty()) {
+                                this->flowsC_.flores_[floresInfo.faceId][gasCompIdx][globalDofIdx]
                                     = floresInfo.flow[gas_idx];
                             }
                         }
                         if constexpr (oil_idx >= 0) {
-                            if (!this->flores_[floresInfo.faceId][oilCompIdx].empty()) {
-                                this->flores_[floresInfo.faceId][oilCompIdx][globalDofIdx]
+                            if (!this->flowsC_.flores_[floresInfo.faceId][oilCompIdx].empty()) {
+                                this->flowsC_.flores_[floresInfo.faceId][oilCompIdx][globalDofIdx]
                                     = floresInfo.flow[oil_idx];
                             }
                         }
                         if constexpr (water_idx >= 0) {
-                            if (!this->flores_[floresInfo.faceId][waterCompIdx].empty()) {
-                                this->flores_[floresInfo.faceId][waterCompIdx][globalDofIdx]
+                            if (!this->flowsC_.flores_[floresInfo.faceId][waterCompIdx].empty()) {
+                                this->flowsC_.flores_[floresInfo.faceId][waterCompIdx][globalDofIdx]
                                     = floresInfo.flow[water_idx];
                             }
                         }
                     }
                    
                     if (floresInfo.faceId == -2) {
-                        if (!this->floresn_[gasCompIdx].indices.empty()) {
-                            this->floresn_[gasCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
-                            this->floresn_[gasCompIdx].values[floresInfo.nncId]
+                        if (!this->flowsC_.floresn_[gasCompIdx].indices.empty()) {
+                            this->flowsC_.floresn_[gasCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
+                            this->flowsC_.floresn_[gasCompIdx].values[floresInfo.nncId]
                                 = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
                         }
-                        if (!this->floresn_[oilCompIdx].indices.empty()) {
-                            this->floresn_[oilCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
-                            this->floresn_[oilCompIdx].values[floresInfo.nncId]
+                        if (!this->flowsC_.floresn_[oilCompIdx].indices.empty()) {
+                            this->flowsC_.floresn_[oilCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
+                            this->flowsC_.floresn_[oilCompIdx].values[floresInfo.nncId]
                                 = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
                         }
-                        if (!this->floresn_[waterCompIdx].indices.empty()) {
-                            this->floresn_[waterCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
-                            this->floresn_[waterCompIdx].values[floresInfo.nncId]
+                        if (!this->flowsC_.floresn_[waterCompIdx].indices.empty()) {
+                            this->flowsC_.floresn_[waterCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
+                            this->flowsC_.floresn_[waterCompIdx].values[floresInfo.nncId]
                                 = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
                         }
                     }
@@ -1000,7 +1000,7 @@ public:
                             dir = FaceDir::ToIntersectionIndex(Dir::ZPlus);
                         }
 
-                        val.second = this->flows_[dir][waterCompIdx][globalDofIdx];
+                        val.second = this->flowsC_.flows_[dir][waterCompIdx][globalDofIdx];
                     }
                     else {
                         std::string logstring = "Keyword '";
