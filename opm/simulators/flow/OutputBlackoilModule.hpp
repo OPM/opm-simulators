@@ -388,9 +388,9 @@ public:
                 if (this->viscosity_[phaseIdx].empty())
                     continue;
 
-                if (!this->extboX_.empty() && phaseIdx == oilPhaseIdx)
+                if (!this->extboC_.X_volume_.empty() && phaseIdx == oilPhaseIdx)
                     this->viscosity_[phaseIdx][globalDofIdx] = getValue(intQuants.oilViscosity());
-                else if (!this->extboX_.empty() && phaseIdx == gasPhaseIdx)
+                else if (!this->extboC_.X_volume_.empty() && phaseIdx == gasPhaseIdx)
                     this->viscosity_[phaseIdx][globalDofIdx] = getValue(intQuants.gasViscosity());
                 else
                     this->viscosity_[phaseIdx][globalDofIdx] = getValue(fs.viscosity(phaseIdx));
@@ -438,16 +438,16 @@ public:
                 this->permFact_[globalDofIdx] = intQuants.permFactor().value();
             }
 
-            if (!this->extboX_.empty()) {
-                this->extboX_[globalDofIdx] = intQuants.xVolume().value();
+            if (!this->extboC_.X_volume_.empty()) {
+                this->extboC_.X_volume_[globalDofIdx] = intQuants.xVolume().value();
             }
 
-            if (!this->extboY_.empty()) {
-                this->extboY_[globalDofIdx] = intQuants.yVolume().value();
+            if (!this->extboC_.Y_volume_.empty()) {
+                this->extboC_.Y_volume_[globalDofIdx] = intQuants.yVolume().value();
             }
 
-            if (!this->extboZ_.empty()) {
-                this->extboZ_[globalDofIdx] = intQuants.zFraction().value();
+            if (!this->extboC_.Z_fraction_.empty()) {
+                this->extboC_.Z_fraction_[globalDofIdx] = intQuants.zFraction().value();
             }
 
             if (!this->rPorV_.empty()) {
@@ -455,7 +455,7 @@ public:
                 this->rPorV_[globalDofIdx] = totVolume * intQuants.porosity().value();
             }
 
-            if (!this->mFracCo2_.empty()) {
+            if (!this->extboC_.mFracCo2_.empty()) {
                 const Scalar stdVolOil = getValue(fs.saturation(oilPhaseIdx)) * getValue(fs.invB(oilPhaseIdx))
                     + getValue(fs.saturation(gasPhaseIdx)) * getValue(fs.invB(gasPhaseIdx)) * getValue(fs.Rv());
                 const Scalar stdVolGas = getValue(fs.saturation(gasPhaseIdx)) * getValue(fs.invB(gasPhaseIdx))
@@ -470,9 +470,9 @@ public:
                 const Scalar rhoG = FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
                 const Scalar rhoCO2 = intQuants.zRefDensity();
                 const Scalar stdMassTotal = 1.0e-10 + stdVolOil * rhoO + stdVolGas * rhoG + stdVolCo2 * rhoCO2;
-                this->mFracOil_[globalDofIdx] = stdVolOil * rhoO / stdMassTotal;
-                this->mFracGas_[globalDofIdx] = stdVolGas * rhoG / stdMassTotal;
-                this->mFracCo2_[globalDofIdx] = stdVolCo2 * rhoCO2 / stdMassTotal;
+                this->extboC_.mFracOil_[globalDofIdx] = stdVolOil * rhoO / stdMassTotal;
+                this->extboC_.mFracGas_[globalDofIdx] = stdVolGas * rhoG / stdMassTotal;
+                this->extboC_.mFracCo2_[globalDofIdx] = stdVolCo2 * rhoCO2 / stdMassTotal;
             }
 
             if (this->micpC_.allocated()) {
