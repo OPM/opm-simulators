@@ -109,6 +109,7 @@ public:
                    const int comp_idx) const
     { return flows_[FaceDir::ToIntersectionIndex(dir)][comp_idx][globalDofIdx]; }
 
+private:
     bool anyFlows_{false};
     bool anyFlores_{false};
     bool blockFlows_{false};
