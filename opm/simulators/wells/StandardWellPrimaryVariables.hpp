@@ -157,7 +157,7 @@ private:
                                              DeferredLogger& deferred_logger) const;
 
     //! \brief Returns volume fraction for a component.
-    EvalWell volumeFraction(const unsigned compIdx) const;
+    EvalWell volumeFraction(const int compIdx) const;
 
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions();
