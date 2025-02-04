@@ -728,6 +728,7 @@ if(CUDA_FOUND)
                        gpu_ad
                        gpu_linear_two_phase_material
                        gpuPvt
+                       smart_pointers
                        PROPERTIES LABELS ${gpu_label})
 endif()
 

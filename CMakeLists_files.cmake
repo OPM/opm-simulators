@@ -312,6 +312,7 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBlockPreconditioner.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg PreconditionerHolder.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg set_device.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg gpu_smart_pointer.hpp)
 endif()
 
 if(USE_GPU_BRIDGE)
@@ -467,6 +468,8 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ad.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_linear_two_phase_material.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuPvt.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_smart_pointers.cu)
+
 
   # for loop providing the flag --expt-relaxed-constexpr to fix some cuda issues with constexpr
   if(NOT CONVERT_CUDA_TO_HIP)
