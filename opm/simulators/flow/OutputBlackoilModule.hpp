@@ -690,44 +690,12 @@ public:
                 const auto& floresInf = problem.model().linearizer().getFloresInfo();
                 auto floresInfos = floresInf[globalDofIdx];
                 for (const auto& floresInfo : floresInfos) {
-                    if (floresInfo.faceId >= 0) {
-                        if constexpr (gas_idx >= 0) {
-                            if (!this->flowsC_.flores_[floresInfo.faceId][gasCompIdx].empty()) {
-                                this->flowsC_.flores_[floresInfo.faceId][gasCompIdx][globalDofIdx]
-                                    = floresInfo.flow[gas_idx];
-                            }
-                        }
-                        if constexpr (oil_idx >= 0) {
-                            if (!this->flowsC_.flores_[floresInfo.faceId][oilCompIdx].empty()) {
-                                this->flowsC_.flores_[floresInfo.faceId][oilCompIdx][globalDofIdx]
-                                    = floresInfo.flow[oil_idx];
-                            }
-                        }
-                        if constexpr (water_idx >= 0) {
-                            if (!this->flowsC_.flores_[floresInfo.faceId][waterCompIdx].empty()) {
-                                this->flowsC_.flores_[floresInfo.faceId][waterCompIdx][globalDofIdx]
-                                    = floresInfo.flow[water_idx];
-                            }
-                        }
-                    }
-                   
-                    if (floresInfo.faceId == -2) {
-                        if (!this->flowsC_.floresn_[gasCompIdx].indices.empty()) {
-                            this->flowsC_.floresn_[gasCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
-                            this->flowsC_.floresn_[gasCompIdx].values[floresInfo.nncId]
-                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
-                        }
-                        if (!this->flowsC_.floresn_[oilCompIdx].indices.empty()) {
-                            this->flowsC_.floresn_[oilCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
-                            this->flowsC_.floresn_[oilCompIdx].values[floresInfo.nncId]
-                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
-                        }
-                        if (!this->flowsC_.floresn_[waterCompIdx].indices.empty()) {
-                            this->flowsC_.floresn_[waterCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
-                            this->flowsC_.floresn_[waterCompIdx].values[floresInfo.nncId]
-                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
-                        }
-                    }
+                    this->flowsC_.assignFlores(globalDofIdx,
+                                               floresInfo.faceId,
+                                               floresInfo.nncId,
+                                               value_or_zero<gas_idx>(floresInfo.flow),
+                                               value_or_zero<oil_idx>(floresInfo.flow),
+                                               value_or_zero<water_idx>(floresInfo.flow));
                 }
             }
         }
