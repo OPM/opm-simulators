@@ -28,6 +28,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/SICD.hpp>
+#include <opm/input/eclipse/Schedule/MSW/Segment.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -54,12 +55,13 @@ ValueType haalandFormular(const ValueType& re,
                           const Scalar diameter,
                           const Scalar roughness)
 {
-    // Since we currently do not guard for high roughness values in input we can end up with unrealistic friction factors.
-    // In particular, there could be a singularity in f(Re) if 1 \in image(X) in log10(X) below. In calculations we therefore
-    // limit the relative roughness to ensure the singularity never occurs in the relevant range (Re >= 4000).
+    // We now guard for high roughness values (possible singularity) during input handling.
+    // Keepeing a check here in case of unforeseen future usage.
     assert( re >= 4000. );
-    constexpr Scalar MAX_REL_ROUGHNESS = 3.7 * std::pow((1.0 - 1.0e-3) - 6.9/4000.0, 9. / 10.);
-    const Scalar rel_roughness = std::min(MAX_REL_ROUGHNESS, roughness/diameter);
+    const Scalar rel_roughness = roughness/diameter;
+    if (rel_roughness > Opm::Segment::MAX_REL_ROUGHNESS) {
+        throw std::invalid_argument("Too large relative roughness in Haaland friction factor calculations.");
+    }
     const ValueType value = -3.6 * log10(6.9 / re + std::pow(rel_roughness / 3.7, 10. / 9.) );
     return 1.0 / (value*value);
 }
