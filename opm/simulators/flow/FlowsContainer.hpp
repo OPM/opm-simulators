@@ -60,6 +60,13 @@ public:
                   const bool allocRestart,
                   std::map<std::string, int>& rstKeywords);
 
+    void assignFlores(const unsigned globalDofIdx,
+                      const int faceId,
+                      const unsigned nncId,
+                      const Scalar gas,
+                      const Scalar oil,
+                      const Scalar water);
+
     void assignFlows(const unsigned globalDofIdx,
                      const int faceId,
                      const unsigned nncId,
