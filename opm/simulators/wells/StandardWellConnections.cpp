@@ -731,7 +731,7 @@ connectionRateFoam(const std::vector<EvalWell>& cq_s,
             }
             case Phase::SOLVENT: {
                 if constexpr (Indices::enableSolvent)
-                    return static_cast<unsigned>(Indices::contiSolventEqIdx);
+                    return Indices::contiSolventEqIdx;
                 else
                     OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
             }
