@@ -77,6 +77,7 @@ public:
     bool allocated() const
     { return allocated_; }
 
+private:
     bool allocated_ = false;
     ScalarBuffer potentialForce_;
     ScalarBuffer potentialPressForce_;
