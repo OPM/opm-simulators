@@ -23,11 +23,14 @@
 #include <config.h>
 #include <opm/simulators/flow/MechContainer.hpp>
 
+#include <opm/common/utility/Visitor.hpp>
+
 #include <opm/output/data/Solution.hpp>
 
 #include <algorithm>
 #include <array>
 #include <tuple>
+#include <variant>
 
 namespace Opm {
 
@@ -157,64 +160,85 @@ outputRestart(data::Solution& sol) const
     if (!allocated_) {
         return;
     }
-    using DataEntry =
-        std::tuple<std::string, UnitSystem::measure, const std::vector<Scalar>&>;
+    using DataEntry = std::tuple<std::string,
+                                 UnitSystem::measure,
+                                 std::variant<const std::vector<Scalar>*,
+                                              const std::array<std::vector<Scalar>,3>*,
+                                              const VoigtArray<Scalar>*>>;
 
-    auto doInsert = [&sol](const DataEntry&       entry,
-                           const data::TargetType target)
+    auto doInsert = [&sol](const std::string& name,
+                           const UnitSystem::measure& measure,
+                           const std::vector<Scalar>& entry)
     {
-        if (std::get<2>(entry).empty()) {
-            return;
+        if (!entry.empty()) {
+            sol.insert(name, measure, entry, data::TargetType::RESTART_OPM_EXTENDED);
         }
-
-        sol.insert(std::get<std::string>(entry),
-                   std::get<UnitSystem::measure>(entry),
-                   std::move(std::get<2>(entry)),
-                   target);
     };
 
     const auto solutionVectors = std::array{
-        DataEntry{"DELSTRXX", UnitSystem::measure::pressure, delstressXX_},
-        DataEntry{"DELSTRYY", UnitSystem::measure::pressure, delstressYY_},
-        DataEntry{"DELSTRZZ", UnitSystem::measure::pressure, delstressZZ_},
-        DataEntry{"DELSTRXY", UnitSystem::measure::pressure, delstressXY_},
-        DataEntry{"DELSTRXZ", UnitSystem::measure::pressure, delstressXZ_},
-        DataEntry{"DELSTRYZ", UnitSystem::measure::pressure, delstressYZ_},
-        DataEntry{"DISPX",    UnitSystem::measure::length,   disp_[0]},
-        DataEntry{"DISPY",    UnitSystem::measure::length,   disp_[1]},
-        DataEntry{"DISPZ",    UnitSystem::measure::length,   disp_[2]},
-        DataEntry{"FRCSTRXX", UnitSystem::measure::pressure, fracstressXX_},
-        DataEntry{"FRCSTRYY", UnitSystem::measure::pressure, fracstressYY_},
-        DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure, fracstressZZ_},
-        DataEntry{"FRCSTRXY", UnitSystem::measure::pressure, fracstressXY_},
-        DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure, fracstressXZ_},
-        DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure, fracstressYZ_},
-        DataEntry{"LINSTRXX", UnitSystem::measure::pressure, linstressXX_},
-        DataEntry{"LINSTRYY", UnitSystem::measure::pressure, linstressYY_},
-        DataEntry{"LINSTRZZ", UnitSystem::measure::pressure, linstressZZ_},
-        DataEntry{"LINSTRXY", UnitSystem::measure::pressure, linstressXY_},
-        DataEntry{"LINSTRXZ", UnitSystem::measure::pressure, linstressXZ_},
-        DataEntry{"LINSTRYZ", UnitSystem::measure::pressure, linstressYZ_},
-        DataEntry{"MECHPOTF", UnitSystem::measure::pressure, potentialForce_},
-        DataEntry{"PRESPOTF", UnitSystem::measure::pressure, potentialPressForce_},
-        DataEntry{"STRAINXX", UnitSystem::measure::identity, strainXX_},
-        DataEntry{"STRAINYY", UnitSystem::measure::identity, strainYY_},
-        DataEntry{"STRAINZZ", UnitSystem::measure::identity, strainZZ_},
-        DataEntry{"STRAINXY", UnitSystem::measure::identity, strainXY_},
-        DataEntry{"STRAINXZ", UnitSystem::measure::identity, strainXZ_},
-        DataEntry{"STRAINYZ", UnitSystem::measure::identity, strainYZ_},
-        DataEntry{"STRESSXX", UnitSystem::measure::length,   stress_[VoigtIndex::XX]},
-        DataEntry{"STRESSYY", UnitSystem::measure::length,   stress_[VoigtIndex::YY]},
-        DataEntry{"STRESSZZ", UnitSystem::measure::length,   stress_[VoigtIndex::ZZ]},
-        DataEntry{"STRESSXY", UnitSystem::measure::length,   stress_[VoigtIndex::XY]},
-        DataEntry{"STRESSXZ", UnitSystem::measure::length,   stress_[VoigtIndex::XZ]},
-        DataEntry{"STRESSYZ", UnitSystem::measure::length,   stress_[VoigtIndex::YZ]},
-        DataEntry{"TEMPPOTF", UnitSystem::measure::pressure, potentialTempForce_},
+        DataEntry{"DELSTRXX", UnitSystem::measure::pressure, &delstressXX_},
+        DataEntry{"DELSTRYY", UnitSystem::measure::pressure, &delstressYY_},
+        DataEntry{"DELSTRZZ", UnitSystem::measure::pressure, &delstressZZ_},
+        DataEntry{"DELSTRXY", UnitSystem::measure::pressure, &delstressXY_},
+        DataEntry{"DELSTRXZ", UnitSystem::measure::pressure, &delstressXZ_},
+        DataEntry{"DELSTRYZ", UnitSystem::measure::pressure, &delstressYZ_},
+        DataEntry{"DISP",     UnitSystem::measure::length,   &disp_},
+        DataEntry{"FRCSTRXX", UnitSystem::measure::pressure, &fracstressXX_},
+        DataEntry{"FRCSTRYY", UnitSystem::measure::pressure, &fracstressYY_},
+        DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure, &fracstressZZ_},
+        DataEntry{"FRCSTRXY", UnitSystem::measure::pressure, &fracstressXY_},
+        DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure, &fracstressXZ_},
+        DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure, &fracstressYZ_},
+        DataEntry{"LINSTRXX", UnitSystem::measure::pressure, &linstressXX_},
+        DataEntry{"LINSTRYY", UnitSystem::measure::pressure, &linstressYY_},
+        DataEntry{"LINSTRZZ", UnitSystem::measure::pressure, &linstressZZ_},
+        DataEntry{"LINSTRXY", UnitSystem::measure::pressure, &linstressXY_},
+        DataEntry{"LINSTRXZ", UnitSystem::measure::pressure, &linstressXZ_},
+        DataEntry{"LINSTRYZ", UnitSystem::measure::pressure, &linstressYZ_},
+        DataEntry{"MECHPOTF", UnitSystem::measure::pressure, &potentialForce_},
+        DataEntry{"PRESPOTF", UnitSystem::measure::pressure, &potentialPressForce_},
+        DataEntry{"STRAINXX", UnitSystem::measure::identity, &strainXX_},
+        DataEntry{"STRAINYY", UnitSystem::measure::identity, &strainYY_},
+        DataEntry{"STRAINZZ", UnitSystem::measure::identity, &strainZZ_},
+        DataEntry{"STRAINXY", UnitSystem::measure::identity, &strainXY_},
+        DataEntry{"STRAINXZ", UnitSystem::measure::identity, &strainXZ_},
+        DataEntry{"STRAINYZ", UnitSystem::measure::identity, &strainYZ_},
+        DataEntry{"STRESS",   UnitSystem::measure::length,   &stress_},
+        DataEntry{"TEMPPOTF", UnitSystem::measure::pressure, &potentialTempForce_},
     };
 
     std::for_each(solutionVectors.begin(), solutionVectors.end(),
-                  [doInsert](const auto& array)
-                  { doInsert(array, data::TargetType::RESTART_OPM_EXTENDED); });
+                  [&doInsert](const auto& array)
+                  {
+                      std::visit(VisitorOverloadSet{
+                                    [&array, &doInsert](const std::vector<Scalar>* v)
+                                    {
+                                        doInsert(std::get<0>(array), std::get<1>(array), *v);
+                                    },
+                                    [&array, &doInsert](const std::array<std::vector<Scalar>,3>* V)
+                                    {
+                                        const auto& v = *V;
+                                        const auto& name = std::get<0>(array);
+                                        const auto& measure = std::get<1>(array);
+                                        doInsert(name + "X", measure, v[0]);
+                                        doInsert(name + "Y", measure, v[1]);
+                                        doInsert(name + "Z", measure, v[2]);
+                                    },
+                                    [&array, &doInsert](const VoigtArray<Scalar>* V)
+                                    {
+                                        const auto& v = *V;
+                                        const auto& name = std::get<0>(array);
+                                        const auto& measure = std::get<1>(array);
+                                        doInsert(name + "XX", measure, v[VoigtIndex::XX]);
+                                        doInsert(name + "YY", measure, v[VoigtIndex::YY]);
+                                        doInsert(name + "ZZ", measure, v[VoigtIndex::ZZ]);
+                                        doInsert(name + "YZ", measure, v[VoigtIndex::YZ]);
+                                        doInsert(name + "XZ", measure, v[VoigtIndex::XZ]);
+                                        doInsert(name + "XY", measure, v[VoigtIndex::XY]);
+                                    }
+                                 }, std::get<2>(array));
+                  }
+    );
 }
 
 template class MechContainer<double>;
