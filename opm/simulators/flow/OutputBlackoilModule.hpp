@@ -209,6 +209,9 @@ public:
                 const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
                 // Assume all mechanical things should be written
+                this->mech_.assignDelStress(globalDofIdx,
+                                            model.delstress(globalDofIdx));
+
                 this->mech_.assignDisplacement(globalDofIdx,
                                                model.disp(globalDofIdx, /*include_fracture*/true));
 
@@ -223,15 +226,6 @@ public:
                 // Total stress is not stored but calculated result is Voigt notation
                 this->mech_.assignStress(globalDofIdx,
                                          model.stress(globalDofIdx, /*include_fracture*/true));;
-
-                // Not including fracture
-                const auto delstress = model.delstress(globalDofIdx);
-                this->mech_.delstressXX_[globalDofIdx] = delstress[Voigt::XX];
-                this->mech_.delstressYY_[globalDofIdx] = delstress[Voigt::YY];
-                this->mech_.delstressZZ_[globalDofIdx] = delstress[Voigt::ZZ];
-                this->mech_.delstressXY_[globalDofIdx] = delstress[Voigt::XY];
-                this->mech_.delstressXZ_[globalDofIdx] = delstress[Voigt::XZ];
-                this->mech_.delstressYZ_[globalDofIdx] = delstress[Voigt::YZ];
 
                 const auto linstress = model.linstress(globalDofIdx);
                 this->mech_.linstressXX_[globalDofIdx] = linstress[Voigt::XX];

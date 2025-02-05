@@ -113,6 +113,19 @@ allocate(const std::size_t bufferSize,
 
 template<class Scalar>
 void MechContainer<Scalar>::
+assignDelStress(const unsigned globalDofIdx,
+                const Dune::FieldVector<Scalar,6>& delStress)
+{
+    this->delstressXX_[globalDofIdx] = delStress[0];
+    this->delstressYY_[globalDofIdx] = delStress[1];
+    this->delstressZZ_[globalDofIdx] = delStress[2];
+    this->delstressYZ_[globalDofIdx] = delStress[3];
+    this->delstressXZ_[globalDofIdx] = delStress[4];
+    this->delstressXY_[globalDofIdx] = delStress[5];
+}
+
+template<class Scalar>
+void MechContainer<Scalar>::
 assignDisplacement(const unsigned globalDofIdx,
                    const Dune::FieldVector<Scalar,3>& disp)
 {
