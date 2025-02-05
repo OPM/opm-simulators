@@ -22,6 +22,7 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/is_gpu_pointer.hpp>
 
 /**
  * @file gpu_smart_pointer.hpp defines convenience classes and functions for using std::shared_ptr and std::unique_ptr
@@ -48,7 +49,7 @@ make_gpu_shared_ptr()
 {
     T* ptr = nullptr;
     OPM_GPU_SAFE_CALL(cudaMalloc(&ptr, sizeof(T)));
-    auto deleter = [](T* ptr) { OPM_GPU_WARN_IF_ERROR(cudaFree(ptr)); };
+    auto deleter = [](T* ptrToDelete) { OPM_GPU_WARN_IF_ERROR(cudaFree(ptrToDelete)); };
     return std::shared_ptr<T>(ptr, deleter);
 }
 
@@ -90,7 +91,7 @@ make_gpu_unique_ptr()
     T* ptr = nullptr;
     OPM_GPU_SAFE_CALL(cudaMalloc(&ptr, sizeof(T)));
 
-    auto deleter = [](T* ptr) { OPM_GPU_WARN_IF_ERROR(cudaFree(ptr)); };
+    auto deleter = [](T* ptrToDelete) { OPM_GPU_WARN_IF_ERROR(cudaFree(ptrToDelete)); };
     return std::unique_ptr<T, decltype(deleter)>(ptr, deleter);
 }
 
@@ -112,6 +113,82 @@ make_gpu_unique_ptr(const T& value)
     auto ptr = make_gpu_unique_ptr<T>();
     OPM_GPU_SAFE_CALL(cudaMemcpy(ptr.get(), &value, sizeof(T), cudaMemcpyHostToDevice));
     return ptr;
+}
+
+/**
+ * @brief Copies a value from GPU-allocated memory to the host.
+ * 
+ * @param value A pointer to the value on the GPU.
+ * 
+ * @return The value copied from the GPU.
+ * 
+ * @note This function is involves a sychronization point, and should be used with care.
+ */
+template<class T>
+T copyFromGPU(const T* value) {
+    #ifndef NDEBUG
+    OPM_ERROR_IF(!Opm::gpuistl::detail::isGPUPointer(value), "The pointer is not associated with GPU memory.");
+    #endif
+    T result;
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&result, value, sizeof(T), cudaMemcpyDeviceToHost));
+    return result;
+}
+
+/**
+ * @brief Copies a value from GPU-allocated memory to the host.
+ * 
+ * @tparam SmartPtr A template class for the pointer type.
+ * @tparam T   The type stored within the pointer.
+ * @tparam Args Additional template arguments for the smart pointer (typically the custom deleter for unique pointers).
+ * @param value A smart pointer to the value on the GPU.
+ * 
+ * @return The value copied from the GPU.
+ * 
+ * @note This function is involves a sychronization point, and should be used with care.
+ */
+template <
+    template <class, class...> class SmartPtr,
+    class T,
+    class... Args
+>T copyFromGPU(const SmartPtr<T, Args...>& value) {
+    return copyFromGPU(value.get());
+}
+
+/**
+ * @brief Copies a value from the host to GPU-allocated memory.
+ * 
+ * @param value The value to copy to the GPU.
+ * @param ptr A pointer to the GPU-allocated memory.
+ * 
+ * @note This function is involves a sychronization point, and should be used with care.
+ */
+template<class T>
+void copyToGPU(const T& value, T* ptr) {
+    #ifndef NDEBUG
+    OPM_ERROR_IF(!Opm::gpuistl::detail::isGPUPointer(ptr), "The pointer is not associated with GPU memory.");
+    #endif
+    OPM_GPU_SAFE_CALL(cudaMemcpy(ptr, &value, sizeof(T), cudaMemcpyHostToDevice));
+}
+
+/**
+ * @brief Copies a value from the host to GPU-allocated memory.
+ *
+ * @tparam SmartPtr A template class for the pointer type.
+ * @tparam T   The type stored within the pointer.
+ * @tparam Args Additional template arguments for the smart pointer (typically the custom deleter for unique pointers).
+ *
+ * @param value The value to copy to the GPU.
+ * @param ptr A smart pointer to the GPU-allocated memory.
+ * 
+ * @note This function is involves a sychronization point, and should be used with care.
+ */
+template <
+    template <class, class...> class SmartPtr,
+    class T,
+    class... Args
+>
+void copyToGPU(const T& value, const SmartPtr<T, Args...>& ptr) {
+    copyToGPU(value, ptr.get());
 }
 
 /**

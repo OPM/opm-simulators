@@ -17,9 +17,10 @@
 
 #define BOOST_TEST_MODULE TestSmartPointers
 
+#include <array>
+
 #include <boost/test/unit_test.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
-
 namespace
 {
 
@@ -104,4 +105,43 @@ BOOST_AUTO_TEST_CASE(TestPointerView)
     double valueFromDeviceUnique = 0;
     OPM_GPU_SAFE_CALL(cudaMemcpy(&valueFromDeviceUnique, uniqueView.get(), sizeof(double), cudaMemcpyDeviceToHost));
     BOOST_CHECK_EQUAL(valueFromDeviceUnique, 1.0);
+}
+
+BOOST_AUTO_TEST_CASE(TestCopyFromGPU)
+{
+    auto sharedPtr = Opm::gpuistl::make_gpu_shared_ptr<int>(42);
+    auto fromGPU = Opm::gpuistl::copyFromGPU(sharedPtr);
+    BOOST_CHECK_EQUAL(fromGPU, 42);
+
+    auto uniquePtr = Opm::gpuistl::make_gpu_unique_ptr<int>(128);
+    auto fromGPUUnique = Opm::gpuistl::copyFromGPU(uniquePtr);
+    BOOST_CHECK_EQUAL(fromGPUUnique, 128);
+
+    auto sharedPtrArray
+        = Opm::gpuistl::make_gpu_shared_ptr<std::array<double, 4>>(std::array<double, 4> {1.0, 2.0, 3.0, 4.0});
+    auto fromGPUArray = Opm::gpuistl::copyFromGPU(sharedPtrArray);
+    BOOST_CHECK_EQUAL(fromGPUArray[0], 1.0);
+    BOOST_CHECK_EQUAL(fromGPUArray[1], 2.0);
+    BOOST_CHECK_EQUAL(fromGPUArray[2], 3.0);
+    BOOST_CHECK_EQUAL(fromGPUArray[3], 4.0);
+}
+
+BOOST_AUTO_TEST_CASE(TestCopyToGPU) {
+    auto sharedPtr = Opm::gpuistl::make_gpu_shared_ptr<double>();
+    Opm::gpuistl::copyToGPU(42.0, sharedPtr);
+    auto valueFromDevice = Opm::gpuistl::copyFromGPU(sharedPtr);
+    BOOST_CHECK_EQUAL(valueFromDevice, 42.0);
+
+    auto uniquePtr = Opm::gpuistl::make_gpu_unique_ptr<double>();
+    Opm::gpuistl::copyToGPU(128.0, uniquePtr);
+    auto valueFromDeviceUnique = Opm::gpuistl::copyFromGPU(uniquePtr);
+    BOOST_CHECK_EQUAL(valueFromDeviceUnique, 128.0);
+
+    auto sharedPtrArray = Opm::gpuistl::make_gpu_shared_ptr<std::array<double, 4>>();
+    Opm::gpuistl::copyToGPU(std::array<double, 4> {1.0, 2.0, 3.0, 4.0}, sharedPtrArray);
+    auto valueFromDeviceArray = Opm::gpuistl::copyFromGPU(sharedPtrArray);
+    BOOST_CHECK_EQUAL(valueFromDeviceArray[0], 1.0);
+    BOOST_CHECK_EQUAL(valueFromDeviceArray[1], 2.0);
+    BOOST_CHECK_EQUAL(valueFromDeviceArray[2], 3.0);
+    BOOST_CHECK_EQUAL(valueFromDeviceArray[3], 4.0);
 }
