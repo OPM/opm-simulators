@@ -158,8 +158,8 @@ private:
     int m_ILU0FactorizationThreadBlockSize = -1;
 
     // Graphs for Apply
-    std::map<std::pair<field_type*, const field_type*>, cudaGraph_t> m_apply_graphs;
-    std::map<std::pair<field_type*, const field_type*>, cudaGraphExec_t> m_executableGraphs;
+    std::map<std::pair<field_type*, const field_type*>, GPUGraph> m_apply_graphs;
+    std::map<std::pair<field_type*, const field_type*>, GPUGraphExec> m_executableGraphs;
 
     // Stream for the DILU operations on the GPU
     GPUStream m_stream{};

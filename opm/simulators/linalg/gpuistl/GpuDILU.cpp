@@ -123,17 +123,15 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d)
         auto it = m_apply_graphs.find(ptrs);
 
         if (it == m_apply_graphs.end()) {
-            m_apply_graphs[ptrs] = cudaGraph_t();
-            m_executableGraphs[ptrs] = cudaGraphExec_t();
             OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream.get(), cudaStreamCaptureModeGlobal));
 
             // The apply functions contains lots of small function calls which call a kernel each
             apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
 
-            OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream.get(), &m_apply_graphs[ptrs]));
-            OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_executableGraphs[ptrs], m_apply_graphs[ptrs], nullptr, nullptr, 0));
+            OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream.get(), &m_apply_graphs[ptrs].get()));
+            OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_executableGraphs[ptrs].get(), m_apply_graphs[ptrs].get(), nullptr, nullptr, 0));
         }
-        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs], 0));
+        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs].get(), 0));
     }
 
     // ensure that main stream only continues after this stream is completed
