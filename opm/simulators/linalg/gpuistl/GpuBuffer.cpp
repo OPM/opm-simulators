@@ -188,6 +188,7 @@ GpuBuffer<T>::copyFromHost(const std::vector<T>& data)
 {
     copyFromHost(data.data(), data.size());
 }
+
 template <class T>
 void
 GpuBuffer<T>::copyToHost(std::vector<T>& data) const
