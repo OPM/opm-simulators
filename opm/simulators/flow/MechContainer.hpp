@@ -26,6 +26,8 @@
 #ifndef OPM_MECH_CONTAINER_HPP
 #define OPM_MECH_CONTAINER_HPP
 
+#include <dune/common/fvector.hh>
+
 #include <cstddef>
 #include <map>
 #include <string>
@@ -43,6 +45,9 @@ class MechContainer
 public:
     void allocate(const std::size_t bufferSize,
                   std::map<std::string, int>& rstKeywords);
+
+    void assignDisplacement(const unsigned globalDofIdx,
+                            const Dune::FieldVector<Scalar,3>& disp);
 
     void assignPotentialForces(const unsigned globalDofIdx,
                                const Scalar force,

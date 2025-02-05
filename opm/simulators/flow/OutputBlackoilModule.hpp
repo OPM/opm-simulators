@@ -209,15 +209,13 @@ public:
                 const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
                 // Assume all mechanical things should be written
+                this->mech_.assignDisplacement(globalDofIdx,
+                                               model.disp(globalDofIdx, /*include_fracture*/true));
+
                 this->mech_.assignPotentialForces(globalDofIdx,
                                                   model.mechPotentialForce(globalDofIdx),
                                                   model.mechPotentialPressForce(globalDofIdx),
                                                   model.mechPotentialTempForce(globalDofIdx));
-
-                const auto disp = model.disp(globalDofIdx, /*include_fracture*/true);
-                this->mech_.dispX_[globalDofIdx] = disp[Voigt::XX];
-                this->mech_.dispY_[globalDofIdx] = disp[Voigt::YY];
-                this->mech_.dispZ_[globalDofIdx] = disp[Voigt::ZZ];
 
                 // Total stress is not stored but calculated result is Voigt notation
                 const auto stress = model.stress(globalDofIdx, /*include_fracture*/true);
