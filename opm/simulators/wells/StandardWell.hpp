@@ -131,6 +131,8 @@ namespace Opm
                      const int index_of_well,
                      const std::vector<PerforationData<Scalar>>& perf_data);
 
+        StandardWell(const StandardWell& well);
+
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<Scalar>& depth_arg,
                           const Scalar gravity_arg,

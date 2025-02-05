@@ -52,6 +52,10 @@ public:
                              const int num_perfs_whole_mswell,
                              WellInterfaceGeneric<Scalar>& well);
 
+    MultisegmentWellSegments(WellInterfaceGeneric<Scalar>& well,
+                             const MultisegmentWellSegments& seg);
+    MultisegmentWellSegments(const MultisegmentWellSegments&) = delete;
+
     void computeFluidProperties(const EvalWell& temperature,
                                 const EvalWell& saltConcentration,
                                 const PrimaryVariables& primary_variables,

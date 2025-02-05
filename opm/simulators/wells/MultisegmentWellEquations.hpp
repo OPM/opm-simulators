@@ -70,7 +70,10 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
-    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info);
+    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well,
+                              const ParallelWellInfo<Scalar>& pw_info);
+    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well,
+                              const MultisegmentWellEquations& eqs);
 
     //! \brief Setup sparsity pattern for the matrices.
     //! \param numPerfs Number of perforations

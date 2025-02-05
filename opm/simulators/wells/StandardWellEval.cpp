@@ -56,6 +56,18 @@ StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif)
 }
 
 template<class FluidSystem, class Indices>
+StandardWellEval<FluidSystem,Indices>::
+StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif,
+                 const StandardWellEval<FluidSystem,Indices>& eval)
+    : baseif_(baseif)
+    , primary_variables_(baseif_, eval.primary_variables_)
+    , F0_(eval.F0_)
+    , linSys_(baseif_.parallelWellInfo(), eval.linSys_)
+    , connections_(baseif)
+{
+}
+
+template<class FluidSystem, class Indices>
 typename StandardWellEval<FluidSystem,Indices>::EvalWell
 StandardWellEval<FluidSystem,Indices>::
 extendEval(const Eval& in) const

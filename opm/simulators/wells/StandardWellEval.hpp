@@ -70,6 +70,10 @@ public:
 protected:
     explicit StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif);
 
+    StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif,
+                     const StandardWellEval& eval);
+    StandardWellEval(const StandardWellEval&) = delete;
+
     const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
 
     EvalWell extendEval(const Eval& in) const;
