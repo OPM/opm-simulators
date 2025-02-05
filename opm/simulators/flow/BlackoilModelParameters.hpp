@@ -139,6 +139,7 @@ struct NonlinearSolver { static constexpr auto value = "newton"; };
 struct LocalSolveApproach { static constexpr auto value = "gauss-seidel"; };
 struct MaxLocalSolveIterations { static constexpr int value = 20; };
 
+struct GroupMaxIterations { static constexpr int value = 1; };
 template<class Scalar>
 struct LocalToleranceScalingMb { static constexpr Scalar value = 1.0; };
 
@@ -310,6 +311,9 @@ public:
 
     /// Maximum pressure update in the inner network pressure update iterations
     Scalar network_max_pressure_update_in_bars_;
+
+    /// Maximum number of iterations in the group switch algorithm
+    int group_control_max_iterations_;
 
     /// Nonlinear solver type: newton or nldd.
     std::string nonlinear_solver_;
