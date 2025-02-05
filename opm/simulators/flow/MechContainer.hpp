@@ -84,15 +84,10 @@ public:
 
     std::array<ScalarBuffer,3> disp_;
     VoigtArray<Scalar> delstress_;
+    VoigtArray<Scalar> fracstress_;
     VoigtArray<Scalar> linstress_;
     VoigtArray<Scalar> strain_;
     VoigtArray<Scalar> stress_;
-    ScalarBuffer fracstressXX_;
-    ScalarBuffer fracstressYY_;
-    ScalarBuffer fracstressZZ_;
-    ScalarBuffer fracstressXY_;
-    ScalarBuffer fracstressXZ_;
-    ScalarBuffer fracstressYZ_;
 };
 
 } // namespace Opm

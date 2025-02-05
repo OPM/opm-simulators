@@ -67,22 +67,10 @@ allocate(const std::size_t bufferSize,
     };
 
     resizeAndRegister(delstress_, "DELSTR");
+    resizeAndRegister(fracstress_, "FRCSTR");
     resizeAndRegister(linstress_, "LINSTR");
     resizeAndRegister(strain_, "STRAIN");
     resizeAndRegister(stress_, "STRESS");
-
-    this->fracstressXX_.resize(bufferSize,0.0);
-    rstKeywords["FRCSTRXX"] = 0;
-    this->fracstressYY_.resize(bufferSize,0.0);
-    rstKeywords["FRCSTRYY"] = 0;
-    this->fracstressZZ_.resize(bufferSize,0.0);
-    rstKeywords["FRCSTRZZ"] = 0;
-    this->fracstressXY_.resize(bufferSize,0.0);
-    rstKeywords["FRCSTRXY"] = 0;
-    this->fracstressXZ_.resize(bufferSize,0.0);
-    rstKeywords["FRCSTRXZ"] = 0;
-    this->fracstressYZ_.resize(bufferSize,0.0);
-    rstKeywords["FRCSTRYZ"] = 0;
 
     allocated_ = true;
 }
@@ -110,12 +98,7 @@ void MechContainer<Scalar>::
 assignFracStress(const unsigned globalDofIdx,
                  const Dune::FieldVector<Scalar,6>& fracStress)
 {
-    this->fracstressXX_[globalDofIdx] = fracStress[0];
-    this->fracstressYY_[globalDofIdx] = fracStress[1];
-    this->fracstressZZ_[globalDofIdx] = fracStress[2];
-    this->fracstressYZ_[globalDofIdx] = fracStress[3];
-    this->fracstressXZ_[globalDofIdx] = fracStress[4];
-    this->fracstressXY_[globalDofIdx] = fracStress[5];
+    this->fracstress_.assign(globalDofIdx, VoigtContainer<Scalar>(fracStress));
 }
 
 template<class Scalar>
@@ -179,12 +162,7 @@ outputRestart(data::Solution& sol) const
     const auto solutionVectors = std::array{
         DataEntry{"DELSTR",   UnitSystem::measure::pressure, &delstress_},
         DataEntry{"DISP",     UnitSystem::measure::length,   &disp_},
-        DataEntry{"FRCSTRXX", UnitSystem::measure::pressure, &fracstressXX_},
-        DataEntry{"FRCSTRYY", UnitSystem::measure::pressure, &fracstressYY_},
-        DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure, &fracstressZZ_},
-        DataEntry{"FRCSTRXY", UnitSystem::measure::pressure, &fracstressXY_},
-        DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure, &fracstressXZ_},
-        DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure, &fracstressYZ_},
+        DataEntry{"FRCSTR",   UnitSystem::measure::pressure, &fracstress_},
         DataEntry{"LINSTR",   UnitSystem::measure::pressure, &linstress_},
         DataEntry{"MECHPOTF", UnitSystem::measure::pressure, &potentialForce_},
         DataEntry{"PRESPOTF", UnitSystem::measure::pressure, &potentialPressForce_},
