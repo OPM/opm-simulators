@@ -80,8 +80,10 @@ template <class TypeTag>
 class FlowProblemBlackoil : public FlowProblem<TypeTag>
 {
     // TODO: the naming of the Types might be able to be adjusted
+public:
     using FlowProblemType = FlowProblem<TypeTag>;
 
+private:
     using typename FlowProblemType::Scalar;
     using typename FlowProblemType::Simulator;
     using typename FlowProblemType::GridView;
@@ -436,11 +438,14 @@ public:
     void endTimeStep() override
     {
         FlowProblemType::endTimeStep();
+        this->endStepApplyAction();
+    }
 
-        // after the solution is updated, the values in output module needs also updated
+    void endStepApplyAction()
+    {
+        // After the solution is updated, the values in output module needs
+        // also updated.
         this->eclWriter()->mutableOutputModule().invalidateLocalData();
-
-        const bool isSubStep = !this->simulator().episodeWillBeOver();
 
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
         const auto& grid = this->simulator().vanguard().gridView().grid();
@@ -448,6 +453,8 @@ public:
         using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
         constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
         if (!isCpGrid || (grid.maxLevel() == 0)) {
+            const bool isSubStep = !this->simulator().episodeWillBeOver();
+
             this->eclWriter_->evalSummaryState(isSubStep);
         }
 
