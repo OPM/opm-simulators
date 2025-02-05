@@ -446,7 +446,7 @@ copyToWellStatePolyMW(WellState<Scalar>& well_state) const
 template<class FluidSystem, class Indices>
 typename StandardWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 StandardWellPrimaryVariables<FluidSystem,Indices>::
-volumeFraction(const unsigned compIdx) const
+volumeFraction(const int compIdx) const
 {
     if (FluidSystem::numActivePhases() == 1) {
         return EvalWell(numWellEq_ + Indices::numEq, 1.0);
@@ -456,7 +456,7 @@ volumeFraction(const unsigned compIdx) const
         return evaluation_[GFrac];
     }
 
-    if (Indices::enableSolvent && compIdx == (unsigned)Indices::contiSolventEqIdx) {
+    if (Indices::enableSolvent && compIdx == Indices::contiSolventEqIdx) {
         return evaluation_[SFrac];
     }
 
