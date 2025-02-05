@@ -67,6 +67,7 @@ allocate(const std::size_t bufferSize,
     };
 
     resizeAndRegister(delstress_, "DELSTR");
+    resizeAndRegister(linstress_, "LINSTR");
     resizeAndRegister(strain_, "STRAIN");
     resizeAndRegister(stress_, "STRESS");
 
@@ -82,19 +83,6 @@ allocate(const std::size_t bufferSize,
     rstKeywords["FRCSTRXZ"] = 0;
     this->fracstressYZ_.resize(bufferSize,0.0);
     rstKeywords["FRCSTRYZ"] = 0;
-
-    this->linstressXX_.resize(bufferSize,0.0);
-    rstKeywords["LINSTRXX"] = 0;
-    this->linstressYY_.resize(bufferSize,0.0);
-    rstKeywords["LINSTRYY"] = 0;
-    this->linstressZZ_.resize(bufferSize,0.0);
-    rstKeywords["LINSTRZZ"] = 0;
-    this->linstressXY_.resize(bufferSize,0.0);
-    rstKeywords["LINSTRXY"] = 0;
-    this->linstressXZ_.resize(bufferSize,0.0);
-    rstKeywords["LINSTRXZ"] = 0;
-    this->linstressYZ_.resize(bufferSize,0.0);
-    rstKeywords["LINSTRYZ"] = 0;
 
     allocated_ = true;
 }
@@ -122,12 +110,7 @@ void MechContainer<Scalar>::
 assignLinStress(const unsigned globalDofIdx,
                 const Dune::FieldVector<Scalar,6>& linStress)
 {
-    this->linstressXX_[globalDofIdx] = linStress[0];
-    this->linstressYY_[globalDofIdx] = linStress[1];
-    this->linstressZZ_[globalDofIdx] = linStress[2];
-    this->linstressYZ_[globalDofIdx] = linStress[3];
-    this->linstressXZ_[globalDofIdx] = linStress[4];
-    this->linstressXY_[globalDofIdx] = linStress[5];
+    this->linstress_.assign(globalDofIdx, VoigtContainer<Scalar>(linStress));
 }
 
 template<class Scalar>
@@ -189,12 +172,7 @@ outputRestart(data::Solution& sol) const
         DataEntry{"FRCSTRXY", UnitSystem::measure::pressure, &fracstressXY_},
         DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure, &fracstressXZ_},
         DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure, &fracstressYZ_},
-        DataEntry{"LINSTRXX", UnitSystem::measure::pressure, &linstressXX_},
-        DataEntry{"LINSTRYY", UnitSystem::measure::pressure, &linstressYY_},
-        DataEntry{"LINSTRZZ", UnitSystem::measure::pressure, &linstressZZ_},
-        DataEntry{"LINSTRXY", UnitSystem::measure::pressure, &linstressXY_},
-        DataEntry{"LINSTRXZ", UnitSystem::measure::pressure, &linstressXZ_},
-        DataEntry{"LINSTRYZ", UnitSystem::measure::pressure, &linstressYZ_},
+        DataEntry{"LINSTR",   UnitSystem::measure::pressure, &linstress_},
         DataEntry{"MECHPOTF", UnitSystem::measure::pressure, &potentialForce_},
         DataEntry{"PRESPOTF", UnitSystem::measure::pressure, &potentialPressForce_},
         DataEntry{"STRAIN",   UnitSystem::measure::identity, &strain_},
