@@ -77,14 +77,9 @@ public:
     ScalarBuffer potentialTempForce_;
 
     std::array<ScalarBuffer,3> disp_;
+    VoigtArray<Scalar> delstress_;
     VoigtArray<Scalar> strain_;
     VoigtArray<Scalar> stress_;
-    ScalarBuffer delstressXX_;
-    ScalarBuffer delstressYY_;
-    ScalarBuffer delstressZZ_;
-    ScalarBuffer delstressXY_;
-    ScalarBuffer delstressXZ_;
-    ScalarBuffer delstressYZ_;
     ScalarBuffer linstressXX_;
     ScalarBuffer linstressYY_;
     ScalarBuffer linstressZZ_;
