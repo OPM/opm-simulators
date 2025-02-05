@@ -215,6 +215,9 @@ public:
                 this->mech_.assignDisplacement(globalDofIdx,
                                                model.disp(globalDofIdx, /*include_fracture*/true));
 
+                this->mech_.assignLinStress(globalDofIdx,
+                                            model.linstress(globalDofIdx));
+
                 this->mech_.assignPotentialForces(globalDofIdx,
                                                   model.mechPotentialForce(globalDofIdx),
                                                   model.mechPotentialPressForce(globalDofIdx),
@@ -226,14 +229,6 @@ public:
                 // Total stress is not stored but calculated result is Voigt notation
                 this->mech_.assignStress(globalDofIdx,
                                          model.stress(globalDofIdx, /*include_fracture*/true));;
-
-                const auto linstress = model.linstress(globalDofIdx);
-                this->mech_.linstressXX_[globalDofIdx] = linstress[Voigt::XX];
-                this->mech_.linstressYY_[globalDofIdx] = linstress[Voigt::YY];
-                this->mech_.linstressZZ_[globalDofIdx] = linstress[Voigt::ZZ];
-                this->mech_.linstressXY_[globalDofIdx] = linstress[Voigt::XY];
-                this->mech_.linstressXZ_[globalDofIdx] = linstress[Voigt::XZ];
-                this->mech_.linstressYZ_[globalDofIdx] = linstress[Voigt::YZ];
 
                 // is the tresagii stress which make rock fracture
                 const auto fracstress = model.fractureStress(globalDofIdx);
