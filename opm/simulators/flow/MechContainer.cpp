@@ -147,6 +147,19 @@ assignPotentialForces(const unsigned globalDofIdx,
 
 template<class Scalar>
 void MechContainer<Scalar>::
+assignStrain(const unsigned globalDofIdx,
+             const Dune::FieldVector<Scalar,6>& strain)
+{
+    this->strainXX_[globalDofIdx] = strain[0];
+    this->strainYY_[globalDofIdx] = strain[1];
+    this->strainZZ_[globalDofIdx] = strain[2];
+    this->strainYZ_[globalDofIdx] = strain[3];
+    this->strainXZ_[globalDofIdx] = strain[4];
+    this->strainXY_[globalDofIdx] = strain[5];
+}
+
+template<class Scalar>
+void MechContainer<Scalar>::
 assignStress(const unsigned globalDofIdx,
              const Dune::FieldVector<Scalar,6>& stress)
 {

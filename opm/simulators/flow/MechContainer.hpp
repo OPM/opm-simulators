@@ -57,6 +57,9 @@ public:
                                const Scalar pressForce,
                                const Scalar tempForce);
 
+    void assignStrain(const unsigned globalDofIdx,
+                      const Dune::FieldVector<Scalar,6>& strain);
+
     void assignStress(const unsigned globalDofIdx,
                       const Dune::FieldVector<Scalar,6>& stress);
 
