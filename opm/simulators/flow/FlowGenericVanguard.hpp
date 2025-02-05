@@ -77,6 +77,7 @@ struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 struct PartitionMethod { static constexpr int value = 3; };
 struct AddCorners { static constexpr bool value = false; };
 struct NumOverlap { static constexpr int value = 1; };
+struct EdgeConformal { static constexpr bool value = false; };    
 
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
@@ -257,6 +258,9 @@ public:
     bool ownersFirst() const
     { return ownersFirst_; }
 
+    bool edgeConformal() const
+    { return edgeConformal_; }
+
 #if HAVE_MPI
     bool addCorners() const
     { return addCorners_; }
@@ -373,6 +377,9 @@ protected:
 #if HAVE_MPI
     bool addCorners_;
     int numOverlap_;
+    bool edgeConformal_;
+
+#if HAVE_MPI
     Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
     double imbalanceTol_;
