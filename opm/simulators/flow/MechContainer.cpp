@@ -43,12 +43,13 @@ allocate(const std::size_t bufferSize,
     this->potentialPressForce_.resize(bufferSize, 0.0);
     rstKeywords["PRESPOTF"] = 0;
 
-    this->dispX_.resize(bufferSize, 0.0);
-    rstKeywords["DISPX"] = 0;
-    this->dispY_.resize(bufferSize, 0.0);
-    rstKeywords["DISPY"] = 0;
-    this->dispZ_.resize(bufferSize, 0.0);
-    rstKeywords["DISPZ"] = 0;
+    std::for_each(disp_.begin(), disp_.end(),
+                  [suffix = "XYZ", is = 0, bufferSize, &rstKeywords](auto& v) mutable
+                  {
+                      v.resize(bufferSize, 0.0);
+                      rstKeywords[std::string{"DISP"} + suffix[is++]] = 0;
+                  });
+
     this->stressXX_.resize(bufferSize, 0.0);
     rstKeywords["STRESSXX"] = 0;
     this->stressYY_.resize(bufferSize, 0.0);
@@ -122,9 +123,9 @@ void MechContainer<Scalar>::
 assignDisplacement(const unsigned globalDofIdx,
                    const Dune::FieldVector<Scalar,3>& disp)
 {
-    this->dispX_[globalDofIdx] = disp[0];
-    this->dispY_[globalDofIdx] = disp[1];
-    this->dispZ_[globalDofIdx] = disp[2];
+    this->disp_[0][globalDofIdx] = disp[0];
+    this->disp_[1][globalDofIdx] = disp[1];
+    this->disp_[2][globalDofIdx] = disp[2];
 }
 
 template<class Scalar>
@@ -169,9 +170,9 @@ outputRestart(data::Solution& sol) const
         DataEntry{"DELSTRXY", UnitSystem::measure::pressure, delstressXY_},
         DataEntry{"DELSTRXZ", UnitSystem::measure::pressure, delstressXZ_},
         DataEntry{"DELSTRYZ", UnitSystem::measure::pressure, delstressYZ_},
-        DataEntry{"DISPX",    UnitSystem::measure::length,   dispX_},
-        DataEntry{"DISPY",    UnitSystem::measure::length,   dispY_},
-        DataEntry{"DISPZ",    UnitSystem::measure::length,   dispZ_},
+        DataEntry{"DISPX",    UnitSystem::measure::length,   disp_[0]},
+        DataEntry{"DISPY",    UnitSystem::measure::length,   disp_[1]},
+        DataEntry{"DISPZ",    UnitSystem::measure::length,   disp_[2]},
         DataEntry{"FRCSTRXX", UnitSystem::measure::pressure, fracstressXX_},
         DataEntry{"FRCSTRYY", UnitSystem::measure::pressure, fracstressYY_},
         DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure, fracstressZZ_},

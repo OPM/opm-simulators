@@ -28,6 +28,7 @@
 
 #include <dune/common/fvector.hh>
 
+#include <array>
 #include <cstddef>
 #include <map>
 #include <string>
@@ -64,9 +65,7 @@ public:
     ScalarBuffer potentialPressForce_;
     ScalarBuffer potentialTempForce_;
 
-    ScalarBuffer dispX_;
-    ScalarBuffer dispY_;
-    ScalarBuffer dispZ_;
+    std::array<ScalarBuffer,3> disp_;
     ScalarBuffer stressXX_;
     ScalarBuffer stressYY_;
     ScalarBuffer stressZZ_;
