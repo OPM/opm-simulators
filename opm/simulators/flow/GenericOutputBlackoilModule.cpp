@@ -548,12 +548,24 @@ assignToSolution(data::Solution& sol)
         DataEntry{"STRAINXY", UnitSystem::measure::identity,           strainXY_},
         DataEntry{"STRAINXZ", UnitSystem::measure::identity,           strainXZ_},
         DataEntry{"STRAINYZ", UnitSystem::measure::identity,           strainYZ_},
-        DataEntry{"STRESSXX", UnitSystem::measure::length,             stressXX_},
-        DataEntry{"STRESSYY", UnitSystem::measure::length,             stressYY_},
-        DataEntry{"STRESSZZ", UnitSystem::measure::length,             stressZZ_},
-        DataEntry{"STRESSXY", UnitSystem::measure::length,             stressXY_},
-        DataEntry{"STRESSXZ", UnitSystem::measure::length,             stressXZ_},
-        DataEntry{"STRESSYZ", UnitSystem::measure::length,             stressYZ_},
+        DataEntry{"STRESSXX", UnitSystem::measure::pressure,           stressXX_},
+        DataEntry{"STRESSYY", UnitSystem::measure::pressure,           stressYY_},
+        DataEntry{"STRESSZZ", UnitSystem::measure::pressure,           stressZZ_},
+        DataEntry{"STRESSXY", UnitSystem::measure::pressure,           stressXY_},
+        DataEntry{"STRESSXZ", UnitSystem::measure::pressure,           stressXZ_},
+        DataEntry{"STRESSYZ", UnitSystem::measure::pressure,           stressYZ_},
+        DataEntry{"LINSTRXX", UnitSystem::measure::pressure,           linstressXX_},
+        DataEntry{"LINSTRYY", UnitSystem::measure::pressure,           linstressYY_},
+        DataEntry{"LINSTRZZ", UnitSystem::measure::pressure,           linstressZZ_},
+        DataEntry{"LINSTRXY", UnitSystem::measure::pressure,           linstressXY_},
+        DataEntry{"LINSTRXZ", UnitSystem::measure::pressure,           linstressXZ_},
+        DataEntry{"LINSTRYZ", UnitSystem::measure::pressure,           linstressYZ_},
+        DataEntry{"FRCSTRXX", UnitSystem::measure::pressure,           fracstressXX_},
+        DataEntry{"FRCSTRYY", UnitSystem::measure::pressure,           fracstressYY_},
+        DataEntry{"FRCSTRZZ", UnitSystem::measure::pressure,           fracstressZZ_},
+        DataEntry{"FRCSTRXY", UnitSystem::measure::pressure,           fracstressXY_},
+        DataEntry{"FRCSTRXZ", UnitSystem::measure::pressure,           fracstressXZ_},
+        DataEntry{"FRCSTRYZ", UnitSystem::measure::pressure,           fracstressYZ_},
         DataEntry{"TEMPPOTF", UnitSystem::measure::pressure,           mechPotentialTempForce_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
         DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
@@ -1037,6 +1049,36 @@ doAllocBuffers(const unsigned bufferSize,
         rstKeywords["DELSTRXY"] = 0;
         this->delstressYZ_.resize(bufferSize,0.0);
         rstKeywords["DELSTRYZ"] = 0;
+
+        this->fracstressXX_.resize(bufferSize,0.0);
+        rstKeywords["FRCSTRXX"] = 0;
+        this->fracstressYY_.resize(bufferSize,0.0);
+        rstKeywords["FRCSTRYY"] = 0;
+        this->fracstressZZ_.resize(bufferSize,0.0);
+        rstKeywords["FRCSTRZZ"] = 0;
+        this->fracstressXY_.resize(bufferSize,0.0);
+        rstKeywords["FRCSTRXY"] = 0;
+        this->fracstressXZ_.resize(bufferSize,0.0);
+        rstKeywords["FRCSTRXZ"] = 0;
+        this->fracstressXY_.resize(bufferSize,0.0);
+        rstKeywords["FRCSTRXY"] = 0;
+        this->fracstressYZ_.resize(bufferSize,0.0);
+        rstKeywords["FRCSTRYZ"] = 0;
+
+        this->linstressXX_.resize(bufferSize,0.0);
+        rstKeywords["LINSTRXX"] = 0;
+        this->linstressYY_.resize(bufferSize,0.0);
+        rstKeywords["LINSTRYY"] = 0;
+        this->linstressZZ_.resize(bufferSize,0.0);
+        rstKeywords["LINSTRZZ"] = 0;
+        this->linstressXY_.resize(bufferSize,0.0);
+        rstKeywords["LINSTRXY"] = 0;
+        this->linstressXZ_.resize(bufferSize,0.0);
+        rstKeywords["LINSTRXZ"] = 0;
+        this->linstressXY_.resize(bufferSize,0.0);
+        rstKeywords["LINSTRXY"] = 0;
+        this->linstressYZ_.resize(bufferSize,0.0);
+        rstKeywords["LINSTRYZ"] = 0;
     }
 
     // If TEMP is set in RPTRST we output temperature even if THERMAL

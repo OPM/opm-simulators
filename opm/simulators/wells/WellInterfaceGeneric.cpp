@@ -20,6 +20,7 @@
 */
 
 #include <config.h>
+
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -33,7 +34,9 @@
 #include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
@@ -45,10 +48,13 @@
 
 #include <fmt/format.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -674,6 +680,36 @@ template<class Scalar>
 void WellInterfaceGeneric<Scalar>::resetWellOperability()
 {
     this->operability_status_.resetOperability();
+}
+
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::addPerforations(const std::vector<std::tuple<int,double,double>>& perfs)
+{
+    for (const auto& [cell, WI, depth] : perfs) {
+        auto it = std::find(well_cells_.begin(), well_cells_.end(), cell);
+        if (it != this->well_cells_.end()) {
+            // If perforation to cell already exists, just add contribution.
+            const auto ind = std::distance(this->well_cells_.begin(), it);
+            this->well_index_[ind] += WI;
+        }
+        else {
+            this->well_cells_.push_back(cell);
+            this->well_index_.push_back(WI);
+            this->perf_depth_.push_back(depth);
+
+            // Not strictly needed.
+            const double nan = std::nan("1");
+            this->perf_rep_radius_.push_back(nan);
+            this->perf_length_.push_back(nan);
+            this->bore_diameters_.push_back(nan);
+
+            // For now use the saturation table for the first cell.
+            this->saturation_table_number_
+                .push_back(this->saturation_table_number_.front());
+
+            ++this->number_of_perforations_;
+        }
+    }
 }
 
 template<class Scalar>
