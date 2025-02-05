@@ -176,11 +176,11 @@ loadRestartGroupData(const std::string&     group,
     }
 
     if (cgi != GIMode::NONE) {
-        grpState.injection_control(group, Phase::GAS, cgi);
+        grpState.set_injection_control(group, Phase::GAS, cgi);
     }
 
     if (cwi != GIMode::NONE) {
-        grpState.injection_control(group, Phase::WATER, cwi);
+        grpState.set_injection_control(group, Phase::WATER, cwi);
     }
 }
 
