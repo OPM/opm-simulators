@@ -57,7 +57,7 @@ public:
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
 
     //! \brief Constructor initializes reference to well.
-    MultisegmentWellAssemble(const WellInterfaceIndices<FluidSystem,Indices>& well)
+    explicit MultisegmentWellAssemble(const WellInterfaceIndices<FluidSystem,Indices>& well)
         : well_(well)
     {}
 

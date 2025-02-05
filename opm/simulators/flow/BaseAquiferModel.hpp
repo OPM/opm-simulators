@@ -52,7 +52,7 @@ class BaseAquiferModel
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
-    BaseAquiferModel(Simulator& simulator)
+    explicit BaseAquiferModel(Simulator& simulator)
         : simulator_(simulator)
     {}
 

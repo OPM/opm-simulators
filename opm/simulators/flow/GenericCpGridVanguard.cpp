@@ -144,6 +144,8 @@ template<class ElementMapper, class GridView, class Scalar>
 void GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
 doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                const bool                               ownersFirst,
+               const bool                               addCorners,
+               const int                                numOverlap,
                const Dune::PartitionMethod              partitionMethod,
                const bool                               serialPartitioning,
                const bool                               enableDistributedWells,
@@ -176,7 +178,11 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         auto loadBalancerSet = static_cast<int>(externalLoadBalancer.has_value());
         this->grid_->comm().broadcast(&loadBalancerSet, 1, 0);
 
-        if ((this->grid_->size(0) > 0) && (enableEclOutput || loadBalancerSet == 0 || partitionJacobiBlocks)) {
+        if ((this->grid_->size(0) > 0) &&
+            (enableEclOutput ||
+             (loadBalancerSet == 0) ||
+             partitionJacobiBlocks))
+        {
             this->allocTrans();
         }
 
@@ -200,7 +206,8 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         const auto& possibleFutureConnections = schedule.getPossibleFutureConnections();
         // Distribute the grid and switch to the distributed view.
         if (mpiSize > 1) {
-            this->distributeGrid(edgeWeightsMethod, ownersFirst, partitionMethod,
+            this->distributeGrid(edgeWeightsMethod, ownersFirst,
+                                 addCorners, numOverlap, partitionMethod,
                                  serialPartitioning, enableDistributedWells,
                                  imbalanceTol, loadBalancerSet != 0,
                                  faceTrans, wells,
@@ -328,6 +335,8 @@ void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
 distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
                const bool                                            ownersFirst,
+               const bool                                            addCorners,
+               const int                                             numOverlap,
                const Dune::PartitionMethod                           partitionMethod,
                const bool                                            serialPartitioning,
                const bool                                            enableDistributedWells,
@@ -342,10 +351,12 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
     if (auto* eclState = dynamic_cast<ParallelEclipseState*>(&eclState1);
         eclState != nullptr)
     {
-        this->distributeGrid(edgeWeightsMethod, ownersFirst, partitionMethod,
+        this->distributeGrid(edgeWeightsMethod, ownersFirst, addCorners,
+                             numOverlap, partitionMethod,
                              serialPartitioning, enableDistributedWells,
                              imbalanceTol, loadBalancerSet, faceTrans,
-                             wells, possibleFutureConnections, eclState, parallelWells);
+                             wells, possibleFutureConnections,
+                             eclState, parallelWells);
     }
     else {
         const auto message = std::string {
@@ -366,6 +377,8 @@ void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
 distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
                const bool                                            ownersFirst,
+               const bool                                            addCorners,
+               const int                                             numOverlap,
                const Dune::PartitionMethod                           partitionMethod,
                const bool                                            serialPartitioning,
                const bool                                            enableDistributedWells,
@@ -384,27 +397,29 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
         *this->grid_, *eclState
     };
 
-    const auto addCornerCells = false;
-    const auto overlapLayers = 1;
+    const auto addCornerCells = addCorners;
+    const auto overlapLayers = numOverlap;
 
     if (loadBalancerSet) {
         auto parts = isIORank
             ? (*externalLoadBalancer)(*this->grid_)
             : std::vector<int>{};
-        //For this case, simple partitioning is selected automatically
-        parallelWells =
-            std::get<1>(this->grid_->loadBalance(handle, parts, &wells, possibleFutureConnections, ownersFirst,
-                                                 addCornerCells, overlapLayers));
+
+        // For this case, simple partitioning is selected automatically.
+        parallelWells = std::get<1>
+            (this->grid_->loadBalance(handle, parts, &wells,
+                                      possibleFutureConnections, ownersFirst,
+                                      addCornerCells, overlapLayers));
     }
     else {
-        parallelWells =
-            std::get<1>(this->grid_->loadBalance(handle, edgeWeightsMethod,
-                                                 &wells, possibleFutureConnections,
-                                                 serialPartitioning,
-                                                 faceTrans.data(), ownersFirst,
-                                                 addCornerCells, overlapLayers,
-                                                 partitionMethod, imbalanceTol,
-                                                 enableDistributedWells));
+        parallelWells = std::get<1>
+            (this->grid_->loadBalance(handle, edgeWeightsMethod,
+                                      &wells, possibleFutureConnections,
+                                      serialPartitioning,
+                                      faceTrans.data(), ownersFirst,
+                                      addCornerCells, overlapLayers,
+                                      partitionMethod, imbalanceTol,
+                                      enableDistributedWells));
     }
 }
 

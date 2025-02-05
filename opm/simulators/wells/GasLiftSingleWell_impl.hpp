@@ -143,6 +143,7 @@ std::optional<typename GasLiftSingleWell<TypeTag>::Scalar>
 GasLiftSingleWell<TypeTag>::
 computeBhpAtThpLimit_(Scalar alq, bool debug_output) const
 {
+    OPM_TIMEFUNCTION();
     auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlq(
         this->simulator_,
         this->summary_state_,
@@ -215,7 +216,7 @@ void
 GasLiftSingleWell<TypeTag>::
 setAlqMaxRate_(const GasLiftWell& well)
 {
-    auto& max_alq_optional = well.max_rate();
+    const auto& max_alq_optional = well.max_rate();
     if (max_alq_optional) {
         // NOTE: To prevent extrapolation of the VFP tables, any value
         // entered here must not exceed the largest ALQ value in the well's VFP table.

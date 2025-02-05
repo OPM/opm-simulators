@@ -71,7 +71,7 @@ public:
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(Scalar)
      */
-    PvsRateVector(const Evaluation& value)
+    explicit PvsRateVector(const Evaluation& value)
         : ParentType(value)
     {}
 

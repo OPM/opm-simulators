@@ -75,7 +75,7 @@ public:
     /*!
      * \copydoc FvBaseNewtonMethod::FvBaseNewtonMethod(Problem& )
      */
-    NcpNewtonMethod(Simulator& simulator) : ParentType(simulator)
+    explicit NcpNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {}
 
 protected:

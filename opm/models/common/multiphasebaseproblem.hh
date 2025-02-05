@@ -82,7 +82,7 @@ public:
     /*!
      * \copydoc Problem::FvBaseProblem(Simulator& )
      */
-    MultiPhaseBaseProblem(Simulator& simulator)
+    explicit MultiPhaseBaseProblem(Simulator& simulator)
         : ParentType(simulator)
     { init_(); }
 

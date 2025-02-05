@@ -94,7 +94,7 @@ class TracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties::G
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
 public:
-    TracerModel(Simulator& simulator)
+    explicit TracerModel(Simulator& simulator)
         : BaseType(simulator.vanguard().gridView(),
                    simulator.vanguard().eclState(),
                    simulator.vanguard().cartesianIndexMapper(),
@@ -616,7 +616,7 @@ protected:
             if (elem.partitionType() != Dune::InteriorEntity)
             {
                 // Dirichlet boundary conditions needed for the parallel matrix
-                for (auto& tr : tbatch) {
+                for (const auto& tr : tbatch) {
                     if (tr.numTracer() != 0) {
                         (*tr.mat)[I][I][0][0] = 1.;
                         (*tr.mat)[I][I][1][1] = 1.;
@@ -892,7 +892,7 @@ protected:
 
       TracerBatch(int phaseIdx = 0) : phaseIdx_(phaseIdx) {}
 
-      int numTracer() const {return idx_.size(); }
+      int numTracer() const { return idx_.size(); }
 
       void addTracer(const int idx, const TV & concentration)
       {

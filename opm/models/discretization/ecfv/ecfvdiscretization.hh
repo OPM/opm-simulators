@@ -102,8 +102,8 @@ public:
 template <class TypeTag>
 struct DummySpaceEcfv {
     using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
-    DummySpaceEcfv(const DiscreteFunctionSpace&) {};
-    DummySpaceEcfv(const int&) {};
+    explicit DummySpaceEcfv(const DiscreteFunctionSpace&) {};
+    explicit DummySpaceEcfv(const int&) {};
 };
 
 template <class TypeTag>
@@ -154,7 +154,7 @@ class EcfvDiscretization : public GetPropType<TypeTag, Properties::BaseDiscretiz
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
-    EcfvDiscretization(Simulator& simulator)
+    explicit EcfvDiscretization(Simulator& simulator)
         : ParentType(simulator)
     { }
 

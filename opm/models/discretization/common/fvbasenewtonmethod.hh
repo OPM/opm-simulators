@@ -96,7 +96,7 @@ class FvBaseNewtonMethod : public NewtonMethod<TypeTag>
 
 
 public:
-    FvBaseNewtonMethod(Simulator& simulator)
+    explicit FvBaseNewtonMethod(Simulator& simulator)
         : ParentType(simulator)
     { }
 

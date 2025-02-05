@@ -69,7 +69,7 @@ public:
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(Scalar)
      */
-    RichardsRateVector(const Evaluation& value)
+    explicit RichardsRateVector(const Evaluation& value)
         : ParentType(value)
     {}
 

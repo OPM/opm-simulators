@@ -54,7 +54,7 @@ public:
      *
      * \param simulator The manager object of the simulation
      */
-    BlackOilProblem(Simulator& simulator)
+    explicit BlackOilProblem(Simulator& simulator)
         : ParentType(simulator)
     {}
 

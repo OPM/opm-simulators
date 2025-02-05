@@ -134,7 +134,7 @@ protected:
     enum { dimWorld = GridView::dimensionworld };
 
 public:
-    ParallelBaseBackend(const Simulator& simulator)
+    explicit ParallelBaseBackend(const Simulator& simulator)
         : simulator_(simulator)
         , gridSequenceNumber_( -1 )
         , lastIterations_( -1 )

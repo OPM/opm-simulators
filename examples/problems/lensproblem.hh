@@ -217,7 +217,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    LensProblem(Simulator& simulator)
+    explicit LensProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

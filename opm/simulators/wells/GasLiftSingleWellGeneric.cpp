@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
@@ -138,6 +139,7 @@ std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar>::
 runOptimize(const int iteration_idx)
 {
+    OPM_TIMEFUNCTION();
     std::unique_ptr<GasLiftWellState<Scalar>> state;
     if (this->optimize_) {
         if (this->debug_limit_increase_decrease_) {
@@ -430,6 +432,7 @@ std::optional<typename GasLiftSingleWellGeneric<Scalar>::BasicRates>
 GasLiftSingleWellGeneric<Scalar>::
 computeWellRatesWithALQ_(Scalar alq) const
 {
+    OPM_TIMEFUNCTION();
     std::optional<BasicRates> rates;
     auto bhp_opt = computeBhpAtThpLimit_(alq);
     if (bhp_opt) {
@@ -1048,11 +1051,10 @@ GasLiftSingleWellGeneric<Scalar>::
 increaseALQtoPositiveOilRate_(Scalar alq,
                               const LimitedRates& orig_rates) const
 {
-    bool stop_iteration = false;
     Scalar temp_alq = alq;
     // use the copy constructor to only copy the rates
     BasicRates rates = orig_rates;
-    while (!stop_iteration) {
+    while (true) {
         temp_alq += this->increment_;
         if (temp_alq > this->max_alq_)
             break;
@@ -1078,10 +1080,9 @@ increaseALQtoMinALQ_(const Scalar orig_alq,
     assert(min_alq >= 0);
     assert(orig_alq < min_alq);
     assert(min_alq < this->max_alq_);
-    bool stop_iteration = false;
     Scalar alq = orig_alq;
     LimitedRates rates = orig_rates;
-    while (!stop_iteration) {
+    while (true) {
         Scalar temp_alq = alq + this->increment_;
 
         alq = temp_alq;
@@ -1175,11 +1176,10 @@ GasLiftSingleWellGeneric<Scalar>::
 reduceALQtoGroupAlqLimits_(const Scalar orig_alq,
                            const LimitedRates& orig_rates) const
 {
-    bool stop_this_iteration = false;
     Scalar alq = orig_alq;
     BasicRates rates {orig_rates};
     Scalar temp_alq = orig_alq;
-    while (!stop_this_iteration) {
+    while (true) {
         if (temp_alq == 0)
             break;
         temp_alq -= this->increment_;
@@ -1268,8 +1268,7 @@ reduceALQtoWellTarget_(const Scalar orig_alq,
     Scalar alq = orig_alq;
     Scalar temp_alq = alq;
     std::optional<LimitedRates> new_rates;
-    bool stop_iteration = false;
-    while (!stop_iteration) {
+    while (true) {
         if (temp_alq == 0)
             break;
         temp_alq -= this->increment_;
@@ -1326,6 +1325,7 @@ std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar>::
 runOptimizeLoop_(bool increase)
 {
+    OPM_TIMEFUNCTION();
     if (this->debug)
         debugShowProducerControlMode();
     std::unique_ptr<GasLiftWellState<Scalar>> ret_value; // nullptr initially
@@ -1364,6 +1364,7 @@ runOptimizeLoop_(bool increase)
         state.stop_iteration = true;
     }
     while (!state.stop_iteration && (++state.it <= this->max_iterations_)) {
+        OPM_TIMEBLOCK(GasliftOptimizationLoopStage1);
         if (state.checkRatesViolated(new_rates))
             break;
         if (state.checkAlqOutsideLimits(temp_alq, new_rates.oil))
@@ -1443,6 +1444,7 @@ template<class Scalar>
 std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar>::runOptimize1_()
 {
+    OPM_TIMEFUNCTION();
     std::unique_ptr<GasLiftWellState<Scalar>> state;
     int inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
     int dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
@@ -1465,6 +1467,7 @@ template<class Scalar>
 std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar>::runOptimize2_()
 {
+    OPM_TIMEFUNCTION();
     std::unique_ptr<GasLiftWellState<Scalar>> state;
     state = tryIncreaseLiftGas_();
     if (!state || !(state->alqChanged())) {
@@ -1590,7 +1593,7 @@ template<class Scalar>
 void GasLiftSingleWellGeneric<Scalar>::
 updateWellStateAlqFixedValue_(const GasLiftWell& well)
 {
-    auto& max_alq_optional = well.max_rate();
+    const auto& max_alq_optional = well.max_rate();
     if (max_alq_optional) {
         // According to WLIFTOPT, item 3:
         // If item 2 is NO, then item 3 is regarded as the fixed

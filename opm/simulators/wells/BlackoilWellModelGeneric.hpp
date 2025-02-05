@@ -55,6 +55,7 @@
 namespace Opm {
     class DeferredLogger;
     class EclipseState;
+    template<class Scalar> class BlackoilWellModelGasLiftGeneric;
     template<class Scalar> class GasLiftGroupInfo;
     template<class Scalar> class GasLiftSingleWellGeneric;
     template<class Scalar> class GasLiftWellState;
@@ -91,6 +92,7 @@ class BlackoilWellModelGeneric
 {
 public:
     BlackoilWellModelGeneric(Schedule& schedule,
+                             BlackoilWellModelGasLiftGeneric<Scalar>& gaslift,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsage& phase_usage,
@@ -118,7 +120,12 @@ public:
     // whether there exists any multisegment well open on this process
     bool anyMSWellOpenLocal() const;
 
-    const std::vector<Well>& eclWells() const { return wells_ecl_; }
+    const std::vector<Well>& eclWells() const
+    { return wells_ecl_; }
+
+    bool terminalOutput() const
+    { return terminal_output_; }
+
     const Well& getWellEcl(const std::string& well_name) const;
     std::vector<Well> getLocalWells(const int timeStepIdx) const;
     const Schedule& schedule() const { return schedule_; }
@@ -126,6 +133,9 @@ public:
     const GroupState<Scalar>& groupState() const { return this->active_wgstate_.group_state; }
     std::vector<const WellInterfaceGeneric<Scalar>*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
+
+    std::vector<WellInterfaceGeneric<Scalar>*> genericWells()
+    { return well_container_generic_; }
 
     /*
       Immutable version of the currently active wellstate.
@@ -217,11 +227,6 @@ public:
     const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
     const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
 
-    const std::map<std::string, int>& well_domain() const
-    {
-        return well_domain_;
-    }
-
     std::vector<int> getCellsForConnections(const Well& well) const;
 
     bool reportStepStarts() const { return report_step_starts_; }
@@ -236,8 +241,6 @@ public:
     bool wasDynamicallyShutThisTimeStep(const std::string& well_name) const;
 
     void logPrimaryVars() const;
-    std::vector<Scalar> getPrimaryVarsDomain(const int domainIdx) const;
-    void setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars);
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -256,24 +259,10 @@ public:
         serializer(switched_prod_groups_);
         serializer(switched_inj_groups_);
         serializer(closed_offending_wells_);
+        serializer(gen_gaslift_);
     }
 
-    bool operator==(const BlackoilWellModelGeneric& rhs) const
-    {
-        return this->initial_step_ == rhs.initial_step_ &&
-               this->report_step_starts_ == rhs.report_step_starts_ &&
-               this->last_run_wellpi_ == rhs.last_run_wellpi_ &&
-               this->local_shut_wells_ == rhs.local_shut_wells_ &&
-               this->closed_this_step_ == rhs.closed_this_step_ &&
-               this->node_pressures_ == rhs.node_pressures_ &&
-               this->prev_inj_multipliers_ == rhs.prev_inj_multipliers_ &&
-               this->active_wgstate_ == rhs.active_wgstate_ &&
-               this->last_valid_wgstate_ == rhs.last_valid_wgstate_ &&
-               this->nupcol_wgstate_ == rhs.nupcol_wgstate_ &&
-               this->switched_prod_groups_ == rhs.switched_prod_groups_ &&
-               this->switched_inj_groups_ == rhs.switched_inj_groups_ &&
-               this->closed_offending_wells_ == rhs.closed_offending_wells_;            
-    }
+    bool operator==(const BlackoilWellModelGeneric& rhs) const;
 
     const ParallelWellInfo<Scalar>&
     parallelWellInfo(const std::size_t idx) const
@@ -363,7 +352,8 @@ protected:
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 
     Scalar updateNetworkPressures(const int reportStepIdx,
-                                  const Scalar damping_factor);
+                                  const Scalar damping_factor,
+                                  const Scalar update_upper_bound);
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
@@ -472,6 +462,7 @@ protected:
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
+    BlackoilWellModelGasLiftGeneric<Scalar>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar> wbp_;
 
     PhaseUsage phase_usage_;
@@ -536,9 +527,6 @@ protected:
     std::map<std::string, std::array<std::vector<Group::InjectionCMode>, 3>> switched_inj_groups_;
     // Store map of group name and close offending well for output
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
-
-    // Keep track of the domain of each well, if using subdomains.
-    std::map<std::string, int> well_domain_;
 
 private:
     WellInterfaceGeneric<Scalar>* getGenWell(const std::string& well_name);

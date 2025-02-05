@@ -260,6 +260,10 @@ public:
 
     bool wellIsOwned(const std::string& wellName) const;
 
+    bool isRank0() const {
+        return this->global_well_info.value().isRank0();
+    }
+
     void updateStatus(int well_index, WellStatus status);
 
     void openWell(int well_index);
@@ -360,12 +364,12 @@ public:
         serializer(permanently_inactive_well_names_);
     }
 
-private:
-    bool enableDistributedWells_ = false;
-
     bool is_permanently_inactive_well(const std::string& wname) const {
         return std::find(this->permanently_inactive_well_names_.begin(), this->permanently_inactive_well_names_.end(), wname) != this->permanently_inactive_well_names_.end();
     }
+
+private:
+    bool enableDistributedWells_ = false;
 
     PhaseUsage phase_usage_;
 

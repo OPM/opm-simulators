@@ -22,6 +22,7 @@
 // it is use for the development when some facility class are not ready
 
 #include <opm/output/data/Aquifer.hpp>
+#include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Wells.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
@@ -39,7 +40,7 @@ class EmptyModel : public BaseAuxiliaryModule<TypeTag>
 
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    EmptyModel(Simulator& /*simulator*/)
+    explicit EmptyModel(Simulator& /*simulator*/)
     {
     }
 
@@ -48,9 +49,9 @@ public:
     void init(Something /*A*/){}
     void prepareTracerBatches(){};
     using NeighborSet = std::set<unsigned>;
-    void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/){};
-    unsigned numDofs() const{return 0;};
-    void addNeighbors(std::vector<NeighborSet>& /*neighbors*/) const{};
+    void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/) override {}
+    unsigned numDofs() const override { return 0; }
+    void addNeighbors(std::vector<NeighborSet>& /*neighbors*/) const override {}
     //void applyInitial(){};
     void initialSolutionApplied(){};
     //void initFromRestart(const data::Aquifers& aquiferSoln);
@@ -73,7 +74,7 @@ public:
     void endIteration()const{};
     void endTimeStep(){};
     void endEpisode(){};
-    void applyInitial(){};
+    void applyInitial() override {}
     template<class RateType>
     void computeTotalRatesForDof(RateType& /*rate*/, unsigned /*globalIdx*/) const{};
 

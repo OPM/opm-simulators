@@ -164,7 +164,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    DiffusionProblem(Simulator& simulator)
+    explicit DiffusionProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

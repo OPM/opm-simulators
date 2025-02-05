@@ -48,7 +48,7 @@ public:
 
     //! \brief Constructor.
     //! \param manager The field property manager to wrap.
-    ParallelFieldPropsManager(FieldPropsManager& manager);
+    explicit ParallelFieldPropsManager(FieldPropsManager& manager);
 
     //! \brief Constructor.
     //! \param manager The field property manager to wrap.

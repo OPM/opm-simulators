@@ -205,7 +205,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    ReservoirProblem(Simulator& simulator)
+    explicit ReservoirProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 
@@ -292,7 +292,7 @@ public:
         dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
         dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
-        dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
+        dryGasPvt.setGasViscosity(/*regionIdx=*/0, Opm::Tabulated1DFunction<Scalar>(mug));
 
         Opm::OilPvtMultiplexer<Scalar> *oilPvt = new Opm::OilPvtMultiplexer<Scalar>;
         oilPvt->setApproach(OilPvtApproach::LiveOil);

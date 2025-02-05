@@ -39,7 +39,7 @@ struct PhaseUsage;
 template<class Scalar>
 struct WGState
 {
-    WGState(const PhaseUsage& pu);
+    explicit WGState(const PhaseUsage& pu);
 
     static WGState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 

@@ -180,7 +180,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    ObstacleProblem(Simulator& simulator)
+    explicit ObstacleProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

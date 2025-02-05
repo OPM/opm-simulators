@@ -103,12 +103,12 @@ public:
     // do not allow to copy simulators around
     Simulator(const Simulator& ) = delete;
 
-    Simulator(bool verbose = true)
+    explicit Simulator(bool verbose = true)
         :Simulator(Communication(), verbose)   
     {  
     }
 
-    Simulator(Communication comm, bool verbose = true)
+    explicit Simulator(Communication comm, bool verbose = true)
     {
         TimerGuard setupTimerGuard(setupTimer_);
 

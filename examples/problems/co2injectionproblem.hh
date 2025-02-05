@@ -235,7 +235,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    Co2InjectionProblem(Simulator& simulator)
+    explicit Co2InjectionProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 
@@ -571,7 +571,7 @@ private:
         const auto& matParams = this->materialLawParams(context, spaceIdx, timeIdx);
         MaterialLaw::capillaryPressures(pC, matParams, fs);
 
-        fs.setPressure(liquidPhaseIdx, pl + (pC[liquidPhaseIdx] - pC[liquidPhaseIdx]));
+        fs.setPressure(liquidPhaseIdx, pl);
         fs.setPressure(gasPhaseIdx, pl + (pC[gasPhaseIdx] - pC[liquidPhaseIdx]));
 
         //////

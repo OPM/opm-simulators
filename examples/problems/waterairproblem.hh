@@ -221,7 +221,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    WaterAirProblem(Simulator& simulator)
+    explicit WaterAirProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 

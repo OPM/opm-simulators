@@ -132,7 +132,7 @@ class FlowExpProblem : public FlowProblemBlackoil<TypeTag> //, public FvBaseProb
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    void writeOutput(bool verbose = true)
+    void writeOutput(bool verbose = true) override
     {
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to

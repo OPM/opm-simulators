@@ -85,6 +85,7 @@ gasLiftOptimizationStage2(const Parallel::Communication& comm,
                           DeferredLogger& deferred_logger)
 
 {
+    OPM_TIMEFUNCTION();
     GasLiftStage2 glift {episodeIndex,
                          comm,
                          schedule,

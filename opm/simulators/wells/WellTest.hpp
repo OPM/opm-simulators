@@ -42,7 +42,7 @@ template<class Scalar>
 class WellTest {
 public:
     //! \brief Constructor sets reference to well.
-    WellTest(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellTest(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
 
     void updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
                                      const double simulation_time,

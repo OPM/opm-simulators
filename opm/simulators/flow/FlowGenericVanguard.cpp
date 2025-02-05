@@ -49,6 +49,7 @@
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
+#include <opm/input/eclipse/Schedule/Group/GSatProd.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
@@ -117,6 +118,8 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
 
         ownersFirst_ = Parameters::Get<Parameters::OwnerCellsFirst>();
 #if HAVE_MPI
+        numOverlap_ = Parameters::Get<Parameters::NumOverlap>();
+        addCorners_ = Parameters::Get<Parameters::AddCorners>();
         partitionMethod_   = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
         serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
         zoltanParams_ = Parameters::Get<Parameters::ZoltanParams>();
@@ -177,7 +180,7 @@ void FlowGenericVanguard::readDeck(const std::string& filename)
                   modelParams_.actionState_,
                   modelParams_.wtestState_,
                   modelParams_.eclSummaryConfig_,
-                  nullptr, "normal", "normal", "100", false, false, false, {});
+                  nullptr, "normal", "normal", "100", false, false, false, {}, /*slaveMode=*/false);
     modelParams_.setupTime_ = setupTimer.stop();
 }
 
@@ -348,12 +351,10 @@ void FlowGenericVanguard::init()
         {
             if (comm.rank() == 0)
             {
-                std::string message =
-                        std::string("Option --allow-distributed-wells=true in a model with\n")
-                        + "multisegment wells. This feature is still experimental. You can\n"
-                        + "set --enable-multisegment-wells=false to treat the existing \n"
-                        + "multisegment wells as standard wells.";
-                OpmLog::info(message);
+                OpmLog::info("Option --allow-distributed-wells=true in a model with\n"
+                             "multisegment wells. This feature is still experimental. You can\n"
+                             "set --use-multisegment-well=false to treat the existing\n"
+                             "multisegment wells as standard wells.");
             }
             comm.barrier();
         }
@@ -453,8 +454,13 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::OwnerCellsFirst>
         ("Order cells owned by rank before ghost/overlap cells.");
 #if HAVE_MPI
+    Parameters::Register<Parameters::AddCorners>
+        ("Add corners to partition.");
+    Parameters::Register<Parameters::NumOverlap>
+        ("Numbers of layers overlap in parallel partition");
     Parameters::Register<Parameters::PartitionMethod>
-        ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS, 3=Zoltan with all cells of well represented by one vertex.");
+        ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS, "
+         "3=Zoltan with all cells of well represented by one vertex.");
     Parameters::Register<Parameters::SerialPartitioning>
         ("Perform partitioning for parallel runs on a single process.");
     Parameters::Register<Parameters::ZoltanImbalanceTol<Scalar>>

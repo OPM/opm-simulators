@@ -57,7 +57,7 @@ class BaseVanguard
 #endif
 
 public:
-    BaseVanguard(Simulator& simulator)
+    explicit BaseVanguard(Simulator& simulator)
         : simulator_(simulator)
     {}
 

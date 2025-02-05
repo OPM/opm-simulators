@@ -542,7 +542,7 @@ extern "C" {
         if (cells.empty()) { return; }
 
         const auto first = parts[cells.front()];
-        for (auto& cell : cells) {
+        for (const auto& cell : cells) {
             parts[cell] = first;
         }
     }

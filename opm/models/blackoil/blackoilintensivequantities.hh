@@ -56,8 +56,6 @@
 #include <cstring>
 #include <utility>
 
-#include <fmt/format.h>
-
 namespace Opm {
 /*!
  * \ingroup BlackOilModel
@@ -192,7 +190,10 @@ public:
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
-                Sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                assert(Indices::waterSwitchIdx >= 0);
+                if constexpr (Indices::waterSwitchIdx >= 0) {
+                    Sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+                }
             } else if(priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw ||
                       priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Disabled) {
                       // water is enabled but is not a primary variable i.e. one component/phase case
@@ -203,7 +204,10 @@ public:
         Evaluation Sg = 0.0;
         if constexpr (gasEnabled) {
             if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg) {
-                Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                assert(Indices::compositionSwitchIdx >= 0);
+                if constexpr (compositionSwitchEnabled) {
+                    Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                }
             } else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
                 Sg = 1.0 - Sw;
             } else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Disabled) {

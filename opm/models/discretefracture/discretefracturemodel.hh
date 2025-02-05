@@ -121,7 +121,7 @@ class DiscreteFractureModel : public ImmiscibleModel<TypeTag>
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
-    DiscreteFractureModel(Simulator& simulator)
+    explicit DiscreteFractureModel(Simulator& simulator)
         : ParentType(simulator)
     {
         if (Parameters::Get<Parameters::EnableIntensiveQuantityCache>()) {

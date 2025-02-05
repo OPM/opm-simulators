@@ -41,7 +41,7 @@ template<class Scalar>
 class BlackoilWellModelWBP
 {
 public:
-    BlackoilWellModelWBP(BlackoilWellModelGeneric<Scalar>& well_model);
+    explicit BlackoilWellModelWBP(BlackoilWellModelGeneric<Scalar>& well_model);
 
     void initializeSources(typename ParallelWBPCalculation<Scalar>::GlobalToLocal index,
                            typename ParallelWBPCalculation<Scalar>::Evaluator eval);

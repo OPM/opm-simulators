@@ -25,6 +25,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/output/data/Groups.hpp>
@@ -53,6 +54,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
@@ -86,6 +88,7 @@ namespace Opm {
 template<class Scalar>
 BlackoilWellModelGeneric<Scalar>::
 BlackoilWellModelGeneric(Schedule& schedule,
+                         BlackoilWellModelGasLiftGeneric<Scalar>& gaslift,
                          const SummaryState& summaryState,
                          const EclipseState& eclState,
                          const PhaseUsage& phase_usage,
@@ -94,6 +97,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , summaryState_(summaryState)
     , eclState_(eclState)
     , comm_(comm)
+    , gen_gaslift_(gaslift)
     , wbp_(*this)
     , phase_usage_(phase_usage)
     , terminal_output_(comm_.rank() == 0 &&
@@ -253,9 +257,7 @@ initFromRestartFile(const RestartValue& restartValues,
                                   config.model().target(),
                                   restartValues.wells,
                                   this->guideRate_);
-    }
 
-    if (config.has_model()) {
         BlackoilWellModelRestart(*this).
             loadRestartGuideRates(report_step,
                                   config,
@@ -1255,6 +1257,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                               const Scalar tol_nupcol,
                               DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
     const int nupcol = schedule()[reportStepIdx].nupcol();
 
@@ -1268,6 +1271,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     this->wellState().updateGlobalIsGrup(comm_);
 
     if (iterationIdx <= nupcol) {
+        OPM_TIMEBLOCK(updateNupcol);
         this->updateNupcolWGState();
     } else {
         for (const auto& gr_name : schedule().groupNames(reportStepIdx)) {
@@ -1276,6 +1280,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                 if (this->groupState().has_injection_control(gr_name, phase)) {
                     if (this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP || 
                         this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::REIN) {
+		        OPM_TIMEBLOCK(extraIterationsAfterNupcol);
                         const bool is_vrep = this->groupState().injection_control(gr_name, phase) == Group::InjectionCMode::VREP;
                         const Group& group = schedule().getGroup(gr_name, reportStepIdx);
                         const int np = this->wellState().numPhases();
@@ -1515,8 +1520,9 @@ inferLocalShutWells()
 
 template<class Scalar>
 Scalar BlackoilWellModelGeneric<Scalar>::
-updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor)
+updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor, const Scalar upper_update_bound)
 {
+    OPM_TIMEFUNCTION();
     // Get the network and return if inactive (no wells in network at this time)
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {
@@ -1550,11 +1556,9 @@ updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor)
             if (std::abs(change) > network_imbalance) {
                 network_imbalance = std::abs(change);
             }
-            // we dampen the amount of the nodal pressure can change during one iteration
-            // due to the fact our nodal pressure calculation is somewhat explicit
-            // TODO: the following parameters are subject to adjustment for optimization purpose
-            constexpr Scalar upper_update_bound = 5.0 * unit::barsa;
-            // relative dampening factor based on update value
+            // We dampen the nodal pressure change during one iteration since our nodal pressure calculation
+            // is somewhat explicit. There is a relative dampening factor applied to the update value, and also
+            // the maximum update is limited (to 5 bar by default, can be changed with --network-max-pressure-update-in-bars).
             const Scalar damped_change = std::min(damping_factor * std::abs(change), upper_update_bound);
             const Scalar sign = change > 0 ? 1. : -1.;
             node_pressures_[name] = pressure + sign * damped_change;
@@ -1910,7 +1914,7 @@ getMaxWellConnections() const
 
         const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
         if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
-            for (auto& global_index : possibleFutureConnectionSetIt->second) {
+            for (const auto& global_index : possibleFutureConnectionSetIt->second) {
                 int compressed_idx = compressedIndexForInterior(global_index);
                 if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
                     compressed_well_perforations.push_back(compressed_idx);
@@ -2022,35 +2026,6 @@ logPrimaryVars() const
 }
 
 template<class Scalar>
-std::vector<Scalar>
-BlackoilWellModelGeneric<Scalar>::
-getPrimaryVarsDomain(const int domainIdx) const
-{
-    std::vector<Scalar> ret;
-    for (const auto& well : this->well_container_generic_) {
-        if (this->well_domain_.at(well->name()) == domainIdx) {
-            const auto& pv = well->getPrimaryVars();
-            ret.insert(ret.end(), pv.begin(), pv.end());
-        }
-    }
-    return ret;
-}
-
-template<class Scalar>
-void BlackoilWellModelGeneric<Scalar>::
-setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars)
-{
-    std::size_t offset = 0;
-    for (auto& well : this->well_container_generic_) {
-        if (this->well_domain_.at(well->name()) == domainIdx) {
-            int num_pri_vars = well->setPrimaryVars(vars.begin() + offset);
-            offset += num_pri_vars;
-        }
-    }
-    assert(offset == vars.size());
-}
-
-template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 reportGroupSwitching(DeferredLogger& local_deferredLogger) const
 {
@@ -2089,6 +2064,26 @@ reportGroupSwitching(DeferredLogger& local_deferredLogger) const
             }
         }
     }
+}
+
+template<class Scalar>
+bool BlackoilWellModelGeneric<Scalar>::
+operator==(const BlackoilWellModelGeneric& rhs) const
+{
+    return this->initial_step_ == rhs.initial_step_
+        && this->report_step_starts_ == rhs.report_step_starts_
+        && this->last_run_wellpi_ == rhs.last_run_wellpi_
+        && this->local_shut_wells_ == rhs.local_shut_wells_
+        && this->closed_this_step_ == rhs.closed_this_step_
+        && this->node_pressures_ == rhs.node_pressures_
+        && this->prev_inj_multipliers_ == rhs.prev_inj_multipliers_
+        && this->active_wgstate_ == rhs.active_wgstate_
+        && this->last_valid_wgstate_ == rhs.last_valid_wgstate_
+        && this->nupcol_wgstate_ == rhs.nupcol_wgstate_
+        && this->switched_prod_groups_ == rhs.switched_prod_groups_
+        && this->switched_inj_groups_ == rhs.switched_inj_groups_
+        && this->closed_offending_wells_ == rhs.closed_offending_wells_
+        && this->gen_gaslift_ == rhs.gen_gaslift_;
 }
 
 template class BlackoilWellModelGeneric<double>;

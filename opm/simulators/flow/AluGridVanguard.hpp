@@ -116,7 +116,7 @@ public:
     static constexpr int dimension = Grid::dimension;
     static constexpr int dimensionworld = Grid::dimensionworld;
 
-    AluGridVanguard(Simulator& simulator)
+    explicit AluGridVanguard(Simulator& simulator)
         : FlowBaseVanguard<TypeTag>(simulator)
     {
       this->mpiRank = FlowGenericVanguard::comm().rank();

@@ -58,14 +58,14 @@ class CombinedCriterion : public ConvergenceCriterion<Vector>
     using BlockType = typename Vector::block_type;
 
 public:
-    CombinedCriterion(const CollectiveCommunication& comm)
+    explicit CombinedCriterion(const CollectiveCommunication& comm)
         : comm_(comm)
     {}
 
     CombinedCriterion(const CollectiveCommunication& comm,
-                                       Scalar residualReductionTolerance,
-                                       Scalar absResidualTolerance = 0.0,
-                                       Scalar maxResidual = 0.0)
+                      Scalar residualReductionTolerance,
+                      Scalar absResidualTolerance = 0.0,
+                      Scalar maxResidual = 0.0)
         : comm_(comm),
           residualReductionTolerance_(residualReductionTolerance),
           absResidualTolerance_(absResidualTolerance),

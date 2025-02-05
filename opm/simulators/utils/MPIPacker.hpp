@@ -192,7 +192,7 @@ struct Packer
 {
     //! \brief Constructor.
     //! \param comm The communicator to use
-    Packer(Parallel::Communication comm)
+    explicit Packer(Parallel::Communication comm)
         : m_comm(comm)
     {}
 

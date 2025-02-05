@@ -68,7 +68,7 @@ public:
     { return linSys_; }
 
 protected:
-    StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif);
+    explicit StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif);
 
     const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
 

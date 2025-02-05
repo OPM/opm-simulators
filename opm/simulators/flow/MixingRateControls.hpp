@@ -47,7 +47,7 @@ class MixingRateControls
 public:
     using Scalar = typename FluidSystem::Scalar;
 
-    MixingRateControls(const Schedule& schedule);
+    explicit MixingRateControls(const Schedule& schedule);
     MixingRateControls(const MixingRateControls& rhs);
 
     static MixingRateControls serializationTestObject(const Schedule& schedule);

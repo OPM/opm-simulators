@@ -56,7 +56,7 @@ public:
      * \brief Given a domestic overlap object, create an overlapping
      *        block vector coherent to it.
      */
-    OverlappingBlockVector(const Overlap& overlap)
+    explicit OverlappingBlockVector(const Overlap& overlap)
         : ParentType(overlap.numDomestic()), overlap_(&overlap)
     { createBuffers_(); }
 

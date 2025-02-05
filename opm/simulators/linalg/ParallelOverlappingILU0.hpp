@@ -41,7 +41,7 @@ class ParallelOverlappingILU0Args
     : public Dune::Amg::DefaultSmootherArgs<F>
 {
  public:
-    ParallelOverlappingILU0Args(MILU_VARIANT milu = MILU_VARIANT::ILU )
+    explicit ParallelOverlappingILU0Args(MILU_VARIANT milu = MILU_VARIANT::ILU )
         : milu_(milu), n_(0)
     {}
     void setMilu(MILU_VARIANT milu)

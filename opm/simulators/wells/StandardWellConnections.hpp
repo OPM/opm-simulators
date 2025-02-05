@@ -45,7 +45,7 @@ class StandardWellConnections
 {
 public:
     using Scalar = typename FluidSystem::Scalar;
-    StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices>& well);
+    explicit StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices>& well);
 
     struct Properties
     {

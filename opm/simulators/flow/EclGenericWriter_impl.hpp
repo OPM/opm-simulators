@@ -173,7 +173,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     {}
 
     // callback to eclIO serial writeTimeStep method
-    void run()
+    void run() override
     {
         this->eclIO_.writeTimeStep(this->actionState_,
                                    this->wtestState_,
@@ -675,9 +675,10 @@ evalSummary(const int                                            reportStepNum,
         // step we are currently on.
         const auto udq_step = reportStepNum - 1;
 
-        this->schedule_.getUDQConfig(udq_step)
+        this->schedule_[udq_step].udq()
             .eval(udq_step,
                   this->schedule_.wellMatcher(udq_step),
+                  this->schedule_[udq_step].group_order(),
                   this->schedule_.segmentMatcherFactory(udq_step),
                   [es = std::cref(this->eclState_)]() {
                       return std::make_unique<RegionSetMatcher>

@@ -277,7 +277,7 @@ class RichardsModel
                   "The liquid and the gas components must be different");
 
 public:
-    RichardsModel(Simulator& simulator)
+    explicit RichardsModel(Simulator& simulator)
         : ParentType(simulator)
     {
         // the liquid phase must be liquid, the gas phase must be

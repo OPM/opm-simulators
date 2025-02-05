@@ -32,6 +32,9 @@
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
+#if HAVE_MPI
+#define RESERVOIR_COUPLING_ENABLED
+#endif
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
@@ -50,7 +53,6 @@ namespace Opm::Parameters {
 
 // Do not merge parallel output files or warn about them
 struct EnableLoggingFalloutWarning { static constexpr bool value = false; };
-
 struct OutputInterval { static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
@@ -366,7 +368,11 @@ namespace Opm {
         // Callback that will be called from runSimulatorInitOrRun_().
         int runSimulatorRunCallback_()
         {
+#ifdef RESERVOIR_COUPLING_ENABLED
+            SimulatorReport report = simulator_->run(*simtimer_, this->argc_, this->argv_);
+#else
             SimulatorReport report = simulator_->run(*simtimer_);
+#endif
             runSimulatorAfterSim_(report);
             return report.success.exit_status;
         }
@@ -374,7 +380,11 @@ namespace Opm {
         // Callback that will be called from runSimulatorInitOrRun_().
         int runSimulatorInitCallback_()
         {
+#ifdef RESERVOIR_COUPLING_ENABLED
+            simulator_->init(*simtimer_, this->argc_, this->argv_);
+#else
             simulator_->init(*simtimer_);
+#endif
             return EXIT_SUCCESS;
         }
 

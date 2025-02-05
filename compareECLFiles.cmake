@@ -143,6 +143,10 @@ function(add_test_compareSeparateECLFiles)
                         SIMULATOR ${PARAM_SIMULATOR}
                         TESTNAME ${PARAM_CASENAME}
                         PROCESSORS ${MPI_PROCS})
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+    set_tests_properties(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} PROPERTIES
+                         ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_append:${opm-common_DIR}/python)
+  endif()
 endfunction()
 
 ###########################################################################
@@ -397,6 +401,12 @@ add_test_runSimulator(CASENAME norne_parallel
                       DIR norne
                       PROCS 4
                       CONFIGURATION extra)
+
+add_test_runSimulator(CASENAME spe1case1_carfin
+                      FILENAME SPE1CASE1_CARFIN
+   	              SIMULATOR flow
+		      DIR lgr
+		      TEST_ARGS --parsing-strictness=low --enable-ecl-output=false --enable-vtk-output=true)
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
 add_test_runSimulator(CASENAME tuning_xxxmbe

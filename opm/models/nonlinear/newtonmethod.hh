@@ -109,7 +109,7 @@ class NewtonMethod
     using CollectiveCommunication = typename Dune::Communication<typename Dune::MPIHelper::MPICommunicator>;
 
 public:
-    NewtonMethod(Simulator& simulator)
+    explicit NewtonMethod(Simulator& simulator)
         : simulator_(simulator)
         , endIterMsgStream_(std::ostringstream::out)
         , linearSolver_(simulator)

@@ -30,6 +30,8 @@
 
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+
 #include <opm/material/components/SimpleCO2.hpp>
 #include <opm/material/components/C10.hpp>
 #include <opm/material/components/C1.hpp>
@@ -247,6 +249,11 @@ public:
     const DimVector& gravity() const
     {
         return gravity_;
+    }
+
+    Opm::CompositionalConfig::EOSType getEosType() const
+    {
+        return Opm::CompositionalConfig::EOSType::PR;
     }
 
     /*!

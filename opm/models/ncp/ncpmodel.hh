@@ -250,7 +250,7 @@ class NcpModel
     using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
 public:
-    NcpModel(Simulator& simulator)
+    explicit NcpModel(Simulator& simulator)
         : ParentType(simulator)
     {}
 

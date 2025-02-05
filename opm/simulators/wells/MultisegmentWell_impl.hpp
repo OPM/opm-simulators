@@ -296,7 +296,7 @@ namespace Opm
         debug_cost_counter_ = 0;
         bool converged_implicit = false;
         if (this->param_.local_well_solver_control_switching_) {
-            converged_implicit = computeWellPotentialsImplicit(simulator, well_potentials, deferred_logger);
+            converged_implicit = computeWellPotentialsImplicit(simulator, well_state, well_potentials, deferred_logger);
             if (!converged_implicit) {
                 deferred_logger.debug("Implicit potential calculations failed for well "
                                        + this->name() + ",  reverting to original aproach.");
@@ -394,6 +394,7 @@ namespace Opm
                                       std::vector<Scalar>& well_flux,
                                       DeferredLogger& deferred_logger) const
     {
+        OPM_TIMEFUNCTION();
         // creating a copy of the well itself, to avoid messing up the explicit information
         // during this copy, the only information not copied properly is the well controls
         MultisegmentWell<TypeTag> well_copy(*this);
@@ -515,6 +516,7 @@ namespace Opm
     bool
     MultisegmentWell<TypeTag>::
     computeWellPotentialsImplicit(const Simulator& simulator,
+                                  const WellState<Scalar>& well_state,
                                   std::vector<Scalar>& well_potentials,
                                   DeferredLogger& deferred_logger) const
     {
@@ -525,7 +527,7 @@ namespace Opm
         well_copy.debug_cost_counter_ = 0;
 
         // store a copy of the well state, we don't want to update the real well state
-        WellState<Scalar> well_state_copy = simulator.problem().wellModel().wellState();
+        WellState<Scalar> well_state_copy = well_state;
         const auto& group_state = simulator.problem().wellModel().groupState();
         auto& ws = well_state_copy.well(this->index_of_well_);
         
@@ -1656,32 +1658,28 @@ namespace Opm
         // if we fail to solve eqs, we reset status/operability before leaving
         const auto well_status_orig = this->wellStatus_;
         const auto operability_orig = this->operability_status_;
-        auto well_status_cur = well_status_orig;
         // don't allow opening wells that are stopped from schedule or has a stopped well state
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
                                  well_state.well(this->index_of_well_).status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
         const bool allow_switching = !this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) &&
                                      (!fixed_control || !fixed_status) && allow_open;
-        bool changed = false;
         bool final_check = false;
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
-            its_since_last_switch++;
+            ++its_since_last_switch;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
-                changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
-                                                                         inj_controls, prod_controls, wqTotal,
-                                                                         deferred_logger, fixed_control, fixed_status);
-                if (changed){
+                bool changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
+                                                                              inj_controls, prod_controls, wqTotal,
+                                                                              deferred_logger, fixed_control,
+                                                                              fixed_status);
+                if (changed) {
                     its_since_last_switch = 0;
-                    switch_count++;
-                    if (well_status_cur != this->wellStatus_) {
-                        well_status_cur = this->wellStatus_;
-                    }
+                    ++switch_count;
                 }
                 if (!changed && final_check) {
                     break;
@@ -1690,7 +1688,8 @@ namespace Opm
                 }
             }
 
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
+                                           well_state, group_state, deferred_logger);
 
             const BVectorWell dx_well = this->linSys_.solve();
 
@@ -2107,6 +2106,7 @@ namespace Opm
                                     DeferredLogger& deferred_logger,
                                     bool iterate_if_no_solution) const
     {
+        OPM_TIMEFUNCTION();
         // Make the frates() function.
         auto frates = [this, &simulator, &deferred_logger](const Scalar bhp) {
             // Not solving the well equations here, which means we are

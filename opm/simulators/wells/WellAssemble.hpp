@@ -52,7 +52,7 @@ class WellAssemble {
     using Scalar = typename FluidSystem::Scalar;
 
 public:
-    WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well);
+    explicit WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well);
 
     template<class EvalWell>
     void assembleControlEqProd(const WellState<Scalar>& well_state,

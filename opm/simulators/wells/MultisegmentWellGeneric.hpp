@@ -22,10 +22,7 @@
 #ifndef OPM_MULTISEGMENTWELL_GENERIC_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_GENERIC_HEADER_INCLUDED
 
-#include <functional>
-#include <optional>
 #include <vector>
-#include <array>
 
 namespace Opm
 {
@@ -52,7 +49,7 @@ public:
     int numberOfSegments() const;
 
 protected:
-    MultisegmentWellGeneric(WellInterfaceGeneric<Scalar>& baseif);
+    explicit MultisegmentWellGeneric(WellInterfaceGeneric<Scalar>& baseif);
 
     // scale the segment rates and pressure based on well rates and bhp
     void scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,

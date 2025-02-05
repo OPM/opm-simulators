@@ -171,10 +171,9 @@ findThpFromBhpIteratively(const std::function<Scalar(const Scalar, const Scalar)
     auto pressure_loss = getVfpBhpAdjustment(bhp + dp, thp_limit);
     auto thp = thp_func(bhp, pressure_loss);
     const Scalar tolerance = 1e-5 * unit::barsa;
-    bool do_iterate = true;
     int it = 1;
     int max_iterations = 50;
-    while (do_iterate) {
+    while (true) {
         if (it > max_iterations) {
             break;
         }

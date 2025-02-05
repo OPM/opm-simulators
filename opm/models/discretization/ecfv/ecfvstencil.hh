@@ -93,7 +93,7 @@ public:
         SubControlVolume()
         {}
 
-        SubControlVolume(const Element& element)
+        explicit SubControlVolume(const Element& element)
             : element_(element)
         { update(); }
 

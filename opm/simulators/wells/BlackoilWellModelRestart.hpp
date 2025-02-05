@@ -49,7 +49,7 @@ class BlackoilWellModelRestart
 {
 public:
     //! \brief Constructor initializes reference to the well model.
-    BlackoilWellModelRestart(const BlackoilWellModelGeneric<Scalar>& wellModel)
+    explicit BlackoilWellModelRestart(const BlackoilWellModelGeneric<Scalar>& wellModel)
         : wellModel_(wellModel)
     {}
 

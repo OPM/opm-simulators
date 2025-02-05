@@ -40,7 +40,7 @@ namespace Opm {
 class TimerGuard
 {
 public:
-    TimerGuard(Timer& timer)
+    explicit TimerGuard(Timer& timer)
         : timer_(timer)
     { }
 

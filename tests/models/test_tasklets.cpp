@@ -42,14 +42,14 @@ std::unique_ptr<Opm::TaskletRunner> runner{};
 class SleepTasklet : public Opm::TaskletInterface
 {
 public:
-    SleepTasklet(int mseconds)
+    explicit SleepTasklet(int mseconds)
         : mseconds_(mseconds)
     {
         n_ = numInstantiated_;
         ++ numInstantiated_;
     }
 
-    void run()
+    void run() override
     {
         assert(0 <= runner->workerThreadIndex() && runner->workerThreadIndex() < runner->numWorkerThreads());
         std::this_thread::sleep_for(std::chrono::milliseconds(mseconds_));

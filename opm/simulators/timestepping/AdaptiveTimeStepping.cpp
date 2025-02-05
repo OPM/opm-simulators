@@ -33,7 +33,7 @@ void logTimer(const AdaptiveSimulatorTimer& substepTimer)
 }
 
 std::set<std::string>
-consistentlyFailingWells(const std::vector<StepReport>& sr)
+consistentlyFailingWells(const std::vector<StepReport>& sr, bool requireRepeatedFailures)
 {
     // If there are wells that cause repeated failures, we
     // close them, and restart the un-chopped timestep.
@@ -60,10 +60,10 @@ consistentlyFailingWells(const std::vector<StepReport>& sr)
     const int rep_step = sr.back().report_step;
     const int sub_step = sr.back().current_step;
     const int sr_size = sr.size();
-    if (sr_size >= num_steps) {
-        for (const auto& wf : wfs) {
-            failing_wells.insert(wf.wellName());
-        }
+    for (const auto& wf : wfs) {
+        failing_wells.insert(wf.wellName());
+    }
+    if (requireRepeatedFailures && sr_size >= num_steps) {
         for (int s = 1; s < num_steps; ++s) {
             const auto& srep = sr[sr_size - 1 - s];
             // Report must be from same report step and substep, otherwise we have

@@ -219,7 +219,7 @@ openclSolverBackend(int verbosity_,
         OPM_THROW(std::logic_error, oss.str());
     } catch (const std::logic_error& error) {
         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-        throw error;
+        throw;
     }
 }
 
@@ -479,7 +479,7 @@ initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
         OPM_THROW(std::logic_error, oss.str());
     } catch (const std::logic_error& error) {
         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-        throw error;
+        throw;
     }
 
     initialized = true;
@@ -649,7 +649,7 @@ solve_system(WellContributions<Scalar>& wellContribs, GpuResult& res)
         OPM_THROW(std::logic_error, oss.str());
     } catch (const std::logic_error& error) {
         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-        throw error;
+        throw;
     }
 
     if (verbosity > 2) {

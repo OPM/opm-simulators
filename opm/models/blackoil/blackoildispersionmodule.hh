@@ -28,11 +28,13 @@
 #ifndef EWOMS_DISPERSION_MODULE_HH
 #define EWOMS_DISPERSION_MODULE_HH
 
+#include <dune/common/fvector.hh>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
 
 #include <stdexcept>
 
@@ -192,14 +194,17 @@ public:
             }
 
             // Adding dispersion in the gas phase leads to
-            // convergence issues and unphysical results. 
+            // convergence issues and unphysical results.
             // We disable dispersion in the gas phase for now
+            // See comment below
             if (FluidSystem::gasPhaseIdx == phaseIdx) {
                 continue;
             }
 
             // no dispersion in gas for blackoil models unless gas can contain evaporated water or oil
-            if ((!FluidSystem::enableVaporizedWater() && !FluidSystem::enableVaporizedOil()) && FluidSystem::gasPhaseIdx == phaseIdx) {
+            // phase check disabled due to if above, reenable when removing unconditional gas phase disablement
+            if ((!FluidSystem::enableVaporizedWater() && !FluidSystem::enableVaporizedOil())
+                /*&& FluidSystem::gasPhaseIdx == phaseIdx*/) {
                 continue;
             }
 
@@ -371,7 +376,7 @@ protected:
         for (unsigned i = 0; i < phaseIdxs.size(); ++i) {
             normVelocityCell_[i] = 0;
         }
-        for (auto& velocityInfo : velocityInfos) {
+        for (const auto& velocityInfo : velocityInfos) {
             for (unsigned i = 0; i < phaseIdxs.size(); ++i) {
                 if (FluidSystem::phaseIsActive(phaseIdxs[i])) {
                     normVelocityCell_[phaseIdxs[i]] = max( normVelocityCell_[phaseIdxs[i]], 

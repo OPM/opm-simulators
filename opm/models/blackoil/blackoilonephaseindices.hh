@@ -179,7 +179,7 @@ struct BlackOilOnePhaseIndices
     //////////////////////
 
     //! \brief returns the index of "active" component
-    static unsigned canonicalToActiveComponentIndex(unsigned /*compIdx*/)
+    static constexpr unsigned canonicalToActiveComponentIndex(unsigned /*compIdx*/)
     {
         return 0;
     }

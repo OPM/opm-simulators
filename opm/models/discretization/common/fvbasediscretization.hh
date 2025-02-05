@@ -389,7 +389,7 @@ public:
     // this constructor required to be explicitly specified because
     // we've defined a constructor above which deletes all implicitly
     // generated constructors in C++.
-    FvBaseDiscretization(Simulator& simulator)
+    explicit FvBaseDiscretization(Simulator& simulator)
         : simulator_(simulator)
         , gridView_(simulator.gridView())
         , elementMapper_(gridView_, Dune::mcmgElementLayout())
@@ -1962,7 +1962,7 @@ public:
         }
     };
 
-    FvBaseDiscretizationNoAdapt(Simulator& simulator)
+    explicit FvBaseDiscretizationNoAdapt(Simulator& simulator)
         : ParentType(simulator)
     {
         if (this->enableGridAdaptation_) {

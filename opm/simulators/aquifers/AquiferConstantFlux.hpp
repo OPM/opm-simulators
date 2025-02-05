@@ -67,8 +67,6 @@ public:
         return result;
     }
 
-    virtual ~AquiferConstantFlux() = default;
-
     void computeFaceAreaFraction(const std::vector<Scalar>& total_face_area) override
     {
         assert (total_face_area.size() >= static_cast<typename std::vector<Scalar>::size_type>(this->aquiferID()));

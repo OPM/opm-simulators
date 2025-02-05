@@ -17,15 +17,9 @@
 #ifndef FLOW_BLACKOIL_TPFA_HPP
 #define FLOW_BLACKOIL_TPFA_HPP
 
-#include <memory>
-#include <tuple>
+#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
 
-namespace Opm::Properties::TTag {
-    struct FlowProblem;
-    struct FlowProblemTPFA {
-        using InheritsFrom = std::tuple<FlowProblem>;
-    };
-}
+#include <memory>
 
 namespace Opm {
 

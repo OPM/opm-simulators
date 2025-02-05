@@ -141,13 +141,6 @@ public:
     }
 
     /*!
-     * \brief Register all run-time parameters for the Vtk output module.
-     */
-    static void registerParameters()
-    {
-    }
-
-    /*!
      * \brief Allocate memory for the scalar fields we would like to
      *        write to ECL output files
      */

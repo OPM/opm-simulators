@@ -245,7 +245,7 @@ namespace Opm
     PIDAndIterationCountTimeStepControl
     PIDAndIterationCountTimeStepControl::serializationTestObject()
     {
-        return {1, 2.0, 3.0, 4.0, 5.0, true};
+        return PIDAndIterationCountTimeStepControl{1, 2.0, 3.0, 4.0, 5.0, true};
     }
 
     double PIDAndIterationCountTimeStepControl::

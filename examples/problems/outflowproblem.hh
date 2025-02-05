@@ -129,7 +129,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    OutflowProblem(Simulator& simulator)
+    explicit OutflowProblem(Simulator& simulator)
         : ParentType(simulator)
         , eps_(1e-6)
     { }

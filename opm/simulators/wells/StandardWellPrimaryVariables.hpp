@@ -88,7 +88,7 @@ public:
     using BVectorWell = typename StandardWellEquations<Scalar,Indices::numEq>::BVectorWell;
 
     //! \brief Constructor initializes reference to well interface.
-    StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
+    explicit StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
         : well_(well)
     {}
 

@@ -122,7 +122,7 @@ public:
     {};
 
 private:
-    int dofOffset_;
+    int dofOffset_{};
 };
 
 } // namespace Opm

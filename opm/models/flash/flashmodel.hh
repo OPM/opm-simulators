@@ -196,7 +196,7 @@ class FlashModel
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
-    FlashModel(Simulator& simulator)
+    explicit FlashModel(Simulator& simulator)
         : ParentType(simulator)
     {}
 

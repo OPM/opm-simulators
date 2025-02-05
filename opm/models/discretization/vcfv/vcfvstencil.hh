@@ -839,7 +839,12 @@ public:
 
         numVertices = e.subEntities(/*codim=*/dim);
         numEdges = e.subEntities(/*codim=*/dim-1);
-        numFaces = (dim<3)?0:e.subEntities(/*codim=*/1);
+        if constexpr (dim == 3) {
+            numFaces = e.subEntities(/*codim=*/1);
+        }
+        else {
+            numFaces = 0;
+        }
 
         numBoundarySegments_ = 0; // TODO: really required here(?)
 
@@ -913,13 +918,13 @@ public:
             // cases which don't apply.
             LocalPosition ipLocal_;
             DimVector diffVec;
-            if (dim==1) {
+            if constexpr (dim == 1) {
                 subContVolFace[k].ipLocal_ = 0.5;
                 subContVolFace[k].normal_ = 1.0;
                 subContVolFace[k].area_ = 1.0;
                 ipLocal_ = subContVolFace[k].ipLocal_;
             }
-            else if (dim==2) {
+            else if constexpr (dim == 2) {
                 ipLocal_ = referenceElement.position(static_cast<int>(k), dim-1) + elementLocal;
                 ipLocal_ *= 0.5;
                 subContVolFace[k].ipLocal_ = ipLocal_;
@@ -937,7 +942,7 @@ public:
                 subContVolFace[k].area_ = subContVolFace[k].normal_.two_norm();
                 subContVolFace[k].normal_ /= subContVolFace[k].area_;
             }
-            else if (dim==3) {
+            else if constexpr (dim == 3) {
                 unsigned leftFace;
                 unsigned rightFace;
                 getFaceIndices(numVertices, k, leftFace, rightFace);
@@ -973,17 +978,17 @@ public:
                 unsigned bfIdx = numBoundarySegments_;
                 ++numBoundarySegments_;
 
-                if (dim == 1) {
+                if constexpr (dim == 1) {
                     boundaryFace_[bfIdx].ipLocal_ = referenceElement.position(static_cast<int>(vertInElement), dim);
                     boundaryFace_[bfIdx].area_ = 1.0;
                 }
-                else if (dim == 2) {
+                else if constexpr (dim == 2) {
                     boundaryFace_[bfIdx].ipLocal_ = referenceElement.position(static_cast<int>(vertInElement), dim)
                         + referenceElement.position(static_cast<int>(face), 1);
                     boundaryFace_[bfIdx].ipLocal_ *= 0.5;
                     boundaryFace_[bfIdx].area_ = 0.5 * intersection.geometry().volume();
                 }
-                else if (dim == 3) {
+                else if constexpr (dim == 3) {
                     unsigned leftEdge;
                     unsigned rightEdge;
                     getEdgeIndices(numVertices, face, vertInElement, leftEdge, rightEdge);
@@ -1113,12 +1118,12 @@ private:
 #endif
     void fillSubContVolData_()
     {
-        if (dim == 1) {
+        if constexpr (dim == 1) {
             // 1D
             subContVol[0].volume_ = 0.5*elementVolume;
             subContVol[1].volume_ = 0.5*elementVolume;
         }
-        else if (dim == 2) {
+        else if constexpr (dim == 2) {
             switch (numVertices) {
             case 3: // 2D, triangle
                 subContVol[0].volume_ = elementVolume/3;
@@ -1152,7 +1157,7 @@ private:
                                        +", numVertices = "+std::to_string(numVertices));
             }
         }
-        else if (dim == 3) {
+        else if constexpr (dim == 3) {
             switch (numVertices) {
             case 4: // 3D, tetrahedron
                 for (unsigned k = 0; k < numVertices; k++)

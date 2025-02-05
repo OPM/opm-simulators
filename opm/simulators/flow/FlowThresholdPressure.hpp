@@ -70,7 +70,7 @@ class FlowThresholdPressure : public GenericThresholdPressure<GetPropType<TypeTa
     enum { numPhases = FluidSystem::numPhases };
 
 public:
-    FlowThresholdPressure(const Simulator& simulator)
+    explicit FlowThresholdPressure(const Simulator& simulator)
         : BaseType(simulator.vanguard().cartesianIndexMapper(),
                    simulator.vanguard().gridView(),
                    simulator.model().elementMapper(),

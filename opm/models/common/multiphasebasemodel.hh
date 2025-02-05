@@ -169,7 +169,7 @@ class MultiPhaseBaseModel : public GetPropType<TypeTag, Properties::Discretizati
     enum { numComponents = FluidSystem::numComponents };
 
 public:
-    MultiPhaseBaseModel(Simulator& simulator)
+    explicit MultiPhaseBaseModel(Simulator& simulator)
         : ParentType(simulator)
     { }
 

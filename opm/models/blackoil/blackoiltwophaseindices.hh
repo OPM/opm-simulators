@@ -28,6 +28,8 @@
 #ifndef EWOMS_BLACK_OIL_TWO_PHASE_INDICES_HH
 #define EWOMS_BLACK_OIL_TWO_PHASE_INDICES_HH
 
+#include <opm/common/utility/ConstexprAssert.hpp>
+
 #include <cassert>
 
 namespace Opm {
@@ -179,20 +181,20 @@ struct BlackOilTwoPhaseIndices
     //////////////////////
 
     //! \brief returns the index of "active" component
-    static unsigned canonicalToActiveComponentIndex(unsigned compIdx)
+    static constexpr unsigned canonicalToActiveComponentIndex(const unsigned compIdx)
     {
         // assumes canonical oil = 0, water = 1, gas = 2;
         if (!gasEnabled) {
-            assert(compIdx != 2);
+            constexpr_assert(compIdx != 2);
             // oil = 0, water = 1
             return compIdx;
         } else if (!waterEnabled) {
-            assert(compIdx != 1);
+            constexpr_assert(compIdx != 1);
             // oil = 0, gas = 1
             return compIdx / 2;
         } else {
-            assert(!oilEnabled);
-            assert(compIdx != 0);
+            constexpr_assert(!oilEnabled);
+            constexpr_assert(compIdx != 0);
         }
 
         // water = 0, gas = 1;

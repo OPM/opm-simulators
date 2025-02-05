@@ -92,6 +92,19 @@ add_test_compare_restarted_simulation(CASENAME network_01_reroute_restart
                                       DIR network
                                       TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
 
+# Restart run in which a UDQ defining expression has exactly 128
+# characters.  Verifies that we don't overflow the ZUDL character
+# limit in restart files.
+add_test_compare_restarted_simulation(CASENAME udq_reg_02
+  FILENAME UDQ_REG-02
+  SIMULATOR flow
+  ABS_TOL ${abs_tol_restart}
+  REL_TOL ${rel_tol_restart}
+  RESTART_STEP 2
+  DIR udq_actionx
+  TEST_ARGS --enable-tuning=true
+)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary

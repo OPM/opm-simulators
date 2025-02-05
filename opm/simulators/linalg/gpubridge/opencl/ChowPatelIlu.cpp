@@ -978,7 +978,7 @@ void ChowPatelIlu<block_size>::gpu_decomposition(
         OPM_THROW(std::logic_error, oss.str());
     } catch (const std::logic_error& error) {
         // rethrow exception by OPM_THROW in the try{}
-        throw error;
+        throw;
     }
 }
 

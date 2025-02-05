@@ -74,7 +74,7 @@ public:
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
     using BVectorWell = typename Equations::BVectorWell;
 
-    MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
+    explicit MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
         : well_(well)
     {}
 

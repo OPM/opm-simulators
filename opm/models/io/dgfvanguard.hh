@@ -72,7 +72,7 @@ public:
     /*!
      * \brief Load the grid from the file.
      */
-    DgfVanguard(Simulator& simulator)
+    explicit DgfVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
         const std::string dgfFileName = Parameters::Get<Parameters::GridFile>();

@@ -92,7 +92,7 @@ class VtkMultiPhaseModule : public BaseOutputModule<TypeTag>
     using PhaseVectorBuffer = std::array<VectorBuffer, numPhases>;
 
 public:
-    VtkMultiPhaseModule(const Simulator& simulator)
+    explicit VtkMultiPhaseModule(const Simulator& simulator)
         : ParentType(simulator)
     {
         params_.read();
@@ -110,7 +110,7 @@ public:
      * \brief Allocate memory for the scalar fields we would like to
      *        write to the VTK file.
      */
-    void allocBuffers()
+    void allocBuffers() override
     {
         if (params_.extrusionFactorOutput_) {
             this->resizeScalarBuffer_(extrusionFactor_);
@@ -174,7 +174,7 @@ public:
      * \brief Modify the internal buffers according to the intensive quantities seen on
      *        an element
      */
-    void processElement(const ElementContext& elemCtx)
+    void processElement(const ElementContext& elemCtx) override
     {
         if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
@@ -294,7 +294,7 @@ public:
     /*!
      * \brief Add all buffers to the VTK output writer.
      */
-    void commitBuffers(BaseOutputWriter& baseWriter)
+    void commitBuffers(BaseOutputWriter& baseWriter) override
     {
         VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
         if (!vtkWriter) {

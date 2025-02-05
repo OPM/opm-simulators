@@ -33,7 +33,7 @@ namespace Opm {
 
 template<class Grid>
 struct IsNumericalAquiferCell {
-    IsNumericalAquiferCell(const Grid&)
+    explicit IsNumericalAquiferCell(const Grid&)
     {}
 
     template<class T>
@@ -42,7 +42,7 @@ struct IsNumericalAquiferCell {
 
 template<>
 struct IsNumericalAquiferCell<Dune::CpGrid> {
-    IsNumericalAquiferCell(const Dune::CpGrid& grid)
+    explicit IsNumericalAquiferCell(const Dune::CpGrid& grid)
         : grid_(grid)
     {}
 

@@ -28,6 +28,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/SICD.hpp>
+#include <opm/input/eclipse/Schedule/MSW/Segment.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -54,12 +55,15 @@ ValueType haalandFormular(const ValueType& re,
                           const Scalar diameter,
                           const Scalar roughness)
 {
-    const ValueType value = -3.6 * log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
-
-    // sqrt(1/f) should be non-positive
-    assert(value >= 0.0);
-
-    return 1. / (value * value);
+    // We now guard for high roughness values (possible singularity) during input handling.
+    // Keepeing a check here in case of unforeseen future usage.
+    assert( re >= 4000. );
+    const Scalar rel_roughness = roughness/diameter;
+    if (rel_roughness > Opm::Segment::MAX_REL_ROUGHNESS) {
+        throw std::invalid_argument("Too large relative roughness in Haaland friction factor calculations.");
+    }
+    const ValueType value = -3.6 * log10(6.9 / re + std::pow(rel_roughness / 3.7, 10. / 9.) );
+    return 1.0 / (value*value);
 }
 
 // water in oil emulsion viscosity

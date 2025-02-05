@@ -69,7 +69,7 @@ class FvBaseNewtonConvergenceWriter
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
-    FvBaseNewtonConvergenceWriter(NewtonMethod& nm)
+    explicit FvBaseNewtonConvergenceWriter(NewtonMethod& nm)
         : newtonMethod_(nm)
     {
         timeStepIdx_ = 0;

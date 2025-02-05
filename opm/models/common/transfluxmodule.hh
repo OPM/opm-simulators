@@ -500,10 +500,10 @@ private:
     Evaluation pressureDifference_[numPhases];
 
     // the local indices of the interior and exterior degrees of freedom
-    unsigned short interiorDofIdx_;
-    unsigned short exteriorDofIdx_;
-    short upIdx_[numPhases];
-    short dnIdx_[numPhases];
+    unsigned short interiorDofIdx_{};
+    unsigned short exteriorDofIdx_{};
+    short upIdx_[numPhases]{};
+    short dnIdx_[numPhases]{};
 };
 
 } // namespace Opm

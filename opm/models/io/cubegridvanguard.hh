@@ -95,7 +95,7 @@ public:
     /*!
      * \brief Create the grid
      */
-    CubeGridVanguard(Simulator& simulator)
+    explicit CubeGridVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
         std::array<unsigned int, dim> cellRes;

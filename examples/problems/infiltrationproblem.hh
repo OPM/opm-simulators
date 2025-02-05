@@ -166,7 +166,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    InfiltrationProblem(Simulator& simulator)
+    explicit InfiltrationProblem(Simulator& simulator)
         : ParentType(simulator)
         , eps_(1e-6)
     { }

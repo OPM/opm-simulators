@@ -61,7 +61,7 @@ void sortRow(int *colIndices, int *data, int left, int right)
 // LUMat->nnzValues[ik] = LUMat->nnzValues[ik] - (pivot * LUMat->nnzValues[jk]) in ilu decomposition
 // a = a - (b * c)
 template<class Scalar>
-void blockMultSub(Scalar* a, Scalar* b, Scalar* c, unsigned int block_size)
+void blockMultSub(Scalar* a, const Scalar* b, const Scalar* c, unsigned int block_size)
 {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
@@ -76,7 +76,8 @@ void blockMultSub(Scalar* a, Scalar* b, Scalar* c, unsigned int block_size)
 
 /*Perform a 3x3 matrix-matrix multiplicationj on two blocks*/
 template<class Scalar>
-void blockMult(Scalar* mat1, Scalar* mat2, Scalar* resMat, unsigned int block_size)
+void blockMult(const Scalar* mat1, const Scalar* mat2,
+               Scalar* resMat, unsigned int block_size)
 {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
@@ -90,8 +91,8 @@ void blockMult(Scalar* mat1, Scalar* mat2, Scalar* resMat, unsigned int block_si
 }
 
 #define INSTANTIATE_TYPE(T)                               \
-    template void blockMultSub(T*, T*, T*, unsigned int); \
-    template void blockMult(T*, T*, T*, unsigned int);
+    template void blockMultSub(T*, const T*, const T*, unsigned int); \
+    template void blockMult(const T*, const T*, T*, unsigned int);
 
 INSTANTIATE_TYPE(double)
 

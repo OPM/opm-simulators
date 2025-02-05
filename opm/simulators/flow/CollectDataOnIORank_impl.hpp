@@ -1098,7 +1098,7 @@ localIdxToGlobalIdx(unsigned localIdx) const
         throw std::logic_error("index map is not created on this rank");
     }
 
-    if (localIdx > this->localIdxToGlobalIdx_.size()) {
+    if (localIdx >= this->localIdxToGlobalIdx_.size()) {
         throw std::logic_error("local index is outside map range");
     }
 

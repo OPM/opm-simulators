@@ -47,7 +47,7 @@ public:
     using EvalWell = typename PrimaryVariables::EvalWell;
 
     //! \brief Constructor initializes reference to well.
-    StandardWellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well)
+    explicit StandardWellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well)
         : well_(well)
     {}
 

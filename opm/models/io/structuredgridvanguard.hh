@@ -132,7 +132,7 @@ public:
     /*!
      * \brief Create the grid for the lens problem
      */
-    StructuredGridVanguard(Simulator& simulator)
+    explicit StructuredGridVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
         Dune::FieldVector<int, dim> cellRes;

@@ -114,7 +114,7 @@ public:
      * \param gridView The view on the DUNE grid which ought to be
      *                 used (normally the leaf grid view)
      */
-    FvBaseProblem(Simulator& simulator)
+    explicit FvBaseProblem(Simulator& simulator)
         : nextTimeStepSize_(0.0)
         , gridView_(simulator.gridView())
         , elementMapper_(gridView_, Dune::mcmgElementLayout())
