@@ -50,18 +50,20 @@ allocate(const std::size_t bufferSize,
                       rstKeywords[std::string{"DISP"} + suffix[is++]] = 0;
                   });
 
-    this->stressXX_.resize(bufferSize, 0.0);
-    rstKeywords["STRESSXX"] = 0;
-    this->stressYY_.resize(bufferSize, 0.0);
-    rstKeywords["STRESSYY"] = 0;
-    this->stressZZ_.resize(bufferSize, 0.0);
-    rstKeywords["STRESSZZ"] = 0;
-    this->stressXY_.resize(bufferSize, 0.0);
-    rstKeywords["STRESSXY"] = 0;
-    this->stressXZ_.resize(bufferSize, 0.0);
-    rstKeywords["STRESSXZ"] = 0;
-    this->stressYZ_.resize(bufferSize, 0.0);
-    rstKeywords["STRESSYZ"] = 0;
+    auto resizeAndRegister =
+        [&rstKeywords,bufferSize](auto& tensor,
+                                  const std::string& name)
+    {
+        static constexpr auto fields = std::array{
+            "XX", "YY", "ZZ", "YZ", "XZ", "XY",
+        };
+        tensor.resize(bufferSize);
+        for (const auto& f : fields) {
+            rstKeywords[name + f] = 0;
+        }
+    };
+
+    resizeAndRegister(stress_, "STRESS");
 
     this->strainXX_.resize(bufferSize, 0.0);
     rstKeywords["STRAINXX"] = 0;
@@ -145,12 +147,7 @@ void MechContainer<Scalar>::
 assignStress(const unsigned globalDofIdx,
              const Dune::FieldVector<Scalar,6>& stress)
 {
-    this->stressXX_[globalDofIdx] = stress[0];
-    this->stressYY_[globalDofIdx] = stress[1];
-    this->stressZZ_[globalDofIdx] = stress[2];
-    this->stressYZ_[globalDofIdx] = stress[3];
-    this->stressXZ_[globalDofIdx] = stress[4];
-    this->stressXY_[globalDofIdx] = stress[5];
+    this->stress_.assign(globalDofIdx, VoigtContainer<Scalar>(stress));
 }
 
 template<class Scalar>
@@ -206,12 +203,12 @@ outputRestart(data::Solution& sol) const
         DataEntry{"STRAINXY", UnitSystem::measure::identity, strainXY_},
         DataEntry{"STRAINXZ", UnitSystem::measure::identity, strainXZ_},
         DataEntry{"STRAINYZ", UnitSystem::measure::identity, strainYZ_},
-        DataEntry{"STRESSXX", UnitSystem::measure::length,   stressXX_},
-        DataEntry{"STRESSYY", UnitSystem::measure::length,   stressYY_},
-        DataEntry{"STRESSZZ", UnitSystem::measure::length,   stressZZ_},
-        DataEntry{"STRESSXY", UnitSystem::measure::length,   stressXY_},
-        DataEntry{"STRESSXZ", UnitSystem::measure::length,   stressXZ_},
-        DataEntry{"STRESSYZ", UnitSystem::measure::length,   stressYZ_},
+        DataEntry{"STRESSXX", UnitSystem::measure::length,   stress_[VoigtIndex::XX]},
+        DataEntry{"STRESSYY", UnitSystem::measure::length,   stress_[VoigtIndex::YY]},
+        DataEntry{"STRESSZZ", UnitSystem::measure::length,   stress_[VoigtIndex::ZZ]},
+        DataEntry{"STRESSXY", UnitSystem::measure::length,   stress_[VoigtIndex::XY]},
+        DataEntry{"STRESSXZ", UnitSystem::measure::length,   stress_[VoigtIndex::XZ]},
+        DataEntry{"STRESSYZ", UnitSystem::measure::length,   stress_[VoigtIndex::YZ]},
         DataEntry{"TEMPPOTF", UnitSystem::measure::pressure, potentialTempForce_},
     };
 

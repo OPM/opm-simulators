@@ -28,6 +28,8 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/simulators/utils/VoigtArray.hpp>
+
 #include <array>
 #include <cstddef>
 #include <map>
@@ -69,12 +71,7 @@ public:
     ScalarBuffer potentialTempForce_;
 
     std::array<ScalarBuffer,3> disp_;
-    ScalarBuffer stressXX_;
-    ScalarBuffer stressYY_;
-    ScalarBuffer stressZZ_;
-    ScalarBuffer stressXY_;
-    ScalarBuffer stressXZ_;
-    ScalarBuffer stressYZ_;
+    VoigtArray<Scalar> stress_;
     ScalarBuffer delstressXX_;
     ScalarBuffer delstressYY_;
     ScalarBuffer delstressZZ_;
