@@ -55,6 +55,9 @@ public:
                                const Scalar pressForce,
                                const Scalar tempForce);
 
+    void assignStress(const unsigned globalDofIdx,
+                      const Dune::FieldVector<Scalar,6>& stress);
+
     void outputRestart(data::Solution& sol) const;
 
     bool allocated() const

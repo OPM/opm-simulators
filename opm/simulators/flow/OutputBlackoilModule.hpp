@@ -218,13 +218,8 @@ public:
                                                   model.mechPotentialTempForce(globalDofIdx));
 
                 // Total stress is not stored but calculated result is Voigt notation
-                const auto stress = model.stress(globalDofIdx, /*include_fracture*/true);
-                this->mech_.stressXX_[globalDofIdx] = stress[Voigt::XX];
-                this->mech_.stressYY_[globalDofIdx] = stress[Voigt::YY];
-                this->mech_.stressZZ_[globalDofIdx] = stress[Voigt::ZZ];
-                this->mech_.stressXY_[globalDofIdx] = stress[Voigt::XY];
-                this->mech_.stressXZ_[globalDofIdx] = stress[Voigt::XZ];
-                this->mech_.stressYZ_[globalDofIdx] = stress[Voigt::YZ];
+                this->mech_.assignStress(globalDofIdx,
+                                         model.stress(globalDofIdx, /*include_fracture*/true));;
 
                 const auto strain = model.strain(globalDofIdx, /*include_fracture*/true);
                 this->mech_.strainXX_[globalDofIdx] = strain[Voigt::XX];
