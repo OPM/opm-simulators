@@ -55,8 +55,6 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, int
     , m_tuneThreadBlockSizes(tuneKernels)
     , m_mixedPrecisionScheme(makeMatrixStorageMPScheme(mixedPrecisionScheme))
 {
-    OPM_GPU_SAFE_CALL(cudaStreamCreate(&m_stream));
-
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
     // Some sanity check
     OPM_ERROR_IF(A.N() != m_gpuMatrix.N(),
@@ -114,6 +112,10 @@ template <class M, class X, class Y, int l>
 void
 GpuDILU<M, X, Y, l>::apply(X& v, const Y& d)
 {
+    // ensure that this stream only starts doing work when main stream is completed up to this point
+    OPM_GPU_SAFE_CALL(cudaEventRecord(m_before.get(), 0));
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(m_stream.get(), m_before.get(), 0));
+
     OPM_TIMEBLOCK(prec_apply);
     {
         const auto ptrs = std::make_pair(v.data(), d.data());
@@ -123,16 +125,20 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d)
         if (it == m_apply_graphs.end()) {
             m_apply_graphs[ptrs] = cudaGraph_t();
             m_executableGraphs[ptrs] = cudaGraphExec_t();
-            OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream, cudaStreamCaptureModeGlobal));
+            OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream.get(), cudaStreamCaptureModeGlobal));
 
             // The apply functions contains lots of small function calls which call a kernel each
             apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
 
-            OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream, &m_apply_graphs[ptrs]));
+            OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream.get(), &m_apply_graphs[ptrs]));
             OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_executableGraphs[ptrs], m_apply_graphs[ptrs], nullptr, nullptr, 0));
         }
         OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs], 0));
     }
+
+    // ensure that main stream only continues after this stream is completed
+    OPM_GPU_SAFE_CALL(cudaEventRecord(m_after.get(), m_stream.get()));
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(0, m_after.get(), 0));
 }
 
 template <class M, class X, class Y, int l>
@@ -155,7 +161,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     d.data(),
                     v.data(),
                     lowerSolveThreadBlockSize,
-                    m_stream);
+                    m_stream.get());
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG) {
                 detail::DILU::solveLowerLevelSetSplit<blocksize_, field_type, float, field_type>(
                     m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
@@ -168,7 +174,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     d.data(),
                     v.data(),
                     lowerSolveThreadBlockSize,
-                    m_stream);
+                    m_stream.get());
             } else {
                 detail::DILU::solveLowerLevelSetSplit<blocksize_, field_type, field_type, field_type>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
@@ -181,7 +187,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     d.data(),
                     v.data(),
                     lowerSolveThreadBlockSize,
-                    m_stream);
+                    m_stream.get());
             }
         } else {
             detail::DILU::solveLowerLevelSet<field_type, blocksize_>(
@@ -195,7 +201,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                 d.data(),
                 v.data(),
                 lowerSolveThreadBlockSize,
-                m_stream);
+                m_stream.get());
         }
         levelStartIdx += numOfRowsInLevel;
     }
@@ -217,7 +223,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     m_gpuDInvFloat->data(),
                     v.data(),
                     upperSolveThreadBlockSize,
-                    m_stream);
+                    m_stream.get());
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG){
                 detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, float>(
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
@@ -229,7 +235,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     m_gpuDInv.data(),
                     v.data(),
                     upperSolveThreadBlockSize,
-                    m_stream);
+                    m_stream.get());
             } else {
                 detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, field_type>(
                     m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
@@ -241,7 +247,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     m_gpuDInv.data(),
                     v.data(),
                     upperSolveThreadBlockSize,
-                    m_stream);
+                    m_stream.get());
             }
         } else {
             detail::DILU::solveUpperLevelSet<field_type, blocksize_>(
@@ -254,7 +260,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                 m_gpuDInv.data(),
                 v.data(),
                 upperSolveThreadBlockSize,
-                m_stream);
+                m_stream.get());
         }
     }
 }
@@ -289,9 +295,17 @@ template <class M, class X, class Y, int l>
 void
 GpuDILU<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationBlockSize)
 {
+    // ensure that this stream only starts doing work when main stream is completed up to this point
+    OPM_GPU_SAFE_CALL(cudaEventRecord(m_before.get(), 0));
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(m_stream.get(), m_before.get(), 0));
+
     m_gpuMatrix.updateNonzeroValues(m_cpuMatrix); // send updated matrix to the gpu
     reorderAndSplitMatrix(moveThreadBlockSize);
     computeDiagonal(factorizationBlockSize);
+
+    // ensure that main stream only continues after this stream is completed
+    OPM_GPU_SAFE_CALL(cudaEventRecord(m_after.get(), m_stream.get()));
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(0, m_after.get(), 0));
 }
 
 template <class M, class X, class Y, int l>
