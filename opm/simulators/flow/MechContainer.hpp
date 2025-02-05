@@ -44,6 +44,11 @@ public:
     void allocate(const std::size_t bufferSize,
                   std::map<std::string, int>& rstKeywords);
 
+    void assignPotentialForces(const unsigned globalDofIdx,
+                               const Scalar force,
+                               const Scalar pressForce,
+                               const Scalar tempForce);
+
     void outputRestart(data::Solution& sol) const;
 
     bool allocated() const

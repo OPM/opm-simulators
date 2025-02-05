@@ -119,6 +119,18 @@ allocate(const std::size_t bufferSize,
 
 template<class Scalar>
 void MechContainer<Scalar>::
+assignPotentialForces(const unsigned globalDofIdx,
+                      const Scalar force,
+                      const Scalar pressForce,
+                      const Scalar tempForce)
+{
+    potentialForce_[globalDofIdx] = force;
+    potentialPressForce_[globalDofIdx] = pressForce;
+    potentialTempForce_[globalDofIdx] = tempForce;
+}
+
+template<class Scalar>
+void MechContainer<Scalar>::
 outputRestart(data::Solution& sol) const
 {
     if (!allocated_) {
