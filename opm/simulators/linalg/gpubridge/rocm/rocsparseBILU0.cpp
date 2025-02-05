@@ -326,7 +326,8 @@ update_system_on_gpu(Scalar *d_Avals) {
 
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-apply(Scalar& y, Scalar& x) {
+apply(const Scalar& y, Scalar& x)
+{
     Scalar one  = 1.0;
 
     Timer t_apply;
