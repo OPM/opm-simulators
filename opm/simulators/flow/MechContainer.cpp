@@ -66,20 +66,8 @@ allocate(const std::size_t bufferSize,
         }
     };
 
+    resizeAndRegister(strain_, "STRAIN");
     resizeAndRegister(stress_, "STRESS");
-
-    this->strainXX_.resize(bufferSize, 0.0);
-    rstKeywords["STRAINXX"] = 0;
-    this->strainYY_.resize(bufferSize, 0.0);
-    rstKeywords["STRAINYY"] = 0;
-    this->strainZZ_.resize(bufferSize, 0.0);
-    rstKeywords["STRAINZZ"] = 0;
-    this->strainXY_.resize(bufferSize, 0.0);
-    rstKeywords["STRAINXY"] = 0;
-    this->strainXZ_.resize(bufferSize, 0.0);
-    rstKeywords["STRAINXZ"] = 0;
-    this->strainYZ_.resize(bufferSize, 0.0);
-    rstKeywords["STRAINYZ"] = 0;
 
     this->delstressXX_.resize(bufferSize, 0.0);
     rstKeywords["DELSTRXX"] = 0;
@@ -150,12 +138,7 @@ void MechContainer<Scalar>::
 assignStrain(const unsigned globalDofIdx,
              const Dune::FieldVector<Scalar,6>& strain)
 {
-    this->strainXX_[globalDofIdx] = strain[0];
-    this->strainYY_[globalDofIdx] = strain[1];
-    this->strainZZ_[globalDofIdx] = strain[2];
-    this->strainYZ_[globalDofIdx] = strain[3];
-    this->strainXZ_[globalDofIdx] = strain[4];
-    this->strainXY_[globalDofIdx] = strain[5];
+    this->strain_.assign(globalDofIdx, VoigtContainer<Scalar>(strain));
 }
 
 template<class Scalar>
@@ -210,12 +193,7 @@ outputRestart(data::Solution& sol) const
         DataEntry{"LINSTRYZ", UnitSystem::measure::pressure, &linstressYZ_},
         DataEntry{"MECHPOTF", UnitSystem::measure::pressure, &potentialForce_},
         DataEntry{"PRESPOTF", UnitSystem::measure::pressure, &potentialPressForce_},
-        DataEntry{"STRAINXX", UnitSystem::measure::identity, &strainXX_},
-        DataEntry{"STRAINYY", UnitSystem::measure::identity, &strainYY_},
-        DataEntry{"STRAINZZ", UnitSystem::measure::identity, &strainZZ_},
-        DataEntry{"STRAINXY", UnitSystem::measure::identity, &strainXY_},
-        DataEntry{"STRAINXZ", UnitSystem::measure::identity, &strainXZ_},
-        DataEntry{"STRAINYZ", UnitSystem::measure::identity, &strainYZ_},
+        DataEntry{"STRAIN",   UnitSystem::measure::identity, &strain_},
         DataEntry{"STRESS",   UnitSystem::measure::length,   &stress_},
         DataEntry{"TEMPPOTF", UnitSystem::measure::pressure, &potentialTempForce_},
     };
