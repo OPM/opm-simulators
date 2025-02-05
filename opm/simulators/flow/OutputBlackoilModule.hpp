@@ -200,8 +200,6 @@ public:
                 return;
             }
 
-            enum Voigt { XX = 0, YY = 1, ZZ = 2, YZ = 3, XZ = 4, XY = 5, };
-
             const auto& problem = elemCtx.simulator().problem();
             const auto& model = problem.geoMechModel();
 
@@ -214,6 +212,10 @@ public:
 
                 this->mech_.assignDisplacement(globalDofIdx,
                                                model.disp(globalDofIdx, /*include_fracture*/true));
+
+                // is the tresagii stress which make rock fracture
+                this->mech_.assignFracStress(globalDofIdx,
+                                             model.fractureStress(globalDofIdx));
 
                 this->mech_.assignLinStress(globalDofIdx,
                                             model.linstress(globalDofIdx));
@@ -229,15 +231,6 @@ public:
                 // Total stress is not stored but calculated result is Voigt notation
                 this->mech_.assignStress(globalDofIdx,
                                          model.stress(globalDofIdx, /*include_fracture*/true));;
-
-                // is the tresagii stress which make rock fracture
-                const auto fracstress = model.fractureStress(globalDofIdx);
-                this->mech_.fracstressXX_[globalDofIdx] = fracstress[Voigt::XX];
-                this->mech_.fracstressYY_[globalDofIdx] = fracstress[Voigt::YY];
-                this->mech_.fracstressZZ_[globalDofIdx] = fracstress[Voigt::ZZ];
-                this->mech_.fracstressXY_[globalDofIdx] = fracstress[Voigt::XY];
-                this->mech_.fracstressXZ_[globalDofIdx] = fracstress[Voigt::XZ];
-                this->mech_.fracstressYZ_[globalDofIdx] = fracstress[Voigt::YZ];
             }
         }
     }

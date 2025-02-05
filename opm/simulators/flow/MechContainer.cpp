@@ -107,6 +107,19 @@ assignDisplacement(const unsigned globalDofIdx,
 
 template<class Scalar>
 void MechContainer<Scalar>::
+assignFracStress(const unsigned globalDofIdx,
+                 const Dune::FieldVector<Scalar,6>& fracStress)
+{
+    this->fracstressXX_[globalDofIdx] = fracStress[0];
+    this->fracstressYY_[globalDofIdx] = fracStress[1];
+    this->fracstressZZ_[globalDofIdx] = fracStress[2];
+    this->fracstressYZ_[globalDofIdx] = fracStress[3];
+    this->fracstressXZ_[globalDofIdx] = fracStress[4];
+    this->fracstressXY_[globalDofIdx] = fracStress[5];
+}
+
+template<class Scalar>
+void MechContainer<Scalar>::
 assignLinStress(const unsigned globalDofIdx,
                 const Dune::FieldVector<Scalar,6>& linStress)
 {

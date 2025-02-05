@@ -60,6 +60,9 @@ public:
                                const Scalar pressForce,
                                const Scalar tempForce);
 
+    void assignFracStress(const unsigned globalDofIdx,
+                          const Dune::FieldVector<Scalar,6>& fracStress);
+
     void assignLinStress(const unsigned globalDofIdx,
                          const Dune::FieldVector<Scalar,6>& linStress);
 
