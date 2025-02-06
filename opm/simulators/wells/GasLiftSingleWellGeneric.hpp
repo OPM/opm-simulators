@@ -152,7 +152,19 @@ protected:
             bhp_is_limited = rates.bhp_is_limited;
             return *this;
         }
+        bool operator==(const BasicRates& rates){
+            return oil == rates.oil &&
+            gas == rates.gas &&
+            water == rates.water &&
+            bhp_is_limited == rates.bhp_is_limited;
+        }
 
+        bool approx(const BasicRates& rates, double tol){
+            return std::abs(oil - rates.oil) < tol &&
+                   std::abs(gas - rates.gas) < tol &&
+                   std::abs(water - rates.water) < tol &&
+                   bhp_is_limited == rates.bhp_is_limited;
+        }
         // This copy constructor cannot be defined inline here since LimitedRates
         //   has not been defined yet (it is defined below). Instead it is defined in
         //   in the .cpp file
@@ -285,6 +297,7 @@ protected:
     bool checkInitialALQmodified_(Scalar alq, Scalar initial_alq) const;
 
     virtual bool checkThpControl_() const = 0;
+    virtual void solveWellWithTHPConstraintAlqImplicit(WellState<Scalar>& wellState,const GroupState<Scalar>& groupState) const = 0;
     virtual std::optional<Scalar > computeBhpAtThpLimit_(Scalar alq,
                                                         bool debug_output = true) const = 0;
 

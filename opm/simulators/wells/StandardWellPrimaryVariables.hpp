@@ -140,11 +140,11 @@ public:
 
     //! \brief Returns a value.
     Scalar value(const int idx) const
-    { return value_[idx]; }
+    { assert(evaluation_[idx].value() == value_[idx]);return value_[idx]; }
 
     //! \brief Returns a const ref to an evaluation.
     const EvalWell& eval(const int idx) const
-    { return evaluation_[idx]; }
+    { assert(evaluation_[idx].value() == value_[idx]); return evaluation_[idx]; }
 
     //! \brief Set a value. Note that this does not also set the corresponding evaluation.
     void setValue(const int idx, const Scalar val)

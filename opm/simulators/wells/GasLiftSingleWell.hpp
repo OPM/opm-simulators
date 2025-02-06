@@ -55,6 +55,7 @@ public:
     const WellInterfaceGeneric<Scalar>& getWell() const override { return well_; }
 
 private:
+    void solveWellWithTHPConstraintAlqImplicit(WellState<Scalar>& wellState,const GroupState<Scalar>& groupState) const override;
     std::optional<Scalar>
     computeBhpAtThpLimit_(Scalar alq,
                           bool debug_ouput = true) const override;

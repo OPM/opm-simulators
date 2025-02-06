@@ -165,7 +165,11 @@ namespace Opm {
         std::vector<Scalar> getPrimaryVars() const override;
 
         int setPrimaryVars(typename std::vector<Scalar>::const_iterator it) override;
-
+        void solveWellWithTHPConstraintConst(const Simulator& simulator, WellState<Scalar>& wellState, 
+                                            const GroupState<Scalar>& groupState) const{
+        auto copy_well(*this);
+        copy_well.solveWellWithTHPConstraintALQ(simulator, wellState, groupState);
+      }
     protected:
         // regularize msw equation
         bool regularize_;

@@ -29,6 +29,7 @@
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <fmt/format.h>
 
@@ -420,6 +421,7 @@ std::optional<typename GasLiftSingleWellGeneric<Scalar>::LimitedRates>
 GasLiftSingleWellGeneric<Scalar>::
 computeLimitedWellRatesWithALQ_(Scalar alq) const
 {
+    OPM_TIMEFUNCTION();
     std::optional<LimitedRates> limited_rates;
     if (auto rates = computeWellRatesWithALQ_(alq); rates) {
         limited_rates = getLimitedRatesFromRates_(*rates);
@@ -433,13 +435,100 @@ GasLiftSingleWellGeneric<Scalar>::
 computeWellRatesWithALQ_(Scalar alq) const
 {
     OPM_TIMEFUNCTION();
+    bool new_code = true;
+    std::optional<BasicRates> rates_opt;
+    auto copy_well_state(this->well_state_);
+    if(new_code){
+        copy_well_state.setALQ(this->well_name_, alq);
+        //bool solved =
+          solveWellWithTHPConstraintAlqImplicit(copy_well_state,this->group_state_);
+        const auto& ws = copy_well_state.well(this->well_name_);
+        auto bhp_tmp = ws.bhp;
+        auto [bhp, bhp_is_limited] = getBhpWithLimit_(bhp_tmp);
+        bool tmp = bhp_is_limited;
+        BasicRates rates(-ws.surface_rates[this->oil_pos_],
+                -ws.surface_rates[this->gas_pos_],
+                -ws.surface_rates[this->water_pos_],
+                tmp);
+
+        if(ws.status == WellStatus::OPEN){
+            rates_opt = rates;
+        }         
+    }//else{
+    // old code
     std::optional<BasicRates> rates;
     auto bhp_opt = computeBhpAtThpLimit_(alq);
     if (bhp_opt) {
         auto [bhp, bhp_is_limited] = getBhpWithLimit_(*bhp_opt);
         rates = computeWellRates_(bhp, bhp_is_limited);
     }
-    return rates;
+    const auto& ws = copy_well_state.well(this->well_name_);
+    if(!rates){
+        //assert(!rates_opt);
+        if(rates_opt){
+            std::cout << "alq " << alq << std::endl;
+            std::cout << "name: " << this->well_name_ << std::endl;
+            std::cout << "rates is empty" << std::endl;
+            std::cout << "rates_opt: " << (*rates_opt).gas << std::endl;
+        }
+    }else{
+        if(rates_opt){
+            bool ok = (*rates).approx(*rates_opt, 1e-2);
+            std::cout << "alq " << alq << std::endl;
+            std::cout << "name: " << this->well_name_ << std::endl;
+            std::cout << "ok: " << ok << std::endl;
+            std::cout << "rates: " <<  (*rates).gas << " " << (*rates).oil << " " << (*rates).water << std::endl;
+            std::cout << "rates_opt: " << (*rates_opt).gas << " " << (*rates_opt).oil << " " << (*rates_opt).water << std::endl;
+            std::cout <<"------------------" << std::endl;
+            auto copy_well_state_tmp(copy_well_state);
+            auto& ws_new = copy_well_state_tmp.well(this->well_name_);
+            ws_new.bhp = *bhp_opt;
+            ws_new.surface_rates[0] = -rates->water;
+            ws_new.surface_rates[1] = -rates->oil;
+            ws_new.surface_rates[2] = -rates->gas;
+            solveWellWithTHPConstraintAlqImplicit(copy_well_state_tmp,this->group_state_);
+            std::cout << "rates_opt: " << ws_new.surface_rates[0] << " " << ws_new.surface_rates[1] << " " << ws_new.surface_rates[2] << std::endl;
+            auto rates1 = computeWellRates_(ws.bhp, false);
+            std::cout << "rates 1: " << rates1.gas << " " << rates1.oil << " " << rates1.water << std::endl;
+            auto rates2 = computeWellRates_(*bhp_opt, false);
+            std::cout << "rates 2: " << rates2.gas << " " << rates2.oil << " " << rates2.water << std::endl;
+            WellBhpThpCalculator<double> well_bhp_calculator(this->getWell());
+            std::optional<double> alq_tmp = alq;
+            DeferredLogger deferred_logger;
+            auto thp1 = well_bhp_calculator.calculateThpFromBhp(ws.surface_rates, ws.bhp, 836.0, alq_tmp, ws.thp, deferred_logger);
+            //this->updateIPRImplicit(simulator, well_state, deferred_logger);
+            //bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
+            auto ratesnew = ws.surface_rates;
+            ratesnew[0] = -rates->water;
+            ratesnew[1] = -rates->oil;
+            ratesnew[2] = -rates->gas;
+            auto thp2 = well_bhp_calculator.calculateThpFromBhp(ratesnew,*bhp_opt, 836, alq, ws.thp, deferred_logger);
+            std::cout << "thp1: " << thp1 << std::endl;
+            std::cout << "thp2: " << thp2 << std::endl;
+            std::cout << "-----" << std::endl;
+            solveWellWithTHPConstraintAlqImplicit(copy_well_state,this->group_state_);
+            std::cout << "rates_opt: " << ws.surface_rates[0] << " " << ws.surface_rates[1] << " " << ws.surface_rates[2] << std::endl;
+        }else{
+            std::cout << "alq " << alq << std::endl;
+            std::cout << "name: " << this->well_name_ << std::endl;
+            std::cout << "rates_opt is empty" << std::endl;
+            std::cout << "rates: " << (*rates).gas << std::endl;
+            auto copy_well_state_tmp(this->well_state_);
+            copy_well_state_tmp.setALQ(this->well_name_, alq);
+            auto& ws_new = copy_well_state_tmp.well(this->well_name_);
+            solveWellWithTHPConstraintAlqImplicit(copy_well_state_tmp,this->group_state_);
+            std::cout << "rates_opt: " << ws_new.surface_rates[0] << " " << ws_new.surface_rates[1] << " " << ws_new.surface_rates[2] << std::endl;
+            ws_new.bhp = *bhp_opt;
+            ws_new.surface_rates[0] = -rates->water;
+            ws_new.surface_rates[1] = -rates->oil;
+            ws_new.surface_rates[2] = -rates->gas;
+            solveWellWithTHPConstraintAlqImplicit(copy_well_state_tmp,this->group_state_);
+            std::cout << "rates_opt: " << ws_new.surface_rates[0] << " " << ws_new.surface_rates[1] << " " << ws_new.surface_rates[2] << std::endl;
+        }
+    }
+    return rates_opt;
+    
+    //}
 }
 
 template<class Scalar>

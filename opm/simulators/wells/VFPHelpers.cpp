@@ -320,7 +320,7 @@ bhp(const VFPProdTable& table,
     Scalar flo = detail::getFlo(table, aqua, liquid, vapour);
     Scalar wfr = detail::getWFR(table, aqua, liquid, vapour);
     Scalar gfr = detail::getGFR(table, aqua, liquid, vapour);
-    if (use_vfpexplicit || -flo < table.getFloAxis().front()) {
+    if (use_vfpexplicit) {// || -flo < table.getFloAxis().front()) {
         wfr = explicit_wfr;
         gfr = explicit_gfr;
     }

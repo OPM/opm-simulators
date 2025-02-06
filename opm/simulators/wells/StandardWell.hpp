@@ -259,6 +259,20 @@ namespace Opm
 
         int setPrimaryVars(typename std::vector<Scalar>::const_iterator it) override;
 
+       void solveWellWithTHPConstraintConst(const Simulator& simulator, WellState<Scalar>& wellState, 
+                                            const GroupState<Scalar>& groupState) const{
+          auto well_copy(*this);
+          //well_copy.prepareForPotentialCalculations(summaryw_state, well_state_copy, inj_controls, prod_controls);
+          DeferredLogger deferred_logger;
+          //well_copy.calculateExplicitQuantities(simulator, wellState, deferred_logger);
+          well_copy.updatePrimaryVariables(simulator, wellState, deferred_logger);
+          well_copy.initPrimaryVariablesEvaluation();
+          well_copy.solveWellWithTHPConstraintALQ(simulator, wellState, groupState);
+          auto& ws = wellState.well(this->name());
+          if(ws.status == Opm::WellStatus::OPEN){
+            assert(!well_copy.wellIsStopped());
+          }
+      }
     protected:
         bool regularize_;
 

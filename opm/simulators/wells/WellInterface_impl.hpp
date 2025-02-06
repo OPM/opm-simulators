@@ -405,7 +405,7 @@ namespace Opm
 
         WellState<Scalar> well_state_copy = well_state;
         auto& ws = well_state_copy.well(this->indexOfWell());
-
+        calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
@@ -535,6 +535,29 @@ namespace Opm
         }
         return converged;
     }
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    solveWellWithTHPConstraintALQ(const Simulator& simulator, WellState<Scalar>& well_state, const GroupState<Scalar>& group_state){
+            const auto& summary_state = simulator.vanguard().summaryState();
+            auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+            auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+            const double dt = simulator.timeStepSize();
+            DeferredLogger deferred_logger;
+            this->prepareForPotentialCalculations(summary_state, well_state, inj_controls, prod_controls);
+            bool converged = this->solveWellWithTHPConstraint(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            auto& ws = well_state.well(this->name());
+            if(this->wellIsStopped()){
+                ws.status = WellStatus::STOP;
+            }else{
+                ws.status = WellStatus::OPEN;
+            }
+            assert(converged);
+            return converged;
+    }
+
+
 
     template<typename TypeTag>
     bool
@@ -854,6 +877,7 @@ namespace Opm
                                 DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
+        initPrimaryVariablesEvaluation();
         const bool old_well_operable = this->operability_status_.isOperableAndSolvable();
 
         if (this->param_.check_well_operability_iter_)
@@ -1951,9 +1975,11 @@ namespace Opm
                                      WellState<Scalar>& well_state,
                                      DeferredLogger& deferred_logger) const
     {
-        OPM_TIMEFUNCTION();
+        OPM_TIMEFUNCTION(); 
         const auto& summary_state = simulator.vanguard().summaryState();
-
+        // if(std::abs(this->getTHPConstraint(summary_state)-ws.thp) < 10*bar) {
+        //     return true;
+        // }
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
             simulator, summary_state, this->getALQ(well_state), deferred_logger, /*iterate_if_no_solution */ true);
         if (bhp_at_thp_limit) {
