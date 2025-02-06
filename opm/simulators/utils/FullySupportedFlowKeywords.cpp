@@ -33,7 +33,7 @@ fullySupported()
 {
    static const SupportedKeywordItems<std::string> fully_supported_keywords_strings = {
          {
-            "GEFAC",
+          "GEFAC",
             {
                {3,{true, is_bool_convertible {}, "GEFAC(GRPNETWK): String value must be convertible to bool."}}, // USE_GEFAC_IN_NETWORK
             },
