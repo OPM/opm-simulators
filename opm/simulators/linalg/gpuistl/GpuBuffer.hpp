@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <vector>
 #include <string>
+#include <cuda_runtime.h>
 
 
 namespace Opm::gpuistl
