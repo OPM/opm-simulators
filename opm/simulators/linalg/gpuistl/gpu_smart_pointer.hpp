@@ -117,18 +117,20 @@ make_gpu_unique_ptr(const T& value)
 
 /**
  * @brief Copies a value from GPU-allocated memory to the host.
- * 
+ *
  * @param value A pointer to the value on the GPU.
- * 
+ *
  * @return The value copied from the GPU.
- * 
+ *
  * @note This function is involves a sychronization point, and should be used with care.
  */
-template<class T>
-T copyFromGPU(const T* value) {
-    #ifndef NDEBUG
+template <class T>
+T
+copyFromGPU(const T* value)
+{
+#ifndef NDEBUG
     OPM_ERROR_IF(!Opm::gpuistl::detail::isGPUPointer(value), "The pointer is not associated with GPU memory.");
-    #endif
+#endif
     T result;
     OPM_GPU_SAFE_CALL(cudaMemcpy(&result, value, sizeof(T), cudaMemcpyDeviceToHost));
     return result;
@@ -136,58 +138,83 @@ T copyFromGPU(const T* value) {
 
 /**
  * @brief Copies a value from GPU-allocated memory to the host.
- * 
- * @tparam SmartPtr A template class for the pointer type.
- * @tparam T   The type stored within the pointer.
- * @tparam Args Additional template arguments for the smart pointer (typically the custom deleter for unique pointers).
- * @param value A smart pointer to the value on the GPU.
- * 
+ *
+ * @param value A shared pointer to the value on the GPU.
+ *
  * @return The value copied from the GPU.
- * 
+ *
  * @note This function is involves a sychronization point, and should be used with care.
  */
-template <
-    template <class, class...> class SmartPtr,
-    class T,
-    class... Args
->T copyFromGPU(const SmartPtr<T, Args...>& value) {
+template <class T>
+T
+copyFromGPU(const std::shared_ptr<T>& value)
+{
+    return copyFromGPU(value.get());
+}
+
+/**
+ * @brief Copies a value from GPU-allocated memory to the host.
+ *
+ * @tparam Deleter The custom deleter type.
+ * @param value A unique pointer to the value on the GPU (with a custom deleter).
+ *
+ * @return The value copied from the GPU.
+ *
+ * @note This function is involves a sychronization point, and should be used with care.
+ */
+template <class T, class Deleter>
+T
+copyFromGPU(const std::unique_ptr<T, Deleter>& value)
+{
     return copyFromGPU(value.get());
 }
 
 /**
  * @brief Copies a value from the host to GPU-allocated memory.
- * 
+ *
  * @param value The value to copy to the GPU.
  * @param ptr A pointer to the GPU-allocated memory.
- * 
+ *
  * @note This function is involves a sychronization point, and should be used with care.
  */
-template<class T>
-void copyToGPU(const T& value, T* ptr) {
-    #ifndef NDEBUG
+template <class T>
+void
+copyToGPU(const T& value, T* ptr)
+{
+#ifndef NDEBUG
     OPM_ERROR_IF(!Opm::gpuistl::detail::isGPUPointer(ptr), "The pointer is not associated with GPU memory.");
-    #endif
+#endif
     OPM_GPU_SAFE_CALL(cudaMemcpy(ptr, &value, sizeof(T), cudaMemcpyHostToDevice));
 }
 
 /**
- * @brief Copies a value from the host to GPU-allocated memory.
- *
- * @tparam SmartPtr A template class for the pointer type.
- * @tparam T   The type stored within the pointer.
- * @tparam Args Additional template arguments for the smart pointer (typically the custom deleter for unique pointers).
+ * @brief Copies a value from the host to GPU-allocated memory using a shared_ptr.
  *
  * @param value The value to copy to the GPU.
- * @param ptr A smart pointer to the GPU-allocated memory.
- * 
- * @note This function is involves a sychronization point, and should be used with care.
+ * @param ptr A shared_ptr to the GPU-allocated memory.
+ *
+ * @note This function involves a synchronization point, and should be used with care.
  */
-template <
-    template <class, class...> class SmartPtr,
-    class T,
-    class... Args
->
-void copyToGPU(const T& value, const SmartPtr<T, Args...>& ptr) {
+template <class T>
+void
+copyToGPU(const T& value, const std::shared_ptr<T>& ptr)
+{
+    copyToGPU(value, ptr.get());
+}
+
+/**
+ * @brief Copies a value from the host to GPU-allocated memory using a unique_ptr.
+ *
+ * @tparam Deleter The custom deleter type.
+ * @param value The value to copy to the GPU.
+ * @param ptr A unique_ptr to the GPU-allocated memory (with a custom deleter).
+ *
+ * @note This function involves a synchronization point, and should be used with care.
+ */
+template <class T, class Deleter>
+void
+copyToGPU(const T& value, const std::unique_ptr<T, Deleter>& ptr)
+{
     copyToGPU(value, ptr.get());
 }
 
