@@ -97,7 +97,8 @@ toFluidState() const
 {
     FluidState fluid_state;
     // will be different if more connections are involved
-    const auto& pressure = evaluation_[Bhp];
+    auto pressure = evaluation_[Bhp];
+    pressure.setValue(75e5);
     std::array<EvalWell, FluidSystem::numComponents> total_molar_fractions;
     EvalWell sum = 0.;
     for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {

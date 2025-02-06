@@ -88,6 +88,8 @@ update_injector_targets(const Well& well,
     assert(this->total_molar_fractions.size() == inj_composition.size());
     // TODO: this might not be correct when crossing flow is involved
     this->total_molar_fractions = inj_composition;
+    // TODO: for debugging purpose, should be removed later
+    this->total_molar_fractions = {0.1, 0.3, 0.6};
 
     // we initialize all open wells with a rate to avoid singularities
     Scalar inj_surf_rate = 10.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
