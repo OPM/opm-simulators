@@ -67,6 +67,7 @@
 
 #include <opm/simulators/flow/KeywordValidation.hpp>
 #include <opm/simulators/flow/ValidationFunctions.hpp>
+#include <opm/simulators/utils/FullySupportedFlowKeywords.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/utils/PartiallySupportedFlowKeywords.hpp>
@@ -209,11 +210,22 @@ namespace {
     {
         Opm::Deck deck(parser.parseFile(deckFilename, parseContext, errorGuard));
 
-        auto keyword_validator = Opm::KeywordValidation::KeywordValidator {
-            Opm::FlowKeywordValidation::unsupportedKeywords(),
+        Opm::KeywordValidation::SupportedKeywords partiallySupported  {
             Opm::FlowKeywordValidation::partiallySupported<std::string>(),
             Opm::FlowKeywordValidation::partiallySupported<int>(),
-            Opm::FlowKeywordValidation::partiallySupported<double>(),
+            Opm::FlowKeywordValidation::partiallySupported<double>()
+        };
+
+        Opm::KeywordValidation::SupportedKeywords fullySupported  {
+            Opm::FlowKeywordValidation::fullySupported<std::string>(),
+            Opm::FlowKeywordValidation::fullySupported<int>(),
+            Opm::FlowKeywordValidation::fullySupported<double>()
+        };
+
+        auto keyword_validator = Opm::KeywordValidation::KeywordValidator {
+            Opm::FlowKeywordValidation::unsupportedKeywords(),
+            partiallySupported,
+            fullySupported,
             Opm::KeywordValidation::specialValidation()
         };
 
