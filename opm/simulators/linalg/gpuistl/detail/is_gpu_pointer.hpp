@@ -49,21 +49,30 @@ isGPUPointer(const T* ptr)
 
 
 /**
- * @brief Checks if the given smart pointer refers to GPU memory.
+ * @brief Checks if the given std::unique_ptr with custom deleter refers to GPU memory.
  *
- * This overload of isGPUPointer checks the pointer by forwarding the call
- * to its raw pointer form, thereby determining if the underlying pointer
- * addresses GPU memory.
- *
- * @tparam SmartPtr A template class for the pointer type.
- * @tparam T   The type stored within the pointer.
- * @tparam Args Additional template arguments for the smart pointer (typically the custom deleter for unique pointers).
- * @param ptr  The smart pointer object to inspect.
- * @return true if the smart pointer addresses GPU memory; otherwise false.
+ * @tparam T The type stored within the pointer.
+ * @tparam D The custom deleter type.
+ * @param ptr The std::unique_ptr object to inspect.
+ * @return true if the pointer addresses GPU memory; otherwise false.
  */
-template <template <class, class...> class SmartPtr, class T, class... Args>
+template <class T, class D>
 inline bool
-isGPUPointer(const SmartPtr<T, Args...>& ptr)
+isGPUPointer(const std::unique_ptr<T, D>& ptr)
+{
+    return isGPUPointer(ptr.get());
+}
+
+/**
+ * @brief Checks if the given std::shared_ptr refers to GPU memory.
+ *
+ * @tparam T The type stored within the pointer.
+ * @param ptr The std::shared_ptr object to inspect.
+ * @return true if the pointer addresses GPU memory; otherwise false.
+ */
+template <class T>
+inline bool
+isGPUPointer(const std::shared_ptr<T>& ptr)
 {
     return isGPUPointer(ptr.get());
 }
