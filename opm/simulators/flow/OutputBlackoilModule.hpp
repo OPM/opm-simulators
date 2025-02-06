@@ -196,44 +196,70 @@ public:
     void processElementMech(const ElementContext& elemCtx)
     {
         if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+            if (this->mechPotentialForce_.empty()) {
+                return;
+            }
+
+            enum Voigt { XX = 0, YY = 1, ZZ = 2, YZ = 3, XZ = 4, XY = 5, };
+
             const auto& problem = elemCtx.simulator().problem();
             const auto& model = problem.geoMechModel();
+
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                if (!this->mechPotentialForce_.empty()) {
-                    // assume all mechanical things should be written
-                    this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
-                    this->mechPotentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
-                    this->mechPotentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
+                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
-                    this->dispX_[globalDofIdx] = model.disp(globalDofIdx, 0);
-                    this->dispY_[globalDofIdx] = model.disp(globalDofIdx, 1);
-                    this->dispZ_[globalDofIdx] = model.disp(globalDofIdx, 2);
-                    this->stressXX_[globalDofIdx] = model.stress(globalDofIdx, 0);
-                    this->stressYY_[globalDofIdx] = model.stress(globalDofIdx, 1);
-                    this->stressZZ_[globalDofIdx] = model.stress(globalDofIdx, 2);
-                    // voight notation
-                    this->stressXY_[globalDofIdx] = model.stress(globalDofIdx, 5);
-                    this->stressXZ_[globalDofIdx] = model.stress(globalDofIdx, 4);
-                    this->stressYZ_[globalDofIdx] = model.stress(globalDofIdx, 3);
+                // Assume all mechanical things should be written
+                this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
+                this->mechPotentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
+                this->mechPotentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
 
-                    this->strainXX_[globalDofIdx] = model.strain(globalDofIdx, 0);
-                    this->strainYY_[globalDofIdx] = model.strain(globalDofIdx, 1);
-                    this->strainZZ_[globalDofIdx] = model.strain(globalDofIdx, 2);
-                    // voight notation
-                    this->strainXY_[globalDofIdx] = model.strain(globalDofIdx, 5);
-                    this->strainXZ_[globalDofIdx] = model.strain(globalDofIdx, 4);
-                    this->strainYZ_[globalDofIdx] = model.strain(globalDofIdx, 3);
+                const auto disp = model.disp(globalDofIdx, /*include_fracture*/true);
+                this->dispX_[globalDofIdx] = disp[Voigt::XX];
+                this->dispY_[globalDofIdx] = disp[Voigt::YY];
+                this->dispZ_[globalDofIdx] = disp[Voigt::ZZ];
 
+                // Total stress is not stored but calculated result is Voigt notation
+                const auto stress = model.stress(globalDofIdx, /*include_fracture*/true);
+                this->stressXX_[globalDofIdx] = stress[Voigt::XX];
+                this->stressYY_[globalDofIdx] = stress[Voigt::YY];
+                this->stressZZ_[globalDofIdx] = stress[Voigt::ZZ];
+                this->stressXY_[globalDofIdx] = stress[Voigt::XY];
+                this->stressXZ_[globalDofIdx] = stress[Voigt::XZ];
+                this->stressYZ_[globalDofIdx] = stress[Voigt::YZ];
 
-                    this->delstressXX_[globalDofIdx] = model.delstress(globalDofIdx, 0);
-                    this->delstressYY_[globalDofIdx] = model.delstress(globalDofIdx, 1);
-                    this->delstressZZ_[globalDofIdx] = model.delstress(globalDofIdx, 2);
-                    // voight notation
-                    this->delstressXY_[globalDofIdx] = model.delstress(globalDofIdx, 5);
-                    this->delstressXZ_[globalDofIdx] = model.delstress(globalDofIdx, 4);
-                    this->delstressYZ_[globalDofIdx] = model.delstress(globalDofIdx, 3);
-                }
+                const auto strain = model.strain(globalDofIdx, /*include_fracture*/true);
+                this->strainXX_[globalDofIdx] = strain[Voigt::XX];
+                this->strainYY_[globalDofIdx] = strain[Voigt::YY];
+                this->strainZZ_[globalDofIdx] = strain[Voigt::ZZ];
+                this->strainXY_[globalDofIdx] = strain[Voigt::XY];
+                this->strainXZ_[globalDofIdx] = strain[Voigt::XZ];
+                this->strainYZ_[globalDofIdx] = strain[Voigt::YZ];
+
+                // Not including fracture
+                const auto delstress = model.delstress(globalDofIdx);
+                this->delstressXX_[globalDofIdx] = delstress[Voigt::XX];
+                this->delstressYY_[globalDofIdx] = delstress[Voigt::YY];
+                this->delstressZZ_[globalDofIdx] = delstress[Voigt::ZZ];
+                this->delstressXY_[globalDofIdx] = delstress[Voigt::XY];
+                this->delstressXZ_[globalDofIdx] = delstress[Voigt::XZ];
+                this->delstressYZ_[globalDofIdx] = delstress[Voigt::YZ];
+
+                const auto linstress = model.linstress(globalDofIdx);
+                this->linstressXX_[globalDofIdx] = linstress[Voigt::XX];
+                this->linstressYY_[globalDofIdx] = linstress[Voigt::YY];
+                this->linstressZZ_[globalDofIdx] = linstress[Voigt::ZZ];
+                this->linstressXY_[globalDofIdx] = linstress[Voigt::XY];
+                this->linstressXZ_[globalDofIdx] = linstress[Voigt::XZ];
+                this->linstressYZ_[globalDofIdx] = linstress[Voigt::YZ];
+
+                // is the tresagii stress which make rock fracture
+                const auto fracstress = model.fractureStress(globalDofIdx);
+                this->fracstressXX_[globalDofIdx] = fracstress[Voigt::XX];
+                this->fracstressYY_[globalDofIdx] = fracstress[Voigt::YY];
+                this->fracstressZZ_[globalDofIdx] = fracstress[Voigt::ZZ];
+                this->fracstressXY_[globalDofIdx] = fracstress[Voigt::XY];
+                this->fracstressXZ_[globalDofIdx] = fracstress[Voigt::XZ];
+                this->fracstressYZ_[globalDofIdx] = fracstress[Voigt::YZ];
             }
         }
     }
@@ -812,6 +838,7 @@ public:
             return;
 
         const auto& problem = elemCtx.simulator().problem();
+
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             // Adding block data
             const auto globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
@@ -849,6 +876,30 @@ public:
                             val.second = getValue(fs.temperature(gasPhaseIdx));
                         else if (FluidSystem::phaseIsActive(waterPhaseIdx))
                             val.second = getValue(fs.temperature(waterPhaseIdx));
+                    }
+                    else if ((key.first == "BSTRSSXX") ||
+                             (key.first == "BSTRSSYY") ||
+                             (key.first == "BSTRSSZZ") ||
+                             (key.first == "BSTRSSXY") ||
+                             (key.first == "BSTRSSXZ") ||
+                             (key.first == "BSTRSSYZ"))
+                    {
+                        if constexpr (HasGeoMech<RemoveCVR<decltype(problem)>>::value) {
+                            enum Voigt { XX = 0, YY = 1, ZZ = 2, YZ = 3, XZ = 4, XY = 5, };
+
+                            const auto stress = problem.geoMechModel()
+                                .stress(globalDofIdx, /*include_fracture*/ true);
+
+                            if      (key.first == "BSTRSSXX") { val.second = stress[Voigt::XX]; }
+                            else if (key.first == "BSTRSSYY") { val.second = stress[Voigt::YY]; }
+                            else if (key.first == "BSTRSSZZ") { val.second = stress[Voigt::ZZ]; }
+                            else if (key.first == "BSTRSSXY") { val.second = stress[Voigt::XY]; }
+                            else if (key.first == "BSTRSSXZ") { val.second = stress[Voigt::XZ]; }
+                            else    /*             BSTRSSYZ */{ val.second = stress[Voigt::YZ]; }
+                        }
+                        else {
+                            val.second = 0.0;
+                        }
                     }
                     else if (key.first == "BWKR" || key.first == "BKRW")
                         val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
@@ -1243,6 +1294,17 @@ public:
     }
 
 private:
+    template <typename T>
+    using RemoveCVR = std::remove_cv_t<std::remove_reference_t<T>>;
+
+    template <typename, class = void>
+    struct HasGeoMech : public std::false_type {};
+
+    template <typename Problem>
+    struct HasGeoMech<
+        Problem, std::void_t<decltype(std::declval<Problem>().geoMechModel())>
+    > : public std::true_type {};
+
     bool isDefunctParallelWell(std::string wname) const override
     {
         if (simulator_.gridView().comm().size() == 1)
