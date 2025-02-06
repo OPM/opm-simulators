@@ -123,6 +123,7 @@ public:
                                                   const Schedule& schedule,
                                                   const int reportStepIdx,
                                                   const bool isInjector,
+                                                  const Phase injector_phase,
                                                   const PhaseUsage& pu,
                                                   const GuideRate& guide_rate,
                                                   const WellState<Scalar>& wellState,
@@ -293,7 +294,8 @@ public:
                                         const int report_step,
                                         const std::string& well_name,
                                         const std::string& always_included_child,
-                                        const bool is_production_group);
+                                        const bool is_production_group,
+                                        const Phase injection_phase);
 
     static std::pair<bool, Scalar>
     checkGroupConstraintsInj(const std::string& name,

@@ -401,10 +401,23 @@ updateGroupTargetReduction(const Group& group,
                            GroupState<Scalar>& group_state,
                            std::vector<Scalar>& groupTargetReduction)
 {
-    int num_group_controlled_wells = 0;
-    updateGroupTargetReductionRecurse(group, schedule, reportStepIdx, isInjector, pu, guide_rate,
-                                      wellState, summaryState, group_state, groupTargetReduction,
-                                      num_group_controlled_wells);
+    if (isInjector) {
+        // Do recursive runs, for each possible injection phase.
+        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
+        for (const Phase injector_phase : all) {
+            int num_group_controlled_wells = 0;
+            updateGroupTargetReductionRecurse(group, schedule, reportStepIdx, isInjector, injector_phase,
+                                              pu, guide_rate, wellState, summaryState,
+                                              group_state, groupTargetReduction, num_group_controlled_wells);
+        }
+    } else {
+        // Just one for production.
+        const Phase dummy = Phase::OIL;
+        int num_group_controlled_wells = 0;
+        updateGroupTargetReductionRecurse(group, schedule, reportStepIdx, isInjector, dummy,
+                                          pu, guide_rate, wellState, summaryState,
+                                          group_state, groupTargetReduction, num_group_controlled_wells);
+    }
 }
 
 template<class Scalar>
@@ -413,6 +426,7 @@ updateGroupTargetReductionRecurse(const Group& group,
                                   const Schedule& schedule,
                                   const int reportStepIdx,
                                   const bool isInjector,
+                                  const Phase injector_phase,
                                   const PhaseUsage& pu,
                                   const GuideRate& guide_rate,
                                   const WellState<Scalar>& wellState,
@@ -430,6 +444,7 @@ updateGroupTargetReductionRecurse(const Group& group,
                                           schedule,
                                           reportStepIdx,
                                           isInjector,
+                                          injector_phase,
                                           pu,
                                           guide_rate,
                                           wellState,
@@ -440,49 +455,49 @@ updateGroupTargetReductionRecurse(const Group& group,
 
         const Scalar subGroupEfficiency = subGroup.getGroupEfficiencyFactor();
 
+        // std::cout << "***************" << std::endl;
+        // std::cout << "num_group_controlled_wells = " << num_group_controlled_wells << std::endl;
+        // std::cout << "groupControlledWells() = " << groupControlledWells(schedule, wellState, group_state, summaryState, &guide_rate, reportStepIdx, subGroupName, "", !isInjector, phase) << std::endl;
+
         // accumulate group contribution from sub group
         if (isInjector) {
-            const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-            for (Phase phase : all) {
-
-                int phase_pos = -1;
-                switch (phase) {
-                case Phase::GAS:
-                    if (pu.phase_used[BlackoilPhases::Vapour]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Vapour];
-                    }
-                    break;
-                case Phase::OIL:
-                    if (pu.phase_used[BlackoilPhases::Liquid]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Liquid];
-                    }
-                    break;
-                case Phase::WATER:
-                    if (pu.phase_used[BlackoilPhases::Aqua]) {
-                        phase_pos = pu.phase_pos[BlackoilPhases::Aqua];
-                    }
-                    break;
-                default:
-                    // just to avoid warning
-                    throw std::invalid_argument("unhandled phase enum");
+            int phase_pos = -1;
+            switch (injector_phase) {
+            case Phase::GAS:
+                if (pu.phase_used[BlackoilPhases::Vapour]) {
+                    phase_pos = pu.phase_pos[BlackoilPhases::Vapour];
                 }
+                break;
+            case Phase::OIL:
+                if (pu.phase_used[BlackoilPhases::Liquid]) {
+                    phase_pos = pu.phase_pos[BlackoilPhases::Liquid];
+                }
+                break;
+            case Phase::WATER:
+                if (pu.phase_used[BlackoilPhases::Aqua]) {
+                    phase_pos = pu.phase_pos[BlackoilPhases::Aqua];
+                }
+                break;
+            default:
+                // just to avoid warning
+                throw std::invalid_argument("unhandled phase enum");
+            }
 
-                // the phase is not present
-                if (phase_pos == -1)
-                    continue;
+            // the phase is not present
+            if (phase_pos == -1)
+                return;
 
-                const Group::InjectionCMode& currentGroupControl
-                        = group_state.injection_control(subGroup.name(), phase);
-                const bool individual_control = (currentGroupControl != Group::InjectionCMode::FLD
-                        && currentGroupControl != Group::InjectionCMode::NONE);
-                if (individual_control || num_group_controlled_wells == 0) {
-                    groupTargetReduction[phase_pos]
-                        += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase_pos, isInjector);
-                } else {
-                    // Accumulate from this subgroup only if no group guide rate is set for it.
-                    if (!guide_rate.has(subGroupName, phase)) {
-                        groupTargetReduction[phase_pos] += subGroupEfficiency * subGroupTargetReduction[phase_pos];
-                    }
+            const Group::InjectionCMode& currentGroupControl
+                = group_state.injection_control(subGroup.name(), injector_phase);
+            const bool individual_control = (currentGroupControl != Group::InjectionCMode::FLD
+                                             && currentGroupControl != Group::InjectionCMode::NONE);
+            if (individual_control || num_group_controlled_wells == 0) {
+                groupTargetReduction[phase_pos]
+                    += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase_pos, isInjector);
+            } else {
+                // Accumulate from this subgroup only if no group guide rate is set for it.
+                if (!guide_rate.has(subGroupName, injector_phase)) {
+                    groupTargetReduction[phase_pos] += subGroupEfficiency * subGroupTargetReduction[phase_pos];
                 }
             }
         } else {
@@ -530,7 +545,7 @@ updateGroupTargetReductionRecurse(const Group& group,
 
         const bool group_controlled = wellIsUnderGroupControl(schedule, group, wellState, group_state,
                                                               summaryState, &guide_rate, reportStepIdx,
-                                                              wellName, "", !isInjector);
+                                                              wellName, "", !isInjector, injector_phase);
         if (group_controlled) {
             ++num_group_controlled_wells;
         }
@@ -1230,13 +1245,15 @@ groupControlledWells(const Schedule& schedule,
 
         if (included) {
             num_wells
-                += groupControlledWells(schedule, well_state, group_state, summary_state, guideRate, report_step, child_group, always_included_child, is_production_group, injection_phase);
+                += groupControlledWells(schedule, well_state, group_state, summary_state,
+                                        guideRate, report_step, child_group, always_included_child,
+                                        is_production_group, injection_phase);
         }
     }
     for (const std::string& child_well : group.wells()) {
-        if (wellIsUnderGroupControl(schedule, group, well_state, group_state,
-                                    summary_state, guideRate, report_step,
-                                    child_well, always_included_child, is_production_group)) {
+        if (wellIsUnderGroupControl(schedule, group, well_state, group_state, summary_state,
+                                    guideRate, report_step, child_well, always_included_child,
+                                    is_production_group, injection_phase)) {
             ++num_wells;
         }
     }
@@ -1255,16 +1272,28 @@ wellIsUnderGroupControl(const Schedule& schedule,
                         const int report_step,
                         const std::string& well_name,
                         const std::string& always_included_child,
-                        const bool is_production_group)
+                        const bool is_production_group,
+                        const Phase injection_phase)
 {
     bool included = (well_name == always_included_child);
     if (is_production_group) {
         included = included || well_state.isProductionGrup(well_name) || group.as_choke();
     } else {
-        included = included || well_state.isInjectionGrup(well_name);
+        // Check not only that the well is under group control, but
+        // that it is an injector, and currently injecting the phase
+        // we are asking for.
+        const Well& well = schedule.getWell(well_name, report_step);
+        if (well.isInjector()) {
+            const bool injgrup = well_state.isInjectionGrup(well_name);
+            const InjectorType well_phase = well.injectorType();
+            const bool matching_phase =
+                   (well_phase == InjectorType::GAS   && injection_phase == Phase::GAS)
+                || (well_phase == InjectorType::WATER && injection_phase == Phase::WATER);
+            included = included || (injgrup && matching_phase);
+        }
     }
     const auto ctrl1 = group_state.production_control(group.name());
-    if (group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))){
+    if (is_production_group && group.as_choke() && ((ctrl1 == Group::ProductionCMode::FLD) || (ctrl1 == Group::ProductionCMode::NONE))) {
         // The auto choke group has not own group control but inherits control from an ancestor group.
         // Number of wells should be calculated as zero when wells of auto choke group do not deliver target.
         // This behaviour is then similar to no-autochoke group with wells not on GRUP control.
