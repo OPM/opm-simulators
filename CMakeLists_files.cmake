@@ -107,6 +107,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
   opm/simulators/flow/MainDispatchDynamic.cpp
+  opm/simulators/flow/MechContainer.cpp
   opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NonlinearSolver.cpp
   opm/simulators/flow/partitionCells.cpp
@@ -856,6 +857,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/KeywordValidation.hpp
   opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/Main.hpp
+  opm/simulators/flow/MechContainer.hpp
   opm/simulators/flow/MixingRateControls.hpp
   opm/simulators/flow/NewTranFluxModule.hpp
   opm/simulators/flow/NonlinearSolver.hpp
