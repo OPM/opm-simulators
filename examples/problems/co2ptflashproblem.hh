@@ -261,7 +261,7 @@ public:
         ccWaterPvt.setViscosity(/*regionIdx=*/0, 9.6e-4);
         ccWaterPvt.setCompressibility(/*regionIdx=*/0, 1.450377e-10);
         waterPvt->initEnd();
-        FluidSystem::setWaterPvt(std::move(waterPvt));
+        FluidSystem::setWaterPvt(waterPvt);
     }
 
     template <class Context>
