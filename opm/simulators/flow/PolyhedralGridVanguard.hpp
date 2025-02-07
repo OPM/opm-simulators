@@ -246,7 +246,8 @@ protected:
     {
         this->grid_ = std::make_unique<Grid>
             (this->eclState().getInputGrid(),
-             this->eclState().fieldProps().porv(true));
+             this->eclState().fieldProps().porv(true),
+             this->edgeConformal());
 
         this->cartesianIndexMapper_ =
             std::make_unique<CartesianIndexMapper>(*this->grid_);
