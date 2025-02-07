@@ -37,6 +37,7 @@
 #include <opm/simulators/flow/InterRegFlows.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
 #include <opm/simulators/flow/MechContainer.hpp>
+#include <opm/simulators/flow/MICPContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -198,45 +199,8 @@ public:
         return 0;
     }
 
-    Scalar getMicrobialConcentration(unsigned elemIdx) const
-    {
-        if (cMicrobes_.size() > elemIdx)
-            return cMicrobes_[elemIdx];
-
-        return 0;
-    }
-
-    Scalar getOxygenConcentration(unsigned elemIdx) const
-    {
-        if (cOxygen_.size() > elemIdx)
-            return cOxygen_[elemIdx];
-
-        return 0;
-    }
-
-    Scalar getUreaConcentration(unsigned elemIdx) const
-    {
-        if (cUrea_.size() > elemIdx)
-            return cUrea_[elemIdx];
-
-        return 0;
-    }
-
-    Scalar getBiofilmConcentration(unsigned elemIdx) const
-    {
-        if (cBiofilm_.size() > elemIdx)
-            return cBiofilm_[elemIdx];
-
-        return 0;
-    }
-
-    Scalar getCalciteConcentration(unsigned elemIdx) const
-    {
-        if (cCalcite_.size() > elemIdx)
-            return cCalcite_[elemIdx];
-
-        return 0;
-    }
+    const MICPContainer<Scalar>& getMICP() const
+    { return this->micpC_; }
 
     const std::array<FlowsData<double>, 3>& getFlowsn() const
     {
@@ -494,11 +458,7 @@ protected:
     ScalarBuffer minimumOilPressure_;
     ScalarBuffer saturatedOilFormationVolumeFactor_;
     ScalarBuffer rockCompTransMultiplier_;
-    ScalarBuffer cMicrobes_;
-    ScalarBuffer cOxygen_;
-    ScalarBuffer cUrea_;
-    ScalarBuffer cBiofilm_;
-    ScalarBuffer cCalcite_;
+    MICPContainer<Scalar> micpC_;
     ScalarBuffer pcgw_;
     ScalarBuffer pcow_;
     ScalarBuffer pcog_;

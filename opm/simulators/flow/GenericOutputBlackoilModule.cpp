@@ -514,11 +514,7 @@ assignToSolution(data::Solution& sol)
     addEntry(flowsSolutionVector, "FLRWATK-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][waterCompIdx], waterCompIdx);
 
     auto extendedSolutionArrays = std::array {
-        DataEntry{"BIOFILM",  UnitSystem::measure::identity,           cBiofilm_},
-        DataEntry{"CALCITE",  UnitSystem::measure::identity,           cCalcite_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
-        DataEntry{"MICROBES", UnitSystem::measure::density,            cMicrobes_},
-        DataEntry{"OXYGEN",   UnitSystem::measure::density,            cOxygen_},
         DataEntry{"PERMFACT", UnitSystem::measure::identity,           permFact_},
         DataEntry{"PORV_RC",  UnitSystem::measure::identity,           rockCompPorvMultiplier_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
@@ -535,7 +531,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"STD_GAS",  UnitSystem::measure::identity,           mFracGas_},
         DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
-        DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
     };
 
     // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
@@ -578,6 +573,10 @@ assignToSolution(data::Solution& sol)
         for (auto& array : flowsSolutionVector) {
             doInsert(array, data::TargetType::RESTART_SOLUTION);
         }
+    }
+
+    if (this->micpC_.allocated()) {
+        this->micpC_.outputRestart(sol);
     }
 
     for (auto& array : extendedSolutionArrays) {
@@ -763,11 +762,7 @@ setRestart(const data::Solution& sol,
     };
 
     const auto fields = std::array{
-        std::pair{"BIOFILM",  &cBiofilm_},
-        std::pair{"CALCITE",  &cCalcite_},
         std::pair{"FOAM",     &cFoam_},
-        std::pair{"MICROBES", &cMicrobes_},
-        std::pair{"OXYGEN",   &cOxygen_},
         std::pair{"PERMFACT", &permFact_},
         std::pair{"POLYMER",  &cPolymer_},
         std::pair{"PPCW",     &ppcw_},
@@ -785,12 +780,15 @@ setRestart(const data::Solution& sol,
         std::pair{"SWHY1",    &swmin_},
         std::pair{"SWMAX",    &swMax_},
         std::pair{"TEMP",     &temperature_},
-        std::pair{"UREA",     &cUrea_},
     };
 
     std::for_each(fields.begin(), fields.end(),
                   [&assign](const auto& p)
                   { assign(p.first, *p.second); });
+
+    if (this->micpC_.allocated()) {
+        this->micpC_.readRestart(globalDofIndex, elemIdx, sol);
+    }
 }
 
 template<class FluidSystem>
@@ -1036,11 +1034,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (enableMICP_) {
-        cMicrobes_.resize(bufferSize, 0.0);
-        cOxygen_.resize(bufferSize, 0.0);
-        cUrea_.resize(bufferSize, 0.0);
-        cBiofilm_.resize(bufferSize, 0.0);
-        cCalcite_.resize(bufferSize, 0.0);
+        this->micpC_.allocate(bufferSize);
     }
 
     if (vapparsActive) {
