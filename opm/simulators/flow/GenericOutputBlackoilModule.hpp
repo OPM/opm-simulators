@@ -32,6 +32,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/ExtboContainer.hpp>
 #include <opm/simulators/flow/FIPContainer.hpp>
 #include <opm/simulators/flow/FlowsData.hpp>
 #include <opm/simulators/flow/InterRegFlows.hpp>
@@ -435,12 +436,7 @@ protected:
     ScalarBuffer cSalt_;
     ScalarBuffer pSalt_;
     ScalarBuffer permFact_;
-    ScalarBuffer extboX_;
-    ScalarBuffer extboY_;
-    ScalarBuffer extboZ_;
-    ScalarBuffer mFracOil_;
-    ScalarBuffer mFracGas_;
-    ScalarBuffer mFracCo2_;
+    ExtboContainer<Scalar> extboC_;
     ScalarBuffer soMax_;
     ScalarBuffer swMax_;
     ScalarBuffer sgmax_;

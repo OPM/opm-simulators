@@ -92,6 +92,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/CollectDataOnIORank.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/EclGenericWriter.cpp
+  opm/simulators/flow/ExtboContainer.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FIPContainer.cpp
   opm/simulators/flow/FlowGenericProblem.cpp
@@ -829,6 +830,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/EclGenericWriter_impl.hpp
   opm/simulators/flow/EclWriter.hpp
   opm/simulators/flow/EquilInitializer.hpp
+  opm/simulators/flow/ExtboContainer.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FIBlackoilModel.hpp

@@ -524,12 +524,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"RVW",      UnitSystem::measure::oil_gas_ratio,      rvw_},
         DataEntry{"RVWSAT",   UnitSystem::measure::oil_gas_ratio,      waterVaporizationFactor_},
         DataEntry{"SALTP",    UnitSystem::measure::identity,           pSalt_},
-        DataEntry{"SS_X",     UnitSystem::measure::identity,           extboX_},
-        DataEntry{"SS_Y",     UnitSystem::measure::identity,           extboY_},
-        DataEntry{"SS_Z",     UnitSystem::measure::identity,           extboZ_},
-        DataEntry{"STD_CO2",  UnitSystem::measure::identity,           mFracCo2_},
-        DataEntry{"STD_GAS",  UnitSystem::measure::identity,           mFracGas_},
-        DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
     };
 
@@ -584,6 +578,7 @@ assignToSolution(data::Solution& sol)
     }
 
     this->mech_.outputRestart(sol);
+    this->extboC_.outputRestart(sol);
 
     if (! this->temperature_.empty())
     {
@@ -1025,12 +1020,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (enableExtbo_) {
-        extboX_.resize(bufferSize, 0.0);
-        extboY_.resize(bufferSize, 0.0);
-        extboZ_.resize(bufferSize, 0.0);
-        mFracOil_.resize(bufferSize, 0.0);
-        mFracGas_.resize(bufferSize, 0.0);
-        mFracCo2_.resize(bufferSize, 0.0);
+        extboC_.allocate(bufferSize);
     }
 
     if (enableMICP_) {
