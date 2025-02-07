@@ -40,6 +40,10 @@ class ExtboContainer
 public:
     void allocate(const unsigned bufferSize);
 
+    void assignVolumes(const unsigned globalDofIdx,
+                       const Scalar xVolume,
+                       const Scalar yVolume);
+
     void outputRestart(data::Solution& sol);
 
     bool allocated() const

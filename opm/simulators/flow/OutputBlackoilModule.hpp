@@ -388,9 +388,9 @@ public:
                 if (this->viscosity_[phaseIdx].empty())
                     continue;
 
-                if (!this->extboC_.X_volume_.empty() && phaseIdx == oilPhaseIdx)
+                if (this->extboC_.allocated() && phaseIdx == oilPhaseIdx)
                     this->viscosity_[phaseIdx][globalDofIdx] = getValue(intQuants.oilViscosity());
-                else if (!this->extboC_.X_volume_.empty() && phaseIdx == gasPhaseIdx)
+                else if (this->extboC_.allocated() && phaseIdx == gasPhaseIdx)
                     this->viscosity_[phaseIdx][globalDofIdx] = getValue(intQuants.gasViscosity());
                 else
                     this->viscosity_[phaseIdx][globalDofIdx] = getValue(fs.viscosity(phaseIdx));
@@ -438,21 +438,19 @@ public:
                 this->permFact_[globalDofIdx] = intQuants.permFactor().value();
             }
 
-            if (!this->extboC_.X_volume_.empty()) {
-                this->extboC_.X_volume_[globalDofIdx] = intQuants.xVolume().value();
+            if (!this->rPorV_.empty()) {
+                const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+                this->rPorV_[globalDofIdx] = totVolume * intQuants.porosity().value();
             }
 
-            if (!this->extboC_.Y_volume_.empty()) {
-                this->extboC_.Y_volume_[globalDofIdx] = intQuants.yVolume().value();
+            if (this->extboC_.allocated()) {
+                this->extboC_.assignVolumes(globalDofIdx,
+                                            intQuants.xVolume().value(),
+                                            intQuants.yVolume().value());
             }
 
             if (!this->extboC_.Z_fraction_.empty()) {
                 this->extboC_.Z_fraction_[globalDofIdx] = intQuants.zFraction().value();
-            }
-
-            if (!this->rPorV_.empty()) {
-                const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
-                this->rPorV_[globalDofIdx] = totVolume * intQuants.porosity().value();
             }
 
             if (!this->extboC_.mFracCo2_.empty()) {

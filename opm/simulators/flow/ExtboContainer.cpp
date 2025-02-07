@@ -50,6 +50,16 @@ allocate(const unsigned bufferSize)
 
 template<class Scalar>
 void ExtboContainer<Scalar>::
+assignVolumes(const unsigned globalDofIdx,
+              const Scalar xVolume,
+              const Scalar yVolume)
+{
+    X_volume_[globalDofIdx] = xVolume;
+    Y_volume_[globalDofIdx] = yVolume;
+}
+
+template<class Scalar>
+void ExtboContainer<Scalar>::
 outputRestart(data::Solution& sol)
 {
     if (!this->allocated_) {
