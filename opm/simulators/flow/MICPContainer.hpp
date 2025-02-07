@@ -31,6 +31,7 @@
 namespace Opm {
 
 namespace data { class Solution; }
+template<class Scalar> class MICPSolutionContainer;
 
 template<class Scalar>
 class MICPContainer
@@ -47,6 +48,8 @@ public:
                  const Scalar biofilmConcentration,
                  const Scalar calciteConcentration);
 
+    MICPSolutionContainer<Scalar> getSolution() const;
+
     void outputRestart(data::Solution& sol);
 
     void readRestart(const unsigned globalDofIdx,
@@ -55,46 +58,6 @@ public:
 
     bool allocated() const
     { return allocated_; }
-
-    Scalar getMicrobialConcentration(unsigned elemIdx) const
-    {
-        if (cMicrobes_.size() > elemIdx)
-            return cMicrobes_[elemIdx];
-
-        return 0;
-    }
-
-    Scalar getOxygenConcentration(unsigned elemIdx) const
-    {
-        if (cOxygen_.size() > elemIdx)
-            return cOxygen_[elemIdx];
-
-        return 0;
-    }
-
-    Scalar getUreaConcentration(unsigned elemIdx) const
-    {
-        if (cUrea_.size() > elemIdx)
-            return cUrea_[elemIdx];
-
-        return 0;
-    }
-
-    Scalar getBiofilmConcentration(unsigned elemIdx) const
-    {
-        if (cBiofilm_.size() > elemIdx)
-            return cBiofilm_[elemIdx];
-
-        return 0;
-    }
-
-    Scalar getCalciteConcentration(unsigned elemIdx) const
-    {
-        if (cCalcite_.size() > elemIdx)
-            return cCalcite_[elemIdx];
-
-        return 0;
-    }
 
     bool allocated_ = false;
     ScalarBuffer cMicrobes_;

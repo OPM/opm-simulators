@@ -1142,6 +1142,10 @@ protected:
         // Initialize mixing controls before trying to set any lastRx valuesx
         this->mixControls_.init(numElems, restart_step, eclState.runspec().tabdims().getNumPVTTables());
 
+        if constexpr (enableMICP) {
+            this->micp_ = this->eclWriter_->outputModule().getMICP().getSolution();
+        }
+
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = this->initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
@@ -1179,13 +1183,6 @@ protected:
 
             if constexpr (enablePolymer)
                 this->polymer_.concentration[elemIdx] = this->eclWriter_->outputModule().getPolymerConcentration(elemIdx);
-            if constexpr (enableMICP){
-                this->micp_.microbialConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getMicrobialConcentration(elemIdx);
-                this->micp_.oxygenConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getOxygenConcentration(elemIdx);
-                this->micp_.ureaConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getUreaConcentration(elemIdx);
-                this->micp_.biofilmConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getBiofilmConcentration(elemIdx);
-                this->micp_.calciteConcentration[elemIdx] = this->eclWriter_->outputModule().getMICP().getCalciteConcentration(elemIdx);
-            }
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 

@@ -27,6 +27,8 @@
 
 #include <opm/output/data/Solution.hpp>
 
+#include <opm/simulators/flow/SolutionContainers.hpp>
+
 #include <algorithm>
 #include <array>
 #include <string>
@@ -61,6 +63,20 @@ assign(const unsigned globalDofIdx,
     cUrea_[globalDofIdx] = ureaConcentration;
     cBiofilm_[globalDofIdx] = biofilmConcentration;
     cCalcite_[globalDofIdx] = calciteConcentration;
+}
+
+template<class Scalar>
+MICPSolutionContainer<Scalar>
+MICPContainer<Scalar>::
+getSolution() const
+{
+    return {
+        cMicrobes_,
+        cOxygen_,
+        cUrea_,
+        cBiofilm_,
+        cCalcite_
+    };
 }
 
 template<class Scalar>
