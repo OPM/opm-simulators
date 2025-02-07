@@ -72,7 +72,7 @@ public:
     void assignStress(const unsigned globalDofIdx,
                       const Dune::FieldVector<Scalar,6>& stress);
 
-    void outputRestart(data::Solution& sol) const;
+    void outputRestart(data::Solution& sol);
 
     bool allocated() const
     { return allocated_; }

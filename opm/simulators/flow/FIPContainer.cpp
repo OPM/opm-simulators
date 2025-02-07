@@ -412,7 +412,7 @@ outputRestart(data::Solution& sol)
         if (! this->fip_[phase].empty()) {
             sol.insert(Inplace::EclString(phase),
                        UnitSystem::measure::volume,
-                       this->fip_[phase],
+                       std::move(this->fip_[phase]),
                        data::TargetType::SUMMARY);
         }
     }
