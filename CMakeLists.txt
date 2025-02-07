@@ -538,6 +538,9 @@ endif()
 add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
 set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
+set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 # Strictly we only depend on the update-version target,
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
@@ -587,6 +590,7 @@ opm_add_test(flow
   flow/flow.cpp
   ${FLOW_TGTS}
   $<TARGET_OBJECTS:moduleVersion>
+  $<TARGET_OBJECTS:MainDispatchDynamic>
   )
 
 opm_add_test(flow_blackoil_polyhedralgrid
@@ -609,6 +613,7 @@ opm_add_test(flow_distribute_z
   flow/flow_distribute_z.cpp
   ${FLOW_TGTS}
   $<TARGET_OBJECTS:moduleVersion>
+  $<TARGET_OBJECTS:MainDispatchDynamic>
   )
 
 opm_add_test(flowexp_blackoil

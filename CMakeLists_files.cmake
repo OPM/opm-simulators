@@ -106,7 +106,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
-  opm/simulators/flow/MainDispatchDynamic.cpp
   opm/simulators/flow/MechContainer.cpp
   opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NonlinearSolver.cpp
