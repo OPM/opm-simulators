@@ -139,23 +139,23 @@ assignStress(const unsigned globalDofIdx,
 
 template<class Scalar>
 void MechContainer<Scalar>::
-outputRestart(data::Solution& sol) const
+outputRestart(data::Solution& sol)
 {
     if (!allocated_) {
         return;
     }
     using DataEntry = std::tuple<std::string,
                                  UnitSystem::measure,
-                                 std::variant<const std::vector<Scalar>*,
-                                              const std::array<std::vector<Scalar>,3>*,
-                                              const VoigtArray<Scalar>*>>;
+                                 std::variant<std::vector<Scalar>*,
+                                              std::array<std::vector<Scalar>,3>*,
+                                              VoigtArray<Scalar>*>>;
 
     auto doInsert = [&sol](const std::string& name,
                            const UnitSystem::measure& measure,
-                           const std::vector<Scalar>& entry)
+                           std::vector<Scalar>& entry)
     {
         if (!entry.empty()) {
-            sol.insert(name, measure, entry, data::TargetType::RESTART_OPM_EXTENDED);
+            sol.insert(name, measure, std::move(entry), data::TargetType::RESTART_OPM_EXTENDED);
         }
     };
 
@@ -172,25 +172,25 @@ outputRestart(data::Solution& sol) const
     };
 
     std::for_each(solutionVectors.begin(), solutionVectors.end(),
-                  [&doInsert](const auto& array)
+                  [&doInsert](auto& array)
                   {
                       std::visit(VisitorOverloadSet{
-                                    [&array, &doInsert](const std::vector<Scalar>* v)
+                                    [&array, &doInsert](std::vector<Scalar>* v)
                                     {
                                         doInsert(std::get<0>(array), std::get<1>(array), *v);
                                     },
-                                    [&array, &doInsert](const std::array<std::vector<Scalar>,3>* V)
+                                    [&array, &doInsert](std::array<std::vector<Scalar>,3>* V)
                                     {
-                                        const auto& v = *V;
+                                        auto& v = *V;
                                         const auto& name = std::get<0>(array);
                                         const auto& measure = std::get<1>(array);
                                         doInsert(name + "X", measure, v[0]);
                                         doInsert(name + "Y", measure, v[1]);
                                         doInsert(name + "Z", measure, v[2]);
                                     },
-                                    [&array, &doInsert](const VoigtArray<Scalar>* V)
+                                    [&array, &doInsert](VoigtArray<Scalar>* V)
                                     {
-                                        const auto& v = *V;
+                                        auto& v = *V;
                                         const auto& name = std::get<0>(array);
                                         const auto& measure = std::get<1>(array);
                                         doInsert(name + "XX", measure, v[VoigtIndex::XX]);
@@ -203,6 +203,8 @@ outputRestart(data::Solution& sol) const
                                  }, std::get<2>(array));
                   }
     );
+
+    allocated_ = false;
 }
 
 template class MechContainer<double>;
