@@ -515,7 +515,7 @@ template<typename FluidSystem, typename Indices>
 typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 volumeFraction(const int seg,
-               const unsigned compIdx) const
+               const int compIdx) const
 {
     if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
         return evaluation_[seg][WFrac];
@@ -584,7 +584,7 @@ typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentRateUpwinding(const int seg,
                         const int seg_upwind,
-                        const std::size_t comp_idx) const
+                        const int comp_idx) const
 {
     // the result will contain the derivative with respect to WQTotal in segment seg,
     // and the derivatives with respect to WFrac GFrac in segment seg_upwind.
