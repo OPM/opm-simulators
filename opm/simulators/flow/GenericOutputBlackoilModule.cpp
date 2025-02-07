@@ -1025,12 +1025,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (enableExtbo_) {
-        extboC_.X_volume_.resize(bufferSize, 0.0);
-        extboC_.Y_volume_.resize(bufferSize, 0.0);
-        extboC_.Z_fraction_.resize(bufferSize, 0.0);
-        extboC_.mFracOil_.resize(bufferSize, 0.0);
-        extboC_.mFracGas_.resize(bufferSize, 0.0);
-        extboC_.mFracCo2_.resize(bufferSize, 0.0);
+        extboC_.allocate(bufferSize);
     }
 
     if (enableMICP_) {

@@ -25,6 +25,20 @@
 
 namespace Opm {
 
+template<class Scalar>
+void ExtboContainer<Scalar>::
+allocate(const unsigned bufferSize)
+{
+    X_volume_.resize(bufferSize, 0.0);
+    Y_volume_.resize(bufferSize, 0.0);
+    Z_fraction_.resize(bufferSize, 0.0);
+    mFracOil_.resize(bufferSize, 0.0);
+    mFracGas_.resize(bufferSize, 0.0);
+    mFracCo2_.resize(bufferSize, 0.0);
+
+    allocated_ = true;
+}
+
 template class ExtboContainer<double>;
 
 #if FLOW_INSTANTIATE_FLOAT

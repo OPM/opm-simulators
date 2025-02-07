@@ -36,6 +36,12 @@ class ExtboContainer
     using ScalarBuffer = std::vector<Scalar>;
 
 public:
+    void allocate(const unsigned bufferSize);
+
+    bool allocated() const
+    { return allocated_; }
+
+    bool allocated_ = false;
     ScalarBuffer X_volume_;
     ScalarBuffer Y_volume_;
     ScalarBuffer Z_fraction_;
