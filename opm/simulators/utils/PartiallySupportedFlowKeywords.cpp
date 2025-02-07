@@ -112,12 +112,6 @@ partiallySupported()
             },
          },
          {
-            "GEFAC",
-            {
-               {3,{true, allow_values<std::string> {"YES"}, "GEFAC(GRPNETWK): Extended Network Model efficiency NO option not implemented"}}, // TRANSFER_EXT_NET
-            },
-         },
-         {
             "GRIDOPTS",
             {
                {1,{true, allow_values<std::string> {"NO", "YES"}, "GRIDOPTS(TRANMULT): should be set to either NO or YES"}}, // TRANMULT
@@ -271,12 +265,6 @@ partiallySupported()
                {3,{true, allow_values<std::string> {"YES"}, "WAGHYSTR(GAS_MODEL): only the YES option is supported – will STOP"}}, // GAS_MODEL
                {4,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(RES_OIL): only the NO option is supported – will STOP"}}, // RES_OIL
                {5,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(WATER_MODEL): only the NO option is supported – will STOP"}}, // WATER_MODEL
-            },
-         },
-         {
-            "WEFAC",
-            {
-               {3,{true, allow_values<std::string> {"YES"}, "WEFAC(WELNETWK): only the YES option is supported"}}, // EXTENDED_NETWORK_OPT
             },
          },
          {
