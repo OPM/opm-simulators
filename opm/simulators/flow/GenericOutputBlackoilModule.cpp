@@ -514,11 +514,7 @@ assignToSolution(data::Solution& sol)
     addEntry(flowsSolutionVector, "FLRWATK-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][waterCompIdx], waterCompIdx);
 
     auto extendedSolutionArrays = std::array {
-        DataEntry{"BIOFILM",  UnitSystem::measure::identity,           micpC_.cBiofilm_},
-        DataEntry{"CALCITE",  UnitSystem::measure::identity,           micpC_.cCalcite_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
-        DataEntry{"MICROBES", UnitSystem::measure::density,            micpC_.cMicrobes_},
-        DataEntry{"OXYGEN",   UnitSystem::measure::density,            micpC_.cOxygen_},
         DataEntry{"PERMFACT", UnitSystem::measure::identity,           permFact_},
         DataEntry{"PORV_RC",  UnitSystem::measure::identity,           rockCompPorvMultiplier_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
@@ -535,7 +531,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"STD_GAS",  UnitSystem::measure::identity,           mFracGas_},
         DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
-        DataEntry{"UREA",     UnitSystem::measure::density,            micpC_.cUrea_},
     };
 
     // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
@@ -578,6 +573,10 @@ assignToSolution(data::Solution& sol)
         for (auto& array : flowsSolutionVector) {
             doInsert(array, data::TargetType::RESTART_SOLUTION);
         }
+    }
+
+    if (this->micpC_.allocated()) {
+        this->micpC_.outputRestart(sol);
     }
 
     for (auto& array : extendedSolutionArrays) {

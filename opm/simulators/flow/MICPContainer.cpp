@@ -23,6 +23,15 @@
 #include <config.h>
 #include <opm/simulators/flow/MICPContainer.hpp>
 
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
+#include <opm/output/data/Solution.hpp>
+
+#include <array>
+#include <string>
+#include <tuple>
+
+
 namespace Opm {
 
 template<class Scalar>
@@ -36,6 +45,39 @@ allocate(const unsigned bufferSize)
     cCalcite_.resize(bufferSize, 0.0);
 
     allocated_ = true;
+}
+
+template<class Scalar>
+void MICPContainer<Scalar>::
+outputRestart(data::Solution& sol)
+{
+    if (!this->allocated_) {
+        return;
+    }
+
+    using DataEntry =
+        std::tuple<std::string, UnitSystem::measure, std::vector<Scalar>&>;
+
+    auto solutionVectors = std::array {
+        DataEntry{"BIOFILM",  UnitSystem::measure::identity, cBiofilm_},
+        DataEntry{"CALCITE",  UnitSystem::measure::identity, cCalcite_},
+        DataEntry{"MICROBES", UnitSystem::measure::density,  cMicrobes_},
+        DataEntry{"OXYGEN",   UnitSystem::measure::density,  cOxygen_},
+        DataEntry{"UREA",     UnitSystem::measure::density,  cUrea_},
+    };
+
+    std::for_each(solutionVectors.begin(), solutionVectors.end(),
+                  [&sol](auto& entry)
+                  {
+                      if (!std::get<2>(entry).empty()) {
+                          sol.insert(std::get<std::string>(entry),
+                          std::get<UnitSystem::measure>(entry),
+                          std::move(std::get<2>(entry)),
+                          data::TargetType::RESTART_OPM_EXTENDED);
+                      }
+                   });
+
+    allocated_ = false;
 }
 
 template class MICPContainer<double>;

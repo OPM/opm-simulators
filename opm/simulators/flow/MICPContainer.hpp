@@ -30,6 +30,8 @@
 
 namespace Opm {
 
+namespace data { class Solution; }
+
 template<class Scalar>
 class MICPContainer
 {
@@ -37,6 +39,8 @@ class MICPContainer
 
 public:
     void allocate(const unsigned bufferSize);
+
+    void outputRestart(data::Solution& sol);
 
     bool allocated() const
     { return allocated_; }
