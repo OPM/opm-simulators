@@ -50,6 +50,18 @@ allocate(const unsigned bufferSize)
 
 template<class Scalar>
 void ExtboContainer<Scalar>::
+assignMassFractions(const unsigned globalDofIdx,
+                    const Scalar gas,
+                    const Scalar oil,
+                    const Scalar co2)
+{
+    this->mFracGas_[globalDofIdx] = gas;
+    this->mFracOil_[globalDofIdx] = oil;
+    this->mFracCo2_[globalDofIdx] = co2;
+}
+
+template<class Scalar>
+void ExtboContainer<Scalar>::
 assignVolumes(const unsigned globalDofIdx,
               const Scalar xVolume,
               const Scalar yVolume)

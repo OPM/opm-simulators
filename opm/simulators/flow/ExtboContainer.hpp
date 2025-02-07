@@ -40,6 +40,11 @@ class ExtboContainer
 public:
     void allocate(const unsigned bufferSize);
 
+    void assignMassFractions(const unsigned globalDofIdx,
+                             const Scalar gas,
+                             const Scalar oil,
+                             const Scalar co2);
+
     void assignVolumes(const unsigned globalDofIdx,
                        const Scalar xVolume,
                        const Scalar yVolume);
