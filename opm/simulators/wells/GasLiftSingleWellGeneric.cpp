@@ -29,6 +29,7 @@
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <fmt/format.h>
 
@@ -420,6 +421,7 @@ std::optional<typename GasLiftSingleWellGeneric<Scalar>::LimitedRates>
 GasLiftSingleWellGeneric<Scalar>::
 computeLimitedWellRatesWithALQ_(Scalar alq) const
 {
+    OPM_TIMEFUNCTION();
     std::optional<LimitedRates> limited_rates;
     if (auto rates = computeWellRatesWithALQ_(alq); rates) {
         limited_rates = getLimitedRatesFromRates_(*rates);
@@ -433,13 +435,41 @@ GasLiftSingleWellGeneric<Scalar>::
 computeWellRatesWithALQ_(Scalar alq) const
 {
     OPM_TIMEFUNCTION();
-    std::optional<BasicRates> rates;
-    auto bhp_opt = computeBhpAtThpLimit_(alq);
-    if (bhp_opt) {
-        auto [bhp, bhp_is_limited] = getBhpWithLimit_(*bhp_opt);
-        rates = computeWellRates_(bhp, bhp_is_limited);
+    bool new_code = true;
+    
+    if(new_code){
+        std::optional<BasicRates> rates_opt;
+        auto copy_well_state(this->well_state_);
+        copy_well_state.setALQ(this->well_name_, alq);
+        auto& ws = copy_well_state.well(this->well_name_);
+        //bool solved =
+        solveWellWithTHPConstraintAlqImplicit(copy_well_state,this->group_state_);
+        
+        auto bhp_tmp = ws.bhp;
+        auto [bhp, bhp_is_limited] = getBhpWithLimit_(bhp_tmp);
+        bool tmp = bhp_is_limited;
+        BasicRates rates(-ws.surface_rates[this->oil_pos_],
+                -ws.surface_rates[this->gas_pos_],
+                -ws.surface_rates[this->water_pos_],
+                tmp);
+
+        if(ws.status == WellStatus::OPEN){
+            rates_opt = rates;
+        }
+        return rates_opt;         
+    }else{
+        // old code
+        std::optional<BasicRates> rates;
+        auto bhp_opt = computeBhpAtThpLimit_(alq);
+        if (bhp_opt) {
+            auto [bhp, bhp_is_limited] = getBhpWithLimit_(*bhp_opt);
+            rates = computeWellRates_(bhp, bhp_is_limited);
+        }
+        return rates;
     }
-    return rates;
+    
+    
+    //}
 }
 
 template<class Scalar>

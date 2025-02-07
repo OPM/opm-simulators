@@ -25,6 +25,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/Events.hpp>
 
@@ -169,11 +170,13 @@ public:
 
     bool isInjectionGrup(const std::string& name) const
     {
+        OPM_TIMEFUNCTION();
         return this->global_well_info.value().in_injecting_group(name);
     }
 
     bool isProductionGrup(const std::string& name) const
     {
+        OPM_TIMEFUNCTION();
         return this->global_well_info.value().in_producing_group(name);
     }
 

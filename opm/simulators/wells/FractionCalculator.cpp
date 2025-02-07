@@ -28,6 +28,7 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <opm/common/TimingMacros.hpp>
 #include <cassert>
 
 namespace Opm::WGHelpers {
@@ -116,6 +117,7 @@ guideRateSum(const Group& group,
              const std::string& always_included_child,
              const bool always_use_potentials)
 {
+    OPM_TIMEFUNCTION();
     Scalar total_guide_rate = 0.0;
     int number_of_included_well_or_groups = 0;
     for (const std::string& child_group : group.groups()) {
@@ -159,6 +161,7 @@ guideRate(const std::string& name,
           const std::string& always_included_child,
           const bool always_use_potentials)
 {
+    OPM_TIMEFUNCTION();
     if (schedule_.hasWell(name, report_step_)) {
         return WellGroupHelpers<Scalar>::getGuideRate(name, schedule_, well_state_, group_state_,
                                                       report_step_, guide_rate_, target_, pu_);

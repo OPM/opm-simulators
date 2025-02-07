@@ -245,13 +245,13 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
     case Well::ProducerCMode::THP:
     case Well::ProducerCMode::BHP:
         if (this->pu.phase_used[BlackoilPhases::Liquid]) {
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = 0.0 * (-1000.0) * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
         }
         if (this->pu.phase_used[BlackoilPhases::Aqua]) {
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = 0.0 * (-1000.0) * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
         }
         if (this->pu.phase_used[BlackoilPhases::Vapour]){
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -100000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = 0.0 * (-100000.0) * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
         }
         break;
 

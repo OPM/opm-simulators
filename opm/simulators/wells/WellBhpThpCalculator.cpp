@@ -644,6 +644,7 @@ bhpMax(const std::function<Scalar(const Scalar)>& fflo,
        const Scalar vfp_flo_front,
        DeferredLogger& deferred_logger) const
 {
+    OPM_TIMEFUNCTION();
     // Find the bhp-point where production becomes nonzero.
     Scalar bhp_max = 0.0;
     Scalar low = bhp_limit;
@@ -724,6 +725,7 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
                      const std::array<Scalar, 2>& range,
                      DeferredLogger& deferred_logger) const
 {
+    //OPM_TIMEFUNCTION();
     // Given a VFP function returning bhp as a function of phase
     // rates and thp:
     //     fbhp(rates, thp),
@@ -741,6 +743,7 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
     // highest rate) should be returned.
 
     // Define the equation we want to solve.
+    
     auto eq = [&fbhp, &frates](Scalar bhp) {
         return fbhp(frates(bhp)) - bhp;
     };
@@ -775,6 +778,7 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
     const Scalar bhp_tolerance = 0.01 * unit::barsa;
     int iteration = 0;
     try {
+        OPM_TIMEBLOCK(RegularFalsiBisection);
         const Scalar solved_bhp = RegulaFalsiBisection<ThrowOnError>::
             solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
         return solved_bhp;
@@ -794,6 +798,7 @@ bisectBracket(const std::function<Scalar(const Scalar)>& eq,
               std::optional<Scalar>& approximate_solution,
               DeferredLogger& deferred_logger) const
 {
+    OPM_TIMEFUNCTION();
     bool finding_bracket = false;
     low = range[0];
     high = range[1];
@@ -869,6 +874,7 @@ bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
                   Scalar& low, Scalar& high,
                   DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     bool bracket_found = false;
     low = range[0];
     high = range[1];
@@ -901,6 +907,7 @@ isStableSolution(const WellState<Scalar>& well_state,
                  const std::vector<Scalar>& rates,
                  const SummaryState& summaryState) const
 {
+    OPM_TIMEFUNCTION();
     assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
     assert(well_.isProducer()); // only valid for producers 
 
@@ -1013,6 +1020,7 @@ bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                            const Scalar& limit,
                            DeferredLogger& deferred_logger)
 {
+    OPM_TIMEFUNCTION();
     bool bracket_found = false;
     low = range[0];
     high = range[1];
@@ -1049,6 +1057,7 @@ WellBhpThpCalculator<Scalar>::
 bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                            Scalar& min_thp, Scalar& max_thp)
 {
+    OPM_TIMEFUNCTION();
     bool bracket_found = false;
     constexpr int sample_number = 1000;
     constexpr Scalar interval = 1E5; 
