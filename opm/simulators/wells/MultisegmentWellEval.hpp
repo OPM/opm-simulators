@@ -71,7 +71,12 @@ public:
     const ParallelWellInfo<Scalar>& pw_info_;
 
 protected:
-    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info);
+    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif,
+                         const ParallelWellInfo<Scalar>& pw_info);
+
+    MultisegmentWellEval(const MultisegmentWellEval&) = delete;
+    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif,
+                         const MultisegmentWellEval& eval);
 
     void initMatrixAndVectors();
 

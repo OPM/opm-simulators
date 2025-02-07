@@ -78,6 +78,11 @@ public:
         : well_(well)
     {}
 
+    MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well,
+                                     const MultisegmentWellPrimaryVariables& pv);
+
+    MultisegmentWellPrimaryVariables(const MultisegmentWellPrimaryVariables&) = delete;
+
     //! \brief Resize values and evaluations.
     void resize(const int numSegments);
 

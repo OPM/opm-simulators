@@ -45,6 +45,15 @@
 namespace Opm {
 
 template<class FluidSystem, class Indices>
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well,
+                                 const MultisegmentWellPrimaryVariables& pv)
+    : value_(pv.value_)
+    , evaluation_(pv.evaluation_)
+    , well_(well)
+{}
+
+template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 resize(const int numSegments)
 {

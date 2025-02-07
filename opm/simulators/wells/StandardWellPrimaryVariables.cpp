@@ -96,6 +96,16 @@ Scalar relaxationFactorFraction(const Scalar old_value,
 namespace Opm {
 
 template<class FluidSystem, class Indices>
+StandardWellPrimaryVariables<FluidSystem,Indices>::
+StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well,
+                             const StandardWellPrimaryVariables& pv)
+    : value_(pv.value_)
+    , evaluation_(pv.evaluation_)
+    , well_(well)
+    , numWellEq_(pv.numWellEq_)
+{}
+
+template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
 init()
 {

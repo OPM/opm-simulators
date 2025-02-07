@@ -67,6 +67,10 @@ public:
 
     explicit StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info);
 
+    StandardWellEquations(const StandardWellEquations&) = delete;
+    StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info,
+                          const StandardWellEquations& eqs);
+
     //! \brief Setup sparsity pattern for the matrices.
     //! \param numWellEq Number of well equations
     //! \param numPerfs Number of perforations
