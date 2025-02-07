@@ -48,7 +48,7 @@ thp(const int    table_id,
     Scalar flo = detail::getFlo(table, aqua, liquid, vapour);
     Scalar wfr = detail::getWFR(table, aqua, liquid, vapour);
     Scalar gfr = detail::getGFR(table, aqua, liquid, vapour);
-    if (use_expvfp){// || -flo < table.getFloAxis().front()) {
+    if (use_expvfp || -flo < table.getFloAxis().front()) {
         wfr = explicit_wfr;
         gfr = explicit_gfr;
     }
@@ -180,7 +180,7 @@ bhp(const int       table_id,
     EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
     EvalWell wfr = detail::getWFR(table, aqua, liquid, vapour);
     EvalWell gfr = detail::getGFR(table, aqua, liquid, vapour);
-    if (use_expvfp){ //|| -flo.value() < table.getFloAxis().front()) {
+    if (use_expvfp || -flo.value() < table.getFloAxis().front()) {
         wfr = explicit_wfr;
         gfr = explicit_gfr;
     }
