@@ -440,6 +440,7 @@ updateGroupTargetReductionRecurse(const Group& group,
     for (const std::string& subGroupName : group.groups()) {
         std::vector<Scalar> subGroupTargetReduction(np, 0.0);
         const Group& subGroup = schedule.getGroup(subGroupName, reportStepIdx);
+        int num_subgroup_controlled_wells = 0;
         updateGroupTargetReductionRecurse(subGroup,
                                           schedule,
                                           reportStepIdx,
@@ -451,13 +452,19 @@ updateGroupTargetReductionRecurse(const Group& group,
                                           summaryState,
                                           group_state,
                                           subGroupTargetReduction,
-                                          num_group_controlled_wells);
+                                          num_subgroup_controlled_wells);
 
+#if 0
+        // OIL     = 0,
+        // GAS     = 1,
+        // WATER   = 2,
+        static const std::string injphstr[3] = { "OIL", "GAS", "WATER" };
+        std::cout << "***** " << subGroupName << " injector: " << isInjector
+                  << " phase: " << injphstr[static_cast<int>(injector_phase)] << std::endl;
+        std::cout << "num_subgroup_controlled_wells = " << num_subgroup_controlled_wells << std::endl;
+        std::cout << "groupControlledWells() = " << groupControlledWells(schedule, wellState, group_state, summaryState, &guide_rate, reportStepIdx, subGroupName, "", !isInjector, injector_phase) << std::endl;
+#endif
         const Scalar subGroupEfficiency = subGroup.getGroupEfficiencyFactor();
-
-        // std::cout << "***************" << std::endl;
-        // std::cout << "num_group_controlled_wells = " << num_group_controlled_wells << std::endl;
-        // std::cout << "groupControlledWells() = " << groupControlledWells(schedule, wellState, group_state, summaryState, &guide_rate, reportStepIdx, subGroupName, "", !isInjector, phase) << std::endl;
 
         // accumulate group contribution from sub group
         if (isInjector) {
@@ -491,10 +498,11 @@ updateGroupTargetReductionRecurse(const Group& group,
                 = group_state.injection_control(subGroup.name(), injector_phase);
             const bool individual_control = (currentGroupControl != Group::InjectionCMode::FLD
                                              && currentGroupControl != Group::InjectionCMode::NONE);
-            if (individual_control || num_group_controlled_wells == 0) {
+            if (individual_control || num_subgroup_controlled_wells == 0) {
                 groupTargetReduction[phase_pos]
                     += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase_pos, isInjector);
             } else {
+                num_group_controlled_wells += num_subgroup_controlled_wells;
                 // Accumulate from this subgroup only if no group guide rate is set for it.
                 if (!guide_rate.has(subGroupName, injector_phase)) {
                     groupTargetReduction[phase_pos] += subGroupEfficiency * subGroupTargetReduction[phase_pos];
@@ -505,13 +513,14 @@ updateGroupTargetReductionRecurse(const Group& group,
             const bool individual_control = (currentGroupControl != Group::ProductionCMode::FLD
                                              && currentGroupControl != Group::ProductionCMode::NONE);
 
-            if (individual_control || num_group_controlled_wells == 0) {
+            if (individual_control || num_subgroup_controlled_wells == 0) {
                 for (int phase = 0; phase < np; phase++) {
                     groupTargetReduction[phase]
                         += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase, isInjector);
                 }
             } else {
                 // The subgroup may participate in group control.
+                num_group_controlled_wells += num_subgroup_controlled_wells;
                 if (!guide_rate.has(subGroupName)) {
                     // Accumulate from this subgroup only if no group guide rate is set for it.
                     for (int phase = 0; phase < np; phase++) {
