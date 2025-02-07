@@ -261,6 +261,7 @@ namespace Opm
 
        void solveWellWithTHPConstraintConst(const Simulator& simulator, WellState<Scalar>& wellState, 
                                             const GroupState<Scalar>& groupState) const{
+          OPM_TIMEFUNCTION();
           auto well_copy(*this);
           //well_copy.prepareForPotentialCalculations(summaryw_state, well_state_copy, inj_controls, prod_controls);
           DeferredLogger deferred_logger;

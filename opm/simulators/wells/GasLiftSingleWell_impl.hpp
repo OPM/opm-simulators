@@ -142,6 +142,7 @@ template<typename TypeTag>
 void GasLiftSingleWell<TypeTag>::solveWellWithTHPConstraintAlqImplicit(WellState<Scalar>& wellState,
 const GroupState<Scalar>& groupState) const
 {
+  OPM_TIMEFUNCTION();
   this->well_.solveWellWithTHPConstraintConst(this->simulator_,wellState,groupState);
 #if 0
   auto well_copy(this->well_);

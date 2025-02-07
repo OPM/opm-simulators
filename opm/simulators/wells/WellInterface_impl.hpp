@@ -540,6 +540,7 @@ namespace Opm
     bool
     WellInterface<TypeTag>::
     solveWellWithTHPConstraintALQ(const Simulator& simulator, WellState<Scalar>& well_state, const GroupState<Scalar>& group_state){
+        OPM_TIMEFUNCTION();
             const auto& summary_state = simulator.vanguard().summaryState();
             auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
             auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
