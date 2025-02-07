@@ -23,6 +23,15 @@
 #include <config.h>
 #include <opm/simulators/flow/ExtboContainer.hpp>
 
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
+#include <opm/output/data/Solution.hpp>
+
+#include <algorithm>
+#include <array>
+#include <string>
+#include <tuple>
+
 namespace Opm {
 
 template<class Scalar>
@@ -37,6 +46,40 @@ allocate(const unsigned bufferSize)
     mFracCo2_.resize(bufferSize, 0.0);
 
     allocated_ = true;
+}
+
+template<class Scalar>
+void ExtboContainer<Scalar>::
+outputRestart(data::Solution& sol)
+{
+    if (!this->allocated_) {
+        return;
+    }
+
+    using DataEntry =
+        std::tuple<std::string, UnitSystem::measure, std::vector<Scalar>&>;
+
+    auto solutionArrays = std::array {
+        DataEntry{"SS_X",     UnitSystem::measure::identity,           X_volume_},
+        DataEntry{"SS_Y",     UnitSystem::measure::identity,           Y_volume_},
+        DataEntry{"SS_Z",     UnitSystem::measure::identity,           Z_fraction_},
+        DataEntry{"STD_CO2",  UnitSystem::measure::identity,           mFracCo2_},
+        DataEntry{"STD_GAS",  UnitSystem::measure::identity,           mFracGas_},
+        DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
+    };
+
+    std::for_each(solutionArrays.begin(), solutionArrays.end(),
+                  [&sol](auto& entry)
+                  {
+                      if (!std::get<2>(entry).empty()) {
+                          sol.insert(std::get<std::string>(entry),
+                          std::get<UnitSystem::measure>(entry),
+                          std::move(std::get<2>(entry)),
+                          data::TargetType::RESTART_OPM_EXTENDED);
+                      }
+                  });
+
+    this->allocated_ = false;
 }
 
 template class ExtboContainer<double>;

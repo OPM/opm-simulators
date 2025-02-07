@@ -524,12 +524,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"RVW",      UnitSystem::measure::oil_gas_ratio,      rvw_},
         DataEntry{"RVWSAT",   UnitSystem::measure::oil_gas_ratio,      waterVaporizationFactor_},
         DataEntry{"SALTP",    UnitSystem::measure::identity,           pSalt_},
-        DataEntry{"SS_X",     UnitSystem::measure::identity,           extboC_.X_volume_},
-        DataEntry{"SS_Y",     UnitSystem::measure::identity,           extboC_.Y_volume_},
-        DataEntry{"SS_Z",     UnitSystem::measure::identity,           extboC_.Z_fraction_},
-        DataEntry{"STD_CO2",  UnitSystem::measure::identity,           extboC_.mFracCo2_},
-        DataEntry{"STD_GAS",  UnitSystem::measure::identity,           extboC_.mFracGas_},
-        DataEntry{"STD_OIL",  UnitSystem::measure::identity,           extboC_.mFracOil_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
     };
 
@@ -584,6 +578,7 @@ assignToSolution(data::Solution& sol)
     }
 
     this->mech_.outputRestart(sol);
+    this->extboC_.outputRestart(sol);
 
     if (! this->temperature_.empty())
     {
