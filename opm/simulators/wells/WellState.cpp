@@ -426,20 +426,6 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
                 }
             }
         }
-    }else{
-        // initializing new wells (or wells that have been shut down)
-        for (int w = 0; w < nw; ++w) {
-            const Well& well = wells_ecl[w];
-            if (well.getStatus() == Well::Status::SHUT) {
-                continue;
-            }
-            auto& new_well = this->well(w);
-            if (well.isProducer()) {
-                new_well.update_producer_targets(well, summary_state);
-            } else {
-                new_well.update_injector_targets(well, summary_state);
-            }
-        }
     }
 
     updateWellsDefaultALQ(schedule, report_step, summary_state);
