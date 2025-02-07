@@ -442,7 +442,8 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
 #endif  // HAVE_MPI
 
 template<class ElementMapper, class GridView, class Scalar>
-void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(EclipseState& eclState)
+void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::
+doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
 {
     const auto isRoot = this->mpiRank == 0;
 
@@ -472,7 +473,8 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
                                &eclState,
                                /* isPeriodic = */ false,
                                /* flipNormals = */ false,
-                               /* clipZ = */ false);
+                               /* clipZ = */ false,
+                               edge_conformal);
 
     if (isRoot) {
         const auto& active_porv = eclState.fieldProps().porv(false);
