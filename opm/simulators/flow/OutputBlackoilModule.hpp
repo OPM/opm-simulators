@@ -447,10 +447,8 @@ public:
                 this->extboC_.assignVolumes(globalDofIdx,
                                             intQuants.xVolume().value(),
                                             intQuants.yVolume().value());
-            }
-
-            if (!this->extboC_.Z_fraction_.empty()) {
-                this->extboC_.Z_fraction_[globalDofIdx] = intQuants.zFraction().value();
+                this->extboC_.assignZFraction(globalDofIdx,
+                                              intQuants.zFraction().value());
             }
 
             if (!this->extboC_.mFracCo2_.empty()) {

@@ -44,6 +44,9 @@ public:
                        const Scalar xVolume,
                        const Scalar yVolume);
 
+    void assignZFraction(const unsigned globalDofIdx,
+                         const Scalar zFraction);
+
     void outputRestart(data::Solution& sol);
 
     bool allocated() const

@@ -60,6 +60,14 @@ assignVolumes(const unsigned globalDofIdx,
 
 template<class Scalar>
 void ExtboContainer<Scalar>::
+assignZFraction(const unsigned globalDofIdx,
+                const Scalar zFraction)
+{
+    Z_fraction_[globalDofIdx] = zFraction;
+}
+
+template<class Scalar>
+void ExtboContainer<Scalar>::
 outputRestart(data::Solution& sol)
 {
     if (!this->allocated_) {
