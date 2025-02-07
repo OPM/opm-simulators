@@ -700,7 +700,7 @@ if(CUDA_FOUND)
       ${CUDA_nvptxcompiler_static_LIBRARY}
     )
 
-    foreach(tgt test_gpu_safe_call test_cuda_check_last_error test_GpuVector)
+    foreach(tgt test_gpu_safe_call test_cuda_check_last_error test_GpuVector test_is_gpu_pointer)
       target_link_libraries(${tgt} CUDA::cudart)
     endforeach()
   endif()
