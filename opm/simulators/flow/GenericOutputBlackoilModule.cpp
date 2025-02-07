@@ -410,9 +410,9 @@ void GenericOutputBlackoilModule<FluidSystem>::
 assignToSolution(data::Solution& sol)
 {
     using DataEntry =
-        std::tuple<std::string, UnitSystem::measure, const std::vector<Scalar>&>;
+        std::tuple<std::string, UnitSystem::measure, std::vector<Scalar>&>;
 
-    auto doInsert = [&sol](const DataEntry&       entry,
+    auto doInsert = [&sol](DataEntry&       entry,
                            const data::TargetType target)
     {
         if (std::get<2>(entry).empty()) {
@@ -426,12 +426,15 @@ assignToSolution(data::Solution& sol)
     };
 
     // if index not specified, we treat it as valid (>= 0)
-    auto addEntry = [](std::vector<DataEntry>& container, const std::string& name, UnitSystem::measure measure, const auto& flowArray, int index = 1) {
+    auto addEntry = [](std::vector<DataEntry>& container,
+                       const std::string& name,
+                       UnitSystem::measure measure,
+                       auto& flowArray, int index = 1)
+    {
         if (index >= 0) {  // Only add if index is valid
             container.emplace_back(name, measure, flowArray);
         }
     };
-
 
     std::vector<DataEntry> baseSolutionVector;
     addEntry(baseSolutionVector, "1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_[gasPhaseIdx],                                              gasPhaseIdx);
@@ -510,7 +513,7 @@ assignToSolution(data::Solution& sol)
     addEntry(flowsSolutionVector, "FLRWATJ-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][waterCompIdx], waterCompIdx);
     addEntry(flowsSolutionVector, "FLRWATK-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][waterCompIdx], waterCompIdx);
 
-    const auto extendedSolutionArrays = std::array {
+    auto extendedSolutionArrays = std::array {
         DataEntry{"BIOFILM",  UnitSystem::measure::identity,           cBiofilm_},
         DataEntry{"CALCITE",  UnitSystem::measure::identity,           cCalcite_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
@@ -562,22 +565,22 @@ assignToSolution(data::Solution& sol)
             }
         }
 
-        for (const auto& array: compositionalEntries) {
+        for (auto& array: compositionalEntries) {
             doInsert(array, data::TargetType::RESTART_SOLUTION);
         }
     }
 
-    for (const auto& array : baseSolutionVector) {
+    for (auto& array : baseSolutionVector) {
         doInsert(array, data::TargetType::RESTART_SOLUTION);
     }
 
     if (this->enableFlows_) {
-        for (const auto& array : flowsSolutionVector) {
+        for (auto& array : flowsSolutionVector) {
             doInsert(array, data::TargetType::RESTART_SOLUTION);
         }
     }
 
-    for (const auto& array : extendedSolutionArrays) {
+    for (auto& array : extendedSolutionArrays) {
         doInsert(array, data::TargetType::RESTART_OPM_EXTENDED);
     }
 
