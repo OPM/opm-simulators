@@ -25,6 +25,19 @@
 
 namespace Opm {
 
+template<class Scalar>
+void MICPContainer<Scalar>::
+allocate(const unsigned bufferSize)
+{
+    cMicrobes_.resize(bufferSize, 0.0);
+    cOxygen_.resize(bufferSize, 0.0);
+    cUrea_.resize(bufferSize, 0.0);
+    cBiofilm_.resize(bufferSize, 0.0);
+    cCalcite_.resize(bufferSize, 0.0);
+
+    allocated_ = true;
+}
+
 template class MICPContainer<double>;
 
 #if FLOW_INSTANTIATE_FLOAT

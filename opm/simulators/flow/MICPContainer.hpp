@@ -36,6 +36,11 @@ class MICPContainer
     using ScalarBuffer = std::vector<Scalar>;
 
 public:
+    void allocate(const unsigned bufferSize);
+
+    bool allocated() const
+    { return allocated_; }
+
     Scalar getMicrobialConcentration(unsigned elemIdx) const
     {
         if (cMicrobes_.size() > elemIdx)
@@ -76,6 +81,7 @@ public:
         return 0;
     }
 
+    bool allocated_ = false;
     ScalarBuffer cMicrobes_;
     ScalarBuffer cOxygen_;
     ScalarBuffer cUrea_;

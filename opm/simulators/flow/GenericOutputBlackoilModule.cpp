@@ -1036,11 +1036,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (enableMICP_) {
-        micpC_.cMicrobes_.resize(bufferSize, 0.0);
-        micpC_.cOxygen_.resize(bufferSize, 0.0);
-        micpC_.cUrea_.resize(bufferSize, 0.0);
-        micpC_.cBiofilm_.resize(bufferSize, 0.0);
-        micpC_.cCalcite_.resize(bufferSize, 0.0);
+        this->micpC_.allocate(bufferSize);
     }
 
     if (vapparsActive) {
