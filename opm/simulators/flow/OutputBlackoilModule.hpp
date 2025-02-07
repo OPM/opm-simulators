@@ -475,26 +475,14 @@ public:
                 this->mFracCo2_[globalDofIdx] = stdVolCo2 * rhoCO2 / stdMassTotal;
             }
 
-            if (!this->micpC_.cMicrobes_.empty()) {
-                this->micpC_.cMicrobes_[globalDofIdx] = intQuants.microbialConcentration().value();
-            }
-
-            if (!this->micpC_.cOxygen_.empty()) {
-                this->micpC_.cOxygen_[globalDofIdx] = intQuants.oxygenConcentration().value();
-            }
-
-            if (!this->micpC_.cUrea_.empty()) {
-                this->micpC_.cUrea_[globalDofIdx] = 10
-                    * intQuants.ureaConcentration()
-                          .value(); // Reescaling back the urea concentration (see WellInterface_impl.hpp)
-            }
-
-            if (!this->micpC_.cBiofilm_.empty()) {
-                this->micpC_.cBiofilm_[globalDofIdx] = intQuants.biofilmConcentration().value();
-            }
-
-            if (!this->micpC_.cCalcite_.empty()) {
-                this->micpC_.cCalcite_[globalDofIdx] = intQuants.calciteConcentration().value();
+            if (this->micpC_.allocated()) {
+                this->micpC_.assign(globalDofIdx,
+                                    intQuants.microbialConcentration().value(),
+                                    intQuants.oxygenConcentration().value(),
+                                    // Rescaling back the urea concentration (see WellInterface_impl.hpp)
+                                    10 * intQuants.ureaConcentration().value(),
+                                    intQuants.biofilmConcentration().value(),
+                                    intQuants.calciteConcentration().value());
             }
 
             if (!this->bubblePointPressure_.empty()) {

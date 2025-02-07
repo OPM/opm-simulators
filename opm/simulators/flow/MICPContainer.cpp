@@ -49,6 +49,22 @@ allocate(const unsigned bufferSize)
 
 template<class Scalar>
 void MICPContainer<Scalar>::
+assign(const unsigned globalDofIdx,
+       const Scalar microbialConcentration,
+       const Scalar oxygenConcentration,
+       const Scalar ureaConcentration,
+       const Scalar biofilmConcentration,
+       const Scalar calciteConcentration)
+{
+    cMicrobes_[globalDofIdx] = microbialConcentration;
+    cOxygen_[globalDofIdx] = oxygenConcentration;
+    cUrea_[globalDofIdx] = ureaConcentration;
+    cBiofilm_[globalDofIdx] = biofilmConcentration;
+    cCalcite_[globalDofIdx] = calciteConcentration;
+}
+
+template<class Scalar>
+void MICPContainer<Scalar>::
 outputRestart(data::Solution& sol)
 {
     if (!this->allocated_) {

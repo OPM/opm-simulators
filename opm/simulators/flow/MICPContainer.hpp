@@ -40,6 +40,13 @@ class MICPContainer
 public:
     void allocate(const unsigned bufferSize);
 
+    void assign(const unsigned globalDofIdx,
+                 const Scalar microbialConcentration,
+                 const Scalar oxygenConcentration,
+                 const Scalar ureaConcentration,
+                 const Scalar biofilmConcentration,
+                 const Scalar calciteConcentration);
+
     void outputRestart(data::Solution& sol);
 
     bool allocated() const
