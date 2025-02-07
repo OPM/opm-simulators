@@ -27,10 +27,10 @@
 
 #include <opm/output/data/Solution.hpp>
 
+#include <algorithm>
 #include <array>
 #include <string>
 #include <tuple>
-
 
 namespace Opm {
 
@@ -94,6 +94,38 @@ outputRestart(data::Solution& sol)
                    });
 
     allocated_ = false;
+}
+
+template<class Scalar>
+void MICPContainer<Scalar>::
+readRestart(const unsigned globalDofIdx,
+            const unsigned elemIdx,
+            const data::Solution& sol)
+{
+    if (this->allocated_) {
+        return;
+    }
+
+    auto assign = [elemIdx, globalDofIdx, &sol](const std::string& name,
+                                                ScalarBuffer& data)
+
+    {
+        if (!data.empty() && sol.has(name)) {
+            data[elemIdx] = sol.data<double>(name)[globalDofIdx];
+        }
+    };
+
+    const auto fields = std::array{
+        std::pair{"BIOFILM",  &cBiofilm_},
+        std::pair{"CALCITE",  &cCalcite_},
+        std::pair{"MICROBES", &cMicrobes_},
+        std::pair{"OXYGEN",   &cOxygen_},
+        std::pair{"UREA",     &cUrea_},
+    };
+
+    std::for_each(fields.begin(), fields.end(),
+                  [&assign](const auto& p)
+                  { assign(p.first, *p.second); });
 }
 
 template class MICPContainer<double>;

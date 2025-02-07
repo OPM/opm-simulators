@@ -49,6 +49,10 @@ public:
 
     void outputRestart(data::Solution& sol);
 
+    void readRestart(const unsigned globalDofIdx,
+                     const unsigned elemIdx,
+                     const data::Solution& sol);
+
     bool allocated() const
     { return allocated_; }
 

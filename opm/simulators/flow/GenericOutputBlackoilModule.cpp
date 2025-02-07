@@ -762,11 +762,7 @@ setRestart(const data::Solution& sol,
     };
 
     const auto fields = std::array{
-        std::pair{"BIOFILM",  &micpC_.cBiofilm_},
-        std::pair{"CALCITE",  &micpC_.cCalcite_},
         std::pair{"FOAM",     &cFoam_},
-        std::pair{"MICROBES", &micpC_.cMicrobes_},
-        std::pair{"OXYGEN",   &micpC_.cOxygen_},
         std::pair{"PERMFACT", &permFact_},
         std::pair{"POLYMER",  &cPolymer_},
         std::pair{"PPCW",     &ppcw_},
@@ -784,12 +780,15 @@ setRestart(const data::Solution& sol,
         std::pair{"SWHY1",    &swmin_},
         std::pair{"SWMAX",    &swMax_},
         std::pair{"TEMP",     &temperature_},
-        std::pair{"UREA",     &micpC_.cUrea_},
     };
 
     std::for_each(fields.begin(), fields.end(),
                   [&assign](const auto& p)
                   { assign(p.first, *p.second); });
+
+    if (this->micpC_.allocated()) {
+        this->micpC_.readRestart(globalDofIndex, elemIdx, sol);
+    }
 }
 
 template<class FluidSystem>
