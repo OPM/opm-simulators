@@ -440,9 +440,16 @@ computeWellRatesWithALQ_(Scalar alq) const
     auto copy_well_state(this->well_state_);
     if(new_code){
         copy_well_state.setALQ(this->well_name_, alq);
+        auto& ws = copy_well_state.well(this->well_name_);
         //bool solved =
-          solveWellWithTHPConstraintAlqImplicit(copy_well_state,this->group_state_);
-        const auto& ws = copy_well_state.well(this->well_name_);
+        if(std::abs(ws.prev_surface_rates[0]+0.011574) < 1e-6){
+            auto rates = computeWellRates_(ws.thp, false);
+            ws.prev_surface_rates[0] = -rates.water;
+            ws.prev_surface_rates[1] = -rates.oil;
+            ws.prev_surface_rates[2] = -rates.gas;
+        }
+        solveWellWithTHPConstraintAlqImplicit(copy_well_state,this->group_state_);
+        
         auto bhp_tmp = ws.bhp;
         auto [bhp, bhp_is_limited] = getBhpWithLimit_(bhp_tmp);
         bool tmp = bhp_is_limited;
@@ -470,6 +477,14 @@ computeWellRatesWithALQ_(Scalar alq) const
             std::cout << "name: " << this->well_name_ << std::endl;
             std::cout << "rates is empty" << std::endl;
             std::cout << "rates_opt: " << (*rates_opt).gas << std::endl;
+            WellBhpThpCalculator<double> well_bhp_calculator(this->getWell());
+            auto rates1 = computeWellRates_(ws.bhp, false);
+            std::cout << "rates 1: " << rates1.gas << " " << rates1.oil << " " << rates1.water << std::endl;
+            DeferredLogger deferred_logger;
+            auto thp1 = well_bhp_calculator.calculateThpFromBhp(ws.surface_rates, ws.bhp, 836.0, alq, ws.thp, deferred_logger);
+            std::cout << "thp1: " << thp1 << std::endl;
+            //auto bhp1 = well_bhp_calculator.calculateBhpFromThp<double>(copy_well_state, ws.thp, 836.0, alq, ws.thp, deferred_logger);
+            //std::cout << "bhp1: " << bhp1 << std::endl;
         }
     }else{
         if(rates_opt){
