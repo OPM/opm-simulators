@@ -25,6 +25,7 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/solver.hh>
 
+#include <opm/common/CriticalError.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
@@ -377,10 +378,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void prepare(const Matrix& M, Vector& b)
         {
             OPM_TIMEBLOCK(istlSolverPrepare);
+            OPM_BEGIN_TRY_CATCH_RETHROW_AS_CRITICAL_ERROR();
+                initPrepare(M,b);
 
-            initPrepare(M,b);
-
-            prepareFlexibleSolver();
+                prepareFlexibleSolver();
+            OPM_END_TRY_CATCH_RETHROW_AS_CRITICAL_ERROR();
         }
 
 
