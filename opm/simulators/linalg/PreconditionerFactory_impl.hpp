@@ -20,7 +20,6 @@
 
 #include <config.h>
 
-#include <opm/common/CriticalError.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
@@ -777,7 +776,7 @@ PreconditionerFactory<Operator, Comm>::create(const Operator& op,
                                               const std::function<Vector()>& weightsCalculator,
                                               std::size_t pressureIndex)
 {
-    OPM_TRY_THROW_AS_CRITICAL_ERROR(return instance().doCreate(op, prm, weightsCalculator, pressureIndex));
+    return instance().doCreate(op, prm, weightsCalculator, pressureIndex);
 }
 
 template <class Operator, class Comm>
@@ -788,7 +787,7 @@ PreconditionerFactory<Operator, Comm>::create(const Operator& op,
                                               const Comm& comm,
                                               std::size_t pressureIndex)
 {
-    OPM_TRY_THROW_AS_CRITICAL_ERROR(return instance().doCreate(op, prm, weightsCalculator, pressureIndex, comm));
+    return instance().doCreate(op, prm, weightsCalculator, pressureIndex, comm);
 }
 
 
@@ -799,7 +798,7 @@ PreconditionerFactory<Operator, Comm>::create(const Operator& op,
                                               const Comm& comm,
                                               std::size_t pressureIndex)
 {
-    OPM_TRY_THROW_AS_CRITICAL_ERROR(return instance().doCreate(op, prm, std::function<Vector()>(), pressureIndex, comm));
+    return instance().doCreate(op, prm, std::function<Vector()>(), pressureIndex, comm);
 }
 
 template <class Operator, class Comm>
