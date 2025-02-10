@@ -237,6 +237,17 @@ public:
                              this->numJacobiBlocks(), this->enableEclOutput());
 #endif
 
+        // --- Add LGRs  ---
+        // Check if input file contains Lgrs.
+        const auto& lgrs = this-> eclState().getLgrs();
+        const auto lgrsSize = lgrs.size();
+        // If there are lgrs, create the grid with them, and update the leaf grid view.
+        if (lgrsSize)
+        {
+            OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
+            this->addLgrsUpdateLeafView(lgrs, lgrsSize, *(this->grid_));
+        }
+
         this->updateGridView_();
         this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
