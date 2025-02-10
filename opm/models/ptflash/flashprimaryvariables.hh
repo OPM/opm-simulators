@@ -61,6 +61,14 @@ class FlashPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     // primary variable indices
     enum { z0Idx = Indices::z0Idx };
     enum { pressure0Idx = Indices::pressure0Idx };
+    enum { water0Idx = Indices::water0Idx };
+
+    static constexpr bool waterEnabled = Indices::waterEnabled;
+
+    // phase indices
+    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
+    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
+    enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -108,10 +116,17 @@ public:
         // the energy module
         EnergyModule::setPriVarTemperatures(*this, fluidState);
 
+        // assign components total fraction
         for (int i = 0; i < numComponents - 1; ++i)
             (*this)[z0Idx + i] = getValue(fluidState.moleFraction(i));
 
-        (*this)[pressure0Idx] = getValue(fluidState.pressure(0));
+        // assign pressure
+        (*this)[pressure0Idx] = getValue(fluidState.pressure(oilPhaseIdx));
+
+        // assign water saturation
+        if constexpr (waterEnabled) {
+            (*this)[water0Idx] = getValue(fluidState.saturation(waterPhaseIdx));
+        }
     }
 
     /*!
@@ -121,11 +136,14 @@ public:
      */
     void print(std::ostream& os = std::cout) const
     {
-        os << "(p_" << FluidSystem::phaseName(0) << " = "
+        os << "(p_" << FluidSystem::phaseName(FluidSystem::oilPhaseIdx) << " = "
            << this->operator[](pressure0Idx);
         for (unsigned compIdx = 0; compIdx < numComponents - 2; ++compIdx) {
             os << ", z_" << FluidSystem::componentName(compIdx) << " = "
                << this->operator[](z0Idx + compIdx);
+        }
+        if constexpr (waterEnabled) {
+            os << ", S_w = " << this->operator[](water0Idx);
         }
         os << ")" << std::flush;
     }
