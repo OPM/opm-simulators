@@ -66,7 +66,7 @@ struct MetisParams { static constexpr auto value = "default"; };
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 struct NumJacobiBlocks { static constexpr int value = 0; };
-#endif
+#endif // HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 
 struct OwnerCellsFirst { static constexpr bool value = true; };
 struct ParsingStrictness { static constexpr auto value = "normal"; };
@@ -248,7 +248,7 @@ public:
         return numJacobiBlocks_;
 #else
         return 0;
-#endif
+#endif // HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
     }
 
     /*!
@@ -297,7 +297,7 @@ public:
     {
         return this->externalPartitionFile_;
     }
-#endif
+#endif // HAVE_MPI
 
     /*!
      * \brief Whether perforations of a well might be distributed.
@@ -367,12 +367,13 @@ protected:
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
     int numJacobiBlocks_{0};
-#endif
+#endif // HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 
     bool ownersFirst_;
 #if HAVE_MPI
     bool addCorners_;
     int numOverlap_;
+
     Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
     double imbalanceTol_;
@@ -384,7 +385,8 @@ protected:
     std::string metisParams_;
 
     std::string externalPartitionFile_{};
-#endif
+#endif // HAVE_MPI
+
     bool enableDistributedWells_;
     bool enableEclOutput_;
     bool allow_splitting_inactive_wells_;

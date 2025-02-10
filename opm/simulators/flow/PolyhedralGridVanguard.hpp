@@ -236,11 +236,17 @@ public:
         // not required for this type of grid yet (only from bdaBridge??)
         return {};
     }
+
 protected:
     void createGrids_()
     {
-        grid_ = std::make_unique<Grid>(this->eclState().getInputGrid(), this->eclState().fieldProps().porv(true));
-        cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
+        this->grid_ = std::make_unique<Grid>
+            (this->eclState().getInputGrid(),
+             this->eclState().fieldProps().porv(true));
+
+        this->cartesianIndexMapper_ =
+            std::make_unique<CartesianIndexMapper>(*this->grid_);
+
         this->updateGridView_();
         this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
