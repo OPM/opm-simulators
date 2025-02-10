@@ -14,6 +14,7 @@
         ColumnLimit: 120,
         Cpp11BracedListStyle: true,
         FixNamespaceComments: true,
+        InsertNewlineAtEOF: true,
         MaxEmptyLinesToKeep: 5,
         NamespaceIndentation: Inner,
 }
