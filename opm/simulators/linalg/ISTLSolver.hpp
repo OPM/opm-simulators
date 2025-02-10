@@ -378,11 +378,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void prepare(const Matrix& M, Vector& b)
         {
             OPM_TIMEBLOCK(istlSolverPrepare);
-            OPM_BEGIN_TRY_CATCH_RETHROW_AS_CRITICAL_ERROR();
+            try {
                 initPrepare(M,b);
 
                 prepareFlexibleSolver();
-            OPM_END_TRY_CATCH_RETHROW_AS_CRITICAL_ERROR();
+            } OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR("This is likely due to a faulty linear solver JSON specification. Check for errors related to missing nodes.");
         }
 
 
