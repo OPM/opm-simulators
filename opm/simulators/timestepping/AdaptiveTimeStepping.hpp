@@ -173,7 +173,7 @@ private:
         const SimulatorTimer& simulatorTimer_() const;
         boost::posix_time::ptime startDateTime_() const;
         double timeStepControlComputeEstimate_(
-            const double dt, const int iterations, double elapsed) const;
+            const double dt, const int iterations, AdaptiveSimulatorTimer& substepTimer) const;
         bool timeStepVerbose_() const;
         void updateSuggestedNextStep_();
         bool useNewtonIteration_() const;
@@ -229,6 +229,7 @@ public:
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectPID();
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectPIDIt();
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectSimple();
+    static AdaptiveTimeStepping<TypeTag> serializationTestObject3rdOrder();
 
 private:
     void maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_step,

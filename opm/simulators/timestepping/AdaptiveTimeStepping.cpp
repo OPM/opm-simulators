@@ -212,6 +212,14 @@ createController(const UnitSystem& unitSystem)
                  true
              };
          }},
+        {"general3rdorder",
+         [tol]() {
+             return RetVal{
+                 TimeStepControlType::General3rdOrder,
+                 std::make_unique<General3rdOrderController>(tol),
+                 false
+             };
+        }},
         {"hardcoded",
          []() {
              const std::string filename = Parameters::Get<Parameters::TimeStepControlFileName>(); // "timesteps"
