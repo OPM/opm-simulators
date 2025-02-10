@@ -1010,6 +1010,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/BlackoilWellModelWBP.hpp
   opm/simulators/wells/ConnectionIndexMap.hpp
   opm/simulators/wells/ConnFiltrateData.hpp
+  opm/simulators/wells/ConnFracStatistics.hpp
   opm/simulators/wells/FractionCalculator.hpp
   opm/simulators/wells/GasLiftCommon.hpp
   opm/simulators/wells/GasLiftGroupInfo.hpp
@@ -1041,6 +1042,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/RegionAttributeHelpers.hpp
   opm/simulators/wells/RegionAverageCalculator.hpp
   opm/simulators/wells/RuntimePerforation.hpp
+  opm/simulators/wells/RunningStatistics.hpp
   opm/simulators/wells/SingleWellState.hpp
   opm/simulators/wells/StandardWell.hpp
   opm/simulators/wells/StandardWell_impl.hpp
