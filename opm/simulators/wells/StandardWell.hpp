@@ -207,7 +207,7 @@ namespace Opm
                                         const Well::InjectionControls& inj_controls,
                                         const Well::ProductionControls& prod_controls,
                                         WellState<Scalar>& well_state,
-                                        const GroupState<Scalar>& group_state,
+                                        GroupState<Scalar>& group_state,
                                         DeferredLogger& deferred_logger, 
                                         const bool fixed_control = false,
                                         const bool fixed_status = false) override;
