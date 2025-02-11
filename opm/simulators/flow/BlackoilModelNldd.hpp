@@ -362,23 +362,55 @@ public:
         return local_reports_accumulated_;
     }
 
+    /// Write the partition vector to a file in ResInsight compatible format for inspection
+    /// and a partition file for each rank, that can be used as input for OPM.
     void writePartitions(const std::filesystem::path& odir) const
     {
         const auto& elementMapper = this->model_.simulator().model().elementMapper();
         const auto& cartMapper = this->model_.simulator().vanguard().cartesianIndexMapper();
+        const auto& dims = cartMapper.cartesianDimensions();
+        const auto total_size = dims[0] * dims[1] * dims[2];
 
         const auto& grid = this->model_.simulator().vanguard().grid();
         const auto& comm = grid.comm();
-        const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
 
-        std::ofstream pfile { odir / fmt::format("{1:0>{0}}", nDigit, comm.rank()) };
+        // Create a full-sized vector initialized with -1 (indicating inactive cells)
+        auto full_partition = std::vector<int>(total_size, -1);
 
+        // Fill active cell values for this rank
         const auto p = this->reconstitutePartitionVector();
         auto i = 0;
         for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
+            full_partition[cartMapper.cartesianIndex(elementMapper.index(cell))] = p[i++];
+        }
+
+        // Gather all partitions using max operation
+        comm.max(full_partition.data(), full_partition.size());
+
+        // Only rank 0 writes the file
+        if (this->rank_ == 0) {
+            auto fname = odir / "ResInsight_compatible_partition.txt";
+            std::ofstream resInsightFile { fname };
+
+            // Write header
+            resInsightFile << "NLDD_DOM" << '\n';
+
+            // Write all cells, including inactive ones
+            for (const auto& val : full_partition) {
+                resInsightFile << val << '\n';
+            }
+            resInsightFile << "/" << '\n';
+        }
+
+        const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
+        auto partition_fname = odir / fmt::format("{1:0>{0}}", nDigit, comm.rank());
+        std::ofstream pfile { partition_fname };
+
+        auto cell_index = 0;
+        for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
             pfile << comm.rank() << ' '
                   << cartMapper.cartesianIndex(elementMapper.index(cell)) << ' '
-                  << p[i++] << '\n';
+                  << p[cell_index++] << '\n';
         }
     }
 
