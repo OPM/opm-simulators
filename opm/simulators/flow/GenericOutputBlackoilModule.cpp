@@ -527,36 +527,8 @@ assignToSolution(data::Solution& sol)
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
     };
 
-    // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
-    // and also, we need to map these values.
-    // TODO: the following should go to a function
     if (this->isCompositional_) {
-        auto compositionalEntries = std::vector<DataEntry>{};
-        {
-            // ZMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("ZMF{}", i + 1);  // Generate ZMF1, ZMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity, compC_.moleFractions_[i]);
-            }
-
-            // XMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("XMF{}", i + 1);  // Generate XMF1, XMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
-                                                  compC_.phaseMoleFractions_[oilPhaseIdx][i]);
-            }
-
-            // YMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("YMF{}", i + 1);  // Generate YMF1, YMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
-                                                  compC_.phaseMoleFractions_[gasPhaseIdx][i]);
-            }
-        }
-
-        for (auto& array: compositionalEntries) {
-            doInsert(array, data::TargetType::RESTART_SOLUTION);
-        }
+        this->compC_.outputRestart(sol);
     }
 
     for (auto& array : baseSolutionVector) {

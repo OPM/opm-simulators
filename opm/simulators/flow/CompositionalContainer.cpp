@@ -27,6 +27,13 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
 
+#include <opm/output/data/Solution.hpp>
+
+#include <algorithm>
+#include <tuple>
+
+#include <fmt/format.h>
+
 namespace Opm {
 
 template<class FluidSystem>
@@ -57,6 +64,61 @@ allocate(const unsigned bufferSize,
             phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
         }
     }
+}
+
+template<class FluidSystem>
+void CompositionalContainer<FluidSystem>::
+outputRestart(data::Solution& sol)
+{
+    using DataEntry =
+        std::tuple<std::string, UnitSystem::measure, std::vector<Scalar>&>;
+
+    auto doInsert = [&sol](DataEntry&       entry,
+                           const data::TargetType target)
+    {
+        if (std::get<2>(entry).empty()) {
+            return;
+        }
+
+        sol.insert(std::get<std::string>(entry),
+                   std::get<UnitSystem::measure>(entry),
+                   std::move(std::get<2>(entry)),
+                   target);
+    };
+
+    auto entries = std::vector<DataEntry>{};
+
+    // ZMF
+    if (!moleFractions_[0].empty()) {
+        for (int i = 0; i < numComponents; ++i) {
+            const auto name = fmt::format("ZMF{}", i + 1);  // Generate ZMF1, ZMF2, ...
+            entries.emplace_back(name, UnitSystem::measure::identity, moleFractions_[i]);
+        }
+    }
+
+    // XMF
+    if (!phaseMoleFractions_[oilPhaseIdx][0].empty()) {
+        for (int i = 0; i < numComponents; ++i) {
+            const auto name = fmt::format("XMF{}", i + 1);  // Generate XMF1, XMF2, ...
+            entries.emplace_back(name, UnitSystem::measure::identity,
+                                 phaseMoleFractions_[oilPhaseIdx][i]);
+        }
+    }
+
+    // YMF
+    if (!phaseMoleFractions_[gasPhaseIdx][0].empty()) {
+        for (int i = 0; i < numComponents; ++i) {
+            const auto name = fmt::format("YMF{}", i + 1);  // Generate YMF1, YMF2, ...
+            entries.emplace_back(name, UnitSystem::measure::identity,
+                                 phaseMoleFractions_[gasPhaseIdx][i]);
+        }
+    }
+
+    std::for_each(entries.begin(), entries.end(),
+                  [&doInsert](auto& array)
+                  { doInsert(array, data::TargetType::RESTART_SOLUTION); });
+
+    this->allocated_ = false;
 }
 
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;

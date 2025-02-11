@@ -33,6 +33,8 @@
 
 namespace Opm {
 
+namespace data { class Solution; }
+
 template<class FluidSystem>
 class CompositionalContainer
 {
@@ -49,6 +51,8 @@ class CompositionalContainer
 public:
     void allocate(const unsigned bufferSize,
                   std::map<std::string, int>& rstKeywords);
+
+    void outputRestart(data::Solution& sol);
 
     bool allocated_ = false;
     // total mole fractions for each component
