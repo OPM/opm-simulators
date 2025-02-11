@@ -118,6 +118,104 @@ resize(const int numWellEq)
 }
 
 template<class FluidSystem, class Indices>
+bool StandardWellPrimaryVariables<FluidSystem,Indices>::
+consistent(const WellState<Scalar>& well_state) const
+{
+    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Gas = BlackoilPhases::Vapour;
+
+    const int well_index = well_.indexOfWell();
+    const int np = well_.numPhases();
+    const auto& pu = well_.phaseUsage();
+    const auto& ws = well_state.well(well_index);
+    // the weighted total well rate
+    Scalar total_well_rate = 0.0;
+    for (int p = 0; p < np; ++p) {
+        total_well_rate += well_.scalingFactor(p) * ws.surface_rates[p];
+    }
+
+    // Not: for the moment, the first primary variable for the injectors is not G_total. The injection rate
+    // under surface condition is used here
+    auto approx = [](auto a,auto b){ return std::abs(a-b) < 1e-10; };
+    bool ok = true;
+    if (well_.isInjector()) {
+        switch (well_.wellEcl().injectorType()) {
+        case InjectorType::WATER:
+            ok = ok && approx(value_[WQTotal],ws.surface_rates[pu.phase_pos[Water]]);
+            break;
+        case InjectorType::GAS:
+            ok = ok && approx(value_[WQTotal],ws.surface_rates[pu.phase_pos[Gas]]);
+            break;
+        case InjectorType::OIL:
+            ok = ok && approx(value_[WQTotal], ws.surface_rates[pu.phase_pos[Oil]]);
+            break;
+        case InjectorType::MULTI:
+            // Not supported.
+            ok = false;
+            assert(false);
+            break;
+        }
+    } else {
+        ok = ok && approx(value_[WQTotal], total_well_rate);     
+    }
+    if (std::abs(total_well_rate) > 0.) {
+        if constexpr (has_wfrac_variable) {
+            auto tmp = well_.scalingFactor(pu.phase_pos[Water]) * ws.surface_rates[pu.phase_pos[Water]] / total_well_rate; 
+            ok = ok && approx(value_[WFrac], tmp);
+        }
+        if constexpr (has_gfrac_variable) {
+            auto tmp =  well_.scalingFactor(pu.phase_pos[Gas]) *
+                            (ws.surface_rates[pu.phase_pos[Gas]] -
+                             (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate;
+            ok = ok && approx(value_[GFrac], tmp) ;
+        }
+        if constexpr (Indices::enableSolvent) {
+            //value_[SFrac] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
+        }
+
+    } else { // total_well_rate == 0
+        if (well_.isInjector()) {
+            // only single phase injection handled
+            if constexpr (has_wfrac_variable) {
+                // if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                //     auto phase = well_.wellEcl().getInjectionProperties().injectorType;
+                //     if (phase == InjectorType::WATER) {
+                //         value_[WFrac] = 1.0;
+                //     } else {
+                //         value_[WFrac] = 0.0;
+                //     }
+                // }
+            }
+            if constexpr (has_gfrac_variable) {
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    auto phase = well_.wellEcl().getInjectionProperties().injectorType;
+                    if (phase == InjectorType::GAS) {
+                        ok = ok && approx(value_[GFrac], (1.0 - well_.rsRvInj()));
+                      
+                    } else {
+                        ok = ok && approx(value_[GFrac], 0.0);
+                    }
+                }
+            }
+
+            // TODO: it is possible to leave injector as a oil well,
+            // when F_w and F_g both equals to zero, not sure under what kind of circumstance
+            // this will happen.
+        } else if (well_.isProducer()) { // producers
+       
+        } else {
+           assert(false);
+        }
+    }
+
+    // BHP
+    ok = ok && approx(value_[Bhp], ws.bhp);
+    return ok;
+}
+
+
+template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
 update(const WellState<Scalar>& well_state,
        const bool stop_or_zero_rate_target,
