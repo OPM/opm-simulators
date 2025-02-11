@@ -460,7 +460,8 @@ This is not supported in the current NLDD implementation.)",
         };
     }
 
-    OPM_END_PARALLEL_TRY_CATCH(std::string { "ZoltanPartitioner::connectWells()" }, comm)
+    OPM_END_PARALLEL_TRY_CATCH(std::string{"ZoltanPartitioner::connectWells(): Distributed well detected. "
+                                          "This is not supported in the current NLDD implementation"}, comm)
 }
 
 template <class GridView, class Element>
