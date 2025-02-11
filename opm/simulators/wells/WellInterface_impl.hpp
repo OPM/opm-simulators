@@ -1288,22 +1288,18 @@ namespace Opm
             case Well::ProducerCMode::ORAT:
             {
                 Scalar current_rate = -ws.surface_rates[ pu.phase_pos[Oil] ];
-                if (!initialize) {
-                    ws.surface_rates[ pu.phase_pos[Oil] ] *=  controls.oil_rate/current_rate;
+                // for trivial rates or opposite direction we don't just scale the rates
+                // but use either the potentials or the mobility ratio to initial the well rates
+                if (current_rate > 0.0) {
+                    for (int p = 0; p<np; ++p) {
+                        ws.surface_rates[p] *= controls.oil_rate/current_rate;
+                    }
                 } else {
-                    // for trivial rates or opposite direction we don't just scale the rates
-                    // but use either the potentials or the mobility ratio to initial the well rates
-                    if (current_rate > 0.0) {
+                    const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
+                    double control_fraction = fractions[pu.phase_pos[Oil]];
+                    if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            ws.surface_rates[p] *= controls.oil_rate/current_rate;
-                        }
-                    } else {
-                        const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
-                        double control_fraction = fractions[pu.phase_pos[Oil]];
-                        if (control_fraction != 0.0) {
-                            for (int p = 0; p<np; ++p) {
-                                ws.surface_rates[p] = - fractions[p] * controls.oil_rate/control_fraction;
-                            }
+                            ws.surface_rates[p] = - fractions[p] * controls.oil_rate/control_fraction;
                         }
                     }
                 }
@@ -1312,22 +1308,18 @@ namespace Opm
             case Well::ProducerCMode::WRAT:
             {
                 Scalar current_rate = -ws.surface_rates[ pu.phase_pos[Water] ];
-                if (!initialize) {
-                    ws.surface_rates[ pu.phase_pos[Water] ] *=  controls.water_rate/current_rate;
+                // for trivial rates or opposite direction we don't just scale the rates
+                // but use either the potentials or the mobility ratio to initial the well rates
+                if (current_rate > 0.0) {
+                    for (int p = 0; p<np; ++p) {
+                        ws.surface_rates[p] *= controls.water_rate/current_rate;
+                    }
                 } else {
-                    // for trivial rates or opposite direction we don't just scale the rates
-                    // but use either the potentials or the mobility ratio to initial the well rates
-                    if (current_rate > 0.0) {
+                    const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
+                    const Scalar control_fraction = fractions[pu.phase_pos[Water]];
+                    if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            ws.surface_rates[p] *= controls.water_rate/current_rate;
-                        }
-                    } else {
-                        const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
-                        const Scalar control_fraction = fractions[pu.phase_pos[Water]];
-                        if (control_fraction != 0.0) {
-                            for (int p = 0; p<np; ++p) {
-                                ws.surface_rates[p] = - fractions[p] * controls.water_rate / control_fraction;
-                            }
+                            ws.surface_rates[p] = - fractions[p] * controls.water_rate / control_fraction;
                         }
                     }
                 }
@@ -1336,22 +1328,18 @@ namespace Opm
             case Well::ProducerCMode::GRAT:
             {
                 Scalar current_rate = -ws.surface_rates[pu.phase_pos[Gas] ];
-                if (!initialize) {
-                    ws.surface_rates[ pu.phase_pos[Gas] ] *=  controls.gas_rate/current_rate;
+                // or trivial rates or opposite direction we don't just scale the rates
+                // but use either the potentials or the mobility ratio to initial the well rates
+                if (current_rate > 0.0) {
+                    for (int p = 0; p<np; ++p) {
+                        ws.surface_rates[p] *= controls.gas_rate/current_rate;
+                    }
                 } else {
-                    // or trivial rates or opposite direction we don't just scale the rates
-                    // but use either the potentials or the mobility ratio to initial the well rates
-                    if (current_rate > 0.0) {
+                    const std::vector<Scalar > fractions = initialWellRateFractions(simulator, well_state);
+                    const Scalar control_fraction = fractions[pu.phase_pos[Gas]];
+                    if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            ws.surface_rates[p] *= controls.gas_rate/current_rate;
-                        }
-                    } else {
-                        const std::vector<Scalar > fractions = initialWellRateFractions(simulator, well_state);
-                        const Scalar control_fraction = fractions[pu.phase_pos[Gas]];
-                        if (control_fraction != 0.0) {
-                            for (int p = 0; p<np; ++p) {
-                                ws.surface_rates[p] = - fractions[p] * controls.gas_rate / control_fraction;
-                            }
+                            ws.surface_rates[p] = - fractions[p] * controls.gas_rate / control_fraction;
                         }
                     }
                 }
@@ -1363,23 +1351,18 @@ namespace Opm
             {
                 Scalar current_rate = - ws.surface_rates[ pu.phase_pos[Water] ]
                                       - ws.surface_rates[ pu.phase_pos[Oil] ];
-                if (!initialize) {
-                    ws.surface_rates[ pu.phase_pos[Water] ] *=  controls.liquid_rate/current_rate;
-                    ws.surface_rates[ pu.phase_pos[Oil] ] *=  controls.liquid_rate/current_rate;
+                // or trivial rates or opposite direction we don't just scale the rates
+                // but use either the potentials or the mobility ratio to initial the well rates
+                if (current_rate > 0.0) {
+                    for (int p = 0; p<np; ++p) {
+                        ws.surface_rates[p] *= controls.liquid_rate/current_rate;
+                    }
                 } else {
-                    // or trivial rates or opposite direction we don't just scale the rates
-                    // but use either the potentials or the mobility ratio to initial the well rates
-                    if (current_rate > 0.0) {
+                    const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
+                    const Scalar control_fraction = fractions[pu.phase_pos[Water]] + fractions[pu.phase_pos[Oil]];
+                    if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            ws.surface_rates[p] *= controls.liquid_rate/current_rate;
-                        }
-                    } else {
-                        const std::vector<Scalar> fractions = initialWellRateFractions(simulator, well_state);
-                        const Scalar control_fraction = fractions[pu.phase_pos[Water]] + fractions[pu.phase_pos[Oil]];
-                        if (control_fraction != 0.0) {
-                            for (int p = 0; p<np; ++p) {
-                                ws.surface_rates[p] = - fractions[p] * controls.liquid_rate / control_fraction;
-                            }
+                            ws.surface_rates[p] = - fractions[p] * controls.liquid_rate / control_fraction;
                         }
                     }
                 }
