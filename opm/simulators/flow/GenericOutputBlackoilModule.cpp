@@ -1294,26 +1294,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     if (this->isCompositional_) {
-        if (rstKeywords["ZMF"] > 0) {
-            rstKeywords["ZMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                compC_.moleFractions_[i].resize(bufferSize, 0.0);
-            }
-        }
-
-        if (rstKeywords["XMF"] > 0 && FluidSystem::phaseIsActive(oilPhaseIdx)) {
-            rstKeywords["XMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                compC_.phaseMoleFractions_[oilPhaseIdx][i].resize(bufferSize, 0.0);
-            }
-        }
-
-        if (rstKeywords["YMF"] > 0 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-            rstKeywords["YMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                compC_.phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
-            }
-        }
+        this->compC_.allocate(bufferSize, rstKeywords);
     }
 
 

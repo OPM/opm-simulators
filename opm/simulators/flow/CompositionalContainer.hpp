@@ -27,6 +27,8 @@
 #define OPM_COMPOSITIONAL_CONTAINER_HPP
 
 #include <array>
+#include <map>
+#include <string>
 #include <vector>
 
 namespace Opm {
@@ -38,9 +40,17 @@ class CompositionalContainer
     using ScalarBuffer = std::vector<Scalar>;
 
     static constexpr int numComponents = FluidSystem::numComponents;
+
     static constexpr int numPhases = FluidSystem::numPhases;
+    static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
+    static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
 public:
+    void allocate(const unsigned bufferSize,
+                  std::map<std::string, int>& rstKeywords);
+
+    bool allocated_ = false;
     // total mole fractions for each component
     std::array<ScalarBuffer, numComponents> moleFractions_;
     // mole fractions for each component in each phase
