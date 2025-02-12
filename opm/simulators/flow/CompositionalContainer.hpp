@@ -58,6 +58,9 @@ public:
     void assignMoleFractions(const unsigned globalDofIdx,
                              const AssignFunction& fractions);
 
+    void assignOilFractions(const unsigned globalDofIdx,
+                            const AssignFunction& fractions);
+
     void outputRestart(data::Solution& sol);
 
     bool allocated() const

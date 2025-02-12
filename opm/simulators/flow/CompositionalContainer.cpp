@@ -82,6 +82,20 @@ assignMoleFractions(const unsigned globalDofIdx,
 
 template<class FluidSystem>
 void CompositionalContainer<FluidSystem>::
+assignOilFractions(const unsigned globalDofIdx,
+                   const AssignFunction& fractions)
+{
+    if (phaseMoleFractions_[oilPhaseIdx][0].empty()) {
+        return;
+    }
+    std::for_each(phaseMoleFractions_[oilPhaseIdx].begin(),
+                  phaseMoleFractions_[oilPhaseIdx].end(),
+                  [globalDofIdx, &fractions, c = 0](auto& comp) mutable
+                  { comp[globalDofIdx] = fractions(c++); });
+}
+
+template<class FluidSystem>
+void CompositionalContainer<FluidSystem>::
 outputRestart(data::Solution& sol)
 {
     using DataEntry =

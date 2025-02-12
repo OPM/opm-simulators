@@ -195,13 +195,15 @@ public:
                 this->compC_.assignMoleFractions(globalDofIdx,
                                                  [&fs](const unsigned compIdx)
                                                  { return getValue(fs.moleFraction(compIdx)); });
+
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                    this->compC_.assignOilFractions(globalDofIdx,
+                                                    [&fs](const unsigned compIdx)
+                                                    { return getValue(fs.moleFraction(oilPhaseIdx, compIdx)); });
+                }
             }
             // XMF and YMF
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    if (this->compC_.phaseMoleFractions_[oilPhaseIdx][compIdx].empty()) continue;
-                    this->compC_.phaseMoleFractions_[oilPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(oilPhaseIdx, compIdx));
-                }
                 if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
                     if (this->compC_.phaseMoleFractions_[gasPhaseIdx][compIdx].empty()) continue;
                     this->compC_.phaseMoleFractions_[gasPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(gasPhaseIdx, compIdx));
