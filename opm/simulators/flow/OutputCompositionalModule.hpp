@@ -57,8 +57,7 @@
 #include <vector>
 
 
-namespace Opm
-{
+namespace Opm {
 
 // forward declaration
 template <class TypeTag>
@@ -196,17 +195,16 @@ public:
                                                  [&fs](const unsigned compIdx)
                                                  { return getValue(fs.moleFraction(compIdx)); });
 
+                if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    this->compC_.assignGasFractions(globalDofIdx,
+                                                    [&fs](const unsigned compIdx)
+                                                    { return getValue(fs.moleFraction(gasPhaseIdx, compIdx)); });
+                }
+
                 if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                     this->compC_.assignOilFractions(globalDofIdx,
                                                     [&fs](const unsigned compIdx)
                                                     { return getValue(fs.moleFraction(oilPhaseIdx, compIdx)); });
-                }
-            }
-            // XMF and YMF
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    if (this->compC_.phaseMoleFractions_[gasPhaseIdx][compIdx].empty()) continue;
-                    this->compC_.phaseMoleFractions_[gasPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(gasPhaseIdx, compIdx));
                 }
             }
 

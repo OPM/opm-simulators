@@ -55,6 +55,9 @@ public:
 
     using AssignFunction = std::function<Scalar(const unsigned)>;
 
+    void assignGasFractions(const unsigned globalDofIdx,
+                            const AssignFunction& fractions);
+
     void assignMoleFractions(const unsigned globalDofIdx,
                              const AssignFunction& fractions);
 

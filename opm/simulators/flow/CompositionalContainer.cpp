@@ -68,6 +68,21 @@ allocate(const unsigned bufferSize,
 
 template<class FluidSystem>
 void CompositionalContainer<FluidSystem>::
+assignGasFractions(const unsigned globalDofIdx,
+                   const AssignFunction& fractions)
+{
+    if (phaseMoleFractions_[gasPhaseIdx][0].empty()) {
+        return;
+    }
+
+    std::for_each(phaseMoleFractions_[gasPhaseIdx].begin(),
+                  phaseMoleFractions_[gasPhaseIdx].end(),
+                  [globalDofIdx, &fractions, c = 0](auto& comp) mutable
+                  { comp[globalDofIdx] = fractions(c++); });
+}
+
+template<class FluidSystem>
+void CompositionalContainer<FluidSystem>::
 assignMoleFractions(const unsigned globalDofIdx,
                     const AssignFunction& fractions)
 {
@@ -88,6 +103,7 @@ assignOilFractions(const unsigned globalDofIdx,
     if (phaseMoleFractions_[oilPhaseIdx][0].empty()) {
         return;
     }
+
     std::for_each(phaseMoleFractions_[oilPhaseIdx].begin(),
                   phaseMoleFractions_[oilPhaseIdx].end(),
                   [globalDofIdx, &fractions, c = 0](auto& comp) mutable
