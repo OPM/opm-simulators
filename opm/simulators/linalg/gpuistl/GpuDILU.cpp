@@ -37,6 +37,7 @@
 #include <functional>
 #include <utility>
 #include <string>
+
 namespace Opm::gpuistl
 {
 
@@ -93,7 +94,8 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, int
         }
     }
 
-    computeDiagAndMoveReorderedData(m_moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
+    reorderAndSplitMatrix(m_moveThreadBlockSize);
+    computeDiagonal(m_DILUFactorizationThreadBlockSize);
 
     if (m_tuneThreadBlockSizes) {
         tuneThreadBlockSizes();
@@ -110,10 +112,31 @@ template <class M, class X, class Y, int l>
 void
 GpuDILU<M, X, Y, l>::apply(X& v, const Y& d)
 {
+    // ensure that this stream only starts doing work when main stream is completed up to this point
+    OPM_GPU_SAFE_CALL(cudaEventRecord(m_before.get(), 0));
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(m_stream.get(), m_before.get(), 0));
+
     OPM_TIMEBLOCK(prec_apply);
     {
-        apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
+        const auto ptrs = std::make_pair(v.data(), d.data());
+
+        auto it = m_apply_graphs.find(ptrs);
+
+        if (it == m_apply_graphs.end()) {
+            OPM_GPU_SAFE_CALL(cudaStreamBeginCapture(m_stream.get(), cudaStreamCaptureModeGlobal));
+
+            // The apply functions contains lots of small function calls which call a kernel each
+            apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
+
+            OPM_GPU_SAFE_CALL(cudaStreamEndCapture(m_stream.get(), &m_apply_graphs[ptrs].get()));
+            OPM_GPU_SAFE_CALL(cudaGraphInstantiate(&m_executableGraphs[ptrs].get(), m_apply_graphs[ptrs].get(), nullptr, nullptr, 0));
+        }
+        OPM_GPU_SAFE_CALL(cudaGraphLaunch(m_executableGraphs[ptrs].get(), 0));
     }
+
+    // ensure that main stream only continues after this stream is completed
+    OPM_GPU_SAFE_CALL(cudaEventRecord(m_after.get(), m_stream.get()));
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(0, m_after.get(), 0));
 }
 
 template <class M, class X, class Y, int l>
@@ -135,7 +158,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     m_gpuDInvFloat->data(),
                     d.data(),
                     v.data(),
-                    lowerSolveThreadBlockSize);
+                    lowerSolveThreadBlockSize,
+                    m_stream.get());
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG) {
                 detail::DILU::solveLowerLevelSetSplit<blocksize_, field_type, float, field_type>(
                     m_gpuMatrixReorderedLowerFloat->getNonZeroValues().data(),
@@ -147,7 +171,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     m_gpuDInv.data(),
                     d.data(),
                     v.data(),
-                    lowerSolveThreadBlockSize);
+                    lowerSolveThreadBlockSize,
+                    m_stream.get());
             } else {
                 detail::DILU::solveLowerLevelSetSplit<blocksize_, field_type, field_type, field_type>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
@@ -159,7 +184,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     m_gpuDInv.data(),
                     d.data(),
                     v.data(),
-                    lowerSolveThreadBlockSize);
+                    lowerSolveThreadBlockSize,
+                    m_stream.get());
             }
         } else {
             detail::DILU::solveLowerLevelSet<field_type, blocksize_>(
@@ -172,7 +198,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                 m_gpuDInv.data(),
                 d.data(),
                 v.data(),
-                lowerSolveThreadBlockSize);
+                lowerSolveThreadBlockSize,
+                m_stream.get());
         }
         levelStartIdx += numOfRowsInLevel;
     }
@@ -193,7 +220,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     numOfRowsInLevel,
                     m_gpuDInvFloat->data(),
                     v.data(),
-                    upperSolveThreadBlockSize);
+                    upperSolveThreadBlockSize,
+                    m_stream.get());
             } else if (m_mixedPrecisionScheme == MatrixStorageMPScheme::DOUBLE_DIAG_FLOAT_OFFDIAG){
                 detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, float>(
                     m_gpuMatrixReorderedUpperFloat->getNonZeroValues().data(),
@@ -204,7 +232,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     numOfRowsInLevel,
                     m_gpuDInv.data(),
                     v.data(),
-                    upperSolveThreadBlockSize);
+                    upperSolveThreadBlockSize,
+                    m_stream.get());
             } else {
                 detail::DILU::solveUpperLevelSetSplit<blocksize_, field_type, field_type>(
                     m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
@@ -215,7 +244,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                     numOfRowsInLevel,
                     m_gpuDInv.data(),
                     v.data(),
-                    upperSolveThreadBlockSize);
+                    upperSolveThreadBlockSize,
+                    m_stream.get());
             }
         } else {
             detail::DILU::solveUpperLevelSet<field_type, blocksize_>(
@@ -227,7 +257,8 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
                 numOfRowsInLevel,
                 m_gpuDInv.data(),
                 v.data(),
-                upperSolveThreadBlockSize);
+                upperSolveThreadBlockSize,
+                m_stream.get());
         }
     }
 }
@@ -252,7 +283,9 @@ GpuDILU<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
     {
-        update(m_moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);
+        m_gpuMatrix.updateNonzeroValues(m_cpuMatrix); // send updated matrix to the gpu
+        reorderAndSplitMatrix(m_moveThreadBlockSize);
+        computeDiagonal(m_DILUFactorizationThreadBlockSize);
     }
 }
 
@@ -260,13 +293,22 @@ template <class M, class X, class Y, int l>
 void
 GpuDILU<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationBlockSize)
 {
-    m_gpuMatrix.updateNonzeroValues(m_cpuMatrix, true); // send updated matrix to the gpu
-    computeDiagAndMoveReorderedData(moveThreadBlockSize, factorizationBlockSize);
+    // ensure that this stream only starts doing work when main stream is completed up to this point
+    OPM_GPU_SAFE_CALL(cudaEventRecord(m_before.get(), 0));
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(m_stream.get(), m_before.get(), 0));
+
+    m_gpuMatrix.updateNonzeroValues(m_cpuMatrix); // send updated matrix to the gpu
+    reorderAndSplitMatrix(moveThreadBlockSize);
+    computeDiagonal(factorizationBlockSize);
+
+    // ensure that main stream only continues after this stream is completed
+    OPM_GPU_SAFE_CALL(cudaEventRecord(m_after.get(), m_stream.get()));
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(0, m_after.get(), 0));
 }
 
 template <class M, class X, class Y, int l>
 void
-GpuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData(int moveThreadBlockSize, int factorizationBlockSize)
+GpuDILU<M, X, Y, l>::reorderAndSplitMatrix(int moveThreadBlockSize)
 {
     if (m_splitMatrix) {
         detail::copyMatDataToReorderedSplit<field_type, blocksize_>(
@@ -290,7 +332,12 @@ GpuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData(int moveThreadBlockSize, in
                                                                 m_gpuMatrixReordered->N(),
                                                                 moveThreadBlockSize);
     }
+}
 
+template <class M, class X, class Y, int l>
+void
+GpuDILU<M, X, Y, l>::computeDiagonal(int factorizationBlockSize)
+{
     int levelStartIdx = 0;
     for (int level = 0; level < m_levelSets.size(); ++level) {
         const int numOfRowsInLevel = m_levelSets[level].size();

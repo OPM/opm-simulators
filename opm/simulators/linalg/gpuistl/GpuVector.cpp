@@ -268,6 +268,19 @@ GpuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 
 template <class T>
 void
+GpuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements, cudaStream_t stream)
+{
+    if (numberOfElements > dim()) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Requesting to copy too many elements. Vector has {} elements, while {} was requested.",
+                              dim(),
+                              numberOfElements));
+    }
+    OPM_GPU_SAFE_CALL(cudaMemcpyAsync(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice, stream));
+}
+
+template <class T>
+void
 GpuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     assertSameSize(detail::to_int(numberOfElements));
