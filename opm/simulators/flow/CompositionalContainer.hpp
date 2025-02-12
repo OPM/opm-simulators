@@ -64,7 +64,8 @@ public:
     void assignOilFractions(const unsigned globalDofIdx,
                             const AssignFunction& fractions);
 
-    void outputRestart(data::Solution& sol);
+    void outputRestart(data::Solution& sol,
+                       ScalarBuffer& oil_saturation);
 
     bool allocated() const
     { return allocated_; }

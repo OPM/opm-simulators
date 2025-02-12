@@ -23,8 +23,6 @@
 #include <config.h>
 #include <opm/simulators/flow/CompositionalContainer.hpp>
 
-#include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
 
 #include <opm/output/data/Solution.hpp>
@@ -42,8 +40,8 @@ allocate(const unsigned bufferSize,
          std::map<std::string, int>& rstKeywords)
 {
     if (auto& zmf = rstKeywords["ZMF"]; zmf > 0) {
-        zmf = 0;
         this->allocated_ = true;
+        zmf = 0;
         for (int i = 0; i < numComponents; ++i) {
             moleFractions_[i].resize(bufferSize, 0.0);
         }
@@ -112,7 +110,8 @@ assignOilFractions(const unsigned globalDofIdx,
 
 template<class FluidSystem>
 void CompositionalContainer<FluidSystem>::
-outputRestart(data::Solution& sol)
+outputRestart(data::Solution& sol,
+              ScalarBuffer& oil_saturation)
 {
     using DataEntry =
         std::tuple<std::string, UnitSystem::measure, std::vector<Scalar>&>;
@@ -158,23 +157,16 @@ outputRestart(data::Solution& sol)
         }
     }
 
+    if (!oil_saturation.empty()) {
+        entries.emplace_back("SOIL", UnitSystem::measure::identity, oil_saturation);
+    }
+
     std::for_each(entries.begin(), entries.end(),
                   [&doInsert](auto& array)
                   { doInsert(array, data::TargetType::RESTART_SOLUTION); });
 
     this->allocated_ = false;
 }
-
-template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
-
-#define INSTANTIATE_TYPE(T) \
-    template class CompositionalContainer<FS<T>>;
-
-INSTANTIATE_TYPE(double)
-
-#if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_TYPE(float)
-#endif
 
 #define INSTANTIATE_COMP(NUM) \
     template<class T> using FS##NUM = GenericOilGasFluidSystem<T, NUM>; \

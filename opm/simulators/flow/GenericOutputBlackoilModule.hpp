@@ -32,7 +32,6 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
-#include <opm/simulators/flow/CompositionalContainer.hpp>
 #include <opm/simulators/flow/ExtboContainer.hpp>
 #include <opm/simulators/flow/FIPContainer.hpp>
 #include <opm/simulators/flow/FlowsData.hpp>
@@ -320,8 +319,7 @@ protected:
                                 bool enableBrine,
                                 bool enableSaltPrecipitation,
                                 bool enableExtbo,
-                                bool enableMICP,
-                                bool isCompositional = false);
+                                bool enableMICP);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
@@ -330,11 +328,12 @@ protected:
                         const bool isRestart,
                         const bool vapparsActive = false,
                         const bool enablePCHysteresis = false,
-                        const bool enableNonWettingHysteresis =false,
+                        const bool enableNonWettingHysteresis = false,
                         const bool enableWettingHysteresis = false,
                         unsigned numTracers = 0,
                         const std::vector<bool>& enableSolTracers = {},
-                        unsigned numOutputNnc = 0);
+                        unsigned numOutputNnc = 0,
+                        std::map<std::string, int> rstKeywords = {});
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -391,7 +390,6 @@ protected:
     bool enableSaltPrecipitation_{false};
     bool enableExtbo_{false};
     bool enableMICP_{false};
-    bool isCompositional_{false};
 
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
@@ -469,7 +467,6 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
-    CompositionalContainer<FluidSystem> compC_;
     std::vector<ScalarBuffer> freeTracerConcentrations_;
     std::vector<ScalarBuffer> solTracerConcentrations_;
 

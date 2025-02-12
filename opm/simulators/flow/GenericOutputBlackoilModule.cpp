@@ -104,8 +104,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             bool enableBrine,
                             bool enableSaltPrecipitation,
                             bool enableExtbo,
-                            bool enableMICP,
-                            bool isCompositional)
+                            bool enableMICP)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
@@ -124,7 +123,6 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
-    , isCompositional_(isCompositional)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -527,10 +525,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
     };
 
-    if (this->isCompositional_) {
-        this->compC_.outputRestart(sol);
-    }
-
     for (auto& array : baseSolutionVector) {
         doInsert(array, data::TargetType::RESTART_SOLUTION);
     }
@@ -573,15 +567,6 @@ assignToSolution(data::Solution& sol)
                    std::move(this->saturation_[gasPhaseIdx]),
                    data::TargetType::RESTART_SOLUTION);
     }
-
-    if (this->isCompositional_ && FluidSystem::phaseIsActive(oilPhaseIdx) &&
-        ! this->saturation_[oilPhaseIdx].empty())
-    {
-        sol.insert("SOIL", UnitSystem::measure::identity,
-                   std::move(this->saturation_[oilPhaseIdx]),
-                   data::TargetType::RESTART_SOLUTION);
-    }
-
 
     if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
         auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
@@ -806,10 +791,14 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     enableWettingHysteresis,
                const unsigned numTracers,
                const std::vector<bool>& enableSolTracers,
-               const unsigned numOutputNnc)
+               const unsigned numOutputNnc,
+               std::map<std::string, int> rstKeywords)
 {
+    if (rstKeywords.empty()) {
+        rstKeywords = schedule_.rst_keywords(reportStepNum);
+    }
+
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
-    std::map<std::string, int> rstKeywords = schedule_.rst_keywords(reportStepNum);
     for (auto& [keyword, should_write] : rstKeywords) {
         if (this->isOutputCreationDirective_(keyword)) {
             // 'BASIC', 'FREQ' and similar.  Don't attempt to create
@@ -1264,11 +1253,6 @@ doAllocBuffers(const unsigned bufferSize,
         minimumOilPressure_.resize(bufferSize, 0.0);
         overburdenPressure_.resize(bufferSize, 0.0);
     }
-
-    if (this->isCompositional_) {
-        this->compC_.allocate(bufferSize, rstKeywords);
-    }
-
 
     //Warn for any unhandled keyword
     if (log) {

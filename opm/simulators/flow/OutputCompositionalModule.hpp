@@ -45,6 +45,7 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/CompositionalContainer.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
 
@@ -105,8 +106,7 @@ public:
                    getPropValue<TypeTag, Properties::EnableBrine>(),
                    getPropValue<TypeTag, Properties::EnableSaltPrecipitation>(),
                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                   getPropValue<TypeTag, Properties::EnableMICP>(),
-                   true)
+                   getPropValue<TypeTag, Properties::EnableMICP>())
         , simulator_(simulator)
     {
         for (auto& region_pair : this->regions_) {
@@ -158,11 +158,24 @@ public:
             return;
         }
 
-        this->doAllocBuffers(bufferSize,
-                              reportStepNum,
-                              substep,
-                              log,
-                              isRestart);
+        auto rstKeywords = this->schedule_.rst_keywords(reportStepNum);
+        this->compC_.allocate(bufferSize, rstKeywords);
+
+        this->doAllocBuffers(bufferSize, reportStepNum, substep, log, isRestart,
+                             /* vapparsActive =*/ false,
+                             /* enablePCHysteresis = */ false,
+                             /* enableNonWettingHysteresis =*/ false,
+                             /* enableWettingHysteresis =*/ false,
+                             /* numTracers = */ 0,
+                             /* enableSoltracers =*/ {},
+                             /* numOutputNnc =*/ 0,
+                             std::move(rstKeywords));
+    }
+
+    void assignToSolution(data::Solution& sol)
+    {
+        this->compC_.outputRestart(sol, this->saturation_[oilPhaseIdx]);
+        BaseType::assignToSolution(sol);
     }
 
     /*!
@@ -336,6 +349,7 @@ private:
     }
 
     const Simulator& simulator_;
+    CompositionalContainer<FluidSystem> compC_;
 };
 
 } // namespace Opm
