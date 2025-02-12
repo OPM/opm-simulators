@@ -69,6 +69,7 @@ public:
     bool allocated() const
     { return allocated_; }
 
+private:
     bool allocated_ = false;
     // total mole fractions for each component
     std::array<ScalarBuffer, numComponents> moleFractions_;
