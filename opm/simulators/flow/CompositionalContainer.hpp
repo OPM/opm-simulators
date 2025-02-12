@@ -27,6 +27,7 @@
 #define OPM_COMPOSITIONAL_CONTAINER_HPP
 
 #include <array>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -52,7 +53,15 @@ public:
     void allocate(const unsigned bufferSize,
                   std::map<std::string, int>& rstKeywords);
 
+    using AssignFunction = std::function<Scalar(const unsigned)>;
+
+    void assignMoleFractions(const unsigned globalDofIdx,
+                             const AssignFunction& fractions);
+
     void outputRestart(data::Solution& sol);
+
+    bool allocated() const
+    { return allocated_; }
 
     bool allocated_ = false;
     // total mole fractions for each component

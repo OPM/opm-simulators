@@ -68,6 +68,20 @@ allocate(const unsigned bufferSize,
 
 template<class FluidSystem>
 void CompositionalContainer<FluidSystem>::
+assignMoleFractions(const unsigned globalDofIdx,
+                    const AssignFunction& fractions)
+{
+    if (moleFractions_.empty()) {
+        return;
+    }
+
+    std::for_each(moleFractions_.begin(), moleFractions_.end(),
+                  [&fractions, globalDofIdx, c = 0](auto& comp) mutable
+                  { comp[globalDofIdx] = fractions(c++); });
+}
+
+template<class FluidSystem>
+void CompositionalContainer<FluidSystem>::
 outputRestart(data::Solution& sol)
 {
     using DataEntry =

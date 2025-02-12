@@ -191,10 +191,10 @@ public:
                 Valgrind::CheckDefined(this->saturation_[phaseIdx][globalDofIdx]);
             }
 
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (this->compC_.moleFractions_[compIdx].empty()) continue;
-
-                this->compC_.moleFractions_[compIdx][globalDofIdx] = getValue(fs.moleFraction(compIdx));
+            if (this->compC_.allocated()) {
+                this->compC_.assignMoleFractions(globalDofIdx,
+                                                 [&fs](const unsigned compIdx)
+                                                 { return getValue(fs.moleFraction(compIdx)); });
             }
             // XMF and YMF
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
