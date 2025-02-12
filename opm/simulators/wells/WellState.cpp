@@ -786,16 +786,12 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                         const int first_perf = ws.parallel_info.get().globalToLocal(segment_perforations[seg][0]);
                         if (first_perf > -1) { //-1 indicates that the global id is not on this process
                             segment_pressure[seg] = perf_press[first_perf];
+                        } else {
+                            segment_pressure[seg] = 0.0; // setting this to 0 here, this will later be filled by the communication below
                         }
                         segment_indices.push_back(seg);
-                    } else {
-                        // seg_press_.push_back(bhp); // may not be a good decision
-                        // using the outlet segment pressure // it needs the ordering is correct
-                        const int outlet_seg = segment_set[seg].outletSegment();
-                        segment_pressure[seg] = segment_pressure[segment_set.segmentNumberToIndex(outlet_seg)];
                     }
                 }
-
                 if (ws.parallel_info.get().communication().size() > 1) {
                     // Communicate the segment_pressure values
                     std::vector<Scalar> values_to_combine(segment_indices.size(), 0.0);
@@ -808,6 +804,16 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     // Now make segment_pressure equal across all processes
                     for (size_t i = 0; i < segment_indices.size(); ++i) {
                         segment_pressure[segment_indices[i]] = values_to_combine[i];
+                    }
+                }
+                // Before addressing the segments with !segment_perforations[seg].empty(), we need to communicate such that the
+                // vector segment_pressure contains info from all processes
+                for (int seg = 1; seg < well_nseg; ++ seg) {
+                    if (segment_perforations[seg].empty()) {
+                        // seg_press_.push_back(bhp); // may not be a good decision
+                        // using the outlet segment pressure // it needs the ordering is correct
+                        const int outlet_seg = segment_set[seg].outletSegment();
+                        segment_pressure[seg] = segment_pressure[segment_set.segmentNumberToIndex(outlet_seg)];
                     }
                 }
             }
