@@ -39,9 +39,9 @@ class RatioCalculator
 public:
     using Scalar = decltype(getValue(Value{}));
 
-    RatioCalculator(unsigned gasCompIdx,
-                    unsigned oilCompIdx,
-                    unsigned waterCompIdx,
+    RatioCalculator(int gasCompIdx,
+                    int oilCompIdx,
+                    int waterCompIdx,
                     std::string_view name);
 
     void disOilVapWatVolumeRatio(Value& volumeRatio,
@@ -91,9 +91,9 @@ public:
                               const bool isProducer) const;
 
 private:
-    unsigned gasComp_;
-    unsigned oilComp_;
-    unsigned waterComp_;
+    int gasComp_;
+    int oilComp_;
+    int waterComp_;
     std::string name_;
 };
 
