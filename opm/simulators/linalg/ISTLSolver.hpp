@@ -25,6 +25,7 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/solver.hh>
 
+#include <opm/common/CriticalError.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
@@ -377,10 +378,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void prepare(const Matrix& M, Vector& b)
         {
             OPM_TIMEBLOCK(istlSolverPrepare);
+            try {
+                initPrepare(M,b);
 
-            initPrepare(M,b);
-
-            prepareFlexibleSolver();
+                prepareFlexibleSolver();
+            } OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR("This is likely due to a faulty linear solver JSON specification. Check for errors related to missing nodes.");
         }
 
 
