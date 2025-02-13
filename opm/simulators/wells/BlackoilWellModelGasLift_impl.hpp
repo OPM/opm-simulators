@@ -46,7 +46,7 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
                        DeferredLogger& deferred_logger)
 {
     OPM_TIMEFUNCTION();
-    const auto& glo = simulator.vanguard().schedule().glo(simulator.episodeIndex())
+    const auto& glo = simulator.vanguard().schedule().glo(simulator.episodeIndex());
     if(!glo.active()) {
         return false;
     }
