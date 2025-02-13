@@ -223,6 +223,7 @@ update(const WellState<Scalar>& well_state,
 
     // BHP
     value_[Bhp] = ws.bhp;
+    init();
 }
 
 template<class FluidSystem, class Indices>
@@ -301,6 +302,7 @@ updateNewton(const BVectorWell& dwells,
     // so that bhp constaint can be an active control when needed.
     constexpr Scalar bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
     value_[Bhp] = std::max(value_[Bhp] - dx1_limited, bhp_lower_limit);
+    init();
 }
 
 template<class FluidSystem, class Indices>
@@ -320,6 +322,7 @@ updateNewtonPolyMW(const BVectorWell& dwells)
             value_[pskin_index] -= relaxation_factor * dx_pskin;
         }
     }
+    init();
 }
 
 template<class FluidSystem, class Indices>
