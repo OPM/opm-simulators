@@ -172,7 +172,7 @@ BOOST_FIXTURE_TEST_CASE(TestEvaluateUniformTabulated2DFunctionOnGpu, Fixture) {
     Opm::UniformTabulated2DFunction<double> cpuTab(1.0, 6.0, 3, 1.0, 6.0, 2, tabData);
 
     // Move data to GPU buffer and create a view for GPU operations
-    Opm::UniformTabulated2DFunction<double, GpuB> gpuBufTab = Opm::gpuistl::copy_to_gpu<double, GpuB>(cpuTab);
+    Opm::UniformTabulated2DFunction<double, GpuB> gpuBufTab = Opm::gpuistl::copy_to_gpu<GpuB>(cpuTab);
     GpuTab gpuViewTab = Opm::gpuistl::make_view<GpuV>(gpuBufTab);
 
     // Evaluation points on the CPU
