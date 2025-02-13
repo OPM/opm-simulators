@@ -1819,6 +1819,7 @@ namespace Opm
                                    const GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // update the upwinding segments
