@@ -50,13 +50,14 @@ calculateExplicitQuantities(const Simulator& simulator,
                             const SingleCompWellState<Scalar>& well_state)
 {
     updatePrimaryVariables(simulator, well_state);
+    // at least at here, there is no Evaluation needed
     updatePrimaryVariableEvaluation();
 
     {
         // flash calculation in the wellbore
         using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
         FluidState fluid_state_scalar = this->primary_variables_.toFluidStateScalar();
-        PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state_scalar, "ssi", 1.e-6, CompositionalConfig::EOSType::PR, 3);
+        PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state_scalar, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
         // calculating the mass within the wellbore
         constexpr Scalar R = Constants<Scalar>::R;
         typename FluidSystem::template ParameterCache<Scalar> param_cache {CompositionalConfig::EOSType::PR};
@@ -128,7 +129,11 @@ updateTotalMass()
     // flash calculation in the wellbore
     using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
     FluidState fluid_state = this->primary_variables_.toFluidState();
-    PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR, 3);
+    // manullay set the values for debugging purpose
+    fluid_state.setMoleFraction(0, 0.8576939356002758);
+    fluid_state.setMoleFraction(1, 0.04743535777357194);
+    fluid_state.setMoleFraction(2, 0.09487070662615232);
+    PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
     // calculating the mass within the wellbore
     constexpr Scalar R = Constants<Scalar>::R;
     typename FluidSystem::template ParameterCache<EvalWell> param_cache {CompositionalConfig::EOSType::PR};
@@ -188,68 +193,68 @@ updateSurfaceQuantities(const Simulator& simulator)
 {
     const auto& surface_cond = simulator.vanguard().eclState().getTableManager().stCond();
     std::cout << " well surface condition temperature " << surface_cond.temperature << " pressure " << surface_cond.pressure << std::endl;
-    // if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
-    //     const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
-    //     using FluidStateScalar = CompositionalFluidState<Scalar, FluidSystem>;
-    //     FluidStateScalar fluid_state;
-    //     fluid_state.setTemperature(surface_cond.temperature);
-    //     // we can have a function to set the pressure for all the phases
-    //     fluid_state.setPressure(FluidSystem::oilPhaseIdx, surface_cond.pressure);
-    //     fluid_state.setPressure(FluidSystem::gasPhaseIdx, surface_cond.pressure);
-    //
-    //     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-    //         fluid_state.setMoleFraction(comp_idx, std::max(inj_composition[comp_idx], 1.e-10));
-    //     }
-    //
-    //     for (int i = 0; i < FluidSystem::numComponents; ++i) {
-    //         fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
-    //     }
-    //
-    //     fluid_state.setLvalue(-1.);
-    //
-    //     PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR, 3);
-    //
-    //     constexpr Scalar R = Constants<Scalar>::R;
-    //     typename FluidSystem::template ParameterCache<Scalar> param_cache {CompositionalConfig::EOSType::PR};
-    //     param_cache.updatePhase(fluid_state, FluidSystem::oilPhaseIdx);
-    //     const Scalar Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state.pressure(FluidSystem::oilPhaseIdx) )/
-    //                        (R * fluid_state.temperature(FluidSystem::oilPhaseIdx));
-    //     param_cache.updatePhase(fluid_state, FluidSystem::gasPhaseIdx);
-    //     const Scalar Z_V = (param_cache.molarVolume(FluidSystem::gasPhaseIdx) * fluid_state.pressure(FluidSystem::gasPhaseIdx) )/
-    //                        (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
-    //
-    //     Scalar L = fluid_state.L();
-    //     Scalar So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-    //     Scalar Sg = Opm::max(1 - So, 0.0);
-    //     Scalar sumS = So + Sg;
-    //     So /= sumS;
-    //     Sg /= sumS;
-    //
-    //     fluid_state.setSaturation(FluidSystem::oilPhaseIdx, So);
-    //     fluid_state.setSaturation(FluidSystem::gasPhaseIdx, Sg);
-    //
-    //     fluid_state.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
-    //     fluid_state.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
-    //
-    //     fluid_state.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::oilPhaseIdx));
-    //     fluid_state.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::gasPhaseIdx));
-    //     const auto density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
-    //     const auto density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
-    //
-    //     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-    //         this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
-    //                 fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
-    //         this->surface_conditions_.mass_fractions_[FluidSystem::gasPhaseIdx][compidx] =
-    //                 fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
-    //     }
-    //     this->surface_conditions_.surface_densities_[FluidSystem::oilPhaseIdx] = density_oil;
-    //     this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
-    //     this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = So;
-    //     this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = Sg;
-    //     std::cout << " oil surface density " << density_oil << " gas surface density " << density_gas
-    //               << " oil volume fraction " << So << " gas volume fraction " << Sg << std::endl;
-    //     // TODO: it shows it is liquid, which is not correct
-    // } else { // the composition will be from the wellbore
+     if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
+         const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
+         using FluidStateScalar = CompositionalFluidState<Scalar, FluidSystem>;
+         FluidStateScalar fluid_state;
+         fluid_state.setTemperature(surface_cond.temperature);
+         // we can have a function to set the pressure for all the phases
+         fluid_state.setPressure(FluidSystem::oilPhaseIdx, surface_cond.pressure);
+         fluid_state.setPressure(FluidSystem::gasPhaseIdx, surface_cond.pressure);
+
+         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+             fluid_state.setMoleFraction(comp_idx, std::max(inj_composition[comp_idx], 1.e-10));
+         }
+
+         for (int i = 0; i < FluidSystem::numComponents; ++i) {
+             fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
+         }
+
+         fluid_state.setLvalue(-1.);
+
+         PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
+
+         constexpr Scalar R = Constants<Scalar>::R;
+         typename FluidSystem::template ParameterCache<Scalar> param_cache {CompositionalConfig::EOSType::PR};
+         param_cache.updatePhase(fluid_state, FluidSystem::oilPhaseIdx);
+         const Scalar Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state.pressure(FluidSystem::oilPhaseIdx) )/
+                            (R * fluid_state.temperature(FluidSystem::oilPhaseIdx));
+         param_cache.updatePhase(fluid_state, FluidSystem::gasPhaseIdx);
+         const Scalar Z_V = (param_cache.molarVolume(FluidSystem::gasPhaseIdx) * fluid_state.pressure(FluidSystem::gasPhaseIdx) )/
+                            (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
+
+         Scalar L = fluid_state.L();
+         Scalar So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
+         Scalar Sg = Opm::max(1 - So, 0.0);
+         Scalar sumS = So + Sg;
+         So /= sumS;
+         Sg /= sumS;
+
+         fluid_state.setSaturation(FluidSystem::oilPhaseIdx, So);
+         fluid_state.setSaturation(FluidSystem::gasPhaseIdx, Sg);
+
+         fluid_state.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
+         fluid_state.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
+
+         fluid_state.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::oilPhaseIdx));
+         fluid_state.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::gasPhaseIdx));
+         const auto density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
+         const auto density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
+
+         for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
+             this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
+                     fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
+             this->surface_conditions_.mass_fractions_[FluidSystem::gasPhaseIdx][compidx] =
+                     fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
+         }
+         this->surface_conditions_.surface_densities_[FluidSystem::oilPhaseIdx] = density_oil;
+         this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
+         this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = So;
+         this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = Sg;
+         std::cout << " oil surface density " << density_oil << " gas surface density " << density_gas
+                   << " oil volume fraction " << So << " gas volume fraction " << Sg << std::endl;
+         // TODO: it shows it is liquid, which is not correct
+     } else { // the composition will be from the wellbore
         // here, it will use the composition from the wellbore and the pressure and temperature from the surface condition
         std::cout << " well is a producer " << std::endl;
         using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
@@ -266,7 +271,7 @@ updateSurfaceQuantities(const Simulator& simulator)
             fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
         }
 
-        PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR, 3);
+        PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
 
         constexpr Scalar R = Constants<Scalar>::R;
         typename FluidSystem::template ParameterCache<EvalWell> param_cache {CompositionalConfig::EOSType::PR};
@@ -305,7 +310,7 @@ updateSurfaceQuantities(const Simulator& simulator)
         this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
         this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = So;
         this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = Sg;
-    // }
+     }
 }
 
 template <typename TypeTag>
@@ -329,13 +334,18 @@ calculateSingleConnectionRate(const Simulator& simulator,
     const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(cell_idx, 0);
     std::vector<EvalWell> mob(np, 0.);
     getMoblity(simulator, con_idx, mob);
+    // manually set values for debugging purpose
+    mob[FluidSystem::oilPhaseIdx].setValue(5351.693668595587);
+    mob[FluidSystem::gasPhaseIdx].setValue(2674.5087028562);
 
     const Scalar tw = this->well_index_[0]; // only one connection
 
     const auto& fluid_state = int_quantities->fluidState();
 
     const EvalWell cell_pressure = PrimaryVariables::extendEval(fluid_state.pressure(FluidSystem::oilPhaseIdx));
-    const EvalWell drawdown = cell_pressure - bhp;
+    EvalWell drawdown = cell_pressure - bhp;
+    // manually set the drawdown for debugging purpose
+    drawdown.setValue(-4.2e6);
     //
     // the following will go to a funciton getMobility
     if (drawdown > 0.) { // producing connection
@@ -358,7 +368,6 @@ calculateSingleConnectionRate(const Simulator& simulator,
         }
         EvalWell cq_v = - total_mobility * tw * drawdown;
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; comp_idx++) {
-            const EvalWell density = PrimaryVariables::extendEval(fluid_state.density(FluidSystem::oilPhaseIdx));
             cq_s[comp_idx] = cq_v * fluid_density_ * mass_fractions_[comp_idx];
         }
     }
@@ -413,12 +422,12 @@ assembleWellEq(const Simulator& simulator,
         this->well_equations_.residual()[0][comp_idx] -= connection_rates[comp_idx].value();
         for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             // C, needs the cell_idx
-            this->well_equations_.C()[0][cell_idx][pvIdx][comp_idx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
-            this->well_equations_.D()[0][0][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.C()[0][cell_idx][pvIdx][comp_idx] += connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.D()[0][0][comp_idx][pvIdx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
         }
 
         for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numResEq; ++pvIdx) {
-            this->well_equations_.D()[0][cell_idx][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx);
+            this->well_equations_.B()[0][cell_idx][comp_idx][pvIdx] -= connection_rates[comp_idx].derivative(pvIdx);
         }
     }
 
@@ -450,6 +459,8 @@ assembleSourceTerm(const Scalar dt)
     const EvalWell total_mass_rate = total_surface_rate * density;
     std::array<EvalWell, FluidSystem::numComponents> component_mass_rates;
     for (unsigned  comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+        const auto& val = this->surface_conditions_.massFraction(comp_idx);
+        std::cout << " mass fraction for comp_idx " << comp_idx << " is " << val << std::endl;
         component_mass_rates[comp_idx] = total_mass_rate * this->surface_conditions_.massFraction(comp_idx);
     }
 
@@ -470,7 +481,7 @@ iterateWellEq(const Simulator& simulator,
               const Scalar dt,
               SingleCompWellState<Scalar>& well_state)
 {
-    constexpr int max_iter = 20;
+    constexpr int max_iter = 20000;
     const auto& summary_state = simulator.vanguard().summaryState();
     const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
     const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
@@ -486,7 +497,6 @@ iterateWellEq(const Simulator& simulator,
             std::cout << val << " ";
         }
         std::cout << std::endl;
-
         // get convergence
         converged = true;
         for (const auto& val : this->well_equations_.residual()[0]) {
@@ -500,8 +510,10 @@ iterateWellEq(const Simulator& simulator,
         ++it;
 
         solveEqAndUpdateWellState(simulator, well_state);
+        this->updatePrimaryVariableEvaluation();
 
     } while (it < max_iter);
+    std::cout << "converged " << converged << " after " << it << " iterations" << std::endl;
 }
 
 template <typename TypeTag>

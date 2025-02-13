@@ -97,8 +97,8 @@ toFluidState() const
 {
     FluidState fluid_state;
     // will be different if more connections are involved
-    auto pressure = evaluation_[Bhp];
-    pressure.setValue(75e5);
+    const auto pressure = evaluation_[Bhp];
+//    pressure.setValue(75e5);
     std::array<EvalWell, FluidSystem::numComponents> total_molar_fractions;
     EvalWell sum = 0.;
     for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
@@ -169,6 +169,12 @@ updateNewton(const BVectorWell& dwells) {
         std::cout << dwells[0][i] << " ";
     }
     std::cout << std::endl;
+    for (unsigned i = 0; i < value_.size(); ++i) {
+        value_[i] -= 0.01 * dwells[0][i];
+    }
+    std::cout << " process the fractions " << std::endl;
+    value_[1] = std::min(1. - 2.e-10, value_[1]);
+    value_[2] = std::max(1.e-10, value_[2]);
 }
 
 } // end of namespace Opm
