@@ -63,6 +63,8 @@ class FlashNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMeth
     enum { z0Idx = Indices::z0Idx };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
+    static constexpr bool waterEnabled = Indices::waterEnabled;
+
 public:
     /*!
      * \copydoc FvBaseNewtonMethod::FvBaseNewtonMethod(Problem& )
@@ -124,6 +126,14 @@ protected:
         Scalar tol = 1e-8;
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
             clampValue_(nextValue[z0Idx + compIdx], tol, 1-tol);
+        }
+
+        if constexpr (waterEnabled) {
+            // limit change in water saturation to 0.2
+            constexpr Scalar dSwMax = 0.2;
+            if (update[Indices::water0Idx] > dSwMax) {
+                nextValue[Indices::water0Idx] = currentValue[Indices::water0Idx] - dSwMax;
+            }
         }
     }
 private:

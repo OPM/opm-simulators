@@ -49,17 +49,23 @@ class FlashLocalResidual: public GetPropType<TypeTag, Properties::DiscLocalResid
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { water0Idx = Indices::water0Idx };
     enum { conti0EqIdx = Indices::conti0EqIdx };
+
+    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+
+    static const bool waterEnabled = Indices::waterEnabled;
 
     using Toolbox = Opm::MathToolbox<Evaluation>;
 
@@ -77,14 +83,24 @@ public:
         const IntensiveQuantities& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
 
-        // compute storage term of all components within all phases
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            unsigned eqIdx = conti0EqIdx + compIdx;
-            storage[eqIdx] +=
-            Toolbox::template decay<LhsEval>(fs.massFraction(phaseIdx, compIdx))
-                * Toolbox::template decay<LhsEval>(fs.density(phaseIdx))
+        // compute water storage term
+        if (waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)) {
+            unsigned eqIdx = conti0EqIdx + numComponents;
+            storage[eqIdx] = 
+                Toolbox::template decay<LhsEval>(fs.density(phaseIdx))
                 * Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
                 * Toolbox::template decay<LhsEval>(intQuants.porosity());
+        }
+        else {
+            // compute storage term of all components within oil/gas phases
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                unsigned eqIdx = conti0EqIdx + compIdx;
+                storage[eqIdx] +=
+                Toolbox::template decay<LhsEval>(fs.massFraction(phaseIdx, compIdx))
+                    * Toolbox::template decay<LhsEval>(fs.density(phaseIdx))
+                    * Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
+                    * Toolbox::template decay<LhsEval>(intQuants.porosity());
+            }
         }
 
         EnergyModule::addPhaseStorage(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx), phaseIdx);
@@ -146,19 +162,31 @@ public:
                     up.fluidState().density(phaseIdx)
                     * extQuants.volumeFlux(phaseIdx);
 
-                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                    flux[conti0EqIdx + compIdx] +=
-                        tmp*up.fluidState().massFraction(phaseIdx, compIdx);
+                if (waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)) {
+                    unsigned eqIdx = conti0EqIdx + numComponents;
+                    flux[eqIdx] = tmp;
+                }
+                else {
+                    for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                        flux[conti0EqIdx + compIdx] +=
+                            tmp*up.fluidState().massFraction(phaseIdx, compIdx);
+                    }
                 }
             }
             else {
                 Evaluation tmp =
                     Toolbox::value(up.fluidState().density(phaseIdx))
                      * extQuants.volumeFlux(phaseIdx);
-
-                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                    flux[conti0EqIdx + compIdx] +=
-                        tmp*Toolbox::value(up.fluidState().massFraction(phaseIdx, compIdx));
+                
+                if (waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)) {
+                    unsigned eqIdx = conti0EqIdx + numComponents;
+                    flux[eqIdx] = tmp;
+                }
+                else {
+                    for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                        flux[conti0EqIdx + compIdx] +=
+                            tmp*Toolbox::value(up.fluidState().massFraction(phaseIdx, compIdx));
+                    }
                 }
             }
         }
