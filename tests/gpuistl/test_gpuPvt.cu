@@ -26,8 +26,9 @@
 #include <cmath>
 
 using Evaluation = Opm::DenseAd::Evaluation<double, 3>;
-using GpuB = const Opm::gpuistl::GpuBuffer<double>;
-using GpuV = Opm::gpuistl::GpuView<const double>;
+using GpuB = Opm::gpuistl::GpuBuffer<double>;
+using GpuV = Opm::gpuistl::GpuView<double>;
+using ConstGpuV = Opm::gpuistl::GpuView<const double>;
 
 using GpuTab = Opm::UniformTabulated2DFunction<double, GpuV>;
 
@@ -268,9 +269,9 @@ BOOST_FIXTURE_TEST_CASE(TestCo2GasPvt, Fixture) {
     CpuCo2Pvt cpuCo2Pvt(salinities);
     double internalEnergyReference = cpuCo2Pvt.internalEnergy(1, temp, pressure, Evaluation(0.4), Evaluation(0.0)).value();
 
-    const GpuBufCo2Pvt gpuBufCo2Pvt = Opm::gpuistl::copy_to_gpu<double, GpuBufCo2Tables, GpuB>(cpuCo2Pvt);
-    const auto brineReferenceDensityCPUCopy = gpuBufCo2Pvt.getBrineReferenceDensity().asStdVector();
-    const GpuViewCo2Pvt gpuViewCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufCo2Pvt);
+    GpuBufCo2Pvt gpuBufCo2Pvt = Opm::gpuistl::copy_to_gpu<double, GpuBufCo2Tables, GpuB>(cpuCo2Pvt);
+    auto brineReferenceDensityCPUCopy = gpuBufCo2Pvt.getBrineReferenceDensity().asStdVector();
+    GpuViewCo2Pvt gpuViewCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufCo2Pvt);
 
     gpuComputedResultOnCpu = launchKernelAndRetrieveResult(co2GasPvtInternalEnergy, gpuViewCo2Pvt, gpuTemp, gpuPressure);
 
@@ -287,8 +288,8 @@ BOOST_FIXTURE_TEST_CASE(TestBrineCo2Pvt, Fixture) {
     CpuBrineCo2Pvt cpuBrineCo2Pvt(salinities);
     double internalEnergyReference = cpuBrineCo2Pvt.internalEnergy(1, temp, pressure, rs, saltConcentration).value();
 
-    const GpuBufBrineCo2Pvt gpuBufBrineCo2Pvt = Opm::gpuistl::copy_to_gpu<double, GpuBufCo2Tables, GpuB>(cpuBrineCo2Pvt);
-    const GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufBrineCo2Pvt);
+    GpuBufBrineCo2Pvt gpuBufBrineCo2Pvt = Opm::gpuistl::copy_to_gpu<double, GpuBufCo2Tables, GpuB>(cpuBrineCo2Pvt);
+    GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufBrineCo2Pvt);
 
     // Allocate memory for the result on the GPU
     double* resultOnGpu = nullptr;
