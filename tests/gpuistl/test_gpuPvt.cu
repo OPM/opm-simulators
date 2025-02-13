@@ -268,7 +268,7 @@ BOOST_FIXTURE_TEST_CASE(TestCo2GasPvt, Fixture) {
     CpuCo2Pvt cpuCo2Pvt(salinities);
     double internalEnergyReference = cpuCo2Pvt.internalEnergy(1, temp, pressure, Evaluation(0.4), Evaluation(0.0)).value();
 
-    GpuBufCo2Pvt gpuBufCo2Pvt = Opm::gpuistl::copy_to_gpu<double, GpuBufCo2Tables, GpuB>(cpuCo2Pvt);
+    GpuBufCo2Pvt gpuBufCo2Pvt = Opm::gpuistl::copy_to_gpu<GpuB, GpuBufCo2Tables>(cpuCo2Pvt);
     auto brineReferenceDensityCPUCopy = gpuBufCo2Pvt.getBrineReferenceDensity().asStdVector();
     GpuViewCo2Pvt gpuViewCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufCo2Pvt);
 
