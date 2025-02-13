@@ -46,10 +46,14 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
                        DeferredLogger& deferred_logger)
 {
     OPM_TIMEFUNCTION();
+    const auto& glo = simulator.vanguard().schedule().glo(simulator.episodeIndex())
+    if(!glo.active()) {
+        return false;
+    }
     bool do_glift_optimization = false;
     int num_wells_changed = 0;
     const double simulation_time = simulator.time();
-    const Scalar min_wait = simulator.vanguard().schedule().glo(simulator.episodeIndex()).min_wait();
+    const Scalar min_wait = glo.min_wait();
     // We only optimize if a min_wait time has past.
     // If all_newton is true we still want to optimize several times pr timestep
     // i.e. we also optimize if check simulation_time == last_glift_opt_time_
