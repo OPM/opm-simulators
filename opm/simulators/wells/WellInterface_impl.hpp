@@ -365,6 +365,7 @@ namespace Opm
             const Scalar bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
             if (bhp_diff > 0){
                 this->openWell();
+                well_state.well(this->index_of_well_).trivial_target = false;
                 well_state.well(this->index_of_well_).bhp = (this->isInjector())? inj_limit : prod_limit;
                 if (has_thp) {
                     well_state.well(this->index_of_well_).thp = this->getTHPConstraint(summary_state);
@@ -546,6 +547,7 @@ namespace Opm
         // if well is stopped, check if we can reopen
         if (this->wellIsStopped()) {
             this->openWell();
+            ws.trivial_target = false;
             auto bhp_target = estimateOperableBhp(simulator, dt, well_state, summary_state, deferred_logger);
             if (!bhp_target.has_value()) {
                 // no intersection with ipr
@@ -597,6 +599,7 @@ namespace Opm
             // Well did not converge, switch to explicit fractions
             this->operability_status_.use_vfpexplicit = true;
             this->openWell();
+            ws.trivial_target = false;
             auto bhp_target = estimateOperableBhp(simulator, dt, well_state, summary_state, deferred_logger);
             if (!bhp_target.has_value()) {
                 // well can't operate using explicit fractions
@@ -853,7 +856,7 @@ namespace Opm
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = simulator.model().newtonMethod().numIterations();
         if (iteration_idx < this->param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
-            const auto& ws = well_state.well(this->indexOfWell());
+            auto& ws = well_state.well(this->indexOfWell());
             const auto pmode_orig = ws.production_cmode;
             const auto imode_orig = ws.injection_cmode;
 
@@ -873,6 +876,7 @@ namespace Opm
                     // This logic is introduced to prevent/ameliorate stopped/revived oscillations  
                     this->operability_status_.resetOperability();
                     this->openWell();
+                    ws.trivial_target = false;
                     deferred_logger.debug("    " + this->name() + " is re-opened after being stopped during local solve");
                 }
                 // Add debug info for switched controls
@@ -922,6 +926,7 @@ namespace Opm
         } else if (well_operable && !old_well_operable) {
             deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
             this->openWell();
+            well_state.well(this->index_of_well_).trivial_target = false;
             changed_to_stopped_this_step_ = false;
             this->changed_to_open_this_step_ = true;
         }
