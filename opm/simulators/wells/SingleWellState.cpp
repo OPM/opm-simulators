@@ -25,7 +25,9 @@
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/wells/PerforationData.hpp>
-
+#include <opm/common/utility/parameters/Parameter.hpp>
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 namespace Opm {
 
 template<class Scalar>
@@ -227,7 +229,10 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
 
         return;
     }
-
+    double fac = 1.0;
+    if(Parameters::Get<Parameters::AlternativeWellRateInit>()){
+        fac = 0.0;
+    }
     switch (prod_controls.cmode) {
     case Well::ProducerCMode::ORAT:
         assert(this->pu.phase_used[BlackoilPhases::Liquid]);
@@ -245,13 +250,13 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
     case Well::ProducerCMode::THP:
     case Well::ProducerCMode::BHP:
         if (this->pu.phase_used[BlackoilPhases::Liquid]) {
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = fac*-1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
         }
         if (this->pu.phase_used[BlackoilPhases::Aqua]) {
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = fac*-1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
         }
         if (this->pu.phase_used[BlackoilPhases::Vapour]){
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -100000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = fac*-100000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
         }
         break;
 
