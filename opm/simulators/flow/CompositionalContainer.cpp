@@ -23,7 +23,7 @@
 #include <config.h>
 #include <opm/simulators/flow/CompositionalContainer.hpp>
 
-#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/output/data/Solution.hpp>
 
@@ -168,11 +168,19 @@ outputRestart(data::Solution& sol,
     this->allocated_ = false;
 }
 
-#define INSTANTIATE_COMP(NUM) \
-    template<class T> using FS##NUM = GenericOilGasFluidSystem<T, NUM>; \
+#define INSTANTIATE_COMP_THREEPHASE(NUM) \
+    template<class T> using FS##NUM = GenericOilGasWaterFluidSystem<T, NUM, true>; \
     template class CompositionalContainer<FS##NUM<double>>;
 
-INSTANTIATE_COMP(0)
+#define INSTANTIATE_COMP_TWOPHASE(NUM) \
+    template<class T> using GFS##NUM = GenericOilGasWaterFluidSystem<T, NUM, false>; \
+    template class CompositionalContainer<GFS##NUM<double>>;
+
+#define INSTANTIATE_COMP(NUM) \
+    INSTANTIATE_COMP_THREEPHASE(NUM) \
+    INSTANTIATE_COMP_TWOPHASE(NUM)
+
+INSTANTIATE_COMP_THREEPHASE(0)  // \Note: to register the parameter ForceDisableFluidInPlaceOutput
 INSTANTIATE_COMP(2)
 INSTANTIATE_COMP(3)
 INSTANTIATE_COMP(4)
