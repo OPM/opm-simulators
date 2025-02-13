@@ -222,7 +222,6 @@ public:
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
             Sw = priVars.makeEvaluation(water0Idx, timeIdx);
-            fluidState_.setSaturation(FluidSystem::waterPhaseIdx, Sw);
         }
         Evaluation L = fluidState_.L();
         Evaluation So = Opm::max((1 - Sw) * (L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
@@ -230,10 +229,13 @@ public:
         Scalar sumS = Opm::getValue(So) + Opm::getValue(Sg) + Opm::getValue(Sw);
         So /= sumS;
         Sg /= sumS;
-        Sw /= sumS;
 
         fluidState_.setSaturation(FluidSystem::oilPhaseIdx, So);
         fluidState_.setSaturation(FluidSystem::gasPhaseIdx, Sg);
+        if constexpr (waterEnabled) {
+            Sw /= sumS;
+            fluidState_.setSaturation(FluidSystem::waterPhaseIdx, Sw);
+        }
 
         fluidState_.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
         fluidState_.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
