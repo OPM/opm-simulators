@@ -28,7 +28,6 @@
 using Evaluation = Opm::DenseAd::Evaluation<double, 3>;
 using GpuB = Opm::gpuistl::GpuBuffer<double>;
 using GpuV = Opm::gpuistl::GpuView<double>;
-using ConstGpuV = Opm::gpuistl::GpuView<const double>;
 
 using GpuTab = Opm::UniformTabulated2DFunction<double, GpuV>;
 
