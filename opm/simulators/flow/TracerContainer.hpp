@@ -30,6 +30,7 @@
 
 namespace Opm {
 
+namespace data { class Solution; }
 class EclipseState;
 
 template<class FluidSystem>
@@ -44,6 +45,8 @@ public:
     {}
 
     void allocate(const unsigned bufferSize);
+
+    void outputRestart(data::Solution& sol);
 
     const EclipseState& eclState_;
 

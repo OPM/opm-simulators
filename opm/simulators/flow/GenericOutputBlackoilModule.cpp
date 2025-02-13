@@ -632,41 +632,7 @@ assignToSolution(data::Solution& sol)
     this->fipC_.outputRestart(sol);
 
     // Tracers
-    if (! this->tracerC_.freeConcentrations_.empty()) {
-        const auto& tracers = this->eclState_.tracer();
-        for (auto tracerIdx = 0*tracers.size();
-             tracerIdx < tracers.size(); ++tracerIdx)
-        {
-            sol.insert(tracers[tracerIdx].fname(),
-                       UnitSystem::measure::identity,
-                       std::move(this->tracerC_.freeConcentrations_[tracerIdx]),
-                       data::TargetType::RESTART_TRACER_SOLUTION);
-        }
-
-        // Put freeTracerConcentrations container into a valid state.  Otherwise
-        // we'll move from vectors that have already been moved from if we
-        // get here and it's not a restart step.
-        this->tracerC_.freeConcentrations_.clear();
-    }
-    if (! this->tracerC_.solConcentrations_.empty()) {
-        const auto& tracers = this->eclState_.tracer();
-        for (auto tracerIdx = 0*tracers.size();
-             tracerIdx < tracers.size(); ++tracerIdx)
-        {
-            if (this->tracerC_.solConcentrations_[tracerIdx].empty())
-                continue;
-
-            sol.insert(tracers[tracerIdx].sname(),
-                       UnitSystem::measure::identity,
-                       std::move(this->tracerC_.solConcentrations_[tracerIdx]),
-                       data::TargetType::RESTART_TRACER_SOLUTION);
-        }
-
-        // Put solTracerConcentrations container into a valid state.  Otherwise
-        // we'll move from vectors that have already been moved from if we
-        // get here and it's not a restart step.
-        this->tracerC_.solConcentrations_.clear();
-    }
+    this->tracerC_.outputRestart(sol);
 }
 
 template<class FluidSystem>
