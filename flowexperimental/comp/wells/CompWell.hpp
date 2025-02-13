@@ -58,7 +58,7 @@ public:
         static constexpr int num_phases = 2;
         std::array<EvalWell, num_phases> surface_densities_{0.};
         std::array<EvalWell, num_phases> volume_fractions_{0.};
-        std::array<std::array<EvalWell, num_phases>, num_comp> mass_fractions_{0.};
+        std::array<std::array<EvalWell, num_comp>, num_phases> mass_fractions_{0.};
 
         EvalWell density() const {
             EvalWell density = 0.;
