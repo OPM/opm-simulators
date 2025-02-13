@@ -32,15 +32,20 @@
 #include <opm/simulators/utils/moduleVersion.hpp>
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/CompositionalContainer.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
 
@@ -53,8 +58,7 @@
 #include <vector>
 
 
-namespace Opm
-{
+namespace Opm {
 
 // forward declaration
 template <class TypeTag>
@@ -102,8 +106,7 @@ public:
                    getPropValue<TypeTag, Properties::EnableBrine>(),
                    getPropValue<TypeTag, Properties::EnableSaltPrecipitation>(),
                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                   getPropValue<TypeTag, Properties::EnableMICP>(),
-                   true)
+                   getPropValue<TypeTag, Properties::EnableMICP>())
         , simulator_(simulator)
     {
         for (auto& region_pair : this->regions_) {
@@ -155,11 +158,24 @@ public:
             return;
         }
 
-        this->doAllocBuffers(bufferSize,
-                              reportStepNum,
-                              substep,
-                              log,
-                              isRestart);
+        auto rstKeywords = this->schedule_.rst_keywords(reportStepNum);
+        this->compC_.allocate(bufferSize, rstKeywords);
+
+        this->doAllocBuffers(bufferSize, reportStepNum, substep, log, isRestart,
+                             /* vapparsActive =*/ false,
+                             /* enablePCHysteresis = */ false,
+                             /* enableNonWettingHysteresis =*/ false,
+                             /* enableWettingHysteresis =*/ false,
+                             /* numTracers = */ 0,
+                             /* enableSoltracers =*/ {},
+                             /* numOutputNnc =*/ 0,
+                             std::move(rstKeywords));
+    }
+
+    void assignToSolution(data::Solution& sol)
+    {
+        this->compC_.outputRestart(sol, this->saturation_[oilPhaseIdx]);
+        BaseType::assignToSolution(sol);
     }
 
     /*!
@@ -187,20 +203,21 @@ public:
                 Valgrind::CheckDefined(this->saturation_[phaseIdx][globalDofIdx]);
             }
 
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (this->moleFractions_[compIdx].empty()) continue;
+            if (this->compC_.allocated()) {
+                this->compC_.assignMoleFractions(globalDofIdx,
+                                                 [&fs](const unsigned compIdx)
+                                                 { return getValue(fs.moleFraction(compIdx)); });
 
-                this->moleFractions_[compIdx][globalDofIdx] = getValue(fs.moleFraction(compIdx));
-            }
-            // XMF and YMF
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    if (this->phaseMoleFractions_[oilPhaseIdx][compIdx].empty()) continue;
-                    this->phaseMoleFractions_[oilPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(oilPhaseIdx, compIdx));
-                }
                 if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    if (this->phaseMoleFractions_[gasPhaseIdx][compIdx].empty()) continue;
-                    this->phaseMoleFractions_[gasPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(gasPhaseIdx, compIdx));
+                    this->compC_.assignGasFractions(globalDofIdx,
+                                                    [&fs](const unsigned compIdx)
+                                                    { return getValue(fs.moleFraction(gasPhaseIdx, compIdx)); });
+                }
+
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                    this->compC_.assignOilFractions(globalDofIdx,
+                                                    [&fs](const unsigned compIdx)
+                                                    { return getValue(fs.moleFraction(oilPhaseIdx, compIdx)); });
                 }
             }
 
@@ -332,6 +349,7 @@ private:
     }
 
     const Simulator& simulator_;
+    CompositionalContainer<FluidSystem> compC_;
 };
 
 } // namespace Opm

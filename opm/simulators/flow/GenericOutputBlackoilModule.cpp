@@ -104,8 +104,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             bool enableBrine,
                             bool enableSaltPrecipitation,
                             bool enableExtbo,
-                            bool enableMICP,
-                            bool isCompositional)
+                            bool enableMICP)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
@@ -124,7 +123,6 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
-    , isCompositional_(isCompositional)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -527,38 +525,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
     };
 
-    // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
-    // and also, we need to map these values.
-    // TODO: the following should go to a function
-    if (this->isCompositional_) {
-        auto compositionalEntries = std::vector<DataEntry>{};
-        {
-            // ZMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("ZMF{}", i + 1);  // Generate ZMF1, ZMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity, moleFractions_[i]);
-            }
-
-            // XMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("XMF{}", i + 1);  // Generate XMF1, XMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
-                                                  phaseMoleFractions_[oilPhaseIdx][i]);
-            }
-
-            // YMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("YMF{}", i + 1);  // Generate YMF1, YMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
-                                                  phaseMoleFractions_[gasPhaseIdx][i]);
-            }
-        }
-
-        for (auto& array: compositionalEntries) {
-            doInsert(array, data::TargetType::RESTART_SOLUTION);
-        }
-    }
-
     for (auto& array : baseSolutionVector) {
         doInsert(array, data::TargetType::RESTART_SOLUTION);
     }
@@ -601,15 +567,6 @@ assignToSolution(data::Solution& sol)
                    std::move(this->saturation_[gasPhaseIdx]),
                    data::TargetType::RESTART_SOLUTION);
     }
-
-    if (this->isCompositional_ && FluidSystem::phaseIsActive(oilPhaseIdx) &&
-        ! this->saturation_[oilPhaseIdx].empty())
-    {
-        sol.insert("SOIL", UnitSystem::measure::identity,
-                   std::move(this->saturation_[oilPhaseIdx]),
-                   data::TargetType::RESTART_SOLUTION);
-    }
-
 
     if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
         auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
@@ -834,10 +791,14 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     enableWettingHysteresis,
                const unsigned numTracers,
                const std::vector<bool>& enableSolTracers,
-               const unsigned numOutputNnc)
+               const unsigned numOutputNnc,
+               std::map<std::string, int> rstKeywords)
 {
+    if (rstKeywords.empty()) {
+        rstKeywords = schedule_.rst_keywords(reportStepNum);
+    }
+
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
-    std::map<std::string, int> rstKeywords = schedule_.rst_keywords(reportStepNum);
     for (auto& [keyword, should_write] : rstKeywords) {
         if (this->isOutputCreationDirective_(keyword)) {
             // 'BASIC', 'FREQ' and similar.  Don't attempt to create
@@ -1292,30 +1253,6 @@ doAllocBuffers(const unsigned bufferSize,
         minimumOilPressure_.resize(bufferSize, 0.0);
         overburdenPressure_.resize(bufferSize, 0.0);
     }
-
-    if (this->isCompositional_) {
-        if (rstKeywords["ZMF"] > 0) {
-            rstKeywords["ZMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                moleFractions_[i].resize(bufferSize, 0.0);
-            }
-        }
-
-        if (rstKeywords["XMF"] > 0 && FluidSystem::phaseIsActive(oilPhaseIdx)) {
-            rstKeywords["XMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                phaseMoleFractions_[oilPhaseIdx][i].resize(bufferSize, 0.0);
-            }
-        }
-
-        if (rstKeywords["YMF"] > 0 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-            rstKeywords["YMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
-            }
-        }
-    }
-
 
     //Warn for any unhandled keyword
     if (log) {
