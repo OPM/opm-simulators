@@ -339,6 +339,10 @@ public:
     computeCurrentWellRates(const Simulator& simulator,
                             DeferredLogger& deferred_logger) const = 0;
 
+    virtual void solveWellWithTHPConstraintConst(const Simulator& simulator, WellState<Scalar>& wellState, 
+                                                  const GroupState<Scalar>& groupState) const = 0;
+
+  
     /// Modify the well_state's rates if there is only one nonzero rate.
     /// If so, that rate is kept as is, but the others are set proportionally
     /// to the rates returned by computeCurrentWellRates().
@@ -439,6 +443,10 @@ protected:
                               const GroupState<Scalar>& group_state,
                               DeferredLogger& deferred_logger);
 
+    bool solveWellWithTHPConstraintALQ(const Simulator& simulator, WellState<Scalar>& well_state, 
+                                       const GroupState<Scalar>& group_state);
+
+
     bool solveWellWithTHPConstraint(const Simulator& simulator,
                                     const double dt,
                                     const Well::InjectionControls& inj_controls,
@@ -506,7 +514,7 @@ protected:
                                     const SingleWellState<Scalar>& ws) const;
 };
 
-} // namespace Opm
+} // namespace OpmS
 
 #include "WellInterface_impl.hpp"
 

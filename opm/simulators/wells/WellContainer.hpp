@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <opm/common/TimingMacros.hpp>
 namespace Opm {
 
 
@@ -151,6 +152,7 @@ public:
     }
 
     std::optional<int> well_index(const std::string& wname) const {
+        OPM_TIMEFUNCTION();
         auto index_iter = this->index_map.find(wname);
         if (index_iter != this->index_map.end())
             return index_iter->second;
@@ -159,6 +161,7 @@ public:
     }
 
     const std::string& well_name(std::size_t well_index) const {
+        OPM_TIMEFUNCTION();
         for (const auto& [wname, windex] : this->index_map) {
             if (windex == well_index)
                 return wname;

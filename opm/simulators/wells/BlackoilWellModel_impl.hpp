@@ -1240,6 +1240,7 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // Set the well primary variables based on the value of well solutions
+            updatePrimaryVariables(local_deferredLogger);
             initPrimaryVariablesEvaluation();
 
             alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,

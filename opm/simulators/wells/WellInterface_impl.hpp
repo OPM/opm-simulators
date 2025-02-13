@@ -295,7 +295,16 @@ namespace Opm
         }
         const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
 
-        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        // do not check groups zero rate in second case
+        bool zero_target = false;
+        if(this->param_.check_group_constraints_inner_well_iterations_){
+            zero_target = this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
+        }else{
+            const auto& summaryState = simulator.vanguard().summaryState();
+            zero_target =  this->wellUnderZeroRateTargetIndividual(summaryState, well_state);
+        }
+
+        if (oscillating || zero_target || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -396,7 +405,7 @@ namespace Opm
 
         WellState<Scalar> well_state_copy = well_state;
         auto& ws = well_state_copy.well(this->indexOfWell());
-
+        calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
@@ -526,6 +535,30 @@ namespace Opm
         }
         return converged;
     }
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    solveWellWithTHPConstraintALQ(const Simulator& simulator, WellState<Scalar>& well_state, const GroupState<Scalar>& group_state){
+        OPM_TIMEFUNCTION();
+            const auto& summary_state = simulator.vanguard().summaryState();
+            auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+            auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+            const double dt = simulator.timeStepSize();
+            DeferredLogger deferred_logger;
+            this->prepareForPotentialCalculations(summary_state, well_state, inj_controls, prod_controls);
+            bool converged = this->solveWellWithTHPConstraint(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            auto& ws = well_state.well(this->name());
+            if(this->wellIsStopped()){
+                ws.status = WellStatus::STOP;
+            }else{
+                ws.status = WellStatus::OPEN;
+            }
+            assert(converged);
+            return converged;
+    }
+
+
 
     template<typename TypeTag>
     bool
@@ -845,6 +878,7 @@ namespace Opm
                                 DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
+        initPrimaryVariablesEvaluation();
         const bool old_well_operable = this->operability_status_.isOperableAndSolvable();
 
         if (this->param_.check_well_operability_iter_)
@@ -1547,6 +1581,7 @@ namespace Opm
                                                          DeferredLogger& deferred_logger,
                                                          const std::optional<bool> group_control) const
     {
+        OPM_TIMEFUNCTION();
         // Check if well is under zero rate target from group
         const bool isGroupControlled = group_control.value_or(this->wellUnderGroupControl(well_state.well(this->index_of_well_)));
         if (isGroupControlled) {
@@ -1941,9 +1976,11 @@ namespace Opm
                                      WellState<Scalar>& well_state,
                                      DeferredLogger& deferred_logger) const
     {
-        OPM_TIMEFUNCTION();
+        OPM_TIMEFUNCTION(); 
         const auto& summary_state = simulator.vanguard().summaryState();
-
+        // if(std::abs(this->getTHPConstraint(summary_state)-ws.thp) < 10*bar) {
+        //     return true;
+        // }
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
             simulator, summary_state, this->getALQ(well_state), deferred_logger, /*iterate_if_no_solution */ true);
         if (bhp_at_thp_limit) {

@@ -29,6 +29,7 @@
 #include <cassert>
 #include <stdexcept>
 
+#include <opm/common/TimingMacros.hpp>
 namespace Opm::WGHelpers {
 
 template<class Scalar>
@@ -55,6 +56,7 @@ template<class Scalar>
 template <typename RateType>
 RateType TargetCalculator<Scalar>::calcModeRateFromRates(const RateType* rates) const
 {
+    OPM_TIMEFUNCTION();
     switch (cmode_) {
     case Group::ProductionCMode::ORAT: {
         assert(pu_.phase_used[BlackoilPhases::Liquid]);
@@ -97,6 +99,7 @@ Scalar TargetCalculator<Scalar>::
 groupTarget(const std::optional<Group::ProductionControls>& ctrl,
             DeferredLogger& deferred_logger) const
 {
+    OPM_TIMEFUNCTION();
     if (!ctrl && !use_gpmaint_) {
         OPM_DEFLOG_THROW(std::logic_error,
                          "Production group " + this->group_name_
@@ -174,6 +177,7 @@ InjectionTargetCalculator(const Group::InjectionCMode& cmode,
     , use_gpmaint_(use_gpmaint)
 
 {
+    OPM_TIMEFUNCTION();
     // initialize to avoid warning
     pos_ = pu.phase_pos[BlackoilPhases::Aqua];
     target_ = GuideRateModel::Target::WAT;
@@ -206,6 +210,7 @@ Scalar InjectionTargetCalculator<Scalar>::
 groupTarget(const std::optional<Group::InjectionControls>& ctrl,
             DeferredLogger& deferred_logger) const
 {
+    OPM_TIMEFUNCTION();
     if (!ctrl && !use_gpmaint_) {
         OPM_DEFLOG_THROW(std::logic_error,
                          "Injection group " + this->group_name_

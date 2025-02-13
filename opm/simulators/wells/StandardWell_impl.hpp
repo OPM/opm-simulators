@@ -356,6 +356,7 @@ namespace Opm
                                    const GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
@@ -1751,6 +1752,7 @@ namespace Opm
                           std::vector<Scalar>& well_potentials,
                           DeferredLogger& deferred_logger) // const
     {
+        OPM_TIMEFUNCTION();
         const auto [compute_potential, bhp_controlled_well] =
             this->WellInterfaceGeneric<Scalar>::computeWellPotentials(well_potentials, well_state);
 
@@ -2354,6 +2356,7 @@ namespace Opm
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger)
     {
+        OPM_TIMEFUNCTION();
         const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
         bool converged;
@@ -2402,6 +2405,7 @@ namespace Opm
                                const bool fixed_control /*false*/,
                                const bool fixed_status /*false*/)
     {
+        OPM_TIMEFUNCTION();
         const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
         bool converged = false;

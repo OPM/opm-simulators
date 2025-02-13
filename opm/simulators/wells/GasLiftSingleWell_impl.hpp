@@ -139,6 +139,19 @@ computeWellRates_(Scalar bhp, bool bhp_is_limited, bool debug_output ) const
 }
 
 template<typename TypeTag>
+void GasLiftSingleWell<TypeTag>::solveWellWithTHPConstraintAlqImplicit(WellState<Scalar>& wellState,
+const GroupState<Scalar>& groupState) const
+{
+  OPM_TIMEFUNCTION();
+  this->well_.solveWellWithTHPConstraintConst(this->simulator_,wellState,groupState);
+#if 0
+  auto well_copy(this->well_);
+  //const_cast<WellInterface<TypeTag>&>(this->well_).solveWellWithTHPConstraintALQ(this->simulator_,wellState,groupState);
+  this->well_.solveWellWithTHPConstraintALQ(this->simulator_,wellState,groupState);
+#endif
+}
+
+template<typename TypeTag>
 std::optional<typename GasLiftSingleWell<TypeTag>::Scalar>
 GasLiftSingleWell<TypeTag>::
 computeBhpAtThpLimit_(Scalar alq, bool debug_output) const
