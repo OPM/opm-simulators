@@ -101,6 +101,9 @@ public:
     //! \brief Returns number of well equations.
     int numWellEq() const { return numWellEq_; }
 
+    bool consistent(const WellState<Scalar>& well_state) const;
+
+
     //! \brief Copy values from well state.
     void update(const WellState<Scalar>& well_state,
                 const bool stop_or_zero_rate_target,

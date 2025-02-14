@@ -356,7 +356,8 @@ namespace Opm
                                    const GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger)
     {
-        // TODO: only_wells should be put back to save some computation
+        assert(this->primary_variables_.consistent(well_state));
+         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
