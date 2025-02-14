@@ -347,8 +347,8 @@ namespace Opm
         // Use the general third order controller for all other time steps
         else
         {
-            const std::array<double> beta = { 0.125, 0.25, 0.125 };
-            const std::array<double> alpha = { 0.375, 0.125 };
+            const std::array<double, 3> beta = { 0.125, 0.25, 0.125 };
+            const std::array<double, 2> alpha = { 0.375, 0.125 };
             const double newDt = dt * std::pow(safetyFactor_ * tolerance_ / errors_[2], beta[0]) *
                                       std::pow(safetyFactor_ * tolerance_ / errors_[1], beta[1]) *
                                       std::pow(safetyFactor_ * tolerance_ / errors_[0], beta[2]) *
