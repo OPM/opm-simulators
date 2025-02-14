@@ -53,7 +53,7 @@ namespace Opm
         void init(const ParameterGroup& param);
 
         /// Use the SimulatorTimer as a shim around opm-commons Schedule class
-        void init(const Schedule& schedule, std::size_t report_step, std::size_t end_step);
+        void init(const Schedule& schedule, std::size_t report_step, int end_step);
 
         /// Whether the current step is the first step.
         bool initialStep() const override;

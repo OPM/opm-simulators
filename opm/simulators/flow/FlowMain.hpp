@@ -423,7 +423,7 @@ namespace Opm {
 
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
-            int end_step =   Parameters::Get<Parameters::EndStep>();
+            int end_step = Parameters::Get<Parameters::EndStep>();
             simtimer_->init(schedule, static_cast<std::size_t>(initConfig.getRestartStep()), end_step);
 
             if (this->output_cout_) {

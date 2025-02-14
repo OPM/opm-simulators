@@ -55,21 +55,6 @@ namespace Opm
         return res;
     }
 
-    /// Initialize from parameters. Accepts the following:
-    ///    num_psteps    (default 1)
-    ///    stepsize_days (default 1)
-    void SimulatorTimer::init(const ParameterGroup& param)
-    {
-        const int num_psteps = param.getDefault("num_psteps", 1);
-        const int end_step = param.getDefault("end_step", 50000);
-        const double stepsize_days = param.getDefault("stepsize_days", 1.0);
-        const double stepsize = Opm::unit::convert::from(stepsize_days, Opm::unit::day);
-        timesteps_.clear();
-        timesteps_.resize(num_psteps, stepsize);
-	end_step_ = end_step;
-        total_time_ = num_psteps*stepsize;
-    }
-
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
     void SimulatorTimer::init(const Schedule& schedule, std::size_t report_step, std::size_t end_step)
     {
@@ -171,9 +156,9 @@ namespace Opm
     /// Return true if op++() has been called numSteps() times.
     bool SimulatorTimer::done() const
     {
-        if(current_step_ < end_step_){
+        if (current_step_ < end_step_) {
             return int(timesteps_.size()) == current_step_;
-        }else{
+        } else {
             return true;
         }
     }
