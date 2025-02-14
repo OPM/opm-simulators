@@ -44,21 +44,23 @@ namespace {
     void addEntry(std::vector<DataEntry<Scalar>>& container,
                   const std::string& name,
                   Opm::UnitSystem::measure measure,
-                  Array& flowArray)
+                  Array& flowArray,
+                  const unsigned faceId)
     {
         if constexpr (idx >= 0) {  // Only add if index is valid
-            container.emplace_back(name, measure, flowArray[idx]);
+            container.emplace_back(name, measure, flowArray[idx][faceId]);
         }
     }
 
     template<int idx, class Array, class Scalar>
     void assignToVec(Array& array,
+                     const unsigned faceId,
                      const unsigned globalDofIdx,
                      const Scalar value)
     {
         if constexpr (idx != -1) {
-            if (!array[idx].empty()) {
-                array[idx][globalDofIdx] = value;
+            if (!array[idx][faceId].empty()) {
+                array[idx][faceId][globalDofIdx] = value;
             }
         }
     }
@@ -124,9 +126,9 @@ allocate(const std::size_t bufferSize,
 
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
-                flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::XPlus)].resize(bufferSize, 0.0);
+                flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::YPlus)].resize(bufferSize, 0.0);
+                flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::ZPlus)].resize(bufferSize, 0.0);
             }
         }
     }
@@ -149,15 +151,15 @@ allocate(const std::size_t bufferSize,
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
                 if (!blockFlows_) { // Already allocated if summary vectors requested
-                    flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::XPlus)].resize(bufferSize, 0.0);
+                    flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::YPlus)].resize(bufferSize, 0.0);
+                    flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::ZPlus)].resize(bufferSize, 0.0);
                 }
 
                 if (rstKeywords["FLOWS-"] > 0) {
-                    flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::XMinus)].resize(bufferSize, 0.0);
+                    flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::YMinus)].resize(bufferSize, 0.0);
+                    flows_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::ZMinus)].resize(bufferSize, 0.0);
                 }
 
                 if (numOutputNnc > 0) {
@@ -186,14 +188,14 @@ allocate(const std::size_t bufferSize,
 
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
-                flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                flores_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::XPlus)].resize(bufferSize, 0.0);
+                flores_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::YPlus)].resize(bufferSize, 0.0);
+                flores_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::ZPlus)].resize(bufferSize, 0.0);
 
                 if (rstKeywords["FLORES-"] > 0) {
-                    flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
-                    flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)][compIdxs[ii]].resize(bufferSize, 0.0);
+                    flores_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::XMinus)].resize(bufferSize, 0.0);
+                    flores_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::YMinus)].resize(bufferSize, 0.0);
+                    flores_[compIdxs[ii]][FaceDir::ToIntersectionIndex(Dir::ZMinus)].resize(bufferSize, 0.0);
                 }
 
                 if (numOutputNnc > 0) {
@@ -221,9 +223,9 @@ assignFlores(const unsigned globalDofIdx,
              const Scalar water)
 {
     if (faceId >= 0) {
-        assignToVec<gasCompIdx>(this->flores_[faceId], globalDofIdx, gas);
-        assignToVec<oilCompIdx>(this->flores_[faceId], globalDofIdx, oil);
-        assignToVec<waterCompIdx>(this->flores_[faceId], globalDofIdx, water);
+        assignToVec<gasCompIdx>(this->flores_, faceId, globalDofIdx, gas);
+        assignToVec<oilCompIdx>(this->flores_, faceId, globalDofIdx, oil);
+        assignToVec<waterCompIdx>(this->flores_, faceId, globalDofIdx, water);
     }
     else if (faceId == -2) {
         assignToNnc<gasCompIdx>(this->floresn_, nncId, gas);
@@ -242,9 +244,9 @@ assignFlows(const unsigned globalDofIdx,
             const Scalar water)
 {
     if (faceId >= 0) {
-        assignToVec<gasCompIdx>(this->flows_[faceId], globalDofIdx, gas);
-        assignToVec<oilCompIdx>(this->flows_[faceId], globalDofIdx, oil);
-        assignToVec<waterCompIdx>(this->flows_[faceId], globalDofIdx, water);
+        assignToVec<gasCompIdx>(this->flows_, faceId, globalDofIdx, gas);
+        assignToVec<oilCompIdx>(this->flows_, faceId, globalDofIdx, oil);
+        assignToVec<waterCompIdx>(this->flows_, faceId, globalDofIdx, water);
     }
     else if (faceId == -2) {
         assignToNnc<gasCompIdx>(this->flowsn_, nncId, gas);
@@ -270,44 +272,44 @@ outputRestart(data::Solution& sol)
 
     using Dir = FaceDir::DirEnum;
     std::vector<DataEntry<Scalar>> floresSolutionVector;
-    addEntry<gasCompIdx>(floresSolutionVector, "FLRGASI+", UnitSystem::measure::rate,   flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)]);
-    addEntry<gasCompIdx>(floresSolutionVector, "FLRGASJ+", UnitSystem::measure::rate,   flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)]);
-    addEntry<gasCompIdx>(floresSolutionVector, "FLRGASK+", UnitSystem::measure::rate,   flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)]);
-    addEntry<oilCompIdx>(floresSolutionVector, "FLROILI+", UnitSystem::measure::rate,   flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)]);
-    addEntry<oilCompIdx>(floresSolutionVector, "FLROILJ+", UnitSystem::measure::rate,   flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)]);
-    addEntry<oilCompIdx>(floresSolutionVector, "FLROILK+", UnitSystem::measure::rate,   flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)]);
-    addEntry<waterCompIdx>(floresSolutionVector, "FLRWATI+", UnitSystem::measure::rate, flores_[FaceDir::ToIntersectionIndex(Dir::XPlus)]);
-    addEntry<waterCompIdx>(floresSolutionVector, "FLRWATJ+", UnitSystem::measure::rate, flores_[FaceDir::ToIntersectionIndex(Dir::YPlus)]);
-    addEntry<waterCompIdx>(floresSolutionVector, "FLRWATK+", UnitSystem::measure::rate, flores_[FaceDir::ToIntersectionIndex(Dir::ZPlus)]);
+    addEntry<gasCompIdx>(floresSolutionVector, "FLRGASI+", UnitSystem::measure::rate,   flores_, FaceDir::ToIntersectionIndex(Dir::XPlus));
+    addEntry<gasCompIdx>(floresSolutionVector, "FLRGASJ+", UnitSystem::measure::rate,   flores_, FaceDir::ToIntersectionIndex(Dir::YPlus));
+    addEntry<gasCompIdx>(floresSolutionVector, "FLRGASK+", UnitSystem::measure::rate,   flores_, FaceDir::ToIntersectionIndex(Dir::ZPlus));
+    addEntry<oilCompIdx>(floresSolutionVector, "FLROILI+", UnitSystem::measure::rate,   flores_, FaceDir::ToIntersectionIndex(Dir::XPlus));
+    addEntry<oilCompIdx>(floresSolutionVector, "FLROILJ+", UnitSystem::measure::rate,   flores_, FaceDir::ToIntersectionIndex(Dir::YPlus));
+    addEntry<oilCompIdx>(floresSolutionVector, "FLROILK+", UnitSystem::measure::rate,   flores_, FaceDir::ToIntersectionIndex(Dir::ZPlus));
+    addEntry<waterCompIdx>(floresSolutionVector, "FLRWATI+", UnitSystem::measure::rate, flores_, FaceDir::ToIntersectionIndex(Dir::XPlus));
+    addEntry<waterCompIdx>(floresSolutionVector, "FLRWATJ+", UnitSystem::measure::rate, flores_, FaceDir::ToIntersectionIndex(Dir::YPlus));
+    addEntry<waterCompIdx>(floresSolutionVector, "FLRWATK+", UnitSystem::measure::rate, flores_, FaceDir::ToIntersectionIndex(Dir::ZPlus));
 
     std::vector<DataEntry<Scalar>> flowsSolutionVector;
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASI+", UnitSystem::measure::gas_surface_rate,      flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)]);
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASJ+", UnitSystem::measure::gas_surface_rate,      flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)]);
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASK+", UnitSystem::measure::gas_surface_rate,      flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILI+", UnitSystem::measure::liquid_surface_rate,   flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILJ+", UnitSystem::measure::liquid_surface_rate,   flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILK+", UnitSystem::measure::liquid_surface_rate,   flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATI+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATJ+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATK+", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)]);
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASI-", UnitSystem::measure::gas_surface_rate,      flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)]);
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASJ-", UnitSystem::measure::gas_surface_rate,      flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)]);
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASK-", UnitSystem::measure::gas_surface_rate,      flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILI-", UnitSystem::measure::liquid_surface_rate,   flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILJ-", UnitSystem::measure::liquid_surface_rate,   flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILK-", UnitSystem::measure::liquid_surface_rate,   flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATI-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::XMinus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATJ-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::YMinus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATK-", UnitSystem::measure::liquid_surface_rate, flows_[FaceDir::ToIntersectionIndex(Dir::ZMinus)]);
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLRGASI-", UnitSystem::measure::rate,                  flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)]);
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLRGASJ-", UnitSystem::measure::rate,                  flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)]);
-    addEntry<gasCompIdx>(flowsSolutionVector, "FLRGASK-", UnitSystem::measure::rate,                  flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLROILI-", UnitSystem::measure::rate,                  flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLROILJ-", UnitSystem::measure::rate,                  flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)]);
-    addEntry<oilCompIdx>(flowsSolutionVector, "FLROILK-", UnitSystem::measure::rate,                  flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLRWATI-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::XMinus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLRWATJ-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::YMinus)]);
-    addEntry<waterCompIdx>(flowsSolutionVector, "FLRWATK-", UnitSystem::measure::rate,                flores_[FaceDir::ToIntersectionIndex(Dir::ZMinus)]);
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASI+", UnitSystem::measure::gas_surface_rate,      flows_, FaceDir::ToIntersectionIndex(Dir::XPlus));
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASJ+", UnitSystem::measure::gas_surface_rate,      flows_, FaceDir::ToIntersectionIndex(Dir::YPlus));
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASK+", UnitSystem::measure::gas_surface_rate,      flows_, FaceDir::ToIntersectionIndex(Dir::ZPlus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILI+", UnitSystem::measure::liquid_surface_rate,   flows_, FaceDir::ToIntersectionIndex(Dir::XPlus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILJ+", UnitSystem::measure::liquid_surface_rate,   flows_, FaceDir::ToIntersectionIndex(Dir::YPlus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILK+", UnitSystem::measure::liquid_surface_rate,   flows_, FaceDir::ToIntersectionIndex(Dir::ZPlus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATI+", UnitSystem::measure::liquid_surface_rate, flows_, FaceDir::ToIntersectionIndex(Dir::XPlus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATJ+", UnitSystem::measure::liquid_surface_rate, flows_, FaceDir::ToIntersectionIndex(Dir::YPlus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATK+", UnitSystem::measure::liquid_surface_rate, flows_, FaceDir::ToIntersectionIndex(Dir::ZPlus));
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASI-", UnitSystem::measure::gas_surface_rate,      flows_, FaceDir::ToIntersectionIndex(Dir::XMinus));
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASJ-", UnitSystem::measure::gas_surface_rate,      flows_, FaceDir::ToIntersectionIndex(Dir::YMinus));
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLOGASK-", UnitSystem::measure::gas_surface_rate,      flows_, FaceDir::ToIntersectionIndex(Dir::ZMinus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILI-", UnitSystem::measure::liquid_surface_rate,   flows_, FaceDir::ToIntersectionIndex(Dir::XMinus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILJ-", UnitSystem::measure::liquid_surface_rate,   flows_, FaceDir::ToIntersectionIndex(Dir::YMinus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLOOILK-", UnitSystem::measure::liquid_surface_rate,   flows_, FaceDir::ToIntersectionIndex(Dir::ZMinus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATI-", UnitSystem::measure::liquid_surface_rate, flows_, FaceDir::ToIntersectionIndex(Dir::XMinus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATJ-", UnitSystem::measure::liquid_surface_rate, flows_, FaceDir::ToIntersectionIndex(Dir::YMinus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLOWATK-", UnitSystem::measure::liquid_surface_rate, flows_, FaceDir::ToIntersectionIndex(Dir::ZMinus));
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLRGASI-", UnitSystem::measure::rate,                  flores_, FaceDir::ToIntersectionIndex(Dir::XMinus));
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLRGASJ-", UnitSystem::measure::rate,                  flores_, FaceDir::ToIntersectionIndex(Dir::YMinus));
+    addEntry<gasCompIdx>(flowsSolutionVector, "FLRGASK-", UnitSystem::measure::rate,                  flores_, FaceDir::ToIntersectionIndex(Dir::ZMinus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLROILI-", UnitSystem::measure::rate,                  flores_, FaceDir::ToIntersectionIndex(Dir::XMinus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLROILJ-", UnitSystem::measure::rate,                  flores_, FaceDir::ToIntersectionIndex(Dir::YMinus));
+    addEntry<oilCompIdx>(flowsSolutionVector, "FLROILK-", UnitSystem::measure::rate,                  flores_, FaceDir::ToIntersectionIndex(Dir::ZMinus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLRWATI-", UnitSystem::measure::rate,                flores_, FaceDir::ToIntersectionIndex(Dir::XMinus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLRWATJ-", UnitSystem::measure::rate,                flores_, FaceDir::ToIntersectionIndex(Dir::YMinus));
+    addEntry<waterCompIdx>(flowsSolutionVector, "FLRWATK-", UnitSystem::measure::rate,                flores_, FaceDir::ToIntersectionIndex(Dir::ZMinus));
 
     std::for_each(floresSolutionVector.begin(), floresSolutionVector.end(),
                   [doInsert](auto& array)
