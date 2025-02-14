@@ -22,6 +22,7 @@
 #define OPM_TIMESTEPCONTROL_HEADER_INCLUDED
 
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
+#include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 
 #include <string>
 #include <vector>
@@ -32,7 +33,8 @@ namespace Opm
       SimpleIterationCount,
       PID,
       PIDAndIterationCount,
-      HardCodedTimeStep
+      HardCodedTimeStep,
+      General3rdOrder,
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,7 +64,7 @@ namespace Opm
         double computeTimeStepSize(const double dt,
                                    const int iterations,
                                    const RelativeChangeInterface& /* relativeChange */,
-                                   const double /*simulationTimeElapsed */ ) const override;
+                                   const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -113,7 +115,7 @@ namespace Opm
         double computeTimeStepSize(const double dt,
                                    const int /* iterations */,
                                    const RelativeChangeInterface& relativeChange,
-                                   const double /*simulationTimeElapsed */ ) const override;
+                                   const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -162,7 +164,7 @@ namespace Opm
         double computeTimeStepSize(const double dt,
                                    const int iterations,
                                    const RelativeChangeInterface& relativeChange,
-                                   const double /*simulationTimeElapsed */ ) const override;
+                                   const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -181,6 +183,49 @@ namespace Opm
         const double  decayDampingFactor_;
         const double  growthDampingFactor_;
         const double  minTimeStepBasedOnIterations_;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    ///  General 3rd order controller
+    ///
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class General3rdOrderController : public TimeStepControlInterface
+    {
+    public:
+        static constexpr TimeStepControlType Type = TimeStepControlType::General3rdOrder;
+
+        General3rdOrderController( const double tolerance = 1e-3,
+                                   const double safetyFactor = 0.8,
+                                   const bool verbose = false );
+
+        static General3rdOrderController serializationTestObject();
+
+        double computeTimeStepSize(const double dt,
+                                   const int /*iterations */,
+                                   const RelativeChangeInterface& relativeChange,
+                                   const AdaptiveSimulatorTimer& substepTimer) const override;
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(tolerance_);
+            serializer(safetyFactor_);
+            serializer(errors_);
+            serializer(timeSteps_);
+            serializer(verbose_);
+        }
+
+        bool operator==(const General3rdOrderController&) const;
+
+
+    protected:
+        const double tolerance_ = 1e-3;
+        const double safetyFactor_ = 0.8;
+        mutable std::vector<double> errors_{};
+        mutable std::vector<double> timeSteps_{};
+        mutable int counterSinceFailure_ = 0;
+        const bool verbose_ = false;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,7 +253,7 @@ namespace Opm
         double computeTimeStepSize(const double dt,
                                    const int /* iterations */,
                                    const RelativeChangeInterface& /*relativeChange */,
-                                   const double simulationTimeElapsed) const override;
+                                   const AdaptiveSimulatorTimer& substepTimer) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
