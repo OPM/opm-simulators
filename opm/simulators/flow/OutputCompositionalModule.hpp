@@ -162,7 +162,6 @@ public:
         this->compC_.allocate(bufferSize, rstKeywords);
 
         this->doAllocBuffers(bufferSize, reportStepNum, substep, log, isRestart,
-                             /* vapparsActive =*/ false,
                              /* enablePCHysteresis = */ false,
                              /* enableNonWettingHysteresis =*/ false,
                              /* enableWettingHysteresis =*/ false,

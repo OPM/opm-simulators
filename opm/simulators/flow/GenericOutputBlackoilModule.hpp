@@ -327,7 +327,6 @@ protected:
                         const bool substep,
                         const bool log,
                         const bool isRestart,
-                        const bool vapparsActive = false,
                         const bool enablePCHysteresis = false,
                         const bool enableNonWettingHysteresis = false,
                         const bool enableWettingHysteresis = false,

@@ -752,7 +752,6 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     substep,
                const bool     log,
                const bool     isRestart,
-               const bool     vapparsActive,
                const bool     enablePCHysteresis,
                const bool     enableNonWettingHysteresis,
                const bool     enableWettingHysteresis,
@@ -953,6 +952,8 @@ doAllocBuffers(const unsigned bufferSize,
         this->micpC_.allocate(bufferSize);
     }
 
+    const bool vapparsActive = schedule_[std::max(reportStepNum, 0u)].oilvap().getType() ==
+                                  OilVaporizationProperties::OilVaporization::VAPPARS;
     if (vapparsActive) {
         soMax_.resize(bufferSize, 0.0);
     }

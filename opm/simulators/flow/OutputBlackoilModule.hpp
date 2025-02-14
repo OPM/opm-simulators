@@ -184,7 +184,6 @@ public:
                              substep,
                              log,
                              isRestart,
-                             problem.vapparsActive(std::max(simulator_.episodeIndex(), 0)),
                              problem.materialLawManager()->enablePCHysteresis(),
                              problem.materialLawManager()->enableNonWettingHysteresis(),
                              problem.materialLawManager()->enableWettingHysteresis(),
