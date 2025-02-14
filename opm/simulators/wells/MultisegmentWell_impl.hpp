@@ -181,15 +181,18 @@ namespace Opm
     updateWellStateWithTarget(const Simulator& simulator,
                               const GroupState<Scalar>& group_state,
                               WellState<Scalar>& well_state,
-                              DeferredLogger&  deferred_logger) const
+                              DeferredLogger&  deferred_logger, 
+                              const bool initialize)
     {
-        Base::updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+        Base::updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger, initialize);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
-        this->scaleSegmentRatesWithWellRates(this->segments_.inlets(),
-                                             this->segments_.perforations(),
-                                             well_state);
-        this->scaleSegmentPressuresWithBhp(well_state);
+        if (initialize) {
+            this->scaleSegmentRatesWithWellRates(this->segments_.inlets(),
+                                                 this->segments_.perforations(),
+                                                 well_state);
+            this->scaleSegmentPressuresWithBhp(well_state);
+        }
     }
 
 
