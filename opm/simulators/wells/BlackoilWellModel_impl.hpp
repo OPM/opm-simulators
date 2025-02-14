@@ -1103,7 +1103,6 @@ namespace Opm {
             }
             OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
                                        this->simulator_.vanguard().grid().comm());
-            this->initPrimaryVariablesEvaluation();
         } while (iter < max_iter);
 
         if (!converged) {
@@ -1239,9 +1238,6 @@ namespace Opm {
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            // Set the well primary variables based on the value of well solutions
-            initPrimaryVariablesEvaluation();
-
             alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
                                                           well_container_,
                                                           this->wellState(),
@@ -1662,17 +1658,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    initPrimaryVariablesEvaluation() const
-    {
-        for (auto& well : well_container_) {
-            well->initPrimaryVariablesEvaluation();
-        }
-    }
-
-
-    template<typename TypeTag>
     ConvergenceReport
     BlackoilWellModel<TypeTag>::
     getWellConvergence(const std::vector<Scalar>& B_avg, bool checkWellGroupControls) const
@@ -2084,7 +2069,6 @@ namespace Opm {
             if (events.hasEvent(WellState<Scalar>::event_mask)) {
                 well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
                 well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
-                well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
                 events.clearEvent(WellState<Scalar>::event_mask);

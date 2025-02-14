@@ -86,8 +86,6 @@ namespace Opm {
                   const std::vector<Scalar>& B_avg,
                   const bool changed_to_open_this_step) override;
 
-        void initPrimaryVariablesEvaluation() override;
-
         /// updating the well state based the current control mode
         void updateWellStateWithTarget(const Simulator& simulator,
                                        const GroupState<Scalar>& group_state,
