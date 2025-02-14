@@ -127,7 +127,7 @@ namespace Opm {
             if (wellEcl.getStatus() == Opm::Well::Status::SHUT)
                 continue;
 
-            Scalar factor = wellEcl.getEfficiencyFactor(network) * wellState[wellEcl.name()].efficiency_scaling_factor;
+            const Scalar factor = wellEcl.getEfficiencyFactor(network) * wellState[wellEcl.name()].efficiency_scaling_factor;
             const auto& ws = wellState.well(well_index.value());
             if (res_rates) {
                 const auto& well_rates = ws.reservoir_rates;
@@ -978,14 +978,14 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                 // Add downbranch rates to upbranch.
                 std::vector<Scalar>& up = node_inflows[(*upbranch).uptree_node()];
                 const std::vector<Scalar>& down = node_inflows[node];
-                // @TODO@ Also support NEFAC (for nodes that do not correspond to groups)
-                const double efficiency = network.node(node).efficiency();
+                // We now also support NEFAC
+                const Scalar efficiency = network.node(node).efficiency();
                 if (up.empty()) {
                     up = std::vector<Scalar>(down.size(), 0.0);
                 }
                 assert (up.size() == down.size());
                 for (std::size_t ii = 0; ii < up.size(); ++ii) {
-                    up[ii] += (efficiency*down[ii]);
+                    up[ii] += efficiency*down[ii];
                 }
             }
         }

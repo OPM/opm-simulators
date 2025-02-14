@@ -86,13 +86,6 @@ bool GroupState<Scalar>::has_production_rates(const std::string& gname) const
 }
 
 template<class Scalar>
-bool GroupState<Scalar>::has_network_leaf_node_production_rates(const std::string& gname) const
-{
-    auto group_iter = this->m_network_leaf_node_production_rates.find(gname);
-    return (group_iter != this->m_network_leaf_node_production_rates.end());
-}
-
-template<class Scalar>
 void GroupState<Scalar>::update_production_rates(const std::string& gname,
                                                  const std::vector<Scalar>& rates)
 {

@@ -50,7 +50,6 @@ public:
     bool operator==(const GroupState& other) const;
 
     bool has_production_rates(const std::string& gname) const;
-    bool has_network_leaf_node_production_rates(const std::string& gname) const;
     void update_production_rates(const std::string& gname,
                                  const std::vector<Scalar>& rates);
     void update_network_leaf_node_production_rates(const std::string& gname,
