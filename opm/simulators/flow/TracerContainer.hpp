@@ -26,6 +26,7 @@
 #ifndef OPM_TRACER_CONTAINER_HPP
 #define OPM_TRACER_CONTAINER_HPP
 
+#include <functional>
 #include <vector>
 
 namespace Opm {
@@ -45,6 +46,11 @@ public:
     {}
 
     void allocate(const unsigned bufferSize);
+
+    using AssignFunction = std::function<Scalar(const unsigned)>;
+
+    void assignFreeConcentrations(const unsigned globalDofIdx,
+                                  const AssignFunction& concentration);
 
     void outputRestart(data::Solution& sol);
 

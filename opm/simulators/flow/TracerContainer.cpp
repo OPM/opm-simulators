@@ -63,6 +63,21 @@ allocate(const unsigned bufferSize)
 
 template<class FluidSystem>
 void TracerContainer<FluidSystem>::
+assignFreeConcentrations(const unsigned globalDofIdx,
+                         const AssignFunction& concentration)
+{
+    std::for_each(freeConcentrations_.begin(), freeConcentrations_.end(),
+                  [globalDofIdx, idx = 0, &concentration](auto& tracer) mutable
+                  {
+                      if (!tracer.empty()) {
+                          tracer[globalDofIdx] = concentration(idx);
+                      }
+                      ++idx;
+                  });
+}
+
+template<class FluidSystem>
+void TracerContainer<FluidSystem>::
 outputRestart(data::Solution& sol)
 {
     if (!this->allocated_) {
