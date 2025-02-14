@@ -41,6 +41,7 @@ GroupState<Scalar> GroupState<Scalar>::serializationTestObject()
 {
     GroupState result(3);
     result.m_production_rates = {{"test1", {1.0, 2.0}}};
+    result.m_network_leaf_node_production_rates={{"test1", {1.0, 20}}};
     result.production_controls = {{"test2", Group::ProductionCMode::LRAT}};
     result.prod_red_rates = {{"test3", {3.0, 4.0, 5.0}}};
     result.inj_red_rates = {{"test4", {6.0, 7.0}}};
@@ -61,6 +62,7 @@ template<class Scalar>
 bool GroupState<Scalar>::operator==(const GroupState& other) const
 {
     return this->m_production_rates == other.m_production_rates &&
+           this->m_network_leaf_node_production_rates == other.m_network_leaf_node_production_rates &&
            this->production_controls == other.production_controls &&
            this->prod_red_rates == other.prod_red_rates &&
            this->inj_red_rates == other.inj_red_rates &&
@@ -94,11 +96,32 @@ void GroupState<Scalar>::update_production_rates(const std::string& gname,
 }
 
 template<class Scalar>
+void GroupState<Scalar>::update_network_leaf_node_production_rates(const std::string& gname,
+                                                 const std::vector<Scalar>& rates)
+{
+    if (rates.size() != this->num_phases)
+        throw std::logic_error("Wrong number of phases");
+
+    this->m_network_leaf_node_production_rates[gname] = rates;
+}
+
+template<class Scalar>
 const std::vector<Scalar>&
 GroupState<Scalar>::production_rates(const std::string& gname) const
 {
     auto group_iter = this->m_production_rates.find(gname);
     if (group_iter == this->m_production_rates.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+const std::vector<Scalar>&
+GroupState<Scalar>::network_leaf_node_production_rates(const std::string& gname) const
+{
+    auto group_iter = this->m_network_leaf_node_production_rates.find(gname);
+    if (group_iter == this->m_network_leaf_node_production_rates.end())
         throw std::logic_error("No such group");
 
     return group_iter->second;

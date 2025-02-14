@@ -36,10 +36,13 @@
 
 template <int compileTimeComponent>
 std::tuple<bool, int>
-runComponent(int runtimeComponent, int argc, char** argv)
+runComponent(int runtimeComponent, bool water, int argc, char** argv)
 {
     if (runtimeComponent == compileTimeComponent) {
-        return std::make_tuple(true, Opm::dispatchFlowExpComp<compileTimeComponent>(argc, argv));
+        if (water)
+            return std::make_tuple(true, Opm::dispatchFlowExpComp<compileTimeComponent, true>(argc, argv));
+        else
+            return std::make_tuple(true, Opm::dispatchFlowExpComp<compileTimeComponent, false>(argc, argv));
     }
     return std::make_tuple(false, EXIT_FAILURE);
 }
@@ -63,18 +66,21 @@ runComponent(int runtimeComponent, int argc, char** argv)
  */
 template <int currentCompileTimeComponent, int nextComponent, int... components>
 std::tuple<bool, int>
-runComponent(int runtimecomponent, int argc, char** argv)
+runComponent(int runtimecomponent, bool water, int argc, char** argv)
 {
     if (currentCompileTimeComponent == runtimecomponent) {
-        return std::make_tuple(true, Opm::dispatchFlowExpComp<currentCompileTimeComponent>(argc, argv));
+        if (water)
+            return std::make_tuple(true, Opm::dispatchFlowExpComp<currentCompileTimeComponent, true>(argc, argv));
+        else
+            return std::make_tuple(true, Opm::dispatchFlowExpComp<currentCompileTimeComponent, false>(argc, argv));
     }
-    return runComponent<nextComponent, components...>(runtimecomponent, argc, argv);
+    return runComponent<nextComponent, components...>(runtimecomponent, water, argc, argv);
 }
 
 int
 main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<0>;
+    using TypeTag = Opm::Properties::TTag::FlowExpCompProblem<0, true>;
     Opm::registerEclTimeSteppingParameters<double>();
 
     // At the moment, this is probably as optimal as can be.
@@ -90,9 +96,11 @@ main(int argc, char** argv)
         = Opm::Parser {}.parseFile(inputFilename, Opm::ParseContext {}, std::vector {Opm::Ecl::SectionType::RUNSPEC});
     const auto runspec = Opm::Runspec(deck);
     const auto numComps = runspec.numComps();
+    const auto& phases = runspec.phases();
+    const auto wat = phases.active(Opm::Phase::WATER);
 
     auto [componentSupported, executionStatus]
-        = runComponent<OPM_COMPILE_COMPONENTS_TEMPLATE_LIST>(numComps, argc, argv);
+        = runComponent<OPM_COMPILE_COMPONENTS_TEMPLATE_LIST>(numComps, wat, argc, argv);
 
     if (!componentSupported) {
         fmt::print("Deck has {} components, not supported. In this build of the simulator, we support the "

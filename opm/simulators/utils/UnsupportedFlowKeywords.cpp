@@ -397,7 +397,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"NARROW", {true, std::nullopt}},
         {"NCONSUMP", {true, std::nullopt}},
         {"NCOMPS", {false, std::nullopt}},
-        {"NEFAC", {true, std::nullopt}},
         {"NETCOMPA", {true, std::nullopt}},
         {"NEXT", {false, std::nullopt}},
         {"NEXTSTPL", {true, std::nullopt}},

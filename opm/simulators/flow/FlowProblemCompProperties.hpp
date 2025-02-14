@@ -69,17 +69,10 @@ private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    // using Traits = ThreePhaseMaterialTraits<Scalar,
-    //                                         /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
-    //                                         /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-    //                                         /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
-
-    // TODO: We should be able to use FluidSystem here and using Indices to handle the active phases
-    // some more development is needed
     using Traits = ThreePhaseMaterialTraits<Scalar,
-                                            /*wettingPhaseIdx=*/ 0,
-                                            /*nonWettingPhaseIdx=*/ 1,
-                                            /*gasPhaseIdx=*/ 2>;
+                                            /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+                                            /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                            /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
     using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;

@@ -94,10 +94,10 @@ struct BlackOilIndices
                                  numEnergy + numFoam + numBrine + numMICPs;
 
     //! \brief returns the index of "active" component
-    static constexpr unsigned canonicalToActiveComponentIndex(unsigned compIdx)
+    static constexpr int canonicalToActiveComponentIndex(const int compIdx)
     { return compIdx; }
 
-    static constexpr unsigned activeToCanonicalComponentIndex(unsigned compIdx)
+    static constexpr int activeToCanonicalComponentIndex(const int compIdx)
     { return compIdx; }
 
     ////////

@@ -27,10 +27,10 @@
 
 #include <opm/grid/common/CommunicationUtils.hpp>
 
+#include <opm/material/fluidmatrixinteractions/EclHysteresisConfig.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
-
-#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
+#include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Runspec.hpp>
@@ -55,7 +55,6 @@
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -104,8 +103,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             bool enableBrine,
                             bool enableSaltPrecipitation,
                             bool enableExtbo,
-                            bool enableMICP,
-                            bool isCompositional)
+                            bool enableMICP)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
@@ -124,7 +122,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
-    , isCompositional_(isCompositional)
+    , tracerC_(eclState_)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -527,38 +525,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
     };
 
-    // basically, for compositional, we can not use std::array for this.  We need to generate the ZMF1, ZMF2, and so on
-    // and also, we need to map these values.
-    // TODO: the following should go to a function
-    if (this->isCompositional_) {
-        auto compositionalEntries = std::vector<DataEntry>{};
-        {
-            // ZMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("ZMF{}", i + 1);  // Generate ZMF1, ZMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity, moleFractions_[i]);
-            }
-
-            // XMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("XMF{}", i + 1);  // Generate XMF1, XMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
-                                                  phaseMoleFractions_[oilPhaseIdx][i]);
-            }
-
-            // YMF
-            for (int i = 0; i < numComponents; ++i) {
-                const auto name = fmt::format("YMF{}", i + 1);  // Generate YMF1, YMF2, ...
-                compositionalEntries.emplace_back(name, UnitSystem::measure::identity,
-                                                  phaseMoleFractions_[gasPhaseIdx][i]);
-            }
-        }
-
-        for (auto& array: compositionalEntries) {
-            doInsert(array, data::TargetType::RESTART_SOLUTION);
-        }
-    }
-
     for (auto& array : baseSolutionVector) {
         doInsert(array, data::TargetType::RESTART_SOLUTION);
     }
@@ -601,15 +567,6 @@ assignToSolution(data::Solution& sol)
                    std::move(this->saturation_[gasPhaseIdx]),
                    data::TargetType::RESTART_SOLUTION);
     }
-
-    if (this->isCompositional_ && FluidSystem::phaseIsActive(oilPhaseIdx) &&
-        ! this->saturation_[oilPhaseIdx].empty())
-    {
-        sol.insert("SOIL", UnitSystem::measure::identity,
-                   std::move(this->saturation_[oilPhaseIdx]),
-                   data::TargetType::RESTART_SOLUTION);
-    }
-
 
     if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
         auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
@@ -674,41 +631,7 @@ assignToSolution(data::Solution& sol)
     this->fipC_.outputRestart(sol);
 
     // Tracers
-    if (! this->freeTracerConcentrations_.empty()) {
-        const auto& tracers = this->eclState_.tracer();
-        for (auto tracerIdx = 0*tracers.size();
-             tracerIdx < tracers.size(); ++tracerIdx)
-        {
-            sol.insert(tracers[tracerIdx].fname(),
-                       UnitSystem::measure::identity,
-                       std::move(freeTracerConcentrations_[tracerIdx]),
-                       data::TargetType::RESTART_TRACER_SOLUTION);
-        }
-
-        // Put freeTracerConcentrations container into a valid state.  Otherwise
-        // we'll move from vectors that have already been moved from if we
-        // get here and it's not a restart step.
-        this->freeTracerConcentrations_.clear();
-    }
-    if (! this->solTracerConcentrations_.empty()) {
-        const auto& tracers = this->eclState_.tracer();
-        for (auto tracerIdx = 0*tracers.size();
-             tracerIdx < tracers.size(); ++tracerIdx)
-        {
-            if (solTracerConcentrations_[tracerIdx].empty())
-                continue;
-
-            sol.insert(tracers[tracerIdx].sname(),
-                       UnitSystem::measure::identity,
-                       std::move(solTracerConcentrations_[tracerIdx]),
-                       data::TargetType::RESTART_TRACER_SOLUTION);
-        }
-
-        // Put solTracerConcentrations container into a valid state.  Otherwise
-        // we'll move from vectors that have already been moved from if we
-        // get here and it's not a restart step.
-        this->solTracerConcentrations_.clear();
-    }
+    this->tracerC_.outputRestart(sol);
 }
 
 template<class FluidSystem>
@@ -828,16 +751,15 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     substep,
                const bool     log,
                const bool     isRestart,
-               const bool     vapparsActive,
-               const bool     enablePCHysteresis,
-               const bool     enableNonWettingHysteresis,
-               const bool     enableWettingHysteresis,
-               const unsigned numTracers,
-               const std::vector<bool>& enableSolTracers,
-               const unsigned numOutputNnc)
+               const EclHysteresisConfig* hysteresisConfig,
+               const unsigned numOutputNnc,
+               std::map<std::string, int> rstKeywords)
 {
+    if (rstKeywords.empty()) {
+        rstKeywords = schedule_.rst_keywords(reportStepNum);
+    }
+
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
-    std::map<std::string, int> rstKeywords = schedule_.rst_keywords(reportStepNum);
     for (auto& [keyword, should_write] : rstKeywords) {
         if (this->isOutputCreationDirective_(keyword)) {
             // 'BASIC', 'FREQ' and similar.  Don't attempt to create
@@ -1027,11 +949,13 @@ doAllocBuffers(const unsigned bufferSize,
         this->micpC_.allocate(bufferSize);
     }
 
+    const bool vapparsActive = schedule_[std::max(reportStepNum, 0u)].oilvap().getType() ==
+                                  OilVaporizationProperties::OilVaporization::VAPPARS;
     if (vapparsActive) {
         soMax_.resize(bufferSize, 0.0);
     }
 
-    if (enableNonWettingHysteresis) {
+    if (hysteresisConfig && hysteresisConfig->enableNonWettingHysteresis()) {
         if (FluidSystem::phaseIsActive(oilPhaseIdx)){
             if (FluidSystem::phaseIsActive(waterPhaseIdx)){
                 soMax_.resize(bufferSize, 0.0);
@@ -1043,7 +967,7 @@ doAllocBuffers(const unsigned bufferSize,
             //TODO add support for gas-water 
         }
     }
-    if (enableWettingHysteresis) {
+    if (hysteresisConfig && hysteresisConfig->enableWettingHysteresis()) {
         if (FluidSystem::phaseIsActive(oilPhaseIdx)){
             if (FluidSystem::phaseIsActive(waterPhaseIdx)){
                 swMax_.resize(bufferSize, 0.0);
@@ -1055,7 +979,7 @@ doAllocBuffers(const unsigned bufferSize,
             //TODO add support for gas-water 
         }
     }
-    if (enablePCHysteresis) {
+    if (hysteresisConfig && hysteresisConfig->enablePCHysteresis()) {
         if (FluidSystem::phaseIsActive(oilPhaseIdx)){
             if (FluidSystem::phaseIsActive(waterPhaseIdx)){
                 swmin_.resize(bufferSize, 0.0);
@@ -1259,19 +1183,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     // tracers
-    if (numTracers > 0) {
-        freeTracerConcentrations_.resize(numTracers);
-        for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
-        {
-            freeTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
-        }
-        solTracerConcentrations_.resize(numTracers);
-        for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
-        {
-            if (enableSolTracers[tracerIdx])
-                solTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
-        }
-    }
+    this->tracerC_.allocate(bufferSize);
 
     if (rstKeywords["RESIDUAL"] > 0) {
         rstKeywords["RESIDUAL"] = 0;
@@ -1292,30 +1204,6 @@ doAllocBuffers(const unsigned bufferSize,
         minimumOilPressure_.resize(bufferSize, 0.0);
         overburdenPressure_.resize(bufferSize, 0.0);
     }
-
-    if (this->isCompositional_) {
-        if (rstKeywords["ZMF"] > 0) {
-            rstKeywords["ZMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                moleFractions_[i].resize(bufferSize, 0.0);
-            }
-        }
-
-        if (rstKeywords["XMF"] > 0 && FluidSystem::phaseIsActive(oilPhaseIdx)) {
-            rstKeywords["XMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                phaseMoleFractions_[oilPhaseIdx][i].resize(bufferSize, 0.0);
-            }
-        }
-
-        if (rstKeywords["YMF"] > 0 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-            rstKeywords["YMF"] = 0;
-            for (int i = 0; i < numComponents; ++i) {
-                phaseMoleFractions_[gasPhaseIdx][i].resize(bufferSize, 0.0);
-            }
-        }
-    }
-
 
     //Warn for any unhandled keyword
     if (log) {
@@ -1585,12 +1473,19 @@ INSTANTIATE_TYPE(double)
 INSTANTIATE_TYPE(float)
 #endif
 
-#define INSTANTIATE_COMP(NUM) \
-    template<class T> using FS##NUM = GenericOilGasFluidSystem<T, NUM>; \
+#define INSTANTIATE_COMP_THREEPHASE(NUM) \
+    template<class T> using FS##NUM = GenericOilGasWaterFluidSystem<T, NUM, true>; \
     template class GenericOutputBlackoilModule<FS##NUM<double>>;
 
-INSTANTIATE_COMP(0) // \Note: to register the parameter ForceDisableFluidInPlaceOutput
+#define INSTANTIATE_COMP_TWOPHASE(NUM) \
+    template<class T> using GFS##NUM = GenericOilGasWaterFluidSystem<T, NUM, false>; \
+    template class GenericOutputBlackoilModule<GFS##NUM<double>>;
 
+#define INSTANTIATE_COMP(NUM) \
+    INSTANTIATE_COMP_THREEPHASE(NUM) \
+    INSTANTIATE_COMP_TWOPHASE(NUM)
+
+INSTANTIATE_COMP_THREEPHASE(0)  // \Note: to register the parameter ForceDisableFluidInPlaceOutput
 INSTANTIATE_COMP(2)
 INSTANTIATE_COMP(3)
 INSTANTIATE_COMP(4)

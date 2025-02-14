@@ -634,6 +634,7 @@ opm_add_test(flowexp_blackoil
 set(FLOWEXP_COMPONENTS_SOURCES)
 foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
   list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
+  list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}_2p.cpp)
 endforeach()
 
 opm_add_test(flowexp_comp

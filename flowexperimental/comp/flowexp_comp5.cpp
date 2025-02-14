@@ -28,9 +28,9 @@
 namespace Opm {
 
 template<>
-int dispatchFlowExpComp<5>(int argc, char** argv)
+int dispatchFlowExpComp<5, true>(int argc, char** argv)
 {
-    return start<Properties::TTag::FlowExpCompProblem<5>>(argc, argv, false);
+    return start<Properties::TTag::FlowExpCompProblem<5, true>>(argc, argv, false);
 }
 
 }

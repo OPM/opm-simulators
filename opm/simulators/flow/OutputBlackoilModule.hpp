@@ -184,12 +184,7 @@ public:
                              substep,
                              log,
                              isRestart,
-                             problem.vapparsActive(std::max(simulator_.episodeIndex(), 0)),
-                             problem.materialLawManager()->enablePCHysteresis(),
-                             problem.materialLawManager()->enableNonWettingHysteresis(),
-                             problem.materialLawManager()->enableWettingHysteresis(),
-                             problem.tracerModel().numTracers(),
-                             problem.tracerModel().enableSolTracers(),
+                             &problem.materialLawManager()->hysteresisConfig(),
                              problem.eclWriter()->getOutputNnc().size());
     }
 
@@ -517,7 +512,7 @@ public:
 
             const auto& matLawManager = problem.materialLawManager();
             if (matLawManager->enableHysteresis()) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx) 
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)
                     && FluidSystem::phaseIsActive(waterPhaseIdx)) {
                         Scalar somax;
                         Scalar swmax;
@@ -525,7 +520,7 @@ public:
 
                         matLawManager->oilWaterHysteresisParams(
                             somax, swmax, swmin, globalDofIdx);
-                
+
                     if (matLawManager->enableNonWettingHysteresis()) {
                         if (!this->soMax_.empty()) {
                             this->soMax_[globalDofIdx] = somax;
@@ -543,14 +538,14 @@ public:
                     }
                 }
 
-                if (FluidSystem::phaseIsActive(oilPhaseIdx) 
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)
                     && FluidSystem::phaseIsActive(gasPhaseIdx)) {
                         Scalar sgmax;
                         Scalar shmax;
                         Scalar somin;
                         matLawManager->gasOilHysteresisParams(
                             sgmax, shmax, somin, globalDofIdx);
-                
+
                     if (matLawManager->enableNonWettingHysteresis()) {
                         if (!this->sgmax_.empty()) {
                             this->sgmax_[globalDofIdx] = sgmax;
@@ -568,7 +563,7 @@ public:
                     }
                 }
             } else {
-                
+
                 if (!this->soMax_.empty())
                     this->soMax_[globalDofIdx]
                         = std::max(getValue(fs.saturation(oilPhaseIdx)), problem.maxOilSaturation(globalDofIdx));
@@ -647,25 +642,14 @@ public:
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();
-            if (! this->freeTracerConcentrations_.empty()) {
-                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
-                    if (this->freeTracerConcentrations_[tracerIdx].empty()) {
-                        continue;
-                    }
-                    this->freeTracerConcentrations_[tracerIdx][globalDofIdx] =
-                        tracerModel.freeTracerConcentration(tracerIdx, globalDofIdx);
-                }
-            }
-            if (! this->solTracerConcentrations_.empty()) {
-                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
-                    if (this->solTracerConcentrations_[tracerIdx].empty()) {
-                        continue;
-                    }
-                    this->solTracerConcentrations_[tracerIdx][globalDofIdx] =
-                        tracerModel.solTracerConcentration(tracerIdx, globalDofIdx);
-                    
-                }
-            }
+            this->tracerC_.assignFreeConcentrations(globalDofIdx,
+                                                    [globalDofIdx, &tracerModel](const unsigned tracerIdx)
+                                                    { return tracerModel.freeTracerConcentration(tracerIdx,
+                                                                                                 globalDofIdx); });
+            this->tracerC_.assignSolConcentrations(globalDofIdx,
+                                                   [globalDofIdx, &tracerModel](const unsigned tracerIdx)
+                                                   { return tracerModel.solTracerConcentration(tracerIdx,
+                                                                                               globalDofIdx); });
 
             // output residual
             for ( int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx )
@@ -1176,7 +1160,7 @@ public:
         if (simulator.problem().materialLawManager()->enableHysteresis()) {
             auto matLawManager = simulator.problem().materialLawManager();
 
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) 
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)
                 && FluidSystem::phaseIsActive(waterPhaseIdx)) {
                     Scalar somax = 2.0;
                     Scalar swmax = -2.0;
@@ -1200,7 +1184,7 @@ public:
                 matLawManager->setOilWaterHysteresisParams(
                         somax, swmax, swmin, elemIdx);
             }
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) 
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)
                 && FluidSystem::phaseIsActive(gasPhaseIdx)) {
                     Scalar sgmax = 2.0;
                     Scalar shmax = -2.0;
@@ -1538,7 +1522,7 @@ private:
         {
             this->updateCO2InGas(globalDofIdx, pv, intQuants);
         }
-        
+
         if (this->fipC_.hasCo2InWater() &&
             (FluidSystem::phaseIsActive(waterPhaseIdx) ||
              FluidSystem::phaseIsActive(oilPhaseIdx)))

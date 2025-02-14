@@ -40,6 +40,7 @@
 #include <opm/simulators/flow/MechContainer.hpp>
 #include <opm/simulators/flow/MICPContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
+#include <opm/simulators/flow/TracerContainer.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -62,6 +63,7 @@ struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false;
 namespace Opm {
 
 namespace data { class Solution; }
+class EclHysteresisConfig;
 class EclipseState;
 class Schedule;
 class SummaryConfig;
@@ -319,21 +321,16 @@ protected:
                                 bool enableBrine,
                                 bool enableSaltPrecipitation,
                                 bool enableExtbo,
-                                bool enableMICP,
-                                bool isCompositional = false);
+                                bool enableMICP);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
                         const bool substep,
                         const bool log,
                         const bool isRestart,
-                        const bool vapparsActive = false,
-                        const bool enablePCHysteresis = false,
-                        const bool enableNonWettingHysteresis =false,
-                        const bool enableWettingHysteresis = false,
-                        unsigned numTracers = 0,
-                        const std::vector<bool>& enableSolTracers = {},
-                        unsigned numOutputNnc = 0);
+                        const EclHysteresisConfig* hysteresisConfig,
+                        unsigned numOutputNnc = 0,
+                        std::map<std::string, int> rstKeywords = {});
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -390,7 +387,6 @@ protected:
     bool enableSaltPrecipitation_{false};
     bool enableExtbo_{false};
     bool enableMICP_{false};
-    bool isCompositional_{false};
 
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
@@ -468,12 +464,7 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
-    // total mole fractions for each component
-    std::array<ScalarBuffer, numComponents> moleFractions_;
-    // mole fractions for each component in each phase
-    std::array<std::array<ScalarBuffer, numComponents>, numPhases> phaseMoleFractions_;
-    std::vector<ScalarBuffer> freeTracerConcentrations_;
-    std::vector<ScalarBuffer> solTracerConcentrations_;
+    TracerContainer<FluidSystem> tracerC_;
 
     std::array<ScalarBuffer, numPhases> residual_;
 
