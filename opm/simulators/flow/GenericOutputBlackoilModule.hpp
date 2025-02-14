@@ -63,6 +63,7 @@ struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false;
 namespace Opm {
 
 namespace data { class Solution; }
+class EclHysteresisConfig;
 class EclipseState;
 class Schedule;
 class SummaryConfig;
@@ -327,9 +328,7 @@ protected:
                         const bool substep,
                         const bool log,
                         const bool isRestart,
-                        const bool enablePCHysteresis = false,
-                        const bool enableNonWettingHysteresis = false,
-                        const bool enableWettingHysteresis = false,
+                        const EclHysteresisConfig* hysteresisConfig,
                         unsigned numOutputNnc = 0,
                         std::map<std::string, int> rstKeywords = {});
 

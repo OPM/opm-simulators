@@ -162,9 +162,7 @@ public:
         this->compC_.allocate(bufferSize, rstKeywords);
 
         this->doAllocBuffers(bufferSize, reportStepNum, substep, log, isRestart,
-                             /* enablePCHysteresis = */ false,
-                             /* enableNonWettingHysteresis =*/ false,
-                             /* enableWettingHysteresis =*/ false,
+                             /* hysteresisConfig = */ nullptr,
                              /* numOutputNnc =*/ 0,
                              std::move(rstKeywords));
     }

@@ -27,9 +27,9 @@
 
 #include <opm/grid/common/CommunicationUtils.hpp>
 
+#include <opm/material/fluidmatrixinteractions/EclHysteresisConfig.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
-
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -55,7 +55,6 @@
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -752,9 +751,7 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     substep,
                const bool     log,
                const bool     isRestart,
-               const bool     enablePCHysteresis,
-               const bool     enableNonWettingHysteresis,
-               const bool     enableWettingHysteresis,
+               const EclHysteresisConfig* hysteresisConfig,
                const unsigned numOutputNnc,
                std::map<std::string, int> rstKeywords)
 {
@@ -958,7 +955,7 @@ doAllocBuffers(const unsigned bufferSize,
         soMax_.resize(bufferSize, 0.0);
     }
 
-    if (enableNonWettingHysteresis) {
+    if (hysteresisConfig && hysteresisConfig->enableNonWettingHysteresis()) {
         if (FluidSystem::phaseIsActive(oilPhaseIdx)){
             if (FluidSystem::phaseIsActive(waterPhaseIdx)){
                 soMax_.resize(bufferSize, 0.0);
@@ -970,7 +967,7 @@ doAllocBuffers(const unsigned bufferSize,
             //TODO add support for gas-water 
         }
     }
-    if (enableWettingHysteresis) {
+    if (hysteresisConfig && hysteresisConfig->enableWettingHysteresis()) {
         if (FluidSystem::phaseIsActive(oilPhaseIdx)){
             if (FluidSystem::phaseIsActive(waterPhaseIdx)){
                 swMax_.resize(bufferSize, 0.0);
@@ -982,7 +979,7 @@ doAllocBuffers(const unsigned bufferSize,
             //TODO add support for gas-water 
         }
     }
-    if (enablePCHysteresis) {
+    if (hysteresisConfig && hysteresisConfig->enablePCHysteresis()) {
         if (FluidSystem::phaseIsActive(oilPhaseIdx)){
             if (FluidSystem::phaseIsActive(waterPhaseIdx)){
                 swmin_.resize(bufferSize, 0.0);
