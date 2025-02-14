@@ -81,9 +81,6 @@ public:
     //! \brief Resize values and evaluations.
     void resize(const int numSegments);
 
-    //! \brief Initialize evaluations from values.
-    void init();
-
     //! \brief Copy values from well state.
     void update(const WellState<Scalar>& well_state,
                 const bool stop_or_zero_rate_target);
@@ -149,6 +146,9 @@ public:
     void outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const;
 
 private:
+    //! \brief Initialize evaluations from values.
+    void setEvaluationsFromValues();
+
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions(const int seg);
 

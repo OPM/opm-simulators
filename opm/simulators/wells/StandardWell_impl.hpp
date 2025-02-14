@@ -88,17 +88,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    void StandardWell<TypeTag>::
-    initPrimaryVariablesEvaluation()
-    {
-        this->primary_variables_.init();
-    }
-
-
-
-
-
-    template<typename TypeTag>
     template<class Value>
     void
     StandardWell<TypeTag>::
@@ -1412,7 +1401,6 @@ namespace Opm
                                 DeferredLogger& deferred_logger)
     {
         updatePrimaryVariables(simulator, well_state, deferred_logger);
-        initPrimaryVariablesEvaluation();
         computeWellConnectionPressures(simulator, well_state, deferred_logger);
         this->computeAccumWell();
     }
@@ -1564,7 +1552,6 @@ namespace Opm
                     = sign * ws.well_potentials[phase];
         }
         well_copy.updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
-        well_copy.initPrimaryVariablesEvaluation();
         well_copy.computeAccumWell();
 
         const double dt = simulator.timeStepSize();
@@ -1576,7 +1563,6 @@ namespace Opm
         }
         well_copy.updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
         well_copy.computeWellConnectionPressures(simulator, well_state_copy, deferred_logger);
-        well_copy.initPrimaryVariablesEvaluation();
         well_copy.computeWellRatesWithBhp(simulator, bhp, well_flux, deferred_logger);
     }
 
@@ -2382,7 +2368,6 @@ namespace Opm
             // this function or we use different functions for the well testing purposes.
             // We don't allow for switching well controls while computing well potentials and testing wells
             // updateWellControl(simulator, well_state, deferred_logger);
-            initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 
         return converged;
@@ -2478,7 +2463,6 @@ namespace Opm
 
             ++it;
             solveEqAndUpdateWellState(simulator, well_state, deferred_logger);
-            initPrimaryVariablesEvaluation();
 
         } while (it < max_iter);
 

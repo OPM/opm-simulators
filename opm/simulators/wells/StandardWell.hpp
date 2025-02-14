@@ -137,8 +137,6 @@ namespace Opm
                           const std::vector<Scalar>& B_avg,
                           const bool changed_to_open_this_step) override;
 
-        void initPrimaryVariablesEvaluation() override;
-
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const Simulator& simulator,
                                                      const WellState<Scalar>& well_state,

@@ -97,7 +97,7 @@ namespace Opm {
 
 template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
-init()
+setEvaluationsFromValues()
 {
     for (int eqIdx = 0; eqIdx < numWellEq_; ++eqIdx) {
         evaluation_[eqIdx] =
@@ -223,7 +223,7 @@ update(const WellState<Scalar>& well_state,
 
     // BHP
     value_[Bhp] = ws.bhp;
-    init();
+    setEvaluationsFromValues();
 }
 
 template<class FluidSystem, class Indices>
@@ -302,7 +302,7 @@ updateNewton(const BVectorWell& dwells,
     // so that bhp constaint can be an active control when needed.
     constexpr Scalar bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
     value_[Bhp] = std::max(value_[Bhp] - dx1_limited, bhp_lower_limit);
-    init();
+    setEvaluationsFromValues();
 }
 
 template<class FluidSystem, class Indices>
@@ -322,7 +322,7 @@ updateNewtonPolyMW(const BVectorWell& dwells)
             value_[pskin_index] -= relaxation_factor * dx_pskin;
         }
     }
-    init();
+    setEvaluationsFromValues();
 }
 
 template<class FluidSystem, class Indices>
