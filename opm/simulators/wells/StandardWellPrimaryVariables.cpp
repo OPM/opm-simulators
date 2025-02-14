@@ -240,6 +240,7 @@ updatePolyMW(const WellState<Scalar>& well_state)
             value_[Bhp + 1 + well_.numPerfs() + perf] = skin_pressure[perf];
         }
     }
+    setEvaluationsFromValues();
 }
 
 template<class FluidSystem, class Indices>
