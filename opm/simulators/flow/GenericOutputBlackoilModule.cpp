@@ -123,6 +123,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
+    , tracerC_(eclState_)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -631,41 +632,7 @@ assignToSolution(data::Solution& sol)
     this->fipC_.outputRestart(sol);
 
     // Tracers
-    if (! this->freeTracerConcentrations_.empty()) {
-        const auto& tracers = this->eclState_.tracer();
-        for (auto tracerIdx = 0*tracers.size();
-             tracerIdx < tracers.size(); ++tracerIdx)
-        {
-            sol.insert(tracers[tracerIdx].fname(),
-                       UnitSystem::measure::identity,
-                       std::move(freeTracerConcentrations_[tracerIdx]),
-                       data::TargetType::RESTART_TRACER_SOLUTION);
-        }
-
-        // Put freeTracerConcentrations container into a valid state.  Otherwise
-        // we'll move from vectors that have already been moved from if we
-        // get here and it's not a restart step.
-        this->freeTracerConcentrations_.clear();
-    }
-    if (! this->solTracerConcentrations_.empty()) {
-        const auto& tracers = this->eclState_.tracer();
-        for (auto tracerIdx = 0*tracers.size();
-             tracerIdx < tracers.size(); ++tracerIdx)
-        {
-            if (solTracerConcentrations_[tracerIdx].empty())
-                continue;
-
-            sol.insert(tracers[tracerIdx].sname(),
-                       UnitSystem::measure::identity,
-                       std::move(solTracerConcentrations_[tracerIdx]),
-                       data::TargetType::RESTART_TRACER_SOLUTION);
-        }
-
-        // Put solTracerConcentrations container into a valid state.  Otherwise
-        // we'll move from vectors that have already been moved from if we
-        // get here and it's not a restart step.
-        this->solTracerConcentrations_.clear();
-    }
+    this->tracerC_.outputRestart(sol);
 }
 
 template<class FluidSystem>
@@ -789,8 +756,6 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     enablePCHysteresis,
                const bool     enableNonWettingHysteresis,
                const bool     enableWettingHysteresis,
-               const unsigned numTracers,
-               const std::vector<bool>& enableSolTracers,
                const unsigned numOutputNnc,
                std::map<std::string, int> rstKeywords)
 {
@@ -1220,19 +1185,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     // tracers
-    if (numTracers > 0) {
-        freeTracerConcentrations_.resize(numTracers);
-        for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
-        {
-            freeTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
-        }
-        solTracerConcentrations_.resize(numTracers);
-        for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
-        {
-            if (enableSolTracers[tracerIdx])
-                solTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
-        }
-    }
+    this->tracerC_.allocate(bufferSize);
 
     if (rstKeywords["RESIDUAL"] > 0) {
         rstKeywords["RESIDUAL"] = 0;

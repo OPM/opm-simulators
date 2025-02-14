@@ -188,8 +188,6 @@ public:
                              problem.materialLawManager()->enablePCHysteresis(),
                              problem.materialLawManager()->enableNonWettingHysteresis(),
                              problem.materialLawManager()->enableWettingHysteresis(),
-                             problem.tracerModel().numTracers(),
-                             problem.tracerModel().enableSolTracers(),
                              problem.eclWriter()->getOutputNnc().size());
     }
 
@@ -647,25 +645,14 @@ public:
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();
-            if (! this->freeTracerConcentrations_.empty()) {
-                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
-                    if (this->freeTracerConcentrations_[tracerIdx].empty()) {
-                        continue;
-                    }
-                    this->freeTracerConcentrations_[tracerIdx][globalDofIdx] =
-                        tracerModel.freeTracerConcentration(tracerIdx, globalDofIdx);
-                }
-            }
-            if (! this->solTracerConcentrations_.empty()) {
-                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
-                    if (this->solTracerConcentrations_[tracerIdx].empty()) {
-                        continue;
-                    }
-                    this->solTracerConcentrations_[tracerIdx][globalDofIdx] =
-                        tracerModel.solTracerConcentration(tracerIdx, globalDofIdx);
-                    
-                }
-            }
+            this->tracerC_.assignFreeConcentrations(globalDofIdx,
+                                                    [globalDofIdx, &tracerModel](const unsigned tracerIdx)
+                                                    { return tracerModel.freeTracerConcentration(tracerIdx,
+                                                                                                 globalDofIdx); });
+            this->tracerC_.assignSolConcentrations(globalDofIdx,
+                                                   [globalDofIdx, &tracerModel](const unsigned tracerIdx)
+                                                   { return tracerModel.solTracerConcentration(tracerIdx,
+                                                                                               globalDofIdx); });
 
             // output residual
             for ( int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx )

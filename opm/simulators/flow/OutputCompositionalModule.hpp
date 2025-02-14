@@ -166,8 +166,6 @@ public:
                              /* enablePCHysteresis = */ false,
                              /* enableNonWettingHysteresis =*/ false,
                              /* enableWettingHysteresis =*/ false,
-                             /* numTracers = */ 0,
-                             /* enableSoltracers =*/ {},
                              /* numOutputNnc =*/ 0,
                              std::move(rstKeywords));
     }
