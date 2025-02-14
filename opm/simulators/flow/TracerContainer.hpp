@@ -57,6 +57,7 @@ public:
 
     void outputRestart(data::Solution& sol);
 
+private:
     const EclipseState& eclState_;
 
     std::vector<ScalarBuffer> freeConcentrations_{};
