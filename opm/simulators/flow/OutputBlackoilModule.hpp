@@ -649,17 +649,10 @@ public:
                                                     [globalDofIdx, &tracerModel](const unsigned tracerIdx)
                                                     { return tracerModel.freeTracerConcentration(tracerIdx,
                                                                                                  globalDofIdx); });
-
-            if (! this->tracerC_.solConcentrations_.empty()) {
-                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
-                    if (this->tracerC_.solConcentrations_[tracerIdx].empty()) {
-                        continue;
-                    }
-                    this->tracerC_.solConcentrations_[tracerIdx][globalDofIdx] =
-                        tracerModel.solTracerConcentration(tracerIdx, globalDofIdx);
-                    
-                }
-            }
+            this->tracerC_.assignSolConcentrations(globalDofIdx,
+                                                   [globalDofIdx, &tracerModel](const unsigned tracerIdx)
+                                                   { return tracerModel.solTracerConcentration(tracerIdx,
+                                                                                               globalDofIdx); });
 
             // output residual
             for ( int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx )

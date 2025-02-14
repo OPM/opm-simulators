@@ -52,6 +52,9 @@ public:
     void assignFreeConcentrations(const unsigned globalDofIdx,
                                   const AssignFunction& concentration);
 
+    void assignSolConcentrations(const unsigned globalDofIdx,
+                                 const AssignFunction& concentration);
+
     void outputRestart(data::Solution& sol);
 
     const EclipseState& eclState_;
