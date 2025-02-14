@@ -118,8 +118,8 @@ private:
     bool enableFlowsn_{false};
     bool enableFloresn_{false};
 
-    std::array<std::array<ScalarBuffer, numPhases>, 6> flows_;
-    std::array<std::array<ScalarBuffer, numPhases>, 6> flores_;
+    std::array<std::array<ScalarBuffer, 6>, numPhases> flows_;
+    std::array<std::array<ScalarBuffer, 6>, numPhases> flores_;
 
     std::array<FlowsData<double>, 3> floresn_;
     std::array<FlowsData<double>, 3> flowsn_;
