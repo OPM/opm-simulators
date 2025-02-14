@@ -30,6 +30,8 @@
 
 namespace Opm {
 
+class EclipseState;
+
 template<class FluidSystem>
 class TracerContainer
 {
@@ -37,8 +39,17 @@ class TracerContainer
     using ScalarBuffer = std::vector<Scalar>;
 
 public:
-    std::vector<ScalarBuffer> freeConcentrations_;
-    std::vector<ScalarBuffer> solConcentrations_;
+    TracerContainer(const EclipseState& eclState)
+        : eclState_(eclState)
+    {}
+
+    void allocate(const unsigned bufferSize);
+
+    const EclipseState& eclState_;
+
+    std::vector<ScalarBuffer> freeConcentrations_{};
+    std::vector<ScalarBuffer> solConcentrations_{};
+    bool allocated_{false};
 };
 
 } // namespace Opm

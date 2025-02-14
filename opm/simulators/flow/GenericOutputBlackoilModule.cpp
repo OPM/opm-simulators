@@ -123,6 +123,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
+    , tracerC_(eclState_)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -789,8 +790,6 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     enablePCHysteresis,
                const bool     enableNonWettingHysteresis,
                const bool     enableWettingHysteresis,
-               const unsigned numTracers,
-               const std::vector<bool>& enableSolTracers,
                const unsigned numOutputNnc,
                std::map<std::string, int> rstKeywords)
 {
@@ -1220,19 +1219,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     // tracers
-    if (numTracers > 0) {
-        tracerC_.freeConcentrations_.resize(numTracers);
-        for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
-        {
-            tracerC_.freeConcentrations_[tracerIdx].resize(bufferSize, 0.0);
-        }
-        tracerC_.solConcentrations_.resize(numTracers);
-        for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
-        {
-            if (enableSolTracers[tracerIdx])
-                tracerC_.solConcentrations_[tracerIdx].resize(bufferSize, 0.0);
-        }
-    }
+    this->tracerC_.allocate(bufferSize);
 
     if (rstKeywords["RESIDUAL"] > 0) {
         rstKeywords["RESIDUAL"] = 0;
