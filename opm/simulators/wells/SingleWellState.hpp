@@ -76,6 +76,9 @@ public:
         serializer(production_cmode);
         serializer(filtrate_conc);
         serializer(perf_data);
+        serializer(stw_primaryvar);
+        serializer(multiseg_primaryvar);
+        serializer(initialized_from_reservoir_);
     }
 
     bool operator==(const SingleWellState&) const;
@@ -150,8 +153,13 @@ public:
 
     Scalar sum_filtrate_rate() const;
     Scalar sum_filtrate_total() const;
-
+    std::vector<Scalar> stw_primaryvar;
+    std::vector<std::array<Scalar, 4>> multiseg_primaryvar;
+    bool initializedFromReservoir() const { return initialized_from_reservoir_; }
+   void setInitializedFromReservoir(bool value) { initialized_from_reservoir_ = value; }
 private:
+    bool initialized_from_reservoir_ = false;
+
     Scalar sum_connection_rates(const std::vector<Scalar>& connection_rates) const;
 };
 
