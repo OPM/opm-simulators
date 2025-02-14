@@ -216,17 +216,17 @@ assemblePerforationEq(const EvalWell& cq_s_effective,
     StandardWellEquationAccess eqns(eqns1);
 
     // subtract sum of phase fluxes in the well equations.
-    eqns.residual()[0][componentIdx] += cq_s_effective.value();
+    eqns.residual()[0][componentIdx] -= cq_s_effective.value();
 
        // assemble the jacobians
     for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
-        eqns.C()[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+Indices::numEq); // intput in transformed matrix
-        eqns.D()[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq);
+        eqns.C()[0][cell_idx][pvIdx][componentIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq); // intput in transformed matrix
+        eqns.D()[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+Indices::numEq);
     }
 
     for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
-        eqns.B()[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
+        eqns.B()[0][cell_idx][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx);
     }
 }
 
