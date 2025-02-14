@@ -112,50 +112,59 @@ update(const WellState<Scalar>& well_state,
             value_[seg][WQTotal] = 0;
         }
         assert(ws.initializedFromReservoir());
+        // tot to map old fraction to new perforations for now start from scratch.
+        bool prim_set = ws.stw_primaryvar.size() == value_.size();
+        if(prim_set){
         //if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
-                //const int water_pos = pu.phase_pos[Water];
-                //value_[seg][WFrac] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
                 value_[seg][WFrac] = ws.multiseg_primaryvar[seg][WFrac];
             }
             if (has_gfrac_variable) {
-                //const int gas_pos = pu.phase_pos[Gas];
-                //value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate;
                 value_[seg][GFrac] = ws.multiseg_primaryvar[seg][GFrac];
             }
-
+        } else {
+        if (std::abs(total_seg_rate) > 0.) {
+            if (has_wfrac_variable) {
+                const int water_pos = pu.phase_pos[Water];
+                value_[seg][WFrac] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
+            }
+            if (has_gfrac_variable) {
+                const int gas_pos = pu.phase_pos[Gas];
+                value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate; 
+            }
             // what about water and gas injection?
-        // } else { // total_seg_rate == 0
-        //     if (well_.isInjector()) {
-        //         // only single phase injection handled
-        //         auto phase = well.getInjectionProperties().injectorType;
+         } else { // total_seg_rate == 0
+            if (well_.isInjector()) {
+                // only single phase injection handled
+                auto phase = well.getInjectionProperties().injectorType;
 
-        //         if (has_wfrac_variable) {
-        //             if (phase == InjectorType::WATER) {
-        //                 value_[seg][WFrac] = 1.0;
-        //             } else {
-        //                 value_[seg][WFrac] = 0.0;
-        //             }
-        //         }
+                if (has_wfrac_variable) {
+                    if (phase == InjectorType::WATER) {
+                        value_[seg][WFrac] = 1.0;
+                    } else {
+                        value_[seg][WFrac] = 0.0;
+                    }
+                }
 
-        //         if (has_gfrac_variable) {
-        //             if (phase == InjectorType::GAS) {
-        //                 value_[seg][GFrac] = 1.0;
-        //             } else {
-        //                 value_[seg][GFrac] = 0.0;
-        //             }
-        //         }
+                if (has_gfrac_variable) {
+                    if (phase == InjectorType::GAS) {
+                        value_[seg][GFrac] = 1.0;
+                    } else {
+                        value_[seg][GFrac] = 0.0;
+                    }
+                }
 
-        //     } else if (well_.isProducer()) { // producers
-        //         if (has_wfrac_variable) {
-        //             value_[seg][WFrac] = 1.0 / well_.numPhases();
-        //         }
+            } else if (well_.isProducer()) { // producers
+                if (has_wfrac_variable) {
+                    value_[seg][WFrac] = 1.0 / well_.numPhases();
+                }
 
-        //         if (has_gfrac_variable) {
-        //             value_[seg][GFrac] = 1.0 / well_.numPhases();
-        //         }
-        //     }
-        // }
+                if (has_gfrac_variable) {
+                    value_[seg][GFrac] = 1.0 / well_.numPhases();
+                }
+            }
+        }
+        }
     }
 }
 

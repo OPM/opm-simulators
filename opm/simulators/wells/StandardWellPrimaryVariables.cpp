@@ -162,70 +162,80 @@ update(const WellState<Scalar>& well_state,
                 value_[WQTotal] = 0.;
             }
     }
-
+    assert(ws.initializedFromReservoir());
     //if (std::abs(total_well_rate) > 0.) {
-        assert(ws.initializedFromReservoir());
+        
+    bool prim_set = ws.stw_primaryvar.size()>0;
+    if(prim_set){   
         if constexpr (has_wfrac_variable) {
-            //value_[WFrac] = well_.scalingFactor(pu.phase_pos[Water]) * ws.surface_rates[pu.phase_pos[Water]] / total_well_rate;
-            value_[WFrac] = ws.stw_primaryvar[WFrac];
+             value_[WFrac] = ws.stw_primaryvar[WFrac];
         }
         if constexpr (has_gfrac_variable) {
-            // value_[GFrac] = well_.scalingFactor(pu.phase_pos[Gas]) *
-            //                 (ws.surface_rates[pu.phase_pos[Gas]] -
-            //                  (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate ;
-            value_[GFrac] = ws.stw_primaryvar[GFrac];
+             value_[GFrac] = ws.stw_primaryvar[GFrac];
         }
         if constexpr (Indices::enableSolvent) {
             value_[SFrac] = ws.stw_primaryvar[SFrac];
-            //value_[SFrac] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
+         }
+     }else{
+     assert(prim_set==false);   
+     if (std::abs(total_well_rate) > 0.) {
+        if constexpr (has_wfrac_variable) {
+            value_[WFrac] = well_.scalingFactor(pu.phase_pos[Water]) * ws.surface_rates[pu.phase_pos[Water]] / total_well_rate;
         }
+        if constexpr (has_gfrac_variable) {
+            value_[GFrac] = well_.scalingFactor(pu.phase_pos[Gas]) *
+                             (ws.surface_rates[pu.phase_pos[Gas]] -
+                              (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate ;
+        }
+        if constexpr (Indices::enableSolvent) {
+            value_[SFrac] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
+        }
+    } else { // total_well_rate == 0
+        if (well_.isInjector()) {
+            // only single phase injection handled
+            if constexpr (has_wfrac_variable) {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    auto phase = well_.wellEcl().getInjectionProperties().injectorType;
+                    if (phase == InjectorType::WATER) {
+                        value_[WFrac] = 1.0;
+                    } else {
+                        value_[WFrac] = 0.0;
+                    }
+                }
+            }
+            if constexpr (has_gfrac_variable) {
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    auto phase = well_.wellEcl().getInjectionProperties().injectorType;
+                    if (phase == InjectorType::GAS) {
+                        value_[GFrac] = (1.0 - well_.rsRvInj());
+                        if constexpr (Indices::enableSolvent) {
+                            value_[GFrac] = 1.0 - well_.rsRvInj() - well_.wsolvent();
+                            value_[SFrac] = well_.wsolvent();
+                        }
+                    } else {
+                        value_[GFrac] = 0.0;
+                    }
+                }
+            }
 
-    // } else { // total_well_rate == 0
-    //     if (well_.isInjector()) {
-    //         // only single phase injection handled
-    //         if constexpr (has_wfrac_variable) {
-    //             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-    //                 auto phase = well_.wellEcl().getInjectionProperties().injectorType;
-    //                 if (phase == InjectorType::WATER) {
-    //                     value_[WFrac] = 1.0;
-    //                 } else {
-    //                     value_[WFrac] = 0.0;
-    //                 }
-    //             }
-    //         }
-    //         if constexpr (has_gfrac_variable) {
-    //             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-    //                 auto phase = well_.wellEcl().getInjectionProperties().injectorType;
-    //                 if (phase == InjectorType::GAS) {
-    //                     value_[GFrac] = (1.0 - well_.rsRvInj());
-    //                     if constexpr (Indices::enableSolvent) {
-    //                         value_[GFrac] = 1.0 - well_.rsRvInj() - well_.wsolvent();
-    //                         value_[SFrac] = well_.wsolvent();
-    //                     }
-    //                 } else {
-    //                     value_[GFrac] = 0.0;
-    //                 }
-    //             }
-    //         }
+            // TODO: it is possible to leave injector as a oil well,
+            // when F_w and F_g both equals to zero, not sure under what kind of circumstance
+            // this will happen.
+        } else if (well_.isProducer()) { // producers
+            // TODO: the following are not addressed for the solvent case yet
+            if constexpr (has_wfrac_variable) {
+                value_[WFrac] = 1.0 / np;
+            }
 
-    //         // TODO: it is possible to leave injector as a oil well,
-    //         // when F_w and F_g both equals to zero, not sure under what kind of circumstance
-    //         // this will happen.
-    //     } else if (well_.isProducer()) { // producers
-    //         // TODO: the following are not addressed for the solvent case yet
-    //         if constexpr (has_wfrac_variable) {
-    //             value_[WFrac] = 1.0 / np;
-    //         }
-
-    //         if constexpr (has_gfrac_variable) {
-    //             value_[GFrac] = 1.0 / np;
-    //         }
-    //     } else {
-    //         OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
-    //     }
-    // }
-
-    // BHP
+            if constexpr (has_gfrac_variable) {
+                value_[GFrac] = 1.0 / np;
+            }
+        } else {
+            OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
+        }
+    }
+    }
+    //BHP
     value_[Bhp] = ws.bhp;
 }
 

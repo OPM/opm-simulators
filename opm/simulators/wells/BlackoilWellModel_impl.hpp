@@ -437,9 +437,9 @@ namespace Opm {
             // nonzero phase anyway.
             for (const auto& well : well_container_) {
                 //const bool zero_target = well->stoppedOrZeroRateTarget(simulator_, this->wellState(), local_deferredLogger);
-                if (well->isProducer()){// && !zero_target) {
+                //if (well->isProducer()){// && !zero_target) {
                     well->initializeWellState(simulator_, this->groupState(), this->wellState(), local_deferredLogger);
-                }
+                //}
             }
         }
 
