@@ -164,6 +164,7 @@ public:
     void communicateGroupRates(const Parallel::Communication& comm);
 
     void updateGlobalIsGrup(const Parallel::Communication& comm);
+    void updateGlobalIsGrup();
     void updateEfficiencyScalingFactor(const std::string& wellName,
                                        const Scalar value);
 
