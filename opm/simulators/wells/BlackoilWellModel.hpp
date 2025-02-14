@@ -257,8 +257,8 @@ template<class Scalar> class WellContributions;
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
-            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
-            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
+            // it should be able to go to prepareTimeStep(), however, the updateWellControls()
+            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above function
             // twice at the beginning of the time step
             /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
             /// at the beginning of the time step and no derivatives are included in these quantities
@@ -266,7 +266,6 @@ template<class Scalar> class WellContributions;
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
-            void initPrimaryVariablesEvaluation() const;
 
             std::pair<bool, bool>
             updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);

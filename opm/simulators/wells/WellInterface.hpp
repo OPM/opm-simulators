@@ -151,8 +151,6 @@ public:
                       const std::vector<Scalar>& B_avg,
                       const bool changed_to_open_this_step);
 
-    virtual void initPrimaryVariablesEvaluation() = 0;
-
     virtual ConvergenceReport getWellConvergence(const Simulator& simulator,
                                                  const WellState<Scalar>& well_state,
                                                  const std::vector<Scalar>& B_avg,

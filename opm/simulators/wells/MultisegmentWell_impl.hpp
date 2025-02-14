@@ -150,18 +150,6 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    initPrimaryVariablesEvaluation()
-    {
-        this->primary_variables_.init();
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const Simulator& simulator,
                            const WellState<Scalar>& well_state,
                            DeferredLogger& deferred_logger)
@@ -732,7 +720,6 @@ namespace Opm
                                 DeferredLogger& deferred_logger)
     {
         updatePrimaryVariables(simulator, well_state, deferred_logger);
-        initPrimaryVariablesEvaluation();
         computePerfCellPressDiffs(simulator);
         computeInitialSegmentFluids(simulator);
     }
@@ -1582,7 +1569,6 @@ namespace Opm
                 deferred_logger.debug(sstr.str());
             }
             updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
-            initPrimaryVariablesEvaluation();
         }
 
         // TODO: we should decide whether to keep the updated well_state, or recover to use the old well_state
@@ -1774,7 +1760,6 @@ namespace Opm
                 }
             }
             updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
-            initPrimaryVariablesEvaluation();
         }
 
         if (converged) {

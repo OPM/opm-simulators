@@ -400,7 +400,6 @@ namespace Opm
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
-        initPrimaryVariablesEvaluation();
 
         if (this->isProducer()) {
             const auto& schedule = simulator.vanguard().schedule();

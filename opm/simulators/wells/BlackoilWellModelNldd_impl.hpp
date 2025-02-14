@@ -47,7 +47,6 @@ assemble(const int /*iterationIdx*/,
 
     DeferredLogger local_deferredLogger;
     this->updateWellControls(local_deferredLogger, domain);
-    this->initPrimaryVariablesEvaluation(domain);
     this->assembleWellEq(dt, domain, local_deferredLogger);
 }
 
@@ -122,18 +121,6 @@ recoverWellSolutionAndUpdateWellState(const BVector& x,
     // be stored in the local_deferredlogger in a parallel case.
     if (wellModel_.terminalOutput()) {
         local_deferredLogger.logMessages();
-    }
-}
-
-template<typename TypeTag>
-void
-BlackoilWellModelNldd<TypeTag>::
-initPrimaryVariablesEvaluation(const Domain& domain) const
-{
-    for (auto& well : wellModel_.localNonshutWells()) {
-        if (this->well_domain().at(well->name()) == domain.index) {
-            well->initPrimaryVariablesEvaluation();
-        }
     }
 }
 
