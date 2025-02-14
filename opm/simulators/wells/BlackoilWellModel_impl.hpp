@@ -785,7 +785,7 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
 
         const int nw = this->numLocalWells();
-        if(this->wellStructureChangedDynamically_ = true){
+        if(this->wellStructureChangedDynamically_ == true){
             well_container_.clear();
             this->wellStructureChangedDynamically_ = false;
         }
