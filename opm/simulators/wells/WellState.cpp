@@ -231,7 +231,7 @@ template<class Scalar>
 void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
                                        const std::vector<Scalar>& cellTemperatures,
                                        const Well& well,
-                                       const std::vector<PerforationData<Scalar>>& well_perf_data,
+                                       const std::vector<PerforationData<Scalar>>& well_perf_data, //this variable contains only the perforation data on this process!
                                        const ParallelWellInfo<Scalar>& well_info,
                                        const SummaryState& summary_state)
 {
@@ -239,6 +239,7 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
     if (!well_perf_data.empty()) {
         pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
     }
+    // The following call is neccessary to ensure that processes that do not contain the first perforation get the correct value
     pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
 
     if (well.isInjector()) {
@@ -246,6 +247,7 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
         if (!well_perf_data.empty()) {
             temperature_first_connection = cellTemperatures[well_perf_data[0].cell_index];
         }
+        // The following call is neccessary to ensure that processes that do not contain the first perforation get the correct value
         temperature_first_connection = well_info.broadcastFirstPerforationValue(temperature_first_connection);
         this->initSingleInjector(well, well_info, pressure_first_connection, temperature_first_connection,
                                  well_perf_data, summary_state);
@@ -785,27 +787,16 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                         if (first_perf > -1) { //-1 indicates that the global id is not on this process
                             segment_pressure[seg] = perf_press[first_perf];
                         }
+                        // The segment_pressure needs to be communicated right away, otherwise the segment_pressure for the
+                        // case segment_perforations[seg].empty() is incorrect, since it uses the pressure of the outlet segment,
+                        // which is only on one process!
+                        segment_pressure[seg] = ws.parallel_info.get().communication().sum(segment_pressure[seg]);
                         segment_indices.push_back(seg);
                     } else {
                         // seg_press_.push_back(bhp); // may not be a good decision
                         // using the outlet segment pressure // it needs the ordering is correct
                         const int outlet_seg = segment_set[seg].outletSegment();
                         segment_pressure[seg] = segment_pressure[segment_set.segmentNumberToIndex(outlet_seg)];
-                    }
-                }
-
-                if (ws.parallel_info.get().communication().size() > 1) {
-                    // Communicate the segment_pressure values
-                    std::vector<Scalar> values_to_combine(segment_indices.size(), 0.0);
-
-                    for (size_t i = 0; i < segment_indices.size(); ++i) {
-                        values_to_combine[i] = segment_pressure[segment_indices[i]];
-                    }
-                    ws.parallel_info.get().communication().sum(values_to_combine.data(), values_to_combine.size());
-
-                    // Now make segment_pressure equal across all processes
-                    for (size_t i = 0; i < segment_indices.size(); ++i) {
-                        segment_pressure[segment_indices[i]] = values_to_combine[i];
                     }
                 }
             }
