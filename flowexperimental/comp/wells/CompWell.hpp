@@ -118,7 +118,7 @@ private:
     // the following varialbes are temporary and remain to be cleaned up and re-organized
     // some are testing variables, and some are secondary variables might be kept
     // anyway, they are very rough prototype code for testing and will be changed
-    const Scalar wellbore_volume_ {21.6}; // m^3, it is rather big, will come with different design when the working flow is established
+    const Scalar wellbore_volume_ {21.6*0.001}; // m^3, it is rather big, will come with different design when the working flow is established
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
     EvalWell fluid_density_{0.};
