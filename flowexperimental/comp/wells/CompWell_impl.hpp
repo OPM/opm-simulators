@@ -130,9 +130,9 @@ updateTotalMass()
     using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
     FluidState fluid_state = this->primary_variables_.toFluidState();
     // manullay set the values for debugging purpose
-    fluid_state.setMoleFraction(0, 0.8576939356002758);
+    /* fluid_state.setMoleFraction(0, 0.8576939356002758);
     fluid_state.setMoleFraction(1, 0.04743535777357194);
-    fluid_state.setMoleFraction(2, 0.09487070662615232);
+    fluid_state.setMoleFraction(2, 0.09487070662615232); */
     PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
     // calculating the mass within the wellbore
     constexpr Scalar R = Constants<Scalar>::R;
@@ -335,8 +335,8 @@ calculateSingleConnectionRate(const Simulator& simulator,
     std::vector<EvalWell> mob(np, 0.);
     getMoblity(simulator, con_idx, mob);
     // manually set values for debugging purpose
-    mob[FluidSystem::oilPhaseIdx].setValue(5351.693668595587);
-    mob[FluidSystem::gasPhaseIdx].setValue(2674.5087028562);
+    // mob[FluidSystem::oilPhaseIdx].setValue(5351.693668595587);
+    // mob[FluidSystem::gasPhaseIdx].setValue(2674.5087028562);
 
     const Scalar tw = this->well_index_[0]; // only one connection
 
@@ -345,7 +345,7 @@ calculateSingleConnectionRate(const Simulator& simulator,
     const EvalWell cell_pressure = PrimaryVariables::extendEval(fluid_state.pressure(FluidSystem::oilPhaseIdx));
     EvalWell drawdown = cell_pressure - bhp;
     // manually set the drawdown for debugging purpose
-    drawdown.setValue(-4.2e6);
+    // drawdown.setValue(-4.2e6);
     //
     // the following will go to a funciton getMobility
     if (drawdown > 0.) { // producing connection
@@ -500,7 +500,8 @@ iterateWellEq(const Simulator& simulator,
         // get convergence
         converged = true;
         for (const auto& val : this->well_equations_.residual()[0]) {
-            converged = converged && (std::abs(val) < 1.e-6);
+            // converged = converged && (std::abs(val) < 1.e-6);
+            converged = converged && (std::abs(val) < 1.e-6 * 10000.);
         }
 
         if (converged) {

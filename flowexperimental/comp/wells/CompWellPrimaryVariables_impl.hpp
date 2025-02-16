@@ -170,7 +170,7 @@ updateNewton(const BVectorWell& dwells) {
     }
     std::cout << std::endl;
     for (unsigned i = 0; i < value_.size(); ++i) {
-        value_[i] -= 0.01 * dwells[0][i];
+        value_[i] -= 0.8 * dwells[0][i];
     }
     std::cout << " process the fractions " << std::endl;
     value_[1] = std::min(1. - 2.e-10, value_[1]);
