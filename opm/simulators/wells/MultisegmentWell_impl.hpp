@@ -1546,8 +1546,10 @@ namespace Opm
                             converged = true;
                             sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
                             deferred_logger.debug(sstr.str());
-                            return converged;
+                        } else {
+                            sstr << " well " << this->name() << " has stagnated without converging in " << it << " inner iterations. Treating as unconverged.";
                         }
+                        return converged;
                     }
                 }
 
@@ -1666,14 +1668,12 @@ namespace Opm
                 if (changed) {
                     its_since_last_switch = 0;
                     ++switch_count;
-                }
-                if (!changed && final_check) {
-                    break;
-                } else {
                     final_check = false;
                 }
             }
-
+            if (well_state.well(this->index_of_well_).production_cmode != Well::ProducerCMode::GRUP) {
+                well_state.well(this->index_of_well_).trivial_target = false;
+            }
             assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
                                            well_state, group_state, deferred_logger);
 
@@ -1692,12 +1692,13 @@ namespace Opm
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
                 // in this case, make sure all constraints are satisfied before returning
-                if (switch_count > 0 && its_since_last_switch < min_its_after_switch) {
-                    final_check = true;
-                    its_since_last_switch = min_its_after_switch;
-                } else {
+                // (there may be unsatisfied constraints in addition to the control equation, so even if there is convergence and
+                //  no switch in the first iteration we need the final check)
+                if (final_check) {
                     break;
                 }
+                final_check = true;
+                its_since_last_switch = min_its_after_switch;
             }
 
             // getFinteWellResiduals returns false for nan/inf residuals

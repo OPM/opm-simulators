@@ -622,6 +622,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     timeStepSucceeded(const double simulationTime, const double dt)
     {
+        // Set THP of closed wells to 0 before clearing the set
+        for (const auto& wname : this->closed_this_step_) {
+            this->wellState().well(wname).thp = 0.0;
+        }
         this->closed_this_step_.clear();
 
         // time step is finished and we are not any more at the beginning of an report step
@@ -1085,22 +1089,31 @@ namespace Opm {
         const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
-        const std::size_t max_iter = param_.network_max_iterations_;
+
         bool converged = false;
-        std::size_t iter = 0;
         bool changed_well_group = false;
-        do {
-            changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
-            assembleWellEqWithoutIteration(dt, deferred_logger);
-            converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
-            if (converged) {
-                break;
+
+        changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
+        assembleWellEqWithoutIteration(dt, deferred_logger);
+        converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (auto& well : this->well_container_) {
+            well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
+        }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
+                                    this->simulator_.vanguard().grid().comm());
+        this->initPrimaryVariablesEvaluation();
+
+        if (this->simulator_.vanguard().grid().comm().rank() == 0) {
+            if (!converged) {
+                const std::string msg = fmt::format("Initial (pre-step) network balance did not converge, "
+                                                    "unconverged network pressures will be used to initialize the first Newton iteration");
+                deferred_logger.warning(msg);
+            } else {
+                const std::string msg = fmt::format("Initial (pre-step) network balance converged");
+                deferred_logger.debug(msg);
             }
-            ++iter;
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
-            for (auto& well : this->well_container_) {
-                well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
-            }
+<<<<<<< HEAD
             OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
                                        this->simulator_.vanguard().grid().comm());
         } while (iter < max_iter);
@@ -1112,6 +1125,8 @@ namespace Opm {
         } else {
             const std::string msg = fmt::format("Initial (pre-step) network balance converged with {} iterations", iter);
             deferred_logger.debug(msg);
+=======
+>>>>>>> 5dffeab0a... Network + MSW testing, no STDW update
         }
     }
 
@@ -1190,6 +1205,7 @@ namespace Opm {
                                  DeferredLogger& local_deferredLogger)
     {
         OPM_TIMEFUNCTION();
+        const bool io_rank = (this->simulator_.vanguard().grid().comm().rank() == 0);
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
@@ -1199,7 +1215,7 @@ namespace Opm {
         const std::size_t max_iteration = param_.network_max_iterations_;
         std::size_t network_update_iteration = 0;
         while (do_network_update) {
-            if (this->terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
+            if (io_rank && this->terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
                 local_deferredLogger.info(" we begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
             }
             const bool relax_network_balance = network_update_iteration >= iteration_to_relax;
@@ -1208,7 +1224,7 @@ namespace Opm {
             ++network_update_iteration;
 
             if (network_update_iteration >= max_iteration ) {
-                if (this->terminal_output_) {
+                if (io_rank && this->terminal_output_) {
                     local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now. "
                                               "The simulation will continue with unconverged network results");
                 }
@@ -2093,7 +2109,7 @@ namespace Opm {
         updatePrimaryVariables(deferred_logger);
 
         // Actually do the pre-step network rebalance, using the updated well states and initial solutions
-        if (do_prestep_network_rebalance) doPreStepNetworkRebalance(deferred_logger);
+        if (do_prestep_network_rebalance || true) doPreStepNetworkRebalance(deferred_logger); // TEST: Always pre-balance
     }
 
     template<typename TypeTag>

@@ -78,6 +78,14 @@ private:
                                DeferredLogger& deferred_logger,
                                const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
+    bool
+    stillViolatingCurrentControl(const SingleWellState<Scalar>& ws,
+                            const SummaryState& summaryState,
+                            const RateConvFunc& calcReservoirVoidageRates,
+                            DeferredLogger& deferred_logger,
+                            const Well::ProductionControls& prod_controls) const;
+
+
     const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface
 };
 
