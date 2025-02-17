@@ -273,7 +273,7 @@ public:
             
             dam_err_ =  DamarisOutput::endIteration();
             */
-            if (this->damarisOutputModule_->getPRESSURE_ptr() != nullptr) 
+            if (!this->damarisOutputModule_->getFluidPressure().empty())
             {
                 dam_err_ =  DamarisOutput::endIteration();
             }

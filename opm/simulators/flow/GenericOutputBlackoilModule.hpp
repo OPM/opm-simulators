@@ -78,16 +78,6 @@ public:
     // Virtual destructor for safer inheritance.
     virtual ~GenericOutputBlackoilModule();
 
-    Scalar* getPRESSURE_ptr()
-    {
-        return this->fluidPressure_.data();
-    }
-
-    int getPRESSURE_size()
-    {
-        return this->fluidPressure_.size();
-    }
-
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
      */
@@ -201,6 +191,9 @@ public:
 
         return 0;
     }
+
+    const std::vector<Scalar>& getFluidPressure() const
+    { return fluidPressure_; }
 
     const MICPContainer<Scalar>& getMICP() const
     { return this->micpC_; }
