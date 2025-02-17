@@ -39,8 +39,15 @@ update(const SingleCompWellState<Scalar>& well_state)
 {
     value_[QTotal] = well_state.get_total_surface_rate();
     // the mole fractions of the first n-1 component
+    std::vector<Scalar> mole_fractions(FluidSystem::numComponents, 0.);
+    Scalar sum_mole_fraction = 0.;
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        mole_fractions[i] = std::max(well_state.total_molar_fractions[i], 1.e-10);
+        sum_mole_fraction += mole_fractions[i];
+    }
+    assert(sum_mole_fraction != 0.);
     for (int i = 0; i < numWellConservationEq - 1; ++i) {
-        value_[i + 1] = well_state.total_molar_fractions[i];
+        value_[i + 1] = mole_fractions[i] / sum_mole_fraction;
     }
     value_[Bhp] = well_state.bhp;
 }
