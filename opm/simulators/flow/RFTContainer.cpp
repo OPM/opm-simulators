@@ -36,6 +36,7 @@
 
 #include <opm/output/data/Wells.hpp>
 
+#include <algorithm>
 #include <tuple>
 
 namespace {
@@ -91,37 +92,49 @@ addToWells(data::Wells& wellDatas,
         if (!wellDatas.count(well.name())) {
             data::Well wellData;
 
-            if (!rft_config.active())
+            if (!rft_config.active()) {
                 continue;
-
-            wellData.connections.resize(well.getConnections().size());
-            std::size_t count = 0;
-            for (const auto& connection: well.getConnections()) {
-                const std::size_t i = std::size_t(connection.getI());
-                const std::size_t j = std::size_t(connection.getJ());
-                const std::size_t k = std::size_t(connection.getK());
-
-                const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
-                auto& connectionData = wellData.connections[count];
-                connectionData.index = index;
-                ++count;
             }
+
+            wellData.connections.reserve(well.getConnections().size());
+            std::transform(well.getConnections().begin(),
+                           well.getConnections().end(),
+                           std::back_inserter(wellData.connections),
+                           [this](const auto& connection)
+                           {
+                               const std::size_t i = std::size_t(connection.getI());
+                               const std::size_t j = std::size_t(connection.getJ());
+                               const std::size_t k = std::size_t(connection.getK());
+
+                               const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
+                               data::Connection res;
+                               res.index = index;
+                               return res;
+                           });
             wellDatas.emplace(std::make_pair(well.name(), wellData));
         }
 
         data::Well& wellData = wellDatas.at(well.name());
-        for (auto& connectionData: wellData.connections) {
-            const auto index = connectionData.index;
-            if (oilConnectionPressures_.count(index) > 0) {
-                connectionData.cell_pressure = oilConnectionPressures_.at(index);
+
+        auto cond_assign = [](double& dest, unsigned idx, const auto& map)
+        {
+            auto it = map.find(idx);
+            if (it != map.end()) {
+                dest = it->second;
             }
-            if (waterConnectionSaturations_.count(index) > 0) {
-                connectionData.cell_saturation_water = waterConnectionSaturations_.at(index);
-            }
-            if (gasConnectionSaturations_.count(index) > 0) {
-                connectionData.cell_saturation_gas = gasConnectionSaturations_.at(index);
-            }
-        }
+        };
+
+        std::for_each(wellData.connections.begin(), wellData.connections.end(),
+                      [&cond_assign, this](auto& connectionData)
+                      {
+                          const auto index = connectionData.index;
+                          cond_assign(connectionData.cell_pressure, index,
+                                      oilConnectionPressures_);
+                          cond_assign(connectionData.cell_saturation_water, index,
+                                      waterConnectionSaturations_);
+                          cond_assign(connectionData.cell_saturation_gas, index,
+                                      gasConnectionSaturations_);
+                       });
     }
 
     oilConnectionPressures_.clear();
