@@ -50,6 +50,8 @@ update(const SingleCompWellState<Scalar>& well_state)
         value_[i + 1] = mole_fractions[i] / sum_mole_fraction;
     }
     value_[Bhp] = well_state.bhp;
+
+    updateEvaluation();
 }
 
 template <typename FluidSystem, typename Indices>
@@ -193,6 +195,8 @@ updateNewton(const BVectorWell& dwells) {
     assert(sum_mole_fraction != 0.);
     value_[1] = mole_fractions[0] / sum_mole_fraction;
     value_[2] = mole_fractions[1] / sum_mole_fraction;
+
+    updateEvaluation();
 }
 
 } // end of namespace Opm
