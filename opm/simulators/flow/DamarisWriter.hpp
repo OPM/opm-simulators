@@ -191,7 +191,7 @@ public:
             }
 
             // add cell data to perforations for Rft output
-            this->damarisOutputModule_->addRftDataToWells(localWellData, reportStepNum);
+            this->damarisOutputModule_->addRftDataToWells(localWellData, reportStepNum, cc);
             
             // On first call and if the mesh and variable size change then set damarisUpdate_ to true
             if (damarisUpdate_ == true) {

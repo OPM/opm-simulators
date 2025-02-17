@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/flow/RFTContainer.hpp>
 
+#include <opm/grid/common/CommunicationUtils.hpp>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/RFTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -32,19 +34,112 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
+#include <opm/output/data/Wells.hpp>
+
+#include <tuple>
+
+namespace {
+
+template<class Scalar>
+void gatherAndUpdateMap(std::map<std::size_t, Scalar>& local_map,
+                        const Opm::Parallel::Communication& comm)
+{
+    std::vector<std::pair<int, Scalar>> pairs(local_map.begin(), local_map.end());
+    std::vector<std::pair<int, Scalar>> all_pairs;
+    std::vector<int> offsets;
+
+    std::tie(all_pairs, offsets) = Opm::allGatherv(pairs, comm);
+
+    // Update maps on all ranks
+    for (auto i = static_cast<std::size_t>(offsets[0]); i < all_pairs.size(); ++i) {
+        const auto& key_value = all_pairs[i];
+        if (auto candidate = local_map.find(key_value.first); candidate != local_map.end()) {
+            const Scalar prev_value = candidate->second;
+            candidate->second = std::max(prev_value, key_value.second);
+        }
+        else {
+            local_map[key_value.first] = key_value.second;
+        }
+    }
+}
+
+}
+
 namespace Opm {
 
 template<class FluidSystem>
 void RFTContainer<FluidSystem>::
-allocate(const std::size_t reportStepNum,
-         const WellQueryFunc& wellQuery)
+addToWells(data::Wells& wellDatas,
+           const std::size_t reportStepNum,
+           const Parallel::Communication& comm)
+{
+    if (comm.size() > 1) {
+        gatherAndUpdateMap(oilConnectionPressures_, comm);
+        gatherAndUpdateMap(waterConnectionSaturations_, comm);
+        gatherAndUpdateMap(gasConnectionSaturations_, comm);
+    }
+
+    const auto& rft_config = schedule_[reportStepNum].rft_config();
+    for (const auto& well: schedule_.getWells(reportStepNum)) {
+
+        // don't bother with wells not on this process
+        if (!wellQuery_(well.name())) {
+            continue;
+        }
+
+        //add data infrastructure for shut wells
+        if (!wellDatas.count(well.name())) {
+            data::Well wellData;
+
+            if (!rft_config.active())
+                continue;
+
+            wellData.connections.resize(well.getConnections().size());
+            std::size_t count = 0;
+            for (const auto& connection: well.getConnections()) {
+                const std::size_t i = std::size_t(connection.getI());
+                const std::size_t j = std::size_t(connection.getJ());
+                const std::size_t k = std::size_t(connection.getK());
+
+                const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
+                auto& connectionData = wellData.connections[count];
+                connectionData.index = index;
+                ++count;
+            }
+            wellDatas.emplace(std::make_pair(well.name(), wellData));
+        }
+
+        data::Well& wellData = wellDatas.at(well.name());
+        for (auto& connectionData: wellData.connections) {
+            const auto index = connectionData.index;
+            if (oilConnectionPressures_.count(index) > 0) {
+                connectionData.cell_pressure = oilConnectionPressures_.at(index);
+            }
+            if (waterConnectionSaturations_.count(index) > 0) {
+                connectionData.cell_saturation_water = waterConnectionSaturations_.at(index);
+            }
+            if (gasConnectionSaturations_.count(index) > 0) {
+                connectionData.cell_saturation_gas = gasConnectionSaturations_.at(index);
+            }
+        }
+    }
+
+    oilConnectionPressures_.clear();
+    waterConnectionSaturations_.clear();
+    gasConnectionSaturations_.clear();
+}
+
+
+template<class FluidSystem>
+void RFTContainer<FluidSystem>::
+allocate(const std::size_t reportStepNum)
 {
     // Well RFT data
     const auto& rft_config = schedule_[reportStepNum].rft_config();
     for (const auto& well: schedule_.getWells(reportStepNum)) {
 
         // don't bother with wells not on this process
-        if (wellQuery(well.name())) {
+        if (!wellQuery_(well.name())) {
             continue;
         }
 

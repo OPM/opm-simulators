@@ -123,10 +123,10 @@ public:
 
     void outputErrorLog(const Parallel::Communication& comm) const;
 
-    void accumulateRftDataParallel(const Parallel::Communication& comm);
-
     void addRftDataToWells(data::Wells& wellDatas,
-                           std::size_t reportStepNum);
+                           std::size_t reportStepNum,
+                           const Parallel::Communication& comm)
+    { this->rftC_.addToWells(wellDatas, reportStepNum, comm); }
 
     /*!
      * \brief Move all buffers to data::Solution.
@@ -358,8 +358,6 @@ protected:
     void setupBlockData(std::function<bool(int)> isCartIdxOnThisRank);
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
-
-    void gatherAndUpdateRftMap(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm);
 
     const EclipseState& eclState_;
     const Schedule& schedule_;

@@ -26,6 +26,8 @@
 #ifndef OPM_RFT_CONTAINER_HPP
 #define OPM_RFT_CONTAINER_HPP
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <cstddef>
 #include <functional>
 #include <map>
@@ -34,6 +36,7 @@
 
 namespace Opm {
 
+namespace data { class Wells; }
 class EclipseState;
 class Schedule;
 
@@ -47,19 +50,25 @@ class RFTContainer {
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
 public:
+    using WellQueryFunc = std::function<bool(const std::string&)>;
+
     RFTContainer(const EclipseState& eclState,
-                 const Schedule& schedule)
+                 const Schedule& schedule,
+                 const WellQueryFunc& wellQuery)
         : eclState_(eclState)
         , schedule_(schedule)
+        , wellQuery_(wellQuery)
     {}
 
-    using WellQueryFunc = std::function<bool(std::string)>;
+   void addToWells(data::Wells& wellDatas,
+                   const std::size_t reportStepNum,
+                   const Parallel::Communication& comm);
 
-    void allocate(const std::size_t reportStepNum,
-                  const WellQueryFunc& wellQuery);
+    void allocate(const std::size_t reportStepNum);
 
     const EclipseState& eclState_;
     const Schedule& schedule_;
+    WellQueryFunc wellQuery_;
     std::map<std::size_t, Scalar> oilConnectionPressures_;
     std::map<std::size_t, Scalar> waterConnectionSaturations_;
     std::map<std::size_t, Scalar> gasConnectionSaturations_;
