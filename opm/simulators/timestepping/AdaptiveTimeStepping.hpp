@@ -203,6 +203,7 @@ public:
 #endif
     void setSuggestedNextStep(const double x);
     double suggestedNextStep() const;
+    const TimeStepControlInterface& timeStepControl() const;
 
     template <class Solver>
     SimulatorReport step(const SimulatorTimer& simulator_timer,

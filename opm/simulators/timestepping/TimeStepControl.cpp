@@ -361,6 +361,15 @@ namespace Opm
         }
     }
 
+    bool General3rdOrderController::
+    timeStepAccepted(const double error) const
+    {
+        if (error > tolerance_)
+            std::cout << "Error: " << error << std::endl;
+            return false;
+        return true;
+    }
+
     bool General3rdOrderController::operator==(const General3rdOrderController& ctrl) const
     {
         return this->tolerance_ == ctrl.tolerance_ &&
