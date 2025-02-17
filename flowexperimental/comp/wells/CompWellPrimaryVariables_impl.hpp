@@ -114,7 +114,8 @@ toFluidState() const
     total_molar_fractions[FluidSystem::numComponents - 1] = 1.0 - sum;
 
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setMoleFraction(i, max(total_molar_fractions[i], 1.e-10));
+        total_molar_fractions[i].setValue(std::max(total_molar_fractions[i].value(), 1.e-10));
+        fluid_state.setMoleFraction(i, total_molar_fractions[i]);
     }
 
     fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
@@ -179,8 +180,19 @@ updateNewton(const BVectorWell& dwells) {
         value_[i] -= 0.8 * dwells[0][i];
     }
     std::cout << " process the fractions " << std::endl;
-    value_[1] = std::min(1. - 2.e-10, value_[1]);
-    value_[2] = std::max(1.e-10, value_[2]);
+    value_[1] = std::clamp(value_[1], 1.e-10, 1.);
+    value_[2] = std::clamp(value_[2], 1.e-10, 1.);
+    std::vector<Scalar> mole_fractions(FluidSystem::numComponents, 0.);
+    Scalar sum_mole_fraction = 0.;
+    for (int i = 0; i < FluidSystem::numComponents-1; ++i) {
+        mole_fractions[i] = std::max(value_[i + 1], 1.e-10);
+        sum_mole_fraction += mole_fractions[i];
+    }
+    mole_fractions[FluidSystem::numComponents - 1] = std::max(1.0 - sum_mole_fraction, 1.e-10);
+    sum_mole_fraction += mole_fractions[FluidSystem::numComponents - 1];
+    assert(sum_mole_fraction != 0.);
+    value_[1] = mole_fractions[0] / sum_mole_fraction;
+    value_[2] = mole_fractions[1] / sum_mole_fraction;
 }
 
 } // end of namespace Opm
