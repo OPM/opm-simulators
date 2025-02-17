@@ -416,18 +416,19 @@ assembleWellEq(const Simulator& simulator,
 
     std::cout << " NumComponents " << FluidSystem::numComponents << std::endl;
     const unsigned cell_idx = this->well_cells_[0];
+    // here we use perf index, need to check how the things are done in the StandardWellAssemble
     // assebmle the well equations related to the produciton/injection mass rates for each component
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
         // the signs need to be checked
-        this->well_equations_.residual()[0][comp_idx] -= connection_rates[comp_idx].value();
+        this->well_equations_.residual()[0][comp_idx] += connection_rates[comp_idx].value();
         for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             // C, needs the cell_idx
-            this->well_equations_.C()[0][cell_idx][pvIdx][comp_idx] += connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
-            this->well_equations_.D()[0][0][comp_idx][pvIdx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.C()[0][0][pvIdx][comp_idx] -= connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
+            this->well_equations_.D()[0][0][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx + PrimaryVariables::numResEq);
         }
 
         for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numResEq; ++pvIdx) {
-            this->well_equations_.B()[0][cell_idx][comp_idx][pvIdx] -= connection_rates[comp_idx].derivative(pvIdx);
+            this->well_equations_.B()[0][0][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx);
         }
     }
 
@@ -465,12 +466,12 @@ assembleSourceTerm(const Scalar dt)
     }
 
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-        const EvalWell residual = (this->new_component_masses_[comp_idx] - this->component_masses_[comp_idx]) / dt + component_mass_rates[comp_idx];
+        const EvalWell residual = (this->new_component_masses_[comp_idx] - this->component_masses_[comp_idx]) / dt - component_mass_rates[comp_idx];
         // let us put it in the well equation
         for (int pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
             this->well_equations_.D()[0][0][comp_idx][pvIdx] += residual.derivative(pvIdx + PrimaryVariables::numResEq);
         }
-        this->well_equations_.residual()[0][comp_idx] = residual.value();
+        this->well_equations_.residual()[0][comp_idx] += residual.value();
     }
 }
 
@@ -501,10 +502,11 @@ iterateWellEq(const Simulator& simulator,
         converged = true;
         for (const auto& val : this->well_equations_.residual()[0]) {
             // converged = converged && (std::abs(val) < 1.e-6);
-            converged = converged && (std::abs(val) < 1.e-6 * 10000.);
+            converged = converged && (std::abs(val) < 1.e-6 * 1.);
         }
 
         if (converged) {
+            std::cout << " the well " << this->well_ecl_.name() << " has converged after " << it << " iterations" << std::endl;
             break;
         }
 
@@ -515,6 +517,7 @@ iterateWellEq(const Simulator& simulator,
 
     } while (it < max_iter);
     std::cout << "converged " << converged << " after " << it << " iterations" << std::endl;
+    return converged;
 }
 
 template <typename TypeTag>
