@@ -50,8 +50,6 @@ calculateExplicitQuantities(const Simulator& simulator,
                             const SingleCompWellState<Scalar>& well_state)
 {
     updatePrimaryVariables(simulator, well_state);
-    updatePrimaryVariableEvaluation();
-
     {
         // flash calculation in the wellbore
         using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
@@ -311,14 +309,6 @@ updateSurfaceQuantities(const Simulator& simulator)
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-updatePrimaryVariableEvaluation()
-{
-    this->primary_variables_.updateEvaluation();
-}
-
-template <typename TypeTag>
-void
-CompWell<TypeTag>::
 calculateSingleConnectionRate(const Simulator& simulator,
                               std::vector<EvalWell>& cq_s) const
 {
@@ -493,14 +483,16 @@ iterateWellEq(const Simulator& simulator,
 
         if (converged) {
             std::cout << " the well " << this->well_ecl_.name() << " has converged after " << it << " iterations" << std::endl;
+            std::cout << " the residuals ";
+            for (const auto& val : this->well_equations_.residual()[0]) {
+                std::cout << val << " ";
+            }
             break;
         }
 
         ++it;
 
         solveEqAndUpdateWellState(simulator, well_state);
-        this->updatePrimaryVariableEvaluation();
-
     } while (it < max_iter);
     std::cout << "converged " << converged << " after " << it << " iterations" << std::endl;
     return converged;
