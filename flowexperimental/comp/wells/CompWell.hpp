@@ -144,6 +144,9 @@ private:
     void assembleSourceTerm(const Scalar dt);
 
     void updatePrimaryVariablesNewton(const BVectorWell& dwells);
+
+    // with passing in the SurfaceCondition, we should be able to do this in the primary variable class
+    void updateWellState(SingleCompWellState<Scalar>& well_state) const;
 };
 
 } // end of namespace Opm
