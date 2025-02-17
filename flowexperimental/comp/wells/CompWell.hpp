@@ -92,8 +92,6 @@ public:
 
     void updateSecondaryQuantities(const Simulator& simulator);
 
-    void updatePrimaryVariableEvaluation(); // override;
-
     // TODO: control should be passed in later
     void assembleWellEq(const Simulator& simulator,
                         const double dt,
