@@ -821,7 +821,7 @@ run()
             report.success.converged = this->substep_timer_.done();
             this->substep_timer_.setLastStepFailed(false);
         }
-        else { // in case of no convergence
+        else { // in case of no convergence or time step tolerance test failure
             this->substep_timer_.setLastStepFailed(true);
             checkTimeStepMaxRestartLimit_(restarts);
 
@@ -1156,6 +1156,9 @@ runSubStep_()
     catch (const TooManyIterations& e) {
         handleFailure("Solver convergence failure - Iteration limit reached", e);
     }
+    catch (const TimeSteppingBreakdown& e) {
+        handleFailure("Time step was too large", e);
+    }
     catch (const ConvergenceMonitorFailure& e) {
         handleFailure("Convergence monitor failure", e, /*log_exception=*/false);
     }
@@ -1173,9 +1176,6 @@ runSubStep_()
     }
     catch (const Dune::MatrixBlockError& e) {
         handleFailure("Matrix block error", e);
-    }
-    catch (const TimeSteppingBreakdown& e) {
-        handleFailure("Time step was too large", e);
     }
 
     return substep_report;

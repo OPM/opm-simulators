@@ -365,7 +365,6 @@ namespace Opm
     timeStepAccepted(const double error) const
     {
         if (error > tolerance_)
-            std::cout << "Error: " << error << std::endl;
             return false;
         return true;
     }
