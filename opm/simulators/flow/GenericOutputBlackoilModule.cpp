@@ -124,6 +124,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
     , tracerC_(eclState_)
+    , rftC_(eclState_, schedule_)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -817,36 +818,9 @@ doAllocBuffers(const unsigned bufferSize,
 
     // Well RFT data
     if (!substep) {
-        const auto& rft_config = schedule_[reportStepNum].rft_config();
-        for (const auto& well: schedule_.getWells(reportStepNum)) {
-
-            // don't bother with wells not on this process
-            if (isDefunctParallelWell(well.name())) {
-                continue;
-            }
-
-            if (!rft_config.active())
-                continue;
-
-            for (const auto& connection: well.getConnections()) {
-                const std::size_t i = std::size_t(connection.getI());
-                const std::size_t j = std::size_t(connection.getJ());
-                const std::size_t k = std::size_t(connection.getK());
-                const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
-
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    rftC_.oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
-                }
-
-                if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                    rftC_.waterConnectionSaturations_.emplace(std::make_pair(index, 0.0));
-                }
-
-                if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    rftC_.gasConnectionSaturations_.emplace(std::make_pair(index, 0.0));
-                }
-            }
-        }
+        this->rftC_.allocate(reportStepNum,
+                             [this](const std::string wname)
+                             { return !isDefunctParallelWell(wname); });
     }
 
     // Flows may need to be allocated even when there is no restart due to BFLOW* summary keywords

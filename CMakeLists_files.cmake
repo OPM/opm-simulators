@@ -113,6 +113,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NonlinearSolver.cpp
   opm/simulators/flow/partitionCells.cpp
+  opm/simulators/flow/RFTContainer.cpp
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/RegionPhasePVAverage.cpp
   opm/simulators/flow/SimulatorConvergenceOutput.cpp

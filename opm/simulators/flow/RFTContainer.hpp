@@ -27,17 +27,39 @@
 #define OPM_RFT_CONTAINER_HPP
 
 #include <cstddef>
+#include <functional>
 #include <map>
+#include <string>
 #include <vector>
 
 namespace Opm {
+
+class EclipseState;
+class Schedule;
 
 template<class FluidSystem>
 class RFTContainer {
     using Scalar = typename FluidSystem::Scalar;
     using ScalarBuffer = std::vector<Scalar>;
 
+    static constexpr auto gasPhaseIdx = FluidSystem::gasPhaseIdx;
+    static constexpr auto oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
+
 public:
+    RFTContainer(const EclipseState& eclState,
+                 const Schedule& schedule)
+        : eclState_(eclState)
+        , schedule_(schedule)
+    {}
+
+    using WellQueryFunc = std::function<bool(std::string)>;
+
+    void allocate(const std::size_t reportStepNum,
+                  const WellQueryFunc& wellQuery);
+
+    const EclipseState& eclState_;
+    const Schedule& schedule_;
     std::map<std::size_t, Scalar> oilConnectionPressures_;
     std::map<std::size_t, Scalar> waterConnectionSaturations_;
     std::map<std::size_t, Scalar> gasConnectionSaturations_;
