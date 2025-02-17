@@ -36,6 +36,16 @@ add_test_compare_parallel_simulation(CASENAME spe9_dist_z
                                      REL_TOL ${rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
 
+# A test for distributed standard wells on 8 processes. We load distribute only along the z-axis
+add_test_compare_parallel_simulation(CASENAME spe9_dist_z_8_procs
+                                     FILENAME SPE9_CP_SHORT
+                                     DIR spe9
+                                     SIMULATOR flow_distribute_z
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${rel_tol_parallel}
+                                     MPI_PROCS 8
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+
 # A test for distributed multisegment wells. We load distribute only along the z-axis
 add_test_compare_parallel_simulation(CASENAME msw-simple
                                      FILENAME MSW-SIMPLE # this file contains one Multisegment well without branches that is distributed across several processes
