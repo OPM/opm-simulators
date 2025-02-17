@@ -327,6 +327,14 @@ suggestedNextStep() const
     return this->suggested_next_timestep_;
 }
 
+template<class TypeTag>
+const TimeStepControlInterface&
+AdaptiveTimeStepping<TypeTag>::
+timeStepControl() const
+{
+    return *this->time_step_control_;
+}
+
 
 template<class TypeTag>
 void
@@ -1138,7 +1146,7 @@ runSubStep_()
     };
 
     try {
-        substep_report = solver_().step(this->substep_timer_);
+        substep_report = solver_().step(this->substep_timer_, *this->adaptive_time_stepping_.time_step_control_);
         if (solverVerbose_()) {
             // report number of linear iterations
             OpmLog::debug("Overall linear iterations used: "
@@ -1165,6 +1173,9 @@ runSubStep_()
     }
     catch (const Dune::MatrixBlockError& e) {
         handleFailure("Matrix block error", e);
+    }
+    catch (const TimeSteppingBreakdown& e) {
+        handleFailure("Time step was too large", e);
     }
 
     return substep_report;
