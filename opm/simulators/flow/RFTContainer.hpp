@@ -72,9 +72,11 @@ public:
                 const AssignmentFunc& water,
                 const AssignmentFunc& gas);
 
+private:
     const EclipseState& eclState_;
     const Schedule& schedule_;
     WellQueryFunc wellQuery_;
+
     std::map<std::size_t, Scalar> oilConnectionPressures_;
     std::map<std::size_t, Scalar> waterConnectionSaturations_;
     std::map<std::size_t, Scalar> gasConnectionSaturations_;
