@@ -630,15 +630,10 @@ public:
 
             // Adding Well RFT data
             const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
-            if (this->rftC_.oilConnectionPressures_.count(cartesianIdx) > 0) {
-                this->rftC_.oilConnectionPressures_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
-            }
-            if (this->rftC_.waterConnectionSaturations_.count(cartesianIdx) > 0) {
-                this->rftC_.waterConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(waterPhaseIdx));
-            }
-            if (this->rftC_.gasConnectionSaturations_.count(cartesianIdx) > 0) {
-                this->rftC_.gasConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(gasPhaseIdx));
-            }
+            this->rftC_.assign(cartesianIdx,
+                               [&fs]() { return getValue(fs.pressure(oilPhaseIdx)); },
+                               [&fs]() { return getValue(fs.saturation(waterPhaseIdx)); },
+                               [&fs]() { return getValue(fs.saturation(gasPhaseIdx)); });
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();

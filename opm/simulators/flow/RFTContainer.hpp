@@ -50,6 +50,7 @@ class RFTContainer {
     static constexpr auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
 public:
+    using AssignmentFunc = std::function<Scalar()>;
     using WellQueryFunc = std::function<bool(const std::string&)>;
 
     RFTContainer(const EclipseState& eclState,
@@ -65,6 +66,11 @@ public:
                    const Parallel::Communication& comm);
 
     void allocate(const std::size_t reportStepNum);
+
+   void assign(const unsigned cartesianIndex,
+                const AssignmentFunc& oil,
+                const AssignmentFunc& water,
+                const AssignmentFunc& gas);
 
     const EclipseState& eclState_;
     const Schedule& schedule_;

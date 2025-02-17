@@ -129,7 +129,6 @@ addToWells(data::Wells& wellDatas,
     gasConnectionSaturations_.clear();
 }
 
-
 template<class FluidSystem>
 void RFTContainer<FluidSystem>::
 allocate(const std::size_t reportStepNum)
@@ -166,6 +165,26 @@ allocate(const std::size_t reportStepNum)
             }
         }
     }
+}
+
+template<class FluidSystem>
+void RFTContainer<FluidSystem>::
+assign(const unsigned cartesianIndex,
+       const AssignmentFunc& oil,
+       const AssignmentFunc& water,
+       const AssignmentFunc& gas)
+{
+    auto cond_assign = [](auto& map, unsigned idx, const auto& func)
+    {
+        auto it = map.find(idx);
+        if (it != map.end()) {
+            it->second = func();
+        }
+    };
+
+    cond_assign(oilConnectionPressures_, cartesianIndex, oil);
+    cond_assign(waterConnectionSaturations_, cartesianIndex, water);
+    cond_assign(gasConnectionSaturations_, cartesianIndex, gas);
 }
 
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
