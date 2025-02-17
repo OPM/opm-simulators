@@ -872,6 +872,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/partitionCells.hpp
   opm/simulators/flow/PolyhedralGridVanguard.hpp
   opm/simulators/flow/priVarsPacking.hpp
+  opm/simulators/flow/RFTContainer.hpp
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/RegionPhasePVAverage.hpp
   opm/simulators/flow/SimulatorConvergenceOutput.hpp

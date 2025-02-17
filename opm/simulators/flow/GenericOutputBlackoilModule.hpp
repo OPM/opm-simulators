@@ -40,6 +40,7 @@
 #include <opm/simulators/flow/MechContainer.hpp>
 #include <opm/simulators/flow/MICPContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
+#include <opm/simulators/flow/RFTContainer.hpp>
 #include <opm/simulators/flow/TracerContainer.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -467,9 +468,7 @@ protected:
     std::array<FlowsData<double>, 3> floresn_;
     std::array<FlowsData<double>, 3> flowsn_;
 
-    std::map<std::size_t, Scalar> oilConnectionPressures_;
-    std::map<std::size_t, Scalar> waterConnectionSaturations_;
-    std::map<std::size_t, Scalar> gasConnectionSaturations_;
+    RFTContainer<FluidSystem> rftC_;
     std::map<std::pair<std::string, int>, double> blockData_;
 
     std::vector<std::vector<int>> cnvData_; //!< Data for CNV_xxx arrays

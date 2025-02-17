@@ -324,9 +324,9 @@ template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
 accumulateRftDataParallel(const Parallel::Communication& comm) {
     if (comm.size() > 1) {
-        gatherAndUpdateRftMap(oilConnectionPressures_, comm);
-        gatherAndUpdateRftMap(waterConnectionSaturations_, comm);
-        gatherAndUpdateRftMap(gasConnectionSaturations_, comm);
+        gatherAndUpdateRftMap(rftC_.oilConnectionPressures_, comm);
+        gatherAndUpdateRftMap(rftC_.waterConnectionSaturations_, comm);
+        gatherAndUpdateRftMap(rftC_.gasConnectionSaturations_, comm);
     }
 }
 
@@ -391,17 +391,20 @@ addRftDataToWells(data::Wells& wellDatas, std::size_t reportStepNum)
         data::Well& wellData = wellDatas.at(well.name());
         for (auto& connectionData: wellData.connections) {
             const auto index = connectionData.index;
-            if (oilConnectionPressures_.count(index) > 0)
-                connectionData.cell_pressure = oilConnectionPressures_.at(index);
-            if (waterConnectionSaturations_.count(index) > 0)
-                connectionData.cell_saturation_water = waterConnectionSaturations_.at(index);
-            if (gasConnectionSaturations_.count(index) > 0)
-                connectionData.cell_saturation_gas = gasConnectionSaturations_.at(index);
+            if (rftC_.oilConnectionPressures_.count(index) > 0) {
+                connectionData.cell_pressure = rftC_.oilConnectionPressures_.at(index);
+            }
+            if (rftC_.waterConnectionSaturations_.count(index) > 0) {
+                connectionData.cell_saturation_water = rftC_.waterConnectionSaturations_.at(index);
+            }
+            if (rftC_.gasConnectionSaturations_.count(index) > 0) {
+                connectionData.cell_saturation_gas = rftC_.gasConnectionSaturations_.at(index);
+            }
         }
     }
-    oilConnectionPressures_.clear();
-    waterConnectionSaturations_.clear();
-    gasConnectionSaturations_.clear();
+    rftC_.oilConnectionPressures_.clear();
+    rftC_.waterConnectionSaturations_.clear();
+    rftC_.gasConnectionSaturations_.clear();
 }
 
 template<class FluidSystem>
@@ -831,14 +834,17 @@ doAllocBuffers(const unsigned bufferSize,
                 const std::size_t k = std::size_t(connection.getK());
                 const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
 
-                if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                    oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                    rftC_.oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
+                }
 
-                if (FluidSystem::phaseIsActive(waterPhaseIdx))
-                    waterConnectionSaturations_.emplace(std::make_pair(index, 0.0));
+                if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                    rftC_.waterConnectionSaturations_.emplace(std::make_pair(index, 0.0));
+                }
 
-                if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                    gasConnectionSaturations_.emplace(std::make_pair(index, 0.0));
+                if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    rftC_.gasConnectionSaturations_.emplace(std::make_pair(index, 0.0));
+                }
             }
         }
     }
