@@ -292,9 +292,9 @@ protected:
     using StringBuffer = std::vector<std::string>;
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
-    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
+    static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
+    static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
