@@ -509,6 +509,8 @@ solveEqAndUpdateWellState(const Simulator& simulator,
    this->well_equations_.solve(dx_well);
 
    this->updatePrimaryVariablesNewton(dx_well);
+
+   this->updateWellState(well_state);
 }
 
 template <typename TypeTag>
@@ -517,7 +519,30 @@ CompWell<TypeTag>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells)
 {
     this->primary_variables_.updateNewton(dwells);
-
 }
 
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updateWellState(SingleCompWellState<Scalar>& well_state) const
+{
+    well_state.bhp = this->primary_variables_.getBhp().value();
+
+    auto& total_molar_fractions = well_state.total_molar_fractions;
+    const auto fluid_state = this->primary_variables_.toFluidStateScalar();
+    for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents - 1; ++comp_idx) {
+        total_molar_fractions[comp_idx] = fluid_state.moleFraction(comp_idx);
+    }
+    const Scalar total_rate = this->primary_variables_.getTotalRate().value();
+    auto& surface_phase_rates = well_state.surface_phase_rates;
+    if (well_state.producer) { // producer
+        const auto& surface_cond = this->surface_conditions_;
+        for (int p = 0; p < FluidSystem::numPhases; ++p) {
+            surface_phase_rates[p] = total_rate * getValue(surface_cond.volume_fractions_[p]);
+        }
+    } else { // injector
+        // only gas injection yet
+        surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
+    }
+}
 } // end of namespace Opm
