@@ -176,8 +176,8 @@ struct NonlinearSolverParameters
                 OPM_THROW_NOLOG(TooManyIterations, msg);
             }
             if (!timeStepControl.timeStepAccepted(model_->relativeChange())) {
-                failureReport_ = report;
                 report.converged = false;
+                failureReport_ = report;
 
                 std::string msg = "Time step was too large. Tolerance test failed.";
                 OPM_THROW_NOLOG(TimeSteppingBreakdown, msg);
