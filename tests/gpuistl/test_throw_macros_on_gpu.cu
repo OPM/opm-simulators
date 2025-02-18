@@ -26,7 +26,10 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 namespace {
-__global__ void codeThatContainsMacros(bool call) {
+// NOTE: We have to split this into a separate function due 
+// to some weirdness of hipcc. Note however that this is 
+// the realistic use case of the macro.
+__device__ void functionThatContainsMacros(bool call) {
     if (call) {
         OPM_THROW(std::logic_error, "Something went wrong");
         OPM_THROW_NOLOG(std::logic_error, "Something went wrong");
@@ -34,28 +37,9 @@ __global__ void codeThatContainsMacros(bool call) {
     }
     OPM_ERROR_IF(!call, "Something went horribly wrong");
 }
-
-// TODO: Check if this is better on HIP
-#if 0 // I am leaving this here to show that this is not possible due to limitations in CUDA
-      // the assert will indeed cause an error, but the CUDA context will be broken for
-      // the rest of the lifetime of the process, see 
-      // https://forums.developer.nvidia.com/t/how-to-clear-cuda-errors/296393/5
-__global__ void checkThrow() {
-    OPM_THROW(std::logic_error, "Something went wrong");
+__global__ void codeThatContainsMacros(bool call) {
+    functionThatContainsMacros(call);
 }
-
-__global__ void checkThrowNoLog() {
-    OPM_THROW_NOLOG(std::logic_error, "Something went wrong");
-}
-
-__global__ void checkThrowProblem() {
-    OPM_THROW_PROBLEM(std::logic_error, "Something went wrong");
-}
-
-__global__ void checkErrorIf() {
-    OPM_ERROR_IF(true, "Something went horribly wrong");
-}
-#endif
 }
 
 BOOST_AUTO_TEST_CASE(TestKernel)
@@ -65,37 +49,6 @@ BOOST_AUTO_TEST_CASE(TestKernel)
     codeThatContainsMacros<<<1, 1>>>(false);
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
-
-    #if 0 // I am leaving this here to show that this is not possible due to limitations in CUDA
-          // the assert will indeed cause an error, but the CUDA context will be broken for
-          // the rest of the lifetime of the process, see 
-          // https://forums.developer.nvidia.com/t/how-to-clear-cuda-errors/296393/5
-    codeThatContainsMacros<<<1, 1>>>(true);
-    // Make sure this actually throws
-    BOOST_CHECK_THROW(OPM_GPU_SAFE_CALL(cudaDeviceSynchronize()), std::runtime_error);
-    OPM_GPU_SAFE_CALL(cudaDeviceReset());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-
-    checkThrow<<<1, 1>>>();
-    BOOST_CHECK_THROW(OPM_GPU_SAFE_CALL(cudaDeviceSynchronize()), std::runtime_error);
-    OPM_GPU_SAFE_CALL(cudaDeviceReset());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-
-    checkThrowNoLog<<<1, 1>>>();
-    BOOST_CHECK_THROW(OPM_GPU_SAFE_CALL(cudaDeviceSynchronize()), std::runtime_error);
-    OPM_GPU_SAFE_CALL(cudaDeviceReset());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-
-    checkThrowProblem<<<1, 1>>>();
-    BOOST_CHECK_THROW(OPM_GPU_SAFE_CALL(cudaDeviceSynchronize()), std::runtime_error);
-    OPM_GPU_SAFE_CALL(cudaDeviceReset());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-
-    checkErrorIf<<<1, 1>>>();
-    BOOST_CHECK_THROW(OPM_GPU_SAFE_CALL(cudaDeviceSynchronize()), std::runtime_error);
-    OPM_GPU_SAFE_CALL(cudaDeviceReset());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-    #endif
 }
 
 BOOST_AUTO_TEST_CASE(TestOutsideKernel) 
