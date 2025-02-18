@@ -417,6 +417,9 @@ public:
         return thresholdPressures_;
     }
 
+    const std::unique_ptr<EclWriterType>& eclWriter() const
+    { return eclWriter_; }
+
     // TODO: do we need this one?
     template<class Serializer>
     void serializeOp(Serializer& serializer)

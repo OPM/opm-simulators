@@ -41,6 +41,7 @@
 #include <opm/simulators/flow/MICPContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
 #include <opm/simulators/flow/RFTContainer.hpp>
+#include <opm/simulators/flow/RSTConv.hpp>
 #include <opm/simulators/flow/TracerContainer.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -229,16 +230,17 @@ public:
         local_data_valid_ = true;
     }
 
-    void setCnvData(const std::vector<std::vector<int>>& data)
-    {
-        cnvData_ = data;
-    }
-
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
         serializer(initialInplace_);
     }
+
+    RSTConv& getConv()
+    { return this->rst_conv_; }
+
+    const RSTConv& getConv() const
+    { return this->rst_conv_; }
 
     //! \brief Assign fields that are in global numbering to the solution.
     //! \detail This is used to add fields that for some reason cannot be collected
@@ -264,6 +266,8 @@ protected:
                                 const SummaryConfig& summaryConfig,
                                 const SummaryState& summaryState,
                                 const std::string& moduleVersionName,
+                                RSTConv::LocalToGlobalCellFunc globalCell,
+                                const Parallel::Communication& comm,
                                 bool enableEnergy,
                                 bool enableTemperature,
                                 bool enableMech,
@@ -413,9 +417,9 @@ protected:
     FlowsContainer<FluidSystem> flowsC_;
 
     RFTContainer<FluidSystem> rftC_;
-    std::map<std::pair<std::string, int>, double> blockData_;
+    RSTConv rst_conv_; //!< Helper class for RPTRST CONV
 
-    std::vector<std::vector<int>> cnvData_; //!< Data for CNV_xxx arrays
+    std::map<std::pair<std::string, int>, double> blockData_;
 
     std::optional<Inplace> initialInplace_;
     bool local_data_valid_{false};
