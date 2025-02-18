@@ -90,12 +90,11 @@ addToWells(data::Wells& wellDatas,
 
         //add data infrastructure for shut wells
         if (!wellDatas.count(well.name())) {
-            data::Well wellData;
-
             if (!rft_config.active()) {
                 continue;
             }
 
+            auto& wellData = wellDatas[well.name()];
             wellData.connections.reserve(well.getConnections().size());
             std::transform(well.getConnections().begin(),
                            well.getConnections().end(),
@@ -106,7 +105,6 @@ addToWells(data::Wells& wellDatas,
                                res.index = connection.global_index();
                                return res;
                            });
-            wellDatas.emplace(std::make_pair(well.name(), wellData));
         }
 
         data::Well& wellData = wellDatas.at(well.name());
