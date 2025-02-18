@@ -20,9 +20,37 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystemDynamic.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+BOOST_AUTO_TEST_CASE(TestThrowOnUnInitialized) {
+    BOOST_CHECK(!Opm::BlackOilFluidSystem<double>::isInitialized());
+    BOOST_CHECK_THROW(Opm::BlackOilFluidSystem<double>::getDynamicInstance(), std::logic_error);
+}
 
 BOOST_AUTO_TEST_CASE(TestDynamicCreationCPU) {
-    Opm::BlackOilFluidSystemDynamic<double> fluidSystem;
+    Opm::BlackOilFluidSystem<double>::initBegin(5);
+    Opm::BlackOilFluidSystem<double>::initEnd();
+    BOOST_CHECK(Opm::BlackOilFluidSystem<double>::isInitialized());
+    auto staticDummyInstance = Opm::BlackOilFluidSystem<double>{};
+    BOOST_CHECK(staticDummyInstance.isInitialized());
+
+    Opm::BlackOilFluidSystemDynamic<double>& fluidSystem = Opm::BlackOilFluidSystem<double>::getDynamicInstance();
+}
+BOOST_AUTO_TEST_CASE(TestDynamicGettersCPU) {
+    Opm::BlackOilFluidSystemDynamic<double>& fluidSystem = Opm::BlackOilFluidSystem<double>::getDynamicInstance();
+    BOOST_CHECK_EQUAL(fluidSystem.numActivePhases(), Opm::BlackOilFluidSystem<double>::numActivePhases());
+    for (int phase = 0; phase < fluidSystem.numActivePhases(); ++phase) {
+      BOOST_CHECK_EQUAL(fluidSystem.phaseIsActive(phase), Opm::BlackOilFluidSystem<double>::phaseIsActive(phase));
+    }
+    //BOOST_CHECK_EQUAL(fluidSystem.surfaceTemperature(), Opm::BlackOilFluidSystem<double>::surfaceTemperature());
+    //BOOST_CHECK_EQUAL(fluidSystem.surfacePressure(), Opm::BlackOilFluidSystem<double>::surfacePressure());
+    BOOST_CHECK_EQUAL(fluidSystem.enableDissolvedGas(), Opm::BlackOilFluidSystem<double>::enableDissolvedGas());
+    BOOST_CHECK_EQUAL(fluidSystem.enableDissolvedGasInWater(), Opm::BlackOilFluidSystem<double>::enableDissolvedGasInWater());
+    BOOST_CHECK_EQUAL(fluidSystem.enableVaporizedOil(), Opm::BlackOilFluidSystem<double>::enableVaporizedOil());
+    BOOST_CHECK_EQUAL(fluidSystem.enableVaporizedWater(), Opm::BlackOilFluidSystem<double>::enableVaporizedWater());
+    BOOST_CHECK_EQUAL(fluidSystem.enableDiffusion(), Opm::BlackOilFluidSystem<double>::enableDiffusion());
+    BOOST_CHECK_EQUAL(fluidSystem.isInitialized(), Opm::BlackOilFluidSystem<double>::isInitialized());
+    BOOST_CHECK_EQUAL(fluidSystem.useSaturatedTables(), Opm::BlackOilFluidSystem<double>::useSaturatedTables());
+    //BOOST_CHECK_EQUAL(fluidSystem.enthalpyEqEnergy(), Opm::BlackOilFluidSystem<double>::enthalpyEqEnergy());
 }
 
