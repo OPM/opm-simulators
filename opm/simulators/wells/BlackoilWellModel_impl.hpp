@@ -1102,7 +1102,6 @@ namespace Opm {
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
                                     this->simulator_.vanguard().grid().comm());
-        this->initPrimaryVariablesEvaluation();
 
         if (this->simulator_.vanguard().grid().comm().rank() == 0) {
             if (!converged) {
@@ -1113,20 +1112,6 @@ namespace Opm {
                 const std::string msg = fmt::format("Initial (pre-step) network balance converged");
                 deferred_logger.debug(msg);
             }
-<<<<<<< HEAD
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
-                                       this->simulator_.vanguard().grid().comm());
-        } while (iter < max_iter);
-
-        if (!converged) {
-            const std::string msg = fmt::format("Initial (pre-step) network balance did not get converged with {} iterations, "
-                                                "unconverged network balance result will be used", max_iter);
-            deferred_logger.warning(msg);
-        } else {
-            const std::string msg = fmt::format("Initial (pre-step) network balance converged with {} iterations", iter);
-            deferred_logger.debug(msg);
-=======
->>>>>>> 5dffeab0a... Network + MSW testing, no STDW update
         }
     }
 
