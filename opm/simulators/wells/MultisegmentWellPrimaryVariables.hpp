@@ -167,7 +167,7 @@ private:
     const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well interface
 
     static constexpr double bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
-    static constexpr double seg_pres_lower_limit = 0.;
+    static constexpr double seg_pres_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
 };
 
 }
