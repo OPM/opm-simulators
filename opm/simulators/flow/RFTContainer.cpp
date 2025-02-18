@@ -100,15 +100,10 @@ addToWells(data::Wells& wellDatas,
             std::transform(well.getConnections().begin(),
                            well.getConnections().end(),
                            std::back_inserter(wellData.connections),
-                           [this](const auto& connection)
+                           [](const auto& connection)
                            {
-                               const std::size_t i = std::size_t(connection.getI());
-                               const std::size_t j = std::size_t(connection.getJ());
-                               const std::size_t k = std::size_t(connection.getK());
-
-                               const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
                                data::Connection res;
-                               res.index = index;
+                               res.index = connection.global_index();
                                return res;
                            });
             wellDatas.emplace(std::make_pair(well.name(), wellData));
@@ -160,10 +155,7 @@ allocate(const std::size_t reportStepNum)
         }
 
         for (const auto& connection: well.getConnections()) {
-            const std::size_t i = std::size_t(connection.getI());
-            const std::size_t j = std::size_t(connection.getJ());
-            const std::size_t k = std::size_t(connection.getK());
-            const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
+            const std::size_t index = connection.global_index();
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
