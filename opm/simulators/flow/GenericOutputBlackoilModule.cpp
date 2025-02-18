@@ -872,7 +872,8 @@ doAllocBuffers(const unsigned bufferSize,
                                        // we need to check if the main keyword is defined. If so,
                                        // call the handler with required set to true
                                        if (!required && (entry.phaseType == EntryPhaseType::NGWO ||
-                                                         entry.phaseType == EntryPhaseType::NGasWatOil))
+                                                         entry.phaseType == EntryPhaseType::NGasWatOil ||
+                                                         entry.phaseType == EntryPhaseType::None))
                                        {
                                            auto it = rstKeywords.find(std::string(entry.kw));
                                            if (it != rstKeywords.end() && it->second > 0) {
