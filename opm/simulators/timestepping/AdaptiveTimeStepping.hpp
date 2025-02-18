@@ -149,9 +149,9 @@ private:
     private:
         bool checkContinueOnUnconvergedSolution_(double dt) const;
         void checkTimeStepMaxRestartLimit_(const int restarts) const;
-        void checkTimeStepMinLimit_(const int new_time_step) const;
+        void checkTimeStepMinLimit_(const double new_time_step) const;
         void chopTimeStep_(const double new_time_step);
-        bool chopTimeStepOrCloseFailingWells_(const int new_time_step);
+        bool chopTimeStepOrCloseFailingWells_(const double new_time_step);
         boost::posix_time::ptime currentDateTime_() const;
         int getNumIterations_(const SimulatorReportSingle &substep_report) const;
         double growthFactor_() const;

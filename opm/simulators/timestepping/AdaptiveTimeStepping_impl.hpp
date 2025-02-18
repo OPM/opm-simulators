@@ -881,7 +881,7 @@ template<class TypeTag>
 template<class Solver>
 void
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-checkTimeStepMinLimit_(const int new_time_step) const
+checkTimeStepMinLimit_(const double new_time_step) const
 {
     // If we have restarted (i.e. cut the timestep) too
     // much, we have failed and throw an exception.
@@ -918,7 +918,7 @@ template<class TypeTag>
 template<class Solver>
 bool
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-chopTimeStepOrCloseFailingWells_(const int new_time_step)
+chopTimeStepOrCloseFailingWells_(const double new_time_step)
 {
     bool wells_shut = false;
     // We are below the threshold, and will check if there are any
