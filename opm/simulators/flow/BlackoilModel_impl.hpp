@@ -141,7 +141,7 @@ prepareStep(const SimulatorTimerInterface& timer)
         return -1;
     };
     const auto& schedule = simulator_.vanguard().schedule();
-    auto& rst_conv = simulator_.problem().eclWriter()->mutableOutputModule().getConv();
+    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
     rst_conv.init(simulator_.vanguard().globalNumCells(),
                   schedule[timer.reportStepNum()].rst_config(),
                   {getIdx(FluidSystem::oilPhaseIdx),
@@ -245,7 +245,7 @@ nonlinearIteration(const int iteration,
                                                            nonlinear_solver);
     }
 
-    auto& rst_conv = simulator_.problem().eclWriter()->mutableOutputModule().getConv();
+    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
     rst_conv.update(simulator_.model().linearizer().residual());
 
     return result;
