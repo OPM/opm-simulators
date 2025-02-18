@@ -82,7 +82,7 @@ public:
     void beginEpisode() { beginReportStep(simulator_.episodeIndex()); }
     void beginReportStep(unsigned report_step);
     void beginTimeStep();
-    void beginIteration() {}
+    void beginIteration();
 
     void init() {}
     void endIteration() const {}
@@ -137,7 +137,10 @@ private:
 
      std::size_t compressedIndexForInterior(std::size_t cartesian_cell_idx) const;
 
+     void assemble(const int iterationIdx,
+                   const double dt);
 
+     void calculateExplicitQuantities();
 };
 
 } // end of namespace Opm
