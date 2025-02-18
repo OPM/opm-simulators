@@ -1761,6 +1761,21 @@ namespace Opm {
                 more_network_sub_update = this->networkActive() && network_imbalance > tolerance;
                 if (!more_network_sub_update)
                     break;
+
+                for (const auto& well : well_container_) {
+                    if (well->isInjector() || !well->wellEcl().predictionMode())
+                         continue;
+
+                    const auto it = this->node_pressures_.find(well->wellEcl().groupName());
+                    if (it != this->node_pressures_.end()) {
+                        const auto& ws = this->wellState().well(well->indexOfWell());
+                        const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
+                        if (thp_is_limit) {
+                            well->prepareWellBeforeAssembling(this->simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+                        }
+                    }
+                }
+                this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, deferred_logger);
             }
             more_network_update = more_network_sub_update || well_group_thp_updated;
         }
