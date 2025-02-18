@@ -1099,7 +1099,8 @@ add_test_compareECLFiles(CASENAME nnc
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR editnnc)
+                         DIR editnnc
+                         TEST_ARGS --enable-opm-rst-file=1)
 
 add_test_compareECLFiles(CASENAME nonnc
                          FILENAME NONNC
