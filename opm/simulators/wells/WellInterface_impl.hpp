@@ -1457,9 +1457,9 @@ namespace Opm
             }
             case Well::ProducerCMode::THP:
             {
-                const bool update_success = updateWellStateWithTHPTargetProd(simulator, well_state, deferred_logger);
+                //const bool update_success = updateWellStateWithTHPTargetProd(simulator, well_state, deferred_logger);
 
-                if (!update_success) {
+                if (true) {
                     // the following is the original way of initializing well state with THP constraint
                     // keeping it for robust reason in case that it fails to get a bhp value with THP constraint
                     // more sophisticated design might be needed in the future
