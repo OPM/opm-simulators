@@ -74,13 +74,17 @@ addToWells(data::Wells& wellDatas,
            const std::size_t reportStepNum,
            const Parallel::Communication& comm)
 {
+    const auto& rft_config = schedule_[reportStepNum].rft_config();
+    if (!rft_config.active()) {
+        return;
+    }
+
     if (comm.size() > 1) {
         gatherAndUpdateMap(oilConnectionPressures_, comm);
         gatherAndUpdateMap(waterConnectionSaturations_, comm);
         gatherAndUpdateMap(gasConnectionSaturations_, comm);
     }
 
-    const auto& rft_config = schedule_[reportStepNum].rft_config();
     for (const auto& well: schedule_.getWells(reportStepNum)) {
 
         // don't bother with wells not on this process
@@ -90,10 +94,6 @@ addToWells(data::Wells& wellDatas,
 
         //add data infrastructure for shut wells
         if (!wellDatas.count(well.name())) {
-            if (!rft_config.active()) {
-                continue;
-            }
-
             auto& wellData = wellDatas[well.name()];
             wellData.connections.reserve(well.getConnections().size());
             std::transform(well.getConnections().begin(),
@@ -141,14 +141,14 @@ allocate(const std::size_t reportStepNum)
 {
     // Well RFT data
     const auto& rft_config = schedule_[reportStepNum].rft_config();
+    if (!rft_config.active()) {
+        return;
+    }
+
     for (const auto& well: schedule_.getWells(reportStepNum)) {
 
         // don't bother with wells not on this process
         if (!wellQuery_(well.name())) {
-            continue;
-        }
-
-        if (!rft_config.active()) {
             continue;
         }
 
