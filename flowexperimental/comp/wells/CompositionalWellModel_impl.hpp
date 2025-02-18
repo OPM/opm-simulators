@@ -153,9 +153,42 @@ initWellState(const std::size_t report_step)
 
 
 template <typename TypeTag>
-std::size_t CompositionalWellModel<TypeTag>::
+std::size_t
+CompositionalWellModel<TypeTag>::
 compressedIndexForInterior(std::size_t cartesian_cell_idx) const {
     return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
+}
+
+template <typename TypeTag>
+void
+CompositionalWellModel<TypeTag>::
+beginIteration()
+{
+    assemble(simulator_.model().newtonMethod().numIterations(),
+         simulator_.timeStepSize());
+}
+
+template <typename TypeTag>
+void
+CompositionalWellModel<TypeTag>::
+assemble(const int iterationIdx,
+         const double dt)
+{
+
+    if (iterationIdx == 0) {
+        this->calculateExplicitQuantities();
+    }
+}
+
+template <typename TypeTag>
+void
+CompositionalWellModel<TypeTag>::
+calculateExplicitQuantities()
+{
+    for (auto& well : well_container_) {
+        auto& well_state = comp_well_states_[well->name()];
+        well->calculateExplicitQuantities(simulator_, well_state);
+    }
 }
 
 } // end of namespace Opm

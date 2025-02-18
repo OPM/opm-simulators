@@ -30,9 +30,10 @@ CompWellInterface(const Well& well,
                   const std::vector<CompConnectionData<Scalar> >& well_connection_data)
     : well_ecl_(well)
     , index_of_well_(index_of_well)
+    , number_of_connection_(well_connection_data.size())
     , reference_depth_(well.getRefDepth())
+    , connectionRates_(number_of_connection_)
 {
-    number_of_connection_ = well_connection_data.size();
     {
         well_cells_.resize(number_of_connection_);
         well_index_.resize(number_of_connection_);
