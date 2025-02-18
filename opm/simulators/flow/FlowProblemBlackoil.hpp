@@ -445,7 +445,7 @@ public:
     {
         // After the solution is updated, the values in output module needs
         // also updated.
-        this->eclWriter()->mutableOutputModule().invalidateLocalData();
+        this->eclWriter().mutableOutputModule().invalidateLocalData();
 
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
         const auto& grid = this->simulator().vanguard().gridView().grid();
@@ -822,10 +822,11 @@ public:
     }
 
 
-    const std::unique_ptr<EclWriterType>& eclWriter() const
-    {
-        return eclWriter_;
-    }
+    const EclWriterType& eclWriter() const
+    { return *eclWriter_; }
+
+    EclWriterType& eclWriter()
+    { return *eclWriter_; }
 
     /*!
      * \brief Returns the maximum value of the gas dissolution factor at the current time

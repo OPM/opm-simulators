@@ -539,14 +539,14 @@ private:
         // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
         // For now, do the same also if any block flows are requested (TODO: only save requested cells...)
         // If DISPERC is in the deck, we initialize the sparse table here as well.
-        const bool anyFlows = simulator_().problem().eclWriter()->outputModule().getFlows().anyFlows();
-        const bool anyFlores = simulator_().problem().eclWriter()->outputModule().getFlows().anyFlores();
+        const bool anyFlows = simulator_().problem().eclWriter().outputModule().getFlows().anyFlows();
+        const bool anyFlores = simulator_().problem().eclWriter().outputModule().getFlows().anyFlores();
         const bool enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         if (((!anyFlows || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && !enableDispersion) {
             return;
         }
         const auto& model = model_();
-        const auto& nncOutput = simulator_().problem().eclWriter()->getOutputNnc();
+        const auto& nncOutput = simulator_().problem().eclWriter().getOutputNnc();
         Stencil stencil(gridView_(), model_().dofMapper());
         unsigned numCells = model.numTotalDof();
         std::unordered_multimap<int, std::pair<int, int>> nncIndices;
@@ -641,9 +641,9 @@ public:
 
     void updateFlowsInfo() {
         OPM_TIMEBLOCK(updateFlows);
-        const bool enableFlows = simulator_().problem().eclWriter()->outputModule().getFlows().hasFlows() ||
-                                  simulator_().problem().eclWriter()->outputModule().getFlows().hasBlockFlows();
-        const bool enableFlores = simulator_().problem().eclWriter()->outputModule().getFlows().hasFlores();
+        const bool enableFlows = simulator_().problem().eclWriter().outputModule().getFlows().hasFlows() ||
+                                 simulator_().problem().eclWriter().outputModule().getFlows().hasBlockFlows();
+        const bool enableFlores = simulator_().problem().eclWriter().outputModule().getFlows().hasFlores();
         if (!enableFlows && !enableFlores) {
             return;
         }
@@ -724,7 +724,7 @@ private:
         // We do not call resetSystem_() here, since that will set
         // the full system to zero, not just our part.
         // Instead, that must be called before starting the linearization.
-        const bool& enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
+        const bool enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         const unsigned int numCells = domain.cells.size();
         const bool on_full_domain = (numCells == model_().numTotalDof());
 

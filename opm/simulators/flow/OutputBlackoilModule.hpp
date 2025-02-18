@@ -117,7 +117,7 @@ public:
                    simulator.vanguard().summaryState(),
                    moduleVersionName(),
                    [this](const int idx)
-                   { return simulator_.problem().eclWriter()->collectOnIORank().localIdxToGlobalIdx(idx); },
+                   { return simulator_.problem().eclWriter().collectOnIORank().localIdxToGlobalIdx(idx); },
                    simulator.vanguard().grid().comm(),
                    getPropValue<TypeTag, Properties::EnableEnergy>(),
                    getPropValue<TypeTag, Properties::EnableTemperature>(),
@@ -188,7 +188,7 @@ public:
                              log,
                              isRestart,
                              &problem.materialLawManager()->hysteresisConfig(),
-                             problem.eclWriter()->getOutputNnc().size());
+                             problem.eclWriter().getOutputNnc().size());
     }
 
     void processElementMech(const ElementContext& elemCtx)
