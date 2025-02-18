@@ -156,15 +156,15 @@ allocate(const std::size_t reportStepNum)
             const std::size_t index = connection.global_index();
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
+                oilConnectionPressures_.emplace(index, 0.0);
             }
 
             if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                waterConnectionSaturations_.emplace(std::make_pair(index, 0.0));
+                waterConnectionSaturations_.emplace(index, 0.0);
             }
 
             if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                gasConnectionSaturations_.emplace(std::make_pair(index, 0.0));
+                gasConnectionSaturations_.emplace(index, 0.0);
             }
         }
     }
