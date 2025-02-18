@@ -652,7 +652,7 @@ public:
             // output residual
             for ( int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx )
             {
-                if (!this->residual_[phaseIdx].empty()) {
+                if (!this->residual_[phaseIdx].empty() && modelResid.size() > 0) {
                     const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
                     this->residual_[phaseIdx][globalDofIdx] = modelResid[globalDofIdx][activeCompIdx];
                 }
