@@ -40,6 +40,7 @@ public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>; // FlashRateVector at the moment
 
     CompWellInterface(const Well& well,
                       const int index_of_well,
@@ -69,6 +70,8 @@ protected:
 
     int number_of_connection_ {};
     Scalar reference_depth_ {}; // TODO: we might not need it since it in well_ecl_.
+
+    std::vector<RateVector> connectionRates_;
 
     // cell index for each well connection
     // TODO: maybe it should be called connection_cells
