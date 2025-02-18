@@ -2094,7 +2094,7 @@ namespace Opm {
         updatePrimaryVariables(deferred_logger);
 
         // Actually do the pre-step network rebalance, using the updated well states and initial solutions
-        if (do_prestep_network_rebalance || true) doPreStepNetworkRebalance(deferred_logger); // TEST: Always pre-balance
+        if (do_prestep_network_rebalance) doPreStepNetworkRebalance(deferred_logger); // TEST: Always pre-balance
     }
 
     template<typename TypeTag>

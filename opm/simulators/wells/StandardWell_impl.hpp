@@ -2428,18 +2428,18 @@ namespace Opm
                 if (changed){
                     its_since_last_switch = 0;
                     switch_count++;
+                    final_check = false;
                     if (well_status_cur != this->wellStatus_) {
                         well_status_cur = this->wellStatus_;
                         status_switch_count++;
                     }
                 }
-                if (!changed && final_check) {
-                    break;
-                } else {
-                    final_check = false;
-                }
             }
 
+            auto& ws = well_state.well(this->index_of_well_);
+            if (ws.production_cmode != Well::ProducerCMode::GRUP) {
+                ws.trivial_target = false;
+            }
             assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
             if (it > this->param_.strict_inner_iter_wells_) {
@@ -2453,12 +2453,13 @@ namespace Opm
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
                 // in this case, make sure all constraints are satisfied before returning
-                if (switch_count > 0 && its_since_last_switch < min_its_after_switch) {
-                    final_check = true;
-                    its_since_last_switch = min_its_after_switch;
-                } else {
+                // (there may be unsatisfied constraints in addition to the control equation, so even if there is convergence and
+                //  no switch in the first iteration we need the final check)
+                if (final_check) {
                     break;
                 }
+                final_check = true;
+                its_since_last_switch = min_its_after_switch;
             }
 
             ++it;

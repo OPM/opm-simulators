@@ -1671,8 +1671,9 @@ namespace Opm
                     final_check = false;
                 }
             }
-            if (well_state.well(this->index_of_well_).production_cmode != Well::ProducerCMode::GRUP) {
-                well_state.well(this->index_of_well_).trivial_target = false;
+            auto& ws = well_state.well(this->index_of_well_);
+            if (ws.production_cmode != Well::ProducerCMode::GRUP) {
+                ws.trivial_target = false;
             }
             assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
                                            well_state, group_state, deferred_logger);
