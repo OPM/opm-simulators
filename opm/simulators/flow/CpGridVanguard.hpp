@@ -247,9 +247,23 @@ public:
 #endif
     }
 
+    /*!
+     * \brief Add LGRs and update Leaf Grid View in the simulation grid.
+     */
+    void addLgrs()
+    {
+        // Check if input file contains Lgrs.
+        //
+        // If there are lgrs, create the grid with them, and update the leaf grid view.
+        if (const auto& lgrs = this->eclState().getLgrs(); lgrs.size() > 0) {
+            OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
+            this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
+        }
+    }
+
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const {
-         return elemIndex;
-     }
+        return elemIndex;
+    }
 
     unsigned int gridIdxToEquilGridIdx(unsigned int elemIndex) const {
         return elemIndex;
