@@ -20,11 +20,13 @@
 #include <config.h>
 #include <opm/simulators/flow/RSTConv.hpp>
 
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/Schedule/RSTConfig.hpp>
-
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
+
+#include <opm/input/eclipse/Schedule/RSTConfig.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+
+#include <opm/output/data/Solution.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -51,6 +53,22 @@ void RSTConv::init(const std::size_t numCells,
         if (compIdx_[i] > -1) {
             cnv_X_[i].resize(numCells);
         }
+    }
+}
+
+void RSTConv::outputRestart(data::Solution& sol)
+{
+    if (!this->cnv_X_.empty()) {
+        constexpr const std::array names{"CNV_OIL", "CNV_GAS", "CNV_WAT",
+                                         "CNV_PLY", "CNV_SAL", "CNV_SOL"};
+        std::for_each(this->cnv_X_.begin(), this->cnv_X_.end(),
+                      [i = 0, &names, &sol](auto& cnv) mutable
+                      {
+                          if (!cnv.empty()) {
+                              sol.insert(names[i], std::move(cnv), data::TargetType::RESTART_SOLUTION);
+                          }
+                          ++i;
+                      });
     }
 }
 
@@ -92,7 +110,7 @@ void RSTConv::gatherAndAccumulate(const std::vector<int>& lIdx,
     std::vector<int> gIdx(comm_.rank() == 0 ? comm_.size() * N_ : 0);
     for (int i = 0; i < N_; ++i) {
         send_values[i] = std::abs(resid[lIdx[i]][compIdx_[comp]]);
-        send_idx[i] = globalCell_[lIdx[i]];
+        send_idx[i] = globalCell_(lIdx[i]);
     }
 
     comm_.gather(send_idx.data(), gIdx.data(), N_, 0);

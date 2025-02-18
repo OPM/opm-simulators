@@ -827,12 +827,7 @@ public:
         return eclWriter_;
     }
 
-    void setConvData(const std::vector<std::vector<int>>& data)
-    {
-        eclWriter_->mutableOutputModule().setCnvData(data);
-    }
-
-        /*!
+    /*!
      * \brief Returns the maximum value of the gas dissolution factor at the current time
      *        for a given degree of freedom.
      */

@@ -95,6 +95,8 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             const SummaryConfig& summaryConfig,
                             const SummaryState& summaryState,
                             const std::string& moduleVersion,
+                            RSTConv::LocalToGlobalCellFunc globalCell,
+                            const Parallel::Communication& comm,
                             bool enableEnergy,
                             bool enableTemperature,
                             bool enableMech,
@@ -127,6 +129,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , rftC_(eclState_, schedule_,
             [this](const std::string& wname)
             { return !isDefunctParallelWell(wname); })
+    , rst_conv_(std::move(globalCell), comm)
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -1316,15 +1319,7 @@ template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
 assignGlobalFieldsToSolution(data::Solution& sol)
 {
-    if (!this->cnvData_.empty()) {
-        constexpr const std::array names{"CNV_OIL", "CNV_GAS", "CNV_WAT",
-                                         "CNV_PLY", "CNV_SAL", "CNV_SOL"};
-        for (std::size_t i = 0; i < names.size(); ++i) {
-            if (!this->cnvData_[i].empty()) {
-                sol.insert(names[i], this->cnvData_[i], data::TargetType::RESTART_SOLUTION);
-            }
-        }
-    }
+    this->rst_conv_.outputRestart(sol);
 }
 
 template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
