@@ -879,10 +879,12 @@ doAllocBuffers(const unsigned bufferSize,
                                            if (it != rstKeywords.end() && it->second > 0) {
                                                required = true;
                                                it->second = 0;
-                                               // Register phase entries as handled in map
-                                               for (int phase : phases) {
-                                                   if (FluidSystem::phaseIsActive(phase)) {
-                                                       rstKeywords[getName(entry.kw, entry.phaseType, phase)] = 0;
+                                               if (entry.phaseType != EntryPhaseType::None) {
+                                                   // Register phase entries as handled in map
+                                                   for (int phase : phases) {
+                                                       if (FluidSystem::phaseIsActive(phase)) {
+                                                           rstKeywords[getName(entry.kw, entry.phaseType, phase)] = 0;
+                                                       }
                                                    }
                                                }
                                            }
