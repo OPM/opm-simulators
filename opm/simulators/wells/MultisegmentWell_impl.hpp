@@ -1693,9 +1693,7 @@ namespace Opm
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
                 // in this case, make sure all constraints are satisfied before returning
-                // (there may be unsatisfied constraints in addition to the control equation, so even if there is convergence and
-                //  no switch in the first iteration we need the final check)
-                if (final_check) {
+                if (final_check || switch_count < 1) {
                     break;
                 }
                 final_check = true;
@@ -1737,10 +1735,12 @@ namespace Opm
                                                                        deferred_logger, true);
                             if (reportStag.converged()) {
                                 converged = true;
-                                fmt::format_to(std::back_inserter(message), " Well {}  manages to get converged with relaxed tolerances in {} inner iterations", this->name(), it);
-                                deferred_logger.debug(message);
-                                return converged;
+                                fmt::format_to(std::back_inserter(message), " well {} manages to get converged with relaxed tolerances in {} inner iterations", this->name(), it);
+                            } else {
+                                fmt::format_to(std::back_inserter(message), " well {} has stagnated without converging in {} inner iterations. Treating as unconverged.", this->name(), it);
                             }
+                            deferred_logger.debug(message);
+                            return converged;
                         }
                     }
 

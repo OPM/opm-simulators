@@ -2453,9 +2453,7 @@ namespace Opm
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
                 // in this case, make sure all constraints are satisfied before returning
-                // (there may be unsatisfied constraints in addition to the control equation, so even if there is convergence and
-                //  no switch in the first iteration we need the final check)
-                if (final_check) {
+                if (final_check || switch_count < 1) {
                     break;
                 }
                 final_check = true;
