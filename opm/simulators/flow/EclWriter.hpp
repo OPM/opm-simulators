@@ -435,10 +435,10 @@ public:
                 this->outputModule_->assignToSolution(localCellData);
             }
 
-            // Collect RFT data on rank 0
-            this->outputModule_->accumulateRftDataParallel(simulator_.gridView().comm());
             // Add cell data to perforations for RFT output
-            this->outputModule_->addRftDataToWells(localWellData, reportStepNum);
+            this->outputModule_->addRftDataToWells(localWellData,
+                                                   reportStepNum,
+                                                   simulator_.gridView().comm());
         }
 
         if (this->collectOnIORank_.isParallel() ||

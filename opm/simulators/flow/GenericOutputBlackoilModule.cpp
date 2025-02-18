@@ -124,6 +124,9 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
     , tracerC_(eclState_)
+    , rftC_(eclState_, schedule_,
+            [this](const std::string& wname)
+            { return !isDefunctParallelWell(wname); })
     , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
@@ -318,90 +321,6 @@ outputFipAndResvLog(const Inplace& inplace,
             }
         }
     }
-}
-
-template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
-accumulateRftDataParallel(const Parallel::Communication& comm) {
-    if (comm.size() > 1) {
-        gatherAndUpdateRftMap(oilConnectionPressures_, comm);
-        gatherAndUpdateRftMap(waterConnectionSaturations_, comm);
-        gatherAndUpdateRftMap(gasConnectionSaturations_, comm);
-    }
-}
-
-template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
-gatherAndUpdateRftMap(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm) {
-
-    std::vector<std::pair<int, Scalar>> pairs(local_map.begin(), local_map.end());
-    std::vector<std::pair<int, Scalar>> all_pairs;
-    std::vector<int> offsets;
-
-    std::tie(all_pairs, offsets) = Opm::allGatherv(pairs, comm);
-
-    // Update maps on all ranks
-    for (auto i=static_cast<std::size_t>(offsets[0]); i<all_pairs.size(); ++i) {
-        const auto& key_value = all_pairs[i];
-        if (auto candidate = local_map.find(key_value.first); candidate != local_map.end()) {
-            const Scalar prev_value = candidate->second;
-            candidate->second = std::max(prev_value, key_value.second);
-        } else {
-            local_map[key_value.first] = key_value.second;
-        }
-    }
-}
-
-
-
-template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
-addRftDataToWells(data::Wells& wellDatas, std::size_t reportStepNum)
-{
-    const auto& rft_config = schedule_[reportStepNum].rft_config();
-    for (const auto& well: schedule_.getWells(reportStepNum)) {
-
-        // don't bother with wells not on this process
-        if (isDefunctParallelWell(well.name())) {
-            continue;
-        }
-
-        //add data infrastructure for shut wells
-        if (!wellDatas.count(well.name())) {
-            data::Well wellData;
-
-            if (!rft_config.active())
-                continue;
-
-            wellData.connections.resize(well.getConnections().size());
-            std::size_t count = 0;
-            for (const auto& connection: well.getConnections()) {
-                const std::size_t i = std::size_t(connection.getI());
-                const std::size_t j = std::size_t(connection.getJ());
-                const std::size_t k = std::size_t(connection.getK());
-
-                const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
-                auto& connectionData = wellData.connections[count];
-                connectionData.index = index;
-                count++;
-            }
-            wellDatas.emplace(std::make_pair(well.name(), wellData));
-        }
-
-        data::Well& wellData = wellDatas.at(well.name());
-        for (auto& connectionData: wellData.connections) {
-            const auto index = connectionData.index;
-            if (oilConnectionPressures_.count(index) > 0)
-                connectionData.cell_pressure = oilConnectionPressures_.at(index);
-            if (waterConnectionSaturations_.count(index) > 0)
-                connectionData.cell_saturation_water = waterConnectionSaturations_.at(index);
-            if (gasConnectionSaturations_.count(index) > 0)
-                connectionData.cell_saturation_gas = gasConnectionSaturations_.at(index);
-        }
-    }
-    oilConnectionPressures_.clear();
-    waterConnectionSaturations_.clear();
-    gasConnectionSaturations_.clear();
 }
 
 template<class FluidSystem>
@@ -814,33 +733,7 @@ doAllocBuffers(const unsigned bufferSize,
 
     // Well RFT data
     if (!substep) {
-        const auto& rft_config = schedule_[reportStepNum].rft_config();
-        for (const auto& well: schedule_.getWells(reportStepNum)) {
-
-            // don't bother with wells not on this process
-            if (isDefunctParallelWell(well.name())) {
-                continue;
-            }
-
-            if (!rft_config.active())
-                continue;
-
-            for (const auto& connection: well.getConnections()) {
-                const std::size_t i = std::size_t(connection.getI());
-                const std::size_t j = std::size_t(connection.getJ());
-                const std::size_t k = std::size_t(connection.getK());
-                const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
-
-                if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                    oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
-
-                if (FluidSystem::phaseIsActive(waterPhaseIdx))
-                    waterConnectionSaturations_.emplace(std::make_pair(index, 0.0));
-
-                if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                    gasConnectionSaturations_.emplace(std::make_pair(index, 0.0));
-            }
-        }
+        this->rftC_.allocate(reportStepNum);
     }
 
     // Flows may need to be allocated even when there is no restart due to BFLOW* summary keywords

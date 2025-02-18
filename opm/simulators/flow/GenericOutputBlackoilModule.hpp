@@ -40,6 +40,7 @@
 #include <opm/simulators/flow/MechContainer.hpp>
 #include <opm/simulators/flow/MICPContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
+#include <opm/simulators/flow/RFTContainer.hpp>
 #include <opm/simulators/flow/TracerContainer.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -122,10 +123,10 @@ public:
 
     void outputErrorLog(const Parallel::Communication& comm) const;
 
-    void accumulateRftDataParallel(const Parallel::Communication& comm);
-
     void addRftDataToWells(data::Wells& wellDatas,
-                           std::size_t reportStepNum);
+                           std::size_t reportStepNum,
+                           const Parallel::Communication& comm)
+    { this->rftC_.addToWells(wellDatas, reportStepNum, comm); }
 
     /*!
      * \brief Move all buffers to data::Solution.
@@ -358,8 +359,6 @@ protected:
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
 
-    void gatherAndUpdateRftMap(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm);
-
     const EclipseState& eclState_;
     const Schedule& schedule_;
     const SummaryState& summaryState_;
@@ -467,9 +466,7 @@ protected:
     std::array<FlowsData<double>, 3> floresn_;
     std::array<FlowsData<double>, 3> flowsn_;
 
-    std::map<std::size_t, Scalar> oilConnectionPressures_;
-    std::map<std::size_t, Scalar> waterConnectionSaturations_;
-    std::map<std::size_t, Scalar> gasConnectionSaturations_;
+    RFTContainer<FluidSystem> rftC_;
     std::map<std::pair<std::string, int>, double> blockData_;
 
     std::vector<std::vector<int>> cnvData_; //!< Data for CNV_xxx arrays
