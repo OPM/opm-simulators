@@ -239,6 +239,7 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
     if (!well_perf_data.empty()) {
         pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
     }
+    // The following call is necessary to ensure that processes that do not contain the first perforation get the correct value
     pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
 
     if (well.isInjector()) {
@@ -246,6 +247,7 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
         if (!well_perf_data.empty()) {
             temperature_first_connection = cellTemperatures[well_perf_data[0].cell_index];
         }
+        // The following call is necessary to ensure that processes that do not contain the first perforation get the correct value
         temperature_first_connection = well_info.broadcastFirstPerforationValue(temperature_first_connection);
         this->initSingleInjector(well, well_info, pressure_first_connection, temperature_first_connection,
                                  well_perf_data, summary_state);
