@@ -915,11 +915,11 @@ namespace Opm
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
 
         if (!well_operable && old_well_operable) {
-            deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
+            deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration ");
             this->stopWell();
             changed_to_stopped_this_step_ = true;
         } else if (well_operable && !old_well_operable) {
-            deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
+            deferred_logger.debug(" well " + this->name() + " gets REVIVED during iteration ");
             this->openWell();
             changed_to_stopped_this_step_ = false;
             this->changed_to_open_this_step_ = true;
