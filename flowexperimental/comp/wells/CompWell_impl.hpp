@@ -40,7 +40,7 @@ CompWell<TypeTag>::
 init() {
     Base::init();
     // primary_variables_.init();
-    well_equations_.init(this->number_of_connection_);
+    well_equations_.init(this->number_of_connection_, this->well_cells_);
 }
 
 template <typename TypeTag>
