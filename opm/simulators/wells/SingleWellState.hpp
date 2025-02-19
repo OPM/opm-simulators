@@ -69,7 +69,7 @@ public:
         serializer(surface_rates);
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
-        serializer(trivial_target);
+        serializer(trivial_group_target);
         serializer(segments);
         serializer(events);
         serializer(injection_cmode);
@@ -110,7 +110,7 @@ public:
     std::vector<Scalar> reservoir_rates;
     std::vector<Scalar> prev_surface_rates;
     PerfData<Scalar> perf_data;
-    bool trivial_target;
+    bool trivial_group_target;
     SegmentState<Scalar> segments;
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
