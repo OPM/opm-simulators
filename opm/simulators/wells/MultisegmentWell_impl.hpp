@@ -1655,7 +1655,11 @@ namespace Opm
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
 
+        auto& ws = well_state.well(this->index_of_well_);
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
+            if (ws.production_cmode != Well::ProducerCMode::GRUP) {
+                ws.trivial_target = false;
+            }
             ++its_since_last_switch;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();

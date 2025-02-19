@@ -2418,7 +2418,11 @@ namespace Opm
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
+        auto& ws = well_state.well(this->index_of_well_);
         do {
+            if (ws.production_cmode != Well::ProducerCMode::GRUP) {
+                ws.trivial_target = false;
+            }
             its_since_last_switch++;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.eval(WQTotal).value();
