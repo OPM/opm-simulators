@@ -49,6 +49,7 @@ class CompositionalWellModel : public BaseAuxiliaryModule<TypeTag>
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
     using NeighborSet = typename BaseAuxiliaryModule<TypeTag>::NeighborSet;
@@ -88,8 +89,8 @@ public:
     void endIteration() const {}
     void endTimeStep() {}
     void endEpisode() {}
-    template<class RateType>
-    void computeTotalRatesForDof(RateType& /*rate*/, unsigned /*globalIdx*/) const {};
+
+    void computeTotalRatesForDof(RateVector& /*rate*/, unsigned /*globalIdx*/) const;
     //
     [[nodiscard]] data::Wells wellData() const {
          return data::Wells{};

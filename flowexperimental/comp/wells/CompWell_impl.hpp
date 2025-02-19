@@ -310,13 +310,14 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 calculateSingleConnectionRate(const Simulator& simulator,
-                              std::vector<EvalWell>& cq_s) const
+                              std::vector<EvalWell>& con_rates) const
 {
     constexpr int con_idx = 0; // TODO: to be a function argument for multiple connection wells
     constexpr int np = 2; // TODO: this will be the number of phases
     const EvalWell& bhp = this->primary_variables_.getBhp();
     const unsigned cell_idx = this->well_cells_[0];
     const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(cell_idx, 0);
+    assert(int_quantities);
     std::vector<EvalWell> mob(np, 0.);
     getMoblity(simulator, con_idx, mob);
 
@@ -334,7 +335,7 @@ calculateSingleConnectionRate(const Simulator& simulator,
             for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; comp_idx++) {
                 const EvalWell density = PrimaryVariables::extendEval(fluid_state.density(phase_idx));
                 const EvalWell mass_fraction = PrimaryVariables::extendEval(fluid_state.massFraction(phase_idx, comp_idx));
-                cq_s[comp_idx] += cq_v[phase_idx] * density * mass_fraction;
+                con_rates[comp_idx] += cq_v[phase_idx] * density * mass_fraction;
             }
         }
     } else { // injecting connection
@@ -344,7 +345,7 @@ calculateSingleConnectionRate(const Simulator& simulator,
         }
         EvalWell cq_v = - total_mobility * tw * drawdown;
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; comp_idx++) {
-            cq_s[comp_idx] = cq_v * fluid_density_ * mass_fractions_[comp_idx];
+            con_rates[comp_idx] = cq_v * fluid_density_ * mass_fractions_[comp_idx];
         }
     }
 }
@@ -357,6 +358,7 @@ getMoblity(const Simulator& simulator,
 {
     const unsigned cell_idx = this->well_cells_[connectin_idx];
     const auto& int_quants = simulator.problem().model().cachedIntensiveQuantities(cell_idx, 0);
+    assert(int_quants);
     const auto& material_law_manager = simulator.problem().materialLawManager();
 
     // either use mobility of the perforation cell or calculate its own
@@ -377,8 +379,6 @@ void
 CompWell<TypeTag>::
 assembleWellEq(const Simulator& simulator,
                const double dt,
-               const Well::InjectionControls& inj_controls,
-               const Well::ProductionControls& prod_controls,
                const SingleCompWellState<Scalar>& well_state)
 {
     this->well_equations_.clear();
@@ -389,8 +389,12 @@ assembleWellEq(const Simulator& simulator,
 
     std::vector<EvalWell> connection_rates(FluidSystem::numComponents, 0.);
     calculateSingleConnectionRate(simulator, connection_rates);
+    // only one perforation for now
+    auto& con_rates = this->connectionRates_[0];
+    for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+        con_rates[comp_idx] = PrimaryVariables::restrictEval(connection_rates[comp_idx]);
+    }
 
-    std::cout << " NumComponents " << FluidSystem::numComponents << std::endl;
     const unsigned cell_idx = this->well_cells_[0];
     // here we use perf index, need to check how the things are done in the StandardWellAssemble
     // assebmle the well equations related to the produciton/injection mass rates for each component
@@ -407,6 +411,10 @@ assembleWellEq(const Simulator& simulator,
             this->well_equations_.B()[0][0][comp_idx][pvIdx] += connection_rates[comp_idx].derivative(pvIdx);
         }
     }
+
+    const auto& summary_state = simulator.vanguard().summaryState();
+    const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+    const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
 
     // assemble the well equations related to the well control equations
     // currently we are dealiing with BHP control equations only
@@ -459,15 +467,12 @@ iterateWellEq(const Simulator& simulator,
               SingleCompWellState<Scalar>& well_state)
 {
     constexpr int max_iter = 20000;
-    const auto& summary_state = simulator.vanguard().summaryState();
-    const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-    const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
 
     int it = 0;
     bool converged = false;
 
     do {
-        assembleWellEq(simulator, dt, inj_controls, prod_controls, well_state);
+        assembleWellEq(simulator, dt, well_state);
 
         std::cout << std::endl << " residuals ";
         for (const auto& val : this->well_equations_.residual()[0]) {
