@@ -50,7 +50,7 @@ SingleWellState(const std::string& name_,
     , reservoir_rates(pu_.num_phases)
     , prev_surface_rates(pu_.num_phases)
     , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
-    , trivial_target(false)
+    , trivial_group_target(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
         this->perf_data.cell_index[perf] = perf_input[perf].cell_index;
@@ -351,7 +351,7 @@ bool SingleWellState<Scalar>::operator==(const SingleWellState& rhs) const
            this->prev_surface_rates == rhs.prev_surface_rates &&
            this->perf_data == rhs.perf_data &&
            this->filtrate_conc == rhs.filtrate_conc &&
-           this->trivial_target == rhs.trivial_target &&
+           this->trivial_group_target == rhs.trivial_group_target &&
            this->segments == rhs.segments &&
            this->events == rhs.events &&
            this->injection_cmode == rhs.injection_cmode &&
