@@ -1108,18 +1108,18 @@ namespace Opm
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+            // The following broadcast call is neccessary to ensure that processes that do *not* contain
             // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+
             auto fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-            fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
-            temperature.setValue(fsTemperature);
-
             auto fsSaltConcentration = fs.saltConcentration();
-            fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
-            saltConcentration = this->extendEval(fsSaltConcentration);
 
-            pvt_region_index = fs.pvtRegionIndex();
-            pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
+            auto infoFromFirstPerf = std::make_tuple(fsTemperature, fsSaltConcentration, fs.pvtRegionIndex());
+            infoFromFirstPerf = this->pw_info_.broadcastFirstPerforationValue(infoFromFirstPerf);
+
+            temperature.setValue(std::get<0>(infoFromFirstPerf));
+            saltConcentration = this->extendEval(std::get<1>(infoFromFirstPerf));
+            pvt_region_index = std::get<2>(infoFromFirstPerf);
         }
 
         this->segments_.computeFluidProperties(temperature,
@@ -2065,18 +2065,18 @@ namespace Opm
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+            // The following broadcast call is neccessary to ensure that processes that do *not* contain
             // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+
             auto fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-            fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
-            temperature.setValue(fsTemperature);
-
             auto fsSaltConcentration = fs.saltConcentration();
-            fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
-            saltConcentration = this->extendEval(fsSaltConcentration);
 
-            pvt_region_index = fs.pvtRegionIndex();
-            pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
+            auto infoFromFirstPerf = std::make_tuple(fsTemperature, fsSaltConcentration, fs.pvtRegionIndex());
+            infoFromFirstPerf = this->pw_info_.broadcastFirstPerforationValue(infoFromFirstPerf);
+
+            temperature.setValue(std::get<0>(infoFromFirstPerf));
+            saltConcentration = this->extendEval(std::get<1>(infoFromFirstPerf));
+            pvt_region_index = std::get<2>(infoFromFirstPerf);
         }
 
         return this->segments_.getSurfaceVolume(temperature,
