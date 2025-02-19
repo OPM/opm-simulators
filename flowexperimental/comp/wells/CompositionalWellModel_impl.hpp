@@ -10,7 +10,8 @@ namespace Opm
 template <typename TypeTag>
 CompositionalWellModel<TypeTag>::
 CompositionalWellModel(Simulator& simulator)
-    : simulator_(simulator)
+    : WellConnectionModule(*this, simulator.gridView().comm())
+    , simulator_(simulator)
     , schedule_(simulator.vanguard().schedule())
     , summary_state_(simulator.vanguard().summaryState())
     , ecl_state_(simulator.vanguard().eclState())
@@ -45,6 +46,14 @@ beginTimeStep()
 //        well->updateSecondaryQuantities(simulator_);
 //        well->solveWellEq(simulator_, well_state);
 //    }
+}
+
+template <typename TypeTag>
+void
+CompositionalWellModel<TypeTag>::
+init()
+{
+    simulator_.model().addAuxiliaryModule(this);
 }
 
 template <typename TypeTag>
@@ -214,6 +223,14 @@ computeTotalRatesForDof(RateVector& rate,
         well->addCellRates(rate, globalIdx);
     }
 }
+
+//template <typename TypeTag>
+//void
+//CompositionalWellModel<TypeTag>::
+//linearize(SparseMatrixAdapter&, GlobalEqVector&)
+//{
+//
+//}
 
 
 } // end of namespace Opm
