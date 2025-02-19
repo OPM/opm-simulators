@@ -59,6 +59,16 @@ namespace Opm
         double global_time = 0.0;
         double timestep_length = 0.0;
 
+        // NLDD specific data
+        int num_domains = 0;
+        int num_wells = 0;
+        int num_overlap_cells = 0;
+        int num_owned_cells = 0;
+        int converged_domains = 0;
+        int unconverged_domains = 0;
+        int accepted_unconverged_domains = 0;
+
+
         static SimulatorReportSingle serializationTestObject();
 
         bool operator==(const SimulatorReportSingle&) const;
@@ -95,6 +105,13 @@ namespace Opm
             serializer(exit_status);
             serializer(global_time);
             serializer(timestep_length);
+            serializer(num_domains);
+            serializer(num_wells);
+            serializer(num_overlap_cells);
+            serializer(num_owned_cells);
+            serializer(converged_domains);
+            serializer(unconverged_domains);
+            serializer(accepted_unconverged_domains);
         }
     };
 

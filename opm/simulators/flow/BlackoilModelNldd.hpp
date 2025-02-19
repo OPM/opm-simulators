@@ -451,6 +451,13 @@ private:
                 ++overlap_cells;
             }
         }
+
+        // Store data for summary output
+        local_reports_accumulated_.success.num_wells = num_wells;
+        local_reports_accumulated_.success.num_domains = num_domains;
+        local_reports_accumulated_.success.num_overlap_cells = overlap_cells;
+        local_reports_accumulated_.success.num_owned_cells = owned_cells;
+
         // Gather data from all ranks
         std::vector<int> all_owned(comm.size());
         std::vector<int> all_overlap(comm.size());
@@ -1019,6 +1026,7 @@ private:
                 const Scalar acceptable_local_cnv_sum = 1.0;
                 if (mb_sum < acceptable_local_mb_sum && cnv_sum < acceptable_local_cnv_sum) {
                     local_report.converged = true;
+                    local_report.accepted_unconverged_domains += 1;
                     logger.debug(fmt::format("Accepting solution in unconverged domain {} on rank {}.", domain.index, rank_));
                     logger.debug(fmt::format("Value of mb_sum: {}  cnv_sum: {}", mb_sum, cnv_sum));
                 } else {
@@ -1032,9 +1040,11 @@ private:
             }
         }
         if (local_report.converged) {
+            local_report.converged_domains += 1;
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
         } else {
+            local_report.unconverged_domains += 1;
             wellModel_.setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);

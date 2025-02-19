@@ -35,7 +35,8 @@ namespace Opm
         return SimulatorReportSingle{1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
                                      7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
                                      13, 14, 15, 16, 17, 18,
-                                     true, false, 19, 20.0, 21.0};
+                                     true, false, 19, 20.0, 21.0,
+                                     22, 23, 24, 25, 26, 27, 28};
     }
 
     bool SimulatorReportSingle::operator==(const SimulatorReportSingle& rhs) const
@@ -62,7 +63,14 @@ namespace Opm
                this->well_group_control_changed == rhs.well_group_control_changed &&
                this->exit_status == rhs.exit_status &&
                this->global_time == rhs.global_time &&
-               this->timestep_length == rhs.timestep_length;
+               this->timestep_length == rhs.timestep_length &&
+               this->num_domains == rhs.num_domains &&
+               this->num_wells == rhs.num_wells &&
+               this->num_overlap_cells == rhs.num_overlap_cells &&
+               this->num_owned_cells == rhs.num_owned_cells &&
+               this->converged_domains == rhs.converged_domains &&
+               this->unconverged_domains == rhs.unconverged_domains &&
+               this->accepted_unconverged_domains == rhs.accepted_unconverged_domains;
     }
 
     void SimulatorReportSingle::operator+=(const SimulatorReportSingle& sr)
@@ -87,6 +95,10 @@ namespace Opm
             min_linear_iterations = std::min(min_linear_iterations, sr.total_linear_iterations);
         }
         max_linear_iterations = std::max(max_linear_iterations, sr.total_linear_iterations);
+
+        converged_domains += sr.converged_domains;
+        unconverged_domains += sr.unconverged_domains;
+        accepted_unconverged_domains += sr.accepted_unconverged_domains;
 
         // It makes no sense adding time points. Therefore, do not 
         // overwrite the value of global_time which gets set in 
@@ -228,11 +240,15 @@ namespace Opm
 
     void SimulatorReportSingle::reportNLDD(std::ostream& os, const SimulatorReportSingle* failureReport) const
     {
+        os << fmt::format("Owned + overlap cells:       {:7}\n", num_owned_cells + num_overlap_cells);
+        os << fmt::format("Number of wells:             {:7}\n", num_wells);
+        os << fmt::format("Number of domains:           {:7}\n", num_domains);
+        os << fmt::format("-------------------------------------------------------\n");
         double t = total_time + (failureReport ? failureReport->total_time : 0.0);
         os << fmt::format("Total time:                   {:9.2f} s\n", t);
 
         t = pre_post_time + (failureReport ? failureReport->pre_post_time : 0.0);
-        os << fmt::format("  Pre/post time:                {:7.2f} s\n", t);
+        os << fmt::format("  Pre/post/wait time:           {:7.2f} s\n", t);
 
         t = solver_time + (failureReport ? failureReport->solver_time : 0.0);
         os << fmt::format("  Solver time:                {:9.2f} s", t);
@@ -314,6 +330,17 @@ namespace Opm
                             100.0*failureReport->total_linear_iterations/noZero(n));
         }
         os << std::endl;
+        os << fmt::format("-------------------------------------------------------\n");
+        n = converged_domains + (failureReport ? failureReport->converged_domains : 0);
+        os << fmt::format("Converged domain solves:     {:7}", n);
+        os << std::endl;
+        n = accepted_unconverged_domains + (failureReport ? failureReport->accepted_unconverged_domains : 0);
+        os << fmt::format("  Accepted with relaxed tol: {:7}", n);
+        os << std::endl;
+        n = unconverged_domains + (failureReport ? failureReport->unconverged_domains : 0);
+        os << fmt::format("Unconverged domain solves:   {:7}", n);
+        os << std::endl << std::endl;
+
     }
 
     SimulatorReport SimulatorReport::serializationTestObject()
