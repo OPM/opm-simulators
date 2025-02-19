@@ -220,7 +220,6 @@ public:
     {
         // -----------   Set up reports and timer   -----------
         SimulatorReportSingle report;
-        Dune::Timer perfTimer;
 
         model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), nonlinear_solver.maxIter(), timer);
 
@@ -229,13 +228,17 @@ public:
         }
 
         // -----------   If not converged, do an NLDD iteration   -----------
-
+        Dune::Timer localSolveTimer;
+        Dune::Timer detailTimer;
+        localSolveTimer.start();
+        detailTimer.start();
         auto& solution = model_.simulator().model().solution(0);
         auto initial_solution = solution;
         auto locally_solved = initial_solution;
 
         // -----------   Decide on an ordering for the domains   -----------
         const auto domain_order = this->getSubdomainOrder();
+        local_reports_accumulated_.success.pre_post_time += detailTimer.stop();
 
         // -----------   Solve each domain separately   -----------
         DeferredLogger logger;
@@ -243,6 +246,8 @@ public:
         for (const int domain_index : domain_order) {
             const auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
+            detailTimer.reset();
+            detailTimer.start();
             if (domain.skip) {
                 local_report.converged = true;
                 domain_reports[domain.index] = local_report;
@@ -272,9 +277,11 @@ public:
                 // TODO: more proper treatment, including in parallel.
                 logger.debug(fmt::format("Convergence failure in domain {} on rank {}." , domain.index, rank_));
             }
+            local_report.solver_time += detailTimer.stop();
             domain_reports[domain.index] = local_report;
         }
-
+        detailTimer.reset();
+        detailTimer.start();
         // Communicate and log all messages.
         auto global_logger = gatherDeferredLogger(logger, model_.simulator().vanguard().grid().comm());
         global_logger.logMessages();
@@ -288,7 +295,7 @@ public:
         int& num_local_newtons = counts[2];
         int& num_domains = counts[3];
         {
-            SimulatorReportSingle rep;
+            auto step_newtons = 0;
             for (const auto& dr : domain_reports) {
                 if (dr.converged) {
                     ++num_converged;
@@ -296,10 +303,10 @@ public:
                         ++num_converged_already;
                     }
                 }
-                rep += dr;
+                step_newtons += dr.total_newton_iterations;
+                local_reports_accumulated_ += dr;
             }
-            num_local_newtons = rep.total_newton_iterations;
-            local_reports_accumulated_ += rep;
+            num_local_newtons = step_newtons;
         }
 
         if (model_.param().local_solve_approach_ == DomainSolveApproach::Jacobi) {
@@ -346,6 +353,10 @@ public:
             OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains did no work. {} total local Newton iterations.\n",
                                       num_converged, num_domains, num_converged_already, num_local_newtons));
         }
+        auto total_local_solve_time = localSolveTimer.stop();
+        report.local_solve_time += total_local_solve_time;
+        local_reports_accumulated_.success.total_time += total_local_solve_time;
+        local_reports_accumulated_.success.pre_post_time += detailTimer.stop();
 
         // Finish with a Newton step.
         // Note that the "iteration + 100" is a simple way to avoid entering
@@ -360,8 +371,8 @@ public:
         return report;
     }
 
-    /// return the statistics if the nonlinearIteration() method failed
-    const SimulatorReportSingle& localAccumulatedReports() const
+    /// return the statistics of local solves accumulated for this rank
+    const SimulatorReport& localAccumulatedReports() const
     {
         return local_reports_accumulated_;
     }
@@ -430,8 +441,6 @@ private:
         auto& modelSimulator = model_.simulator();
 
         SimulatorReportSingle report;
-        Dune::Timer solveTimer;
-        solveTimer.start();
         Dune::Timer detailTimer;
 
         modelSimulator.model().newtonMethod().setIterationIndex(0);
@@ -449,14 +458,21 @@ private:
             wellModel_.assemble(modelSimulator.model().newtonMethod().numIterations(),
                                 modelSimulator.timeStepSize(),
                                 domain);
+            const double tt0 = detailTimer.stop();
+            report.assemble_time += tt0;
+            report.assemble_time_well += tt0;
+            detailTimer.reset();
+            detailTimer.start();
             // Assemble reservoir locally.
             this->assembleReservoirDomain(domain);
             report.assemble_time += detailTimer.stop();
+            report.total_linearizations += 1;
         }
         detailTimer.reset();
         detailTimer.start();
         std::vector<Scalar> resnorms;
         auto convreport = this->getDomainConvergence(domain, timer, 0, logger, resnorms);
+        report.update_time += detailTimer.stop();
         if (convreport.converged()) {
             // TODO: set more info, timing etc.
             report.converged = true;
@@ -514,6 +530,11 @@ private:
             wellModel_.assemble(modelSimulator.model().newtonMethod().numIterations(),
                                 modelSimulator.timeStepSize(),
                                 domain);
+            const double tt3 = detailTimer.stop();
+            report.assemble_time += tt3;
+            report.assemble_time_well += tt3;
+            detailTimer.reset();
+            detailTimer.start();
             this->assembleReservoirDomain(domain);
             report.assemble_time += detailTimer.stop();
 
@@ -523,6 +544,7 @@ private:
             resnorms.clear();
             convreport = this->getDomainConvergence(domain, timer, iter, logger, resnorms);
             convergence_history.push_back(resnorms);
+            report.update_time += detailTimer.stop();
 
             // apply the Schur complement of the well model to the
             // reservoir linearized equations
@@ -553,8 +575,7 @@ private:
 
         report.converged = convreport.converged();
         report.total_newton_iterations = iter;
-        report.total_linearizations = iter;
-        report.total_time = solveTimer.stop();
+        report.total_linearizations += iter;
         // TODO: set more info, timing etc.
         return { report, convreport };
     }
@@ -562,6 +583,7 @@ private:
     /// Assemble the residual and Jacobian of the nonlinear system.
     void assembleReservoirDomain(const Domain& domain)
     {
+        OPM_TIMEBLOCK(assembleReservoirDomain);
         // -------- Mass balance equations --------
         model_.simulator().model().linearizer().linearizeDomain(domain);
     }
@@ -602,6 +624,7 @@ private:
     /// Apply an update to the primary variables.
     void updateDomainSolution(const Domain& domain, const BVector& dx)
     {
+        OPM_TIMEBLOCK(updateDomainSolution);
         auto& simulator = model_.simulator();
         auto& newtonMethod = simulator.model().newtonMethod();
         SolutionVector& solution = simulator.model().solution(/*timeIdx=*/0);
@@ -793,6 +816,7 @@ private:
                                            DeferredLogger& logger,
                                            std::vector<Scalar>& residual_norms)
     {
+        OPM_TIMEBLOCK(getDomainConvergence);
         std::vector<Scalar> B_avg(numEq, 0.0);
         auto report = this->getDomainReservoirConvergence(timer.simulationTimeElapsed(),
                                                           timer.currentStepLength(),
@@ -883,7 +907,7 @@ private:
         auto initial_local_well_primary_vars = wellModel_.getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, false);
-        local_report = res.first;
+        local_report += res.first;
         if (local_report.converged) {
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
@@ -908,7 +932,7 @@ private:
         auto initial_local_well_primary_vars = wellModel_.getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
         auto res = solveDomain(domain, timer, logger, iteration, true);
-        local_report = res.first;
+        local_report += res.first;
         if (!local_report.converged) {
             // We look at the detailed convergence report to evaluate
             // if we should accept the unconverged solution.
@@ -1065,7 +1089,7 @@ private:
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
-    SimulatorReportSingle local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers
+    SimulatorReport local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers per rank
     int rank_ = 0; //!< MPI rank of this process
 };
 
