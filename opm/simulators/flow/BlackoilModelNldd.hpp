@@ -203,6 +203,9 @@ public:
         }
 
         assert(int(domains_.size()) == num_domains);
+
+        // Print domain distribution summary
+        printDomainDistributionSummary(partition_vector);
     }
 
     //! \brief Called before starting a time step.
@@ -430,6 +433,72 @@ public:
     }
 
 private:
+    void printDomainDistributionSummary(const std::vector<int>& partition_vector)
+    {
+        const auto& grid = model_.simulator().vanguard().grid();
+        const auto& gridView = grid.leafGridView();
+        const auto& comm = grid.comm();
+
+        const int num_wells = wellModel_.numLocalWellsEnd();
+        const int num_domains = domains_.size();
+        const int owned_cells = partition_vector.size();
+
+        // Count overlap cells using grid view iteration
+        // can this be avoided?
+        int overlap_cells = 0;
+        for (const auto& cell : elements(gridView)) {
+            if (cell.partitionType() == Dune::OverlapEntity) {
+                ++overlap_cells;
+            }
+        }
+        // Gather data from all ranks
+        std::vector<int> all_owned(comm.size());
+        std::vector<int> all_overlap(comm.size());
+        std::vector<int> all_wells(comm.size());
+        std::vector<int> all_domains(comm.size());
+
+        comm.gather(&owned_cells, all_owned.data(), 1, 0);
+        comm.gather(&overlap_cells, all_overlap.data(), 1, 0);
+        comm.gather(&num_wells, all_wells.data(), 1, 0);
+        comm.gather(&num_domains, all_domains.data(), 1, 0);
+
+        if (rank_ == 0) {
+            std::ostringstream ss;
+            ss << "\nNLDD domain distribution summary:\n"
+            << "  rank   owned cells   overlap cells   total cells   wells   domains\n"
+            << "--------------------------------------------------------------------\n";
+
+            int total_owned = 0;
+            int total_overlap = 0;
+            int total_wells = 0;
+            int total_domains = 0;
+
+            for (int r = 0; r < comm.size(); ++r) {
+                ss << std::setw(6) << r
+                << std::setw(13) << all_owned[r]
+                << std::setw(15) << all_overlap[r]
+                << std::setw(14) << (all_owned[r] + all_overlap[r])
+                << std::setw(8) << all_wells[r]
+                << std::setw(9) << all_domains[r] << '\n';
+
+                total_owned += all_owned[r];
+                total_overlap += all_overlap[r];
+                total_wells += all_wells[r];
+                total_domains += all_domains[r];
+            }
+
+            ss << "--------------------------------------------------------------------\n"
+            << "   sum"
+            << std::setw(13) << total_owned
+            << std::setw(15) << total_overlap
+            << std::setw(14) << (total_owned + total_overlap)
+            << std::setw(8) << total_wells
+            << std::setw(9) << total_domains << '\n';
+
+            OpmLog::info(ss.str());
+        }
+    }
+
     //! \brief Solve the equation system for a single domain.
     std::pair<SimulatorReportSingle, ConvergenceReport>
     solveDomain(const Domain& domain,
