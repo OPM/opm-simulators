@@ -39,12 +39,12 @@ beginTimeStep()
 {
     createWellContainer();
     initWellContainer();
-    for (auto& well : well_container_) {
-        auto& well_state = comp_well_states_[well->name()];
-        well->calculateExplicitQuantities(simulator_, well_state);
-        well->updateSecondaryQuantities(simulator_);
-        well->solveWellEq(simulator_, well_state);
-    }
+//    for (auto& well : well_container_) {
+//        auto& well_state = comp_well_states_[well->name()];
+//        well->calculateExplicitQuantities(simulator_, well_state);
+//        well->updateSecondaryQuantities(simulator_);
+//        well->solveWellEq(simulator_, well_state);
+//    }
 }
 
 template <typename TypeTag>
@@ -164,8 +164,16 @@ void
 CompositionalWellModel<TypeTag>::
 beginIteration()
 {
-    assemble(simulator_.model().newtonMethod().numIterations(),
-         simulator_.timeStepSize());
+    // do we need to do every iteration here?
+    const auto& grid = simulator_.vanguard().grid();
+    const auto& gridView = grid.leafGridView();
+    ElementContext elemCtx(simulator_);
+    for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+        elemCtx.updatePrimaryStencil(elem);
+        elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+    }
+
+    assemble(simulator_.model().newtonMethod().numIterations(), simulator_.timeStepSize());
 }
 
 template <typename TypeTag>
@@ -177,6 +185,12 @@ assemble(const int iterationIdx,
 
     if (iterationIdx == 0) {
         this->calculateExplicitQuantities();
+    }
+    for (auto& well : well_container_) {
+        auto& well_state = comp_well_states_[well->name()];
+        well->iterateWellEq(simulator_, dt, well_state);
+        // TODO: do we need this? can we use the one assembled previously?
+        // well->assembleWellEq(simulator_, dt, well_state);
     }
 }
 
@@ -190,5 +204,16 @@ calculateExplicitQuantities()
         well->calculateExplicitQuantities(simulator_, well_state);
     }
 }
+
+template <typename TypeTag>
+void
+CompositionalWellModel<TypeTag>::
+computeTotalRatesForDof(RateVector& rate,
+                        unsigned globalIdx) const {
+    for (const auto& well: well_container_) {
+        well->addCellRates(rate, globalIdx);
+    }
+}
+
 
 } // end of namespace Opm

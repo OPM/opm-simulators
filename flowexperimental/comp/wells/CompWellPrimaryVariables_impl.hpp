@@ -164,6 +164,19 @@ extendEval(const Eval& in)
 }
 
 template <typename FluidSystem, typename Indices>
+typename CompWellPrimaryVariables<FluidSystem, Indices>::Eval
+CompWellPrimaryVariables<FluidSystem, Indices>::
+restrictEval(const EvalWell& in)
+{
+    Eval out = 0.0;
+    out.setValue(in.value());
+    for(int eq_idx = 0; eq_idx < Indices::numEq;++eq_idx) {
+        out.setDerivative(eq_idx, in.derivative(eq_idx));
+    }
+    return out;
+}
+
+template <typename FluidSystem, typename Indices>
 void
 CompWellPrimaryVariables<FluidSystem, Indices>::
 updateNewton(const BVectorWell& dwells) {

@@ -76,5 +76,18 @@ solveWellEq(const Simulator& simulator,
     bool converged = this->iterateWellEq(simulator, dt, well_state);
 }
 
+template <typename TypeTag>
+void
+CompWellInterface<TypeTag>::
+addCellRates(RateVector& rates, unsigned cellIdx) const {
+    for (int con = 0; con < this->number_of_connection_; ++con) {
+        if (this->well_cells_[con] == cellIdx) {
+            for (int i = 0; i < RateVector::dimension; ++i) {
+                rates[i] += connectionRates_[con][i];
+            }
+        }
+    }
+}
+
 
 } // end of namespace Opm
