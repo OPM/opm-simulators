@@ -741,6 +741,7 @@ if(CUDA_FOUND)
                        gpu_resources
                        gpu_smart_pointers
                        is_gpu_pointer
+                       gpu_macros
                        PROPERTIES LABELS ${gpu_label})
 endif()
 
