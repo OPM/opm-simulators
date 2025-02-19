@@ -391,6 +391,22 @@ namespace Opm {
         // Output summary after simulation has completed
         void runSimulatorAfterSim_(SimulatorReport &report)
         {
+            if (simulator_->model().hasNlddSolver()) {
+                // Create a deferred logger and add the report with rank as tag
+                DeferredLogger local_log;
+                std::ostringstream ss;
+                ss << "======  Accumulated local solve data for rank " << mpi_rank_ << " ======\n";
+                simulator_->model().localAccumulatedReports().reportNLDD(ss);
+                // Use rank number as tag to ensure correct ordering
+                local_log.debug(fmt::format("{:05d}", mpi_rank_), ss.str());
+
+                // Gather all logs and output them in sorted order
+                auto global_log = gatherDeferredLogger(local_log, FlowGenericVanguard::comm());
+                if (this->output_cout_) {
+                    global_log.logMessages();
+                }
+            }
+
             if (! this->output_cout_) {
                 return;
             }
@@ -402,7 +418,7 @@ namespace Opm {
                 = omp_get_max_threads();
 #endif
 
-            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, simulator_->model().localAccumulatedReports());
+            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report);
 
             detail::handleExtraConvergenceOutput(report,
                                                  Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),

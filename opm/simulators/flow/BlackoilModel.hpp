@@ -259,8 +259,8 @@ public:
     const SimulatorReportSingle& failureReport() const
     { return failureReport_; }
 
-    /// return the statistics if the nonlinearIteration() method failed
-    SimulatorReportSingle localAccumulatedReports() const;
+    /// return the statistics of local solves accumulated for this rank
+    SimulatorReport localAccumulatedReports() const;
 
     const std::vector<StepReport>& stepReports() const
     { return convergence_reports_; }
@@ -300,6 +300,10 @@ public:
     //! \brief Returns const reference to component names.
     const ComponentName& compNames() const
     { return compNames_; }
+
+    //! \brief Returns true if an NLDD solver exists
+    bool hasNlddSolver() const 
+    { return nlddSolver_ != nullptr; }
 
 protected:
     // ---------  Data members  ---------
