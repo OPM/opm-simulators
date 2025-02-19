@@ -63,6 +63,8 @@ public:
                                const Scalar dt,
                                SingleCompWellState<Scalar>& well_state) = 0;
 
+    void addCellRates(RateVector& rates, unsigned cellIdx) const;
+
 protected:
 
     const Well& well_ecl_;

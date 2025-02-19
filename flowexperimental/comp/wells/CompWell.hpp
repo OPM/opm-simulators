@@ -95,8 +95,6 @@ public:
     // TODO: control should be passed in later
     void assembleWellEq(const Simulator& simulator,
                         const double dt,
-                        const Well::InjectionControls& inj_controls,
-                        const Well::ProductionControls& prod_controls,
                         const SingleCompWellState<Scalar>& well_state);
 
     bool iterateWellEq(const Simulator& simulator,
@@ -129,7 +127,7 @@ private:
 
     // following are some secondary property or variables to be used for later
     void calculateSingleConnectionRate(const Simulator& simulator,
-                                       std::vector<EvalWell>& cq_s) const;
+                                       std::vector<EvalWell>& con_rates) const;
 
     void updateTotalMass();
     // TODO: a better name
