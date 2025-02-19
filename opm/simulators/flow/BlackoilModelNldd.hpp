@@ -500,16 +500,15 @@ private:
     }
 
     //! \brief Solve the equation system for a single domain.
-    std::pair<SimulatorReportSingle, ConvergenceReport>
+    ConvergenceReport
     solveDomain(const Domain& domain,
                 const SimulatorTimerInterface& timer,
+                SimulatorReportSingle& local_report,
                 DeferredLogger& logger,
                 [[maybe_unused]] const int global_iteration,
                 const bool initial_assembly_required)
     {
         auto& modelSimulator = model_.simulator();
-
-        SimulatorReportSingle report;
         Dune::Timer detailTimer;
 
         modelSimulator.model().newtonMethod().setIterationIndex(0);
@@ -528,24 +527,24 @@ private:
                                 modelSimulator.timeStepSize(),
                                 domain);
             const double tt0 = detailTimer.stop();
-            report.assemble_time += tt0;
-            report.assemble_time_well += tt0;
+            local_report.assemble_time += tt0;
+            local_report.assemble_time_well += tt0;
             detailTimer.reset();
             detailTimer.start();
             // Assemble reservoir locally.
             this->assembleReservoirDomain(domain);
-            report.assemble_time += detailTimer.stop();
-            report.total_linearizations += 1;
+            local_report.assemble_time += detailTimer.stop();
+            local_report.total_linearizations += 1;
         }
         detailTimer.reset();
         detailTimer.start();
         std::vector<Scalar> resnorms;
         auto convreport = this->getDomainConvergence(domain, timer, 0, logger, resnorms);
-        report.update_time += detailTimer.stop();
+        local_report.update_time += detailTimer.stop();
         if (convreport.converged()) {
             // TODO: set more info, timing etc.
-            report.converged = true;
-            return { report, convreport };
+            local_report.converged = true;
+            return convreport;
         }
 
         // We have already assembled for the first iteration,
@@ -556,8 +555,8 @@ private:
                                            modelSimulator.model().linearizer().jacobian(),
                                            modelSimulator.model().linearizer().residual());
         const double tt1 = detailTimer.stop();
-        report.assemble_time += tt1;
-        report.assemble_time_well += tt1;
+        local_report.assemble_time += tt1;
+        local_report.assemble_time_well += tt1;
 
         // Local Newton loop.
         const int max_iter = model_.param().max_local_solve_iterations_;
@@ -578,15 +577,15 @@ private:
             if (damping_factor != 1.0) {
                 x *= damping_factor;
             }
-            report.linear_solve_time += detailTimer.stop();
-            report.linear_solve_setup_time += model_.linearSolveSetupTime();
-            report.total_linear_iterations = model_.linearIterationsLastSolve();
+            local_report.linear_solve_time += detailTimer.stop();
+            local_report.linear_solve_setup_time += model_.linearSolveSetupTime();
+            local_report.total_linear_iterations = model_.linearIterationsLastSolve();
 
             // Update local solution. // TODO: x is still full size, should we optimize it?
             detailTimer.reset();
             detailTimer.start();
             this->updateDomainSolution(domain, x);
-            report.update_time += detailTimer.stop();
+            local_report.update_time += detailTimer.stop();
 
             // Assemble well and reservoir.
             detailTimer.reset();
@@ -600,12 +599,12 @@ private:
                                 modelSimulator.timeStepSize(),
                                 domain);
             const double tt3 = detailTimer.stop();
-            report.assemble_time += tt3;
-            report.assemble_time_well += tt3;
+            local_report.assemble_time += tt3;
+            local_report.assemble_time_well += tt3;
             detailTimer.reset();
             detailTimer.start();
             this->assembleReservoirDomain(domain);
-            report.assemble_time += detailTimer.stop();
+            local_report.assemble_time += detailTimer.stop();
 
             // Check for local convergence.
             detailTimer.reset();
@@ -613,7 +612,7 @@ private:
             resnorms.clear();
             convreport = this->getDomainConvergence(domain, timer, iter, logger, resnorms);
             convergence_history.push_back(resnorms);
-            report.update_time += detailTimer.stop();
+            local_report.update_time += detailTimer.stop();
 
             // apply the Schur complement of the well model to the
             // reservoir linearized equations
@@ -623,8 +622,8 @@ private:
                                                modelSimulator.model().linearizer().jacobian(),
                                                modelSimulator.model().linearizer().residual());
             const double tt2 = detailTimer.stop();
-            report.assemble_time += tt2;
-            report.assemble_time_well += tt2;
+            local_report.assemble_time += tt2;
+            local_report.assemble_time_well += tt2;
 
             // Check if we should dampen. Only do so if wells are converged.
             if (!convreport.converged() && !convreport.wellFailed()) {
@@ -642,11 +641,11 @@ private:
 
         modelSimulator.problem().endIteration();
 
-        report.converged = convreport.converged();
-        report.total_newton_iterations = iter;
-        report.total_linearizations += iter;
+        local_report.converged = convreport.converged();
+        local_report.total_newton_iterations = iter;
+        local_report.total_linearizations += iter;
         // TODO: set more info, timing etc.
-        return { report, convreport };
+        return convreport;
     }
 
     /// Assemble the residual and Jacobian of the nonlinear system.
@@ -975,8 +974,7 @@ private:
     {
         auto initial_local_well_primary_vars = wellModel_.getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, logger, iteration, false);
-        local_report += res.first;
+        auto convrep = solveDomain(domain, timer, local_report, logger, iteration, false);
         if (local_report.converged) {
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
@@ -1000,12 +998,10 @@ private:
     {
         auto initial_local_well_primary_vars = wellModel_.getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, logger, iteration, true);
-        local_report += res.first;
+        auto convrep = solveDomain(domain, timer, local_report, logger, iteration, true);
         if (!local_report.converged) {
             // We look at the detailed convergence report to evaluate
             // if we should accept the unconverged solution.
-            const auto& convrep = res.second;
             // We do not accept a solution if the wells are unconverged.
             if (!convrep.wellFailed()) {
                 // Calculare the sums of the mb and cnv failures.
