@@ -1085,7 +1085,7 @@ namespace Opm {
         const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
-        const std::size_t max_iter = param_.network_max_iterations_;
+        const std::size_t max_iter = 2; //param_.network_max_iterations_;
         bool converged = false;
         std::size_t iter = 0;
         bool changed_well_group = false;
