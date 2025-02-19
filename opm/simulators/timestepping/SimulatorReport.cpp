@@ -33,9 +33,9 @@ namespace Opm
     SimulatorReportSingle SimulatorReportSingle::serializationTestObject()
     {
         return SimulatorReportSingle{1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
-                                     7.0, 8.0, 9.0, 10.0, 11.0,
-                                     12, 13, 14, 15, 16, 17,
-                                     true, false, 18, 19.0, 20.0};
+                                     7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
+                                     13, 14, 15, 16, 17, 18,
+                                     true, false, 19, 20.0, 21.0};
     }
 
     bool SimulatorReportSingle::operator==(const SimulatorReportSingle& rhs) const
@@ -49,6 +49,7 @@ namespace Opm
                this->assemble_time_well == rhs.assemble_time_well &&
                this->linear_solve_setup_time == rhs.linear_solve_setup_time &&
                this->linear_solve_time == rhs.linear_solve_time &&
+               this->local_solve_time == rhs.local_solve_time &&
                this->update_time == rhs.update_time &&
                this->output_write_time == rhs.output_write_time &&
                this->total_well_iterations == rhs.total_well_iterations &&
@@ -70,6 +71,7 @@ namespace Opm
         transport_time += sr.transport_time;
         linear_solve_setup_time += sr.linear_solve_setup_time;
         linear_solve_time += sr.linear_solve_time;
+        local_solve_time += sr.local_solve_time;
         solver_time += sr.solver_time;
         assemble_time += sr.assemble_time;
         pre_post_time += sr.pre_post_time;
@@ -106,14 +108,16 @@ namespace Opm
                           linear_solve_time);
     }
 
+    // Helper lambda to avoid division by zero
+    auto noZero = [](auto val)
+    {
+        if (val == decltype(val){0})
+            return decltype(val){1};
+        return val;
+    };
+
     void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
     {
-        auto noZero = [](auto val)
-        {
-            if (val == decltype(val){0})
-                return decltype(val){1};
-            return val;
-        };
         // Disabling this output as it is redundant with the solver_time, now
         // output as "Simulation time". Usually very small difference between them.
         // os << fmt::format("Total time:                 {:9.2f} s\n", total_time);
@@ -159,6 +163,17 @@ namespace Opm
                                 100*failureReport->linear_solve_setup_time/noZero(t));
             }
             os << std::endl;
+
+            if (local_solve_time > 0.0) {
+                t = local_solve_time + (failureReport ? failureReport->local_solve_time : 0.0);
+                os << fmt::format("  Local solve time:           {:7.2f} s", t);
+                if (failureReport) {
+                  os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                                    failureReport->local_solve_time,
+                                    100*failureReport->local_solve_time/noZero(t));
+                }
+                os << std::endl;
+            }
 
             t = update_time + (failureReport ? failureReport->update_time : 0.0);
             os << fmt::format("  Props/update time:          {:7.2f} s", t);
@@ -210,6 +225,97 @@ namespace Opm
         os << std::endl;
     }
 
+
+    void SimulatorReportSingle::reportNLDD(std::ostream& os, const SimulatorReportSingle* failureReport) const
+    {
+        double t = total_time + (failureReport ? failureReport->total_time : 0.0);
+        os << fmt::format("Total time:                   {:9.2f} s\n", t);
+
+        t = pre_post_time + (failureReport ? failureReport->pre_post_time : 0.0);
+        os << fmt::format("  Pre/post time:                {:7.2f} s\n", t);
+
+        t = solver_time + (failureReport ? failureReport->solver_time : 0.0);
+        os << fmt::format("  Solver time:                {:9.2f} s", t);
+        if (failureReport) {
+            os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                            failureReport->solver_time,
+                            100*failureReport->solver_time/noZero(t));
+        }
+        os << std::endl;
+
+        t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
+        os << fmt::format("    Assembly time:            {:9.2f} s", t);
+        if (failureReport) {
+            os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                            failureReport->assemble_time,
+                            100*failureReport->assemble_time/noZero(t));
+            }
+        os << std::endl;
+
+        t = assemble_time_well + (failureReport ? failureReport->assemble_time_well : 0.0);
+        os << fmt::format("      Well assembly:            {:7.2f} s", t);
+        if (failureReport) {
+            os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                            failureReport->assemble_time_well,
+                            100*failureReport->assemble_time_well/noZero(t));
+        }
+        os << std::endl;
+
+        t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
+        os << fmt::format("    Linear solve time:        {:9.2f} s", t);
+        if (failureReport) {
+            os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                            failureReport->linear_solve_time,
+                            100*failureReport->linear_solve_time/noZero(t));
+        }
+        os << std::endl;
+
+        t = linear_solve_setup_time + (failureReport ? failureReport->linear_solve_setup_time : 0.0);
+        os << fmt::format("      Linear setup:             {:7.2f} s", t);
+        if (failureReport) {
+            os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                            failureReport->linear_solve_setup_time,
+                            100*failureReport->linear_solve_setup_time/noZero(t));
+        }
+        os << std::endl;
+
+        t = update_time + (failureReport ? failureReport->update_time : 0.0);
+        os << fmt::format("    Props/update time:          {:7.2f} s", t);
+        if (failureReport) {
+            os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
+                            failureReport->update_time,
+                            100*failureReport->update_time/noZero(t));
+        }
+        os << std::endl;
+
+        int n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
+        os << fmt::format("Overall Linearizations:       {:7}", n);
+        if (failureReport) {
+          os << fmt::format("   (Wasted: {:5}; {:2.1f}%)",
+                            failureReport->total_linearizations,
+                            100.0*failureReport->total_linearizations/noZero(n));
+        }
+        os << std::endl;
+
+        n = total_newton_iterations + (failureReport ? failureReport->total_newton_iterations : 0);
+        os << fmt::format("Overall Nonlinear Iterations: {:7}", n);
+        if (failureReport) {
+          os << fmt::format("   (Wasted: {:5}; {:2.1f}%)",
+                            failureReport->total_newton_iterations,
+                            100.0*failureReport->total_newton_iterations/noZero(n));
+        }
+        os << std::endl;
+
+        n = total_linear_iterations + (failureReport ? failureReport->total_linear_iterations : 0);
+        os << fmt::format("Overall Linear Iterations:    {:7}", n);
+        if (failureReport) {
+          os << fmt::format("   (Wasted: {:5}; {:2.1f}%)",
+                            failureReport->total_linear_iterations,
+                            100.0*failureReport->total_linear_iterations/noZero(n));
+        }
+        os << std::endl;
+    }
+
     SimulatorReport SimulatorReport::serializationTestObject()
     {
         return SimulatorReport{SimulatorReportSingle::serializationTestObject(),
@@ -247,6 +353,11 @@ namespace Opm
         success.reportFullyImplicit(os, &failure);
     }
 
+    void SimulatorReport::reportNLDD(std::ostream& os) const
+    {
+        success.reportNLDD(os, &failure);
+    }
+
     void SimulatorReport::fullReports(std::ostream& os) const
     {
         os << "  Time(day)  TStep(day)  Assembly    LSetup    LSolve    Update    Output WellIt Lins NewtIt LinIt Conv\n";
@@ -261,6 +372,7 @@ namespace Opm
             os << std::setw(9) << sr.assemble_time << " ";
             os << std::setw(9) << sr.linear_solve_setup_time << " ";
             os << std::setw(9) << sr.linear_solve_time << " ";
+            os << std::setw(9) << sr.local_solve_time << " ";
             os << std::setw(9) << sr.update_time << " ";
             os << std::setw(9) << sr.output_write_time << " ";
             os.precision(6);
