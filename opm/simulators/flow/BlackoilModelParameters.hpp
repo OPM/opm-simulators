@@ -129,8 +129,8 @@ struct UseImplicitIpr { static constexpr bool value = true; };
 struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = true; };
 
 // Network solver parameters
-struct NetworkMaxStrictIterations { static constexpr int value = 10; };
-struct NetworkMaxIterations { static constexpr int value = 20; };
+struct NetworkMaxStrictOuterIterations { static constexpr int value = 10; };
+struct NetworkMaxOuterIterations { static constexpr int value = 10; };
 struct NetworkMaxSubIterations { static constexpr int value = 20; };
 template<class Scalar>
 struct NetworkPressureUpdateDampingFactor { static constexpr Scalar value = 0.1; };
@@ -304,7 +304,7 @@ public:
     int network_max_strict_iterations_;
 
     /// Maximum number of iterations in the network solver before giving up
-    int network_max_iterations_;
+    int network_max_outer_iterations_;
 
     /// Maximum number of sub-iterations to update network pressures (within a single well/group control update)
     int network_max_sub_iterations_;
