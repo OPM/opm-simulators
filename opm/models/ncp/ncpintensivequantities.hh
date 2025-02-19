@@ -97,9 +97,11 @@ public:
     /*!
      * \brief IntensiveQuantities::update
      */
+    template <class DynamicFluidSystem = FluidSystem>
     void update(const ElementContext& elemCtx,
                 unsigned dofIdx,
-                unsigned timeIdx)
+                unsigned timeIdx,
+                const DynamicFluidSystem& fluidSystem = DynamicFluidSystem{})
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
         ParentType::checkDefined();
