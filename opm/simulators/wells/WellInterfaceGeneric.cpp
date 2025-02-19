@@ -253,7 +253,7 @@ updateInjMult(std::vector<Scalar>& inj_multipliers,
 
 template<class Scalar>
 Scalar WellInterfaceGeneric<Scalar>::
-getInjMult(const int perf,
+getInjMult(const int local_perf_index,
            const Scalar bhp,
            const Scalar perf_pres,
            DeferredLogger& dlogger) const
@@ -262,7 +262,7 @@ getInjMult(const int perf,
 
     Scalar multiplier = 1.;
 
-    const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+    const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
     const bool is_wrev = this->well_ecl_.getInjMultMode() == Well::InjMultMode::WREV;
 
     const bool active_injmult = (is_wrev && this->well_ecl_.aciveWellInjMult()) ||
