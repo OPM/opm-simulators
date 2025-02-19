@@ -418,6 +418,7 @@ template<class Scalar> class WellContributions;
                                                                         DeferredLogger& local_deferredLogger);
 
             bool updateWellControlsAndNetwork(const double dt,
+                                              const int iterationIdx,
                                               DeferredLogger& local_deferredLogger);
             
             double computeWellGroupTarget(DeferredLogger& local_deferredLogger);
