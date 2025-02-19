@@ -36,7 +36,7 @@ CompWellEquations()
 template <typename Scalar, int numWellEq, int numEq>
 void
 CompWellEquations<Scalar, numWellEq, numEq>::
-init(const int num_conn)
+init(const int num_conn,  const std::vector<std::size_t>& cells)
 {
     duneD_.setSize(1, 1, 1);
     duneB_.setSize(1, num_conn, num_conn);
@@ -66,6 +66,7 @@ init(const int num_conn)
 
     resWell_.resize(1);
 
+    this->cells_ = cells;
     // some others in the future
 }
 

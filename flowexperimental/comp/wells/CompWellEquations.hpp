@@ -55,7 +55,7 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar, numWellEq, numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
-    void init(const int num_conn);
+    void init(const int num_conn, const std::vector<std::size_t>& cells);
 
     void clear();
 
@@ -97,7 +97,7 @@ private:
 
 
     // Store the global index of the well connection cells
-    std::vector<unsigned int> cells_;
+    std::vector<std::size_t> cells_;
 };
 
 

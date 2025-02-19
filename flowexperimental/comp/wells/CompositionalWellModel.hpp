@@ -31,6 +31,8 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
+
 #include "CompConnectionData.hpp"
 
 #include "CompWellState.hpp"
@@ -42,7 +44,7 @@ namespace Opm {
 class Schedule;
 
 template<typename TypeTag>
-class CompositionalWellModel : public BaseAuxiliaryModule<TypeTag>
+class CompositionalWellModel : WellConnectionAuxiliaryModule<TypeTag, CompositionalWellModel<TypeTag>>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -52,10 +54,13 @@ class CompositionalWellModel : public BaseAuxiliaryModule<TypeTag>
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
-    using NeighborSet = typename BaseAuxiliaryModule<TypeTag>::NeighborSet;
+    // using NeighborSet = typename BaseAuxiliaryModule<TypeTag>::NeighborSet;
 
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+
+    using WellConnectionModule = WellConnectionAuxiliaryModule<TypeTag, CompositionalWellModel<TypeTag>>;
+
     // TODO: Scalar will probably to be TypeTag later
     using CompWellPtr = std::shared_ptr<CompWell<TypeTag> >;
     explicit CompositionalWellModel(Simulator& /*simulator*/);
@@ -64,12 +69,12 @@ public:
     [[nodiscard]] unsigned numDofs() const override
     { return 0; }
 
-    void addNeighbors(std::vector<NeighborSet>& /* neighbors */) const override
-    {}
+//    void addNeighbors(std::vector<NeighborSet>& /* neighbors */) const override
+//    {}
 
     void applyInitial() override {}
 
-    void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/) override {}
+    // void linearize(SparseMatrixAdapter& /*matrix*/, GlobalEqVector& /*residual*/) override;
 
     template <class Restarter>
     void serialize(Restarter& /*res*/)
@@ -85,7 +90,7 @@ public:
     void beginTimeStep();
     void beginIteration();
 
-    void init() {}
+    void init();
     void endIteration() const {}
     void endTimeStep() {}
     void endEpisode() {}
