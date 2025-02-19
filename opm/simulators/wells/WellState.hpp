@@ -55,6 +55,7 @@ namespace Opm
 
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
+template<class Scalar> class ConnFracStatistics;
 class Schedule;
 enum class WellStatus;
 
@@ -456,6 +457,9 @@ private:
 
     void reportConnectionFilterCake(const std::size_t well_index,
                                     std::vector<data::Connection>& connections) const;
+
+    void reportFractureStatistics(const std::vector<ConnFracStatistics<Scalar>>& stats,
+                                  std::vector<data::Connection>& connections) const;
 };
 
 } // namespace Opm
