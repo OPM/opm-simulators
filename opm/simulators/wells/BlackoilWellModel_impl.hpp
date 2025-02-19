@@ -1085,7 +1085,7 @@ namespace Opm {
         const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
-        const std::size_t max_iter = param_.network_max_iterations_;
+        const std::size_t max_iter = param_.network_max_outer_iterations_;
         bool converged = false;
         std::size_t iter = 0;
         bool changed_well_group = false;
@@ -1196,7 +1196,7 @@ namespace Opm {
         // after certain number of the iterations, we use relaxed tolerance for the network update
         const std::size_t iteration_to_relax = param_.network_max_strict_iterations_;
         // after certain number of the iterations, we terminate
-        const std::size_t max_iteration = param_.network_max_iterations_;
+        const std::size_t max_iteration = param_.network_max_outer_iterations_;
         std::size_t network_update_iteration = 0;
         const int episodeIdx = simulator_.episodeIndex();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
