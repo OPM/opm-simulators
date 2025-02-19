@@ -24,6 +24,10 @@
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
+#if HAVE_MPI
+#include <opm/simulators/utils/MPISerializer.hpp>
+#endif
+
 #include <fmt/format.h>
 #include <cassert>
 #include <iterator>
@@ -625,6 +629,7 @@ template<class T>
 T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
 {
     T res = t;
+#if HAVE_MPI
     if (rankWithFirstPerf_ >= 0) {
 #ifndef NDEBUG
         assert(rankWithFirstPerf_ < comm_->size());
@@ -632,12 +637,17 @@ T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
         // with other communication if there are bugs
         comm_->barrier();
 #endif
-        comm_->broadcast(&res, 1, rankWithFirstPerf_);
+
+        Parallel::MpiSerializer ser(*comm_);
+        ser.broadcast(rankWithFirstPerf_, res);
 #ifndef NDEBUG
         comm_->barrier();
 #endif
     }
     return res;
+#else // !HAVE_MPI
+    return t;
+#endif
 }
 
 template<class Scalar>
@@ -802,9 +812,11 @@ template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;
 template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterator;
 
 #define INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, DIM)                 \
-    template Opm::DenseAd::Evaluation<T, DIM, 0u> Opm::ParallelWellInfo<T>::        \
-        broadcastFirstPerforationValue<Opm::DenseAd::Evaluation<T, DIM, 0u>>        \
-        (Opm::DenseAd::Evaluation<T, DIM, 0u> const&) const;
+    template std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int>                \
+        Opm::ParallelWellInfo<T>::broadcastFirstPerforationValue                    \
+        <std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int>>                   \
+        (std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int> const&)            \
+        const;
 
 #define INSTANTIATE_TYPE(T)                                                         \
     template class CheckDistributedWellConnections<T>;                              \
