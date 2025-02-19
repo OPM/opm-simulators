@@ -272,12 +272,16 @@ outputRestart(data::Solution& sol)
 
     using Dir = FaceDir::DirEnum;
     std::vector<DataEntry<Scalar>> entries;
-    addEntry<gasCompIdx>  (entries, "FLRGAS", UnitSystem::measure::rate,                flores_);
-    addEntry<oilCompIdx>  (entries, "FLROIL", UnitSystem::measure::rate,                flores_);
-    addEntry<waterCompIdx>(entries, "FLRWAT", UnitSystem::measure::rate,                flores_);
-    addEntry<gasCompIdx>  (entries, "FLOGAS", UnitSystem::measure::gas_surface_rate,    flows_);
-    addEntry<oilCompIdx>  (entries, "FLOOIL", UnitSystem::measure::liquid_surface_rate, flows_);
-    addEntry<waterCompIdx>(entries, "FLOWAT", UnitSystem::measure::liquid_surface_rate, flows_);
+    if (this->enableFlores_) {
+        addEntry<gasCompIdx>  (entries, "FLRGAS", UnitSystem::measure::rate,                flores_);
+        addEntry<oilCompIdx>  (entries, "FLROIL", UnitSystem::measure::rate,                flores_);
+        addEntry<waterCompIdx>(entries, "FLRWAT", UnitSystem::measure::rate,                flores_);
+    }
+    if (this->enableFlows_) {
+        addEntry<gasCompIdx>  (entries, "FLOGAS", UnitSystem::measure::gas_surface_rate,    flows_);
+        addEntry<oilCompIdx>  (entries, "FLOOIL", UnitSystem::measure::liquid_surface_rate, flows_);
+        addEntry<waterCompIdx>(entries, "FLOWAT", UnitSystem::measure::liquid_surface_rate, flows_);
+    }
 
     std::for_each(entries.begin(), entries.end(),
                   [&doInsert](auto& array)
