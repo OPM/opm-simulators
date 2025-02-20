@@ -27,6 +27,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <opm/simulators/utils/PressureAverage.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
@@ -78,6 +79,32 @@ void logUniqueFailedCells(const std::string& messageTag,
     Opm::OpmLog::warning(messageTag, errlog.str());
 }
 
+std::string injectorCModeToString(const Opm::WellInjectorCMode cmode)
+{
+    auto cmodeStr = std::string{};
+
+    // CMODE_UNDEFINED => ""
+    if (cmode != Opm::WellInjectorCMode::CMODE_UNDEFINED) {
+        cmodeStr = Opm::WellInjectorCMode2String(cmode);
+    }
+
+    return cmodeStr;
+}
+
+std::string producerCModeToString(const Opm::WellProducerCMode cmode)
+{
+    auto cmodeStr = std::string{};
+
+    // NONE && CMODE_UNDEFINED => ""
+    if ((cmode != Opm::WellProducerCMode::NONE) &&
+        (cmode != Opm::WellProducerCMode::CMODE_UNDEFINED))
+    {
+        cmodeStr = Opm::WellProducerCMode2String(cmode);
+    }
+
+    return cmodeStr;
+}
+
 } // Namespace anonymous
 
 namespace Opm {
@@ -99,132 +126,73 @@ cumulative(const std::size_t reportStepNum) const
 {
     this->beginCumulativeReport_();
 
-    std::vector<Scalar> tmp_values(WellCumDataType::numWCValues, 0.0);
-    std::vector<std::string> tmp_names(WellCumDataType::numWCNames, "");
+    using Ix = typename WellCumDataType::WCId;
 
     const auto& st = summaryState_;
-    for (const auto& gname : schedule_.groupNames()) {
-        auto gName = static_cast<std::string>(gname);
-        auto get = [&st, &gName](const std::string& vector)
-        {
-            const auto key = vector + ':' + gName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+    for (const auto& gname : this->schedule_.groupNames()) {
+        std::vector<Scalar> values(WellCumDataType::numWCValues);
+        std::vector<std::string> names(WellCumDataType::numWCNames);
 
-        tmp_names[0] = gname;
+        names[Ix::WellName] = gname;
 
-        if (tmp_names[0] == "FIELD") {
-            tmp_values[2] = st.get("FOPT", 0.0); // WellCumDataType::OilProd
-            tmp_values[3] = st.get("FWPT", 0.0); // WellCumDataType::WaterProd
-            tmp_values[4] = st.get("FGPT", 0.0); // WellCumDataType::GasProd
-            tmp_values[5] = st.get("FVPT", 0.0); // WellCumDataType::FluidResVolProd
-            tmp_values[6] = st.get("FOIT", 0.0); // WellCumDataType::OilInj
-            tmp_values[7] = st.get("FWIT", 0.0); // WellCumDataType::WaterInj
-            tmp_values[8] = st.get("FGIT", 0.0); // WellCumDataType::GasInj
-            tmp_values[9] = st.get("FVIT", 0.0); // WellCumDataType::FluidResVolInj
-        } else {
-            tmp_values[2] = get("GOPT"); // WellCumDataType::OilProd
-            tmp_values[3] = get("GWPT"); // WellCumDataType::WaterProd
-            tmp_values[4] = get("GGPT"); // WellCumDataType::GasProd
-            tmp_values[5] = get("GVPT"); // WellCumDataType::FluidResVolProd
-            tmp_values[6] = get("GOIT"); // WellCumDataType::OilInj
-            tmp_values[7] = get("GWIT"); // WellCumDataType::WaterInj
-            tmp_values[8] = get("GGIT"); // WellCumDataType::GasInj
-            tmp_values[9] = get("GVIT"); // WellCumDataType::FluidResVolInj
-        }
+        const auto isField = gname == "FIELD";
 
-        this->outputCumulativeReportRecord_(tmp_values, tmp_names);
+        values[Ix::OilProd]         = isField ? st.get("FOPT", 0.0) : st.get_group_var(gname, "GOPT", 0.0);
+        values[Ix::WaterProd]       = isField ? st.get("FWPT", 0.0) : st.get_group_var(gname, "GWPT", 0.0);
+        values[Ix::GasProd]         = isField ? st.get("FGPT", 0.0) : st.get_group_var(gname, "GGPT", 0.0);
+        values[Ix::FluidResVolProd] = isField ? st.get("FVPT", 0.0) : st.get_group_var(gname, "GVPT", 0.0);
+        values[Ix::OilInj]          = isField ? st.get("FOIT", 0.0) : st.get_group_var(gname, "GOIT", 0.0);
+        values[Ix::WaterInj]        = isField ? st.get("FWIT", 0.0) : st.get_group_var(gname, "GWIT", 0.0);
+        values[Ix::GasInj]          = isField ? st.get("FGIT", 0.0) : st.get_group_var(gname, "GGIT", 0.0);
+        values[Ix::FluidResVolInj]  = isField ? st.get("FVIT", 0.0) : st.get_group_var(gname, "GVIT", 0.0);
+
+        this->outputCumulativeReportRecord_(values, names);
     }
 
-    for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-        const auto& well = schedule_.getWell(wname, reportStepNum);
-        tmp_names[0] = wname; // WellCumDataType::WellName
-        auto wName = static_cast<std::string>(wname);
-        auto get = [&st, &wName](const std::string& vector)
-        {
-            const auto key = vector + ':' + wName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
+        const auto& well = this->schedule_.getWell(wname, reportStepNum);
+
+        std::vector<Scalar> values(WellCumDataType::numWCValues);
+        std::vector<std::string> names(WellCumDataType::numWCNames);
+
+        names[Ix::WellName] = wname;
 
         if (well.isInjector()) {
             const auto& controls = well.injectionControls(st);
             const auto ctlMode = controls.cmode;
-            const auto injType = controls.injector_type;
-            using CMode = ::Opm::Well::InjectorCMode;
-            using WType = ::Opm::InjectorType;
 
-            auto ftype = [](const auto wtype) -> std::string
-            {
-                switch (wtype) {
-                case WType::OIL:   return "Oil";
-                case WType::WATER: return "Wat";
-                case WType::GAS:   return "Gas";
-                case WType::MULTI: return "Multi";
-                default: return "";
-                }
-            };
+            names[Ix::WellType] = "INJ";
 
-            auto fctl = [](const auto wmctl) -> std::string
-            {
-                switch (wmctl) {
-                case CMode::RATE: return "RATE";
-                case CMode::RESV: return "RESV";
-                case CMode::THP:  return "THP";
-                case CMode::BHP:  return "BHP";
-                case CMode::GRUP: return "GRUP";
-                default: return "";
-                }
-            };
-
-            tmp_names[1] = "INJ"; // WellCumDataType::WellType
-            const auto flowctl = fctl(ctlMode);
-            if (flowctl == "RATE") { // WellCumDataType::WellCTRL
-                const auto flowtype = ftype(injType);
-                if (flowtype == "Oil") {
-                    tmp_names[2] = "ORAT";
-                } else if (flowtype == "Wat") {
-                    tmp_names[2] = "WRAT";
-                } else if (flowtype == "Gas") {
-                    tmp_names[2] = "GRAT";
-                }
-            } else {
-                tmp_names[2] = flowctl;
+            if (ctlMode != Well::InjectorCMode::RATE) {
+                names[Ix::WellCTRL] = injectorCModeToString(ctlMode);
             }
-        } else if (well.isProducer()) {
-            const auto& controls = well.productionControls(st);
-            using CMode = ::Opm::Well::ProducerCMode;
+            else {
+                const auto injType = controls.injector_type;
+                if      (injType == InjectorType::OIL)   { names[Ix::WellCTRL] = "ORAT"; }
+                else if (injType == InjectorType::WATER) { names[Ix::WellCTRL] = "WRAT"; }
+                else if (injType == InjectorType::GAS)   { names[Ix::WellCTRL] = "GRAT"; }
+            }
+        }
+        else if (well.isProducer()) {
+            const auto cmode = well.productionControls(st).cmode;
 
-            auto fctl = [](const auto wmctl) -> std::string
-            {
-                switch (wmctl) {
-                case CMode::ORAT: return "ORAT";
-                case CMode::WRAT: return "WRAT";
-                case CMode::GRAT: return "GRAT";
-                case CMode::LRAT: return "LRAT";
-                case CMode::RESV: return "RESV";
-                case CMode::THP:  return "THP";
-                case CMode::BHP:  return "BHP";
-                case CMode::CRAT: return "CRAT";
-                case CMode::GRUP: return "GRUP";
-                default: return "none";
-                }
-            };
-            tmp_names[1] = "PROD"; // WellProdDataType::CTRLMode
-            tmp_names[2] = fctl(controls.cmode); // WellProdDataType::CTRLMode
+            names[Ix::WellType] = "PROD";
+            names[Ix::WellCTRL] = producerCModeToString(cmode);
         }
 
-        tmp_values[0] = well.getHeadI() + 1; // WellCumDataType::wellLocationi
-        tmp_values[1] = well.getHeadJ() + 1; // WellCumDataType::wellLocationj
-        tmp_values[2] = get("WOPT"); // WellCumDataType::OilProd
-        tmp_values[3] = get("WWPT"); // WellCumDataType::WaterProd
-        tmp_values[4] = get("WGPT"); // WellCumDataType::GasProd
-        tmp_values[5] = get("WVPT"); // WellCumDataType::FluidResVolProd
-        tmp_values[6] = get("WOIT"); // WellCumDataType::OilInj
-        tmp_values[7] = get("WWIT"); // WellCumDataType::WaterInj
-        tmp_values[8] = get("WGIT"); // WellCumDataType::GasInj
-        tmp_values[9] = get("WVIT"); // WellCumDataType::FluidResVolInj
+        values[Ix::WellLocationi] = well.getHeadI() + 1;
+        values[Ix::WellLocationj] = well.getHeadJ() + 1;
 
-        this->outputCumulativeReportRecord_(tmp_values, tmp_names);
+        values[Ix::OilProd]         = st.get_well_var(wname, "WOPT", 0.0);
+        values[Ix::WaterProd]       = st.get_well_var(wname, "WWPT", 0.0);
+        values[Ix::GasProd]         = st.get_well_var(wname, "WGPT", 0.0);
+        values[Ix::FluidResVolProd] = st.get_well_var(wname, "WVPT", 0.0);
+        values[Ix::OilInj]          = st.get_well_var(wname, "WOIT", 0.0);
+        values[Ix::WaterInj]        = st.get_well_var(wname, "WWIT", 0.0);
+        values[Ix::GasInj]          = st.get_well_var(wname, "WGIT", 0.0);
+        values[Ix::FluidResVolInj]  = st.get_well_var(wname, "WVIT", 0.0);
+
+        this->outputCumulativeReportRecord_(values, names);
     }
 
     this->endCumulativeReport_();
@@ -379,115 +347,74 @@ injection(const std::size_t reportStepNum) const
 {
     this->beginInjectionReport_();
 
-    std::vector<Scalar> tmp_values(WellInjDataType::numWIValues, 0.0);
-    std::vector<std::string> tmp_names(WellInjDataType::numWINames, "");
+    using Ix = typename WellInjDataType::WIId;
 
-    const auto& st = summaryState_;
-    for (const auto& gname : schedule_.groupNames()) {
-        auto gName = static_cast<std::string>(gname);
-        auto get = [&st, &gName](const std::string& vector)
-        {
-            const auto key = vector + ':' + gName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+    const auto& st = this->summaryState_;
 
-        tmp_names[0] = gname;
-        if (tmp_names[0] == "FIELD") {
-            tmp_values[2] = st.get("FOIR", 0.0); // WellInjDataType::OilRate
-            tmp_values[3] = st.get("FWIR", 0.0); // WellInjDataType::WaterRate
-            tmp_values[4] = st.get("FGIR", 0.0); // WellInjDataType::GasRate
-            tmp_values[5] = st.get("FVIR", 0.0); // WellInjDataType::FluidResVol
-        } else {
-            tmp_values[2] = get("GOIR"); // WellInjDataType::OilRate
-            tmp_values[3] = get("GWIR"); // WellInjDataType::WaterRate
-            tmp_values[4] = get("GGIR"); // WellInjDataType::GasRate
-            tmp_values[5] = get("GVIR"); // WellInjDataType::FluidResVol
-        }
+    for (const auto& gname : this->schedule_.groupNames()) {
+        std::vector<Scalar> values(WellInjDataType::numWIValues);
+        std::vector<std::string> names(WellInjDataType::numWINames);
 
-        this->outputInjectionReportRecord_(tmp_values, tmp_names);
+        names[Ix::WellName] = gname;
+
+        const auto isField = gname == "FIELD";
+
+        values[Ix::OilRate]     = isField ? st.get("FOIR", 0.0) : st.get_group_var(gname, "GOIR", 0.0);
+        values[Ix::WaterRate]   = isField ? st.get("FWIR", 0.0) : st.get_group_var(gname, "GWIR", 0.0);
+        values[Ix::GasRate]     = isField ? st.get("FGIR", 0.0) : st.get_group_var(gname, "GGIR", 0.0);
+        values[Ix::FluidResVol] = isField ? st.get("FVIR", 0.0) : st.get_group_var(gname, "GVIR", 0.0);
+
+        this->outputInjectionReportRecord_(values, names);
     }
 
-    for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-        const auto& well = schedule_.getWell(wname, reportStepNum);
+    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
+        const auto& well = this->schedule_.getWell(wname, reportStepNum);
 
-        // Ignore Producer wells
+        // Ignore production wells for the injection report.
         if (well.isProducer()) {
             continue;
         }
 
-        tmp_names[0] = wname; // WellInjDataType::WellName
-        auto wName = static_cast<std::string>(wname);
-        auto get = [&st, &wName](const std::string& vector)
-        {
-            const auto key = vector + ':' + wName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+        std::vector<Scalar> values(WellInjDataType::numWIValues);
+        std::vector<std::string> names(WellInjDataType::numWINames);
+
+        names[Ix::WellName] = wname;
 
         const auto& controls = well.injectionControls(st);
         const auto ctlMode = controls.cmode;
         const auto injType = controls.injector_type;
-        using CMode = Well::InjectorCMode;
-        using WType = InjectorType;
 
-        auto ftype = [](const auto wtype) -> std::string
-        {
-            switch (wtype) {
-            case WType::OIL:   return "Oil";
-            case WType::WATER: return "Wat";
-            case WType::GAS:   return "Gas";
-            case WType::MULTI: return "Multi";
-            default: return "";
-            }
-        };
+        const auto isRate = ctlMode == Well::InjectorCMode::RATE;
 
-        auto fctl = [](const auto wmctl) -> std::string
-        {
-            switch (wmctl) {
-            case CMode::RATE: return "RATE";
-            case CMode::RESV: return "RESV";
-            case CMode::THP:  return "THP";
-            case CMode::BHP:  return "BHP";
-            case CMode::GRUP: return "GRUP";
-            default: return "";
-            }
-        };
-
-        const auto flowtype = ftype(injType);
-        const auto flowctl = fctl(ctlMode);
-        if (flowtype == "Oil") { // WellInjDataType::CTRLModeOil
-            if (flowctl == "RATE") {
-                tmp_names[1] = "ORAT";
-            } else {
-                tmp_names[1] =  flowctl;
-            }
+        if (injType == InjectorType::OIL) {
+            names[Ix::CTRLModeOil] = isRate
+                ? "ORAT"
+                : injectorCModeToString(ctlMode);
         }
-        else if (flowtype == "Wat") { // WellInjDataType::CTRLModeWat
-            if (flowctl == "RATE") {
-                tmp_names[3] = "WRAT";
-            } else {
-                tmp_names[2] =  flowctl;
-            }
+        else if (injType == InjectorType::WATER) {
+            names[Ix::CTRLModeWat] = isRate
+                ? "WRAT"
+                : injectorCModeToString(ctlMode);
         }
-        else if (flowtype == "Gas") // WellInjDataType::CTRLModeGas
-        {
-            if (flowctl == "RATE") {
-                tmp_names[3] = "GRAT";
-            } else {
-                tmp_names[3] =  flowctl;
-            }
+        else if (injType == InjectorType::GAS) {
+            names[Ix::CTRLModeGas] = isRate
+                ? "GRAT"
+                : injectorCModeToString(ctlMode);
         }
 
-        tmp_values[0] = well.getHeadI() + 1; // WellInjDataType::wellLocationi
-        tmp_values[1] = well.getHeadJ() + 1; // WellInjDataType::wellLocationj
-        tmp_values[2] = get("WOIR"); // WellInjDataType::OilRate
-        tmp_values[3] = get("WWIR"); // WellInjDataType::WaterRate
-        tmp_values[4] = get("WGIR"); // WellInjDataType::GasRate
-        tmp_values[5] = get("WVIR");// WellInjDataType::FluidResVol
-        tmp_values[6] = get("WBHP"); // WellInjDataType::BHP
-        tmp_values[7] = get("WTHP"); // WellInjDataType::THP
-        //tmp_values[8] = 0; // WellInjDataType::SteadyStateII
+        values[Ix::WellLocationi] = well.getHeadI() + 1;
+        values[Ix::WellLocationj] = well.getHeadJ() + 1;
 
-        this->outputInjectionReportRecord_(tmp_values, tmp_names);
+        values[Ix::OilRate]     = st.get_well_var(wname, "WOIR", 0.0);
+        values[Ix::WaterRate]   = st.get_well_var(wname, "WWIR", 0.0);
+        values[Ix::GasRate]     = st.get_well_var(wname, "WGIR", 0.0);
+        values[Ix::FluidResVol] = st.get_well_var(wname, "WVIR", 0.0);
+        values[Ix::BHP]         = st.get_well_var(wname, "WBHP", 0.0);
+        values[Ix::THP]         = st.get_well_var(wname, "WTHP", 0.0);
+
+        // values[Ix::SteadyStateII] = 0;
+
+        this->outputInjectionReportRecord_(values, names);
     }
 
     this->endInjectionReport_();
@@ -499,100 +426,67 @@ production(const std::size_t reportStepNum) const
 {
     this->beginProductionReport_();
 
-    std::vector<Scalar> tmp_values(WellProdDataType::numWPValues, 0.0);
-    std::vector<std::string> tmp_names(WellProdDataType::numWPNames, "");
+    using Ix = typename WellProdDataType::WPId;
 
-    const auto& st = summaryState_;
-    for (const auto& gname : schedule_.groupNames()) {
-        auto gName = static_cast<std::string>(gname);
-        auto get = [&st, &gName](const std::string& vector)
-        {
-            const auto key = vector + ':' + gName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+    const auto& st = this->summaryState_;
 
-        tmp_names[0] = gname;
-        if (tmp_names[0] == "FIELD") {
-            tmp_values[2] = st.get("FOPR", 0.0); // WellProdDataType::OilRate
-            tmp_values[3] = st.get("FWPR", 0.0); // WellProdDataType::WaterRate
-            tmp_values[4] = st.get("FGPR", 0.0); // WellProdDataType::GasRate
-            tmp_values[5] = st.get("FVPR", 0.0); // WellProdDataType::FluidResVol
-            tmp_values[6] = st.get("FWCT", 0.0); // WellProdDataType::WaterCut
-            tmp_values[7] = st.get("FGOR", 0.0); // WellProdDataType::GasOilRatio
-        } else {
-            tmp_values[2] = get("GOPR"); // WellProdDataType::OilRate
-            tmp_values[3] = get("GWPR"); // WellProdDataType::WaterRate
-            tmp_values[4] = get("GGPR"); // WellProdDataType::GasRate
-            tmp_values[5] = get("GVPR"); // WellProdDataType::FluidResVol
-            tmp_values[6] = get("GWCT"); // WellProdDataType::WaterCut
-            tmp_values[7] = get("GGOR"); // WellProdDataType::GasOilRatio
+    for (const auto& gname : this->schedule_.groupNames()) {
+        std::vector<Scalar> values(WellProdDataType::numWPValues);
+        std::vector<std::string> names(WellProdDataType::numWPNames);
+
+        names[0] = gname;
+
+        const auto isField = gname == "FIELD";
+
+        values[Ix::OilRate]     = isField ? st.get("FOPR", 0.0) : st.get_group_var(gname, "GOPR", 0.0);
+        values[Ix::WaterRate]   = isField ? st.get("FWPR", 0.0) : st.get_group_var(gname, "GWPR", 0.0);
+        values[Ix::GasRate]     = isField ? st.get("FGPR", 0.0) : st.get_group_var(gname, "GGPR", 0.0);
+        values[Ix::FluidResVol] = isField ? st.get("FVPR", 0.0) : st.get_group_var(gname, "GVPR", 0.0);
+        values[Ix::WaterCut]    = isField ? st.get("FWCT", 0.0) : st.get_group_var(gname, "GWCT", 0.0);
+        values[Ix::GasOilRatio] = isField ? st.get("FGOR", 0.0) : st.get_group_var(gname, "GGOR", 0.0);
+
+        values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
+        if (std::isnan(values[Ix::WatGasRatio])) {
+            values[Ix::WatGasRatio] = 0.0;
         }
 
-        tmp_values[8] = tmp_values[3] / tmp_values[4]; // WellProdDataType::WaterGasRatio
-        if (std::isnan(tmp_values[8])) {
-            tmp_values[8] = 0.0;
-        }
-
-        this->outputProductionReportRecord_(tmp_values, tmp_names);
+        this->outputProductionReportRecord_(values, names);
     }
 
-    for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-        const auto& well = schedule_.getWell(wname, reportStepNum);
+    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
+        const auto& well = this->schedule_.getWell(wname, reportStepNum);
 
-        // Ignore injector wells
+        // Ignore injection wells for the production report.
         if (well.isInjector()) {
             continue;
         }
 
-        tmp_names[0] = wname; // WellProdDataType::WellName
+        std::vector<Scalar> values(WellProdDataType::numWPValues);
+        std::vector<std::string> names(WellProdDataType::numWPNames);
 
+        names[Ix::WellName] = wname;
+        names[Ix::CTRLMode] = producerCModeToString(well.productionControls(st).cmode);
 
-        auto wName = static_cast<std::string>(wname);
-        auto get = [&st, &wName](const std::string& vector)
-        {
-            const auto key = vector + ':' + wName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+        values[Ix::WellLocationi] = well.getHeadI() + 1;
+        values[Ix::WellLocationj] = well.getHeadJ() + 1;
 
-        const auto& controls = well.productionControls(st);
-        using CMode = Well::ProducerCMode;
+        values[Ix::OilRate]     = st.get_well_var(wname, "WOPR", 0.0);
+        values[Ix::WaterRate]   = st.get_well_var(wname, "WWPR", 0.0);
+        values[Ix::GasRate]     = st.get_well_var(wname, "WGPR", 0.0);
+        values[Ix::FluidResVol] = st.get_well_var(wname, "WVPR", 0.0);
+        values[Ix::WaterCut]    = st.get_well_var(wname, "WWCT", 0.0);
+        values[Ix::GasOilRatio] = st.get_well_var(wname, "WGOR", 0.0);
+        values[Ix::BHP]         = st.get_well_var(wname, "WBHP", 0.0);
+        values[Ix::THP]         = st.get_well_var(wname, "WTHP", 0.0);
 
-        auto fctl = [](const auto wmctl) -> std::string
-        {
-            switch (wmctl) {
-            case CMode::ORAT: return "ORAT";
-            case CMode::WRAT: return "WRAT";
-            case CMode::GRAT: return "GRAT";
-            case CMode::LRAT: return "LRAT";
-            case CMode::RESV: return "RESV";
-            case CMode::THP:  return "THP";
-            case CMode::BHP:  return "BHP";
-            case CMode::CRAT: return "CRate";
-            case CMode::GRUP: return "GRUP";
-            default: return "none";
-            }
-        };
+        // values[Ix::SteadyStatePI] = 0;
 
-        tmp_names[1] = fctl(controls.cmode); // WellProdDataType::CTRLMode
-
-        tmp_values[0] = well.getHeadI() + 1; // WellProdDataType::WellLocationi
-        tmp_values[1] = well.getHeadJ() + 1; // WellProdDataType::WellLocationj
-        tmp_values[2] = get("WOPR"); // WellProdDataType::OilRate
-        tmp_values[3] = get("WWPR"); // WellProdDataType::WaterRate
-        tmp_values[4] = get("WGPR"); // WellProdDataType::GasRate
-        tmp_values[5] = get("WVPR"); // WellProdDataType::FluidResVol
-        tmp_values[6] = get("WWCT"); // WellProdDataType::WaterCut
-        tmp_values[7] = get("WGOR"); // WellProdDataType::GasOilRatio
-        tmp_values[9] = get("WBHP"); // WellProdDataType::BHP
-        tmp_values[10] = get("WTHP"); // WellProdDataType::THP
-        //tmp_values[11] = 0; //WellProdDataType::SteadyStatePI //
-
-        tmp_values[8] = tmp_values[3] / tmp_values[4]; // WellProdDataType::WaterGasRatio
-        if (std::isnan(tmp_values[8])) {
-            tmp_values[8] = 0.0;
+        values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
+        if (std::isnan(values[Ix::WatGasRatio])) {
+            values[Ix::WatGasRatio] = 0.0;
         }
 
-        this->outputProductionReportRecord_(tmp_values, tmp_names);
+        this->outputProductionReportRecord_(values, names);
     }
 
     this->endProductionReport_();
