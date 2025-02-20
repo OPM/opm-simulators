@@ -54,6 +54,7 @@
 
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/OutputExtractor.hpp>
 
 #include <algorithm>
 #include <array>
@@ -97,6 +98,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     using BaseType = GenericOutputBlackoilModule<FluidSystem>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Dir = FaceDir::DirEnum;
+    using Extractor = detail::Extractor<TypeTag>;
 
     static constexpr int conti0EqIdx = Indices::conti0EqIdx;
     static constexpr int numPhases = FluidSystem::numPhases;
@@ -256,54 +258,16 @@ public:
             return;
         }
 
-        struct HysteresisParams
-        {
-            Scalar somax{};
-            Scalar swmax{};
-            Scalar swmin{};
-            Scalar sgmax{};
-            Scalar shmax{};
-            Scalar somin{};
-        };
-
-        struct ExtractContext
-        {
-            unsigned globalDofIdx;
-            unsigned pvtRegionIdx;
-            int episodeIndex;
-            const FluidState& fs;
-            const IntensiveQuantities& intQuants;
-            const HysteresisParams& hParams;
-        };
-
-        using ScalarExtractFunc = std::function<Scalar(const ExtractContext&)>;
-        using AssignFunc = std::function<void(const ExtractContext&)>;
-        using PhaseExtractFunc = std::function<Scalar(const unsigned, const ExtractContext&)>;
-
-        using ScalarBuffer = std::vector<Scalar>;
-        using PhaseArray = std::array<ScalarBuffer,numPhases>;
-
-        struct ScalarEntry
-        {
-            ScalarBuffer* data;
-            ScalarExtractFunc extract;
-        };
-
-        struct PhaseEntry
-        {
-            PhaseArray* data;
-            PhaseExtractFunc extract;
-        };
-
-        struct Entry
-        {
-            std::variant<AssignFunc, ScalarEntry, PhaseEntry> data;
-            bool condition = true;
-        };
-
         const auto& problem = elemCtx.simulator().problem();
         const auto& modelResid = elemCtx.simulator().model().linearizer().residual();
         const auto& matLawManager = problem.materialLawManager();
+        using Entry = typename Extractor::Entry;
+        using ExtractContext = typename Extractor::Context;
+        using HysteresisParams = typename Extractor::HysteresisParams;
+        using ScalarEntry = typename Extractor::ScalarEntry;
+        using PhaseEntry = typename Extractor::PhaseEntry;
+        using AssignFunc = typename Extractor::AssignFunc;
+        static std::vector<Entry> filtered_extractors;
         auto extractors = std::array{
             Entry{PhaseEntry{&this->saturation_,
                   [](const unsigned phase, const ExtractContext& ectx)
