@@ -247,27 +247,17 @@ public:
         }
     }
 
-    /*!
-     * \brief Modify the internal buffers according to the intensive
-     *        quanties relevant for an element
-     */
-    void processElement(const ElementContext& elemCtx)
+    //! \brief Setup list of active element-level data extractors
+    void setupExtractors()
     {
-        OPM_TIMEBLOCK_LOCAL(processElement);
-        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
-            return;
-        }
-
-        const auto& problem = simulator_.problem();
-        const auto& modelResid = simulator_.model().linearizer().residual();
-        const auto& matLawManager = problem.materialLawManager();
         using Entry = typename Extractor::Entry;
         using ExtractContext = typename Extractor::Context;
-        using HysteresisParams = typename Extractor::HysteresisParams;
         using ScalarEntry = typename Extractor::ScalarEntry;
         using PhaseEntry = typename Extractor::PhaseEntry;
-        using AssignFunc = typename Extractor::AssignFunc;
-        static std::vector<Entry> filtered_extractors;
+
+        const bool hasResidual = simulator_.model().linearizer().residual().size() > 0;
+        const auto& hysteresisConfig = simulator_.problem().materialLawManager()->hysteresisConfig();
+
         auto extractors = std::array{
             Entry{PhaseEntry{&this->saturation_,
                   [](const unsigned phase, const ExtractContext& ectx)
@@ -300,23 +290,24 @@ public:
                   }}
             },
             Entry{PhaseEntry{&this->residual_,
-                  [&modelResid](const unsigned phaseIdx, const ExtractContext& ectx)
+                  [&modelResid = simulator_.model().linearizer().residual()]
+                  (const unsigned phaseIdx, const ExtractContext& ectx)
                   {
                       const unsigned sIdx = FluidSystem::solventComponentIndex(phaseIdx);
                       const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(sIdx);
                       return modelResid[ectx.globalDofIdx][activeCompIdx];
                   }},
-                  modelResid.size() > 0
+                  hasResidual
             },
             Entry{ScalarEntry{&this->rockCompPorvMultiplier_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       return problem.template
                           rockCompPoroMultiplier<Scalar>(ectx.intQuants, ectx.globalDofIdx);
                   }}
             },
             Entry{ScalarEntry{&this->rockCompTransMultiplier_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       return problem.
                            template rockCompTransMultiplier<Scalar>(
@@ -324,7 +315,7 @@ public:
                   }}
             },
             Entry{ScalarEntry{&this->minimumOilPressure_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       return std::min(getValue(ectx.fs.pressure(oilPhaseIdx)),
                                                problem.minOilPressure(ectx.globalDofIdx));
@@ -359,7 +350,7 @@ public:
                   }}
             },
             Entry{ScalarEntry{&this->overburdenPressure_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   { return problem.overburdenPressure(ectx.globalDofIdx); }}
             },
             Entry{ScalarEntry{&this->temperature_,
@@ -418,14 +409,15 @@ public:
                   { return getValue(ectx.fs.Rvw()); }}
             },
             Entry{ScalarEntry{&this->ppcw_,
-                  [&matLawManager](const ExtractContext& ectx)
+                  [&matLawManager = *simulator_.problem().materialLawManager()]
+                  (const ExtractContext& ectx)
                   {
-                      return matLawManager->
+                      return matLawManager.
                                  oilWaterScaledEpsInfoDrainage(ectx.globalDofIdx).maxPcow;
                   }}
             },
             Entry{ScalarEntry{&this->drsdtcon_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       return problem.drsdtcon(ectx.globalDofIdx,
                                               ectx.episodeIndex);
@@ -470,7 +462,7 @@ public:
                   }}
             },
             Entry{ScalarEntry{&this->gasDissolutionFactor_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       const Scalar SoMax = problem.maxOilSaturation(ectx.globalDofIdx);
                       return FluidSystem::template
@@ -481,7 +473,7 @@ public:
                   }}
             },
             Entry{ScalarEntry{&this->oilVaporizationFactor_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       const Scalar SoMax = problem.maxOilSaturation(ectx.globalDofIdx);
                       return FluidSystem::template
@@ -492,7 +484,7 @@ public:
                   }}
             },
             Entry{ScalarEntry{&this->gasDissolutionFactorInWater_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       const Scalar SwMax = problem.maxWaterSaturation(ectx.globalDofIdx);
                       return FluidSystem::template
@@ -539,66 +531,66 @@ public:
                   }}
             },
             Entry{ScalarEntry{&this->soMax_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       return std::max(getValue(ectx.fs.saturation(oilPhaseIdx)),
                                                problem.maxOilSaturation(ectx.globalDofIdx));
                   }},
-                  !matLawManager->enableHysteresis()
+                  !hysteresisConfig.enableHysteresis()
             },
             Entry{ScalarEntry{&this->swMax_,
-                 [&problem](const ExtractContext& ectx)
+                 [&problem = simulator_.problem()](const ExtractContext& ectx)
                   {
                       return std::max(getValue(ectx.fs.saturation(waterPhaseIdx)),
                                                problem.maxWaterSaturation(ectx.globalDofIdx));
                   }},
-                  !matLawManager->enableHysteresis()
+                  !hysteresisConfig.enableHysteresis()
             },
             Entry{ScalarEntry{&this->soMax_,
                   [](const ExtractContext& ectx)
                   { return ectx.hParams.somax; }},
-                  matLawManager->enableHysteresis() &&
-                  matLawManager->enableNonWettingHysteresis() &&
+                  hysteresisConfig.enableHysteresis() &&
+                  hysteresisConfig.enableNonWettingHysteresis() &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(waterPhaseIdx)
             },
             Entry{ScalarEntry{&this->swMax_,
                   [](const ExtractContext& ectx)
                   { return ectx.hParams.swmax; }},
-                  matLawManager->enableHysteresis() &&
-                  matLawManager->enableWettingHysteresis() &&
+                  hysteresisConfig.enableHysteresis() &&
+                  hysteresisConfig.enableWettingHysteresis() &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(waterPhaseIdx)
             },
             Entry{ScalarEntry{&this->swmin_,
                   [](const ExtractContext& ectx)
                   { return ectx.hParams.swmin; }},
-                  matLawManager->enableHysteresis() &&
-                  matLawManager->enablePCHysteresis() &&
+                  hysteresisConfig.enableHysteresis() &&
+                  hysteresisConfig.enablePCHysteresis() &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(waterPhaseIdx)
             },
             Entry{ScalarEntry{&this->sgmax_,
                   [](const ExtractContext& ectx)
                   { return ectx.hParams.sgmax; }},
-                  matLawManager->enableHysteresis() &&
-                  matLawManager->enableNonWettingHysteresis() &&
+                  hysteresisConfig.enableHysteresis() &&
+                  hysteresisConfig.enableNonWettingHysteresis() &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(gasPhaseIdx)
             },
             Entry{ScalarEntry{&this->shmax_,
                   [](const ExtractContext& ectx)
                   { return ectx.hParams.shmax; }},
-                  matLawManager->enableHysteresis() &&
-                  matLawManager->enableWettingHysteresis() &&
+                  hysteresisConfig.enableHysteresis() &&
+                  hysteresisConfig.enableWettingHysteresis() &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(gasPhaseIdx)
             },
             Entry{ScalarEntry{&this->somin_,
                   [](const ExtractContext& ectx)
                   { return ectx.hParams.somin; }},
-                  matLawManager->enableHysteresis() &&
-                  matLawManager->enablePCHysteresis() &&
+                  hysteresisConfig.enableHysteresis() &&
+                  hysteresisConfig.enablePCHysteresis() &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(gasPhaseIdx)
             },
@@ -687,28 +679,28 @@ public:
             // rs and rv with the values computed in the initially.
             // Volume factors, densities and viscosities need to be recalculated with the updated rs and rv values.
             Entry{ScalarEntry{&this->rv_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   { return problem.initialFluidState(ectx.globalDofIdx).Rv(); }},
                   simulator_.episodeIndex() < 0 &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(gasPhaseIdx)
             },
             Entry{ScalarEntry{&this->rs_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   { return problem.initialFluidState(ectx.globalDofIdx).Rs(); }},
                   simulator_.episodeIndex() < 0 &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(gasPhaseIdx)
             },
             Entry{ScalarEntry{&this->rsw_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   { return problem.initialFluidState(ectx.globalDofIdx).Rsw(); }},
                   simulator_.episodeIndex() < 0 &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
                   FluidSystem::phaseIsActive(gasPhaseIdx)
             },
             Entry{ScalarEntry{&this->rvw_,
-                  [&problem](const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const ExtractContext& ectx)
                   { return problem.initialFluidState(ectx.globalDofIdx).Rvw(); }},
                   simulator_.episodeIndex() < 0 &&
                   FluidSystem::phaseIsActive(oilPhaseIdx) &&
@@ -716,7 +708,7 @@ public:
             },
             // re-compute the volume factors, viscosities and densities if asked for
             Entry{PhaseEntry{&this->density_,
-                  [&problem](const unsigned phase, const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const unsigned phase, const ExtractContext& ectx)
                   {
                       const auto& fsInitial = problem.initialFluidState(ectx.globalDofIdx);
                       return FluidSystem::density(fsInitial,
@@ -728,7 +720,7 @@ public:
                   FluidSystem::phaseIsActive(gasPhaseIdx)
             },
             Entry{PhaseEntry{&this->invB_,
-                  [&problem](const unsigned phase, const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const unsigned phase, const ExtractContext& ectx)
                   {
                       const auto& fsInitial = problem.initialFluidState(ectx.globalDofIdx);
                       return FluidSystem::inverseFormationVolumeFactor(fsInitial,
@@ -740,7 +732,7 @@ public:
                   FluidSystem::phaseIsActive(gasPhaseIdx)
             },
             Entry{PhaseEntry{&this->viscosity_,
-                  [&problem](const unsigned phase, const ExtractContext& ectx)
+                  [&problem = simulator_.problem()](const unsigned phase, const ExtractContext& ectx)
                   {
                       const auto& fsInitial = problem.initialFluidState(ectx.globalDofIdx);
                       return FluidSystem::viscosity(fsInitial,
@@ -753,12 +745,37 @@ public:
             },
         };
 
-        HysteresisParams hysterParams;
+        // Setup active extractors
+        this->extractors_ = Extractor::removeInactive(extractors);
+    }
+
+    //! \brief Clear list of active element-level data extractors
+    void clearExtractors()
+    { this->extractors_.clear(); }
+
+    /*!
+     * \brief Modify the internal buffers according to the intensive
+     *        quanties relevant for an element
+     */
+    void processElement(const ElementContext& elemCtx)
+    {
+        OPM_TIMEBLOCK_LOCAL(processElement);
+        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
+            return;
+        }
+
+        if (this->extractors_.empty()) {
+            assert(0);
+        }
+
+        const auto& matLawManager = simulator_.problem().materialLawManager();
+
+        typename Extractor::HysteresisParams hysterParams;
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            const ExtractContext ectx{
+            const typename Extractor::Context ectx{
                 elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0),
                 elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex(),
                 elemCtx.simulator().episodeIndex(),
@@ -782,37 +799,7 @@ public:
                 }
             }
 
-            std::for_each(extractors.begin(), extractors.end(),
-                          [&ectx](const auto& entry)
-                          {
-                              if (!entry.condition) {
-                                  return;
-                              }
-                              std::visit(VisitorOverloadSet{
-                                  [&ectx](const ScalarEntry& v)
-                                  {
-                                      auto& array = *v.data;
-                                      if (!array.empty()) {
-                                          array[ectx.globalDofIdx] = v.extract(ectx);
-                                      }
-                                      Valgrind::CheckDefined(array[ectx.globalDofIdx]);
-                                  },
-                                  [&ectx](const PhaseEntry& v)
-                                  {
-                                      std::for_each(v.data->begin(), v.data->end(),
-                                                    [phaseIdx = 0, &ectx, &v](auto& array) mutable
-                                                    {
-                                                        if (!array.empty()) {
-                                                            array[ectx.globalDofIdx] = v.extract(phaseIdx, ectx);
-                                                            Valgrind::CheckDefined(array[ectx.globalDofIdx]);
-                                                        }
-                                                        ++phaseIdx;
-                                                    });
-                                  },
-                                  [&ectx](const AssignFunc& extract)
-                                  { extract(ectx); },
-                              }, entry.data);
-                          });
+            Extractor::process(ectx, extractors_);
         }
     }
 
@@ -1733,6 +1720,7 @@ private:
     }
 
     const Simulator& simulator_;
+    std::vector<typename Extractor::Entry> extractors_;
 };
 
 } // namespace Opm

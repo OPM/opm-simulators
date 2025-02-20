@@ -448,12 +448,14 @@ private:
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
         OPM_TIMEBLOCK(prepareCellBasedData);
+        damarisOutputModule_->setupExtractors();
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             damarisOutputModule_->processElement(elemCtx);
         }
+        damarisOutputModule_->clearExtractors();
         }
         if(!simulator_.model().linearizer().getFlowsInfo().empty()){
             OPM_TIMEBLOCK(prepareFlowsData);
