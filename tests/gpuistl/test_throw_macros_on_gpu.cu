@@ -29,7 +29,7 @@ namespace {
 // NOTE: We have to split this into a separate function due 
 // to some weirdness of hipcc. Note however that this is 
 // the realistic use case of the macro.
-__device__ void functionThatContainsMacros(bool call) {
+__device__ __host__ void functionThatContainsMacros(bool call) {
     if (call) {
         OPM_THROW(std::logic_error, "Something went wrong");
         OPM_THROW_NOLOG(std::logic_error, "Something went wrong");
