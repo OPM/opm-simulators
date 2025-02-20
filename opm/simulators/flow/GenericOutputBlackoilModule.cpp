@@ -919,14 +919,16 @@ doAllocBuffers(const unsigned bufferSize,
 
     //Warn for any unhandled keyword
     if (log) {
-        for (auto& keyValue: rstKeywords) {
-            if (keyValue.second > 0) {
-                std::string logstring = "Keyword '";
-                logstring.append(keyValue.first);
-                logstring.append("' is unhandled for output to restart file.");
-                OpmLog::warning("Unhandled output keyword", logstring);
-            }
-        }
+        std::for_each(rstKeywords.begin(), rstKeywords.end(),
+                      [](const auto& kwpair)
+                      {
+                          const auto& [kw, value] = kwpair;
+                          if (value > 0) {
+                              OpmLog::warning(
+                                  fmt::format("Keyword '{}' is unhandled for output to restart file.", kw)
+                              );
+                          }
+                      });
     }
 
     failedCellsPb_.clear();
