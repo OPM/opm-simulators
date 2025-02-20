@@ -107,7 +107,7 @@ public:
     Scalar getFlow(const unsigned globalDofIdx,
                    const FaceDir::DirEnum dir,
                    const int comp_idx) const
-    { return flows_[FaceDir::ToIntersectionIndex(dir)][comp_idx][globalDofIdx]; }
+    { return flows_[comp_idx][FaceDir::ToIntersectionIndex(dir)][globalDofIdx]; }
 
 private:
     bool anyFlows_{false};
