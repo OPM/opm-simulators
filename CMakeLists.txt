@@ -545,6 +545,10 @@ if(TARGET fmt::fmt)
   target_link_libraries(MainDispatchDynamic fmt::fmt)
 endif()
 
+if(USE_TRACY_PROFILER AND Tracy_FOUND)
+  target_link_libraries(MainDispatchDynamic Tracy::TracyClient)
+endif()
+
 # Strictly we only depend on the update-version target,
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
@@ -567,6 +571,9 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   endif()
   if(TARGET opmcommon)
       add_dependencies(flow_lib${OBJ} opmcommon)
+  endif()
+  if(USE_TRACY_PROFILER AND Tracy_FOUND)
+    target_link_libraries(flow_lib${OBJ} Tracy::TracyClient)
   endif()
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE
