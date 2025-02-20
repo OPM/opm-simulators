@@ -106,6 +106,16 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
+    template<int idx, class VectorType>
+    Scalar value_or_zero(const VectorType& v)
+    {
+        if constexpr (idx == -1) {
+            return 0.0;
+        } else {
+            return v.empty() ? 0.0 : v[idx];
+        }
+    }
+
 public:
     template <class CollectDataToIORankType>
     OutputBlackOilModule(const Simulator& simulator,
@@ -1586,16 +1596,6 @@ private:
     }
 
     const Simulator& simulator_;
-
-    template<int idx, class VectorType>
-    Scalar value_or_zero(const VectorType& v)
-    {
-        if constexpr (idx == -1) {
-            return 0.0;
-        } else {
-            return v.empty() ? 0.0 : v[idx];
-        }
-    }
 };
 
 } // namespace Opm
