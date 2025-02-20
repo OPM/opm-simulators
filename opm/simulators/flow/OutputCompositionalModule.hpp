@@ -48,6 +48,7 @@
 #include <opm/simulators/flow/CompositionalContainer.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/OutputExtractor.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -80,6 +81,7 @@ class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using BaseType = GenericOutputBlackoilModule<FluidSystem>;
+    using Extractor = detail::Extractor<TypeTag>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
@@ -176,6 +178,68 @@ public:
         BaseType::assignToSolution(sol);
     }
 
+    //! \brief Setup list of active element-level data extractors
+    void setupExtractors()
+    {
+        using Entry = typename Extractor::Entry;
+        using ExtractContext = typename Extractor::Context;
+        using ScalarEntry = typename Extractor::ScalarEntry;
+        using PhaseEntry = typename Extractor::PhaseEntry;
+
+        auto extractors = std::array{
+            Entry{PhaseEntry{&this->saturation_,
+                  [](const unsigned phase, const ExtractContext& ectx)
+                  { return getValue(ectx.fs.saturation(phase)); }}
+            },
+            Entry{ScalarEntry{&this->fluidPressure_,
+                  [](const ExtractContext& ectx)
+                  {
+                      if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                          // Output oil pressure as default
+                          return getValue(ectx.fs.pressure(oilPhaseIdx));
+                      }
+                      else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                          // Output gas if oil is not present
+                          return getValue(ectx.fs.pressure(gasPhaseIdx));
+                      }
+                      else {
+                          // Output water if neither oil nor gas is present
+                          return getValue(ectx.fs.pressure(waterPhaseIdx));
+                      }
+                  }}
+            },
+            Entry{ScalarEntry{&this->temperature_,
+                  [](const ExtractContext& ectx)
+                  { return getValue(ectx.fs.temperature(oilPhaseIdx)); }}
+            },
+            Entry{[&compC = this->compC_](const ExtractContext& ectx)
+                  {
+                      compC.assignMoleFractions(ectx.globalDofIdx,
+                                                [&fs = ectx.fs](const unsigned compIdx)
+                                                { return getValue(fs.moleFraction(compIdx)); });
+
+                      if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                          compC.assignGasFractions(ectx.globalDofIdx,
+                                                   [&fs = ectx.fs](const unsigned compIdx)
+                                                   { return getValue(fs.moleFraction(gasPhaseIdx, compIdx)); });
+                      }
+
+                      if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                          compC.assignOilFractions(ectx.globalDofIdx,
+                                                   [&fs = ectx.fs](const unsigned compIdx)
+                                                   { return getValue(fs.moleFraction(oilPhaseIdx, compIdx)); });
+                      }
+                  }, this->compC_.allocated()
+            },
+        };
+
+        this->extractors_ = Extractor::removeInactive(extractors);
+    }
+
+    //! \brief Clear list of active element-level data extractors
+    void clearExtractors()
+    { this->extractors_.clear(); }
+
     /*!
      * \brief Modify the internal buffers according to the intensive
      *        quanties relevant for an element
@@ -183,60 +247,25 @@ public:
     void processElement(const ElementContext& elemCtx)
     {
         OPM_TIMEBLOCK_LOCAL(processElement);
-        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
+        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
+        }
 
+        typename Extractor::HysteresisParams hysterParams{};
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            // const unsigned pvtRegionIdx = 0; // elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
+            const typename Extractor::Context ectx{
+                elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0),
+                0, // elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex(),
+                elemCtx.simulator().episodeIndex(),
+                fs,
+                intQuants,
+                hysterParams
+            };
 
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (this->saturation_[phaseIdx].empty())
-                    continue;
-
-                this->saturation_[phaseIdx][globalDofIdx] = getValue(fs.saturation(phaseIdx));
-                Valgrind::CheckDefined(this->saturation_[phaseIdx][globalDofIdx]);
-            }
-
-            if (this->compC_.allocated()) {
-                this->compC_.assignMoleFractions(globalDofIdx,
-                                                 [&fs](const unsigned compIdx)
-                                                 { return getValue(fs.moleFraction(compIdx)); });
-
-                if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    this->compC_.assignGasFractions(globalDofIdx,
-                                                    [&fs](const unsigned compIdx)
-                                                    { return getValue(fs.moleFraction(gasPhaseIdx, compIdx)); });
-                }
-
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    this->compC_.assignOilFractions(globalDofIdx,
-                                                    [&fs](const unsigned compIdx)
-                                                    { return getValue(fs.moleFraction(oilPhaseIdx, compIdx)); });
-                }
-            }
-
-            if (!this->fluidPressure_.empty()) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    // Output oil pressure as default
-                    this->fluidPressure_[globalDofIdx] = getValue(fs.pressure(oilPhaseIdx));
-                } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    // Output gas if oil is not present
-                    this->fluidPressure_[globalDofIdx] = getValue(fs.pressure(gasPhaseIdx));
-                } else {
-                    // Output water if neither oil nor gas is present
-                    this->fluidPressure_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx));
-                }
-                Valgrind::CheckDefined(this->fluidPressure_[globalDofIdx]);
-            }
-
-            if (!this->temperature_.empty()) {
-                this->temperature_[globalDofIdx] = getValue(fs.temperature(oilPhaseIdx));
-                Valgrind::CheckDefined(this->temperature_[globalDofIdx]);
-            }
+            Extractor::process(ectx, extractors_);
         }
     }
 
@@ -348,6 +377,7 @@ private:
 
     const Simulator& simulator_;
     CompositionalContainer<FluidSystem> compC_;
+    std::vector<typename Extractor::Entry> extractors_;
 };
 
 } // namespace Opm

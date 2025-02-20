@@ -27,11 +27,16 @@
 #ifndef OPM_OUTPUT_EXTRACTORS_HPP
 #define OPM_OUTPUT_EXTRACTORS_HPP
 
+#include <opm/common/utility/Visitor.hpp>
+
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <algorithm>
 #include <array>
 #include <variant>
 #include <vector>
@@ -104,6 +109,77 @@ struct Extractor
         std::variant<AssignFunc, ScalarEntry, PhaseEntry> data; //!< Extractor
         bool condition = true; //!< Additional condition for enabling extractor
     };
+
+    //! \brief Obtain vector of active extractors from an array of extractors.
+    template<std::size_t size>
+    static std::vector<Entry> removeInactive(std::array<Entry,size>& input)
+    {
+        // Setup active extractors
+        std::vector<Entry> filtered_extractors;
+        filtered_extractors.reserve(input.size());
+        std::copy_if(std::move_iterator(input.begin()),
+                     std::move_iterator(input.end()),
+                     std::back_inserter(filtered_extractors),
+                     [](const Entry& e)
+                     {
+                         if (!e.condition) {
+                            return false;
+                         }
+                         return std::visit(VisitorOverloadSet{
+                                               [](const AssignFunc&)
+                                               {
+                                                   return true;
+                                               },
+                                               [](const ScalarEntry& v)
+                                               {
+                                                   return !v.data->empty();
+                                               },
+                                               [](const PhaseEntry& v)
+                                               {
+                                                   return std::any_of(v.data->begin(),
+                                                                      v.data->end(),
+                                                                      [](const auto& ve)
+                                                                      { return !ve.empty(); });
+                                               }
+                                           }, e.data);
+                     });
+
+        return filtered_extractors;
+    }
+
+    //! \brief Process the given extractor entries
+    //! \param ectx Context for extractors
+    //! \param extractors List of extractors to process
+    static void process(const Context& ectx,
+                        const std::vector<Entry>& extractors)
+    {
+        std::for_each(extractors.begin(), extractors.end(),
+                      [&ectx](const auto& entry)
+                      {
+                          std::visit(VisitorOverloadSet{
+                              [&ectx](const ScalarEntry& v)
+                              {
+                                  auto& array = *v.data;
+                                  array[ectx.globalDofIdx] = v.extract(ectx);
+                                  Valgrind::CheckDefined(array[ectx.globalDofIdx]);
+                              },
+                              [&ectx](const PhaseEntry& v)
+                              {
+                                  std::for_each(v.data->begin(), v.data->end(),
+                                                [phaseIdx = 0, &ectx, &v](auto& array) mutable
+                                                {
+                                                    if (!array.empty()) {
+                                                        array[ectx.globalDofIdx] = v.extract(phaseIdx, ectx);
+                                                        Valgrind::CheckDefined(array[ectx.globalDofIdx]);
+                                                    }
+                                                    ++phaseIdx;
+                                                });
+                              },
+                              [&ectx](const typename Extractor::AssignFunc& extract)
+                              { extract(ectx); },
+                          }, entry.data);
+                      });
+    }
 };
 
 } // namespace Opm::detail
