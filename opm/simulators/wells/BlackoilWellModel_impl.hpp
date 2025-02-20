@@ -1156,7 +1156,21 @@ namespace Opm {
         // after certain number of the iterations, we terminate
         const std::size_t max_iteration = param_.network_max_outer_iterations_;
         std::size_t network_update_iteration = 0;
+        const int episodeIdx = simulator_.episodeIndex();
         while (do_network_update) {
+            if (network_update_iteration >= max_iteration ) {
+                // only output to terminal if we at the last newton iterations where we try to balance the network.
+                if (this->shouldBalanceNetwork(episodeIdx, iterationIdx + 1)) {
+                    local_deferredLogger.debug("maximum of " + std::to_string(max_iteration) + " network iterations has been used, we stop the update \n "
+                                                " and try again after the next newton iteration.");
+                } else {
+                    if (this->terminal_output_) {
+                        local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " network iterations has been used and we stop the update. "
+                                                "The simulator will continue with unconverged network results.");
+                    }
+                }
+                break;
+            }
             if (this->terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
                 local_deferredLogger.info(" we begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
             }
@@ -1164,23 +1178,6 @@ namespace Opm {
             std::tie(do_network_update, well_group_control_changed) =
                     updateWellControlsAndNetworkIteration(relax_network_balance, dt,local_deferredLogger);
             ++network_update_iteration;
-
-            if (network_update_iteration >= max_iteration ) {
-
-                const int episodeIdx = simulator_.episodeIndex();
-                if (this->shouldBalanceNetwork(episodeIdx, iterationIdx + 1)) {
-                    if (this->terminal_output_) {
-                        local_deferredLogger.debug("maximum of " + std::to_string(max_iteration) + " network iterations has been used, we stop the update now \n "
-                                                  " and try again after the next newton iteration.");
-                    }
-                } else {
-                    if (this->terminal_output_) {
-                        local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " network iterations has been used, we stop the update now. "
-                                                "The simulator will continue with unconverged network results to ");
-                    }
-                }
-                break;
-            }
         }
         return well_group_control_changed;
     }
@@ -1196,7 +1193,7 @@ namespace Opm {
                                           DeferredLogger& local_deferredLogger)
     {
         OPM_TIMEFUNCTION();
-        auto [well_group_control_changed, more_network_update] =
+        auto [well_group_control_changed, inner_network_not_balanced] =
                 updateWellControls(local_deferredLogger,
                                    relax_network_tolerance);
 
@@ -1237,7 +1234,11 @@ namespace Opm {
                                                        pot,
                                                        local_deferredLogger);
         }
-
+        // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
+        // the inner iterations are did not converge
+        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
+        bool more_network_update = this->shouldBalanceNetwork(reportStepIdx, iterationIdx) &&
+                    (inner_network_not_balanced || well_group_control_changed || alq_updated);
         return {more_network_update, well_group_control_changed};
     }
 
