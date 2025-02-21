@@ -32,6 +32,9 @@
 
 #include <opm/common/TimingMacros.hpp> // OPM_TIMEBLOCK
 #include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/grid/utility/ElementChunks.hpp>
+
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
@@ -42,6 +45,7 @@
 
 #include <opm/models/blackoil/blackoilproperties.hh> // Properties::EnableMech, EnableTemperature, EnableSolvent
 #include <opm/models/common/multiphasebaseproperties.hh> // Properties::FluidSystem
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
@@ -717,8 +721,6 @@ private:
                          isSubStep && !Parameters::Get<Parameters::EnableWriteAllSolutions>(),
                          log, /*isRestart*/ false);
 
-        ElementContext elemCtx(simulator_);
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         {
@@ -726,18 +728,31 @@ private:
 
             this->outputModule_->prepareDensityAccumulation();
             this->outputModule_->setupExtractors();
-            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-                this->outputModule_->processElement(elemCtx);
-                this->outputModule_->processElementBlockData(elemCtx);
+            const int num_threads = ThreadManager::maxThreads();
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+            for (const auto& chunk : ElementChunks(gridView,
+                                                   Dune::Partitions::interior,
+                                                   num_threads))
+            {
+                ElementContext elemCtx(simulator_);
+                for (const auto& elem : chunk) {
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                    this->outputModule_->processElement(elemCtx);
+                    this->outputModule_->processElementBlockData(elemCtx);
+                }
             }
             this->outputModule_->clearExtractors();
 
             this->outputModule_->accumulateDensityParallel();
         }
 
+        ElementContext elemCtx(simulator_);
         {
             OPM_TIMEBLOCK(prepareFluidInPlace);
 
