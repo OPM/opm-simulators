@@ -65,6 +65,8 @@ namespace Opm
                                    const int iterations,
                                    const RelativeChangeInterface& /* relativeChange */,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
+        
+        bool timeStepAccepted(const double error) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -117,6 +119,8 @@ namespace Opm
                                    const RelativeChangeInterface& relativeChange,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
+        bool timeStepAccepted(const double error) const override { return true; }
+
         template<class Serializer>
         void serializeOp(Serializer& serializer)
         {
@@ -166,6 +170,8 @@ namespace Opm
                                    const RelativeChangeInterface& relativeChange,
                                    const AdaptiveSimulatorTimer& /* substepTimer */ ) const override;
 
+        bool timeStepAccepted(const double error) const override { return true; }
+
         template<class Serializer>
         void serializeOp(Serializer& serializer)
         {
@@ -205,6 +211,8 @@ namespace Opm
                                    const int /*iterations */,
                                    const RelativeChangeInterface& relativeChange,
                                    const AdaptiveSimulatorTimer& substepTimer) const override;
+
+        bool timeStepAccepted(const double error) const override;
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
@@ -254,6 +262,8 @@ namespace Opm
                                    const int /* iterations */,
                                    const RelativeChangeInterface& /*relativeChange */,
                                    const AdaptiveSimulatorTimer& substepTimer) const override;
+
+        bool timeStepAccepted(const double error) const override { return true; }
 
         template<class Serializer>
         void serializeOp(Serializer& serializer)
