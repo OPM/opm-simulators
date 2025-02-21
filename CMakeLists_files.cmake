@@ -566,6 +566,7 @@ list (APPEND TEST_DATA_FILES
   tests/options_flexiblesolver.json
   tests/options_flexiblesolver_simple.json
   tests/GLIFT1.DATA
+  tests/RC-01_MAST_PRED.DATA
   tests/include/flowl_b_vfp.ecl
   tests/include/flowl_c_vfp.ecl
   tests/include/permx_model5.grdecl
@@ -575,6 +576,13 @@ list (APPEND TEST_DATA_FILES
   tests/include/summary.inc
   tests/include/test1_20x30x10.grdecl
   tests/include/well_vfp.ecl
+  tests/include/b1_vfp_flowline.inc
+  tests/include/d1_vfp_flowline.inc
+  tests/include/edit_nnc.inc
+  tests/include/flowline_e1_vfp.inc
+  tests/include/PVT-WET-GAS.INC
+  tests/include/scal_mod2.inc
+  tests/include/summary_rc.inc
   tests/test10.partition
   tests/parametersystem.ini
   tests/data/co2injection.dgf
@@ -1234,6 +1242,9 @@ if(MPI_FOUND)
     opm/simulators/flow/ReservoirCouplingMaster.hpp
     opm/simulators/flow/ReservoirCouplingSlave.hpp
     opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp
+  )
+  list (APPEND TEST_SOURCE_FILES
+    tests/rescoup/test_chopstep.cpp
   )
 endif()
 if(HYPRE_FOUND)
