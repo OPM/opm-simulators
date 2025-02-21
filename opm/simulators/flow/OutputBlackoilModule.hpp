@@ -111,7 +111,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     template<int idx, class VectorType>
-    Scalar value_or_zero(const VectorType& v)
+    static Scalar value_or_zero(const VectorType& v)
     {
         if constexpr (idx == -1) {
             return 0.0;
@@ -262,50 +262,6 @@ public:
             }
 
             Extractor::process(ectx, extractors_);
-        }
-    }
-
-    void processElementFlows(const ElementContext& elemCtx)
-    {
-        OPM_TIMEBLOCK_LOCAL(processElementBlockData);
-        if (!std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>)
-            return;
-
-        const auto& problem = elemCtx.simulator().problem();
-        constexpr auto gas_idx = Indices::gasEnabled ?
-            conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx) : -1;
-        constexpr auto oil_idx = Indices::oilEnabled ?
-            conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx) : -1;
-        constexpr auto water_idx = Indices::waterEnabled ?
-            conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx) : -1;
-        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            if (!problem.model().linearizer().getFlowsInfo().empty()) {
-                const auto& flowsInf = problem.model().linearizer().getFlowsInfo();
-                auto flowsInfos = flowsInf[globalDofIdx];
-                for (const auto& flowsInfo : flowsInfos) {
-                    this->flowsC_.assignFlows(globalDofIdx,
-                                              flowsInfo.faceId,
-                                              flowsInfo.nncId,
-                                              value_or_zero<gas_idx>(flowsInfo.flow),
-                                              value_or_zero<oil_idx>(flowsInfo.flow),
-                                              value_or_zero<water_idx>(flowsInfo.flow));
-                }
-            }
-
-            // flores
-            if (!problem.model().linearizer().getFloresInfo().empty()) {
-                const auto& floresInf = problem.model().linearizer().getFloresInfo();
-                auto floresInfos = floresInf[globalDofIdx];
-                for (const auto& floresInfo : floresInfos) {
-                    this->flowsC_.assignFlores(globalDofIdx,
-                                               floresInfo.faceId,
-                                               floresInfo.nncId,
-                                               value_or_zero<gas_idx>(floresInfo.flow),
-                                               value_or_zero<oil_idx>(floresInfo.flow),
-                                               value_or_zero<water_idx>(floresInfo.flow));
-                }
-            }
         }
     }
 
@@ -1657,6 +1613,46 @@ private:
                                                  [gIdx = ectx.globalDofIdx, &tM](const unsigned tracerIdx)
                                                  { return tM.solTracerConcentration(tracerIdx, gIdx); });
                     }
+            },
+            Entry{[&flowsInf = this->simulator_.problem().model().linearizer().getFlowsInfo(),
+                   &flowsC = this->flowsC_](const Context& ectx)
+                  {
+                      constexpr auto gas_idx = Indices::gasEnabled ?
+                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx) : -1;
+                      constexpr auto oil_idx = Indices::oilEnabled ?
+                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx) : -1;
+                      constexpr auto water_idx = Indices::waterEnabled ?
+                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx) : -1;
+                      const auto& flowsInfos = flowsInf[ectx.globalDofIdx];
+                      for (const auto& flowsInfo : flowsInfos) {
+                          flowsC.assignFlows(ectx.globalDofIdx,
+                                             flowsInfo.faceId,
+                                             flowsInfo.nncId,
+                                             value_or_zero<gas_idx>(flowsInfo.flow),
+                                             value_or_zero<oil_idx>(flowsInfo.flow),
+                                             value_or_zero<water_idx>(flowsInfo.flow));
+                        }
+                 }, !this->simulator_.problem().model().linearizer().getFlowsInfo().empty()
+            },
+            Entry{[&floresInf = this->simulator_.problem().model().linearizer().getFloresInfo(),
+                   &flowsC = this->flowsC_](const Context& ectx)
+                  {
+                      constexpr auto gas_idx = Indices::gasEnabled ?
+                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx) : -1;
+                      constexpr auto oil_idx = Indices::oilEnabled ?
+                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx) : -1;
+                      constexpr auto water_idx = Indices::waterEnabled ?
+                          conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx) : -1;
+                      const auto& floresInfos = floresInf[ectx.globalDofIdx];
+                      for (const auto& floresInfo : floresInfos) {
+                          flowsC.assignFlores(ectx.globalDofIdx,
+                                              floresInfo.faceId,
+                                              floresInfo.nncId,
+                                              value_or_zero<gas_idx>(floresInfo.flow),
+                                              value_or_zero<oil_idx>(floresInfo.flow),
+                                              value_or_zero<water_idx>(floresInfo.flow));
+                      }
+                 }, !this->simulator_.problem().model().linearizer().getFloresInfo().empty()
             },
             // hack to make the intial output of rs and rv Ecl compatible.
             // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step

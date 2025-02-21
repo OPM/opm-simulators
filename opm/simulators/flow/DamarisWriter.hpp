@@ -457,14 +457,6 @@ private:
         }
         damarisOutputModule_->clearExtractors();
         }
-        if(!simulator_.model().linearizer().getFlowsInfo().empty()){
-            OPM_TIMEBLOCK(prepareFlowsData);
-            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                damarisOutputModule_->processElementFlows(elemCtx);
-            }
-        }
         {
         OPM_TIMEBLOCK(prepareBlockData);
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
