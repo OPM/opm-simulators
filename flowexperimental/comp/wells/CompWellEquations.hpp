@@ -83,6 +83,10 @@ public:
 
     void invert();
 
+    void apply(BVector& r) const;
+
+    void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
+
 private:
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
@@ -94,6 +98,10 @@ private:
 
     // residuals of the well equations
     BVectorWell resWell_;
+
+    // several vector used in the matrix calculation
+    mutable BVectorWell Bx_;
+    mutable BVectorWell invDrw_;
 
 
     // Store the global index of the well connection cells

@@ -66,6 +66,10 @@ init(const int num_conn,  const std::vector<std::size_t>& cells)
 
     resWell_.resize(1);
 
+    Bx_.resize(duneB_.N());
+
+    invDrw_.resize(duneD_.N());
+
     this->cells_ = cells;
     // some others in the future
 }
@@ -105,6 +109,33 @@ invert()
         }
     }
 }
+
+
+template <typename Scalar, int numWellEq, int numEq>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
+apply(BVector& r) const
+{
+    assert(invDrw_.size() == invDuneD_.N());
+
+    // invDrw_ = invDuneD_ * resWell_
+    invDuneD_.mv(resWell_, invDrw_);
+    // r = r - duneC_^T * invDrw_
+    duneC_.mmtv(invDrw_, r);
+}
+
+template <typename Scalar, int numWellEq, int numEq>
+void
+CompWellEquations<Scalar, numWellEq, numEq>::
+recoverSolutionWell(const BVector& x, BVectorWell& xw) const
+{
+    BVectorWell resWell = resWell_;
+    // resWell = resWell - B * x
+    duneB_.mmv(x, resWell);
+    // xw = D^-1 * resWell
+    invDuneD_.mv(resWell, xw);
+}
+
 
 
 } // end of namespace Opm
