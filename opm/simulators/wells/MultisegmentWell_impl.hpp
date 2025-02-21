@@ -1560,6 +1560,8 @@ namespace Opm
                             sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
                             deferred_logger.debug(sstr.str());
                             return converged;
+                        } else {
+                            return false;
                         }
                     }
                 }
@@ -1741,7 +1743,7 @@ namespace Opm
                     std::string message;
                     if (relaxation_factor == min_relaxation_factor) {
                         ++stagnate_count;
-                        if (false) { // this disables the usage of the relaxed tolerance
+                        if (stagnate_count == 6) { // this disables the usage of the relaxed tolerance
                             fmt::format_to(std::back_inserter(message), " Well {} observes severe stagnation and/or oscillation."
                                                                         " We relax the tolerance and check for convergence. \n", this->name());
                             const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_,
@@ -1751,6 +1753,8 @@ namespace Opm
                                 fmt::format_to(std::back_inserter(message), " Well {}  manages to get converged with relaxed tolerances in {} inner iterations", this->name(), it);
                                 deferred_logger.debug(message);
                                 return converged;
+                            } else {
+                                return false;
                             }
                         }
                     }
