@@ -33,21 +33,23 @@
 
 BOOST_AUTO_TEST_CASE(TestMakeView)
 {
-    // test that we can create buffers and make views of the buffers using the pointer constructor
+    // check creation of buffers and views for mutable buffers
     auto buf = std::vector<int>({1, 2, 3, 4, 5, 6});
-    const auto gpubuf = ::Opm::gpuistl::GpuBuffer<int>(buf);
-    auto gpuview = ::Opm::gpuistl::GpuView<int>(buf.data(), buf.size());
-    bool gpuBufCreatedView = std::is_same<::Opm::gpuistl::GpuView<int>, decltype(gpuview)>::value;
-
+    auto gpubuf = ::Opm::gpuistl::GpuBuffer<int>(buf);
+    auto gpuview = ::Opm::gpuistl::make_view(gpubuf);
+    bool gpuBufCreatedView = std::is_same_v<::Opm::gpuistl::GpuView<int>, decltype(gpuview)>;
     BOOST_CHECK(gpuBufCreatedView);
 
-    // test that we can make views of buffers by using the GpuBuffer constructor
-    auto gpuview2 = ::Opm::gpuistl::make_view(gpubuf);
-    bool gpuBufCreatedView2 = std::is_same<::Opm::gpuistl::GpuView<const int>, decltype(gpuview2)>::value;
+    auto gpubufOnCpu = gpubuf.asStdVector();
+    BOOST_CHECK_EQUAL_COLLECTIONS(gpubufOnCpu.begin(), gpubufOnCpu.end(), buf.begin(), buf.end());
 
+    // check creation of buffers and views for const buffers
+    const auto buf2 = std::vector<int>({2, 3, 4, 5, 6});
+    const auto gpubuf2 = ::Opm::gpuistl::GpuBuffer<int>(buf2);
+    auto gpuview2 = ::Opm::gpuistl::make_view(gpubuf2);
+    bool gpuBufCreatedView2 = std::is_same_v<::Opm::gpuistl::GpuView<const int>, decltype(gpuview2)>;
     BOOST_CHECK(gpuBufCreatedView2);
 
-    // check that we retrieve the same values when pulling the data back to the cpu as a vector
-    auto gpuBufOnCpu = gpubuf.asStdVector();
-    BOOST_CHECK_EQUAL_COLLECTIONS(gpuBufOnCpu.begin(), gpuBufOnCpu.end(), buf.begin(), buf.end());
+    auto gpubufOnCpu2 = gpubuf2.asStdVector();
+    BOOST_CHECK_EQUAL_COLLECTIONS(gpubufOnCpu2.begin(), gpubufOnCpu2.end(), buf2.begin(), buf2.end());
 }
