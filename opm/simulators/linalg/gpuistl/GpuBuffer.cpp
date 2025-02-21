@@ -37,9 +37,6 @@ template <class T>
 GpuBuffer<T>::GpuBuffer(const size_t numberOfElements)
     : m_numberOfElements(numberOfElements)
 {
-    if (numberOfElements < 1) {
-        OPM_THROW(std::invalid_argument, "Setting a GpuBuffer size to a non-positive number is not allowed");
-    }
     OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * m_numberOfElements));
 }
 
@@ -56,8 +53,11 @@ template <class T>
 GpuBuffer<T>::GpuBuffer(const GpuBuffer<T>& other)
     : GpuBuffer(other.m_numberOfElements)
 {
-    assertHasElements();
+    // assertHasElements();
     assertSameSize(other);
+    if (m_numberOfElements == 0) {
+        return;
+    }
     OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
                                   other.m_dataOnDevice,
                                   m_numberOfElements * sizeof(T),
@@ -199,6 +199,12 @@ GpuBuffer<T>::copyToHost(std::vector<T>& data) const
 template class GpuBuffer<double>;
 template class GpuBuffer<float>;
 template class GpuBuffer<int>;
+template class GpuBuffer<std::array<double, 3>>;
+template class GpuBuffer<std::array<float, 3>>;
+template class GpuBuffer<std::array<int, 3>>;
+template class GpuBuffer<std::array<double, 9>>;
+template class GpuBuffer<std::array<float, 9>>;
+template class GpuBuffer<std::array<int, 9>>;
 
 template <class T>
 GpuView<T> make_view(GpuBuffer<T>& buf) {
