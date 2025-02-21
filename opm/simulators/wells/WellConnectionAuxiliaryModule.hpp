@@ -65,34 +65,34 @@ public:
             return;
         }
 
-        // Create cartesian to compressed mapping
-        const auto& schedule_wells = model_.schedule().getWellsatEnd();
-        auto possibleFutureConnections = model_.schedule().getPossibleFutureConnections();
-
-#if HAVE_MPI
-        // Communicate Map to other processes, since it is only available on rank 0
-        Parallel::MpiSerializer ser(lin_comm_);
-        ser.broadcast(possibleFutureConnections);
-#endif
-        // initialize the additional cell connections introduced by wells.
-        for (const auto& well : schedule_wells)
-        {
-            std::vector<int> wellCells = model_.getCellsForConnections(well);
-            // Now add the cells of the possible future connections
-            const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
-            if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
-                for (const auto& global_index : possibleFutureConnectionSetIt->second) {
-                    int compressed_idx = model_.compressedIndexForInterior(global_index);
-                    if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
-                        wellCells.push_back(compressed_idx);
-                    }
-                }
-            }
-            for (int cellIdx : wellCells) {
-                neighbors[cellIdx].insert(wellCells.begin(),
-                                          wellCells.end());
-            }
-        }
+//         // Create cartesian to compressed mapping
+//         const auto& schedule_wells = model_.schedule().getWellsatEnd();
+//         auto possibleFutureConnections = model_.schedule().getPossibleFutureConnections();
+//
+// #if HAVE_MPI
+//         // Communicate Map to other processes, since it is only available on rank 0
+//         Parallel::MpiSerializer ser(lin_comm_);
+//         ser.broadcast(possibleFutureConnections);
+// #endif
+//         // initialize the additional cell connections introduced by wells.
+//         for (const auto& well : schedule_wells)
+//         {
+//             std::vector<int> wellCells = model_.getCellsForConnections(well);
+//             // Now add the cells of the possible future connections
+//             const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
+//             if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
+//                 for (const auto& global_index : possibleFutureConnectionSetIt->second) {
+//                     int compressed_idx = model_.compressedIndexForInterior(global_index);
+//                     if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+//                         wellCells.push_back(compressed_idx);
+//                     }
+//                 }
+//             }
+//             for (int cellIdx : wellCells) {
+//                 neighbors[cellIdx].insert(wellCells.begin(),
+//                                           wellCells.end());
+//             }
+//         }
     }
 
     void applyInitial() override
@@ -153,9 +153,9 @@ private:
                              GlobalEqVector& res,
                              const WellType& well)
     {
-        if (model_.addMatrixContributions()) {
-            well->addWellContributions(jacobian);
-        }
+        // if (model_.addMatrixContributions()) {
+            // well->addWellContributions(jacobian);
+        // }
 
         const auto& cells = well->cells();
         linearize_res_local_.resize(cells.size());

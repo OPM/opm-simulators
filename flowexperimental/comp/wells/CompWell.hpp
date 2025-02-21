@@ -50,6 +50,11 @@ public:
     using EvalWell = typename PrimaryVariables::EvalWell;
     using BVectorWell = typename WellEquations::BVectorWell;
 
+    using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
+    using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
+    // using Eval = typename Base::Eval;
+    using BVector = Dune::BlockVector<VectorBlockType>;
+
     // TODO: this can be a rate converter role later
     // currently, it has the surface densities for each phase and volume fractions for each phase
     // it is part of the secondary variables used in the assembling the well equations
@@ -104,6 +109,11 @@ public:
     void solveEqAndUpdateWellState(const Simulator& simulator,
                                    SingleCompWellState<Scalar>& well_state);
 
+    void apply(BVector& r) const override;
+
+    void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
+                                               const BVector& x,
+                                               SingleCompWellState<Scalar>& well_state);
 
 private:
 
@@ -145,6 +155,10 @@ private:
 
     // with passing in the SurfaceCondition, we should be able to do this in the primary variable class
     void updateWellState(SingleCompWellState<Scalar>& well_state) const;
+
+    void updateWellState(const Simulator& simulator,
+                         const BVectorWell& dwells,
+                         SingleCompWellState<Scalar>& well_state);
 };
 
 } // end of namespace Opm

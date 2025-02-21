@@ -39,8 +39,14 @@ class CompWellInterface
 public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>; // FlashRateVector at the moment
+
+    using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
+    using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
+    // using Eval = typename Base::Eval;
+    using BVector = Dune::BlockVector<VectorBlockType>;
 
     CompWellInterface(const Well& well,
                       const int index_of_well,
@@ -64,6 +70,16 @@ public:
                                SingleCompWellState<Scalar>& well_state) = 0;
 
     void addCellRates(RateVector& rates, unsigned cellIdx) const;
+
+    const std::vector<std::size_t>& cells() const { return well_cells_; }
+
+    virtual void apply(BVector& r) const = 0;
+
+    /// using the solution x to recover the solution xw for wells and applying
+    /// xw to update Well State
+    virtual void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
+                                                       const BVector& x,
+                                                       SingleCompWellState<Scalar>& well_state) = 0;
 
 protected:
 
