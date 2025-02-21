@@ -61,9 +61,8 @@ protected:
     WellSegmentCompPressureDrop compPressureDrop() const;
 
     /// Detect oscillation or stagnation based on the residual measure history
-    void detectOscillations(const std::vector<Scalar>& measure_history,
-                            bool& oscillate,
-                            bool& stagnate) const;
+    bool update_relaxation_factor(const std::vector<Scalar>& measure_history, Scalar& relaxation_factor, bool& regularize, DeferredLogger& deferred_logger) const;    
+    bool repeatedStagnation(const std::vector<Scalar>& measure_history, bool& regularize, DeferredLogger& deferred_logger) const;
 
     bool accelerationalPressureLossConsidered() const;
     bool frictionalPressureLossConsidered() const;
