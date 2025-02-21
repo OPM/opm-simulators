@@ -268,7 +268,7 @@ template<class Scalar> class WellContributions;
             void prepareTimeStep(DeferredLogger& deferred_logger);
 
             std::pair<bool, bool>
-            updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
+            updateWellControls(DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -396,9 +396,6 @@ template<class Scalar> class WellContributions;
 
             SimulatorReportSingle last_report_{};
 
-            // Pre-step network solve at static reservoir conditions (group and well states might be updated)
-            void doPreStepNetworkRebalance(DeferredLogger& deferred_logger);
-
             std::vector<Scalar> B_avg_{};
 
             const EquilGrid& equilGrid() const
@@ -416,13 +413,11 @@ template<class Scalar> class WellContributions;
             // the function handles one iteration of updating well controls and network pressures.
             // it is possible to decouple the update of well controls and network pressures further.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
-            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
-                                                                        const bool relax_network_tolerance,
+            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const bool relax_network_tolerance,
                                                                         const double dt,
                                                                         DeferredLogger& local_deferredLogger);
 
-            bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
-                                              const double dt,
+            bool updateWellControlsAndNetwork(const double dt,
                                               DeferredLogger& local_deferredLogger);
             
             double computeWellGroupTarget(DeferredLogger& local_deferredLogger);
