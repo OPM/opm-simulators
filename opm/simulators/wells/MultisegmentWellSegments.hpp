@@ -23,6 +23,7 @@
 #define OPM_MULTISEGMENTWELL_SEGMENTS_HEADER_INCLUDED
 
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <cstddef>
 #include <vector>
@@ -49,7 +50,7 @@ class MultisegmentWellSegments
 
 public:
     MultisegmentWellSegments(const int numSegments,
-                             const int num_perfs_whole_mswell,
+                             const ParallelWellInfo<Scalar>& parallel_well_info,
                              WellInterfaceGeneric<Scalar>& well);
 
     void computeFluidProperties(const EvalWell& temperature,
@@ -65,8 +66,8 @@ public:
                                   const int seg_side) const;
 
     //! Pressure difference between segment and perforation.
-    Scalar getPressureDiffSegPerf(const int seg,
-                                  const int perf) const;
+    Scalar getPressureDiffSegLocalPerf(const int seg,
+                                       const int local_perf_index) const;
 
     EvalWell getSurfaceVolume(const EvalWell& temperature,
                               const EvalWell& saltConcentration,
@@ -126,9 +127,9 @@ public:
         return densities_[seg];
     }
 
-    Scalar perforation_depth_diff(const int perf) const
+    Scalar local_perforation_depth_diff(const int local_perf_index) const
     {
-        return perforation_depth_diffs_[perf];
+        return local_perforation_depth_diffs_[local_perf_index];
     }
 
     void copyPhaseDensities(const PhaseUsage& pu,
@@ -152,7 +153,7 @@ private:
     // This vector contains the depth differences for *all* perforations across all processes
     // that this well lies on, its size is well.wellEcl().getConnections().size(),
     // also it works with *global* perforation indices!
-    std::vector<Scalar> perforation_depth_diffs_;
+    std::vector<Scalar> local_perforation_depth_diffs_;
 
     // the inlet segments for each segment. It is for convenience and efficiency reason
     std::vector<std::vector<int>> inlets_;

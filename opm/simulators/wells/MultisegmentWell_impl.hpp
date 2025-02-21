@@ -135,8 +135,8 @@ namespace Opm
         this->initMatrixAndVectors();
 
         // calculate the depth difference between the perforations and the perforated grid block
-        for (int local_perf_index = 0; local_perf_index < this->number_of_perforations_; ++local_perf_index) {
-            // This variable loops over the number_of_perforations_ of *this* process, hence it is *local*.
+        for (int local_perf_index = 0; local_perf_index < this->number_of_local_perforations_; ++local_perf_index) {
+            // This variable loops over the number_of_local_perforations_ of *this* process, hence it is *local*.
             const int cell_idx = this->well_cells_[local_perf_index];
             // Here we need to access the perf_depth_ at the global perforation index though!
             this->cell_perforation_depth_diffs_[local_perf_index] = depth_arg[cell_idx] - this->perf_depth_[this->pw_info_.localToGlobal(local_perf_index)];
@@ -605,12 +605,15 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computePerfCellPressDiffs(const Simulator& simulator)
     {
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        // We call this function on every process for the number_of_local_perforations_ on that process
+        // Each process updates the pressure for his perforations
+        for (int local_perf_index = 0; local_perf_index < this->number_of_local_perforations_; ++local_perf_index) {
+            // This variable loops over the number_of_local_perforations_ of *this* process, hence it is *local*.
 
             std::vector<Scalar> kr(this->number_of_phases_, 0.0);
             std::vector<Scalar> density(this->number_of_phases_, 0.0);
 
-            const int cell_idx = this->well_cells_[perf];
+            const int cell_idx = this->well_cells_[local_perf_index];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             const auto& fs = intQuants.fluidState();
 
@@ -647,7 +650,7 @@ namespace Opm
             }
             average_density /= sum_kr;
 
-            this->cell_perforation_pressure_diffs_[perf] = this->gravity_ * average_density * this->cell_perforation_depth_diffs_[perf];
+            this->cell_perforation_pressure_diffs_[local_perf_index] = this->gravity_ * average_density * this->cell_perforation_depth_diffs_[local_perf_index];
         }
     }
 
@@ -736,9 +739,9 @@ namespace Opm
                             WellState<Scalar>& well_state,
                             DeferredLogger& deferred_logger) const
     {
-        auto fluidState = [&simulator, this](const int perf)
+        auto fluidState = [&simulator, this](const int local_perf_index)
         {
-            const auto cell_idx = this->well_cells_[perf];
+            const auto cell_idx = this->well_cells_[local_perf_index];
             return simulator.model()
                .intensiveQuantities(cell_idx, /*timeIdx=*/ 0).fluidState();
         };
@@ -776,7 +779,7 @@ namespace Opm
             // The subsetPerfID loops over 0 .. this->perf_data_->size().
             // *(this->perf_data_) contains info about the local processes only,
             // hence subsetPerfID is a local perf id and we can call getMobility
-            // directly with that.
+            // as well as fluidState directly with that.
             getMobility(simulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
@@ -802,7 +805,7 @@ namespace Opm
             comm.sum(wellPI, np);
         }
 
-        assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
+        assert (static_cast<int>(subsetPerfID) == this->number_of_local_perforations_ &&
                 "Internal logic error in processing connections for PI/II");
     }
 
@@ -887,12 +890,12 @@ namespace Opm
 
         // pressure difference between the segment and the perforation
         const Value perf_seg_press_diff = this->gravity() * segment_density *
-                                          this->segments_.perforation_depth_diff(perf);
+                                          this->segments_.local_perforation_depth_diff(local_perf_index);
         // pressure difference between the perforation and the grid cell
         const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
 
         // perforation pressure is the wellbore pressure corrected to perforation depth
-        // (positive sign due to convention in segments_.perforation_depth_diff() )
+        // (positive sign due to convention in segments_.local_perforation_depth_diff() )
         perf_press = segment_pressure + perf_seg_press_diff;
 
         // cell pressure corrected to perforation depth
@@ -1100,13 +1103,23 @@ namespace Opm
         // TODO: later to investigate how to handle the pvt region
         int pvt_region_index;
         {
-            // using the first perforated cell
+            // using the first perforated cell, so we look for global index 0
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
-            temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
-            saltConcentration = this->extendEval(fs.saltConcentration());
+
+            // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+            // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+            auto fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
+            temperature.setValue(fsTemperature);
+
+            auto fsSaltConcentration = fs.saltConcentration();
+            fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
+            saltConcentration = this->extendEval(fsSaltConcentration);
+
             pvt_region_index = fs.pvtRegionIndex();
+            pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
         }
 
         this->segments_.computeFluidProperties(temperature,
@@ -1146,7 +1159,7 @@ namespace Opm
             // we can change this depending on what we want
             const Scalar segment_pres = this->primary_variables_.getSegmentPressure(seg).value();
             const Scalar perf_seg_press_diff = this->gravity() * this->segments_.density(seg).value()
-                                                               * this->segments_.perforation_depth_diff(local_perf_index);
+                                                               * this->segments_.local_perforation_depth_diff(local_perf_index);
             const Scalar perf_press = segment_pres + perf_seg_press_diff;
             const Scalar multiplier = this->getInjMult(local_perf_index, segment_pres, perf_press, deferred_logger);
             for (std::size_t i = 0; i < mob.size(); ++i) {
@@ -1263,7 +1276,7 @@ namespace Opm
                 const auto& int_quantities = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 const auto& fs = int_quantities.fluidState();
                 // pressure difference between the segment and the perforation
-                const Scalar perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
+                const Scalar perf_seg_press_diff = this->segments_.getPressureDiffSegLocalPerf(seg, local_perf_index);
                 // pressure difference between the perforation and the grid cell
                 const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
                 const Scalar pressure_cell = this->getPerfCellPressure(fs).value();
@@ -1993,7 +2006,7 @@ namespace Opm
                 const auto& fs = intQuants.fluidState();
 
                 // pressure difference between the segment and the perforation
-                const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
+                const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegLocalPerf(seg, local_perf_index);
                 // pressure difference between the perforation and the grid cell
                 const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
 
@@ -2046,14 +2059,24 @@ namespace Opm
         EvalWell saltConcentration;
         int pvt_region_index;
         {
-            // using the pvt region of first perforated cell
+            // using the pvt region of first perforated cell, so we look for global index 0
             // TODO: it should be a member of the WellInterface, initialized properly
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
-            temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
-            saltConcentration = this->extendEval(fs.saltConcentration());
+
+            // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+            // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+            auto fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
+            temperature.setValue(fsTemperature);
+
+            auto fsSaltConcentration = fs.saltConcentration();
+            fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
+            saltConcentration = this->extendEval(fsSaltConcentration);
+
             pvt_region_index = fs.pvtRegionIndex();
+            pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
         }
 
         return this->segments_.getSurfaceVolume(temperature,
