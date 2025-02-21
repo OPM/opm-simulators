@@ -224,6 +224,25 @@ computeTotalRatesForDof(RateVector& rate,
     }
 }
 
+template<typename TypeTag>
+void
+CompositionalWellModel<TypeTag>::
+recoverWellSolutionAndUpdateWellState(const BVector& x)
+{
+    {
+        for (const auto& well : well_container_) {
+            const auto& cells = well->cells();
+            x_local_.resize(cells.size());
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                x_local_[i] = x[cells[i]];
+            }
+            auto& ws = this->comp_well_states_[well->name()];
+            well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_, ws);
+        }
+    }
+}
+
 //template <typename TypeTag>
 //void
 //CompositionalWellModel<TypeTag>::
