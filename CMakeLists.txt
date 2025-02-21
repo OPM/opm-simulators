@@ -753,6 +753,7 @@ if(CUDA_FOUND)
                        gpu_smart_pointers
                        is_gpu_pointer
                        throw_macros_on_gpu
+                       gpuBlackOilFluidSystem
                        PROPERTIES LABELS ${gpu_label})
 endif()
 

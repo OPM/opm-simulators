@@ -34,6 +34,33 @@
 namespace Opm::gpuistl
 {
 
+template<class ViewType>
+class ViewPointer {
+public:
+    __host__ __device__ ViewPointer (ViewType view) : view_(view) {}
+
+    __host__ __device__ ViewPointer() : view_() {}
+
+    __host__ __device__ ViewType& operator*(){
+        return view_;
+    }
+
+    __host__ __device__ const ViewType& operator*() const {
+        return view_;
+    }
+
+    __host__ __device__ ViewType* operator->(){
+        return &view_;
+    }
+
+    __host__ __device__ const ViewType* operator->() const {
+        return &view_;
+    }
+
+private:
+    ViewType view_;
+};
+
 /**
  * @brief The GpuView class is provides a view of some data allocated on the GPU
  * Essenstially is only stores a pointer and a size.
@@ -106,6 +133,11 @@ public:
      * @brief ~GpuView calls cudaFree
      */
     ~GpuView() = default;
+
+    // make a copy of this view that behaves like a pointer
+    ViewPointer<GpuView<T>> pointer(){
+        return ViewPointer<GpuView<T>>(*this);
+    }
 
     /**
      * @return the raw pointer to the GPU data
