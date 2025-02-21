@@ -109,6 +109,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     monitor_params_.cutoff_ = Parameters::Get<Parameters::ConvergenceMonitoringCutOff>();
     monitor_params_.decay_factor_ = Parameters::Get<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>();
 
+    relative_change_version_ = Parameters::Get<Parameters::RelativeChangeVersion>();
+
     nupcol_group_rate_tolerance_ = Parameters::Get<Parameters::NupcolGroupRateTolerance<Scalar>>();
 }
 
@@ -270,6 +272,12 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Cut off limit for convergence monitoring");
     Parameters::Register<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>
         ("Decay factor for convergence monitoring");
+    
+    Parameters::Register<Parameters::RelativeChangeVersion>
+        ("Version of relative change used in time step control. Allowed values are "
+         "'pressure', "
+         "'saturation', "
+         "'pressure+saturation'.");
 
     Parameters::Register<Parameters::NupcolGroupRateTolerance<Scalar>>
         ("Tolerance for acceptable changes in VREP/RAIN group rates");
