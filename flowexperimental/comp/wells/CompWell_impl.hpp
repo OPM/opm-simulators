@@ -518,12 +518,44 @@ solveEqAndUpdateWellState(const Simulator& simulator,
    this->updateWellState(well_state);
 }
 
+template<typename TypeTag>
+void
+CompWell<TypeTag>::
+apply(BVector& r) const
+{
+    this->well_equations_.apply(r);
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
+                                      const BVector& x,
+                                      SingleCompWellState<Scalar>& well_state)
+{
+    BVectorWell xw(1);
+
+    this->well_equations_.recoverSolutionWell(x, xw);
+    updateWellState(simulator, xw, well_state);
+}
+
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells)
 {
     this->primary_variables_.updateNewton(dwells);
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updateWellState(const Simulator& simulator,
+                const BVectorWell& xw,
+                SingleCompWellState<Scalar>& well_state)
+{
+    this->primary_variables_.updateNewton(xw);
+    updateWellState(well_state);
 }
 
 template <typename TypeTag>

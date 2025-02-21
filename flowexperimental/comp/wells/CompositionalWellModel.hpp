@@ -61,6 +61,12 @@ public:
 
     using WellConnectionModule = WellConnectionAuxiliaryModule<TypeTag, CompositionalWellModel<TypeTag>>;
 
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    static const int numEq = Indices::numEq;
+    using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
+    typedef Dune::BlockVector<VectorBlockType> BVector;
+
+
     // TODO: Scalar will probably to be TypeTag later
     using CompWellPtr = std::shared_ptr<CompWell<TypeTag> >;
     explicit CompositionalWellModel(Simulator& /*simulator*/);
@@ -110,6 +116,16 @@ public:
          return WellTestState{};
     }
 
+    // using the solution x to recover the solution xw for wells and applying
+    // xw to update Well State
+    void recoverWellSolutionAndUpdateWellState(const BVector& x);
+
+    // some functions to compile
+    bool addMatrixContributions() const { return false; }
+    const Schedule& schedule() const { return schedule_; }
+    auto begin() const { return well_container_.begin(); }
+    auto end() const { return well_container_.end(); }
+
 private:
      Simulator& simulator_;
      const Schedule& schedule_;
@@ -132,6 +148,8 @@ private:
      std::vector<std::vector<CompConnectionData<Scalar> > > well_connection_data_;
      // const Schedule& schedule_;
      std::vector<CompWellPtr> well_container_;
+
+     mutable BVector x_local_;
 
      std::size_t local_num_cells_{0};
 
