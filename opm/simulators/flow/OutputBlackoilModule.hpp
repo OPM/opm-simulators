@@ -205,48 +205,6 @@ public:
                              problem.eclWriter().getOutputNnc().size());
     }
 
-    void processElementMech(const ElementContext& elemCtx)
-    {
-        if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
-            if (!this->mech_.allocated()) {
-                return;
-            }
-
-            const auto& problem = elemCtx.simulator().problem();
-            const auto& model = problem.geoMechModel();
-
-            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-
-                // Assume all mechanical things should be written
-                this->mech_.assignDelStress(globalDofIdx,
-                                            model.delstress(globalDofIdx));
-
-                this->mech_.assignDisplacement(globalDofIdx,
-                                               model.disp(globalDofIdx, /*include_fracture*/true));
-
-                // is the tresagii stress which make rock fracture
-                this->mech_.assignFracStress(globalDofIdx,
-                                             model.fractureStress(globalDofIdx));
-
-                this->mech_.assignLinStress(globalDofIdx,
-                                            model.linstress(globalDofIdx));
-
-                this->mech_.assignPotentialForces(globalDofIdx,
-                                                  model.mechPotentialForce(globalDofIdx),
-                                                  model.mechPotentialPressForce(globalDofIdx),
-                                                  model.mechPotentialTempForce(globalDofIdx));
-
-                this->mech_.assignStrain(globalDofIdx,
-                                         model.strain(globalDofIdx, /*include_fracture*/true));
-
-                // Total stress is not stored but calculated result is Voigt notation
-                this->mech_.assignStress(globalDofIdx,
-                                         model.stress(globalDofIdx, /*include_fracture*/true));;
-            }
-        }
-    }
-
     //! \brief Setup list of active element-level data extractors
     void setupExtractors()
     {
@@ -1784,6 +1742,41 @@ private:
 
         // Setup active extractors
         this->extractors_ = Extractor::removeInactive(extractors);
+
+        if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
+            if (this->mech_.allocated()) {
+                this->extractors_.emplace(
+                    [&mech = this->mech_,
+                     &model = simulator_.problem().geoMechModel()](const Context& ectx)
+                    {
+                        mech.assignDelStress(ectx.globalDofIdx,
+                                             model.delstress(ectx.globalDofIdx));
+
+                        mech.assignDisplacement(ectx.globalDofIdx,
+                                                model.disp(ectx.globalDofIdx, /*include_fracture*/true));
+
+                        // is the tresagii stress which make rock fracture
+                        mech.assignFracStress(ectx.globalDofIdx,
+                                              model.fractureStress(ectx.globalDofIdx));
+
+                        mech.assignLinStress(ectx.globalDofIdx,
+                                             model.linstress(ectx.globalDofIdx));
+
+                        mech.assignPotentialForces(ectx.globalDofIdx,
+                                                   model.mechPotentialForce(ectx.globalDofIdx),
+                                                   model.mechPotentialPressForce(ectx.globalDofIdx),
+                                                   model.mechPotentialTempForce(ectx.globalDofIdx));
+
+                        mech.assignStrain(ectx.globalDofIdx,
+                                          model.strain(ectx.globalDofIdx, /*include_fracture*/true));
+
+                        // Total stress is not stored but calculated result is Voigt notation
+                        mech.assignStress(ectx.globalDofIdx,
+                                          model.stress(ectx.globalDofIdx, /*include_fracture*/true));
+                     }, true
+                );
+            }
+        }
     }
 
     const Simulator& simulator_;
