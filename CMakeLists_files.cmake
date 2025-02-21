@@ -875,6 +875,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/OutputBlackoilModule.hpp
   opm/simulators/flow/OutputCompositionalModule.hpp
+  opm/simulators/flow/OutputExtractor.hpp
   opm/simulators/flow/partitionCells.hpp
   opm/simulators/flow/PolyhedralGridVanguard.hpp
   opm/simulators/flow/priVarsPacking.hpp

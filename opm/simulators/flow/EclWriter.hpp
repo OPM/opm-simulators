@@ -725,13 +725,14 @@ private:
             OPM_TIMEBLOCK(prepareCellBasedData);
 
             this->outputModule_->prepareDensityAccumulation();
-
+            this->outputModule_->setupExtractors();
             for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
                 this->outputModule_->processElement(elemCtx);
             }
+            this->outputModule_->clearExtractors();
 
             this->outputModule_->accumulateDensityParallel();
         }
