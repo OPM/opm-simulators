@@ -455,9 +455,6 @@ public:
             OPM_TIMEBLOCK_LOCAL(UpdateViscosity);
             typename FluidSystem::template ParameterCache<Evaluation> paramCache;
             paramCache.setRegionIndex(pvtRegionIdx);
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                paramCache.setMaxOilSat(SoMax);
-            }
             paramCache.updateAll(fluidState_);
 
             const auto& mu = FluidSystem::viscosity(fluidState, paramCache, phaseIdx);

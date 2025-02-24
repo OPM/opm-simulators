@@ -503,10 +503,12 @@ protected:
                 1.0 / (intQuants.porosity() * intQuants.porosity()) *
                 Toolbox::pow(base, 10.0 / 3.0);
 
+            using PCache = typename FluidSystem::template ParameterCache<Scalar>;
+            PCache pcache(regionIdx);
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 diffusionCoefficient_[phaseIdx][compIdx] =
                     FluidSystem::diffusionCoefficient(fluidState,
-                                                      regionIdx,
+                                                      pcache,
                                                       phaseIdx,
                                                       compIdx);
             }

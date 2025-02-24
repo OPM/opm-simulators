@@ -2603,7 +2603,6 @@ namespace Opm
                 typename FluidSystem::template ParameterCache<FsScalar> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
                 paramCache.setRegionIndex(pvtRegionIdx);
-                paramCache.setMaxOilSat(maxOilSaturation);
                 paramCache.updatePhase(fs, phaseIdx);
 
                 const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
