@@ -58,6 +58,7 @@ struct TimeStepControlFileName { static constexpr auto value = "timesteps"; };
 struct MinTimeStepBeforeShuttingProblematicWellsInDays { static constexpr double value = 0.01; };
 struct MinTimeStepBasedOnNewtonIterations { static constexpr double value = 0.0; };
 struct TimeStepControlSafetyFactor { static constexpr double value = 0.8; };
+struct TimeStepControlRejectCompletedStep { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
