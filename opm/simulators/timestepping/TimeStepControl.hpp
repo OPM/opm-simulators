@@ -203,6 +203,7 @@ namespace Opm
 
         General3rdOrderController( const double tolerance = 1e-3,
                                    const double safetyFactor = 0.8,
+                                   const bool rejectCompletedStep = false,
                                    const bool verbose = false );
 
         static General3rdOrderController serializationTestObject();
@@ -219,6 +220,7 @@ namespace Opm
         {
             serializer(tolerance_);
             serializer(safetyFactor_);
+            serializer(rejectCompletedStep_);
             serializer(errors_);
             serializer(timeSteps_);
             serializer(verbose_);
@@ -230,6 +232,7 @@ namespace Opm
     protected:
         const double tolerance_ = 1e-3;
         const double safetyFactor_ = 0.8;
+        const bool rejectCompletedStep_ = false;
         mutable std::vector<double> errors_{};
         mutable std::vector<double> timeSteps_{};
         mutable int counterSinceFailure_ = 0;

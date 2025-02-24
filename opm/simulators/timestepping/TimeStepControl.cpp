@@ -291,9 +291,11 @@ namespace Opm
 
     General3rdOrderController::General3rdOrderController( const double tolerance,
                                                           const double safetyFactor,
+                                                          const bool rejectCompletedStep,
                                                           const bool verbose)
         : tolerance_( tolerance )
         , safetyFactor_( safetyFactor )
+        , rejectCompletedStep_( rejectCompletedStep )
         , errors_( 3, tolerance_ )
         , timeSteps_ ( 3, 1.0 )
         , verbose_( verbose )
@@ -364,7 +366,7 @@ namespace Opm
     bool General3rdOrderController::
     timeStepAccepted(const double error) const
     {
-        if (error > tolerance_)
+        if (rejectCompletedStep_ && error > tolerance_)
             return false;
         return true;
     }
@@ -373,6 +375,7 @@ namespace Opm
     {
         return this->tolerance_ == ctrl.tolerance_ &&
                this->safetyFactor_ == ctrl.safetyFactor_ &&
+               this->rejectCompletedStep_ == ctrl.rejectCompletedStep_ &&
                this->errors_ == ctrl.errors_ &&
                this->timeSteps_ == ctrl.timeSteps_ &&
                this->verbose_ == ctrl.verbose_;
