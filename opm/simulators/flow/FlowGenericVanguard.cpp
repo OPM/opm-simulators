@@ -468,21 +468,22 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::SerialPartitioning>
         ("Perform partitioning for parallel runs on a single process.");
     Parameters::Register<Parameters::ZoltanImbalanceTol<Scalar>>
-        ("Tolerable imbalance of the loadbalancing provided by Zoltan. DEPRECATED: Use --imbalance-tol instead");
+        ("Tolerable imbalance of the loadbalancing provided by Zoltan. "
+         "DEPRECATED: Use --imbalance-tol instead.");
     Parameters::Register<Parameters::ZoltanParams>
         ("Configuration of Zoltan partitioner. "
          "Valid options are: graph, hypergraph or scotch. "
          "Alternatively, you can request a configuration to be read "
-         "from a JSON file by giving the filename here, ending with '.json.' "
+         "from a JSON file by giving the filename here, with extension '.json'. "
          "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
          "for available Zoltan options.");
     Parameters::Register<Parameters::ImbalanceTol<Scalar>>
-        ("Tolerable imbalance of the loadbalancing (default: 1.1).");
+        ("Tolerable imbalance of the loadbalancing.");
     Parameters::Register<Parameters::MetisParams>
         ("Configuration of Metis partitioner. "
          "You can request a configuration to be read "
-         "from a JSON file by giving the filename here, ending with '.json.' "
-         "See http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf"
+         "from a JSON file by giving the filename here, with extension '.json'. "
+         "See http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf "
          "for available METIS options.");
     Parameters::Register<Parameters::ExternalPartition>
         ("Name of file from which to load an externally generated "
