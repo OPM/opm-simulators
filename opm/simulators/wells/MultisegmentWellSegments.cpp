@@ -80,6 +80,9 @@ MultisegmentWellSegments(const int numSegments,
 
     // initialize the segment_perforations_ and update perforation_segment_depth_diffs_
     const WellConnections& completion_set = well_.wellEcl().getConnections();
+    std::cout << "well_.numPerfs() " << well_.numPerfs() << std::endl;
+    std::cout << "well_.wellEcl().getConnections().size() " << well_.wellEcl().getConnections().size() << std::endl;
+    std::cout << "parallel_well_info.numLocalPerfs() " << parallel_well_info.numLocalPerfs() << std::endl;
     // index of the perforation within wells struct
     // there might be some perforations not active, which causes the number of the perforations in
     // well_ecl_ and wells struct different
@@ -106,7 +109,8 @@ MultisegmentWellSegments(const int numSegments,
             const Scalar segment_depth = segment_set[segment_index].depth();
             int local_perf_index = parallel_well_info.globalToLocal(i_perf_wells);
             if (local_perf_index > -1) // If local_perf_index == -1, then the perforation is not on this process
-                local_perforation_depth_diffs_[local_perf_index] = well_.perfDepth()[i_perf_wells] - segment_depth;
+                if (local_perforation_depth_diffs_.size() > static_cast<std::size_t>(local_perf_index)) // If local_perforation_depth_diffs_.size() is not large enough, this is a SHUT connection
+                    local_perforation_depth_diffs_[local_perf_index] = well_.perfDepth()[i_perf_wells] - segment_depth;
             i_perf_wells++;
         }
     }
