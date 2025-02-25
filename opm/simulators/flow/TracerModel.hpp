@@ -29,6 +29,7 @@
 #define OPM_TRACER_MODEL_HPP
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 
@@ -184,6 +185,7 @@ public:
             return;
         }
 
+        OPM_TIMEBLOCK(tracerUpdateCache);
         updateStorageCache();
     }
 
@@ -196,6 +198,7 @@ public:
             return;
         }
 
+        OPM_TIMEBLOCK(tracerAdvance);
         advanceTracerFields();
     }
 
@@ -597,6 +600,7 @@ protected:
         // to the rhs both through storrage and flux terms.
         // Compare also advanceTracerFields(...) below.
 
+        OPM_TIMEBLOCK(tracerAssemble);
         for (auto& tr : tbatch) {
             if (tr.numTracer() != 0) {
                 (*tr.mat) = 0.0;
@@ -732,6 +736,8 @@ protected:
             if (!converged) {
                 OpmLog::warning("### Tracer model: Linear solver did not converge. ###");
             }
+
+            OPM_TIMEBLOCK(tracerPost);
 
             for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                 for (std::size_t globalDofIdx = 0; globalDofIdx < tr.concentration_[tIdx].size(); ++globalDofIdx) {
