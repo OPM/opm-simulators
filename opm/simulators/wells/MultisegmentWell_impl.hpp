@@ -1106,25 +1106,33 @@ namespace Opm
         // perforated cell
         // TODO: later to investigate how to handle the pvt region
         int pvt_region_index;
-        {
-            // using the first perforated cell, so we look for global index 0
+
+        Scalar fsTemperature;
+        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
+        SaltConcType fsSaltConcentration;
+
+        if (this->well_cells_.size() > 0) {
+            // this->well_cells_ is empty if this process does not contain active perforations
+            // using the pvt region of first perforated cell, so we look for global index 0
+            // TODO: it should be a member of the WellInterface, initialized properly
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            // The following broadcast calls are neccessary to ensure that processes that do *not* contain
-            // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-            auto fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-            fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
-            temperature.setValue(fsTemperature);
-
-            auto fsSaltConcentration = fs.saltConcentration();
-            fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
-            saltConcentration = this->extendEval(fsSaltConcentration);
-
+            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsSaltConcentration = fs.saltConcentration();
             pvt_region_index = fs.pvtRegionIndex();
-            pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
         }
+
+        // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+        fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
+        temperature.setValue(fsTemperature);
+
+        fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
+        saltConcentration = this->extendEval(fsSaltConcentration);
+
+        pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
 
         this->segments_.computeFluidProperties(temperature,
                                                saltConcentration,
@@ -1990,26 +1998,33 @@ namespace Opm
         EvalWell temperature;
         EvalWell saltConcentration;
         int pvt_region_index;
-        {
+
+        Scalar fsTemperature;
+        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
+        SaltConcType fsSaltConcentration;
+
+        if (this->well_cells_.size() > 0) {
+            // this->well_cells_ is empty if this process does not contain active perforations
             // using the pvt region of first perforated cell, so we look for global index 0
             // TODO: it should be a member of the WellInterface, initialized properly
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            // The following broadcast calls are neccessary to ensure that processes that do *not* contain
-            // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-            auto fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-            fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
-            temperature.setValue(fsTemperature);
-
-            auto fsSaltConcentration = fs.saltConcentration();
-            fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
-            saltConcentration = this->extendEval(fsSaltConcentration);
-
+            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsSaltConcentration = fs.saltConcentration();
             pvt_region_index = fs.pvtRegionIndex();
-            pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
         }
+
+        // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+        fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
+        temperature.setValue(fsTemperature);
+
+        fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
+        saltConcentration = this->extendEval(fsSaltConcentration);
+
+        pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
 
         return this->segments_.getSurfaceVolume(temperature,
                                                 saltConcentration,
