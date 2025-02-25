@@ -852,7 +852,8 @@ protected:
     // scenarios by supplying an extended vector type.
 
     template <typename TV>
-    struct TracerBatch {
+    struct TracerBatch
+    {
         std::vector<int> idx_;
         const int phaseIdx_;
         std::vector<TV> concentrationInitial_;
@@ -861,44 +862,45 @@ protected:
         std::vector<TV> residual_;
         std::unique_ptr<TracerMatrix> mat;
 
-      bool operator==(const TracerBatch& rhs) const
-      {
+        bool operator==(const TracerBatch& rhs) const
+        {
             return this->concentrationInitial_ == rhs.concentrationInitial_ &&
                    this->concentration_ == rhs.concentration_;
-      }
+        }
 
-      static TracerBatch serializationTestObject()
-      {
-          TracerBatch<TV> result(4);
-          result.idx_ = {1,2,3};
-          result.concentrationInitial_ = {5.0, 6.0};
-          result.concentration_ = {7.0, 8.0};
-          result.storageOfTimeIndex1_ = {9.0, 10.0, 11.0};
-          result.residual_ = {12.0, 13.0};
+        static TracerBatch serializationTestObject()
+        {
+            TracerBatch<TV> result(4);
+            result.idx_ = {1,2,3};
+            result.concentrationInitial_ = {5.0, 6.0};
+            result.concentration_ = {7.0, 8.0};
+            result.storageOfTimeIndex1_ = {9.0, 10.0, 11.0};
+            result.residual_ = {12.0, 13.0};
 
-          return result;
-      }
+            return result;
+        }
 
-      template<class Serializer>
-      void serializeOp(Serializer& serializer)
-      {
-          serializer(concentrationInitial_);
-          serializer(concentration_);
-      }
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(concentrationInitial_);
+            serializer(concentration_);
+        }
 
-      TracerBatch(int phaseIdx = 0) : phaseIdx_(phaseIdx) {}
+        TracerBatch(int phaseIdx = 0) : phaseIdx_(phaseIdx) {}
 
-      int numTracer() const { return idx_.size(); }
+        int numTracer() const
+        { return idx_.size(); }
 
-      void addTracer(const int idx, const TV & concentration)
-      {
+        void addTracer(const int idx, const TV & concentration)
+        {
             int numGridDof = concentration.size();
             idx_.emplace_back(idx);
             concentrationInitial_.emplace_back(concentration);
             concentration_.emplace_back(concentration);
             residual_.emplace_back(numGridDof);
             storageOfTimeIndex1_.emplace_back(numGridDof);
-      }
+        }
     };
 
     std::array<TracerBatch<TracerVector>,3> tbatch;
