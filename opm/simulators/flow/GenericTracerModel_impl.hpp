@@ -35,6 +35,7 @@
 #include <dune/istl/schwarz.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/grid/CpGrid.hpp>
 
@@ -439,6 +440,7 @@ template<class Grid, class GridView, class DofMapper, class Stencil, class Fluid
 bool GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
 linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b)
 {
+    OPM_TIMEBLOCK(tracerSolve);
     Scalar tolerance = 1e-2;
     int maxIter = 100;
 
