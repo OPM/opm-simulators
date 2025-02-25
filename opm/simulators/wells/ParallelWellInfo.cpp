@@ -74,7 +74,7 @@ GlobalPerfContainerFactory<Scalar>::
 GlobalPerfContainerFactory(const IndexSet& local_indices,
                            const Parallel::Communication comm,
                            const int num_local_perfs)
-    : local_indices_(local_indices), comm_(comm)
+    : local_indices_(local_indices), comm_(comm), num_local_perfs_(num_local_perfs)
 {
     if ( comm_.size() > 1 )
     {
@@ -164,6 +164,12 @@ int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) con
         return -1; // Global index not found
     return it->second;
 }
+
+template<class Scalar>
+int GlobalPerfContainerFactory<Scalar>::numLocalPerfs() const {
+    return num_local_perfs_;
+}
+
 
 template<class Scalar>
 std::vector<Scalar> GlobalPerfContainerFactory<Scalar>::
@@ -537,6 +543,14 @@ int ParallelWellInfo<Scalar>::globalToLocal(const int globalIndex) const {
         return globalPerfCont_->globalToLocal(globalIndex);
     else // If globalPerfCont_ is not set up, then this is a sequential run and local and global indices are the same.
         return globalIndex;
+}
+
+template<class Scalar>
+int ParallelWellInfo<Scalar>::numLocalPerfs() const {
+    if(globalPerfCont_)
+        return globalPerfCont_->numLocalPerfs();
+    else // If globalPerfCont_ is not set up, then this is a sequential run and local and the number of  indices are the same.
+        return 0;
 }
 
 template<class Scalar>
