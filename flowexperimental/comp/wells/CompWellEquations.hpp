@@ -79,6 +79,11 @@ public:
         return resWell_;
     }
 
+    const BVectorWell& residual() const
+    {
+        return resWell_;
+    }
+
     void solve(BVectorWell& dx_well) const;
 
     void invert();

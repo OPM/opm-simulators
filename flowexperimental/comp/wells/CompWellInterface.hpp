@@ -80,6 +80,7 @@ public:
     virtual void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                                        const BVector& x,
                                                        SingleCompWellState<Scalar>& well_state) = 0;
+    virtual bool getConvergence() const = 0;
 
 protected:
 

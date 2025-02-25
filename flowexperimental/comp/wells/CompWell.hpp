@@ -115,6 +115,8 @@ public:
                                                const BVector& x,
                                                SingleCompWellState<Scalar>& well_state);
 
+    bool getConvergence() const override;
+
 private:
 
     // primary variables

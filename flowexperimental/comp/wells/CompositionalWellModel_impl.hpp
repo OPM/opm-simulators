@@ -243,6 +243,18 @@ recoverWellSolutionAndUpdateWellState(const BVector& x)
     }
 }
 
+template <typename TypeTag>
+bool
+CompositionalWellModel<TypeTag>::
+getWellConvergence() const
+{
+    bool converged = true;
+    for (const auto& well : this->well_container_) {
+        converged = converged && well->getConvergence();
+    }
+    return converged;
+}
+
 //template <typename TypeTag>
 //void
 //CompositionalWellModel<TypeTag>::
