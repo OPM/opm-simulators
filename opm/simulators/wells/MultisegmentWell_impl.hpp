@@ -350,6 +350,10 @@ namespace Opm
                 const int local_perf_index = this->pw_info_.globalToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
+                if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
+                    std::cout << "computeWellRatesWithBhp, local_perf_index = " << local_perf_index << std::endl;
+                    continue;
+                }
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 // flux for each perforation
@@ -887,6 +891,10 @@ namespace Opm
         const int local_perf_index = this->pw_info_.globalToLocal(perf);
         if (local_perf_index < 0) // then the perforation is not on this process
             return;
+        if (this->cell_perforation_pressure_diffs_.size() <= static_cast<std::size_t>(local_perf_index)) { // then the perforation belongs to a shut connection
+            std::cout << "computePerfRate, local_perf_index = " << local_perf_index << std::endl;
+            return;
+        }
 
         // pressure difference between the segment and the perforation
         const Value perf_seg_press_diff = this->gravity() * segment_density *
@@ -1267,6 +1275,11 @@ namespace Opm
                 const int local_perf_index = this->pw_info_.globalToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
+                if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
+                    std::cout << "updateIPR, local_perf_index = " << local_perf_index << std::endl;
+                    continue;
+                }
+
                 std::vector<Scalar> mob(this->num_components_, 0.0);
 
                 // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
@@ -1778,6 +1791,11 @@ namespace Opm
                 const int local_perf_index = this->pw_info_.globalToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
+                if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
+                    std::cout << "assembleWellEqWithoutIteration, local_perf_index = " << local_perf_index << std::endl;
+                    continue;
+                }
+
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<EvalWell> mob(this->num_components_, 0.0);
@@ -1928,6 +1946,10 @@ namespace Opm
                 const int local_perf_index = this->pw_info_.globalToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
+                if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
+                    std::cout << "allDrawDownWrongDirection, local_perf_index = " << local_perf_index << std::endl;
+                    continue;
+                }
 
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
@@ -2155,6 +2177,10 @@ namespace Opm
                 const int local_perf_index = this->pw_info_.globalToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
+                if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
+                    std::cout << "maxPerfPress, local_perf_index = " << local_perf_index << std::endl;
+                    continue;
+                }
 
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
@@ -2187,6 +2213,10 @@ namespace Opm
                 const int local_perf_index = this->pw_info_.globalToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
+                if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
+                    std::cout << "computeCurrentWellRates, local_perf_index = " << local_perf_index << std::endl;
+                    continue;
+                }
 
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
