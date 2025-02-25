@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+
 #include <opm/simulators/utils/SetupPartitioningParams.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -30,83 +31,150 @@
 #endif
 
 #include <filesystem>
-#include <iostream>
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 
-namespace Opm
-{
+#include <fmt/format.h>
+
+namespace {
+
 #if BOOST_VERSION / 100 % 1000 > 48
-void convertJSONToMap(const std::string& conf, std::map<std::string,std::string>& result)
-{
 
-    if ( !std::filesystem::exists(conf) ) {
+    std::map<std::string, std::string>
+    jsonConfiguration(const std::string&    conf,
+                      std::string_view   /* paramName */)
+    {
+        if (! std::filesystem::exists(conf)) {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("JSON file {} does not exist", conf));
+        }
+
+        boost::property_tree::ptree tree;
+        try {
+            boost::property_tree::read_json(conf, tree);
+        }
+        catch (const boost::property_tree::json_parser::json_parser_error& err) {
+            Opm::OpmLog::error(err.what());
+        }
+
+        auto result = std::map<std::string, std::string>{};
+
+        for (const auto& node : tree) {
+            auto value = node.second.get_value_optional<std::string>();
+            if (value) {
+                result.insert_or_assign(node.first, *value);
+            }
+        }
+
+        return result;
+    }
+
+#else // ! Boost.PTree has JSON support.
+
+    [[noreturn]] std::map<std::string, std::string>
+    jsonConfiguration(const std::string& conf,
+                      std::string_view   paramName)
+    {
         OPM_THROW(std::invalid_argument,
-                  "JSON file " + conf + " does not exist.");
+                  fmt::format("{}=file.json ({}) is not supported in "
+                              "current Boost version (1.{}). "
+                              "Need Boost version 1.49 or later.",
+                              paramName, conf, (BOOST_VERSION / 100) % 1000));
     }
-    boost::property_tree::ptree tree;
-    try {
-        boost::property_tree::read_json(conf, tree);
-    } catch (boost::property_tree::json_parser::json_parser_error& err) {
-        OpmLog::error(err.what());
-    }
-    for (const auto& node : tree) {
-        auto value = node.second.get_value_optional<std::string>();
-        if (value)
-          result.insert_or_assign(node.first, *value);
-    }
-}
-#endif
 
-std::map<std::string,std::string> setupZoltanParams(const std::string& conf)
+#endif // Boost.PTree has JSON support.
+
+    bool isJsonConfiguration(const std::string& conf)
+    {
+        const auto ext = std::string_view { ".json" };
+
+        return conf.rfind(ext) == conf.size() - ext.size();
+    }
+
+} // Anonymous namespace
+
+// ---------------------------------------------------------------------------
+
+namespace {
+
+    std::map<std::string, std::string>
+    zoltanGraphParameters(std::string_view graphPackage)
+    {
+        return {
+            { "LB_METHOD", "GRAPH" },
+            { "GRAPH_PACKAGE", graphPackage.data() },
+        };
+    }
+
+    auto zoltanGraphParameters()
+    {
+        return zoltanGraphParameters("PHG");
+    }
+
+    auto zoltanScotchParameters()
+    {
+        return zoltanGraphParameters("Scotch");
+    }
+
+    std::map<std::string, std::string>
+    zoltanHyperGraphParameters()
+    {
+        return {
+            { "LB_METHOD", "HYPERGRAPH" },
+        };
+    }
+
+} // Anonymous namespace
+
+// ===========================================================================
+
+std::map<std::string, std::string>
+Opm::setupZoltanParams(const std::string& conf)
 {
-    std::map<std::string,std::string> result;
+    if (conf == "graph") {
+        return zoltanGraphParameters();
+    }
 
-    if (conf == "scotch") {
-        result.emplace("LB_METHOD", "GRAPH");
-        result.emplace("GRAPH_PACKAGE", "Scotch");
-    } else if (conf == "hypergraph") {
-        result.emplace("LB_METHOD", "HYPERGRAPH");
-    } else if (conf == "graph") {
-        result.emplace("LB_METHOD", "GRAPH");
-        result.emplace("GRAPH_PACKAGE", "PHG");
-    } else if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") {
-#if BOOST_VERSION / 100 % 1000 > 48
-        convertJSONToMap(conf, result);
-#else
-        OPM_THROW(std::invalid_argument,
-                  "--zoltan-params=file.json not supported with "
-                  "boost version. Needs version > 1.48.");
-#endif
-    } else {
+    else if (conf == "hypergraph") {
+        return zoltanHyperGraphParameters();
+    }
+
+    else if (conf == "scotch") {
+        return zoltanScotchParameters();
+    }
+
+    else if (isJsonConfiguration(conf)) {
+        return jsonConfiguration(conf, "--zoltan-params");
+    }
+
+    else {
         // No valid configuration option found.
         OPM_THROW(std::invalid_argument,
-                  conf + " is not a valid setting for --zoltan-params."
-                  " Please use graph, hypergraph or scotch");
+                  fmt::format("{} is not a valid setting for --zoltan-params. "
+                              "Please use \"graph\", \"hypergraph\", \"scotch\", "
+                              "or a JSON file containing the Zoltan parameters.",
+                              conf));
     }
-
-    return result;
 }
 
-std::map<std::string,std::string> setupMetisParams(const std::string& conf)
+std::map<std::string, std::string>
+Opm::setupMetisParams(const std::string& conf)
 {
-    std::map<std::string,std::string> result;
     if (conf == "default") {
-        return result;
-    } else if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") {
-#if BOOST_VERSION / 100 % 1000 > 48
-        convertJSONToMap(conf, result);
-        return result;
-#else
-        OPM_THROW(std::invalid_argument,
-                  "--metis-params=file.json not supported with "
-                  "boost version. Needs version > 1.48.");
-#endif
-    } else {
+        return {};
+    }
+
+    else if (isJsonConfiguration(conf)) {
+        return jsonConfiguration(conf, "--metis-params");
+    }
+
+    else {
         // No valid configuration option found.
         OPM_THROW(std::invalid_argument,
-                  conf + " is not a valid setting for --metis-params."
-                  " Please use a json file containing the METIS parameters.");
+                  fmt::format("{} is not a valid setting for --metis-params. "
+                              "Please use \"default\" or a JSON file containing "
+                              "the METIS parameters.", conf));
     }
 }
-
-
-} // namespace Opm
