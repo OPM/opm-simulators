@@ -480,11 +480,7 @@ iterateWellEq(const Simulator& simulator,
         }
         std::cout << std::endl;
         // get convergence
-        converged = true;
-        for (const auto& val : this->well_equations_.residual()[0]) {
-            // converged = converged && (std::abs(val) < 1.e-6);
-            converged = converged && (std::abs(val) < 1.e-6 * 1.);
-        }
+        converged = this->getConvergence();
 
         if (converged) {
             std::cout << " the well " << this->well_ecl_.name() << " has converged after " << it << " iterations" << std::endl;
@@ -581,5 +577,18 @@ updateWellState(SingleCompWellState<Scalar>& well_state) const
         // only gas injection yet
         surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
     }
+}
+
+template <typename TypeTag>
+bool
+CompWell<TypeTag>::
+getConvergence() const
+{
+    bool converged = true;
+    for (const auto& val : this->well_equations_.residual()[0]) {
+        // converged = converged && (std::abs(val) < 1.e-6);
+        converged = converged && (std::abs(val) < 1.e-6 * 1.);
+    }
+    return converged;
 }
 } // end of namespace Opm

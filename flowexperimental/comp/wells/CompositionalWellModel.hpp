@@ -126,6 +126,8 @@ public:
     auto begin() const { return well_container_.begin(); }
     auto end() const { return well_container_.end(); }
 
+    bool getWellConvergence() const;
+
 private:
      Simulator& simulator_;
      const Schedule& schedule_;
