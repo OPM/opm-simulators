@@ -679,11 +679,17 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             ws.segments = SegmentState<Scalar>{np, segment_set};
             const int well_nseg = segment_set.size();
             int n_activeperf = 0;
+            int n_activeperf_local = 0;
 
             // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
             // that is why I think we should use a well model to initialize the WellState here
             std::vector<std::vector<int>> segment_perforations(well_nseg);
+            std::unordered_map<int,int> active_perf_index_local_to_global = {};
             for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
+                if (ws.parallel_info.get().globalToLocal(perf) == 0) {
+                    // Reset the counter for the active perforations on this process, because the local perforation numbering is also reset
+                    n_activeperf_local = 0;
+                }
                 const Connection& connection = completion_set.get(perf);
                 if (connection.state() == Connection::State::OPEN) {
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
@@ -696,7 +702,13 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     }
 
                     segment_perforations[segment_index].push_back(n_activeperf);
+                    if (ws.parallel_info.get().globalToLocal(perf) > -1) {
+                        active_perf_index_local_to_global.insert({n_activeperf_local, n_activeperf});
+                        n_activeperf_local++;
+                    }
                     n_activeperf++;
+                } else {
+                    std::cout << "no activeperf, perf = " << perf << ", local = " << ws.parallel_info.get().globalToLocal(perf) << std::endl;
                 }
             }
 
@@ -731,7 +743,37 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             }
 
             const auto& perf_rates = perf_data.phase_rates;
-            std::vector<Scalar> perforation_rates(perf_rates.begin(), perf_rates.end());
+            const auto& perf_press = perf_data.pressure;
+            // The function calculateSegmentRates as well as the loop filling the segment_pressure work
+            // with *global* containers. Now we create global vectors containing the phase_rates and
+            // pressures of all processes.
+            size_t number_of_global_perfs = 0;
+
+            if (ws.parallel_info.get().communication().size() > 1) {
+                number_of_global_perfs = ws.parallel_info.get().communication().sum(perf_data.size());
+            } else {
+                number_of_global_perfs = perf_data.size();
+            }
+
+            std::vector<Scalar> perforation_rates(number_of_global_perfs * np, 0.0);
+            std::vector<Scalar> perforation_pressures(number_of_global_perfs, 0.0);
+
+            assert(perf_data.size() == perf_press.size());
+            assert(perf_data.size() * np == perf_rates.size());
+            for (size_t perf = 0; perf < perf_data.size(); ++perf) {
+                if (active_perf_index_local_to_global.count(perf) > 0) {
+                    const int global_active_perf_index = active_perf_index_local_to_global.at(perf);
+                    for (int i = 0; i < np; i++) {
+                        perforation_rates[global_active_perf_index * np + i] = perf_rates[perf * np + i];
+                    }
+                } else {
+                    OPM_THROW(std::logic_error,fmt::format("Error when initializing MS Well state, there is no active perforation index for the local index {}", perf));
+                }
+            }
+            if (ws.parallel_info.get().communication().size() > 1) {
+                ws.parallel_info.get().communication().sum(perforation_rates.data(), perforation_rates.size());
+                ws.parallel_info.get().communication().sum(perforation_pressures.data(), perforation_pressures.size());
+            }
 
             calculateSegmentRates(ws.parallel_info, segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
 
@@ -744,38 +786,14 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 // top segment is always the first one, and its pressure is the well bhp
                 auto& segment_pressure = ws.segments.pressure;
                 segment_pressure[0] = ws.bhp;
-                const auto& perf_press = perf_data.pressure;
                 // The segment_indices contain the indices of the segments, that are only available on one process.
                 std::vector<int> segment_indices;
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if (!segment_perforations[seg].empty()) {
-                        const int first_perf = ws.parallel_info.get().globalToLocal(segment_perforations[seg][0]);
-                        if (first_perf > -1) { //-1 indicates that the global id is not on this process
-                            segment_pressure[seg] = perf_press[first_perf];
-                        } else {
-                            segment_pressure[seg] = 0.0; // setting this to 0 here, this will later be filled by the communication below
-                        }
+                        const int first_perf_global_index = segment_perforations[seg][0];
+                        segment_pressure[seg] = perforation_pressures[first_perf_global_index];
                         segment_indices.push_back(seg);
-                    }
-                }
-                if (ws.parallel_info.get().communication().size() > 1) {
-                    // Communicate the segment_pressure values
-                    std::vector<Scalar> values_to_combine(segment_indices.size(), 0.0);
-
-                    for (size_t i = 0; i < segment_indices.size(); ++i) {
-                        values_to_combine[i] = segment_pressure[segment_indices[i]];
-                    }
-                    ws.parallel_info.get().communication().sum(values_to_combine.data(), values_to_combine.size());
-
-                    // Now make segment_pressure equal across all processes
-                    for (size_t i = 0; i < segment_indices.size(); ++i) {
-                        segment_pressure[segment_indices[i]] = values_to_combine[i];
-                    }
-                }
-                // Before addressing the segments with !segment_perforations[seg].empty(), we need to communicate such that the
-                // vector segment_pressure contains info from all processes
-                for (int seg = 1; seg < well_nseg; ++ seg) {
-                    if (segment_perforations[seg].empty()) {
+                    } else {
                         // seg_press_.push_back(bhp); // may not be a good decision
                         // using the outlet segment pressure // it needs the ordering is correct
                         const int outlet_seg = segment_set[seg].outletSegment();
