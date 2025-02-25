@@ -168,18 +168,21 @@ public:
         TracerMatrix* base = this->tracerMatrix_.get();
         for (auto& tr : this->tbatch) {
             if (tr.numTracer() != 0) {
-                if (this->tracerMatrix_)
+                if (this->tracerMatrix_) {
                     tr.mat = std::move(this->tracerMatrix_);
-                else
+                }
+                else {
                     tr.mat = std::make_unique<TracerMatrix>(*base);
+                }
             }
         }
     }
 
     void beginTimeStep()
     {
-        if (this->numTracers() == 0)
+        if (this->numTracers() == 0) {
             return;
+        }
 
         updateStorageCache();
     }
@@ -189,8 +192,9 @@ public:
      */
     void endTimeStep()
     {
-        if (this->numTracers() == 0)
+        if (this->numTracers() == 0) {
             return;
+        }
 
         advanceTracerFields();
     }
@@ -368,8 +372,9 @@ protected:
                                       unsigned I1)
 
     {
-        if (tr.numTracer() == 0)
+        if (tr.numTracer() == 0) {
             return;
+        }
 
         // Storage terms at previous time step (timeIdx = 1)
         std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
@@ -419,8 +424,9 @@ protected:
                                     unsigned J,
                                     const Scalar dt)
     {
-        if (tr.numTracer() == 0)
+        if (tr.numTracer() == 0) {
             return;
+        }
 
         TracerEvaluation fFlux;
         TracerEvaluation sFlux;
@@ -453,8 +459,9 @@ protected:
     void assembleTracerEquationWell(TrRe& tr,
                                     const Well& well)
     {
-        if (tr.numTracer() == 0)
+        if (tr.numTracer() == 0) {
             return;
+        }
 
         const auto& eclWell = well.wellEcl();
 
@@ -544,13 +551,15 @@ protected:
                                       const Scalar dt,
                                       unsigned I)
     {
-        if (tr.numTracer() == 0)
+        if (tr.numTracer() == 0) {
             return;
+        }
 
         // Skip if solution tracers do not exist
         if (tr.phaseIdx_ ==  FluidSystem::waterPhaseIdx ||
             (tr.phaseIdx_ ==  FluidSystem::gasPhaseIdx && !FluidSystem::enableDissolvedGas()) ||
-            (tr.phaseIdx_ ==  FluidSystem::oilPhaseIdx && !FluidSystem::enableVaporizedOil())) {
+            (tr.phaseIdx_ ==  FluidSystem::oilPhaseIdx && !FluidSystem::enableVaporizedOil()))
+        {
             return;
         }
 
@@ -611,8 +620,7 @@ protected:
 
             std::size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
 
-            if (elem.partitionType() != Dune::InteriorEntity)
-            {
+            if (elem.partitionType() != Dune::InteriorEntity) {
                 // Dirichlet boundary conditions needed for the parallel matrix
                 for (const auto& tr : tbatch) {
                     if (tr.numTracer() != 0) {
@@ -660,8 +668,9 @@ protected:
 
         // Communicate overlap using grid Communication
         for (auto& tr : tbatch) {
-            if (tr.numTracer() == 0)
+            if (tr.numTracer() == 0) {
                 continue;
+            }
             auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(tr.residual_,
                                                                                       simulator_.gridView());
             simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,
@@ -685,8 +694,9 @@ protected:
             Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume() * extrusionFactor;
             int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timeIdx=*/0);
             for (auto& tr : tbatch) {
-                if (tr.numTracer() == 0)
+                if (tr.numTracer() == 0) {
                     continue;
+                }
 
                 Scalar fVol1 = computeFreeVolume_(tr.phaseIdx_, globalDofIdx, 0);
                 Scalar sVol1 = computeSolutionVolume_(tr.phaseIdx_, globalDofIdx, 0);
@@ -707,8 +717,9 @@ protected:
         assembleTracerEquations_();
 
         for (auto& tr : tbatch) {
-            if (tr.numTracer() == 0)
+            if (tr.numTracer() == 0) {
                 continue;
+            }
 
             // Note that we solve for a concentration update (compared to previous time step)
             // Confer also assembleTracerEquations_(...) above.
@@ -730,22 +741,26 @@ protected:
                     const auto& fs = intQuants.fluidState();
                     Scalar Sf = decay<Scalar>(fs.saturation(tr.phaseIdx_));
                     Scalar Ss = 0.0;
-                    if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas())
+                    if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
                         Ss = decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx));
-                    else if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil())
+                    }
+                    else if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
                         Ss = decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx));
+                    }
 
                     const Scalar tol_gas_sat = 1e-6;
-                    if ((tr.concentration_[tIdx][globalDofIdx][0] - dx[tIdx][globalDofIdx][0] < 0.0)
-                        || Sf < tol_gas_sat)
+                    if (tr.concentration_[tIdx][globalDofIdx][0] - dx[tIdx][globalDofIdx][0] < 0.0|| Sf < tol_gas_sat) {
                         tr.concentration_[tIdx][globalDofIdx][0] = 0.0;
-                    else
+                    }
+                    else {
                         tr.concentration_[tIdx][globalDofIdx][0] -= dx[tIdx][globalDofIdx][0];
-                    if (tr.concentration_[tIdx][globalDofIdx][1] - dx[tIdx][globalDofIdx][1] < 0.0
-                        || Ss < tol_gas_sat)
+                    }
+                    if (tr.concentration_[tIdx][globalDofIdx][1] - dx[tIdx][globalDofIdx][1] < 0.0 || Ss < tol_gas_sat) {
                         tr.concentration_[tIdx][globalDofIdx][1] = 0.0;
-                    else
+                    }
+                    else {
                         tr.concentration_[tIdx][globalDofIdx][1] -= dx[tIdx][globalDofIdx][1];
+                    }
 
                     // Partition concentration into free and solution tracers for output
                     this->freeTracerConcentration_[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][0];
@@ -759,8 +774,9 @@ protected:
                 const auto& eclWell = wellPtr->wellEcl();
 
                 // Injection rates already reported during assembly
-                if (!eclWell.isProducer())
+                if (!eclWell.isProducer()) {
                     continue;
+                }
 
                 Scalar rateWellPos = 0.0;
                 Scalar rateWellNeg = 0.0;
