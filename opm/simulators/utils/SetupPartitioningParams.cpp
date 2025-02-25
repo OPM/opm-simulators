@@ -32,6 +32,7 @@
 
 #include <filesystem>
 #include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -100,6 +101,18 @@ namespace {
 namespace {
 
     std::map<std::string, std::string>
+    applyEdgeSizeThreshold(std::map<std::string, std::string>&& params,
+                           const std::optional<double>&         edgeSizeThreshold)
+    {
+        if (edgeSizeThreshold.has_value()) {
+            params.emplace("PHG_EDGE_SIZE_THRESHOLD",
+                           fmt::format("{}", *edgeSizeThreshold));
+        }
+
+        return params;
+    }
+
+    std::map<std::string, std::string>
     zoltanGraphParameters(std::string_view graphPackage)
     {
         return {
@@ -108,9 +121,10 @@ namespace {
         };
     }
 
-    auto zoltanGraphParameters()
+    auto zoltanGraphParameters(const std::optional<double>& edgeSizeThreshold)
     {
-        return zoltanGraphParameters("PHG");
+        return applyEdgeSizeThreshold(zoltanGraphParameters("PHG"),
+                                      edgeSizeThreshold);
     }
 
     auto zoltanScotchParameters()
@@ -119,11 +133,12 @@ namespace {
     }
 
     std::map<std::string, std::string>
-    zoltanHyperGraphParameters()
+    zoltanHyperGraphParameters(const std::optional<double>& edgeSizeThreshold)
     {
-        return {
+        return applyEdgeSizeThreshold({
             { "LB_METHOD", "HYPERGRAPH" },
-        };
+            { "HYPERGRAPH_PACKAGE", "PHG" },
+        }, edgeSizeThreshold);
     }
 
 } // Anonymous namespace
@@ -131,14 +146,15 @@ namespace {
 // ===========================================================================
 
 std::map<std::string, std::string>
-Opm::setupZoltanParams(const std::string& conf)
+Opm::setupZoltanParams(const std::string&           conf,
+                       const std::optional<double>& edgeSizeThreshold)
 {
     if (conf == "graph") {
-        return zoltanGraphParameters();
+        return zoltanGraphParameters(edgeSizeThreshold);
     }
 
     else if (conf == "hypergraph") {
-        return zoltanHyperGraphParameters();
+        return zoltanHyperGraphParameters(edgeSizeThreshold);
     }
 
     else if (conf == "scotch") {

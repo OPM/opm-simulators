@@ -124,7 +124,7 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
     partitionMethod_ = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
     serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
     zoltanParams_ = Parameters::Get<Parameters::ZoltanParams>();
-
+    zoltanPhgEdgeSizeThreshold_ = Parameters::Get<Parameters::ZoltanPhgEdgeSizeThreshold>();
     metisParams_ = Parameters::Get<Parameters::MetisParams>();
 
     externalPartitionFile_ = Parameters::Get<Parameters::ExternalPartition>();
@@ -479,6 +479,10 @@ void FlowGenericVanguard::registerParameters_()
          "for available Zoltan options.");
     Parameters::Register<Parameters::ImbalanceTol<Scalar>>
         ("Tolerable imbalance of the loadbalancing.");
+    Parameters::Register<Parameters::ZoltanPhgEdgeSizeThreshold>
+        ("Low-level threshold fraction in the range [0,1] controlling "
+         "which hypergraph edge to omit. Used if --zoltan-params=\"graph\" "
+         "or if --zoltan-params=\"hypergraph\".");
     Parameters::Register<Parameters::MetisParams>
         ("Configuration of Metis partitioner. "
          "You can request a configuration to be read "
@@ -494,6 +498,7 @@ void FlowGenericVanguard::registerParameters_()
 
     Parameters::Hide<Parameters::ZoltanImbalanceTol<Scalar>>();
     Parameters::Hide<Parameters::ZoltanParams>();
+    Parameters::Hide<Parameters::ZoltanPhgEdgeSizeThreshold>();
 #endif // HAVE_MPI
 
     Parameters::Register<Parameters::AllowDistributedWells>

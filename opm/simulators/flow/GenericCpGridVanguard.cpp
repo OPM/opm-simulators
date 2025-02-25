@@ -158,11 +158,21 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                const int                                numJacobiBlocks,
                const bool                               enableEclOutput)
 {
-    if ((partitionMethod == Dune::PartitionMethod::zoltan
-         || partitionMethod == Dune::PartitionMethod::zoltanGoG) && !this->zoltanParams().empty())
-        this->grid_->setPartitioningParams(setupZoltanParams(this->zoltanParams()));
-    if (partitionMethod == Dune::PartitionMethod::metis && !this->metisParams().empty())
-        this->grid_->setPartitioningParams(setupMetisParams(this->metisParams()));
+    if (((partitionMethod == Dune::PartitionMethod::zoltan) ||
+         (partitionMethod == Dune::PartitionMethod::zoltanGoG)) &&
+        !this->zoltanParams().empty())
+    {
+        this->grid_->setPartitioningParams
+            (setupZoltanParams(this->zoltanParams(),
+                               this->zoltanPhgEdgeSizeThreshold()));
+    }
+
+    if ((partitionMethod == Dune::PartitionMethod::metis) &&
+        !this->metisParams().empty())
+    {
+        this->grid_->setPartitioningParams
+            (setupMetisParams(this->metisParams()));
+    }
 
     const auto mpiSize = this->grid_->comm().size();
 

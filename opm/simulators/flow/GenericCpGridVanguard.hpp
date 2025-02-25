@@ -209,6 +209,7 @@ private:
 
 protected:
     virtual const std::string& zoltanParams() const = 0;
+    virtual double zoltanPhgEdgeSizeThreshold() const = 0;
     virtual const std::string& metisParams() const = 0;
 
 #endif  // HAVE_MPI
