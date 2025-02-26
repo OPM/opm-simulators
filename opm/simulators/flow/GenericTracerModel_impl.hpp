@@ -445,16 +445,16 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
     int maxIter = 100;
 
     int verbosity = 0;
-    PropertyTree prm;
-    prm.put("maxiter", maxIter);
-    prm.put("tol", tolerance);
-    prm.put("verbosity", verbosity);
-    prm.put("solver", std::string("bicgstab"));
-    prm.put("preconditioner.type", std::string("ParOverILU0"));
 
 #if HAVE_MPI
-    if(gridView_.grid().comm().size() > 1)
+    if (gridView_.grid().comm().size() > 1)
     {
+        PropertyTree prm;
+        prm.put("maxiter", maxIter);
+        prm.put("tol", tolerance);
+        prm.put("verbosity", verbosity);
+        prm.put("solver", std::string("bicgstab"));
+        prm.put("preconditioner.type", std::string("ParOverILU0"));
         auto [tracerOperator, solver] =
             createParallelFlexibleSolver<TracerVector>(gridView_.grid(), M, prm);
         (void) tracerOperator;
@@ -468,8 +468,8 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
         return converged;
     }
     else
-    {
 #endif
+    {
         using TracerSolver = Dune::BiCGSTABSolver<TracerVector>;
         using TracerOperator = Dune::MatrixAdapter<TracerMatrix,TracerVector,TracerVector>;
         using TracerScalarProduct = Dune::SeqScalarProduct<TracerVector>;
@@ -493,9 +493,7 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
 
         // return the result of the solver
         return converged;
-#if HAVE_MPI
     }
-#endif
 }
 
 } // namespace Opm
