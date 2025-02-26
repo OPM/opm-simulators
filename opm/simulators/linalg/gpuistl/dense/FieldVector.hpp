@@ -112,13 +112,13 @@ public:
     typedef const value_type& const_reference;
 
     //! Constructor making default-initialized vector
-    constexpr FieldVector()
+    OPM_HOST_DEVICE constexpr FieldVector()
         : _data {{}}
     {
     }
 
     //! Constructor making vector with identical coordinates
-    explicit FieldVector(const K& t)
+    OPM_HOST_DEVICE explicit FieldVector(const K& t)
     {
         std::fill(_data.begin(), _data.end(), t);
     }
@@ -136,7 +136,7 @@ public:
 #endif
 
     /** \brief Construct from a std::initializer_list */
-    FieldVector(std::initializer_list<K> const& l)
+    OPM_HOST_DEVICE FieldVector(std::initializer_list<K> const& l)
     {
         assert(l.size() == dimension); // Actually, this is not needed any more!
         std::copy_n(l.begin(), std::min(static_cast<std::size_t>(dimension), l.size()), _data.begin());
@@ -146,7 +146,7 @@ public:
     FieldVector& operator=(const FieldVector&) = default;
 
     template <typename T>
-    FieldVector& operator=(const FieldVector<T, SIZE>& x)
+    OPM_HOST_DEVICE FieldVector& operator=(const FieldVector<T, SIZE>& x)
     {
         std::copy_n(x.begin(), SIZE, _data.begin());
         return *this;
@@ -167,7 +167,7 @@ public:
      * \param[in]  dummy  A void* dummy argument needed by SFINAE.
      */
     template <class C>
-    FieldVector(const DenseVector<C>& x,
+    OPM_HOST_DEVICE FieldVector(const DenseVector<C>& x,
                 [[maybe_unused]] typename std::enable_if<IsFieldVectorSizeCorrect<C, SIZE>::value>::type* dummy = 0)
     {
         // do a run-time size check, for the case that x is not a FieldVector
@@ -177,7 +177,7 @@ public:
 
     //! Constructor making vector with identical coordinates
     template <class K1>
-    explicit FieldVector(const FieldVector<K1, SIZE>& x)
+    OPM_HOST_DEVICE explicit FieldVector(const FieldVector<K1, SIZE>& x)
     {
         std::copy_n(x.begin(), SIZE, _data.begin());
     }
@@ -188,37 +188,37 @@ public:
     using Base::operator=;
 
     // make this thing a vector
-    static constexpr size_type size()
+    OPM_HOST_DEVICE static constexpr size_type size()
     {
         return SIZE;
     }
 
-    K& operator[](size_type i)
+    OPM_HOST_DEVICE K& operator[](size_type i)
     {
         DUNE_ASSERT_BOUNDS(i < SIZE);
         return _data[i];
     }
-    const K& operator[](size_type i) const
+    OPM_HOST_DEVICE const K& operator[](size_type i) const
     {
         DUNE_ASSERT_BOUNDS(i < SIZE);
         return _data[i];
     }
 
     //! return pointer to underlying array
-    K* data() noexcept
+    OPM_HOST_DEVICE K* data() noexcept
     {
         return _data.data();
     }
 
     //! return pointer to underlying array
-    const K* data() const noexcept
+    OPM_HOST_DEVICE const K* data() const noexcept
     {
         return _data.data();
     }
 
     //! vector space multiplication with scalar
     template <class Scalar, std::enable_if_t<::Dune::IsNumber<Scalar>::value, int> = 0>
-    friend auto operator*(const FieldVector& vector, Scalar scalar)
+    OPM_HOST_DEVICE friend auto operator*(const FieldVector& vector, Scalar scalar)
     {
         FieldVector<typename ::Dune::PromotionTraits<value_type, Scalar>::PromotedType, SIZE> result;
 
@@ -230,7 +230,7 @@ public:
 
     //! vector space multiplication with scalar
     template <class Scalar, std::enable_if_t<::Dune::IsNumber<Scalar>::value, int> = 0>
-    friend auto operator*(Scalar scalar, const FieldVector& vector)
+    OPM_HOST_DEVICE friend auto operator*(Scalar scalar, const FieldVector& vector)
     {
         FieldVector<typename ::Dune::PromotionTraits<value_type, Scalar>::PromotedType, SIZE> result;
 
@@ -242,7 +242,7 @@ public:
 
     //! vector space division by scalar
     template <class Scalar, std::enable_if_t<::Dune::IsNumber<Scalar>::value, int> = 0>
-    friend auto operator/(const FieldVector& vector, Scalar scalar)
+    OPM_HOST_DEVICE friend auto operator/(const FieldVector& vector, Scalar scalar)
     {
         FieldVector<typename ::Dune::PromotionTraits<value_type, Scalar>::PromotedType, SIZE> result;
 
@@ -314,7 +314,7 @@ public:
     //===== construction
 
     /** \brief Default constructor */
-    constexpr FieldVector()
+    OPM_HOST_DEVICE constexpr FieldVector()
         : _data()
     {
     }
@@ -324,14 +324,14 @@ public:
               typename EnableIf = typename std::enable_if<
                   std::is_convertible<T, K>::value
                   && !std::is_base_of<DenseVector<typename ::Dune::FieldTraits<T>::field_type>, K>::value>::type>
-    FieldVector(const T& k)
+    OPM_HOST_DEVICE FieldVector(const T& k)
         : _data(k)
     {
     }
 
     //! Constructor from static vector of different type
     template <class C, std::enable_if_t<std::is_assignable<K&, typename DenseVector<C>::value_type>::value, int> = 0>
-    FieldVector(const DenseVector<C>& x)
+    OPM_HOST_DEVICE FieldVector(const DenseVector<C>& x)
     {
         static_assert(((bool)IsFieldVectorSizeCorrect<C, 1>::value), "FieldVectors do not match in dimension!");
         assert(x.size() == 1);
@@ -345,7 +345,7 @@ public:
     FieldVector& operator=(const FieldVector&) = default;
 
     template <typename T>
-    FieldVector& operator=(const FieldVector<T, 1>& other)
+    OPM_HOST_DEVICE FieldVector& operator=(const FieldVector<T, 1>& other)
     {
         _data = other[0];
         return *this;
@@ -355,7 +355,7 @@ public:
     FieldVector& operator=(const FieldVector<T, N>&) = delete;
 
     /** \brief Construct from a std::initializer_list */
-    FieldVector(std::initializer_list<K> const& l)
+    OPM_HOST_DEVICE FieldVector(std::initializer_list<K> const& l)
     {
         assert(l.size() == 1);
         _data = *l.begin();
@@ -366,37 +366,37 @@ public:
               typename EnableIf = typename std::enable_if<
                   std::is_assignable<K&, T>::value
                   && !std::is_base_of<DenseVector<typename ::Dune::FieldTraits<T>::field_type>, K>::value>::type>
-    inline FieldVector& operator=(const T& k)
+    OPM_HOST_DEVICE inline FieldVector& operator=(const T& k)
     {
         _data = k;
         return *this;
     }
 
     //===== forward methods to container
-    static constexpr size_type size()
+    OPM_HOST_DEVICE static constexpr size_type size()
     {
         return 1;
     }
 
-    K& operator[]([[maybe_unused]] size_type i)
+    OPM_HOST_DEVICE K& operator[]([[maybe_unused]] size_type i)
     {
         DUNE_ASSERT_BOUNDS(i == 0);
         return _data;
     }
-    const K& operator[]([[maybe_unused]] size_type i) const
+    OPM_HOST_DEVICE const K& operator[]([[maybe_unused]] size_type i) const
     {
         DUNE_ASSERT_BOUNDS(i == 0);
         return _data;
     }
 
     //! return pointer to underlying array
-    K* data() noexcept
+    OPM_HOST_DEVICE K* data() noexcept
     {
         return &_data;
     }
 
     //! return pointer to underlying array
-    const K* data() const noexcept
+    OPM_HOST_DEVICE const K* data() const noexcept
     {
         return &_data;
     }
@@ -404,13 +404,13 @@ public:
     //===== conversion operator
 
     /** \brief Conversion operator */
-    operator K&()
+    OPM_HOST_DEVICE operator K&()
     {
         return _data;
     }
 
     /** \brief Const conversion operator */
-    operator const K&() const
+    OPM_HOST_DEVICE operator const K&() const
     {
         return _data;
     }
@@ -421,7 +421,7 @@ public:
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator>(const FieldVector<K, 1>& a, const FieldVector<K, 1>& b)
 {
     return a[0] > b[0];
@@ -429,7 +429,7 @@ operator>(const FieldVector<K, 1>& a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator>=(const FieldVector<K, 1>& a, const FieldVector<K, 1>& b)
 {
     return a[0] >= b[0];
@@ -437,7 +437,7 @@ operator>=(const FieldVector<K, 1>& a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator<(const FieldVector<K, 1>& a, const FieldVector<K, 1>& b)
 {
     return a[0] < b[0];
@@ -445,7 +445,7 @@ operator<(const FieldVector<K, 1>& a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator<=(const FieldVector<K, 1>& a, const FieldVector<K, 1>& b)
 {
     return a[0] <= b[0];
@@ -455,7 +455,7 @@ operator<=(const FieldVector<K, 1>& a, const FieldVector<K, 1>& b)
 
 //! Binary addition, when using FieldVector<K,1> like K
 template <class K>
-inline FieldVector<K, 1>
+OPM_HOST_DEVICE inline FieldVector<K, 1>
 operator+(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] + b;
@@ -463,7 +463,7 @@ operator+(const FieldVector<K, 1>& a, const K b)
 
 //! Binary subtraction, when using FieldVector<K,1> like K
 template <class K>
-inline FieldVector<K, 1>
+OPM_HOST_DEVICE inline FieldVector<K, 1>
 operator-(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] - b;
@@ -471,7 +471,7 @@ operator-(const FieldVector<K, 1>& a, const K b)
 
 //! Binary multiplication, when using FieldVector<K,1> like K
 template <class K>
-inline FieldVector<K, 1>
+OPM_HOST_DEVICE inline FieldVector<K, 1>
 operator*(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] * b;
@@ -479,7 +479,7 @@ operator*(const FieldVector<K, 1>& a, const K b)
 
 //! Binary division, when using FieldVector<K,1> like K
 template <class K>
-inline FieldVector<K, 1>
+OPM_HOST_DEVICE inline FieldVector<K, 1>
 operator/(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] / b;
@@ -487,7 +487,7 @@ operator/(const FieldVector<K, 1>& a, const K b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator>(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] > b;
@@ -495,7 +495,7 @@ operator>(const FieldVector<K, 1>& a, const K b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator>=(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] >= b;
@@ -503,7 +503,7 @@ operator>=(const FieldVector<K, 1>& a, const K b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator<(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] < b;
@@ -511,7 +511,7 @@ operator<(const FieldVector<K, 1>& a, const K b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator<=(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] <= b;
@@ -519,7 +519,7 @@ operator<=(const FieldVector<K, 1>& a, const K b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator==(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] == b;
@@ -527,7 +527,7 @@ operator==(const FieldVector<K, 1>& a, const K b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator!=(const FieldVector<K, 1>& a, const K b)
 {
     return a[0] != b;
@@ -537,7 +537,7 @@ operator!=(const FieldVector<K, 1>& a, const K b)
 
 //! Binary addition, when using FieldVector<K,1> like K
 template <class K>
-inline FieldVector<K, 1>
+OPM_HOST_DEVICE inline FieldVector<K, 1>
 operator+(const K a, const FieldVector<K, 1>& b)
 {
     return a + b[0];
@@ -545,7 +545,7 @@ operator+(const K a, const FieldVector<K, 1>& b)
 
 //! Binary subtraction, when using FieldVector<K,1> like K
 template <class K>
-inline FieldVector<K, 1>
+OPM_HOST_DEVICE inline FieldVector<K, 1>
 operator-(const K a, const FieldVector<K, 1>& b)
 {
     return a - b[0];
@@ -553,7 +553,7 @@ operator-(const K a, const FieldVector<K, 1>& b)
 
 //! Binary multiplication, when using FieldVector<K,1> like K
 template <class K>
-inline FieldVector<K, 1>
+OPM_HOST_DEVICE inline FieldVector<K, 1>
 operator*(const K a, const FieldVector<K, 1>& b)
 {
     return a * b[0];
@@ -561,7 +561,7 @@ operator*(const K a, const FieldVector<K, 1>& b)
 
 //! Binary division, when using FieldVector<K,1> like K
 template <class K>
-inline FieldVector<K, 1>
+OPM_HOST_DEVICE inline FieldVector<K, 1>
 operator/(const K a, const FieldVector<K, 1>& b)
 {
     return a / b[0];
@@ -569,7 +569,7 @@ operator/(const K a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator>(const K a, const FieldVector<K, 1>& b)
 {
     return a > b[0];
@@ -577,7 +577,7 @@ operator>(const K a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator>=(const K a, const FieldVector<K, 1>& b)
 {
     return a >= b[0];
@@ -585,7 +585,7 @@ operator>=(const K a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator<(const K a, const FieldVector<K, 1>& b)
 {
     return a < b[0];
@@ -593,7 +593,7 @@ operator<(const K a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator<=(const K a, const FieldVector<K, 1>& b)
 {
     return a <= b[0];
@@ -601,7 +601,7 @@ operator<=(const K a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator==(const K a, const FieldVector<K, 1>& b)
 {
     return a == b[0];
@@ -609,7 +609,7 @@ operator==(const K a, const FieldVector<K, 1>& b)
 
 //! Binary compare, when using FieldVector<K,1> like K
 template <class K>
-inline bool
+OPM_HOST_DEVICE inline bool
 operator!=(const K a, const FieldVector<K, 1>& b)
 {
     return a != b[0];
@@ -622,7 +622,7 @@ namespace MathOverloads
 
     // ! Returns whether all entries are finite
     template <class K, int SIZE>
-    auto isFinite(const FieldVector<K, SIZE>& b, ::Dune::PriorityTag<2>, ::Dune::MathOverloads::ADLTag)
+    OPM_HOST_DEVICE auto isFinite(const FieldVector<K, SIZE>& b, ::Dune::PriorityTag<2>, ::Dune::MathOverloads::ADLTag)
     {
         bool out = true;
         for (int i = 0; i < SIZE; i++) {
@@ -633,7 +633,7 @@ namespace MathOverloads
 
     // ! Returns whether any entry is infinite
     template <class K, int SIZE>
-    bool isInf(const FieldVector<K, SIZE>& b, ::Dune::PriorityTag<2>, ::Dune::MathOverloads::ADLTag)
+    OPM_HOST_DEVICE bool isInf(const FieldVector<K, SIZE>& b, ::Dune::PriorityTag<2>, ::Dune::MathOverloads::ADLTag)
     {
         bool out = false;
         for (int i = 0; i < SIZE; i++) {
@@ -644,7 +644,7 @@ namespace MathOverloads
 
     // ! Returns whether any entry is NaN
     template <class K, int SIZE, typename = std::enable_if_t<::Dune::HasNaN<K>::value>>
-    bool isNaN(const FieldVector<K, SIZE>& b, ::Dune::PriorityTag<2>, ::Dune::MathOverloads::ADLTag)
+    OPM_HOST_DEVICE bool isNaN(const FieldVector<K, SIZE>& b, ::Dune::PriorityTag<2>, ::Dune::MathOverloads::ADLTag)
     {
         bool out = false;
         for (int i = 0; i < SIZE; i++) {
@@ -655,7 +655,7 @@ namespace MathOverloads
 
     // ! Returns true if either b or c is NaN
     template <class K, typename = std::enable_if_t<::Dune::HasNaN<K>::value>>
-    bool isUnordered(const FieldVector<K, 1>& b, const FieldVector<K, 1>& c, ::Dune::PriorityTag<2>, ::Dune::MathOverloads::ADLTag)
+    OPM_HOST_DEVICE bool isUnordered(const FieldVector<K, 1>& b, const FieldVector<K, 1>& c, ::Dune::PriorityTag<2>, ::Dune::MathOverloads::ADLTag)
     {
         return Dune::isUnordered(b[0], c[0]);
     }

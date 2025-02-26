@@ -29,5 +29,9 @@
 
 BOOST_AUTO_TEST_CASE(TestDenseCreation) 
 {
-    //auto someVec = Opm::gpuistl::dense::DenseVector<float>(10);
+    auto someVec = Opm::gpuistl::dense::FieldVector<double, 10>();
+
+    BOOST_CHECK_EQUAL(someVec.size(), 10);
+    someVec[9] = 1.0;
+    BOOST_CHECK_EQUAL(someVec[9], 1.0);
 }

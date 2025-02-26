@@ -14,6 +14,7 @@
 #include <dune/common/matvectraits.hh>
 #include <dune/common/promotiontraits.hh>
 
+#include <opm/common/utility/gpuDecorators.hpp>
 
 namespace Opm::gpuistl::dense
 {
@@ -52,7 +53,7 @@ namespace fvmeta
        \memberof Dune::DenseVector
      */
     template <class K>
-    inline typename ::Dune::FieldTraits<K>::real_type absreal(const K& k)
+    OPM_HOST_DEVICE inline typename ::Dune::FieldTraits<K>::real_type absreal(const K& k)
     {
         using std::abs;
         return abs(k);
@@ -63,7 +64,7 @@ namespace fvmeta
        \memberof Dune::DenseVector
      */
     template <class K>
-    inline typename ::Dune::FieldTraits<K>::real_type absreal(const std::complex<K>& c)
+    OPM_HOST_DEVICE inline typename ::Dune::FieldTraits<K>::real_type absreal(const std::complex<K>& c)
     {
         using std::abs;
         return abs(c.real()) + abs(c.imag());
@@ -74,7 +75,7 @@ namespace fvmeta
        \memberof Dune::DenseVector
      */
     template <class K>
-    inline typename ::Dune::FieldTraits<K>::real_type abs2(const K& k)
+    OPM_HOST_DEVICE inline typename ::Dune::FieldTraits<K>::real_type abs2(const K& k)
     {
         return k * k;
     }
@@ -84,7 +85,7 @@ namespace fvmeta
        \memberof Dune::DenseVector
      */
     template <class K>
-    inline typename ::Dune::FieldTraits<K>::real_type abs2(const std::complex<K>& c)
+    OPM_HOST_DEVICE inline typename ::Dune::FieldTraits<K>::real_type abs2(const std::complex<K>& c)
     {
         return c.real() * c.real() + c.imag() * c.imag();
     }
@@ -95,7 +96,7 @@ namespace fvmeta
      */
     template <class K, bool isInteger = std::numeric_limits<K>::is_integer>
     struct Sqrt {
-        static inline typename ::Dune::FieldTraits<K>::real_type sqrt(const K& k)
+        OPM_HOST_DEVICE static inline typename ::Dune::FieldTraits<K>::real_type sqrt(const K& k)
         {
             using std::sqrt;
             return sqrt(k);
@@ -108,7 +109,7 @@ namespace fvmeta
      */
     template <class K>
     struct Sqrt<K, true> {
-        static inline typename ::Dune::FieldTraits<K>::real_type sqrt(const K& k)
+        OPM_HOST_DEVICE static inline typename ::Dune::FieldTraits<K>::real_type sqrt(const K& k)
         {
             using std::sqrt;
             return typename ::Dune::FieldTraits<K>::real_type(sqrt(double(k)));
@@ -120,7 +121,7 @@ namespace fvmeta
        \memberof Dune::DenseVector
      */
     template <class K>
-    inline typename ::Dune::FieldTraits<K>::real_type sqrt(const K& k)
+    OPM_HOST_DEVICE inline typename ::Dune::FieldTraits<K>::real_type sqrt(const K& k)
     {
         return Sqrt<K>::sqrt(k);
     }
@@ -162,77 +163,77 @@ public:
     typedef typename C::size_type SizeType;
 
     // Constructors needed by the base iterators.
-    DenseIterator()
+    OPM_HOST_DEVICE DenseIterator()
         : container_(0)
         , position_()
     {
     }
 
-    DenseIterator(C& cont, SizeType pos)
+    OPM_HOST_DEVICE DenseIterator(C& cont, SizeType pos)
         : container_(&cont)
         , position_(pos)
     {
     }
 
-    DenseIterator(const MutableIterator& other)
+    OPM_HOST_DEVICE DenseIterator(const MutableIterator& other)
         : container_(other.container_)
         , position_(other.position_)
     {
     }
 
-    DenseIterator(const ConstIterator& other)
+    OPM_HOST_DEVICE DenseIterator(const ConstIterator& other)
         : container_(other.container_)
         , position_(other.position_)
     {
     }
 
     // Methods needed by the forward iterator
-    bool equals(const MutableIterator& other) const
+    OPM_HOST_DEVICE bool equals(const MutableIterator& other) const
     {
         return position_ == other.position_ && container_ == other.container_;
     }
 
 
-    bool equals(const ConstIterator& other) const
+    OPM_HOST_DEVICE bool equals(const ConstIterator& other) const
     {
         return position_ == other.position_ && container_ == other.container_;
     }
 
-    R dereference() const
+    OPM_HOST_DEVICE R dereference() const
     {
         return container_->operator[](position_);
     }
 
-    void increment()
+    OPM_HOST_DEVICE void increment()
     {
         ++position_;
     }
 
     // Additional function needed by BidirectionalIterator
-    void decrement()
+    OPM_HOST_DEVICE void decrement()
     {
         --position_;
     }
 
     // Additional function needed by RandomAccessIterator
-    R elementAt(DifferenceType i) const
+    OPM_HOST_DEVICE R elementAt(DifferenceType i) const
     {
         return container_->operator[](position_ + i);
     }
 
-    void advance(DifferenceType n)
+    OPM_HOST_DEVICE void advance(DifferenceType n)
     {
         position_ = position_ + n;
     }
 
-    DifferenceType distanceTo(
+    OPM_HOST_DEVICE DifferenceType distanceTo(
         DenseIterator<const typename std::remove_const<C>::type, const typename std::remove_const<T>::type> other) const
     {
         assert(other.container_ == container_);
         return static_cast<DifferenceType>(other.position_) - static_cast<DifferenceType>(position_);
     }
 
-    DifferenceType
+    OPM_HOST_DEVICE DifferenceType
     distanceTo(DenseIterator<typename std::remove_const<C>::type, typename std::remove_const<T>::type> other) const
     {
         assert(other.container_ == container_);
@@ -240,7 +241,7 @@ public:
     }
 
     //! return index
-    SizeType index() const
+    OPM_HOST_DEVICE SizeType index() const
     {
         return this->position_;
     }
@@ -261,11 +262,11 @@ class DenseVector
     // typedef typename Traits::value_type K;
 
     // Curiously recurring template pattern
-    V& asImp()
+    OPM_HOST_DEVICE V& asImp()
     {
         return static_cast<V&>(*this);
     }
-    const V& asImp() const
+    OPM_HOST_DEVICE const V& asImp() const
     {
         return static_cast<const V&>(*this);
     }
@@ -299,7 +300,7 @@ public:
 
     //===== assignment from scalar
     //! Assignment operator for scalar
-    inline derived_type& operator=(const value_type& k)
+    OPM_HOST_DEVICE inline derived_type& operator=(const value_type& k)
     {
         for (size_type i = 0; i < size(); i++)
             asImp()[i] = k;
@@ -315,7 +316,7 @@ public:
     //! Assignment operator for other DenseVector of different type
     template <typename W,
               std::enable_if_t<std::is_assignable<value_type&, typename DenseVector<W>::value_type>::value, int> = 0>
-    derived_type& operator=(const DenseVector<W>& other)
+    OPM_HOST_DEVICE derived_type& operator=(const DenseVector<W>& other)
     {
         assert(other.size() == size());
         for (size_type i = 0; i < size(); i++)
@@ -326,48 +327,48 @@ public:
     //===== access to components
 
     //! random access
-    value_type& operator[](size_type i)
+    OPM_HOST_DEVICE value_type& operator[](size_type i)
     {
         return asImp()[i];
     }
 
-    const value_type& operator[](size_type i) const
+    OPM_HOST_DEVICE const value_type& operator[](size_type i) const
     {
         return asImp()[i];
     }
 
     //! return reference to first element
-    value_type& front()
+    OPM_HOST_DEVICE value_type& front()
     {
         return asImp()[0];
     }
 
     //! return reference to first element
-    const value_type& front() const
+    OPM_HOST_DEVICE const value_type& front() const
     {
         return asImp()[0];
     }
 
     //! return reference to last element
-    value_type& back()
+    OPM_HOST_DEVICE value_type& back()
     {
         return asImp()[size() - 1];
     }
 
     //! return reference to last element
-    const value_type& back() const
+    OPM_HOST_DEVICE const value_type& back() const
     {
         return asImp()[size() - 1];
     }
 
     //! checks whether the container is empty
-    bool empty() const
+    OPM_HOST_DEVICE bool empty() const
     {
         return size() == 0;
     }
 
     //! size method
-    size_type size() const
+    OPM_HOST_DEVICE size_type size() const
     {
         return asImp().size();
     }
@@ -378,33 +379,33 @@ public:
     typedef Iterator iterator;
 
     //! begin iterator
-    Iterator begin()
+    OPM_HOST_DEVICE Iterator begin()
     {
         return Iterator(*this, 0);
     }
 
     //! end iterator
-    Iterator end()
+    OPM_HOST_DEVICE Iterator end()
     {
         return Iterator(*this, size());
     }
 
     //! @returns an iterator that is positioned before
     //! the end iterator of the vector, i.e. at the last entry.
-    Iterator beforeEnd()
+    OPM_HOST_DEVICE Iterator beforeEnd()
     {
         return Iterator(*this, size() - 1);
     }
 
     //! @returns an iterator that is positioned before
     //! the first entry of the vector.
-    Iterator beforeBegin()
+    OPM_HOST_DEVICE Iterator beforeBegin()
     {
         return Iterator(*this, -1);
     }
 
     //! return iterator to given element or end()
-    Iterator find(size_type i)
+    OPM_HOST_DEVICE Iterator find(size_type i)
     {
         return Iterator(*this, std::min(i, size()));
     }
@@ -415,33 +416,33 @@ public:
     typedef ConstIterator const_iterator;
 
     //! begin ConstIterator
-    ConstIterator begin() const
+    OPM_HOST_DEVICE ConstIterator begin() const
     {
         return ConstIterator(*this, 0);
     }
 
     //! end ConstIterator
-    ConstIterator end() const
+    OPM_HOST_DEVICE ConstIterator end() const
     {
         return ConstIterator(*this, size());
     }
 
     //! @returns an iterator that is positioned before
     //! the end iterator of the vector. i.e. at the last element
-    ConstIterator beforeEnd() const
+    OPM_HOST_DEVICE ConstIterator beforeEnd() const
     {
         return ConstIterator(*this, size() - 1);
     }
 
     //! @returns an iterator that is positioned before
     //! the first entry of the vector.
-    ConstIterator beforeBegin() const
+    OPM_HOST_DEVICE ConstIterator beforeBegin() const
     {
         return ConstIterator(*this, -1);
     }
 
     //! return iterator to given element or end()
-    ConstIterator find(size_type i) const
+    OPM_HOST_DEVICE ConstIterator find(size_type i) const
     {
         return ConstIterator(*this, std::min(i, size()));
     }
@@ -450,7 +451,7 @@ public:
 
     //! vector space addition
     template <class Other>
-    derived_type& operator+=(const DenseVector<Other>& x)
+    OPM_HOST_DEVICE derived_type& operator+=(const DenseVector<Other>& x)
     {
         DUNE_ASSERT_BOUNDS(x.size() == size());
         for (size_type i = 0; i < size(); i++)
@@ -460,7 +461,7 @@ public:
 
     //! vector space subtraction
     template <class Other>
-    derived_type& operator-=(const DenseVector<Other>& x)
+    OPM_HOST_DEVICE derived_type& operator-=(const DenseVector<Other>& x)
     {
         DUNE_ASSERT_BOUNDS(x.size() == size());
         for (size_type i = 0; i < size(); i++)
@@ -470,7 +471,7 @@ public:
 
     //! Binary vector addition
     template <class Other>
-    derived_type operator+(const DenseVector<Other>& b) const
+    OPM_HOST_DEVICE derived_type operator+(const DenseVector<Other>& b) const
     {
         derived_type z = asImp();
         return (z += b);
@@ -478,14 +479,14 @@ public:
 
     //! Binary vector subtraction
     template <class Other>
-    derived_type operator-(const DenseVector<Other>& b) const
+    OPM_HOST_DEVICE derived_type operator-(const DenseVector<Other>& b) const
     {
         derived_type z = asImp();
         return (z -= b);
     }
 
     //! Vector negation
-    derived_type operator-() const
+    OPM_HOST_DEVICE derived_type operator-() const
     {
         V result;
         using idx_type = typename decltype(result)::size_type;
@@ -506,7 +507,7 @@ public:
        convertible to value_type.
      */
     template <typename ValueType>
-    typename std::enable_if<std::is_convertible<ValueType, value_type>::value, derived_type>::type&
+    OPM_HOST_DEVICE typename std::enable_if<std::is_convertible<ValueType, value_type>::value, derived_type>::type&
     operator+=(const ValueType& kk)
     {
         const value_type& k = kk;
@@ -525,7 +526,7 @@ public:
        convertible to value_type.
      */
     template <typename ValueType>
-    typename std::enable_if<std::is_convertible<ValueType, value_type>::value, derived_type>::type&
+    OPM_HOST_DEVICE typename std::enable_if<std::is_convertible<ValueType, value_type>::value, derived_type>::type&
     operator-=(const ValueType& kk)
     {
         const value_type& k = kk;
@@ -544,7 +545,7 @@ public:
        convertible to field_type.
      */
     template <typename FieldType>
-    typename std::enable_if<std::is_convertible<FieldType, field_type>::value, derived_type>::type&
+    OPM_HOST_DEVICE typename std::enable_if<std::is_convertible<FieldType, field_type>::value, derived_type>::type&
     operator*=(const FieldType& kk)
     {
         const field_type& k = kk;
@@ -563,7 +564,7 @@ public:
        convertible to field_type.
      */
     template <typename FieldType>
-    typename std::enable_if<std::is_convertible<FieldType, field_type>::value, derived_type>::type&
+    OPM_HOST_DEVICE typename std::enable_if<std::is_convertible<FieldType, field_type>::value, derived_type>::type&
     operator/=(const FieldType& kk)
     {
         const field_type& k = kk;
@@ -574,7 +575,7 @@ public:
 
     //! Binary vector comparison
     template <class Other>
-    bool operator==(const DenseVector<Other>& x) const
+    OPM_HOST_DEVICE bool operator==(const DenseVector<Other>& x) const
     {
         DUNE_ASSERT_BOUNDS(x.size() == size());
         for (size_type i = 0; i < size(); i++)
@@ -586,7 +587,7 @@ public:
 
     //! Binary vector incomparison
     template <class Other>
-    bool operator!=(const DenseVector<Other>& x) const
+    OPM_HOST_DEVICE bool operator!=(const DenseVector<Other>& x) const
     {
         return !operator==(x);
     }
@@ -594,7 +595,7 @@ public:
 
     //! vector space axpy operation ( *this += a x )
     template <class Other>
-    derived_type& axpy(const field_type& a, const DenseVector<Other>& x)
+    OPM_HOST_DEVICE derived_type& axpy(const field_type& a, const DenseVector<Other>& x)
     {
         DUNE_ASSERT_BOUNDS(x.size() == size());
         for (size_type i = 0; i < size(); i++)
@@ -610,7 +611,7 @@ public:
      * @return
      */
     template <class Other>
-    typename ::Dune::PromotionTraits<field_type, typename DenseVector<Other>::field_type>::PromotedType
+    OPM_HOST_DEVICE typename ::Dune::PromotionTraits<field_type, typename DenseVector<Other>::field_type>::PromotedType
     operator*(const DenseVector<Other>& x) const
     {
         typedef
@@ -631,7 +632,7 @@ public:
      * @return
      */
     template <class Other>
-    typename ::Dune::PromotionTraits<field_type, typename DenseVector<Other>::field_type>::PromotedType
+    OPM_HOST_DEVICE typename ::Dune::PromotionTraits<field_type, typename DenseVector<Other>::field_type>::PromotedType
     dot(const DenseVector<Other>& x) const
     {
         typedef
@@ -647,7 +648,7 @@ public:
     //===== norms
 
     //! one norm (sum over absolute values of entries)
-    typename ::Dune::FieldTraits<value_type>::real_type one_norm() const
+    OPM_HOST_DEVICE typename ::Dune::FieldTraits<value_type>::real_type one_norm() const
     {
         using std::abs;
         typename ::Dune::FieldTraits<value_type>::real_type result(0);
@@ -658,7 +659,7 @@ public:
 
 
     //! simplified one norm (uses Manhattan norm for complex values)
-    typename ::Dune::FieldTraits<value_type>::real_type one_norm_real() const
+    OPM_HOST_DEVICE typename ::Dune::FieldTraits<value_type>::real_type one_norm_real() const
     {
         typename ::Dune::FieldTraits<value_type>::real_type result(0);
         for (size_type i = 0; i < size(); i++)
@@ -667,7 +668,7 @@ public:
     }
 
     //! two norm sqrt(sum over squared values of entries)
-    typename ::Dune::FieldTraits<value_type>::real_type two_norm() const
+    OPM_HOST_DEVICE typename ::Dune::FieldTraits<value_type>::real_type two_norm() const
     {
         typename ::Dune::FieldTraits<value_type>::real_type result(0);
         for (size_type i = 0; i < size(); i++)
@@ -676,7 +677,7 @@ public:
     }
 
     //! square of two norm (sum over squared values of entries), need for block recursion
-    typename ::Dune::FieldTraits<value_type>::real_type two_norm2() const
+    OPM_HOST_DEVICE typename ::Dune::FieldTraits<value_type>::real_type two_norm2() const
     {
         typename ::Dune::FieldTraits<value_type>::real_type result(0);
         for (size_type i = 0; i < size(); i++)
@@ -686,7 +687,7 @@ public:
 
     //! infinity norm (maximum of absolute values of entries)
     template <typename vt = value_type, typename std::enable_if<!::Dune::HasNaN<vt>::value, int>::type = 0>
-    typename ::Dune::FieldTraits<vt>::real_type infinity_norm() const
+    OPM_HOST_DEVICE typename ::Dune::FieldTraits<vt>::real_type infinity_norm() const
     {
         using real_type = typename ::Dune::FieldTraits<vt>::real_type;
         using std::abs;
@@ -702,7 +703,7 @@ public:
 
     //! simplified infinity norm (uses Manhattan norm for complex values)
     template <typename vt = value_type, typename std::enable_if<!::Dune::HasNaN<vt>::value, int>::type = 0>
-    typename ::Dune::FieldTraits<vt>::real_type infinity_norm_real() const
+    OPM_HOST_DEVICE typename ::Dune::FieldTraits<vt>::real_type infinity_norm_real() const
     {
         using real_type = typename ::Dune::FieldTraits<vt>::real_type;
         using std::max;
@@ -717,7 +718,7 @@ public:
 
     //! infinity norm (maximum of absolute values of entries)
     template <typename vt = value_type, typename std::enable_if<::Dune::HasNaN<vt>::value, int>::type = 0>
-    typename ::Dune::FieldTraits<vt>::real_type infinity_norm() const
+    OPM_HOST_DEVICE typename ::Dune::FieldTraits<vt>::real_type infinity_norm() const
     {
         using real_type = typename ::Dune::FieldTraits<vt>::real_type;
         using std::abs;
@@ -735,7 +736,7 @@ public:
 
     //! simplified infinity norm (uses Manhattan norm for complex values)
     template <typename vt = value_type, typename std::enable_if<::Dune::HasNaN<vt>::value, int>::type = 0>
-    typename ::Dune::FieldTraits<vt>::real_type infinity_norm_real() const
+    OPM_HOST_DEVICE typename ::Dune::FieldTraits<vt>::real_type infinity_norm_real() const
     {
         using real_type = typename ::Dune::FieldTraits<vt>::real_type;
         using std::max;
@@ -753,13 +754,13 @@ public:
     //===== sizes
 
     //! number of blocks in the vector (are of size 1 here)
-    size_type N() const
+    OPM_HOST_DEVICE size_type N() const
     {
         return size();
     }
 
     //! dimension of the vector space
-    size_type dim() const
+    OPM_HOST_DEVICE size_type dim() const
     {
         return size();
     }
