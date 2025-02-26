@@ -13,8 +13,10 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <boost/test/tools/old/interface.hpp>
+#define HAVE_ECL_INPUT 1
 #include <config.h>
+
+
 #include <stdexcept>
 
 #define BOOST_TEST_MODULE TestDenseVector
@@ -25,14 +27,18 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
-//#include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/dense/DenseVector.hpp>
 #include <opm/simulators/linalg/gpuistl/dense/FieldVector.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
-
+#include <opm/simulators/flow/Main.hpp>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
+// do I need these?
+#include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
+#include <opm/simulators/flow/equil/InitStateEquil.hpp>
 
 namespace {
 
@@ -40,7 +46,9 @@ namespace {
 
 BOOST_AUTO_TEST_CASE(TestPrimaryVariablesCreationWithFieldVector) 
 {
-   // using TypeTag = Opm::Properties::TTag::BlackOilModel;
+   using TypeTag = Opm::Properties::TTag::FlowProblem;
 
-   // Opm::BlackOilPrimaryVariables<TypeTag> primaryVariables;
+   Opm::BlackOilPrimaryVariables<TypeTag> primaryVariables;
+
+   Opm::BlackOilPrimaryVariables<TypeTag, Opm::gpuistl::dense::FieldVector> primaryVariablesFieldVector;
 }
