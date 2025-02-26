@@ -31,6 +31,8 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/grid/utility/ElementChunks.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/GenericTracerModel.hpp>
@@ -690,8 +692,14 @@ protected:
             }
         }
 
+
+        const int num_threads = ThreadManager::maxThreads();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (const auto& chunk : ElementChunks(simulator_.gridView(), Dune::Partitions::all, num_threads)) {
         ElementContext elemCtx(simulator_);
-        for (const auto& elem : elements(simulator_.gridView())) {
+        for (const auto& elem : chunk) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             Scalar extrusionFactor = elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
@@ -713,6 +721,7 @@ protected:
                     tr.storageOfTimeIndex1_[tIdx][globalDofIdx][1] = sVol1 * tr.concentrationInitial_[tIdx][globalDofIdx][1];
                 }
             }
+        }
         }
     }
 
