@@ -103,9 +103,8 @@ public:
 
     void computeTotalRatesForDof(RateVector& /*rate*/, unsigned /*globalIdx*/) const;
     //
-    [[nodiscard]] data::Wells wellData() const {
-         return data::Wells{};
-    }
+    [[nodiscard]] data::Wells wellData() const;
+
     [[nodiscard]] data::WellBlockAveragePressures wellBlockAveragePressures() const {
          return data::WellBlockAveragePressures{};
     }

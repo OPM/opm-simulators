@@ -255,6 +255,14 @@ getWellConvergence() const
     return converged;
 }
 
+template <typename TypeTag>
+data::Wells
+CompositionalWellModel<TypeTag>::
+wellData() const
+{
+    return this->comp_well_states_.report();
+}
+
 //template <typename TypeTag>
 //void
 //CompositionalWellModel<TypeTag>::

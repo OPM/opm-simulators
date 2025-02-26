@@ -131,5 +131,27 @@ operator[](const std::string& well_name)
     return this->wells_[well_name];
 }
 
+template <typename Scalar>
+data::Wells
+CompWellState<Scalar>::
+report() const
+{
+    if (this->wells_.empty()) {
+        return {};
+    }
+
+    data::Wells res;
+    for (std::size_t w = 0; w < this->wells_.size(); ++w) {
+        const auto& ws = this->wells_[w];
+        if (ws.status == Well::Status::SHUT) {
+            continue;
+        }
+        auto& well = res[ws.name];
+        well.bhp = ws.bhp;
+        well.temperature = ws.temperature;
+    }
+    return res;
+}
+
 
 } // end of namespace Opm
