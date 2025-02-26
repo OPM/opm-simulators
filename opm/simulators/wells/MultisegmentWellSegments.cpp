@@ -109,11 +109,14 @@ MultisegmentWellSegments(const int numSegments,
             const Scalar segment_depth = segment_set[segment_index].depth();
             int local_perf_index = parallel_well_info.globalToLocal(i_perf_wells);
             if (local_perf_index > -1) // If local_perf_index == -1, then the perforation is not on this process
-                if (local_perforation_depth_diffs_.size() > static_cast<std::size_t>(local_perf_index)) // If local_perforation_depth_diffs_.size() is not large enough, this is a SHUT connection
+                if (local_perforation_depth_diffs_.size() > static_cast<std::size_t>(local_perf_index)) {
+                    // If local_perforation_depth_diffs_.size() is not large enough, this is a SHUT connection
                     local_perforation_depth_diffs_[local_perf_index] = well_.perfDepth()[i_perf_wells] - segment_depth;
+                }
             i_perf_wells++;
         }
     }
+    std::cout << "First loop of MultisegmentWellSegments constructor done, local_perforation_depth_diffs_.size() = " << local_perforation_depth_diffs_.size() << std::endl;
 
     // initialize the segment_inlets_
     for (const Segment& segment : segment_set) {
@@ -125,6 +128,7 @@ MultisegmentWellSegments(const int numSegments,
             inlets_[outlet_segment_index].push_back(segment_index);
         }
     }
+    std::cout << "Second loop of MultisegmentWellSegments constructor done, segment_set.size() = " << segment_set.size() << std::endl;
 
     // calculating the depth difference between the segment and its oulet_segments
     // for the top segment, we will make its zero unless we find other purpose to use this value
@@ -135,6 +139,7 @@ MultisegmentWellSegments(const int numSegments,
         const Scalar outlet_depth = outlet_segment.depth();
         depth_diffs_[seg] = segment_depth - outlet_depth;
     }
+    std::cout << "Third loop of MultisegmentWellSegments constructor done, numSegments = " << numSegments << std::endl;
 }
 
 template<class FluidSystem, class Indices>

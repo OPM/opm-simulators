@@ -684,6 +684,7 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
             // that is why I think we should use a well model to initialize the WellState here
             std::vector<std::vector<int>> segment_perforations(well_nseg);
+            std::cout << "Will now loop over perforations, from 0 to " << completion_set.size() << std::endl;
             std::unordered_map<int,int> active_perf_index_local_to_global = {};
             for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
                 if (ws.parallel_info.get().globalToLocal(perf) == 0) {
@@ -692,6 +693,7 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 }
                 const Connection& connection = completion_set.get(perf);
                 if (connection.state() == Connection::State::OPEN) {
+                    std::cout << "activeperf_global = " << n_activeperf << ", activeperf_local = " << n_activeperf_local << ", perf_global = " << perf << ", perf_local = " << ws.parallel_info.get().globalToLocal(perf) << std::endl;
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
                     if (segment_index == -1) {
                         OPM_THROW(std::logic_error,
@@ -715,6 +717,7 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             if (!this->enableDistributedWells_ && static_cast<int>(ws.perf_data.size()) != n_activeperf)
                 throw std::logic_error("Distributed multi-segment wells cannot be initialized properly yet.");
 
+            std::cout << "(should be the same?) n_activeperf: " << n_activeperf << std::endl;
 
             std::vector<std::vector<int>> segment_inlets(well_nseg);
             for (int seg = 0; seg < well_nseg; ++seg) {
@@ -727,10 +730,20 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     segment_inlets[outlet_segment_index].push_back(segment_index);
                 }
             }
+            std::cout << "Now: segment_inlets (of size " << well_nseg << "): " << std::endl;
+            for (size_t i = 0; i < segment_inlets.size(); ++i) {
+                std::cout << "segment_inlets[" << i << "]: ";
+                for (int inlet : segment_inlets[i]) {
+                    std::cout << inlet << ", ";
+                }
+                std::cout << std::endl;
+            }
 
             auto& perf_data = ws.perf_data;
+            std::cout << "in the loop for gas" << std::endl;
             // for the seg_rates_, now it becomes a recursive solution procedure.
             if (pu.phase_used[Gas]) {
+                std::cout << "in the loop for gas" << std::endl;
                 auto& perf_rates = perf_data.phase_rates;
                 const int gaspos = pu.phase_pos[Gas];
                 // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
@@ -742,11 +755,15 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     perf_rates[perf*np + gaspos] *= 100;
             }
 
+            std::cout << "perf_data.size() = " << perf_data.size() << std::endl;
+            std::cout << "np = " << np << std::endl;
             const auto& perf_rates = perf_data.phase_rates;
             const auto& perf_press = perf_data.pressure;
             // The function calculateSegmentRates as well as the loop filling the segment_pressure work
             // with *global* containers. Now we create global vectors containing the phase_rates and
             // pressures of all processes.
+            std::cout << "perf_rates.size() = " << perf_rates.size() << std::endl;
+            std::cout << "perf_press.size() = " << perf_press.size() << std::endl;
             size_t number_of_global_perfs = 0;
 
             if (ws.parallel_info.get().communication().size() > 1) {
@@ -757,23 +774,43 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             std::vector<Scalar> perforation_rates(number_of_global_perfs * np, 0.0);
             std::vector<Scalar> perforation_pressures(number_of_global_perfs, 0.0);
+            std::cout << "After communication: perforation_rates.size() = " << perforation_rates.size() << std::endl;
 
             assert(perf_data.size() == perf_press.size());
             assert(perf_data.size() * np == perf_rates.size());
             for (size_t perf = 0; perf < perf_data.size(); ++perf) {
+                std::cout << "looping over perf_data.size(), perf = " << perf;
                 if (active_perf_index_local_to_global.count(perf) > 0) {
                     const int global_active_perf_index = active_perf_index_local_to_global.at(perf);
+                    std::cout << ", global_active_perf_index = " << global_active_perf_index << std::endl;
+                    perforation_pressures[global_active_perf_index] = perf_press[perf];
                     for (int i = 0; i < np; i++) {
                         perforation_rates[global_active_perf_index * np + i] = perf_rates[perf * np + i];
                     }
                 } else {
+                    std::cout << std::endl;
                     OPM_THROW(std::logic_error,fmt::format("Error when initializing MS Well state, there is no active perforation index for the local index {}", perf));
                 }
             }
+
+            std::cout << "Before communication: calculateSegmentRates: perforation_rates.size() " << perforation_rates.size() << ", and the content:" << std::endl;
+            std::for_each(perforation_rates.begin(), perforation_rates.end(), [](const auto& entry) {std::cout << entry << ", ";});
+            std::cout << std::endl;
+            std::cout << "Before communication: calculateSegmentRates: perforation_pressures.size() " << perforation_pressures.size() << ", and the content:" << std::endl;
+            std::for_each(perforation_pressures.begin(), perforation_pressures.end(), [](const auto& entry) {std::cout << entry << ", ";});
+            std::cout << std::endl;
+
             if (ws.parallel_info.get().communication().size() > 1) {
                 ws.parallel_info.get().communication().sum(perforation_rates.data(), perforation_rates.size());
                 ws.parallel_info.get().communication().sum(perforation_pressures.data(), perforation_pressures.size());
             }
+
+            std::cout << "After communication: calculateSegmentRates: perforation_rates.size() " << perforation_rates.size() << ", and the content:" << std::endl;
+            std::for_each(perforation_rates.begin(), perforation_rates.end(), [](const auto& entry) {std::cout << entry << ", ";});
+            std::cout << std::endl;
+            std::cout << "After communication: calculateSegmentRates: perforation_pressures.size() " << perforation_pressures.size() << ", and the content:" << std::endl;
+            std::for_each(perforation_pressures.begin(), perforation_pressures.end(), [](const auto& entry) {std::cout << entry << ", ";});
+            std::cout << std::endl;
 
             calculateSegmentRates(ws.parallel_info, segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
 
@@ -786,11 +823,17 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 // top segment is always the first one, and its pressure is the well bhp
                 auto& segment_pressure = ws.segments.pressure;
                 segment_pressure[0] = ws.bhp;
+                std::cout << "segment_pressure.size() " << segment_pressure.size() << std::endl;
+                std::cout << "perf_press.size() " << perforation_pressures.size() << ", perforation_pressures:" << std::endl;
+                std::for_each(perforation_pressures.begin(), perforation_pressures.end(), [](const auto& entry) {std::cout << entry << ", ";});
+                std::cout << std::endl;
+
                 // The segment_indices contain the indices of the segments, that are only available on one process.
                 std::vector<int> segment_indices;
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if (!segment_perforations[seg].empty()) {
                         const int first_perf_global_index = segment_perforations[seg][0];
+                        std::cout << "first perf of segment " << seg << " seg: " << first_perf_global_index << std::endl;
                         segment_pressure[seg] = perforation_pressures[first_perf_global_index];
                         segment_indices.push_back(seg);
                     } else {
@@ -841,6 +884,7 @@ calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>& pw_info,
                                const int np, const int segment,
                                std::vector<Scalar>& segment_rates)
 {
+    std::cout << "calculateSegmentRatesBeforeSum for the segment " << segment << std::endl;
     // the rate of the segment equals to the sum of the contribution from the perforations and inlet segment rates.
     // the first segment is always the top segment, its rates should be equal to the well rates.
     assert(segment_inlets.size() == segment_perforations.size());
@@ -849,19 +893,30 @@ calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>& pw_info,
         segment_rates.resize(np * well_nseg, 0.0);
     }
     // contributions from the perforations belong to this segment
+    std::cout << "Will now look at the perforations of segment " << segment << std::endl;
     for (const int& perf : segment_perforations[segment]) {
         auto local_perf = pw_info.globalToLocal(perf);
+        std::cout << "perf = " << perf << ", local_perf = " << local_perf << std::endl;
         // If local_perf == -1, then the perforation is not on this process.
         // The perforation of the other processes are added in calculateSegmentRates.
         if (local_perf > -1) {
+            std::cout << "segment_rates.size() = " << segment_rates.size() << ", perforation_rates.size() = " << perforation_rates.size() << std::endl;
             for (int p = 0; p < np; ++p) {
+                std::cout << "will access segment_rates[" << np * segment + p << "] and perforation_rates[" << np * local_perf + p << "]" << std::endl;
                 segment_rates[np * segment + p] += perforation_rates[np * local_perf + p];
             }
         }
     }
+    std::cout << "Will now loop over the inlet_segs of segment " << segment << std::endl;
+    std::cout << "The inlet segs are: ";
+    std::for_each(segment_inlets[segment].begin(), segment_inlets[segment].end(), [](const auto& entry) {std::cout << entry << ", ";});
+    std::cout << std::endl;
     for (const int& inlet_seg : segment_inlets[segment]) {
+        std::cout << "Now call calculateSegmentRatesBeforeSum for the inlet_seg " << inlet_seg << std::endl;
         calculateSegmentRatesBeforeSum(pw_info, segment_inlets, segment_perforations, perforation_rates, np, inlet_seg, segment_rates);
+        std::cout << "segment_rates.size() = " << segment_rates.size() << std::endl;
         for (int p = 0; p < np; ++p) {
+            std::cout << "will access segment_rates[" << np * segment + p << "] and segment_rates[" << np * inlet_seg + p << "]" << std::endl;
             segment_rates[np * segment + p] += segment_rates[np * inlet_seg + p];
         }
     }
@@ -875,6 +930,9 @@ calculateSegmentRates(const ParallelWellInfo<Scalar>& pw_info,
                       const int np, const int segment,
                       std::vector<Scalar>& segment_rates)
 {
+    std::cout << "calculateSegmentRates called, segment = " << segment << std::endl;
+    std::cout << "segment_perforations.size() = " << segment_perforations.size() << std::endl;
+    std::cout << "(should be the same across all proceses:) segment_rates.size() = " << segment_rates.size() << std::endl;
     calculateSegmentRatesBeforeSum(pw_info, segment_inlets, segment_perforations, perforation_rates, np, segment, segment_rates);
     pw_info.communication().sum(segment_rates.data(), segment_rates.size());
 }
