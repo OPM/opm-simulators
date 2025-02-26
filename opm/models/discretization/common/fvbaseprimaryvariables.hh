@@ -45,9 +45,9 @@ namespace Opm {
  *
  * \brief Represents the primary variables used by the a model.
  */
-template <class TypeTag>
+template <class TypeTag, template<class, int> class VectorType = Dune::FieldVector>
 class FvBasePrimaryVariables
-    : public Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
+    : public VectorType<GetPropType<TypeTag, Properties::Scalar>,
                                getPropValue<TypeTag, Properties::NumEq>()>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -56,7 +56,7 @@ class FvBasePrimaryVariables
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     using Toolbox = MathToolbox<Evaluation>;
-    using ParentType = Dune::FieldVector<Scalar, numEq>;
+    using ParentType = VectorType<Scalar, numEq>;
 
 public:
     FvBasePrimaryVariables()
