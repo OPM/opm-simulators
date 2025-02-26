@@ -91,6 +91,17 @@ public:
     void update_injector_targets(const Well& well, const SummaryState& st);
 
     Scalar get_total_surface_rate() const;
+
+    void output() const
+    {
+        std::cout << " well name " << name << std::endl;
+        std::cout << " phase rates ";
+        for (const auto& val : surface_phase_rates) {
+            std::cout << val * 86400. << " ";
+        }
+        std::cout << std::endl;
+        std::cout << " bhp " << bhp/1.e5 << std::endl;
+    }
 };
 
 } // namespace Opm

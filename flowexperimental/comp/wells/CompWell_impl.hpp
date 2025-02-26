@@ -577,6 +577,8 @@ updateWellState(SingleCompWellState<Scalar>& well_state) const
         // only gas injection yet
         surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
     }
+    well_state.output();
+    // std::cout << std::endl;
 }
 
 template <typename TypeTag>
