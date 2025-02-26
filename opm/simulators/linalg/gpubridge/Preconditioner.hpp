@@ -36,7 +36,7 @@ enum PreconditionerType {
 
 template<class Scalar> class BlockedMatrix;
 
-template<class Scalar, unsigned int block_size>
+template<class Scalar, unsigned int block_size, class ApplyScalar = Scalar>
 class Preconditioner
 {
 protected:
@@ -46,25 +46,19 @@ protected:
     int nnzb = 0;    // number of blocks of the matrix
     int verbosity = 0;
 
-    Preconditioner(int verbosity_) :
-    verbosity(verbosity_)
-    {};
+    Preconditioner(int verbosity_)
+        : verbosity(verbosity_)
+    {}
 
 public:
-
     virtual ~Preconditioner() = default;
     
     static std::unique_ptr<Preconditioner> create(PreconditionerType type,
                                                   bool opencl_ilu_parallel,
                                                   int verbosity);
 
-#if HAVE_OPENCL
     // apply preconditioner, x = prec(y)
-    virtual void apply(const cl::Buffer& y, cl::Buffer& x) = 0;
-#endif
-
-    // apply preconditioner, x = prec(y)
-    virtual void apply(Scalar& y, Scalar& x) = 0;
+    virtual void apply(const ApplyScalar& y, ApplyScalar& x) = 0;
 
     // analyze matrix, e.g. the sparsity pattern
     // probably only called once
