@@ -193,6 +193,7 @@ public:
 
     AdaptiveTimeStepping(
         const UnitSystem& unitSystem,
+        const SimulatorReport& full_report,
         const double max_next_tstep = -1.0,
         const bool terminalOutput = true
     );
@@ -201,6 +202,7 @@ public:
         double max_next_tstep,
         const Tuning& tuning,
         const UnitSystem& unitSystem,
+        const SimulatorReport& full_report,
         const bool terminalOutput = true
     );
     bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs);
@@ -225,6 +227,8 @@ public:
 
     template<class Serializer>
     void serializeOp(Serializer& serializer);
+
+    SimulatorReport& report();
 
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectHardcoded();
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectPID();
@@ -272,6 +276,10 @@ protected:
     ReservoirCouplingMaster *reservoir_coupling_master_ = nullptr;
     ReservoirCouplingSlave *reservoir_coupling_slave_ = nullptr;
 #endif
+    // We store a copy of the full simulator run report for output purposes,
+    // so it can be updated and passed to the summary writing code every
+    // substep (not just every report step).
+    SimulatorReport report_;
 };
 
 } // namespace Opm

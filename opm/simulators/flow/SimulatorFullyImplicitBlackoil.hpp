@@ -289,10 +289,10 @@ public:
             if (enableTUNING) {
                 adaptiveTimeStepping_ = std::make_unique<TimeStepper>(max_next_tstep,
                                                                       sched_state.tuning(),
-                                                                      unitSystem, terminalOutput_);
+                                                                      unitSystem, report_, terminalOutput_);
             }
             else {
-                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, max_next_tstep, terminalOutput_);
+                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, report_, max_next_tstep, terminalOutput_);
             }
 #ifdef RESERVOIR_COUPLING_ENABLED
             if (this->reservoirCouplingSlave_) {
