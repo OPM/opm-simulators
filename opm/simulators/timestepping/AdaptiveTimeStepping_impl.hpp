@@ -59,6 +59,7 @@ namespace Opm {
 template<class TypeTag>
 AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(
                                  const UnitSystem& unit_system,
+                                 const SimulatorReport& report,
                                  const double max_next_tstep,
                                  const bool terminal_output
 )
@@ -85,7 +86,7 @@ AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(
     , use_newton_iteration_{false}
     , min_time_step_before_shutting_problematic_wells_{
         Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day}
-
+    , report_(report)
 {
     init_(unit_system);
 }
@@ -96,6 +97,7 @@ template<class TypeTag>
 AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(double max_next_tstep,
                                                  const Tuning& tuning,
                                                  const UnitSystem& unit_system,
+                                                 const SimulatorReport& report,
                                                  const bool terminal_output
 )
     : time_step_control_{}
@@ -116,6 +118,7 @@ AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(double max_next_tstep,
     , use_newton_iteration_{false}
     , min_time_step_before_shutting_problematic_wells_{
         Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day}
+    , report_(report)
 {
     init_(unit_system);
 }
@@ -255,6 +258,14 @@ serializeOp(Serializer& serializer)
     serializer(this->timestep_after_event_);
     serializer(this->use_newton_iteration_);
     serializer(this->min_time_step_before_shutting_problematic_wells_);
+}
+
+template<class TypeTag>
+SimulatorReport&
+AdaptiveTimeStepping<TypeTag>::
+report()
+{
+    return report_;
 }
 
 template<class TypeTag>
@@ -778,6 +789,9 @@ run()
 
         //Pass substep to eclwriter for summary output
         problem.setSubStepReport(substep_report);
+        auto& full_report = adaptive_time_stepping_.report();
+        full_report += substep_report;
+        problem.setSimulationReport(full_report);
 
         report += substep_report;
 
