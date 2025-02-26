@@ -351,9 +351,10 @@ namespace Opm
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
-                    std::cout << "computeWellRatesWithBhp, local_perf_index = " << local_perf_index << std::endl;
+                    std::cout << "skip computeWellRatesWithBhp, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
                     continue;
                 }
+                std::cout << "execute computeWellRatesWithBhp, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 // flux for each perforation
@@ -892,9 +893,10 @@ namespace Opm
         if (local_perf_index < 0) // then the perforation is not on this process
             return;
         if (this->cell_perforation_pressure_diffs_.size() <= static_cast<std::size_t>(local_perf_index)) { // then the perforation belongs to a shut connection
-            std::cout << "computePerfRate, local_perf_index = " << local_perf_index << std::endl;
+            std::cout << "skip computePerfRate, local_perf_index = " << local_perf_index << ", << cell_perforation_depth_diffs_.size() = " << this->cell_perforation_pressure_diffs_.size() << std::endl;
             return;
         }
+        std::cout << "execute computePerfRate, local_perf_index = " << local_perf_index << ", << cell_perforation_depth_diffs_.size() = " << this->cell_perforation_pressure_diffs_.size() << std::endl;
 
         // pressure difference between the segment and the perforation
         const Value perf_seg_press_diff = this->gravity() * segment_density *
@@ -1114,7 +1116,7 @@ namespace Opm
         Scalar fsTemperature;
         using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
         SaltConcType fsSaltConcentration;
-
+        std::cout << "computeSegmentFluidProperties, this->well_cells_.size() = " << this->well_cells_.size() << std::endl;
         if (this->well_cells_.size() > 0) {
             // this->well_cells_ is empty if this process does not contain active perforations
             // using the pvt region of first perforated cell, so we look for global index 0
@@ -1127,16 +1129,20 @@ namespace Opm
             fsSaltConcentration = fs.saltConcentration();
             pvt_region_index = fs.pvtRegionIndex();
         }
+        std::cout << "will broadcastFirstPerforationValue now" << std::endl;
 
         // The following broadcast calls are neccessary to ensure that processes that do *not* contain
         // the first perforation get the correct temperature, saltConcentration and pvt_region_index
         fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
         temperature.setValue(fsTemperature);
+        std::cout << "-" << std::endl;
 
         fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
         saltConcentration = this->extendEval(fsSaltConcentration);
+        std::cout << "-" << std::endl;
 
         pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
+        std::cout << "done" << std::endl;
 
         this->segments_.computeFluidProperties(temperature,
                                                saltConcentration,
@@ -1284,9 +1290,10 @@ namespace Opm
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
-                    std::cout << "updateIPR, local_perf_index = " << local_perf_index << std::endl;
+                    std::cout << "skip updateIPR, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
                     continue;
                 }
+                std::cout << "execute updateIPR, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
 
                 std::vector<Scalar> mob(this->num_components_, 0.0);
 
@@ -1800,9 +1807,10 @@ namespace Opm
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
-                    std::cout << "assembleWellEqWithoutIteration, local_perf_index = " << local_perf_index << std::endl;
+                    std::cout << "skip assembleWellEqWithoutIteration, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
                     continue;
                 }
+                std::cout << "execute assembleWellEqWithoutIteration, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
 
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
@@ -1955,9 +1963,10 @@ namespace Opm
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
-                    std::cout << "allDrawDownWrongDirection, local_perf_index = " << local_perf_index << std::endl;
+                    std::cout << "skip allDrawDownWrongDirection, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
                     continue;
                 }
+                std::cout << "execute allDrawDownWrongDirection, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
 
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
@@ -2021,6 +2030,7 @@ namespace Opm
         using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
         SaltConcType fsSaltConcentration;
 
+        std::cout << "getSegmentSurfaceVolume, this->well_cells_.size() = " << this->well_cells_.size() << std::endl;
         if (this->well_cells_.size() > 0) {
             // this->well_cells_ is empty if this process does not contain active perforations
             // using the pvt region of first perforated cell, so we look for global index 0
@@ -2033,16 +2043,19 @@ namespace Opm
             fsSaltConcentration = fs.saltConcentration();
             pvt_region_index = fs.pvtRegionIndex();
         }
-
+        std::cout << "will broadcastFirstPerforationValue now" << std::endl;
         // The following broadcast calls are neccessary to ensure that processes that do *not* contain
         // the first perforation get the correct temperature, saltConcentration and pvt_region_index
         fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
         temperature.setValue(fsTemperature);
+        std::cout << "-" << std::endl;
 
         fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
         saltConcentration = this->extendEval(fsSaltConcentration);
+        std::cout << "-" << std::endl;
 
         pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
+        std::cout << "done" << std::endl;
 
         return this->segments_.getSurfaceVolume(temperature,
                                                 saltConcentration,
@@ -2193,9 +2206,10 @@ namespace Opm
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
-                    std::cout << "maxPerfPress, local_perf_index = " << local_perf_index << std::endl;
+                    std::cout << "skip maxPerfPress, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
                     continue;
                 }
+                std::cout << "execute maxPerfPress, for seg " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() " << this->well_cells_.size() << std::endl;
 
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
@@ -2229,9 +2243,10 @@ namespace Opm
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 if (this->well_cells_.size() <= static_cast<std::size_t>(local_perf_index)) {// then the perforation belongs to a shut connection
-                    std::cout << "computeCurrentWellRates, local_perf_index = " << local_perf_index << std::endl;
+                    std::cout << "skip computeCurrentWellRates for segment " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() = " << this->well_cells_.size() << std::endl;
                     continue;
                 }
+                std::cout << "execute computeCurrentWellRates for segment " << seg << ", local_perf_index = " << local_perf_index << ", this->well_cells_.size() = " << this->well_cells_.size() << std::endl;
 
                 const int cell_idx = this->well_cells_[local_perf_index];
                 const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
