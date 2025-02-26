@@ -53,7 +53,7 @@ namespace Opm
         void init(const ParameterGroup& param);
 
         /// Use the SimulatorTimer as a shim around opm-commons Schedule class
-        void init(const Schedule& schedule, std::size_t report_step = 0);
+        void init(const Schedule& schedule, std::size_t report_step, int end_step);
 
         /// Whether the current step is the first step.
         bool initialStep() const override;
@@ -127,6 +127,7 @@ namespace Opm
             serializer(current_step_);
             serializer(current_time_);
             serializer(total_time_);
+            serializer(end_step_);
             serializer(start_date_);
         }
 
@@ -137,6 +138,7 @@ namespace Opm
         int current_step_;
         double current_time_;
         double total_time_;
+        int end_step_;
         boost::gregorian::date start_date_;
     };
 
