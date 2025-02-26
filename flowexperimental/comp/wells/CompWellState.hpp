@@ -27,6 +27,8 @@
 
 #include <opm/simulators/wells/WellContainer.hpp>
 
+#include <opm/output/data/Wells.hpp>
+
 
 #include "SingleCompWellState.hpp"
 
@@ -51,6 +53,8 @@ public:
     const SingleCompWellState<Scalar>& operator[](const std::string& well_name) const;
 
     SingleCompWellState<Scalar>& operator[](const std::string& well_name);
+
+    data::Wells report() const;
 private:
     WellContainer<SingleCompWellState<Scalar>> wells_;
 
