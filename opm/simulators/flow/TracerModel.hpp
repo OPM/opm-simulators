@@ -620,8 +620,14 @@ protected:
             }
         }
 
+
+        const int num_threads = ThreadManager::maxThreads();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (const auto& chunk : ElementChunks(simulator_.gridView(), Dune::Partitions::all, num_threads)) {
         ElementContext elemCtx(simulator_);
-        for (const auto& elem : elements(simulator_.gridView())) {
+        for (const auto& elem : chunk) {
             elemCtx.updateStencil(elem);
 
             std::size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
@@ -669,7 +675,7 @@ protected:
             for (auto& tr : tbatch) {
                 this->assembleTracerEquationSource(tr, dt, I);
             }
-
+        }
         }
 
         // Communicate overlap using grid Communication
