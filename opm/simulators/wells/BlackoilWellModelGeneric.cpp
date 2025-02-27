@@ -1847,20 +1847,22 @@ assignMassGasRate(data::Wells& wsrpt,
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 assignWellTracerRates(data::Wells& wsrpt,
-                      const WellTracerRates& wellTracerRates) const
+                      const WellTracerRates& wellTracerRates,
+                      const unsigned reportStep) const
 {
-    if (wellTracerRates.empty())
+    if (wellTracerRates.empty()) {
         return; // no tracers
+    }
 
     for (const auto& wTR : wellTracerRates) {
-        std::string wellName = wTR.first.first;
-        auto xwPos = wsrpt.find(wellName);
+        const auto& eclWell = schedule_.getWell(wTR.first, reportStep);
+        auto xwPos = wsrpt.find(eclWell.name());
         if (xwPos == wsrpt.end()) { // No well results.
             continue;
         }
-        std::string tracerName = wTR.first.second;
-        Scalar rate = wTR.second;
-        xwPos->second.rates.set(data::Rates::opt::tracer, rate, tracerName);
+        for (const auto& tr : wTR.second) {
+            xwPos->second.rates.set(data::Rates::opt::tracer, tr.rate, tr.name);
+        }
     }
 }
 

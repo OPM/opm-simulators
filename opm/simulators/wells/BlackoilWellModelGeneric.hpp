@@ -32,7 +32,6 @@
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-
 #include <opm/simulators/wells/BlackoilWellModelWBP.hpp>
 #include <opm/simulators/wells/ConnectionIndexMap.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
@@ -40,6 +39,7 @@
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/WellTracerRate.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 
 #include <cstddef>
@@ -449,12 +449,15 @@ protected:
     std::vector<std::string> getWellsForTesting(const int timeStepIdx,
                                                 const double simulationTime);
 
-    using WellTracerRates = std::map<std::pair<std::string, std::string>, Scalar>;
+    using WellTracerRates = std::unordered_map<int, std::vector<WellTracerRate<Scalar>>>;
     void assignWellTracerRates(data::Wells& wsrpt,
-                               const WellTracerRates& wellTracerRates) const;
+                               const WellTracerRates& wellTracerRates,
+                               const unsigned reportStep) const;
+
     using MswTracerRates = std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>;
     void assignMswTracerRates(data::Wells& wsrpt,
                               const MswTracerRates& mswTracerRates) const;
+
     void assignMassGasRate(data::Wells& wsrpt,
                            const Scalar& gasDensity) const;
 

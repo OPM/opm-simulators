@@ -32,11 +32,12 @@
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+
 #include <opm/models/blackoil/blackoilmodel.hh>
 
 #include <opm/simulators/linalg/matrixblock.hh>
-
-#include <opm/input/eclipse/EclipseState/Phase.hpp>
+#include <opm/simulators/wells/WellTracerRate.hpp>
 
 #include <array>
 #include <cstddef>
@@ -44,6 +45,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace Opm {
@@ -88,12 +90,18 @@ public:
     /*!
     * \brief Return well tracer rates
     */
-    const std::map<std::pair<std::string, std::string>, Scalar>&
-    getWellTracerRates() const {return wellTracerRate_;}
-    const std::map<std::pair<std::string, std::string>, Scalar>&
-    getWellFreeTracerRates() const {return wellFreeTracerRate_;}
-    const std::map<std::pair<std::string, std::string>, Scalar>&
-    getWellSolTracerRates() const {return wellSolTracerRate_;}
+    const std::unordered_map<int, std::vector<WellTracerRate<Scalar>>>&
+    getWellTracerRates() const
+    { return wellTracerRate_; }
+
+    const std::unordered_map<int, std::vector<WellTracerRate<Scalar>>>&
+    getWellFreeTracerRates() const
+    { return wellFreeTracerRate_; }
+
+    const std::unordered_map<int, std::vector<WellTracerRate<Scalar>>>&
+    getWellSolTracerRates() const
+    { return wellSolTracerRate_; }
+
     const std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>&
     getMswTracerRates() const {return mSwTracerRate_;}
 
@@ -145,10 +153,10 @@ protected:
     std::vector<TracerVectorSingle> freeTracerConcentration_;
     std::vector<TracerVectorSingle> solTracerConcentration_;
 
-    // <wellName, tracerName> -> wellRate
-    std::map<std::pair<std::string, std::string>, Scalar> wellTracerRate_;
-    std::map<std::pair<std::string, std::string>, Scalar> wellFreeTracerRate_;
-    std::map<std::pair<std::string, std::string>, Scalar> wellSolTracerRate_;
+    // well_index -> tracer rates
+    std::unordered_map<int, std::vector<WellTracerRate<Scalar>>> wellTracerRate_;
+    std::unordered_map<int, std::vector<WellTracerRate<Scalar>>> wellFreeTracerRate_;
+    std::unordered_map<int, std::vector<WellTracerRate<Scalar>>> wellSolTracerRate_;
 
     // <wellName, tracerName, segNum> -> wellRate
     std::map<std::tuple<std::string, std::string, std::size_t>, Scalar> mSwTracerRate_;

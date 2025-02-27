@@ -1085,6 +1085,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellProdIndexCalculator.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/wells/WellTest.hpp
+  opm/simulators/wells/WellTracerRate.hpp
   opm/simulators/wells/WGState.hpp
 )
 if (USE_GPU_BRIDGE)

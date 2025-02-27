@@ -468,10 +468,16 @@ protected:
         const auto& eclWell = well.wellEcl();
 
         // Init. well output to zero
+        auto& tracerRate = this->wellTracerRate_[eclWell.seqIndex()];
+        tracerRate.reserve(tr.numTracer());
+        auto& solTracerRate = this->wellTracerRate_[eclWell.seqIndex()];
+        solTracerRate.reserve(tr.numTracer());
+        auto& freeTracerRate = this->wellFreeTracerRate_[eclWell.seqIndex()];
+        freeTracerRate.reserve(tr.numTracer());
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-            this->wellTracerRate_[std::make_pair(eclWell.name(), this->name(tr.idx_[tIdx]))] = 0.0;
-            this->wellFreeTracerRate_[std::make_pair(eclWell.name(), this->wellfname(tr.idx_[tIdx]))] = 0.0;
-            this->wellSolTracerRate_[std::make_pair(eclWell.name(), this->wellsname(tr.idx_[tIdx]))] = 0.0;
+            tracerRate.emplace_back(this->name(tr.idx_[tIdx]), 0.0);
+            freeTracerRate.emplace_back(this->wellfname(tr.idx_[tIdx]), 0.0);
+            solTracerRate.emplace_back(this->wellsname(tr.idx_[tIdx]), 0.0);
             if (eclWell.isMultiSegment()) {
                 for (std::size_t i = 0; i < eclWell.getConnections().size(); ++i) {
                     this->mSwTracerRate_[std::make_tuple(eclWell.name(),
@@ -510,8 +516,8 @@ protected:
                     tr.residual_[tIdx][I][0] -= rate_f*wtracer[tIdx];
 
                     // Store _injector_ tracer rate for reporting (can be done here since WTRACER is constant)
-                    this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
-                    this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
+                    tracerRate[tIdx].rate += rate_f*wtracer[tIdx];
+                    freeTracerRate[tIdx].rate += rate_f*wtracer[tIdx];
                     if (eclWell.isMultiSegment()) {
                         this->mSwTracerRate_[std::make_tuple(eclWell.name(),
                                              this->name(tr.idx_[tIdx]),
@@ -523,8 +529,8 @@ protected:
             else if (rate_f < 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                     // Store _injector_ tracer rate for cross-flowing well connections (can be done here since WTRACER is constant)
-                    this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
-                    this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
+                    tracerRate[tIdx].rate += rate_f*wtracer[tIdx];
+                    freeTracerRate[tIdx].rate += rate_f*wtracer[tIdx];
 
                     // Production of free tracer
                     tr.residual_[tIdx][I][0] -= rate_f * tr.concentration_[tIdx][I][0];
@@ -609,8 +615,15 @@ protected:
             }
         }
 
+        this->wellTracerRate_.clear();
+        this->wellFreeTracerRate_.clear();
+        this->wellSolTracerRate_.clear();
+
         // Well terms
         const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+        this->wellTracerRate_.reserve(wellPtrs.size());
+        this->wellFreeTracerRate_.reserve(wellPtrs.size());
+        this->wellSolTracerRate_.reserve(wellPtrs.size());
         for (const auto& wellPtr : wellPtrs) {
             for (auto& tr : tbatch) {
                 this->assembleTracerEquationWell(tr, *wellPtr);
@@ -786,6 +799,9 @@ protected:
                 Scalar rateWellNeg = 0.0;
                 const std::size_t well_index = simulator_.problem().wellModel().wellState().index(eclWell.name()).value();
                 const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
+                auto& tracerRate = this->wellTracerRate_[well_index];
+                auto& freeTracerRate = this->wellFreeTracerRate_[well_index];
+                auto& solTracerRate = this->wellSolTracerRate_[well_index];
                 for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
                     const auto I = ws.perf_data.cell_index[i];
                     const Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
@@ -805,10 +821,8 @@ protected:
                     if (rate_f < 0) {
                         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                             // Store _producer_ free tracer rate for reporting
-                            this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) +=
-                                rate_f * tr.concentration_[tIdx][I][0];
-                            this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) +=
-                                rate_f * tr.concentration_[tIdx][I][0];
+                            tracerRate[tIdx].rate += rate_f * tr.concentration_[tIdx][I][0];
+                            freeTracerRate[tIdx].rate += rate_f * tr.concentration_[tIdx][I][0];
                             if (eclWell.isMultiSegment()) {
                                 this->mSwTracerRate_[std::make_tuple(eclWell.name(),
                                                      this->name(tr.idx_[tIdx]),
@@ -820,10 +834,8 @@ protected:
                     if (rate_s < 0) {
                         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                             // Store _producer_ solution tracer rate for reporting
-                            this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) +=
-                                rate_s * tr.concentration_[tIdx][I][1];
-                            this->wellSolTracerRate_.at(std::make_pair(eclWell.name(),this->wellsname(tr.idx_[tIdx]))) +=
-                                rate_s * tr.concentration_[tIdx][I][1];
+                            tracerRate[tIdx].rate += rate_s * tr.concentration_[tIdx][I][1];
+                            solTracerRate[tIdx].rate += rate_s * tr.concentration_[tIdx][I][1];
                             if (eclWell.isMultiSegment()) {
                                 this->mSwTracerRate_[std::make_tuple(eclWell.name(),
                                                      this->name(tr.idx_[tIdx]),
@@ -853,7 +865,7 @@ protected:
                     const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
                     const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
                     for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                        this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) *= factor;
+                        tracerRate[tIdx].rate *= factor;
                     }
                 }
             }
