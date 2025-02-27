@@ -32,7 +32,7 @@
 namespace Opm {
 
 namespace data { class Solution; }
-class EclipseState;
+class TracerConfig;
 
 template<class FluidSystem>
 class TracerContainer
@@ -41,11 +41,8 @@ class TracerContainer
     using ScalarBuffer = std::vector<Scalar>;
 
 public:
-    TracerContainer(const EclipseState& eclState)
-        : eclState_(eclState)
-    {}
-
-    void allocate(const unsigned bufferSize);
+    void allocate(const unsigned bufferSize,
+                  const TracerConfig& tracers);
 
     using AssignFunction = std::function<Scalar(const unsigned)>;
 
@@ -55,11 +52,10 @@ public:
     void assignSolConcentrations(const unsigned globalDofIdx,
                                  const AssignFunction& concentration);
 
-    void outputRestart(data::Solution& sol);
+    void outputRestart(data::Solution& sol,
+                       const TracerConfig& tracers);
 
 private:
-    const EclipseState& eclState_;
-
     std::vector<ScalarBuffer> freeConcentrations_{};
     std::vector<ScalarBuffer> solConcentrations_{};
     bool allocated_{false};

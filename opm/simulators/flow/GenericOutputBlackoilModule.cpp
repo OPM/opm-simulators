@@ -125,7 +125,6 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
-    , tracerC_(eclState_)
     , flowsC_(schedule, summaryConfig)
     , rftC_(eclState_, schedule_,
             [this](const std::string& wname)
@@ -481,7 +480,7 @@ assignToSolution(data::Solution& sol)
     this->fipC_.outputRestart(sol);
 
     // Tracers
-    this->tracerC_.outputRestart(sol);
+    this->tracerC_.outputRestart(sol, eclState_.tracer());
 }
 
 template<class FluidSystem>
@@ -915,7 +914,7 @@ doAllocBuffers(const unsigned bufferSize,
     }
 
     // tracers
-    this->tracerC_.allocate(bufferSize);
+    this->tracerC_.allocate(bufferSize, eclState_.tracer());
 
     //Warn for any unhandled keyword
     if (log) {
