@@ -484,6 +484,7 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
                              verbosity);
 
         bool converged = true;
+#pragma omp parallel for reduction(&&:converged) schedule(dynamic,1)
         for (std::size_t nrhs = 0; nrhs < b.size(); ++nrhs) {
             x[nrhs] = 0.0;
             Dune::InverseOperatorResult result;
