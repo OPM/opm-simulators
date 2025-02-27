@@ -121,7 +121,7 @@ struct AquiferModel<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     using type = EmptyModel<TypeTag>;
 };
 
-template<class TypeTag, int NumComp>
+template<class TypeTag, int NumComp, bool EnableWater>
 struct WellModel<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
     using type = CompositionalWellModel<TypeTag>;
 };
