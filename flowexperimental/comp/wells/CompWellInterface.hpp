@@ -41,6 +41,7 @@ public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>; // FlashRateVector at the moment
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
@@ -81,6 +82,8 @@ public:
                                                        const BVector& x,
                                                        SingleCompWellState<Scalar>& well_state) = 0;
     virtual bool getConvergence() const = 0;
+
+    virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
 
 protected:
 

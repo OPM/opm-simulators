@@ -593,4 +593,13 @@ getConvergence() const
     }
     return converged;
 }
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+addWellContributions(SparseMatrixAdapter&) const
+{
+    assert(false);
+}
+
 } // end of namespace Opm
