@@ -380,7 +380,6 @@ protected:
         }
 
         // Storage terms at previous time step (timeIdx = 1)
-        std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
         std::vector<Scalar> fStorageOfTimeIndex1(tr.numTracer());
         std::vector<Scalar> sStorageOfTimeIndex1(tr.numTracer());
         if (elemCtx.enableStorageCache()) {
