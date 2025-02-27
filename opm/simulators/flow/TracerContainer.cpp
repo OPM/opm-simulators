@@ -23,7 +23,7 @@
 #include <config.h>
 #include <opm/simulators/flow/TracerContainer.hpp>
 
-#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/TracerConfig.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
@@ -38,9 +38,9 @@ namespace Opm {
 
 template<class FluidSystem>
 void TracerContainer<FluidSystem>::
-allocate(const unsigned bufferSize)
+allocate(const unsigned bufferSize,
+         const TracerConfig& tracers)
 {
-    const auto& tracers = eclState_.tracer();
     if (!tracers.empty()) {
         allocated_ = true;
         freeConcentrations_.resize(tracers.size());
@@ -93,13 +93,13 @@ assignSolConcentrations(const unsigned globalDofIdx,
 
 template<class FluidSystem>
 void TracerContainer<FluidSystem>::
-outputRestart(data::Solution& sol)
+outputRestart(data::Solution& sol,
+              const TracerConfig& tracers)
 {
     if (!this->allocated_) {
         return;
     }
 
-    const auto& tracers = this->eclState_.tracer();
     std::for_each(tracers.begin(), tracers.end(),
                     [idx = 0, &sol, this](const auto& tracer) mutable
                     {

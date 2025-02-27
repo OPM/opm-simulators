@@ -31,7 +31,7 @@
 namespace Opm {
 
 namespace data { class Solution; }
-template<class Scalar> class MICPSolutionContainer;
+template<class Scalar> struct MICPSolutionContainer;
 
 template<class Scalar>
 class MICPContainer
