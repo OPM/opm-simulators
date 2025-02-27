@@ -42,6 +42,7 @@ public:
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using PrimaryVariables = CompWellPrimaryVariables<FluidSystem, Indices>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using WellEquations = CompWellEquations<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
 
 
@@ -116,6 +117,8 @@ public:
                                                SingleCompWellState<Scalar>& well_state);
 
     bool getConvergence() const override;
+
+    void addWellContributions(SparseMatrixAdapter&) const;
 
 private:
 
