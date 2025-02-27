@@ -454,9 +454,10 @@ protected:
                                const WellTracerRates& wellTracerRates,
                                const unsigned reportStep) const;
 
-    using MswTracerRates = std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>;
+    using MswTracerRates = std::unordered_map<int, std::vector<MSWellTracerRate<Scalar>>>;
     void assignMswTracerRates(data::Wells& wsrpt,
-                              const MswTracerRates& mswTracerRates) const;
+                              const MswTracerRates& mswTracerRates,
+                              const unsigned reportStep) const;
 
     void assignMassGasRate(data::Wells& wsrpt,
                            const Scalar& gasDensity) const;

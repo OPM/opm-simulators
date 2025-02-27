@@ -42,7 +42,6 @@
 #include <array>
 #include <cstddef>
 #include <functional>
-#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -102,7 +101,7 @@ public:
     getWellSolTracerRates() const
     { return wellSolTracerRate_; }
 
-    const std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>&
+    const std::unordered_map<int, std::vector<MSWellTracerRate<Scalar>>>&
     getMswTracerRates() const {return mSwTracerRate_;}
 
     template<class Serializer>
@@ -158,8 +157,7 @@ protected:
     std::unordered_map<int, std::vector<WellTracerRate<Scalar>>> wellFreeTracerRate_;
     std::unordered_map<int, std::vector<WellTracerRate<Scalar>>> wellSolTracerRate_;
 
-    // <wellName, tracerName, segNum> -> wellRate
-    std::map<std::tuple<std::string, std::string, std::size_t>, Scalar> mSwTracerRate_;
+    std::unordered_map<int, std::vector<MSWellTracerRate<Scalar>>> mSwTracerRate_;
 
     /// \brief Function returning the cell centers
     std::function<std::array<double,dimWorld>(int)> centroids_;

@@ -216,7 +216,7 @@ template<class Scalar> class WellContributions;
                     this->assignWellTracerRates(wsrpt, tracerRates, this->reportStepIndex());
                     this->assignWellTracerRates(wsrpt, freeTracerRates, this->reportStepIndex());
                     this->assignWellTracerRates(wsrpt, solTracerRates, this->reportStepIndex());
-                    this->assignMswTracerRates(wsrpt, mswTracerRates);
+                    this->assignMswTracerRates(wsrpt, mswTracerRates, this->reportStepIndex());
                 }
 
                 BlackoilWellModelGuideRates(*this)
