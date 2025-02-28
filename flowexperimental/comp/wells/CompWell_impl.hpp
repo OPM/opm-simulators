@@ -485,7 +485,6 @@ assembleSourceTerm(const Scalar dt)
     std::array<EvalWell, FluidSystem::numComponents> component_mass_rates;
     for (unsigned  comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
         const auto& val = this->surface_conditions_.massFraction(comp_idx);
-        std::cout << " mass fraction for comp_idx " << comp_idx << " is " << val << std::endl;
         component_mass_rates[comp_idx] = total_mass_rate * this->surface_conditions_.massFraction(comp_idx);
     }
 
