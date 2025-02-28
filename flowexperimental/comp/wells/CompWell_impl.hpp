@@ -418,8 +418,7 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 assembleWellEq(const Simulator& simulator,
-               const double dt,
-               const SingleCompWellState<Scalar>& well_state)
+               const double dt)
 {
     this->well_equations_.clear();
 
@@ -435,7 +434,6 @@ assembleWellEq(const Simulator& simulator,
         con_rates[comp_idx] = PrimaryVariables::restrictEval(connection_rates[comp_idx]);
     }
 
-    const unsigned cell_idx = this->well_cells_[0];
     // here we use perf index, need to check how the things are done in the StandardWellAssemble
     // assebmle the well equations related to the produciton/injection mass rates for each component
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
@@ -484,7 +482,6 @@ assembleSourceTerm(const Scalar dt)
     const EvalWell total_mass_rate = total_surface_rate * density;
     std::array<EvalWell, FluidSystem::numComponents> component_mass_rates;
     for (unsigned  comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
-        const auto& val = this->surface_conditions_.massFraction(comp_idx);
         component_mass_rates[comp_idx] = total_mass_rate * this->surface_conditions_.massFraction(comp_idx);
     }
 
@@ -511,7 +508,7 @@ iterateWellEq(const Simulator& simulator,
     bool converged = false;
 
     do {
-        assembleWellEq(simulator, dt, well_state);
+        assembleWellEq(simulator, dt);
 
         std::cout << std::endl << " residuals ";
         for (const auto& val : this->well_equations_.residual()[0]) {
@@ -532,7 +529,7 @@ iterateWellEq(const Simulator& simulator,
 
         ++it;
 
-        solveEqAndUpdateWellState(simulator, well_state);
+        solveEqAndUpdateWellState(well_state);
     } while (it < max_iter);
     std::cout << "converged " << converged << " after " << it << " iterations" << std::endl;
     return converged;
@@ -541,8 +538,7 @@ iterateWellEq(const Simulator& simulator,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-solveEqAndUpdateWellState(const Simulator& simulator,
-                          SingleCompWellState<Scalar>& well_state)
+solveEqAndUpdateWellState(SingleCompWellState<Scalar>& well_state)
 {
    BVectorWell dx_well(1);
 
@@ -564,14 +560,13 @@ apply(BVector& r) const
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
-                                      const BVector& x,
+recoverWellSolutionAndUpdateWellState(const BVector& x,
                                       SingleCompWellState<Scalar>& well_state)
 {
     BVectorWell xw(1);
 
     this->well_equations_.recoverSolutionWell(x, xw);
-    updateWellState(simulator, xw, well_state);
+    updateWellState(xw, well_state);
 }
 
 template <typename TypeTag>
@@ -585,8 +580,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells)
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-updateWellState(const Simulator& simulator,
-                const BVectorWell& xw,
+updateWellState(const CompWell::BVectorWell& xw,
                 SingleCompWellState<Scalar>& well_state)
 {
     this->primary_variables_.updateNewton(xw);

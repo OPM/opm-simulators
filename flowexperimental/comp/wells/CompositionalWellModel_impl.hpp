@@ -31,7 +31,7 @@ beginReportStep(unsigned report_step)
     // TODO: not considering the parallel running yet
     wells_ecl_ = schedule_.getWells(report_step);
     initWellConnectionData();
-    initWellState(report_step);
+    initWellState();
 }
 
 template <typename TypeTag>
@@ -116,7 +116,7 @@ initWellConnectionData()
 
 template <typename TypeTag>
 void CompositionalWellModel<TypeTag>::
-initWellState(const std::size_t report_step)
+initWellState()
 {
     // TODO: not sure the following is correct
     const auto pressIx = [this]()
@@ -155,7 +155,7 @@ initWellState(const std::size_t report_step)
                            this->simulator_.vanguard().grid().comm());
 
     /* TODO: no prev well state for now */
-    this->comp_well_states_.init(this->schedule_, this->wells_ecl_,
+    this->comp_well_states_.init(this->wells_ecl_,
                                  cell_pressure, cell_mole_fractions, this->well_connection_data_,
                                  this->summary_state_);
 }
@@ -260,7 +260,7 @@ recoverWellSolutionAndUpdateWellState(const BVector& x)
                 x_local_[i] = x[cells[i]];
             }
             auto& ws = this->comp_well_states_[well->name()];
-            well->recoverWellSolutionAndUpdateWellState(simulator_, x_local_, ws);
+            well->recoverWellSolutionAndUpdateWellState(x_local_, ws);
         }
     }
 }
