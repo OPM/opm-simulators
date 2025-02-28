@@ -45,8 +45,6 @@ public:
     using RateVector = GetPropType<TypeTag, Properties::RateVector>; // FlashRateVector at the moment
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
-    using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
-    // using Eval = typename Base::Eval;
     using BVector = Dune::BlockVector<VectorBlockType>;
 
     CompWellInterface(const Well& well,
