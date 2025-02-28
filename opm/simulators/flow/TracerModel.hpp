@@ -88,6 +88,7 @@ class TracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties::G
 
     using TracerMatrix = typename BaseType::TracerMatrix;
     using TracerVector = typename BaseType::TracerVector;
+    using TracerVectorSingle = typename BaseType::TracerVectorSingle;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
@@ -715,6 +716,22 @@ protected:
         }
     }
 
+    template<TracerTypeIdx Index, class TrRe>
+    void copyForOutput(TrRe& tr,
+                       const std::vector<TracerVector>& dx,
+                       const Scalar S,
+                       const unsigned tIdx,
+                       const unsigned globalDofIdx,
+                       std::vector<TracerVectorSingle>& sc)
+    {
+        constexpr Scalar tol_gas_sat = 1e-6;
+        tr.concentration_[tIdx][globalDofIdx][Index] -= dx[tIdx][globalDofIdx][Index];
+        if (tr.concentration_[tIdx][globalDofIdx][Index] < 0.0 || S < tol_gas_sat) {
+            tr.concentration_[tIdx][globalDofIdx][Index] = 0.0;
+        }
+        sc[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][Index];
+    }
+
     void advanceTracerFields()
     {
         assembleTracerEquations_();
@@ -746,6 +763,7 @@ protected:
                     const auto& fs = intQuants.fluidState();
                     const Scalar Sf = decay<Scalar>(fs.saturation(tr.phaseIdx_));
                     Scalar Ss = 0.0;
+
                     if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
                         Ss = decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx));
                     }
@@ -753,27 +771,8 @@ protected:
                         Ss = decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx));
                     }
 
-                    constexpr Scalar tol_gas_sat = 1e-6;
-                    if (tr.concentration_[tIdx][globalDofIdx][Free] - dx[tIdx][globalDofIdx][Free] < 0.0 ||
-                        Sf < tol_gas_sat)
-                    {
-                        tr.concentration_[tIdx][globalDofIdx][Free] = 0.0;
-                    }
-                    else {
-                        tr.concentration_[tIdx][globalDofIdx][Free] -= dx[tIdx][globalDofIdx][Free];
-                    }
-                    if (tr.concentration_[tIdx][globalDofIdx][Solution] - dx[tIdx][globalDofIdx][Solution] < 0.0 ||
-                        Ss < tol_gas_sat)
-                    {
-                        tr.concentration_[tIdx][globalDofIdx][Solution] = 0.0;
-                    }
-                    else {
-                        tr.concentration_[tIdx][globalDofIdx][Solution] -= dx[tIdx][globalDofIdx][Solution];
-                    }
-
-                    // Partition concentration into free and solution tracers for output
-                    this->freeTracerConcentration_[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][Free];
-                    this->solTracerConcentration_[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][Solution];
+                    copyForOutput<Free>(tr, dx, Sf, tIdx, globalDofIdx, this->freeTracerConcentration_);
+                    copyForOutput<Solution>(tr, dx, Ss, tIdx, globalDofIdx, this->solTracerConcentration_);
                 }
             }
 
