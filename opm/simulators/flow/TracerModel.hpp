@@ -31,6 +31,8 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/GenericTracerModel.hpp>
@@ -732,6 +734,29 @@ protected:
         sc[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][Index];
     }
 
+    template<TracerTypeIdx Index, class TrRe>
+    void assignRates(const TrRe& tr,
+                     const Well& eclWell,
+                     const std::size_t i,
+                     const std::size_t I,
+                     const Scalar rate,
+                     std::vector<WellTracerRate<Scalar>>& tracerRate,
+                     std::vector<MSWellTracerRate<Scalar>>* mswTracerRate,
+                     std::vector<WellTracerRate<Scalar>>& splitRate)
+    {
+        if (rate < 0) {
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                // Store _producer_ free tracer rate for reporting
+                const Scalar delta = rate * tr.concentration_[tIdx][I][Index];
+                tracerRate[tIdx].rate += delta;
+                splitRate[tIdx].rate += delta;
+                if (eclWell.isMultiSegment()) {
+                    (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
+                }
+            }
+        }
+    }
+
     void advanceTracerFields()
     {
         assembleTracerEquations_();
@@ -794,6 +819,7 @@ protected:
                 auto& freeTracerRate = this->wellFreeTracerRate_[eclWell.seqIndex()];
                 auto& solTracerRate = this->wellSolTracerRate_[eclWell.seqIndex()];
                 auto* mswTracerRate = eclWell.isMultiSegment() ? &this->mSwTracerRate_[eclWell.seqIndex()] : nullptr;
+
                 for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
                     const auto I = ws.perf_data.cell_index[i];
                     const Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
@@ -810,28 +836,10 @@ protected:
                     }
 
                     const Scalar rate_f = rate - rate_s;
-                    if (rate_f < 0) {
-                        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                            // Store _producer_ free tracer rate for reporting
-                            const Scalar delta = rate_f * tr.concentration_[tIdx][I][Free];
-                            tracerRate[tIdx].rate += delta;
-                            freeTracerRate[tIdx].rate += delta;
-                            if (eclWell.isMultiSegment()) {
-                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
-                            }
-                        }
-                    }
-                    if (rate_s < 0) {
-                        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                            // Store _producer_ solution tracer rate for reporting
-                            const Scalar delta = rate_s * tr.concentration_[tIdx][I][Solution];
-                            tracerRate[tIdx].rate += delta;
-                            solTracerRate[tIdx].rate += delta;
-                            if (eclWell.isMultiSegment()) {
-                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
-                            }
-                        }
-                    }
+                    assignRates<Free>(tr, eclWell, i, I, rate_f,
+                                      tracerRate, mswTracerRate, freeTracerRate);
+                    assignRates<Solution>(tr, eclWell, i, I, rate_s,
+                                          tracerRate, mswTracerRate, solTracerRate);
 
                     if (rate < 0) {
                         rateWellNeg += rate;
