@@ -441,10 +441,9 @@ bool GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
 linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b)
 {
     OPM_TIMEBLOCK(tracerSolve);
-    Scalar tolerance = 1e-2;
-    int maxIter = 100;
-
-    int verbosity = 0;
+    const Scalar tolerance = 1e-2;
+    const int maxIter = 100;
+    const int verbosity = 0;
 
 #if HAVE_MPI
     if (gridView_.grid().comm().size() > 1)
@@ -473,7 +472,13 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
         using TracerSolver = Dune::BiCGSTABSolver<TracerVector>;
         using TracerOperator = Dune::MatrixAdapter<TracerMatrix,TracerVector,TracerVector>;
         using TracerScalarProduct = Dune::SeqScalarProduct<TracerVector>;
-        using TracerPreconditioner = Dune::SeqILU< TracerMatrix,TracerVector,TracerVector>;
+        using TracerPreconditioner = Dune::SeqILU<TracerMatrix,TracerVector,TracerVector>;
+
+        if (std::all_of(b.begin(), b.end(),
+            [](const auto& v) { return v.infinity_norm() == 0.0; }))
+        {
+            return true;
+        }
 
         TracerOperator tracerOperator(M);
         TracerScalarProduct tracerScalarProduct;
