@@ -32,13 +32,12 @@ CompWellState(const PhaseUsage& phase_usage,
 
 template <typename Scalar>
 void CompWellState<Scalar>::
-init(const Schedule& schedule,
-     const std::vector<Well>& wells_ecl,
+init(const std::vector<Well>& wells_ecl,
      const std::vector<Scalar>& cell_pressures,
      const std::vector<std::vector<Scalar>>& cell_mole_fractions,
      const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
      const SummaryState& summary_state,
-     const CompWellState* prev_well_state)
+     const CompWellState* /*prev_well_state*/)
 {
     this->base_init(wells_ecl, cell_pressures, cell_mole_fractions, well_connection_data, summary_state);
 
