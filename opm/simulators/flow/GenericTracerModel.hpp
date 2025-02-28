@@ -140,6 +140,12 @@ protected:
 
     Scalar currentConcentration_(const Well& eclWell, const std::string& name) const;
 
+    //! \brief Tracer type index
+    enum TracerTypeIdx {
+        Free     = 0,
+        Solution = 1,
+    };
+
     const GridView& gridView_;
     const EclipseState& eclState_;
     const CartesianIndexMapper& cartMapper_;
