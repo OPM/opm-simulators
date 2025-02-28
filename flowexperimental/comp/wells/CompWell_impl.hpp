@@ -54,7 +54,7 @@ calculateExplicitQuantities(const Simulator& simulator,
         // flash calculation in the wellbore
         using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
         FluidState fluid_state_scalar = this->primary_variables_.toFluidStateScalar();
-        PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state_scalar, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
+        const bool single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state_scalar, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
         // calculating the mass within the wellbore
         constexpr Scalar R = Constants<Scalar>::R;
         typename FluidSystem::template ParameterCache<Scalar> param_cache {CompositionalConfig::EOSType::PR};
@@ -66,6 +66,16 @@ calculateExplicitQuantities(const Simulator& simulator,
                            (R * fluid_state_scalar.temperature(FluidSystem::gasPhaseIdx));
 
         Scalar L = fluid_state_scalar.L();
+        if (single_phase) {
+            // we check whether the phase label is correct
+            if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
+                L = 0.;
+                fluid_state_scalar.setLvalue(L);
+            } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
+                L = 1.;
+                fluid_state_scalar.setLvalue(L);
+            }
+        }
         Scalar So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
         Scalar Sg = Opm::max(1 - So, 0.0);
         Scalar sumS = So + Sg;
@@ -130,7 +140,7 @@ updateTotalMass()
     /* fluid_state.setMoleFraction(0, 0.8576939356002758);
     fluid_state.setMoleFraction(1, 0.04743535777357194);
     fluid_state.setMoleFraction(2, 0.09487070662615232); */
-    PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
+    const bool single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
     // calculating the mass within the wellbore
     constexpr Scalar R = Constants<Scalar>::R;
     typename FluidSystem::template ParameterCache<EvalWell> param_cache {CompositionalConfig::EOSType::PR};
@@ -142,6 +152,16 @@ updateTotalMass()
                        (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
 
     EvalWell L = fluid_state.L();
+    if (single_phase) {
+        // we check whether the phase label is correct
+        if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
+            L = 0.;
+            fluid_state.setLvalue(L);
+        } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
+            L = 1.;
+            fluid_state.setLvalue(L);
+        }
+    }
     EvalWell So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
     EvalWell Sg = Opm::max(1 - So, 0.0);
     EvalWell sumS = So + Sg;
@@ -209,7 +229,7 @@ updateSurfaceQuantities(const Simulator& simulator)
 
         fluid_state.setLvalue(-1.);
 
-        PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
+        const bool single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
 
         constexpr Scalar R = Constants<Scalar>::R;
         typename FluidSystem::template ParameterCache<Scalar> param_cache {CompositionalConfig::EOSType::PR};
@@ -221,6 +241,16 @@ updateSurfaceQuantities(const Simulator& simulator)
                            (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
 
         Scalar L = fluid_state.L();
+        if (single_phase) {
+            // we check whether the phase label is correct
+            if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
+                L = 0.;
+                fluid_state.setLvalue(L);
+            } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
+                L = 1.;
+                fluid_state.setLvalue(L);
+            }
+        }
         Scalar So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
         Scalar Sg = Opm::max(1 - So, 0.0);
         Scalar sumS = So + Sg;
@@ -264,7 +294,7 @@ updateSurfaceQuantities(const Simulator& simulator)
             fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
         }
 
-        PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
+        const bool single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
 
         constexpr Scalar R = Constants<Scalar>::R;
         typename FluidSystem::template ParameterCache<EvalWell> param_cache {CompositionalConfig::EOSType::PR};
@@ -276,6 +306,16 @@ updateSurfaceQuantities(const Simulator& simulator)
                              (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
 
         EvalWell L = fluid_state.L();
+        if (single_phase) {
+            // we check whether the phase label is correct
+            if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
+                L = 0.;
+                fluid_state.setLvalue(L);
+            } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
+                L = 1.;
+                fluid_state.setLvalue(L);
+            }
+        }
         EvalWell So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
         EvalWell Sg = Opm::max(1 - So, 0.0);
         EvalWell sumS = So + Sg;
