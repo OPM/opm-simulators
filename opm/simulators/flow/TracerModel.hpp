@@ -278,44 +278,12 @@ protected:
         }
     }
 
-    void computeFreeFlux_(TracerEvaluation& freeFlux,
-                          bool& isUp,
-                          const int tracerPhaseIdx,
-                          const ElementContext& elemCtx,
-                          const unsigned scvfIdx,
-                          const unsigned timeIdx) const
-    {
-        const auto& stencil = elemCtx.stencil(timeIdx);
-        const auto& scvf = stencil.interiorFace(scvfIdx);
-
-        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        const unsigned inIdx = extQuants.interiorIndex();
-
-        const unsigned upIdx = extQuants.upstreamIndex(tracerPhaseIdx);
-
-        const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
-        const auto& fs = intQuants.fluidState();
-
-        const Scalar v = decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx)) *
-                         decay<Scalar>(fs.invB(tracerPhaseIdx));
-
-        const Scalar A = scvf.area();
-        if (inIdx == upIdx) {
-            freeFlux = A*v*variable<TracerEvaluation>(1.0, 0);
-            isUp = true;
-        }
-        else {
-            freeFlux = A*v;
-            isUp = false;
-        }
-    }
-
-    void computeSolFlux_(TracerEvaluation& solFlux,
-                         bool& isUp,
-                         const int tracerPhaseIdx,
-                         const ElementContext& elemCtx,
-                         const unsigned scvfIdx,
-                         const unsigned timeIdx) const
+    template<TracerTypeIdx Index>
+    std::pair<TracerEvaluation, bool>
+    computeFlux_(const int tracerPhaseIdx,
+                 const ElementContext& elemCtx,
+                 const unsigned scvfIdx,
+                 const unsigned timeIdx) const
     {
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
@@ -326,40 +294,42 @@ protected:
         Scalar v;
         unsigned upIdx;
 
-        // vaporized oil
-        if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
-            upIdx = extQuants.upstreamIndex(FluidSystem::gasPhaseIdx);
-
+        if constexpr (Index == Free) {
+            upIdx = extQuants.upstreamIndex(tracerPhaseIdx);
             const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
             const auto& fs = intQuants.fluidState();
-            v = decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
-                decay<Scalar>(extQuants.volumeFlux(FluidSystem::gasPhaseIdx)) *
-                decay<Scalar>(fs.Rv());
-        }
-        // dissolved gas
-        else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
-            upIdx = extQuants.upstreamIndex(FluidSystem::oilPhaseIdx);
+            v = decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx)) *
+                decay<Scalar>(fs.invB(tracerPhaseIdx));
+        } else {
+            if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                upIdx = extQuants.upstreamIndex(FluidSystem::gasPhaseIdx);
 
-            const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
-            const auto& fs = intQuants.fluidState();
-            v = decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
-                decay<Scalar>(extQuants.volumeFlux(FluidSystem::oilPhaseIdx)) *
-                decay<Scalar>(fs.Rs());
-        }
-        else {
-            upIdx = 0;
-            v = 0.0;
+                const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
+                const auto& fs = intQuants.fluidState();
+                v = decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
+                    decay<Scalar>(extQuants.volumeFlux(FluidSystem::gasPhaseIdx)) *
+                    decay<Scalar>(fs.Rv());
+            }
+            // dissolved gas
+            else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                upIdx = extQuants.upstreamIndex(FluidSystem::oilPhaseIdx);
+
+                const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
+                const auto& fs = intQuants.fluidState();
+                v = decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
+                    decay<Scalar>(extQuants.volumeFlux(FluidSystem::oilPhaseIdx)) *
+                    decay<Scalar>(fs.Rs());
+            }
+            else {
+                upIdx = 0;
+                v = 0.0;
+            }
         }
 
         const Scalar A = scvf.area();
-        if (inIdx == upIdx) {
-            solFlux = A*v*variable<TracerEvaluation>(1.0, 0);
-            isUp = true;
-        }
-        else {
-            solFlux = A*v;
-            isUp = false;
-        }
+        return inIdx == upIdx
+            ? std::pair{A * v * variable<TracerEvaluation>(1.0, 0), true}
+            : std::pair{A * v, false};
     }
 
     template<class TrRe>
@@ -426,12 +396,8 @@ protected:
             return;
         }
 
-        TracerEvaluation fFlux;
-        TracerEvaluation sFlux;
-        bool isUpF;
-        bool isUpS;
-        computeFreeFlux_(fFlux, isUpF, tr.phaseIdx_, elemCtx, scvfIdx, 0);
-        computeSolFlux_(sFlux, isUpS, tr.phaseIdx_, elemCtx, scvfIdx, 0);
+        const auto& [fFlux, isUpF] = computeFlux_<Free>(tr.phaseIdx_, elemCtx, scvfIdx, 0);
+        const auto& [sFlux, isUpS] = computeFlux_<Solution>(tr.phaseIdx_, elemCtx, scvfIdx, 0);
         dVol_[Solution][tr.phaseIdx_][I] += sFlux.value() * dt;
         dVol_[Free][tr.phaseIdx_][I] += fFlux.value() * dt;
         const int fGlobalUpIdx = isUpF ? I : J;
