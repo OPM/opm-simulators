@@ -45,15 +45,12 @@ public:
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using WellEquations = CompWellEquations<Scalar, PrimaryVariables::numWellEq, Indices::numEq>;
 
-
     constexpr static unsigned num_comp = FluidSystem::numComponents;
 
     using EvalWell = typename PrimaryVariables::EvalWell;
     using BVectorWell = typename WellEquations::BVectorWell;
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
-    using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
-    // using Eval = typename Base::Eval;
     using BVector = Dune::BlockVector<VectorBlockType>;
 
     // TODO: this can be a rate converter role later
@@ -129,7 +126,7 @@ private:
     // the following varialbes are temporary and remain to be cleaned up and re-organized
     // some are testing variables, and some are secondary variables might be kept
     // anyway, they are very rough prototype code for testing and will be changed
-    const Scalar wellbore_volume_ {21.6*0.001}; // m^3, it is rather big, will come with different design when the working flow is established
+    const Scalar wellbore_volume_ {21.6*0.001};
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
     EvalWell fluid_density_{0.};
@@ -145,6 +142,7 @@ private:
                                        std::vector<EvalWell>& con_rates) const;
 
     void updateTotalMass();
+
     // TODO: a better name
     void updateSurfaceQuantities(const Simulator& simulator);
 
