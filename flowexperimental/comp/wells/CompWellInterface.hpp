@@ -76,8 +76,7 @@ public:
 
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
-    virtual void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
-                                                       const BVector& x,
+    virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                        SingleCompWellState<Scalar>& well_state) = 0;
     virtual bool getConvergence() const = 0;
 

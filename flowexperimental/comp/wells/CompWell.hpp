@@ -97,20 +97,17 @@ public:
 
     // TODO: control should be passed in later
     void assembleWellEq(const Simulator& simulator,
-                        const double dt,
-                        const SingleCompWellState<Scalar>& well_state);
+                        const double dt);
 
     bool iterateWellEq(const Simulator& simulator,
                        const Scalar dt,
                        SingleCompWellState<Scalar>& well_state);
 
-    void solveEqAndUpdateWellState(const Simulator& simulator,
-                                   SingleCompWellState<Scalar>& well_state);
+    void solveEqAndUpdateWellState(SingleCompWellState<Scalar>& well_state);
 
     void apply(BVector& r) const override;
 
-    void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
-                                               const BVector& x,
+    void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                SingleCompWellState<Scalar>& well_state);
 
     bool getConvergence() const override;
@@ -159,8 +156,7 @@ private:
     // with passing in the SurfaceCondition, we should be able to do this in the primary variable class
     void updateWellState(SingleCompWellState<Scalar>& well_state) const;
 
-    void updateWellState(const Simulator& simulator,
-                         const BVectorWell& dwells,
+    void updateWellState(const BVectorWell& dwells,
                          SingleCompWellState<Scalar>& well_state);
 };
 

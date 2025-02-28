@@ -57,7 +57,7 @@ class SingleCompWellState {
 public:
     SingleCompWellState(const std::string& name,
                         const CompositionalConfig& comp_config,
-                        const PhaseUsage& phase_usage,
+                        const PhaseUsage& phase_usage_input,
                         const std::vector<CompConnectionData<Scalar> >& connections,
                         bool is_producer);
 

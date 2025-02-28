@@ -42,8 +42,7 @@ public:
     explicit CompWellState(const PhaseUsage& phase_usage,
                            const CompositionalConfig& comp_config);
 
-    void init(const Schedule& schedule,
-              const std::vector<Well>& wells_ecl,
+    void init(const std::vector<Well>& wells_ecl,
               const std::vector<Scalar>& cell_pressures,
               const std::vector<std::vector<Scalar>>& cell_mole_fractions,
               const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,

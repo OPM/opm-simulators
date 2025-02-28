@@ -161,7 +161,7 @@ private:
      void initWellContainer();
 
      void initWellConnectionData();
-     void initWellState(std::size_t report_step);
+     void initWellState();
 
      void assemble(const int iterationIdx,
                    const double dt);

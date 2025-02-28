@@ -54,11 +54,11 @@ template <class Scalar>
 SingleCompWellState<Scalar>::
 SingleCompWellState(const std::string& well_name,
                     const CompositionalConfig& comp_config,
-                    const PhaseUsage& phase_usage,
+                    const PhaseUsage& phase_usage_input,
                     const std::vector<CompConnectionData<Scalar>>& connections,
                     bool is_producer)
    : name(well_name)
-   , phase_usage(phase_usage)
+   , phase_usage(phase_usage_input)
    , producer(is_producer)
    , surface_phase_rates(phase_usage.num_phases)
    , phase_fractions(phase_usage.num_phases)
