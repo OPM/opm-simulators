@@ -240,50 +240,42 @@ protected:
     using BaseType::Free;
     using BaseType::Solution;
 
-    // compute volume associated with free concentration
-    Scalar computeFreeVolume_(const int tracerPhaseIdx,
-                              const unsigned globalDofIdx,
-                              const unsigned timeIdx) const
+    // compute volume associated with free/solution concentration
+    template<TracerTypeIdx Index>
+    Scalar computeVolume_(const int tracerPhaseIdx,
+                          const unsigned globalDofIdx,
+                          const unsigned timeIdx) const
     {
         const auto& intQuants = simulator_.model().intensiveQuantities(globalDofIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
-
-        const Scalar phaseVolume = decay<Scalar>(fs.saturation(tracerPhaseIdx)) *
-                                   decay<Scalar>(fs.invB(tracerPhaseIdx)) *
-                                   decay<Scalar>(intQuants.porosity());
-
-        return max(phaseVolume, 1e-10);
-    }
-
-    // compute volume associated with solution concentration
-    Scalar computeSolutionVolume_(const int tracerPhaseIdx,
-                                  const unsigned globalDofIdx,
-                                  const unsigned timeIdx) const
-    {
-        const auto& intQuants = simulator_.model().intensiveQuantities(globalDofIdx, timeIdx);
-        const auto& fs = intQuants.fluidState();
-
         constexpr Scalar min_volume = 1e-10;
 
-        // vaporized oil
-        if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
-            return std::max(decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx)) *
-                            decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
-                            decay<Scalar>(fs.Rv()) *
+        if constexpr (Index == Free) {
+            return std::max(decay<Scalar>(fs.saturation(tracerPhaseIdx)) *
+                            decay<Scalar>(fs.invB(tracerPhaseIdx)) *
                             decay<Scalar>(intQuants.porosity()),
                             min_volume);
-        }
+        } else {
+            // vaporized oil
+            if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                return std::max(decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx)) *
+                                decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
+                                decay<Scalar>(fs.Rv()) *
+                                decay<Scalar>(intQuants.porosity()),
+                                min_volume);
+            }
 
-        // dissolved gas
-        else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
-            return std::max(decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx)) *
-                            decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
-                            decay<Scalar>(fs.Rs()) *
-                            decay<Scalar>(intQuants.porosity()),
-                            min_volume);
-        }
+            // dissolved gas
+            else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                return std::max(decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx)) *
+                                decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
+                                decay<Scalar>(fs.Rs()) *
+                                decay<Scalar>(intQuants.porosity()),
+                                min_volume);
+            }
 
-        return min_volume;
+            return min_volume;
+        }
     }
 
     void computeFreeFlux_(TracerEvaluation& freeFlux,
@@ -393,16 +385,16 @@ protected:
             }
         }
         else {
-            const Scalar fVolume1 = computeFreeVolume_(tr.phaseIdx_, I1, 1);
-            const Scalar sVolume1 = computeSolutionVolume_(tr.phaseIdx_, I1, 1);
+            const Scalar fVolume1 = computeVolume_<Free>(tr.phaseIdx_, I1, 1);
+            const Scalar sVolume1 = computeVolume_<Solution>(tr.phaseIdx_, I1, 1);
             for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                 fStorageOfTimeIndex1[tIdx] = fVolume1 * tr.concentration_[tIdx][I1][Free];
                 sStorageOfTimeIndex1[tIdx] = sVolume1 * tr.concentration_[tIdx][I1][Solution];
             }
         }
 
-        const TracerEvaluation fVol = computeFreeVolume_(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
-        const TracerEvaluation sVol = computeSolutionVolume_(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
+        const TracerEvaluation fVol = computeVolume_<Free>(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
+        const TracerEvaluation sVol = computeVolume_<Solution>(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
         dVol_[Solution][tr.phaseIdx_][I] += sVol.value() * scvVolume - vol1_[1][tr.phaseIdx_][I];
         dVol_[Free][tr.phaseIdx_][I] += fVol.value() * scvVolume - vol1_[0][tr.phaseIdx_][I];
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
@@ -739,8 +731,8 @@ protected:
                     continue;
                 }
 
-                const Scalar fVol1 = computeFreeVolume_(tr.phaseIdx_, globalDofIdx, 0);
-                const Scalar sVol1 = computeSolutionVolume_(tr.phaseIdx_, globalDofIdx, 0);
+                const Scalar fVol1 = computeVolume_<Free>(tr.phaseIdx_, globalDofIdx, 0);
+                const Scalar sVol1 = computeVolume_<Solution>(tr.phaseIdx_, globalDofIdx, 0);
                 vol1_[Free][tr.phaseIdx_][globalDofIdx] = fVol1 * scvVolume;
                 vol1_[Solution][tr.phaseIdx_][globalDofIdx] = sVol1 * scvVolume;
                 dVol_[Free][tr.phaseIdx_][globalDofIdx] = 0.0;
