@@ -519,25 +519,27 @@ protected:
             const Scalar rate_f = rate - rate_s;
             if (rate_f > 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    const Scalar delta = rate_f * wtracer[tIdx];
                     // Injection of free tracer only
-                    tr.residual_[tIdx][I][0] -= rate_f*wtracer[tIdx];
+                    tr.residual_[tIdx][I][0] -= delta;
 
                     // Store _injector_ tracer rate for reporting
                     // (can be done here since WTRACER is constant)
-                    tracerRate[tIdx].rate += rate_f*wtracer[tIdx];
-                    freeTracerRate[tIdx].rate += rate_f*wtracer[tIdx];
+                    tracerRate[tIdx].rate += delta;
+                    freeTracerRate[tIdx].rate += delta;
                     if (eclWell.isMultiSegment()) {
-                        (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += rate_f*wtracer[tIdx];
+                        (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
                     }
                 }
                 dVol_[0][tr.phaseIdx_][I] -= rate_f * dt;
             }
             else if (rate_f < 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    const Scalar delta = rate_f * wtracer[tIdx];
                     // Store _injector_ tracer rate for cross-flowing well connections
                     // (can be done here since WTRACER is constant)
-                    tracerRate[tIdx].rate += rate_f*wtracer[tIdx];
-                    freeTracerRate[tIdx].rate += rate_f*wtracer[tIdx];
+                    tracerRate[tIdx].rate += delta;
+                    freeTracerRate[tIdx].rate += delta;
 
                     // Production of free tracer
                     tr.residual_[tIdx][I][0] -= rate_f * tr.concentration_[tIdx][I][0];
@@ -583,23 +585,27 @@ protected:
         // Source term determined by sign of dsVol: if dsVol > 0 then ms -> mf, else mf -> ms
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
             if (dsVol >= 0) {
-                tr.residual_[tIdx][I][0] -= (dfVol / dt) * tr.concentration_[tIdx][I][0];
-                tr.residual_[tIdx][I][1] += (dfVol / dt) * tr.concentration_[tIdx][I][0];
+                const auto delta = (dfVol / dt) * tr.concentration_[tIdx][I][0];
+                tr.residual_[tIdx][I][0] -= delta;
+                tr.residual_[tIdx][I][1] += delta;
             }
             else {
-                tr.residual_[tIdx][I][0] += (dsVol / dt) * tr.concentration_[tIdx][I][1];
-                tr.residual_[tIdx][I][1] -= (dsVol / dt) * tr.concentration_[tIdx][I][1];
+                const auto delta = (dsVol / dt) * tr.concentration_[tIdx][I][1];
+                tr.residual_[tIdx][I][0] += delta;
+                tr.residual_[tIdx][I][1] -= delta;
             }
         }
 
         // Derivative matrix
         if (dsVol >= 0) {
-            (*tr.mat)[I][I][0][0] -= (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
-            (*tr.mat)[I][I][1][0] += (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            const auto delta = (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            (*tr.mat)[I][I][0][0] -= delta;
+            (*tr.mat)[I][I][1][0] += delta;
         }
         else {
-            (*tr.mat)[I][I][0][1] += (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
-            (*tr.mat)[I][I][1][1] -= (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            const auto delta = (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            (*tr.mat)[I][I][0][1] += delta;
+            (*tr.mat)[I][I][1][1] -= delta;
         }
     }
 
@@ -840,22 +846,22 @@ protected:
                     if (rate_f < 0) {
                         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                             // Store _producer_ free tracer rate for reporting
-                            tracerRate[tIdx].rate += rate_f * tr.concentration_[tIdx][I][0];
-                            freeTracerRate[tIdx].rate += rate_f * tr.concentration_[tIdx][I][0];
+                            const Scalar delta = rate_f * tr.concentration_[tIdx][I][0];
+                            tracerRate[tIdx].rate += delta;
+                            freeTracerRate[tIdx].rate += delta;
                             if (eclWell.isMultiSegment()) {
-                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] +=
-                                    rate_f * tr.concentration_[tIdx][I][0];
+                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
                             }
                         }
                     }
                     if (rate_s < 0) {
                         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                             // Store _producer_ solution tracer rate for reporting
-                            tracerRate[tIdx].rate += rate_s * tr.concentration_[tIdx][I][1];
-                            solTracerRate[tIdx].rate += rate_s * tr.concentration_[tIdx][I][1];
+                            const Scalar delta = rate_s * tr.concentration_[tIdx][I][1];
+                            tracerRate[tIdx].rate += delta;
+                            solTracerRate[tIdx].rate += delta;
                             if (eclWell.isMultiSegment()) {
-                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] +=
-                                    rate_s * tr.concentration_[tIdx][I][1];
+                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
                             }
                         }
                     }
