@@ -139,6 +139,8 @@ report() const
     if (this->wells_.empty()) {
         return {};
     }
+    using rt = data::Rates::opt;
+    const auto& pu = this->phase_usage_;
 
     data::Wells res;
     for (std::size_t w = 0; w < this->wells_.size(); ++w) {
@@ -149,6 +151,16 @@ report() const
         auto& well = res[ws.name];
         well.bhp = ws.bhp;
         well.temperature = ws.temperature;
+        const auto& surface_rates = ws.surface_phase_rates;
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            well.rates.set(rt::wat, surface_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
+        }
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            well.rates.set(rt::oil, surface_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            well.rates.set(rt::gas, surface_rates[pu.phase_pos[BlackoilPhases::Vapour]]);
+        }
     }
     return res;
 }
