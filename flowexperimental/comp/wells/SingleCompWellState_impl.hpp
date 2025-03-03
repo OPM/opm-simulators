@@ -74,8 +74,8 @@ void SingleCompWellState<Scalar>::
 update_injector_targets(const Well& well,
                         const SummaryState& st) {
     const auto& inj_controls = well.injectionControls(st);
-    const auto cmode_is_bhp = (inj_controls.cmode == Well::InjectorCMode::BHP);
-    assert(cmode_is_bhp && "Only BHP control mode is supported for now");
+    const bool cmode_is_undefined = (inj_controls.cmode == Well::InjectorCMode::CMODE_UNDEFINED);
+    assert(!cmode_is_undefined && "control types should be specified");
     const auto& injection_properties = well.getInjectionProperties();
     {
         const auto inection_type = injection_properties.injectorType;
@@ -83,7 +83,7 @@ update_injector_targets(const Well& well,
         assert(is_gas_injecting && "Only gas injection is supported for now");
     }
     this->bhp = inj_controls.bhp_limit;
-    this->injection_cmode = Well::InjectorCMode::BHP;
+    this->injection_cmode = inj_controls.cmode;
     const auto& inj_composition = injection_properties.gasInjComposition();
     assert(this->total_molar_fractions.size() == inj_composition.size());
     // TODO: this might not be correct when crossing flow is involved
@@ -123,13 +123,12 @@ update_producer_targets(const Well& well,
     const auto& prod_controls = well.productionControls(st);
 
     const auto cmode_is_undefined = (prod_controls.cmode == Well::ProducerCMode::CMODE_UNDEFINED);
-    const auto cmode_is_bhp = (prod_controls.cmode == Well::ProducerCMode::BHP);
-    assert((cmode_is_undefined || cmode_is_bhp) && "Only BHP control mode is supported for now");
+    assert(!cmode_is_undefined && "control types should be specified");
 
     this->total_molar_fractions = cell_mole_fractions[this->connection_data.ecl_index[0]];
 
     this->bhp = prod_controls.bhp_limit;
-    this->production_cmode = Well::ProducerCMode::BHP;
+    this->production_cmode = prod_controls.cmode;
 
     // we give a random rates for BHP controlled wells
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
