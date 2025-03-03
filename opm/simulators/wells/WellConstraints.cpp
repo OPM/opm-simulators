@@ -262,7 +262,8 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
     if (well_.wellHasTHPConstraints(summaryState) && currentControl != Well::ProducerCMode::THP) {
         const auto& thp = well_.getTHPConstraint(summaryState);
         Scalar current_thp = ws.thp;
-        if (thp > current_thp && !ws.trivial_target) {
+        const bool dont_check = (currentControl == Well::ProducerCMode::GRUP && ws.trivial_target);
+        if (thp > current_thp && !dont_check) {
             // If WVFPEXP item 4 is set to YES1 or YES2
             // switching to THP is prevented if the well will
             // produce at a higher rate with THP control
