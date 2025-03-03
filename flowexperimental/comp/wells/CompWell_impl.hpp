@@ -418,6 +418,7 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 assembleWellEq(const Simulator& simulator,
+               const SingleCompWellState<Scalar>& well_state,
                const double dt)
 {
     this->well_equations_.clear();
@@ -451,18 +452,7 @@ assembleWellEq(const Simulator& simulator,
     }
 
     const auto& summary_state = simulator.vanguard().summaryState();
-    const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-    const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-
-    // assemble the well equations related to the well control equations
-    // currently we are dealiing with BHP control equations only
-    const Scalar bhp_limit = this->well_ecl_.isInjector() ? inj_controls.bhp_limit : prod_controls.bhp_limit;
-    const EvalWell control_eq = this->primary_variables_.getBhp() - bhp_limit;
-
-    this->well_equations_.residual()[0][PrimaryVariables::Bhp] = control_eq.value();
-    for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
-        this->well_equations_.D()[0][0][PrimaryVariables::Bhp][pvIdx] = control_eq.derivative(pvIdx + PrimaryVariables::numResEq);
-    }
+    assembleControlEq(well_state, summary_state);
 
     this->well_equations_.invert();
     // there will be num_comp mass balance equations for each component and one for the well control equations
@@ -470,6 +460,76 @@ assembleWellEq(const Simulator& simulator,
     // add minus the production rate for each component, will equal to the mass change for each component
 
 }
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+assembleControlEq(const SingleCompWellState<Scalar>& well_state,
+                  const SummaryState& summary_state)
+{
+    EvalWell control_eq;
+    if (this->well_ecl_.isProducer()) {
+        const auto prod_controls = this->well_ecl_.productionControls(summary_state);
+        assembleControlEqProd(well_state, prod_controls, control_eq);
+    } else {
+        const auto inj_controls = this->well_ecl_.injectionControls(summary_state);
+        assembleControlEqInj(well_state, inj_controls, control_eq);
+    }
+
+    this->well_equations_.residual()[0][PrimaryVariables::Bhp] = control_eq.value();
+    for (unsigned pvIdx = 0; pvIdx < PrimaryVariables::numWellEq; ++pvIdx) {
+        this->well_equations_.D()[0][0][PrimaryVariables::Bhp][pvIdx] = control_eq.derivative(pvIdx + PrimaryVariables::numResEq);
+    }
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+assembleControlEqProd(const SingleCompWellState<Scalar>& well_state,
+                      const Well::ProductionControls& prod_controls,
+                      EvalWell& control_eq) const
+{
+    // TODO: we only need to pass in the current control?
+    const auto current = well_state.production_cmode;
+
+    switch (current) {
+    case WellProducerCMode::BHP : {
+        const Scalar bhp_limit = prod_controls.bhp_limit;
+        control_eq = this->primary_variables_.getBhp() - bhp_limit;
+        break;
+    }
+    default:
+        OPM_THROW(std::logic_error, "only handles BHP control for now");
+    }
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+assembleControlEqInj(const SingleCompWellState<Scalar>& well_state,
+                      const Well::InjectionControls& inj_controls,
+                      EvalWell& control_eq) const
+{
+    // TODO: we only need to pass in the current control?
+    const auto current = well_state.injection_cmode;
+
+    switch (current) {
+    case WellInjectorCMode::BHP : {
+        const Scalar bhp_limit = inj_controls.bhp_limit;
+        control_eq = this->primary_variables_.getBhp() - bhp_limit;
+        break;
+    }
+    case WellInjectorCMode::RATE : {
+        const Scalar rate_target = inj_controls.surface_rate;
+        const EvalWell& injection_rate = this->primary_variables_.getTotalRate();
+        control_eq = injection_rate - rate_target;
+        break;
+    }
+    default:
+        OPM_THROW(std::logic_error, "only handles BHP control for now");
+    }
+}
+
 
 template <typename TypeTag>
 void
@@ -508,7 +568,9 @@ iterateWellEq(const Simulator& simulator,
     bool converged = false;
 
     do {
-        assembleWellEq(simulator, dt);
+        updateWellControl(simulator.vanguard().summaryState(), well_state);
+
+        assembleWellEq(simulator, well_state, dt);
 
         std::cout << std::endl << " residuals ";
         for (const auto& val : this->well_equations_.residual()[0]) {
@@ -633,6 +695,68 @@ CompWell<TypeTag>::
 addWellContributions(SparseMatrixAdapter&) const
 {
     assert(false);
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updateWellControl(const SummaryState& summary_state,
+                  SingleCompWellState<Scalar>& well_state) const
+{
+    std::string from;
+    if (this->well_ecl_.isInjector()) {
+        from = WellInjectorCMode2String(well_state.injection_cmode);
+    } else {
+        from = WellProducerCMode2String(well_state.production_cmode);
+    }
+    bool changed = false;
+    if (this->well_ecl_.isProducer()) {
+        const auto production_controls = this->well_ecl_.productionControls(summary_state);
+        const auto current_control = well_state.production_cmode;
+
+        if (production_controls.hasControl(Well::ProducerCMode::BHP) && current_control != WellProducerCMode::BHP) {
+            const Scalar bhp_limit = production_controls.bhp_limit;
+            const Scalar current_bhp = well_state.bhp;
+            if (current_bhp < bhp_limit) {
+                well_state.bhp = bhp_limit;
+                well_state.production_cmode = WellProducerCMode::BHP;
+                changed = true;
+            }
+        }
+    } else {
+        const auto injection_controls = this->well_ecl_.injectionControls(summary_state);
+        const auto current_control = well_state.injection_cmode;
+        if (injection_controls.hasControl(Well::InjectorCMode::BHP) && current_control != WellInjectorCMode::BHP) {
+            const Scalar bhp_limit = injection_controls.bhp_limit;
+            const Scalar current_bhp = well_state.bhp;
+            if (current_bhp > bhp_limit) {
+                well_state.bhp = bhp_limit;
+                well_state.injection_cmode = WellInjectorCMode::BHP;
+                changed = true;
+            }
+        }
+        if (!changed && injection_controls.hasControl(Well::InjectorCMode::RATE) && current_control != WellInjectorCMode::RATE) {
+            // InjectorType injector_type = injection_controls.injector_type;
+            const Scalar rate_limit = injection_controls.surface_rate;
+            // TODO: hack to get the injection rate
+            const Scalar current_rate = std::accumulate(well_state.surface_phase_rates.begin(),
+                                                        well_state.surface_phase_rates.end(), 0.0);
+            if (current_rate > rate_limit) {
+                well_state.injection_cmode = WellInjectorCMode::RATE;
+                changed = true;
+            }
+        }
+    }
+
+    if (changed) {
+        std::string to;
+        if (this->well_ecl_.isInjector()) {
+            to = WellInjectorCMode2String(well_state.injection_cmode);
+        } else {
+            to = WellProducerCMode2String(well_state.production_cmode);
+        }
+        std::cout << " well " << this->well_ecl_.name() << " changed control from " << from << " to " << to << std::endl;
+    }
 }
 
 } // end of namespace Opm
