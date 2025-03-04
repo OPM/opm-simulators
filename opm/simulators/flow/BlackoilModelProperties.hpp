@@ -25,7 +25,6 @@
 #define OPM_BLACKOILMODEL_PROPERTIES_HEADER_INCLUDED
 
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
-
 #include <tuple>
 
 namespace Opm {
@@ -38,6 +37,7 @@ namespace Opm::Properties {
 namespace TTag {
 
 struct FlowIstlSolver;
+struct FlowBaseProblemBlackoil;  
 struct FlowProblem { using InheritsFrom = std::tuple<FlowBaseProblemBlackoil, BlackOilModel>; };
 
 }
