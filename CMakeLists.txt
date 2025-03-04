@@ -545,6 +545,10 @@ if(TARGET fmt::fmt)
   target_link_libraries(MainDispatchDynamic fmt::fmt)
 endif()
 
+if(TARGET opmcommon)
+  add_dependencies(MainDispatchDynamic opmcommon)
+endif()
+
 if(USE_TRACY_PROFILER AND Tracy_FOUND)
   target_link_libraries(MainDispatchDynamic Tracy::TracyClient)
 endif()
