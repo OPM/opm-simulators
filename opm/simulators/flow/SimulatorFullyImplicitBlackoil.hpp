@@ -104,12 +104,13 @@ public:
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
     using AquiferModel = GetPropType<TypeTag, Properties::AquiferModel>;
+    using Model = GetPropType<TypeTag, Properties::NonlinearSystem>;
 
     using TimeStepper = AdaptiveTimeStepping<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using MICPModule = BlackOilMICPModule<TypeTag>;
 
-    using Model = BlackoilModel<TypeTag>;
+
     using Solver = NonlinearSolver<TypeTag, Model>;
     using ModelParameters = typename Model::ModelParameters;
     using SolverParameters = typename Solver::SolverParameters;
