@@ -603,7 +603,8 @@ T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
         // with other communication if there are bugs
         comm_->barrier();
 #endif
-        comm_->broadcast(&res, 1, rankWithFirstPerf_);
+        Parallel::MpiSerializer ser(*comm_);
+        ser.broadcast(rankWithFirstPerf_, t);
 #ifndef NDEBUG
         comm_->barrier();
 #endif
@@ -773,9 +774,11 @@ template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;
 template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterator;
 
 #define INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, DIM)                 \
-    template Opm::DenseAd::Evaluation<T, DIM, 0u> Opm::ParallelWellInfo<T>::        \
-        broadcastFirstPerforationValue<Opm::DenseAd::Evaluation<T, DIM, 0u>>        \
-        (Opm::DenseAd::Evaluation<T, DIM, 0u> const&) const;
+    template std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>, unsigned short>    \
+        Opm::ParallelWellInfo<T>::broadcastFirstPerforationValue                    \
+        <std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>, unsigned short>>       \
+        (std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>, unsigned short> const&)\
+        const;
 
 #define INSTANTIATE_TYPE(T)                                                         \
     template class CheckDistributedWellConnections<T>;                              \
