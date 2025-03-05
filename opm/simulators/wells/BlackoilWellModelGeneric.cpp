@@ -1847,46 +1847,49 @@ assignMassGasRate(data::Wells& wsrpt,
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 assignWellTracerRates(data::Wells& wsrpt,
-                      const WellTracerRates& wellTracerRates) const
+                      const WellTracerRates& wellTracerRates,
+                      const unsigned reportStep) const
 {
-    if (wellTracerRates.empty())
+    if (wellTracerRates.empty()) {
         return; // no tracers
+    }
 
     for (const auto& wTR : wellTracerRates) {
-        std::string wellName = wTR.first.first;
-        auto xwPos = wsrpt.find(wellName);
+        const auto& eclWell = schedule_.getWell(wTR.first, reportStep);
+        auto xwPos = wsrpt.find(eclWell.name());
         if (xwPos == wsrpt.end()) { // No well results.
             continue;
         }
-        std::string tracerName = wTR.first.second;
-        Scalar rate = wTR.second;
-        xwPos->second.rates.set(data::Rates::opt::tracer, rate, tracerName);
+        for (const auto& tr : wTR.second) {
+            xwPos->second.rates.set(data::Rates::opt::tracer, tr.rate, tr.name);
+        }
     }
 }
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 assignMswTracerRates(data::Wells& wsrpt,
-                     const MswTracerRates& mswTracerRates) const
+                     const MswTracerRates& mswTracerRates,
+                     const unsigned reportStep) const
 {
     if (mswTracerRates.empty())
         return;
-    
+
     for (const auto& mswTR : mswTracerRates) {
-        std::string wellName = std::get<0>(mswTR.first);
-        auto xwPos = wsrpt.find(wellName);
+        const auto& eclWell = schedule_.getWell(mswTR.first, reportStep);
+        auto xwPos = wsrpt.find(eclWell.name());
         if (xwPos == wsrpt.end()) { // No well results.
             continue;
         }
-        std::string tracerName = std::get<1>(mswTR.first);
-        std::size_t segNumber = std::get<2>(mswTR.first);
-        Scalar rate = mswTR.second;
 
         auto& wData = xwPos->second;
-        auto segPos = wData.segments.find(segNumber);
-        if (segPos != wData.segments.end()) {
-            auto& segment = segPos->second;
-            segment.rates.set(data::Rates::opt::tracer, rate, tracerName);
+        for (const auto& tr : mswTR.second) {
+            for (const auto& [seg, rate] : tr.rate) {
+                auto segPos = wData.segments.find(seg);
+                if (segPos != wData.segments.end()) {
+                    segPos->second.rates.set(data::Rates::opt::tracer, rate, tr.name);
+                }
+            }
         }
     }
 }
