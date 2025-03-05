@@ -492,14 +492,30 @@ assembleControlEqProd(const SingleCompWellState<Scalar>& well_state,
     // TODO: we only need to pass in the current control?
     const auto current = well_state.production_cmode;
 
+    const auto& surface_cond = this->surface_conditions_;
+
     switch (current) {
     case WellProducerCMode::BHP : {
         const Scalar bhp_limit = prod_controls.bhp_limit;
         control_eq = this->primary_variables_.getBhp() - bhp_limit;
         break;
     }
+    case WellProducerCMode::ORAT : {
+        const Scalar rate_target = prod_controls.oil_rate;
+        const EvalWell& total_rate = this->primary_variables_.getTotalRate();
+        const EvalWell oil_rate = total_rate * surface_cond.volume_fractions_[FluidSystem::oilPhaseIdx];
+        control_eq = oil_rate + rate_target;
+        break;
+    }
+    case WellProducerCMode::GRAT : {
+        const Scalar rate_target = prod_controls.gas_rate;
+        const EvalWell& total_rate = this->primary_variables_.getTotalRate();
+        const EvalWell gas_rate = total_rate * surface_cond.volume_fractions_[FluidSystem::gasPhaseIdx];
+        control_eq = gas_rate + rate_target;
+        break;
+    }
     default:
-        OPM_THROW(std::logic_error, "only handles BHP control for now");
+        OPM_THROW(std::logic_error, "only handles BHP, ORAT and GRAT control for producers for now");
     }
 }
 
@@ -526,7 +542,7 @@ assembleControlEqInj(const SingleCompWellState<Scalar>& well_state,
         break;
     }
     default:
-        OPM_THROW(std::logic_error, "only handles BHP control for now");
+        OPM_THROW(std::logic_error, "only handles BHP and RATE control for injectors for now");
     }
 }
 
@@ -720,6 +736,30 @@ updateWellControl(const SummaryState& summary_state,
             if (current_bhp < bhp_limit) {
                 well_state.bhp = bhp_limit;
                 well_state.production_cmode = WellProducerCMode::BHP;
+                changed = true;
+            }
+        }
+
+        if (!changed && production_controls.hasControl(Well::ProducerCMode::ORAT) && current_control != WellProducerCMode::ORAT) {
+            const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::oilPhaseIdx];
+            if (current_rate > production_controls.oil_rate) {
+                well_state.production_cmode = WellProducerCMode::ORAT;
+                changed = true;
+            }
+        }
+
+        if (!changed && production_controls.hasControl(Well::ProducerCMode::WRAT) && current_control != WellProducerCMode::WRAT) {
+            const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::waterPhaseIdx];
+            if (current_rate > production_controls.water_rate) {
+                well_state.production_cmode = WellProducerCMode::WRAT;
+                changed = true;
+            }
+        }
+
+        if (!changed && production_controls.hasControl(Well::ProducerCMode::GRAT) && current_control != WellProducerCMode::GRAT) {
+            const Scalar current_rate = -well_state.surface_phase_rates[FluidSystem::gasPhaseIdx];
+            if (current_rate > production_controls.gas_rate) {
+                well_state.production_cmode = WellProducerCMode::GRAT;
                 changed = true;
             }
         }
