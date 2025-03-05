@@ -76,7 +76,7 @@ public:
 
     static Eval restrictEval(const EvalWell& in);
 
-    void updateNewton(const BVectorWell& dwells);
+    void updateNewton(const BVectorWell& dwells, const bool producer = false);
 private:
     std::array<Scalar, numWellEq> value_;
     std::array<EvalWell, numWellEq> evaluation_;

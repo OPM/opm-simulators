@@ -179,7 +179,8 @@ restrictEval(const EvalWell& in)
 template <typename FluidSystem, typename Indices>
 void
 CompWellPrimaryVariables<FluidSystem, Indices>::
-updateNewton(const BVectorWell& dwells) {
+updateNewton(const BVectorWell& dwells, const bool producer) {
+    constexpr Scalar damping = 1.0;
     std::cout << " the current values ";
     for (const auto& val : value_) {
         std::cout << val << " ";
@@ -192,8 +193,13 @@ updateNewton(const BVectorWell& dwells) {
     }
     std::cout << std::endl;
     for (unsigned i = 0; i < value_.size(); ++i) {
-        value_[i] -= 0.8 * dwells[0][i];
+        value_[i] -= damping * dwells[0][i];
     }
+    std::cout << " the values after applying the Newton update ";
+    for (const auto& val : value_) {
+        std::cout << val << " ";
+    }
+    std::cout << std::endl;
     std::cout << " process the fractions " << std::endl;
     value_[1] = std::clamp(value_[1], 1.e-10, 1.);
     value_[2] = std::clamp(value_[2], 1.e-10, 1.);
@@ -209,6 +215,14 @@ updateNewton(const BVectorWell& dwells) {
     value_[1] = mole_fractions[0] / sum_mole_fraction;
     value_[2] = mole_fractions[1] / sum_mole_fraction;
 
+    std::cout << " the values after processing the fractions ";
+    for (const auto& val : value_) {
+        std::cout << val << " ";
+    }
+    std::cout << std::endl;
+    if (producer) {
+        std::cout << " producer " << std::endl;
+    }
     updateEvaluation();
 }
 

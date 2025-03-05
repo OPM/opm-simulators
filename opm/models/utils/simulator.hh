@@ -482,7 +482,11 @@ public:
         Scalar eps =
             std::max(Scalar(std::abs(this->time())), timeStepSize())
             *std::numeric_limits<Scalar>::epsilon()*1e3;
-        return finished_ || (this->time()*(1.0 + eps) >= endTime());
+        const bool res = finished_ || (this->time()*(1.0 + eps) >= endTime());
+        if (res) {
+           std::cout << "Simulation finished at time " << this->time() << std::endl;
+        }
+        return res;
     }
 
     /*!

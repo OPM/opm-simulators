@@ -352,6 +352,7 @@ CompWell<TypeTag>::
 calculateSingleConnectionRate(const Simulator& simulator,
                               std::vector<EvalWell>& con_rates) const
 {
+    const bool output = this->well_ecl_.isProducer();
     constexpr int con_idx = 0; // TODO: to be a function argument for multiple connection wells
     constexpr int np = 2; // TODO: this will be the number of phases
     const EvalWell& bhp = this->primary_variables_.getBhp();
@@ -367,6 +368,12 @@ calculateSingleConnectionRate(const Simulator& simulator,
 
     const EvalWell cell_pressure = PrimaryVariables::extendEval(fluid_state.pressure(FluidSystem::oilPhaseIdx));
     const EvalWell drawdown = cell_pressure - bhp;
+    if (output) {
+        std::cout << " incoming mole fractoins " << std::endl;
+        for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
+            std::cout << fluid_state.moleFraction(comp_idx) << " " << std::endl;
+        }
+    }
 
     if (drawdown > 0.) { // producing connection
         std::vector<EvalWell> cq_v(np);
@@ -588,7 +595,7 @@ iterateWellEq(const Simulator& simulator,
 
         assembleWellEq(simulator, well_state, dt);
 
-        std::cout << std::endl << " residuals ";
+        std::cout << std::endl << " iteration number " << it << " residuals ";
         for (const auto& val : this->well_equations_.residual()[0]) {
             std::cout << val << " ";
         }
@@ -652,7 +659,7 @@ void
 CompWell<TypeTag>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells)
 {
-    this->primary_variables_.updateNewton(dwells);
+    this->primary_variables_.updateNewton(dwells, this->well_ecl_.isProducer());
 }
 
 template <typename TypeTag>

@@ -221,7 +221,7 @@ assemble(const int iterationIdx,
         auto& well_state = comp_well_states_[well->name()];
         well->iterateWellEq(simulator_, dt, well_state);
         // TODO: do we need this? can we use the one assembled previously?
-        // well->assembleWellEq(simulator_, dt, well_state);
+        // well->assembleWellEq(simulator_, well_state, dt);
     }
 }
 
