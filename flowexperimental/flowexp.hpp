@@ -172,6 +172,7 @@ public:
         Parameters::Hide<Parameters::MinStrictCnvIter>();
         Parameters::Hide<Parameters::MinStrictMbIter>();
         Parameters::Hide<Parameters::SolveWelleqInitially>();
+        Parameters::Hide<Parameters::PreSolveNetwork>();
         Parameters::Hide<Parameters::UpdateEquationsScaling>();
         Parameters::Hide<Parameters::UseUpdateStabilization>();
         Parameters::Hide<Parameters::MatrixAddWellContributions>();

@@ -2062,7 +2062,7 @@ namespace Opm {
 
         // Rebalance the network initially if any wells in the network have status changes
         // (Need to check this before clearing events)
-        const bool do_prestep_network_rebalance = this->needPreStepNetworkRebalance(episodeIdx);
+        const bool do_prestep_network_rebalance = param_.pre_solve_network_ && this->needPreStepNetworkRebalance(episodeIdx);
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
