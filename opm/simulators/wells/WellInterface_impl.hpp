@@ -1500,9 +1500,11 @@ namespace Opm
                     for (int p = 0; p<np; ++p) {
                         ws.surface_rates[p] *= scale;
                     }
-                    ws.trivial_target = false;
+                    ws.trivial_group_target = false;
                 } else {
-                    ws.trivial_target = true;
+                    // If group target is trivial we dont want to flip to other controls. To avoid oscillation we store
+                    // this information in the well state and explicitly check for this condition when evaluating well controls.
+                    ws.trivial_group_target = true;
                 }
                 break;
             }
