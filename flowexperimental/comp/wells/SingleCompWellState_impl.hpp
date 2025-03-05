@@ -132,8 +132,6 @@ update_producer_targets(const Well& well,
 
     // we give a random rates for BHP controlled wells
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
-    // different from the black oil situation, surface rate is not the primary variable, so we need to
-    // check the how to convert it.
     // TODO: we should use our own phase index system
     // TODO: the following must be changed
     if (prod_controls.cmode == Well::ProducerCMode::BHP) {
@@ -147,8 +145,6 @@ update_producer_targets(const Well& well,
             this->surface_phase_rates[BlackoilPhases::Vapour] = 100. * production_rate;
         }
     }
-
-
 }
 
 template <typename Scalar>

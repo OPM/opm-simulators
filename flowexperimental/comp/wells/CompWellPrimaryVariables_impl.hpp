@@ -22,16 +22,6 @@
 namespace Opm
 {
 
-// template <typename FluidSystem, typename Indices>
-// void
-// CompWellPrimaryVariables<FluidSystem, Indices>::
-// init()
-// {
-//     // the following code looks like a resize function
-//     value_.resize(numWellEq, 0.);
-//     evaluation_.resize(numWellEq, 0.);
-// }
-
 template <typename FluidSystem, typename Indices>
 void
 CompWellPrimaryVariables<FluidSystem, Indices>::
@@ -180,21 +170,12 @@ template <typename FluidSystem, typename Indices>
 void
 CompWellPrimaryVariables<FluidSystem, Indices>::
 updateNewton(const BVectorWell& dwells) {
-    std::cout << " the current values ";
-    for (const auto& val : value_) {
-        std::cout << val << " ";
-    }
-    std::cout << std::endl;
+    constexpr Scalar damping = 1.0;
 
-    std::cout << " dwells ";
-    for (unsigned i = 0; i < dwells[0].size(); ++i) {
-        std::cout << dwells[0][i] << " ";
-    }
-    std::cout << std::endl;
     for (unsigned i = 0; i < value_.size(); ++i) {
-        value_[i] -= 0.8 * dwells[0][i];
+        value_[i] -= damping * dwells[0][i];
     }
-    std::cout << " process the fractions " << std::endl;
+    // TODO: more general indices here
     value_[1] = std::clamp(value_[1], 1.e-10, 1.);
     value_[2] = std::clamp(value_[2], 1.e-10, 1.);
     std::vector<Scalar> mole_fractions(FluidSystem::numComponents, 0.);

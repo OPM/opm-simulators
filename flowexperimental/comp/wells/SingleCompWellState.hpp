@@ -75,8 +75,6 @@ public:
     // WZMF
     std::vector<Scalar> total_molar_fractions;
     // WXMF WYMF and WAMF
-    // TODO: potentiall we can use std::vector<std::vector<Sclar>>
-    // TODO: to do phase_molar_fractions
     std::vector<std::vector<Scalar> > phase_molar_fractions;
 
     ConnectionData<Scalar> connection_data;

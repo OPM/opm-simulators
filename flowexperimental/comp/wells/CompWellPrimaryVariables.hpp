@@ -64,7 +64,6 @@ public:
 
     FluidState toFluidState() const;
 
-    // void init();
     void update(const SingleCompWellState<Scalar>& well_state);
     void updateEvaluation();
 
