@@ -375,10 +375,8 @@ doInit(bool rst, std::size_t numGridDof,
     // all of its neighbors. (it also talks to itself since
     // degrees of freedom are sometimes quite egocentric.)
     for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx) {
-        typename NeighborSet::iterator nIt = neighbors[dofIdx].begin();
-        typename NeighborSet::iterator nEndIt = neighbors[dofIdx].end();
-        for (; nIt != nEndIt; ++nIt) {
-            tracerMatrix_->addindex(dofIdx, *nIt);
+        for (const auto& index : neighbors[dofIdx]) {
+            tracerMatrix_->addindex(dofIdx, index);
         }
     }
     tracerMatrix_->endindices();
