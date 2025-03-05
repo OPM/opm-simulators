@@ -142,18 +142,14 @@ segmentNumberToIndex(const int segment_number) const
 }
 
 template<typename Scalar>
-void
+bool
 MultisegmentWellGeneric<Scalar>::
-detectOscillations(const std::vector<Scalar>& measure_history, bool& oscillate, bool& stagnate) const
+update_relaxation_factor(const std::vector<Scalar>& measure_history, Scalar& relaxation_factor, bool& regularize, DeferredLogger& deferred_logger) const
 {
     const auto it = measure_history.size() - 1;
     if ( it < 2 ) {
-        oscillate = false;
-        stagnate = false;
-        return;
+        return false;
     }
-
-    stagnate = true;
     const Scalar F0 = measure_history[it];
     const Scalar F1 = measure_history[it - 1];
     const Scalar F2 = measure_history[it - 2];
@@ -161,11 +157,59 @@ detectOscillations(const std::vector<Scalar>& measure_history, bool& oscillate, 
     const Scalar d2 = std::abs((F0 - F1) / F0);
 
     const Scalar oscillaton_rel_tol = 0.2;
-    oscillate = (d1 < oscillaton_rel_tol) && (oscillaton_rel_tol < d2);
+    bool oscillate = (d1 < oscillaton_rel_tol) && (oscillaton_rel_tol < d2);
+    if (!oscillate)
+        return false;
+   
+    const Scalar min_relaxation_factor = 0.6;
+    std::ostringstream sstr;
+    if (relaxation_factor == min_relaxation_factor) {
+        sstr << " well " << baseif_.name() << " observes severe oscillation. Terminates after " << it << "iterations.\n";
 
-    const Scalar stagnation_rel_tol = 1.e-2;
-    stagnate = std::abs((F1 - F2) / F2) <= stagnation_rel_tol;
+    }
+    const Scalar reduction_mutliplier = 0.9;
+    relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
+
+    if (relaxation_factor == min_relaxation_factor) {
+        return true;
+    }
+    sstr << " well " << baseif_.name() << " observes oscillation in inner iteration " << it << "\n";
+    sstr << " relaxation_factor is " << relaxation_factor << "\n";
+    regularize = true;
+    deferred_logger.debug(sstr.str());
+    return false;
 }
+
+template<typename Scalar>
+bool
+MultisegmentWellGeneric<Scalar>::
+repeatedStagnation(const std::vector<Scalar>& measure_history, bool& regularize, DeferredLogger& deferred_logger) const
+{
+    const auto it = measure_history.size() - 1;
+    if ( it < 2 ) {
+        return false;
+    }
+    const Scalar F0 = measure_history[it];
+    const Scalar F1 = measure_history[it - 1];
+    const Scalar F2 = measure_history[it - 2];
+    const Scalar stagnation_rel_tol = 1.e-2;
+    bool stagnate = std::abs((F0 - F1) / F1) <= stagnation_rel_tol && std::abs((F1 - F2) / F2) <= stagnation_rel_tol;
+    if (!stagnate)
+        return false;
+
+    std::ostringstream sstr;
+    sstr << " well " << baseif_.name() << " observes stagnation in inner iteration " << it << "\n";
+    // we frist try to regularize and only stop iterating if it still stagnates
+    if (regularize ) {
+        sstr << "Inner iterations are terminated.\n";
+        return true;
+    }
+    regularize = true;
+    sstr << "Try to regularize the equation.\n";
+    deferred_logger.debug(sstr.str());
+    return false;
+}
+
 
 template<typename Scalar>
 bool

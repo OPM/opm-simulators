@@ -1491,9 +1491,7 @@ namespace Opm
         int it = 0;
         // relaxation factor
         Scalar relaxation_factor = 1.;
-        const Scalar min_relaxation_factor = 0.6;
         bool converged = false;
-        int stagnate_count = 0;
         bool relax_convergence = false;
         this->regularize_ = false;
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
@@ -1537,49 +1535,19 @@ namespace Opm
                                                                     this->param_.tolerance_pressure_ms_wells_,
                                                                     deferred_logger) );
             }
-
-
-            bool is_oscillate = false;
-            bool is_stagnate = false;
-
-            this->detectOscillations(measure_history, is_oscillate, is_stagnate);
-            // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
-            // for example, to recover it to be bigger
-
-            if (is_oscillate || is_stagnate) {
-                // HACK!
-                std::ostringstream sstr;
-                if (relaxation_factor == min_relaxation_factor) {
-                    // Still stagnating, terminate iterations if 5 iterations pass.
-                    ++stagnate_count;
-                    if (stagnate_count == 6) {
-                        sstr << " well " << this->name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
-                        const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, true);
-                        if (reportStag.converged()) {
-                            converged = true;
-                            sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
-                            deferred_logger.debug(sstr.str());
-                            return converged;
-                        }
-                    }
+            bool min_relaxation_reached = this->update_relaxation_factor(measure_history, relaxation_factor, this->regularize_, deferred_logger);
+            if (min_relaxation_reached || this->repeatedStagnation(measure_history, this->regularize_, deferred_logger)) {
+                // try last attempt with relaxed tolerances
+                const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, true);
+                if (reportStag.converged()) {
+                    converged = true;
+                    std::string message = fmt::format("Well stagnates/oscillates but {} manages to get converged with relaxed tolerances in {} inner iterations."
+                            ,this->name(), it);
+                    deferred_logger.debug(message);
+                } else {
+                    converged = false;
                 }
-
-                // a factor value to reduce the relaxation_factor
-                const Scalar reduction_mutliplier = 0.9;
-                relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
-
-                // debug output
-                if (is_stagnate) {
-                    sstr << " well " << this->name() << " observes stagnation in inner iteration " << it << "\n";
-
-                }
-                if (is_oscillate) {
-                    sstr << " well " << this->name() << " observes oscillation in inner iteration " << it << "\n";
-                }
-                sstr << " relaxation_factor is " << relaxation_factor << " now\n";
-
-                this->regularize_ = true;
-                deferred_logger.debug(sstr.str());
+                break;
             }
             updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
         }
@@ -1641,9 +1609,7 @@ namespace Opm
         int it = 0;
         // relaxation factor
         Scalar relaxation_factor = 1.;
-        const Scalar min_relaxation_factor = 0.6;
         bool converged = false;
-        [[maybe_unused]] int stagnate_count = 0;
         bool relax_convergence = false;
         this->regularize_ = false;
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -1728,48 +1694,10 @@ namespace Opm
                                                                         this->param_.tolerance_wells_,
                                                                         this->param_.tolerance_pressure_ms_wells_,
                                                                         deferred_logger));
-
-                bool is_oscillate = false;
-                bool is_stagnate = false;
-
-                this->detectOscillations(measure_history, is_oscillate, is_stagnate);
-                // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
-                // for example, to recover it to be bigger
-
-                if (is_oscillate || is_stagnate) {
-                    // HACK!
-                    std::string message;
-                    if (relaxation_factor == min_relaxation_factor) {
-                        ++stagnate_count;
-                        if (false) { // this disables the usage of the relaxed tolerance
-                            fmt::format_to(std::back_inserter(message), " Well {} observes severe stagnation and/or oscillation."
-                                                                        " We relax the tolerance and check for convergence. \n", this->name());
-                            const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_,
-                                                                       deferred_logger, true);
-                            if (reportStag.converged()) {
-                                converged = true;
-                                fmt::format_to(std::back_inserter(message), " Well {}  manages to get converged with relaxed tolerances in {} inner iterations", this->name(), it);
-                                deferred_logger.debug(message);
-                                return converged;
-                            }
-                        }
-                    }
-
-                    // a factor value to reduce the relaxation_factor
-                    constexpr Scalar reduction_mutliplier = 0.9;
-                    relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
-
-                    // debug output
-                    if (is_stagnate) {
-                        fmt::format_to(std::back_inserter(message), " well {} observes stagnation in inner iteration {}\n", this->name(), it);
-                    }
-                    if (is_oscillate) {
-                        fmt::format_to(std::back_inserter(message), " well {} observes oscillation in inner iteration {}\n", this->name(), it);
-                    }
-                    fmt::format_to(std::back_inserter(message), " relaxation_factor is {} now\n", relaxation_factor);
-
-                    this->regularize_ = true;
-                    deferred_logger.debug(message);
+                bool min_relaxation_reached = this->update_relaxation_factor(measure_history, relaxation_factor, this->regularize_, deferred_logger);
+                if (min_relaxation_reached || this->repeatedStagnation(measure_history, this->regularize_, deferred_logger)) {
+                    converged = false;
+                    break;
                 }
             }
             updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
