@@ -1537,7 +1537,16 @@ namespace Opm
             }
             bool min_relaxation_reached = this->update_relaxation_factor(measure_history, relaxation_factor, this->regularize_, deferred_logger);
             if (min_relaxation_reached || this->repeatedStagnation(measure_history, this->regularize_, deferred_logger)) {
-                converged = false;
+                // try last attempt with relaxed tolerances
+                const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, true);
+                if (reportStag.converged()) {
+                    converged = true;
+                    std::string message = fmt::format("Well stagnates/oscillates but {} manages to get converged with relaxed tolerances in {} inner iterations."
+                            ,this->name(), it);
+                    deferred_logger.debug(message);
+                } else {
+                    converged = false;
+                }
                 break;
             }
             updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
