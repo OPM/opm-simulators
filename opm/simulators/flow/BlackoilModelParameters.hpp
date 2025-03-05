@@ -87,6 +87,7 @@ struct MaxSinglePrecisionDays { static constexpr Scalar value = 20.0; };
 struct MinStrictCnvIter { static constexpr int value = -1; };
 struct MinStrictMbIter { static constexpr int value = -1; };
 struct SolveWelleqInitially { static constexpr bool value = true; };
+struct PreSolveNetwork { static constexpr bool value = true; };
 struct UpdateEquationsScaling { static constexpr bool value = false; };
 struct UseUpdateStabilization { static constexpr bool value = true; };
 struct MatrixAddWellContributions { static constexpr bool value = false; };
@@ -253,6 +254,9 @@ public:
 
     /// Solve well equation initially
     bool solve_welleq_initially_;
+
+    /// Pre solve and iterate network model
+    bool pre_solve_network_;
 
     /// Update scaling factors for mass balance equations
     bool update_equations_scaling_;

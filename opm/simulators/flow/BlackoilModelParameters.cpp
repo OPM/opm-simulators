@@ -66,6 +66,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     min_strict_cnv_iter_ = Parameters::Get<Parameters::MinStrictCnvIter>();
     min_strict_mb_iter_ = Parameters::Get<Parameters::MinStrictMbIter>();
     solve_welleq_initially_ = Parameters::Get<Parameters::SolveWelleqInitially>();
+    pre_solve_network_ = Parameters::Get<Parameters::PreSolveNetwork>();
     update_equations_scaling_ = Parameters::Get<Parameters::UpdateEquationsScaling>();
     use_update_stabilization_ = Parameters::Get<Parameters::UseUpdateStabilization>();
     matrix_add_well_contributions_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
@@ -196,6 +197,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "number of Newton iterations are reached.");
     Parameters::Register<Parameters::SolveWelleqInitially>
         ("Fully solve the well equations before each iteration of the reservoir model");
+    Parameters::Register<Parameters::PreSolveNetwork>
+        ("Pre solve and iterate the network model at start-up");
     Parameters::Register<Parameters::UpdateEquationsScaling>
         ("Update scaling factors for mass balance equations during the run");
     Parameters::Register<Parameters::UseUpdateStabilization>
