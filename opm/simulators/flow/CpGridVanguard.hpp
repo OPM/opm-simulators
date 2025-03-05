@@ -316,6 +316,12 @@ protected:
     {
         return this->zoltanParams_;
     }
+
+    double zoltanPhgEdgeSizeThreshold() const override
+    {
+        return this->zoltanPhgEdgeSizeThreshold_;
+    }
+
     const std::string& metisParams() const override
     {
         return this->metisParams_;
