@@ -26,6 +26,7 @@
  */
 #ifndef EWOMS_NEWTON_METHOD_HH
 #define EWOMS_NEWTON_METHOD_HH
+#include <opm/common/utility/DemangledType.hpp>
 
 #include <dune/istl/istlexception.hh>
 #include <dune/common/classname.hh>
@@ -311,6 +312,7 @@ public:
                 // update of the solution
                 linearSolver_.setMatrix(jacobian);
                 solutionUpdate = 0.0;
+                std::cout << " type of the linearSolver_ is " << getDemangledType<LinearSolverBackend>() << std::endl;
                 bool converged = linearSolver_.solve(solutionUpdate);
                 solveTimer_.stop();
 
