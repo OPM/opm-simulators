@@ -77,13 +77,17 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
                 segment_rates[baseif_.numPhases() * seg + phase] *= well_phase_rate / unscaled_top_seg_rate;
             }
-        } else { // In this case, we calculated sumTw
+        } else if (baseif_.numPerfs() > 0) { // Only go here if there are actually active perforations on this process
+            // In this case, we calculated sumTw
             // only handling this specific phase
             constexpr Scalar num_single_phase = 1;
-            std::vector<Scalar> perforation_rates(num_single_phase * baseif_.numPerfs(), 0.0);
+            const int global_num_perf_this_well = ws.parallel_info.get().communication().sum(baseif_.numPerfs());
+            std::vector<Scalar> perforation_rates(num_single_phase * global_num_perf_this_well, 0.0);
+            std::cout << "perforation_rates.size() = " << perforation_rates.size() << std::endl;
             const Scalar perf_phaserate_scaled = ws.surface_rates[phase] / sumTw;
-            for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
+            for (int perf = 0; perf < global_num_perf_this_well; ++perf) { //strangely this loop does not go over the whole array...
                 perforation_rates[perf] = baseif_.wellIndex()[perf] * perf_phaserate_scaled;
+                std::cout << "perforation_rates[" << perf << "] = " << perforation_rates[perf] << std::endl;
             }
 
             std::vector<Scalar> rates;
