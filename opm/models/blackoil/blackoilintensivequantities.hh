@@ -551,6 +551,8 @@ public:
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
 
+
+        
         fluidState_.setPvtRegionIndex(pvtRegionIdx);
 
         updateTempSalt(elemCtx, dofIdx, timeIdx);

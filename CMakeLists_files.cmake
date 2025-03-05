@@ -325,7 +325,8 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg gpu_smart_pointer.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg gpu_resources.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/is_gpu_pointer.hpp)
-
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg dense/DenseVector.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg dense/FieldVector.hpp)
 endif()
 
 if(USE_GPU_BRIDGE)
@@ -488,6 +489,10 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_resources.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_is_gpu_pointer.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_throw_macros_on_gpu.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_densevector.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primary_variables_gpu.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primary_variables_different_vec.cpp)
+
 
 
   # for loop providing the flag --expt-relaxed-constexpr to fix some cuda issues with constexpr
@@ -496,6 +501,8 @@ if (HAVE_CUDA)
       tests/gpuistl/test_gpu_ad.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
+      tests/gpuistl/test_densevector.cu
+      tests/gpuistl/test_primary_variables_gpu.cu
     )
 
     foreach(file ${CU_FILES_NEEDING_RELAXED_CONSTEXPR})
