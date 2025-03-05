@@ -40,12 +40,6 @@ beginTimeStep()
 {
     createWellContainer();
     initWellContainer();
-//    for (auto& well : well_container_) {
-//        auto& well_state = comp_well_states_[well->name()];
-//        well->calculateExplicitQuantities(simulator_, well_state);
-//        well->updateSecondaryQuantities(simulator_);
-//        well->solveWellEq(simulator_, well_state);
-//    }
 }
 
 template <typename TypeTag>
@@ -220,8 +214,8 @@ assemble(const int iterationIdx,
     for (auto& well : well_container_) {
         auto& well_state = comp_well_states_[well->name()];
         well->iterateWellEq(simulator_, dt, well_state);
-        // TODO: do we need this? can we use the one assembled previously?
-        // well->assembleWellEq(simulator_, dt, well_state);
+        // currently we use the converged assembly of well equations directly without a new assembling
+        // well->assembleWellEq(simulator_, well_state, dt);
     }
 }
 
@@ -284,14 +278,5 @@ wellData() const
 {
     return this->comp_well_states_.report();
 }
-
-//template <typename TypeTag>
-//void
-//CompositionalWellModel<TypeTag>::
-//linearize(SparseMatrixAdapter&, GlobalEqVector&)
-//{
-//
-//}
-
 
 } // end of namespace Opm

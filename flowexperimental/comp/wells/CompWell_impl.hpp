@@ -39,7 +39,6 @@ void
 CompWell<TypeTag>::
 init() {
     Base::init();
-    // primary_variables_.init();
     well_equations_.init(this->number_of_connection_, this->well_cells_);
 }
 
@@ -106,7 +105,6 @@ calculateExplicitQuantities(const Simulator& simulator,
                                           gas_mass_fractions[compidx] * density_gas * Sg) * wellbore_volume;
         }
     }
-    // assembleWellEq(simulator, 1.0, well_state);
 }
 
 template <typename TypeTag>
@@ -136,10 +134,6 @@ updateTotalMass()
     // flash calculation in the wellbore
     using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
     FluidState fluid_state = this->primary_variables_.toFluidState();
-    // manullay set the values for debugging purpose
-    /* fluid_state.setMoleFraction(0, 0.8576939356002758);
-    fluid_state.setMoleFraction(1, 0.04743535777357194);
-    fluid_state.setMoleFraction(2, 0.09487070662615232); */
     const bool single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
     // calculating the mass within the wellbore
     constexpr Scalar R = Constants<Scalar>::R;
@@ -193,11 +187,11 @@ updateTotalMass()
                                       gas_mass_fractions[compidx] * density_gas * Sg) * wellbore_volume;
         total_mass += this->new_component_masses_[compidx];
     }
-    // TODO: checking all the calculation's here
+
     // TODO: some properties should go to the fluid_state?
     fluid_density_ = density_oil * So + density_gas * Sg;
 
-    // TODO: the derivative of the mass fradtions does not look correct
+    // TODO: the derivative of the mass fractions does not look correct
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
         mass_fractions_[compidx] = this->new_component_masses_[compidx] / total_mass;
     }
@@ -209,7 +203,6 @@ CompWell<TypeTag>::
 updateSurfaceQuantities(const Simulator& simulator)
 {
     const auto& surface_cond = simulator.vanguard().eclState().getTableManager().stCond();
-    std::cout << " well surface condition temperature " << surface_cond.temperature << " pressure " << surface_cond.pressure << std::endl;
     if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
         const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
         using FluidStateScalar = CompositionalFluidState<Scalar, FluidSystem>;
@@ -278,12 +271,8 @@ updateSurfaceQuantities(const Simulator& simulator)
         this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
         this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = So;
         this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = Sg;
-        std::cout << " oil surface density " << density_oil << " gas surface density " << density_gas
-                  << " oil volume fraction " << So << " gas volume fraction " << Sg << std::endl;
-        // TODO: it shows it is liquid, which is not correct
     } else { // the composition will be from the wellbore
         // here, it will use the composition from the wellbore and the pressure and temperature from the surface condition
-        std::cout << " well is a producer " << std::endl;
         using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
         FluidState fluid_state = this->primary_variables_.toFluidState();
         fluid_state.setTemperature(surface_cond.temperature);
@@ -578,7 +567,7 @@ iterateWellEq(const Simulator& simulator,
               const Scalar dt,
               SingleCompWellState<Scalar>& well_state)
 {
-    constexpr int max_iter = 20000;
+    constexpr int max_iter = 200;
 
     int it = 0;
     bool converged = false;
@@ -588,20 +577,18 @@ iterateWellEq(const Simulator& simulator,
 
         assembleWellEq(simulator, well_state, dt);
 
-        std::cout << std::endl << " residuals ";
-        for (const auto& val : this->well_equations_.residual()[0]) {
-            std::cout << val << " ";
-        }
-        std::cout << std::endl;
         // get convergence
         converged = this->getConvergence();
 
         if (converged) {
+#if 0
             std::cout << " the well " << this->well_ecl_.name() << " has converged after " << it << " iterations" << std::endl;
             std::cout << " the residuals ";
             for (const auto& val : this->well_equations_.residual()[0]) {
                 std::cout << val << " ";
             }
+            std::cout << std::endl;
+#endif
             break;
         }
 
@@ -609,7 +596,6 @@ iterateWellEq(const Simulator& simulator,
 
         solveEqAndUpdateWellState(well_state);
     } while (it < max_iter);
-    std::cout << "converged " << converged << " after " << it << " iterations" << std::endl;
     return converged;
 }
 
@@ -688,8 +674,6 @@ updateWellState(SingleCompWellState<Scalar>& well_state) const
         // only gas injection yet
         surface_phase_rates[FluidSystem::gasPhaseIdx] = total_rate;
     }
-    well_state.output();
-    // std::cout << std::endl;
 }
 
 template <typename TypeTag>
@@ -699,8 +683,7 @@ getConvergence() const
 {
     bool converged = true;
     for (const auto& val : this->well_equations_.residual()[0]) {
-        // converged = converged && (std::abs(val) < 1.e-6);
-        converged = converged && (std::abs(val) < 1.e-6 * 1.);
+        converged = converged && (std::abs(val) < 1.e-8);
     }
     return converged;
 }

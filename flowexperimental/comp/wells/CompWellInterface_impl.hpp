@@ -68,17 +68,6 @@ name() const
 template <typename TypeTag>
 void
 CompWellInterface<TypeTag>::
-solveWellEq(const Simulator& simulator,
-            SingleCompWellState<Scalar>& well_state)
-{
-    const SingleCompWellState<Scalar> well_state0 = well_state;
-    const double dt = simulator.timeStepSize();
-    bool converged = this->iterateWellEq(simulator, dt, well_state);
-}
-
-template <typename TypeTag>
-void
-CompWellInterface<TypeTag>::
 addCellRates(RateVector& rates, unsigned cellIdx) const {
     for (int con = 0; con < this->number_of_connection_; ++con) {
         if (this->well_cells_[con] == cellIdx) {
