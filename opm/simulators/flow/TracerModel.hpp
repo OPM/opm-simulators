@@ -34,6 +34,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/GenericTracerModel.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <array>
@@ -499,8 +500,7 @@ protected:
         }
 
         const Scalar dt = simulator_.timeStepSize();
-        const std::size_t well_index = eclWell.seqIndex();
-        const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
+        const auto& ws = simulator_.problem().wellModel().wellState().well(well.name());
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto I = ws.perf_data.cell_index[i];
             const Scalar rate = well.volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
@@ -609,86 +609,93 @@ protected:
         // to the rhs both through storrage and flux terms.
         // Compare also advanceTracerFields(...) below.
 
-        OPM_TIMEBLOCK(tracerAssemble);
-        for (auto& tr : tbatch) {
-            if (tr.numTracer() != 0) {
-                (*tr.mat) = 0.0;
-                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                    tr.residual_[tIdx] = 0.0;
-                }
-            }
-        }
-
-        this->wellTracerRate_.clear();
-        this->wellFreeTracerRate_.clear();
-        this->wellSolTracerRate_.clear();
-
-         // educated guess for new container size
-        const auto num_msw = this->mSwTracerRate_.size();
-        this->mSwTracerRate_.clear();
-
-        // Well terms
-        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
-        this->wellTracerRate_.reserve(wellPtrs.size());
-        this->wellFreeTracerRate_.reserve(wellPtrs.size());
-        this->wellSolTracerRate_.reserve(wellPtrs.size());
-        this->mSwTracerRate_.reserve(num_msw);
-        for (const auto& wellPtr : wellPtrs) {
+        DeferredLogger local_deferredLogger{};
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
+        {
+            OPM_TIMEBLOCK(tracerAssemble);
             for (auto& tr : tbatch) {
-                this->assembleTracerEquationWell(tr, *wellPtr);
-            }
-        }
-
-        ElementContext elemCtx(simulator_);
-        const Scalar dt = elemCtx.simulator().timeStepSize();
-        for (const auto& elem : elements(simulator_.gridView())) {
-            elemCtx.updateStencil(elem);
-
-            const std::size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
-
-            if (elem.partitionType() != Dune::InteriorEntity) {
-                // Dirichlet boundary conditions needed for the parallel matrix
-                for (const auto& tr : tbatch) {
-                    if (tr.numTracer() != 0) {
-                        (*tr.mat)[I][I][0][0] = 1.;
-                        (*tr.mat)[I][I][1][1] = 1.;
+                if (tr.numTracer() != 0) {
+                    (*tr.mat) = 0.0;
+                    for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                        tr.residual_[tIdx] = 0.0;
                     }
                 }
-                continue;
-            }
-            elemCtx.updateAllIntensiveQuantities();
-            elemCtx.updateAllExtensiveQuantities();
-
-            const Scalar extrusionFactor =
-                    elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
-            Valgrind::CheckDefined(extrusionFactor);
-            assert(isfinite(extrusionFactor));
-            assert(extrusionFactor > 0.0);
-            const Scalar scvVolume =
-                    elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume()
-                    * extrusionFactor;
-
-            const std::size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/1);
-
-            for (auto& tr : tbatch) {
-                this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
             }
 
-            const std::size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
-            for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
-                const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
-                const unsigned j = face.exteriorIndex();
-                const unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
+            this->wellTracerRate_.clear();
+            this->wellFreeTracerRate_.clear();
+            this->wellSolTracerRate_.clear();
+
+             // educated guess for new container size
+            const auto num_msw = this->mSwTracerRate_.size();
+            this->mSwTracerRate_.clear();
+
+            // Well terms
+            const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+            this->wellTracerRate_.reserve(wellPtrs.size());
+            this->wellFreeTracerRate_.reserve(wellPtrs.size());
+            this->wellSolTracerRate_.reserve(wellPtrs.size());
+            this->mSwTracerRate_.reserve(num_msw);
+            for (const auto& wellPtr : wellPtrs) {
                 for (auto& tr : tbatch) {
-                    this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J, dt);
+                    this->assembleTracerEquationWell(tr, *wellPtr);
                 }
             }
 
-            // Source terms (mass transfer between free and solution tracer)
-            for (auto& tr : tbatch) {
-                this->assembleTracerEquationSource(tr, dt, I);
+            ElementContext elemCtx(simulator_);
+            const Scalar dt = elemCtx.simulator().timeStepSize();
+            for (const auto& elem : elements(simulator_.gridView())) {
+                elemCtx.updateStencil(elem);
+
+                const std::size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
+
+                if (elem.partitionType() != Dune::InteriorEntity) {
+                    // Dirichlet boundary conditions needed for the parallel matrix
+                    for (const auto& tr : tbatch) {
+                        if (tr.numTracer() != 0) {
+                            (*tr.mat)[I][I][0][0] = 1.;
+                            (*tr.mat)[I][I][1][1] = 1.;
+                        }
+                    }
+                    continue;
+                }
+                elemCtx.updateAllIntensiveQuantities();
+                elemCtx.updateAllExtensiveQuantities();
+
+                const Scalar extrusionFactor =
+                        elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
+                Valgrind::CheckDefined(extrusionFactor);
+                assert(isfinite(extrusionFactor));
+                assert(extrusionFactor > 0.0);
+                const Scalar scvVolume =
+                        elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume()
+                        * extrusionFactor;
+
+                const std::size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/1);
+
+                for (auto& tr : tbatch) {
+                    this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
+                }
+
+                const std::size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
+                for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
+                    const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
+                    const unsigned j = face.exteriorIndex();
+                    const unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
+                    for (auto& tr : tbatch) {
+                        this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J, dt);
+                    }
+                }
+
+                // Source terms (mass transfer between free and solution tracer)
+                for (auto& tr : tbatch) {
+                    this->assembleTracerEquationSource(tr, dt, I);
+                }
             }
         }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                       "assembleTracerEquations() failed: ",
+                                       true, simulator_.gridView().comm())
 
         // Communicate overlap using grid Communication
         for (auto& tr : tbatch) {
@@ -808,10 +815,10 @@ protected:
                 Scalar rateWellNeg = 0.0;
                 const std::size_t well_index = simulator_.problem().wellModel().wellState().index(eclWell.name()).value();
                 const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
-                auto& tracerRate = this->wellTracerRate_[well_index];
-                auto& freeTracerRate = this->wellFreeTracerRate_[well_index];
-                auto& solTracerRate = this->wellSolTracerRate_[well_index];
-                auto* mswTracerRate = eclWell.isMultiSegment() ? &this->mSwTracerRate_[well_index] : nullptr;
+                auto& tracerRate = this->wellTracerRate_[eclWell.seqIndex()];
+                auto& freeTracerRate = this->wellFreeTracerRate_[eclWell.seqIndex()];
+                auto& solTracerRate = this->wellSolTracerRate_[eclWell.seqIndex()];
+                auto* mswTracerRate = eclWell.isMultiSegment() ? &this->mSwTracerRate_[eclWell.seqIndex()] : nullptr;
                 for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
                     const auto I = ws.perf_data.cell_index[i];
                     const Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
