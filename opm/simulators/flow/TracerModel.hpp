@@ -259,29 +259,27 @@ protected:
         const auto& intQuants = simulator_.model().intensiveQuantities(globalDofIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
 
-        Scalar phaseVolume;
+        constexpr Scalar min_volume = 1e-10;
 
         // vaporized oil
         if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
-            phaseVolume = decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx)) *
-                          decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
-                          decay<Scalar>(fs.Rv()) *
-                          decay<Scalar>(intQuants.porosity());
+            return std::max(decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx)) *
+                            decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
+                            decay<Scalar>(fs.Rv()) *
+                            decay<Scalar>(intQuants.porosity()),
+                            min_volume);
         }
 
         // dissolved gas
         else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
-            phaseVolume = decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx)) *
-                          decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
-                          decay<Scalar>(fs.Rs()) *
-                          decay<Scalar>(intQuants.porosity());
-        }
-        else {
-            phaseVolume = 0.0;
+            return std::max(decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx)) *
+                            decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
+                            decay<Scalar>(fs.Rs()) *
+                            decay<Scalar>(intQuants.porosity()),
+                            min_volume);
         }
 
-        return max(phaseVolume, 1e-10);
-
+        return min_volume;
     }
 
     void computeFreeFlux_(TracerEvaluation& freeFlux,
