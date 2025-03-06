@@ -500,8 +500,7 @@ protected:
         }
 
         const Scalar dt = simulator_.timeStepSize();
-        const std::size_t well_index = eclWell.seqIndex();
-        const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
+        const auto& ws = simulator_.problem().wellModel().wellState().well(well.name());
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto I = ws.perf_data.cell_index[i];
             const Scalar rate = well.volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
@@ -816,10 +815,10 @@ protected:
                 Scalar rateWellNeg = 0.0;
                 const std::size_t well_index = simulator_.problem().wellModel().wellState().index(eclWell.name()).value();
                 const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
-                auto& tracerRate = this->wellTracerRate_[well_index];
-                auto& freeTracerRate = this->wellFreeTracerRate_[well_index];
-                auto& solTracerRate = this->wellSolTracerRate_[well_index];
-                auto* mswTracerRate = eclWell.isMultiSegment() ? &this->mSwTracerRate_[well_index] : nullptr;
+                auto& tracerRate = this->wellTracerRate_[eclWell.seqIndex()];
+                auto& freeTracerRate = this->wellFreeTracerRate_[eclWell.seqIndex()];
+                auto& solTracerRate = this->wellSolTracerRate_[eclWell.seqIndex()];
+                auto* mswTracerRate = eclWell.isMultiSegment() ? &this->mSwTracerRate_[eclWell.seqIndex()] : nullptr;
                 for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
                     const auto I = ws.perf_data.cell_index[i];
                     const Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
