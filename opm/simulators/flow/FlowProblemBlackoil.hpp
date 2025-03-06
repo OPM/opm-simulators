@@ -394,6 +394,7 @@ public:
 
         if (this->enableVtkOutput_() && eclState.getIOConfig().initOnly()) {
             simulator.setTimeStepSize(0.0);
+            simulator.model().applyInitialSolution();
             FlowProblemType::writeOutput(true);
         }
 
