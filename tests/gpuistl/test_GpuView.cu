@@ -34,7 +34,6 @@
 
 using GpuViewDouble = ::Opm::gpuistl::GpuView<double>;
 using GpuBufferDouble = ::Opm::gpuistl::GpuBuffer<double>;
-using ViewPointerDouble = ::Opm::gpuistl::ViewPointer<GpuViewDouble>;
 
 __global__ void useGpuViewOnGPU(GpuViewDouble a, GpuViewDouble b){
     b[0] = a.front();
@@ -109,28 +108,4 @@ BOOST_AUTO_TEST_CASE(TestGpuViewOnGPU)
 
     // checks that view[0] = view[2] works
     BOOST_CHECK(buf[2] == vecA[0]);
-}
-
-__global__ void useViewPointer(ViewPointerDouble ptr, double* out){
-    out[0] = ptr->front();
-    out[1] = (*ptr).front();
-}
-
-BOOST_AUTO_TEST_CASE(TestGpuViewPointer)
-{
-    auto buf = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
-    auto gpubuf = GpuBufferDouble(buf);
-    auto gpuview = GpuViewDouble(gpubuf.data(), gpubuf.size());
-    auto gpuViewPtr = ::Opm::gpuistl::ViewPointer<decltype(gpuview)>(gpuview);
-
-    std::vector<double> out(2, -1.0);
-    auto gpuBufOut = GpuBufferDouble(out);
-    auto gpuViewOut = GpuViewDouble(gpuBufOut.data(), gpuBufOut.size());
-
-    useViewPointer<<<1,1>>>(gpuViewPtr, gpuViewOut.data());
-
-    auto outValues = gpuViewOut.asStdVector();
-
-    BOOST_CHECK(outValues[0] == buf.front());
-    BOOST_CHECK(outValues[1] == buf.front());
 }

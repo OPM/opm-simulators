@@ -31,6 +31,8 @@
  * This test requires the presence of opm-parser.
  */
 #include "config.h"
+#include <fmt/format.h>
+#include <iostream>
 
 #if !HAVE_ECL_INPUT
 #error "The test for the black oil fluid system classes requires ecl input support in opm-common"
@@ -44,6 +46,8 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/GasPvtMultiplexer.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.hpp>
 #include <opm/material/components/CO2Tables.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -60,6 +64,7 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 static constexpr const char* deckString1 =
@@ -113,32 +118,37 @@ static constexpr const char* deckString1 =
 "TSTEP\n"
 "1 /";
 
-using Types = boost::mpl::list<double,Opm::DenseAd::Evaluation<double,2>>;
-// using GpuB = ::Opm::gpuistl::GpuBuffer;
-// using GpuPointer = ::Opm::gpuistl::ViewPointer;
+using GpuB = Opm::gpuistl::GpuBuffer<double>;
+using GpuV = Opm::gpuistl::GpuView<double>;
+using GpuBufCo2Tables = Opm::CO2Tables<double, GpuB>;
+using GpuBufBrineCo2Pvt = Opm::BrineCo2Pvt<double, GpuBufCo2Tables, GpuB>;
+using FluidSystem = Opm::BlackOilFluidSystem<double>;
+using Evaluation = Opm::DenseAd::Evaluation<double,2>;
+using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(BlackOil, Evaluation, Types)
+// checks that we can access value stored as scalar
+template <class IndexTraits>
+__global__ void getReservoirTemperature(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::gpuistl::ValueAsPointer> fs, double* res)
 {
-    // test the black-oil specific methods of BlackOilFluidSystem. The generic methods
-    // for fluid systems are already tested by the generic test for all fluidsystems.
+  *res = fs.reservoirTemperature();
+}
 
-    using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
-    using FluidSystem = Opm::BlackOilFluidSystem<double>;
+// checks that we can access value stored in vectors/buffer/views
+template <class IndexTraits>
+__global__ void getReferenceDensity(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::gpuistl::ValueAsPointer> fs, double* res)
+{
+  *res = fs.referenceDensity(0, 0);
+}
 
-    using GpuB = Opm::gpuistl::GpuBuffer<double>;
-    using GpuBufCo2Tables = Opm::CO2Tables<double, GpuB>;
-    using GpuBufBrineCo2Pvt = Opm::BrineCo2Pvt<double, GpuBufCo2Tables, GpuB>;
+// check that we can correctly compute values that require using pvt multiplexers
+template <class IndexTraits>
+__global__ void getReferenceDensityFromGasPvt(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::gpuistl::ValueAsPointer> fs, double* res)
+{
+  *res = fs.gasPvt().gasReferenceDensity(0);
+}
 
-    static constexpr int numPhases = FluidSystem::numPhases;
-
-    static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
-    static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
-    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
-
-    static constexpr int gasCompIdx = FluidSystem::gasCompIdx;
-    static constexpr int oilCompIdx = FluidSystem::oilCompIdx;
-    static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
-
+BOOST_AUTO_TEST_CASE(BlackOilFluidSystemOnGpu)
+{
     Opm::Parser parser;
 
     auto deck = parser.parseString(deckString1);
@@ -148,38 +158,83 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BlackOil, Evaluation, Types)
 
     FluidSystem::initFromState(eclState, schedule);
 
-
-    // TODO: get the type of the fluid system gasvpt multiplexer approach
-
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
 
-    using GpuCo2Tables = Opm::CO2Tables<double, ::Opm::gpuistl::GpuBuffer<double>>;
-    using CpuCo2Tables = Opm::CO2Tables<double>;
-    using GpuGasPvt = Opm::Co2GasPvt<double, GpuCo2Tables, ::Opm::gpuistl::GpuBuffer<double>>;
-    using GpuWaterPvt = Opm::BrineCo2Pvt<double, GpuCo2Tables, ::Opm::gpuistl::GpuBuffer<double>>;
-
-    // auto cpuGasPvt = dynamicFluidSystem.gasPvt().realGasPvt();
-
-    auto gpuCo2GasPvt = ::Opm::gpuistl::copy_to_gpu<::Opm::gpuistl::GpuBuffer, double>(dynamicFluidSystem);
-    // auto gpuGasPvt = ::Opm::gpuistl::copy_to_gpu<::Opm::gpuistl::GpuBuffer, CO2Tables<double, ::Opm::gpuistl::GpuBuffer<double>>(dynamicFluidSystem->getPvt());
-
-    // auto dynamicGpuFluidSystem = ::Opm::gpuistl::copy_to_gpu<::Opm::gpuistl::GpuBuffer>(dynamicFluidSystem, gpuGasPvt);
-    // auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view<::Opm::gpuistl::GpuView, ::Opm::gpuistl::ViewPointer>(dynamicGpuFluidSystem);
+    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu<::Opm::gpuistl::GpuBuffer, double>(dynamicFluidSystem);
+    auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view<::Opm::gpuistl::GpuView, ::Opm::gpuistl::ValueAsPointer>(dynamicGpuFluidSystemBuffer);
 
     // create a parameter cache
-    // using ParamCache = typename FluidSystem::template ParameterCache<Scalar>;
-    // ParamCache paramCache(/*maxOilSat=*/0.5, /*regionIdx=*/1);
-    // BOOST_CHECK_EQUAL(paramCache.regionIndex(), 1);
+    using ParamCache = typename FluidSystem::template ParameterCache<Scalar>;
+    ParamCache paramCache(/*maxOilSat=*/0.5, /*regionIdx=*/1);
+    BOOST_CHECK_EQUAL(paramCache.regionIndex(), 1);
+    BOOST_CHECK_EQUAL(FluidSystem::numRegions(), 1);
+    BOOST_CHECK_EQUAL(FluidSystem::numActivePhases(), 2);
 
-    // BOOST_CHECK_SMALL(Opm::abs(FluidSystem::reservoirTemperature() - (273.15 + 15.555)), 1e-10);
-    // BOOST_CHECK_EQUAL(FluidSystem::numRegions(), 1);
-    // BOOST_CHECK_EQUAL(FluidSystem::numActivePhases(), 2);
+    double GpuComputedVal = 0.0;
+    double* gpuComputedValPtr = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuComputedValPtr, sizeof(double)));
+    getReservoirTemperature<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr);
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&GpuComputedVal, gpuComputedValPtr, sizeof(double), cudaMemcpyDeviceToHost));
+    BOOST_CHECK_CLOSE(FluidSystem::reservoirTemperature(), GpuComputedVal, 1e-10);
 
-    // BOOST_CHECK(FluidSystem::phaseIsActive(0));
-    // BOOST_CHECK(FluidSystem::phaseIsActive(2));
+    getReferenceDensityFromGasPvt<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr);
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&GpuComputedVal, gpuComputedValPtr, sizeof(double), cudaMemcpyDeviceToHost));
+    BOOST_CHECK_CLOSE(FluidSystem::gasPvt().gasReferenceDensity(0), GpuComputedVal, 1e-10);
 
-    // // make sure that the {oil,gas,water}Pvt() methods are available
-    // [[maybe_unused]] const auto& gPvt = FluidSystem::gasPvt();
-    // [[maybe_unused]] const auto& oPvt = FluidSystem::oilPvt();
-    // [[maybe_unused]] const auto& wPvt = FluidSystem::waterPvt();
+    getReferenceDensity<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr);
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&GpuComputedVal, gpuComputedValPtr, sizeof(double), cudaMemcpyDeviceToHost));
+    BOOST_CHECK_CLOSE(FluidSystem::referenceDensity(0, 0), GpuComputedVal, 1e-10);
+
+
+    OPM_GPU_SAFE_CALL(cudaFree(gpuComputedValPtr));
+}
+
+__global__ void useGasPvtMultiplexer(Opm::GasPvtMultiplexer<double, true, GpuV, GpuV, false> gasMultiplexer, double* refTemp)
+{
+  *refTemp = gasMultiplexer.gasReferenceDensity(0);
+}
+
+__global__ void useWaterPvtMultiplexer(Opm::WaterPvtMultiplexer<double, true, true, GpuV, GpuV, false> waterMultiplexer, double* refTemp)
+{
+  *refTemp = waterMultiplexer.waterReferenceDensity(0);
+}
+
+BOOST_AUTO_TEST_CASE(GasPvtMultiplexer)
+{
+    Opm::Parser parser;
+
+    auto deck = parser.parseString(deckString1);
+    auto python = std::make_shared<Opm::Python>();
+    Opm::EclipseState eclState(deck);
+    Opm::Schedule schedule(deck, eclState, python);
+
+    FluidSystem::initFromState(eclState, schedule);
+
+    // get and compute CPU pvts
+    auto gaspvt = FluidSystem::gasPvt();
+    auto cpuGasRefDensity = gaspvt.gasReferenceDensity(0);
+    auto waterpvt = FluidSystem::waterPvt();
+    auto cpuWaterRefDensity = waterpvt.waterReferenceDensity(0);
+
+    // move pvts to gpu
+    auto gpuGasPvtBuf = ::Opm::gpuistl::copy_to_gpu<GpuB, GpuB>(gaspvt);
+    auto gpuGasPvtView = ::Opm::gpuistl::make_view<GpuV, GpuV>(gpuGasPvtBuf);
+    auto gpuWaterPvtBuf = ::Opm::gpuistl::copy_to_gpu<GpuB, GpuB>(waterpvt);
+    auto gpuWaterPvtView = ::Opm::gpuistl::make_view<GpuV, GpuV>(gpuWaterPvtBuf);
+
+    double gpuRefDensity = 0.0;
+    double* gpuRefDensityPtr = nullptr;
+    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuRefDensityPtr, sizeof(double)));
+
+    // check that the GPU computed GAS reference density is correct
+    useGasPvtMultiplexer<<<1, 1>>>(gpuGasPvtView, gpuRefDensityPtr);
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuRefDensity, gpuRefDensityPtr, sizeof(double), cudaMemcpyDeviceToHost));
+    BOOST_CHECK_CLOSE(cpuGasRefDensity, gpuRefDensity, 1e-10);
+
+    // check that the GPU computed WATER reference density is correct
+    useWaterPvtMultiplexer<<<1, 1>>>(gpuWaterPvtView, gpuRefDensityPtr);
+    OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuRefDensity, gpuRefDensityPtr, sizeof(double), cudaMemcpyDeviceToHost));
+    BOOST_CHECK_CLOSE(cpuWaterRefDensity, gpuRefDensity, 1e-10);
+
+    OPM_GPU_SAFE_CALL(cudaFree(gpuRefDensityPtr));
 }
