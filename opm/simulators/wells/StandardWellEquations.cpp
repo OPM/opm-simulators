@@ -333,7 +333,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             nperf += 1;
         }
     }
-    cell_weights /= nperf;
+    if (nperf != 0)
+        cell_weights /= nperf;
+    else {
+        // Edge case: the well has no active perforations on this rank (duneC_.size==0).
+        // Add positive weight to diagonal to regularize Jacobian (other row entries are 0).
+        // Row's variable has no observable effect, since there are no perforations.
+        cell_weights = 1.;
+    }
 
     BVectorWell  bweights(1);
     std::size_t blockSz = duneD_[0][0].N();
