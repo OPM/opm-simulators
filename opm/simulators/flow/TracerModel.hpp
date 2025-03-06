@@ -139,21 +139,24 @@ public:
         for (std::size_t tracerIdx = 0; tracerIdx < this->tracerPhaseIdx_.size(); ++tracerIdx) {
             if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::waterPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
-                    throw std::runtime_error("Water tracer specified for non-water fluid system:" + this->name(tracerIdx));
+                    throw std::runtime_error("Water tracer specified for non-water fluid system: " +
+                                             this->name(tracerIdx));
                 }
 
                 wat_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
             else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::oilPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
-                    throw std::runtime_error("Oil tracer specified for non-oil fluid system:" + this->name(tracerIdx));
+                    throw std::runtime_error("Oil tracer specified for non-oil fluid system: " +
+                                             this->name(tracerIdx));
                 }
 
                 oil_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
             else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::gasPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
-                    throw std::runtime_error("Gas tracer specified for non-gas fluid system:" + this->name(tracerIdx));
+                    throw std::runtime_error("Gas tracer specified for non-gas fluid system: " +
+                                             this->name(tracerIdx));
                 }
 
                 gas_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
@@ -235,61 +238,56 @@ public:
 protected:
     // compute volume associated with free concentration
     Scalar computeFreeVolume_(const int tracerPhaseIdx,
-                              unsigned globalDofIdx,
-                              unsigned timeIdx)
+                              const unsigned globalDofIdx,
+                              const unsigned timeIdx) const
     {
         const auto& intQuants = simulator_.model().intensiveQuantities(globalDofIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
 
-        const Scalar phaseVolume =
-            decay<Scalar>(fs.saturation(tracerPhaseIdx))
-            *decay<Scalar>(fs.invB(tracerPhaseIdx))
-            *decay<Scalar>(intQuants.porosity());
+        const Scalar phaseVolume = decay<Scalar>(fs.saturation(tracerPhaseIdx)) *
+                                   decay<Scalar>(fs.invB(tracerPhaseIdx)) *
+                                   decay<Scalar>(intQuants.porosity());
 
         return max(phaseVolume, 1e-10);
     }
 
     // compute volume associated with solution concentration
     Scalar computeSolutionVolume_(const int tracerPhaseIdx,
-                                  unsigned globalDofIdx,
-                                  unsigned timeIdx)
+                                  const unsigned globalDofIdx,
+                                  const unsigned timeIdx) const
     {
         const auto& intQuants = simulator_.model().intensiveQuantities(globalDofIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
 
-        Scalar phaseVolume;
+        constexpr Scalar min_volume = 1e-10;
 
         // vaporized oil
         if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
-            phaseVolume =
-                decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx))
-                * decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx))
-                * decay<Scalar>(fs.Rv())
-                * decay<Scalar>(intQuants.porosity());
+            return std::max(decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx)) *
+                            decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
+                            decay<Scalar>(fs.Rv()) *
+                            decay<Scalar>(intQuants.porosity()),
+                            min_volume);
         }
 
         // dissolved gas
         else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
-            phaseVolume =
-                decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx))
-                * decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx))
-                * decay<Scalar>(fs.Rs())
-                * decay<Scalar>(intQuants.porosity());
-        }
-        else {
-            phaseVolume = 0.0;
+            return std::max(decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx)) *
+                            decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
+                            decay<Scalar>(fs.Rs()) *
+                            decay<Scalar>(intQuants.porosity()),
+                            min_volume);
         }
 
-        return max(phaseVolume, 1e-10);
-
+        return min_volume;
     }
 
-    void computeFreeFlux_(TracerEvaluation & freeFlux,
-                          bool & isUp,
+    void computeFreeFlux_(TracerEvaluation& freeFlux,
+                          bool& isUp,
                           const int tracerPhaseIdx,
                           const ElementContext& elemCtx,
-                          unsigned scvfIdx,
-                          unsigned timeIdx)
+                          const unsigned scvfIdx,
+                          const unsigned timeIdx) const
     {
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
@@ -302,9 +300,8 @@ protected:
         const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
 
-        const Scalar v =
-                decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx))
-                * decay<Scalar>(fs.invB(tracerPhaseIdx));
+        const Scalar v = decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx)) *
+                         decay<Scalar>(fs.invB(tracerPhaseIdx));
 
         const Scalar A = scvf.area();
         if (inIdx == upIdx) {
@@ -321,8 +318,8 @@ protected:
                          bool& isUp,
                          const int tracerPhaseIdx,
                          const ElementContext& elemCtx,
-                         unsigned scvfIdx,
-                         unsigned timeIdx)
+                         const unsigned scvfIdx,
+                         const unsigned timeIdx) const
     {
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
@@ -339,10 +336,9 @@ protected:
 
             const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
             const auto& fs = intQuants.fluidState();
-            v =
-                decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx))
-                * decay<Scalar>(extQuants.volumeFlux(FluidSystem::gasPhaseIdx))
-                * decay<Scalar>(fs.Rv());
+            v = decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
+                decay<Scalar>(extQuants.volumeFlux(FluidSystem::gasPhaseIdx)) *
+                decay<Scalar>(fs.Rv());
         }
         // dissolved gas
         else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
@@ -350,10 +346,9 @@ protected:
 
             const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
             const auto& fs = intQuants.fluidState();
-            v =
-                decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx))
-                * decay<Scalar>(extQuants.volumeFlux(FluidSystem::oilPhaseIdx))
-                * decay<Scalar>(fs.Rs());
+            v = decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
+                decay<Scalar>(extQuants.volumeFlux(FluidSystem::oilPhaseIdx)) *
+                decay<Scalar>(fs.Rs());
         }
         else {
             upIdx = 0;
@@ -522,27 +517,30 @@ protected:
             const Scalar rate_f = rate - rate_s;
             if (rate_f > 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    const Scalar delta = rate_f * wtracer[tIdx];
                     // Injection of free tracer only
-                    tr.residual_[tIdx][I][0] -= rate_f*wtracer[tIdx];
+                    tr.residual_[tIdx][I][0] -= delta;
 
-                    // Store _injector_ tracer rate for reporting (can be done here since WTRACER is constant)
-                    tracerRate[tIdx].rate += rate_f*wtracer[tIdx];
-                    freeTracerRate[tIdx].rate += rate_f*wtracer[tIdx];
+                    // Store _injector_ tracer rate for reporting
+                    // (can be done here since WTRACER is constant)
+                    tracerRate[tIdx].rate += delta;
+                    freeTracerRate[tIdx].rate += delta;
                     if (eclWell.isMultiSegment()) {
-                        (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += rate_f*wtracer[tIdx];
+                        (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
                     }
                 }
                 dVol_[0][tr.phaseIdx_][I] -= rate_f * dt;
             }
             else if (rate_f < 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                    // Store _injector_ tracer rate for cross-flowing well connections (can be done here since WTRACER is constant)
-                    tracerRate[tIdx].rate += rate_f*wtracer[tIdx];
-                    freeTracerRate[tIdx].rate += rate_f*wtracer[tIdx];
+                    const Scalar delta = rate_f * wtracer[tIdx];
+                    // Store _injector_ tracer rate for cross-flowing well connections
+                    // (can be done here since WTRACER is constant)
+                    tracerRate[tIdx].rate += delta;
+                    freeTracerRate[tIdx].rate += delta;
 
                     // Production of free tracer
                     tr.residual_[tIdx][I][0] -= rate_f * tr.concentration_[tIdx][I][0];
-
                 }
                 dVol_[0][tr.phaseIdx_][I] -= rate_f * dt;
 
@@ -585,23 +583,27 @@ protected:
         // Source term determined by sign of dsVol: if dsVol > 0 then ms -> mf, else mf -> ms
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
             if (dsVol >= 0) {
-                tr.residual_[tIdx][I][0] -= (dfVol / dt) * tr.concentration_[tIdx][I][0];
-                tr.residual_[tIdx][I][1] += (dfVol / dt) * tr.concentration_[tIdx][I][0];
+                const auto delta = (dfVol / dt) * tr.concentration_[tIdx][I][0];
+                tr.residual_[tIdx][I][0] -= delta;
+                tr.residual_[tIdx][I][1] += delta;
             }
             else {
-                tr.residual_[tIdx][I][0] += (dsVol / dt) * tr.concentration_[tIdx][I][1];
-                tr.residual_[tIdx][I][1] -= (dsVol / dt) * tr.concentration_[tIdx][I][1];
+                const auto delta = (dsVol / dt) * tr.concentration_[tIdx][I][1];
+                tr.residual_[tIdx][I][0] += delta;
+                tr.residual_[tIdx][I][1] -= delta;
             }
         }
 
         // Derivative matrix
         if (dsVol >= 0) {
-            (*tr.mat)[I][I][0][0] -= (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
-            (*tr.mat)[I][I][1][0] += (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            const auto delta = (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            (*tr.mat)[I][I][0][0] -= delta;
+            (*tr.mat)[I][I][1][0] += delta;
         }
         else {
-            (*tr.mat)[I][I][0][1] += (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
-            (*tr.mat)[I][I][1][1] -= (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            const auto delta = (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            (*tr.mat)[I][I][0][1] += delta;
+            (*tr.mat)[I][I][1][1] -= delta;
         }
     }
 
@@ -610,7 +612,7 @@ protected:
         // Note that we formulate the equations in terms of a concentration update
         // (compared to previous time step) and not absolute concentration.
         // This implies that current concentration (tr.concentration_[][]) contributes
-        // to the rhs both through storrage and flux terms.
+        // to the rhs both through storage and flux terms.
         // Compare also advanceTracerFields(...) below.
 
         DeferredLogger local_deferredLogger{};
@@ -842,22 +844,22 @@ protected:
                     if (rate_f < 0) {
                         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                             // Store _producer_ free tracer rate for reporting
-                            tracerRate[tIdx].rate += rate_f * tr.concentration_[tIdx][I][0];
-                            freeTracerRate[tIdx].rate += rate_f * tr.concentration_[tIdx][I][0];
+                            const Scalar delta = rate_f * tr.concentration_[tIdx][I][0];
+                            tracerRate[tIdx].rate += delta;
+                            freeTracerRate[tIdx].rate += delta;
                             if (eclWell.isMultiSegment()) {
-                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] +=
-                                    rate_f * tr.concentration_[tIdx][I][0];
+                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
                             }
                         }
                     }
                     if (rate_s < 0) {
                         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                             // Store _producer_ solution tracer rate for reporting
-                            tracerRate[tIdx].rate += rate_s * tr.concentration_[tIdx][I][1];
-                            solTracerRate[tIdx].rate += rate_s * tr.concentration_[tIdx][I][1];
+                            const Scalar delta = rate_s * tr.concentration_[tIdx][I][1];
+                            tracerRate[tIdx].rate += delta;
+                            solTracerRate[tIdx].rate += delta;
                             if (eclWell.isMultiSegment()) {
-                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] +=
-                                    rate_s * tr.concentration_[tIdx][I][1];
+                                (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
                             }
                         }
                     }
@@ -870,17 +872,19 @@ protected:
                     }
                 }
 
-                // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
-                //  occasionally significant different from the sum over connections (as calculated above). Only observed
-                //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
+                // TODO: Some inconsistencies here that perhaps should be clarified.
+                // The "offical" rate as reported below is occasionally significant
+                // different from the sum over connections (as calculated above). Only observed
+                // for small values, neglible for the rate itself, but matters when used to
+                // calculate tracer concentrations.
                 const Scalar official_well_rate_total =
                     simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
 
                 const Scalar rateWellTotal = official_well_rate_total;
 
                 if (rateWellTotal > rateWellNeg) { // Cross flow
-                    const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
-                    const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
+                    constexpr Scalar bucketPrDay = 10.0 / (1000. * 3600. * 24.); // ... keeps (some) trouble away
+                    const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal / rateWellNeg : 0.0;
                     for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                         tracerRate[tIdx].rate *= factor;
                     }
@@ -940,7 +944,7 @@ protected:
         int numTracer() const
         { return idx_.size(); }
 
-        void addTracer(const int idx, const TV & concentration)
+        void addTracer(const int idx, const TV& concentration)
         {
             const int numGridDof = concentration.size();
             idx_.emplace_back(idx);

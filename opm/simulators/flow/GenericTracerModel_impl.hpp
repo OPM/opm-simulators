@@ -116,8 +116,9 @@ template<class Grid, class GridView, class DofMapper, class Stencil, class Fluid
 Scalar GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
 freeTracerConcentration(int tracerIdx, int globalDofIdx) const
 {
-    if (freeTracerConcentration_.empty())
+    if (freeTracerConcentration_.empty()) {
         return 0.0;
+    }
 
     return freeTracerConcentration_[tracerIdx][globalDofIdx];
 }
@@ -126,8 +127,9 @@ template<class Grid, class GridView, class DofMapper, class Stencil, class Fluid
 Scalar GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>::
 solTracerConcentration(int tracerIdx, int globalDofIdx) const
 {
-    if (solTracerConcentration_.empty())
+    if (solTracerConcentration_.empty()) {
         return 0.0;
+    }
 
     return solTracerConcentration_[tracerIdx][globalDofIdx];
 }
@@ -225,8 +227,9 @@ doInit(bool rst, std::size_t numGridDof,
 {
     const auto& tracers = eclState_.tracer();
 
-    if (tracers.size() == 0)
+    if (tracers.size() == 0) {
         return; // tracer treatment is supposed to be disabled
+    }
 
     // retrieve the number of tracers from the deck
     const std::size_t numTracers = tracers.size();
@@ -372,10 +375,8 @@ doInit(bool rst, std::size_t numGridDof,
     // all of its neighbors. (it also talks to itself since
     // degrees of freedom are sometimes quite egocentric.)
     for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx) {
-        typename NeighborSet::iterator nIt = neighbors[dofIdx].begin();
-        typename NeighborSet::iterator nEndIt = neighbors[dofIdx].end();
-        for (; nIt != nEndIt; ++nIt) {
-            tracerMatrix_->addindex(dofIdx, *nIt);
+        for (const auto& index : neighbors[dofIdx]) {
+            tracerMatrix_->addindex(dofIdx, index);
         }
     }
     tracerMatrix_->endindices();
