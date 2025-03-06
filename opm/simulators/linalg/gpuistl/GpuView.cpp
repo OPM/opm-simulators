@@ -78,5 +78,9 @@ GpuView<T>::copyToHost(std::vector<T>& data) const
 template class GpuView<double>;
 template class GpuView<float>;
 template class GpuView<int>;
+template class GpuView<std::array<double, 3>>;
+template class GpuView<std::array<float, 3>>;
+template class GpuView<std::array<double, 9>>;
+template class GpuView<std::array<float, 9>>;
 
 } // namespace Opm::gpuistl
