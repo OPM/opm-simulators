@@ -1161,21 +1161,17 @@ assignShutConnections(data::Wells& wsrpt,
                          ([[maybe_unused]] const auto wellID,
                           const Well&                 well)
     {
-        const auto wellIsOpen =
-            this->schedule()[reportStepIndex].wells(well.name())
-            .getStatus() == Well::Status::OPEN;
-
-    for (const auto& well : this->wells_ecl_) {
         auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
         xwel.dynamicStatus  = this->wellState().well(well.name()).status;
-        const auto wellIsOpen = xwel.dynamicStatus == Well::Status::OPEN;
-        auto skip = [wellIsOpen](const Connection& conn)
+        if (wasDynamicallyShutThisTimeStep(well.name())) {
+            xwel.dynamicStatus = Well::Status::OPEN; // we will output
+        }
+        const auto wellStatusInSchedule = this->schedule().getWell(well.name(), reportStepIndex).getStatus();
+        const auto wellIsOpenInSchedule = wellStatusInSchedule == Well::Status::OPEN;
+        auto skip = [wellIsOpenInSchedule](const Connection& conn)
         {
-            return wellIsOpen && (conn.state() != Connection::State::SHUT);
+            return wellIsOpenInSchedule && (conn.state() != Connection::State::SHUT);
         };
-
-        auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
-
         auto& xcon = xwel.connections;
         for (const auto& conn : well.getConnections()) {
             if (skip(conn)) {
