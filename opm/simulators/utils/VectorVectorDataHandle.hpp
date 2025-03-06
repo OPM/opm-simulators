@@ -31,6 +31,7 @@
 #include <dune/grid/common/datahandleif.hh>
 
 #include <cstddef>
+#include <utility>
 
 namespace Opm
 {
