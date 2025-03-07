@@ -21,6 +21,10 @@ CompositionalWellModel(Simulator& simulator)
     , comp_well_states_(phase_usage_, comp_config_)
 {
     local_num_cells_ = simulator.gridView().size(0);
+
+    if (FluidSystem::waterEnabled) {
+        throw std::runtime_error("the well model does not support water phase yet");
+    }
 }
 
 template <typename TypeTag>
