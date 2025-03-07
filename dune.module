@@ -5,8 +5,8 @@
 
 Module: opm-simulators
 Description: Simulators and utilities for automatic differentiation
-Version: 2025.04-pre
-Label: 2025.04-pre
+Version: 2025.02
+Label: 2025.02
 Maintainer: atgeirr@sintef.no
 MaintainerName: Atgeirr F. Rasmussen
 Url: http://opm-project.org
