@@ -1199,6 +1199,7 @@ namespace Opm {
         const std::size_t max_iteration = param_.network_max_iterations_;
         std::size_t network_update_iteration = 0;
         const int episodeIdx = simulator_.episodeIndex();
+        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         while (do_network_update) {
             if (network_update_iteration >= max_iteration ) {
                 // only output to terminal if we at the last newton iterations where we try to balance the network.
@@ -1208,26 +1209,18 @@ namespace Opm {
                 } else {
                     if (this->terminal_output_) {
                         local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " network iterations has been used and we stop the update. "
-                                                "The simulator will continue with unconverged network results.");
+                                                  "The simulator will continue with unconverged network results.");
                     }
                 }
                 break;
             }
             if (this->terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
-                local_deferredLogger.info(" we begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
+                local_deferredLogger.debug("We begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
             }
             const bool relax_network_balance = network_update_iteration >= iteration_to_relax;
             std::tie(do_network_update, well_group_control_changed) =
                     updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, dt,local_deferredLogger);
             ++network_update_iteration;
-
-            if (network_update_iteration >= max_iteration ) {
-                if (this->terminal_output_) {
-                    local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now. "
-                                              "The simulation will continue with unconverged network results");
-                }
-                break;
-            }
         }
         return well_group_control_changed;
     }
