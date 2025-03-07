@@ -392,16 +392,10 @@ public:
             this->drift_ = 0.0;
         }
 
-        if (this->enableVtkOutput_() && eclState.getIOConfig().initOnly()) {
-            simulator.setTimeStepSize(0.0);
-            simulator.model().applyInitialSolution();
-            FlowProblemType::writeOutput(true);
-        }
-
         // after finishing the initialization and writing the initial solution, we move
         // to the first "real" episode/report step
         // for restart the episode index and start is already set
-        if (!initconfig.restartRequested()) {
+        if (!initconfig.restartRequested() && !eclState.getIOConfig().initOnly()) {
             simulator.startNextEpisode(schedule.seconds(1));
             simulator.setEpisodeIndex(0);
             simulator.setTimeStepIndex(0);
@@ -431,6 +425,12 @@ public:
         this->mixControls_.init(this->model().numGridDof(),
                                 this->episodeIndex(),
                                 eclState.runspec().tabdims().getNumPVTTables());
+
+        if (this->enableVtkOutput_() && eclState.getIOConfig().initOnly()) {
+            simulator.setTimeStepSize(0.0);
+            simulator.model().applyInitialSolution();
+            FlowProblemType::writeOutput(true);
+        }
     }
 
     /*!
