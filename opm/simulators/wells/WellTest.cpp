@@ -367,7 +367,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
             deferred_logger.warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
         }
 
-        well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+        well_test_state.close_well_on_next_step(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
         if (write_message_to_opmlog) {
             if (well_.wellEcl().getAutomaticShutIn()) {
                 const std::string msg = std::string("well ") + well_.name() + std::string(" will be shut due to rate economic limit");
@@ -435,7 +435,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
             }
         case WellEconProductionLimits::EconWorkover::WELL:
             {
-            well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+            well_test_state.close_well_on_next_step(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
             if (write_message_to_opmlog) {
                 if (well_.wellEcl().getAutomaticShutIn()) {
                     // tell the control that the well is closed
