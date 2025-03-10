@@ -19,8 +19,7 @@
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
-namespace Opm
-{
+namespace Opm {
 
 template <typename Scalar, int numWellEq, int numEq>
 CompWellEquations<Scalar, numWellEq, numEq>::
@@ -135,7 +134,5 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     // xw = D^-1 * resWell
     invDuneD_.mv(resWell, xw);
 }
-
-
 
 } // end of namespace Opm

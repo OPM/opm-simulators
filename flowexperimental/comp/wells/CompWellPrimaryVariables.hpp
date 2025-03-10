@@ -32,7 +32,8 @@ template <typename Scalar>
 class SingleCompWellState;
 
 template <typename FluidSystem, typename Indices>
-class CompWellPrimaryVariables {
+class CompWellPrimaryVariables
+{
 public:
     static constexpr int numWellConservationEq = FluidSystem::numComponents;
     static constexpr int numWellControlEq = 1;

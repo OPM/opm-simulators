@@ -53,7 +53,8 @@ public:
 };
 
 template <typename Scalar>
-class SingleCompWellState {
+class SingleCompWellState
+{
 public:
     SingleCompWellState(const std::string& name,
                         const CompositionalConfig& comp_config,
@@ -82,10 +83,13 @@ public:
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
 
-    // TODO: the function can be reorgnized so that we do not need to have initSingleInjector
+    // TODO: the function can be reorganized so that we do not need to have initSingleInjector
     // and initSingleProducer, but we split when update the targets
-    // so we have a funciton update_targets() to split between injector and producer
-    void update_producer_targets(const Well& well, const std::vector<std::vector<Scalar>>& cell_mole_fractions, const SummaryState& st);
+    // so we have a function update_targets() to split between injector and producer
+    void update_producer_targets(const Well& well,
+                                 const std::vector<std::vector<Scalar>>& cell_mole_fractions,
+                                 const SummaryState& st);
+
     void update_injector_targets(const Well& well, const SummaryState& st);
 
     Scalar get_total_surface_rate() const;

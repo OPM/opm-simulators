@@ -18,12 +18,11 @@
 */
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <opm/models/immiscible/immisciblemodel.hh>
 
-#include "opm/models/immiscible/immisciblemodel.hh"
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
 template <typename TypeTag>
 CompWell<TypeTag>::
@@ -37,7 +36,8 @@ CompWell(const Well& well,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-init() {
+init()
+{
     Base::init();
     well_equations_.init(this->number_of_connection_, this->well_cells_);
 }
@@ -348,7 +348,7 @@ calculateSingleConnectionRate(const Simulator& simulator,
     const auto& int_quantities = simulator.problem().model().cachedIntensiveQuantities(cell_idx, 0);
     assert(int_quantities);
     std::vector<EvalWell> mob(np, 0.);
-    getMoblity(simulator, con_idx, mob);
+    getMobility(simulator, con_idx, mob);
 
     const Scalar tw = this->well_index_[0]; // only one connection
 
@@ -381,9 +381,9 @@ calculateSingleConnectionRate(const Simulator& simulator,
 
 template <typename TypeTag>
 void CompWell<TypeTag>::
-getMoblity(const Simulator& simulator,
-           const int connectin_idx,
-           std::vector<EvalWell>& mob) const
+getMobility(const Simulator& simulator,
+            const int connectin_idx,
+            std::vector<EvalWell>& mob) const
 {
     const unsigned cell_idx = this->well_cells_[connectin_idx];
     const auto& int_quants = simulator.problem().model().cachedIntensiveQuantities(cell_idx, 0);
@@ -425,7 +425,7 @@ assembleWellEq(const Simulator& simulator,
     }
 
     // here we use perf index, need to check how the things are done in the StandardWellAssemble
-    // assebmle the well equations related to the produciton/injection mass rates for each component
+    // assemble the well equations related to the production/injection mass rates for each component
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
         // the signs need to be checked
         this->well_equations_.residual()[0][comp_idx] += connection_rates[comp_idx].value();

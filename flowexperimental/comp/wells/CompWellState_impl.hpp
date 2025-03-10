@@ -17,8 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-namespace Opm
-{
+namespace Opm {
 
 template <typename Scalar>
 CompWellState<Scalar>::
@@ -163,6 +162,5 @@ report() const
     }
     return res;
 }
-
 
 } // end of namespace Opm
