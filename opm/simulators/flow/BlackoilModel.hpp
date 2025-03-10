@@ -262,6 +262,9 @@ public:
     /// return the statistics of local solves accumulated for this rank
     SimulatorReport localAccumulatedReports() const;
 
+    /// return the statistics of local solves accumulated for each domain on this rank
+    std::vector<SimulatorReport> domainAccumulatedReports() const;
+
     const std::vector<StepReport>& stepReports() const
     { return convergence_reports_; }
 

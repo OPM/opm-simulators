@@ -986,6 +986,15 @@ localAccumulatedReports() const
 }
 
 template <class TypeTag>
+std::vector<SimulatorReport>
+BlackoilModel<TypeTag>::
+domainAccumulatedReports() const
+{
+    return hasNlddSolver() ? nlddSolver_->domainAccumulatedReports()
+                           : std::vector<SimulatorReport>{};
+}
+
+template <class TypeTag>
 void
 BlackoilModel<TypeTag>::
 writePartitions(const std::filesystem::path& odir) const

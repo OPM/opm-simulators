@@ -204,6 +204,8 @@ public:
 
         assert(int(domains_.size()) == num_domains);
 
+        domain_reports_accumulated_.resize(num_domains);
+
         // Print domain distribution summary
         printDomainDistributionSummary(partition_vector);
     }
@@ -299,7 +301,8 @@ public:
         int& num_domains = counts[3];
         {
             auto step_newtons = 0;
-            for (const auto& dr : domain_reports) {
+            for (size_t i = 0; i < domain_reports.size(); ++i) {
+                const auto& dr = domain_reports[i];
                 if (dr.converged) {
                     ++num_converged;
                     if (dr.total_newton_iterations == 0) {
@@ -307,6 +310,9 @@ public:
                     }
                 }
                 step_newtons += dr.total_newton_iterations;
+                // Accumulate local reports per domain
+                domain_reports_accumulated_[i] += dr;
+                // Accumulate local reports per rank
                 local_reports_accumulated_ += dr;
             }
             num_local_newtons = step_newtons;
@@ -378,6 +384,12 @@ public:
     const SimulatorReport& localAccumulatedReports() const
     {
         return local_reports_accumulated_;
+    }
+
+    /// return the statistics of local solves accumulated for each domain on this rank
+    const std::vector<SimulatorReport>& domainAccumulatedReports() const
+    {
+        return domain_reports_accumulated_;
     }
 
     /// Write the partition vector to a file in ResInsight compatible format for inspection
@@ -1165,6 +1177,7 @@ private:
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
     SimulatorReport local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers per rank
+    std::vector<SimulatorReport> domain_reports_accumulated_; //!< Accumulated convergence reports per domain
     int rank_ = 0; //!< MPI rank of this process
 };
 
