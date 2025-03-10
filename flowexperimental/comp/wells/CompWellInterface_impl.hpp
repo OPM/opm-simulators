@@ -21,8 +21,7 @@
 
 #include <string>
 
-namespace Opm
-{
+namespace Opm {
 template <typename TypeTag>
 CompWellInterface<TypeTag>::
 CompWellInterface(const Well& well,
@@ -53,7 +52,8 @@ CompWellInterface(const Well& well,
 template <typename TypeTag>
 void
 CompWellInterface<TypeTag>::
-init() {
+init()
+{
     // more things to add here
 }
 
@@ -68,7 +68,8 @@ name() const
 template <typename TypeTag>
 void
 CompWellInterface<TypeTag>::
-addCellRates(RateVector& rates, unsigned cellIdx) const {
+addCellRates(RateVector& rates, unsigned cellIdx) const
+{
     for (int con = 0; con < this->number_of_connection_; ++con) {
         if (this->well_cells_[con] == cellIdx) {
             for (int i = 0; i < RateVector::dimension; ++i) {

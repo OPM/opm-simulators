@@ -28,8 +28,7 @@
 
 #include "SingleCompWellState.hpp"
 
-namespace Opm
-{
+namespace Opm {
 template <typename Scalar>
 class CompConnectionData;
 
