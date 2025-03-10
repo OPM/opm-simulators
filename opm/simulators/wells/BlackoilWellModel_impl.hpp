@@ -1451,6 +1451,11 @@ namespace Opm {
                     if (group.hasWell(well_name)) {
                         well->setDynamicThpLimit(well_group_thp);
                     }
+                    const auto& ws = this->wellState().well(well->indexOfWell());
+                    const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
+                    if (thp_is_limit) {
+                        well->prepareWellBeforeAssembling(this->simulator_, dt, this->wellState(), this->groupState(), local_deferredLogger);
+                    }
                 }
 
                 // Use the group THP in computeNetworkPressures().
