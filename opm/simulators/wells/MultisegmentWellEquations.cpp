@@ -178,6 +178,7 @@ apply(BVector& r) const
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::createSolver()
 {
+    OPM_TIMEFUNCTION();
 #if HAVE_UMFPACK
     if (duneDSolver_) {
         return;
@@ -202,6 +203,7 @@ MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve() const
     // It is ok to do this on each process instead of only on one,
     // because the other processes would remain idle while waiting for
     // the single process to complete the computation.
+    OPM_TIMEFUNCTION();
     return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
 }
 
@@ -212,6 +214,7 @@ MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve(const BVectorWell& rhs)
     // It is ok to do this on each process instead of only on one,
     // because the other processes would remain idle while waiting for
     // the single process to complete the computation.
+    OPM_TIMEFUNCTION();
     return mswellhelpers::applyUMFPack(*duneDSolver_, rhs);
 }
 
