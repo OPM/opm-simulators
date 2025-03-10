@@ -33,7 +33,12 @@ setup(
                 'opm',
                 'opm.simulators'
             ],
-    package_data={'opm' : ['$<TARGET_FILE_NAME:simulators>']},
+    package_data={
+        'opm': [
+            '$<TARGET_FILE_NAME:BlackOil>',
+            '$<TARGET_FILE_NAME:GasWater>'
+        ]
+    },
     include_package_data=True,
     # SPDX license expression to replace deprecated license classifier usage.
     license='GPL-3.0-or-later',
