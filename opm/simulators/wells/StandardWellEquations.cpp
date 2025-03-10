@@ -336,7 +336,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     if (nperf != 0)
         cell_weights /= nperf;
     else {
-        // Edge case: the well has no active perforations on this rank (duneC_.size==0).
+        // duneC_.size==0, which can happen e.g. if a well has no active perforations on this rank.
         // Add positive weight to diagonal to regularize Jacobian (other row entries are 0).
         // Row's variable has no observable effect, since there are no perforations.
         cell_weights = 1.;
