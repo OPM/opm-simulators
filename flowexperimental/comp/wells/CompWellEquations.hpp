@@ -25,10 +25,9 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 
-namespace Opm
-{
+namespace Opm {
 
-// we should look into whether to use dyanmic matrix and vector here
+// we should look into whether to use dynamic matrix and vector here
 template <typename Scalar, int numWellEq, int numEq>
 class CompWellEquations
 {
@@ -112,9 +111,6 @@ private:
     // Store the global index of the well connection cells
     std::vector<std::size_t> cells_;
 };
-
-
-
 
 } // end of namespace Opm
 

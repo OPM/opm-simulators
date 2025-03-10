@@ -4,8 +4,7 @@
 
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
 template <typename TypeTag>
 CompositionalWellModel<TypeTag>::
@@ -162,7 +161,8 @@ initWellState()
 template <typename TypeTag>
 std::size_t
 CompositionalWellModel<TypeTag>::
-compressedIndexForInterior(std::size_t cartesian_cell_idx) const {
+compressedIndexForInterior(std::size_t cartesian_cell_idx) const
+{
     return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
 }
 

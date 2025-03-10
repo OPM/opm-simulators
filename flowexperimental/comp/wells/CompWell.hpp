@@ -22,15 +22,14 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-#include "CompWellEquations.hpp"
-#include "CompWellInterface.hpp"
-#include "CompWellPrimaryVariables.hpp"
-#include "CompConnectionData.hpp"
+#include <flowexperimental/comp/wells/CompWellEquations.hpp>
+#include <flowexperimental/comp/wells/CompWellInterface.hpp>
+#include <flowexperimental/comp/wells/CompWellPrimaryVariables.hpp>
+#include <flowexperimental/comp/wells/CompConnectionData.hpp>
 
 #include <string>
 
-namespace Opm
-{
+namespace Opm {
 
 template <typename TypeTag>
 class CompWell  : public CompWellInterface<TypeTag>
@@ -55,7 +54,7 @@ public:
 
     // TODO: this can be a rate converter role later
     // currently, it has the surface densities for each phase and volume fractions for each phase
-    // it is part of the secondary variables used in the assembling the well equations
+    // it is part of the secondary variables used in the assembling of the well equations
     struct SurfaceConditons
     {
         static constexpr int num_phases = 2;
@@ -144,9 +143,9 @@ private:
     // TODO: a better name
     void updateSurfaceQuantities(const Simulator& simulator);
 
-    void getMoblity(const Simulator& simulator,
-                    int connection_idx,
-                    std::vector<EvalWell>& mob) const;
+    void getMobility(const Simulator& simulator,
+                     const int connection_idx,
+                     std::vector<EvalWell>& mob) const;
 
 
     // TODO: the following assembling functions will be moved to a separate assmeble class

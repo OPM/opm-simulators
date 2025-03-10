@@ -39,8 +39,8 @@ template <typename Scalar>
 class CompWellState
 {
 public:
-    explicit CompWellState(const PhaseUsage& phase_usage,
-                           const CompositionalConfig& comp_config);
+    CompWellState(const PhaseUsage& phase_usage,
+                  const CompositionalConfig& comp_config);
 
     void init(const std::vector<Well>& wells_ecl,
               const std::vector<Scalar>& cell_pressures,
@@ -54,6 +54,7 @@ public:
     SingleCompWellState<Scalar>& operator[](const std::string& well_name);
 
     data::Wells report() const;
+
 private:
     WellContainer<SingleCompWellState<Scalar>> wells_;
 

@@ -19,8 +19,7 @@
 
 #include "SingleCompWellState.hpp"
 
-namespace Opm
-{
+namespace Opm {
 
 template <typename FluidSystem, typename Indices>
 void
@@ -137,7 +136,7 @@ typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
 CompWellPrimaryVariables<FluidSystem, Indices>::
 getTotalRate() const
 {
-        return evaluation_[QTotal];
+    return evaluation_[QTotal];
 }
 
 template <typename FluidSystem, typename Indices>
@@ -169,7 +168,8 @@ restrictEval(const EvalWell& in)
 template <typename FluidSystem, typename Indices>
 void
 CompWellPrimaryVariables<FluidSystem, Indices>::
-updateNewton(const BVectorWell& dwells) {
+updateNewton(const BVectorWell& dwells)
+{
     constexpr Scalar damping = 1.0;
 
     for (unsigned i = 0; i < value_.size(); ++i) {

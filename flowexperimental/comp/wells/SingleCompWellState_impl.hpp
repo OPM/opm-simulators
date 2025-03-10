@@ -17,8 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-namespace Opm
-{
+namespace Opm {
 
 template <class Scalar>
 ConnectionData<Scalar>::
@@ -66,13 +65,13 @@ SingleCompWellState(const std::string& well_name,
    , total_molar_fractions(comp_config.numComps())
    , connection_data(connections, phase_usage, comp_config)
 {
-
 }
 
 template <typename Scalar>
 void SingleCompWellState<Scalar>::
 update_injector_targets(const Well& well,
-                        const SummaryState& st) {
+                        const SummaryState& st)
+{
     const auto& inj_controls = well.injectionControls(st);
     const bool cmode_is_undefined = (inj_controls.cmode == Well::InjectorCMode::CMODE_UNDEFINED);
     assert(!cmode_is_undefined && "control types should be specified");
