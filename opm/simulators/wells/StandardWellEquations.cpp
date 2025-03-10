@@ -346,10 +346,8 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         //NB! calculate quasiimpes well weights NB do not work well with trueimpes reservoir weights
         Scalar abs_max = 0;
         DiagMatrixBlockWellType inv_diag_block = invDuneD_[0][0];
-        DiagMatrixBlockWellType inv_diag_block_transpose =
-            Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
         for (std::size_t i = 0; i < blockSz; ++i) {
-            bweights[0][i] = inv_diag_block_transpose[i][bhp_var_index];
+            bweights[0][i] = inv_diag_block[bhp_var_index][i];
             abs_max = std::max(abs_max, std::fabs(bweights[0][i]));
         }
         assert(abs_max > 0.0);
