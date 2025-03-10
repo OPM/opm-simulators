@@ -332,6 +332,21 @@ protected:
             : std::pair{A * v, false};
     }
 
+    template<TracerTypeIdx Index, class TrRe>
+    Scalar storage1_(const TrRe& tr,
+                     const unsigned tIdx,
+                     const unsigned I,
+                     const unsigned I1,
+                     const bool cache)
+    {
+        if (cache) {
+            return tr.storageOfTimeIndex1_[tIdx][I][Index];
+        } else {
+            return computeVolume_<Index>(tr.phaseIdx_, I1, 1) *
+                   tr.concentration_[tIdx][I1][Index];
+        }
+    }
+
     template<class TrRe>
     void assembleTracerEquationVolume(TrRe& tr,
                                       const ElementContext& elemCtx,
@@ -345,24 +360,6 @@ protected:
             return;
         }
 
-        // Storage terms at previous time step (timeIdx = 1)
-        std::vector<Scalar> fStorageOfTimeIndex1(tr.numTracer());
-        std::vector<Scalar> sStorageOfTimeIndex1(tr.numTracer());
-        if (elemCtx.enableStorageCache()) {
-            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                fStorageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I][Free];
-                sStorageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I][Solution];
-            }
-        }
-        else {
-            const Scalar fVolume1 = computeVolume_<Free>(tr.phaseIdx_, I1, 1);
-            const Scalar sVolume1 = computeVolume_<Solution>(tr.phaseIdx_, I1, 1);
-            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                fStorageOfTimeIndex1[tIdx] = fVolume1 * tr.concentration_[tIdx][I1][Free];
-                sStorageOfTimeIndex1[tIdx] = sVolume1 * tr.concentration_[tIdx][I1][Solution];
-            }
-        }
-
         const TracerEvaluation fVol = computeVolume_<Free>(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
         const TracerEvaluation sVol = computeVolume_<Solution>(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
         dVol_[Solution][tr.phaseIdx_][I] += sVol.value() * scvVolume - vol1_[1][tr.phaseIdx_][I];
@@ -370,12 +367,14 @@ protected:
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
             // Free part
             const Scalar fStorageOfTimeIndex0 = fVol.value() * tr.concentration_[tIdx][I][Free];
-            const Scalar fLocalStorage = (fStorageOfTimeIndex0 - fStorageOfTimeIndex1[tIdx]) * scvVolume/dt;
+            const Scalar fLocalStorage = (fStorageOfTimeIndex0 - storage1_<Free>(tr, tIdx, I, I1,
+                                                                                 elemCtx.enableStorageCache())) * scvVolume / dt;
             tr.residual_[tIdx][I][Free] += fLocalStorage; // residual + flux
 
             // Solution part
             const Scalar sStorageOfTimeIndex0 = sVol.value() * tr.concentration_[tIdx][I][Solution];
-            const Scalar sLocalStorage = (sStorageOfTimeIndex0 - sStorageOfTimeIndex1[tIdx]) * scvVolume/dt;
+            const Scalar sLocalStorage = (sStorageOfTimeIndex0 - storage1_<Solution>(tr, tIdx, I, I1,
+                                                                                     elemCtx.enableStorageCache())) * scvVolume / dt;
             tr.residual_[tIdx][I][Solution] += sLocalStorage; // residual + flux
         }
 
