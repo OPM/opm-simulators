@@ -165,7 +165,7 @@ private:
     void updatePrimaryVariablesNewton(const BVectorWell& dwells);
 
     // with passing in the SurfaceCondition, we should be able to do this in the primary variable class
-    void updateWellState(SingleCompWellState<Scalar>& well_state) const;
+    void updateWellStateFromPrimaryVariables(SingleCompWellState<Scalar>& well_state) const;
 
     void updateWellState(const BVectorWell& dwells,
                          SingleCompWellState<Scalar>& well_state);

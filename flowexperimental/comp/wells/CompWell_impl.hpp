@@ -608,9 +608,7 @@ solveEqAndUpdateWellState(SingleCompWellState<Scalar>& well_state)
 
    this->well_equations_.solve(dx_well);
 
-   this->updatePrimaryVariablesNewton(dx_well);
-
-   this->updateWellState(well_state);
+    this->updateWellState(dx_well, well_state);
 }
 
 template<typename TypeTag>
@@ -630,6 +628,7 @@ recoverWellSolutionAndUpdateWellState(const BVector& x,
     BVectorWell xw(1);
 
     this->well_equations_.recoverSolutionWell(x, xw);
+
     updateWellState(xw, well_state);
 }
 
@@ -647,14 +646,14 @@ CompWell<TypeTag>::
 updateWellState(const CompWell::BVectorWell& xw,
                 SingleCompWellState<Scalar>& well_state)
 {
-    this->primary_variables_.updateNewton(xw);
-    updateWellState(well_state);
+    updatePrimaryVariablesNewton(xw);
+    updateWellStateFromPrimaryVariables(well_state);
 }
 
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-updateWellState(SingleCompWellState<Scalar>& well_state) const
+updateWellStateFromPrimaryVariables(SingleCompWellState<Scalar>& well_state) const
 {
     well_state.bhp = this->primary_variables_.getBhp().value();
 
