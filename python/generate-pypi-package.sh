@@ -56,7 +56,7 @@ do
     cmake -DPYTHON_EXECUTABLE=${python_versions[$tag]} -DWITH_NATIVE=0 -DBoost_USE_STATIC_LIBS=$static \
     -DOPM_ENABLE_PYTHON=ON -DOPM_PYTHON_PACKAGE_VERSION_TAG=${VERSION_TAG} -DBLA_STATIC=$static -DBLAS_LIBRARIES=/usr/lib64/libblas.$libext -DSUITESPARSE_USE_STATIC=$static -DCMAKE_DISABLE_FIND_PACKAGE_QuadMath=1 -DBUILD_SHARED_LIBS=$shared ..
 
-    cmake --build . --target opmcommon_python simulators --parallel ${BUILD_JOBS}
+    cmake --build . --target opmcommon_python BlackOil GasWater --parallel ${BUILD_JOBS}
 
     # Package opm-common bindings
     cd opm-common/python

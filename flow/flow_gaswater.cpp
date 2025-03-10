@@ -33,11 +33,6 @@
 
 namespace Opm {
 namespace Properties {
-namespace TTag {
-struct FlowGasWaterProblem {
-    using InheritsFrom = std::tuple<FlowProblem>;
-};
-}
 
 template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FlowGasWaterProblem> { using type = TpfaLinearizer<TypeTag>; };
@@ -95,6 +90,17 @@ int flowGasWaterMainStandalone(int argc, char** argv)
     // Destruct mainObject as the destructor calls MPI_Finalize!
     mainObject.reset();
     return ret;
+}
+
+std::unique_ptr<FlowMain<Properties::TTag::FlowGasWaterProblem>>
+flowGasWaterMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    return std::make_unique<FlowMain<Properties::TTag::FlowGasWaterProblem>>(
+        argc, argv, outputCout, outputFiles);
 }
 
 }
