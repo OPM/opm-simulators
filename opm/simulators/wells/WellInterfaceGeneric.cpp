@@ -699,6 +699,7 @@ void WellInterfaceGeneric<Scalar, IndexTraits>::addPerforations(const std::vecto
             this->well_index_[ind] += static_cast<Scalar>(perf.ctf);
         }
         else {
+            assert(false);
             this->well_cells_.push_back(perf.cell);
             this->well_index_.push_back(static_cast<Scalar>(perf.ctf));
             this->perf_depth_.push_back(static_cast<Scalar>(perf.depth));
