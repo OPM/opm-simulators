@@ -124,7 +124,7 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
     partitionMethod_ = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
     serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
     zoltanParams_ = Parameters::Get<Parameters::ZoltanParams>();
-
+    zoltanPhgEdgeSizeThreshold_ = Parameters::Get<Parameters::ZoltanPhgEdgeSizeThreshold>();
     metisParams_ = Parameters::Get<Parameters::MetisParams>();
 
     externalPartitionFile_ = Parameters::Get<Parameters::ExternalPartition>();
@@ -468,21 +468,26 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::SerialPartitioning>
         ("Perform partitioning for parallel runs on a single process.");
     Parameters::Register<Parameters::ZoltanImbalanceTol<Scalar>>
-        ("Tolerable imbalance of the loadbalancing provided by Zoltan. DEPRECATED: Use --imbalance-tol instead");
+        ("Tolerable imbalance of the loadbalancing provided by Zoltan. "
+         "DEPRECATED: Use --imbalance-tol instead.");
     Parameters::Register<Parameters::ZoltanParams>
         ("Configuration of Zoltan partitioner. "
          "Valid options are: graph, hypergraph or scotch. "
          "Alternatively, you can request a configuration to be read "
-         "from a JSON file by giving the filename here, ending with '.json.' "
+         "from a JSON file by giving the filename here, with extension '.json'. "
          "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
          "for available Zoltan options.");
     Parameters::Register<Parameters::ImbalanceTol<Scalar>>
-        ("Tolerable imbalance of the loadbalancing (default: 1.1).");
+        ("Tolerable imbalance of the loadbalancing.");
+    Parameters::Register<Parameters::ZoltanPhgEdgeSizeThreshold>
+        ("Low-level threshold fraction in the range [0,1] controlling "
+         "which hypergraph edge to omit. Used if --zoltan-params=\"graph\" "
+         "or if --zoltan-params=\"hypergraph\".");
     Parameters::Register<Parameters::MetisParams>
         ("Configuration of Metis partitioner. "
          "You can request a configuration to be read "
-         "from a JSON file by giving the filename here, ending with '.json.' "
-         "See http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf"
+         "from a JSON file by giving the filename here, with extension '.json'. "
+         "See http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf "
          "for available METIS options.");
     Parameters::Register<Parameters::ExternalPartition>
         ("Name of file from which to load an externally generated "
@@ -493,6 +498,7 @@ void FlowGenericVanguard::registerParameters_()
 
     Parameters::Hide<Parameters::ZoltanImbalanceTol<Scalar>>();
     Parameters::Hide<Parameters::ZoltanParams>();
+    Parameters::Hide<Parameters::ZoltanPhgEdgeSizeThreshold>();
 #endif // HAVE_MPI
 
     Parameters::Register<Parameters::AllowDistributedWells>
