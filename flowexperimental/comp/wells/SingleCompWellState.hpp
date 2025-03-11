@@ -30,7 +30,8 @@
 namespace Opm {
 
 template <typename Scalar>
-class ConnectionData {
+class ConnectionData
+{
 public:
     ConnectionData() = default;
     ConnectionData(std::size_t num_connection,
