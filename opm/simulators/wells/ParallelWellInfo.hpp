@@ -164,6 +164,7 @@ public:
     int numGlobalPerfs() const;
     int globalToLocal(const int globalIndex) const;
     int localToGlobal(std::size_t localIndex) const;
+    int numLocalPerfs() const;
 
 private:
     void buildLocalToGlobalMap() const;
@@ -174,6 +175,7 @@ private:
     mutable bool g2l_map_built_ = false;
     const IndexSet& local_indices_;
     Parallel::Communication comm_;
+    int num_local_perfs_;
     int num_global_perfs_;
     /// \brief sizes for allgatherv
     std::vector<int> sizes_;
@@ -219,6 +221,7 @@ public:
 
     int globalToLocal(const int globalIndex) const;
     int localToGlobal(std::size_t localIndex) const;
+    int numLocalPerfs() const;
 
     /// If the well does not have any open connections the member rankWithFirstPerf
     /// is not initialized, and no broadcast is performed. In this case the argument

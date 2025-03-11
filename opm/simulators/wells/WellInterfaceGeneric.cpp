@@ -92,6 +92,8 @@ WellInterfaceGeneric(const Well& well,
 
     ref_depth_ = well.getRefDepth();
 
+    std::cout << "In WellInterfaceGeneric: this->well_ecl_.getConnections().size() = " << this->well_ecl_.getConnections().size() << std::endl;
+    std::cout << "In WellInterfaceGeneric: perf_data.size() = " << perf_data.size() << std::endl;
     // We do not want to count SHUT perforations here, so
     // it would be wrong to use wells.getConnections().size().
     // This is the number_of_local_perforations_ on this process only!
