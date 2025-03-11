@@ -1861,7 +1861,7 @@ private:
             Entry{PhaseEntry{std::array{"BPPW"sv, "BPPO"sv, "BPPG"sv},
                              [&simConfig = this->eclState_.getSimulationConfig(),
                               &grav = this->simulator_.problem().gravity(),
-                              &regionAvgDensity = *this->regionAvgDensity_,
+                              &regionAvgDensity = this->regionAvgDensity_,
                               &problem = this->simulator_.problem(),
                               &regions = this->regions_](const unsigned phaseIdx, const Context& ectx)
                              {
@@ -1882,7 +1882,7 @@ private:
                                     ectx.elemCtx.primaryVars(ectx.dofIdx, /*timeIdx=*/0).pvtRegionIndex() + 1
                                 };
 
-                                const auto density = regionAvgDensity.value("PVTNUM", phase, region);
+                                const auto density = regionAvgDensity->value("PVTNUM", phase, region);
 
                                 const auto press = getValue(ectx.fs.pressure(phase.ix));
                                 const auto dz = problem.dofCenterDepth(ectx.globalDofIdx) - datum;
