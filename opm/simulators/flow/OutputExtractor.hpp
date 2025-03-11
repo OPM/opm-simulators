@@ -272,7 +272,7 @@ struct BlockExtractor
         std::for_each(
             blockData.begin(),
             blockData.end(),
-            [&handlers, &extractors, &blockData](auto& bd_info)
+            [&handlers, &extractors](auto& bd_info)
             {
                 unsigned phase{};
                 const auto& [key, cell] = bd_info.first;
