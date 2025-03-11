@@ -27,6 +27,10 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#if HAVE_MPI
+#include <opm/simulators/utils/MPISerializer.hpp>
+#endif
+
 #include <memory>
 #include <unordered_map>
 
