@@ -157,11 +157,7 @@ struct SimulatorFixture
         rc_master.resizeNextReportDates(2);
     }
 
-    // Sets the slave start date and the next report time offset for the given slave number
-    // NOTE: The method name is kept short as setSlaveDate() instead of a longer descriptive name
-    //   like setSlaveStartDateAndNextReportTimeOffset() because the method is called multiple times
-    //   in the test cases and the shorter name makes the test cases more readable.
-    void setSlaveData(int slave_number, double slave_start_date, double report_time_step_size)
+    void setSlaveStartDateAndNextReportTimeOffset(int slave_number, double slave_start_date, double report_time_step_size)
     {
         rc_master.setSlaveStartDate(slave_number, slave_start_date);
         rc_master.setSlaveNextReportTimeOffset(slave_number, report_time_step_size);
@@ -206,38 +202,38 @@ BOOST_AUTO_TEST_CASE(NoChop)
     auto tol = Opm::ReservoirCoupling::Seconds::reltol / 2;
 
     // Check that the time step is not chopped when slave processes have identical start dates
-    setSlaveData(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step);
-    setSlaveData(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step);
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step);
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step);
     auto new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
     BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
 
     // Check that the time step is not chopped when slave processes start at the same time as
     // the master but their report steps end after the master process
-    setSlaveData(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step+1);
-    setSlaveData(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step+2);
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step+1);
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step+2);
     new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
     BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
 
     // Check that the time step is not chopped when slave processes start at the same time as
     // the master but their report steps end before the master process but within the tolerance
-    setSlaveData(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step-tol);
-    setSlaveData(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step+2);
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0, /*start_date=*/start_date, /*report_time_step_size=*/time_step-tol);
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1, /*start_date=*/start_date, /*report_time_step_size=*/time_step+2);
     new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
     BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
 
     // Check that the time step is not chopped when slave processes start before
     // the master but their report steps end after the master process
-    setSlaveData(/*slave_number=*/0, /*start_date=*/start_date-1, /*report_time_step_size=*/time_step+1+tol);
-    setSlaveData(/*slave_number=*/1, /*start_date=*/start_date-2, /*report_time_step_size=*/time_step+2+tol);
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0, /*start_date=*/start_date-1, /*report_time_step_size=*/time_step+1+tol);
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1, /*start_date=*/start_date-2, /*report_time_step_size=*/time_step+2+tol);
     new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
     BOOST_CHECK_CLOSE(new_time_step, time_step, 1e-16);
 
     // Check that the time step is not chopped when slave processes starts after the master's
     // report step has ended
-    setSlaveData(/*slave_number=*/0,
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0,
                 /*start_date=*/start_date+time_step+1,
                 /*report_time_step_size=*/time_step);
-    setSlaveData(/*slave_number=*/1,
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1,
                  /*start_date=*/start_date+time_step+tol,
                  /*report_time_step_size=*/time_step);
     new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
@@ -254,10 +250,10 @@ BOOST_AUTO_TEST_CASE(Chop)
 
     // Check that the time step is chopped when slave processes start in the middle of the master's
     // report step
-    setSlaveData(/*slave_number=*/0,
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0,
                 /*start_date=*/start_date+time_step/2,
                 /*report_time_step_size=*/time_step);
-    setSlaveData(/*slave_number=*/1,
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1,
                  /*start_date=*/start_date+time_step/2,
                  /*report_time_step_size=*/time_step);
     new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
@@ -268,19 +264,19 @@ BOOST_AUTO_TEST_CASE(Chop)
     // NOTE: microseconds are approximately the smallest time units that can be represented accurately
     // for epoch values in this century (2000-2100), so first check this
     tol = 1e-8;  // This is then too small, and should not cause the time step to be chopped
-    setSlaveData(/*slave_number=*/0,
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0,
                 /*start_date=*/start_date,
                 /*report_time_step_size=*/time_step - tol);
-    setSlaveData(/*slave_number=*/1,
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1,
                  /*start_date=*/start_date+time_step,
                  /*report_time_step_size=*/time_step);
     new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
     BOOST_CHECK(Opm::ReservoirCoupling::Seconds::compare_eq(new_time_step, time_step));
     tol = 1e-5;  // This is greater than 1e-6 small, and should cause the time step to be chopped
-    setSlaveData(/*slave_number=*/0,
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/0,
                 /*start_date=*/start_date,
                 /*report_time_step_size=*/time_step - tol);
-    setSlaveData(/*slave_number=*/1,
+    setSlaveStartDateAndNextReportTimeOffset(/*slave_number=*/1,
                  /*start_date=*/start_date+time_step,
                  /*report_time_step_size=*/time_step);
     new_time_step = rc_master.maybeChopSubStep(time_step, elapsed_time);
