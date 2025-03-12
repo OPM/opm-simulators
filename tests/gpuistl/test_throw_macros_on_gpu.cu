@@ -26,8 +26,8 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 namespace {
-// NOTE: We have to split this into a separate function due 
-// to some weirdness of hipcc. Note however that this is 
+// NOTE: We have to split this into a separate function due
+// to some weirdness of hipcc. Note however that this is
 // the realistic use case of the macro.
 __device__ __host__ void functionThatContainsMacros(bool call) {
     if (call) {
@@ -44,6 +44,7 @@ __global__ void codeThatContainsMacros(bool call) {
 
 BOOST_AUTO_TEST_CASE(TestKernel)
 {
+    // TODO: Figure out why this test halts when run in debug mode on AMD GPUs
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
     codeThatContainsMacros<<<1, 1>>>(false);
@@ -51,7 +52,7 @@ BOOST_AUTO_TEST_CASE(TestKernel)
     OPM_GPU_SAFE_CALL(cudaGetLastError());
 }
 
-BOOST_AUTO_TEST_CASE(TestOutsideKernel) 
+BOOST_AUTO_TEST_CASE(TestOutsideKernel)
 {
     // This is to make sure that the macros work outside of kernels but inside a .cu file
     // ie. inside a file compiled by nvcc/hipcc.
