@@ -850,9 +850,13 @@ namespace Opm {
                         this->wellState().shutWell(w);
                     }
 
-                    this->well_open_times_.erase(well_name);
-                    this->well_close_times_.erase(well_name);
-                    continue;
+                    if (!this->wellTestState().is_follow_on_well(well_name)) {
+                        this->well_open_times_.erase(well_name);
+                        this->well_close_times_.erase(well_name);
+                        continue;
+                    } else {
+                        this->wellState().openWell(w);
+                    }
                 }
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
