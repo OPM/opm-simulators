@@ -565,11 +565,12 @@ namespace Opm {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
 
+            bool success = false;
             try {
                 using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
                 GLiftEclWells ecl_well_map;
                 gaslift_.initGliftEclWellMap(well_container_, ecl_well_map);
-                well->wellTesting(simulator_,
+                success = well->wellTesting(simulator_,
                                   simulationTime,
                                   this->wellState(),
                                   this->groupState(),
@@ -581,6 +582,10 @@ namespace Opm {
             } catch (const std::exception& e) {
                 const std::string msg = fmt::format("Exception during testing of well: {}. The well will not open.\n Exception message: {}", wellEcl.name(), e.what());
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
+            }
+
+            if (success) {
+                this->removeFromForceShutWell(well->indexOfWell());
             }
         }
     }
@@ -882,25 +887,21 @@ namespace Opm {
                 bool wellIsStopped = false;
                 if (this->wellTestState().well_is_closed(well_name))
                 {
-                    if (well_ecl.getAutomaticShutIn()) {
-                        // shut wells are not added to the well container
+                    //stopped wells where cross flow is not allowed is shut
+                    //so is wells shut by the simulator due to convergence issues.
+                    bool shut_well = well_ecl.getAutomaticShutIn() || !well_ecl.getAllowCrossFlow()
+                                    || this->isForceShutWell(w);
+                    // shut wells are not added to the well container
+                    if (shut_well) {
                         this->wellState().shutWell(w);
                         this->well_close_times_.erase(well_name);
                         this->well_open_times_.erase(well_name);
                         continue;
-                    } else {
-                        if (!well_ecl.getAllowCrossFlow()) {
-                            // stopped wells where cross flow is not allowed
-                            // are not added to the well container
-                            this->wellState().shutWell(w);
-                            this->well_close_times_.erase(well_name);
-                            this->well_open_times_.erase(well_name);
-                            continue;
-                        }
-                        // stopped wells are added to the container but marked as stopped
-                        this->wellState().stopWell(w);
-                        wellIsStopped = true;
                     }
+
+                    // stopped wells are added to the container but marked as stopped
+                    this->wellState().stopWell(w);
+                    wellIsStopped = true;
                 }
 
                 // shut wells with zero rante constraints and disallowing

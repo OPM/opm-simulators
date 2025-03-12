@@ -379,7 +379,7 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    void
+    bool
     WellInterface<TypeTag>::
     wellTesting(const Simulator& simulator,
                 const double simulation_time,
@@ -427,7 +427,7 @@ namespace Opm
             if (!converged) {
                 const auto msg = fmt::format("WTEST: Well {} is not solvable (physical)", this->name());
                 deferred_logger.debug(msg);
-                return;
+                return false;
             }
 
 
@@ -435,7 +435,7 @@ namespace Opm
             if ( !this->isOperableAndSolvable() ) {
                 const auto msg = fmt::format("WTEST: Well {} is not operable (physical)", this->name());
                 deferred_logger.debug(msg);
-                return;
+                return false;
             }
             std::vector<Scalar> potentials;
             try {
@@ -445,7 +445,7 @@ namespace Opm
                                                     "failed during testing for re-opening: ",
                                                     this->name(), e.what());
                 deferred_logger.info(msg);
-                return;
+                return false;
             }
             const int np = well_state_copy.numPhases();
             for (int p = 0; p < np; ++p) {
@@ -486,7 +486,9 @@ namespace Opm
             ws.open();
             well_state = well_state_copy;
             open_times.try_emplace(this->name(), well_test_state.lastTestTime(this->name()));
+            return true;
         }
+        return false;
     }
 
 
