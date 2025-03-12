@@ -157,6 +157,10 @@ struct SimulatorFixture
         rc_master.resizeNextReportDates(2);
     }
 
+    // Sets the slave start date and the next report time offset for the given slave number
+    // NOTE: The method name is kept short as setSlaveDate() instead of a longer descriptive name
+    //   like setSlaveStartDateAndNextReportTimeOffset() because the method is called multiple times
+    //   in the test cases and the shorter name makes the test cases more readable.
     void setSlaveData(int slave_number, double slave_start_date, double report_time_step_size)
     {
         rc_master.setSlaveStartDate(slave_number, slave_start_date);
