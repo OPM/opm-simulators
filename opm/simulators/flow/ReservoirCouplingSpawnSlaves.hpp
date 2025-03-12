@@ -41,8 +41,7 @@ public:
 
     ReservoirCouplingSpawnSlaves(
         ReservoirCouplingMaster &master,
-        const ReservoirCoupling::CouplingInfo &rescoup,
-        const int report_step
+        const ReservoirCoupling::CouplingInfo &rescoup
     );
 
     void spawn();
@@ -64,7 +63,6 @@ private:
 
     ReservoirCouplingMaster &master_;
     const ReservoirCoupling::CouplingInfo &rescoup_;
-    const int report_step_;
     const Parallel::Communication &comm_;
 };
 
