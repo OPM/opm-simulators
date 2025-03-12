@@ -66,4 +66,4 @@ We simulate using the ILU0 preconditioned BiCGSTAB as the linear solver on three
 Development of `gpu-ISTL` in OPM Flow from 2021 to 2024 was a part of the EU project *HPC, Big Data, and Artificial Intelligence convergent platform* (ACROSS). Development in 2024 has been financed by Equinor.
 
 # References
-```
+
