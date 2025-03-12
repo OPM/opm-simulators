@@ -3,7 +3,7 @@
 -- individual contents of the database are licensed under the Database Contents
 -- License: http://opendatacommons.org/licenses/dbcl/1.0/
 
--- Copyright (C) 2018 Equinor
+-- Copyright (C) 2025 Equinor
 
 PVTG                                                                                
                                                                                 
