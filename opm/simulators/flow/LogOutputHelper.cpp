@@ -445,7 +445,12 @@ production(const std::size_t reportStepNum) const
         values[Ix::WaterCut]    = isField ? st.get("FWCT", 0.0) : st.get_group_var(gname, "GWCT", 0.0);
         values[Ix::GasOilRatio] = isField ? st.get("FGOR", 0.0) : st.get_group_var(gname, "GGOR", 0.0);
 
-        values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
+        if (values[Ix::WaterRate] == 0.0) {
+            values[Ix::WatGasRatio] = 0;
+        } else {
+            values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
+        }
+
         if (std::isnan(values[Ix::WatGasRatio])) {
             values[Ix::WatGasRatio] = 0.0;
         }
@@ -481,7 +486,12 @@ production(const std::size_t reportStepNum) const
 
         // values[Ix::SteadyStatePI] = 0;
 
-        values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
+        if (values[Ix::WaterRate] == 0.0) {
+            values[Ix::WatGasRatio] = 0.0;
+        } else {
+            values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
+        }
+
         if (std::isnan(values[Ix::WatGasRatio])) {
             values[Ix::WatGasRatio] = 0.0;
         }
