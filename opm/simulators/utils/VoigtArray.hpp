@@ -39,7 +39,7 @@ template<class T>
 class VoigtContainer
 {
 public:
-    static constexpr auto indices = std::array{
+    static constexpr auto indices = std::array<VoigtIndex, 9>{ // NVCC needs templates specified
         Opm::VoigtIndex::XX,
         Opm::VoigtIndex::XY,
         Opm::VoigtIndex::XZ,
@@ -51,7 +51,7 @@ public:
         Opm::VoigtIndex::ZZ,
     };
 
-    static constexpr auto unique_indices = std::array{
+    static constexpr auto unique_indices = std::array<VoigtIndex, 6>{ // NVCC needs templates specified
         Opm::VoigtIndex::XX,
         Opm::VoigtIndex::YY,
         Opm::VoigtIndex::ZZ,
@@ -60,7 +60,7 @@ public:
         Opm::VoigtIndex::XY
     };
 
-    static constexpr auto diag_indices = std::array{
+    static constexpr auto diag_indices = std::array<VoigtIndex, 3>{ // NVCC needs templates specified
         Opm::VoigtIndex::XX,
         Opm::VoigtIndex::YY,
         Opm::VoigtIndex::ZZ,
