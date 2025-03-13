@@ -465,6 +465,10 @@ public:
             const int episodeIdx = this->episodeIndex();
             auto& simulator = this->simulator();
 
+            // Clear out any existing events as these have already been
+            // processed when we're running an action block
+            this->simulator().vanguard().schedule().clearEvents(episodeIdx);
+
             // Re-ordering in case of Alugrid
             this->actionHandler_
                 .applyActions(episodeIdx, simulator.time() + simulator.timeStepSize(),
