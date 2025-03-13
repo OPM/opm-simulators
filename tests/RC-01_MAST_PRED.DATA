@@ -1,0 +1,332 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Copyright (C) 2025 Equinor
+
+-- This deck tests usage of reservoir coupling.
+
+-- This case is a pure prediction case (no history). The master model includes one grid cell
+-- and no wells. The master deck is used only for controlling production and injection
+-- from the two slave models.
+
+------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------
+RUNSPEC
+------------------------------------------------------------------------------------------------
+
+DIMENS
+ 1 1 1 /
+
+OIL
+WATER
+GAS
+DISGAS
+VAPOIL
+
+METRIC
+
+START
+ 1 'OCT' 2018 /
+
+
+EQLDIMS
+ 1 1*  25 /
+
+
+VFPPDIMS
+--max.rate  max.THP   max.fw   max.fg   max.ALQ    max.tabs
+  25        15        15       15       0          60       /
+
+
+--
+--
+WELLDIMS
+--max.well  max.con/well  max.grup  max.w/grup
+ 5        10            10        10   /
+
+--
+TABDIMS
+--ntsfun     ntpvt  max.nssfun  max.nppvt  max.ntfip  max.nrpvt
+  1          1      50          60         72         60 /
+
+
+--
+UNIFIN
+UNIFOUT
+
+NETWORK
+ 5 3 /
+
+
+------------------------------------------------------------------------------------------------
+GRID
+------------------------------------------------------------------------------------------------
+
+--
+NEWTRAN
+
+--
+GRIDFILE
+ 0  1 /
+
+--
+GRIDUNIT
+METRES  /
+
+--
+INIT
+
+SPECGRID
+ 1 1 1 1 F /
+
+COORD
+  2000.0000  2000.0000  2000.0000   2000.0000  2000.0000  2002.5000
+  2100.0000  2000.0000  2000.0000   2100.0000  2000.0000  2002.5000
+  2000.0000  2100.0000  2000.0000   2000.0000  2100.0000  2002.5000
+  2100.0000  2100.0000  2000.0000   2100.0000  2100.0000  2002.5000
+/
+
+ZCORN
+  2000.0000  2000.0000  2000.0000  2000.0000  2002.5000  2002.5000
+  2002.5000  2002.5000 /
+
+
+PORO
+ 0.25 /
+
+PERMX
+ 2100 /
+
+COPY
+ PERMX PERMY /
+ PERMX PERMZ /
+/
+
+MULTIPLY
+ 'PERMZ' 0.1 /
+/
+
+RPTGRID
+ 'ALLNNC' /
+
+------------------------------------------------------------------------------------------------
+EDIT
+------------------------------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------------------------------
+PROPS
+------------------------------------------------------------------------------------------------
+
+NOECHO
+
+
+INCLUDE
+'include/PVT-WET-GAS.INC' /
+
+INCLUDE
+ 'include/scal_mod2.inc' /
+
+
+FILLEPS
+
+------------------------------------------------------------------------------------------------
+REGIONS
+------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------
+SOLUTION
+------------------------------------------------------------------------------------------------
+
+RPTRST
+ BASIC=2 /
+
+EQUIL
+-- Datum    P     woc     Pc   goc      Pc  Rsvd  Rvvd  N
+2300.00   300.0  2300.0   0.0  1800.00  0.0   1     1   0 /
+
+PBVD
+ 2000.0 100.0
+ 2300.0 100.0 /
+
+PDVD
+ 2000.0 100.0
+ 2300.0 100.0 /
+/
+
+
+------------------------------------------------------------------------------------------------
+SUMMARY
+-----------------------------------------------------------------------------------------------
+
+INCLUDE
+ 'include/summary_rc.inc' /
+
+------------------------------------------------------------------------------------------------
+SCHEDULE
+------------------------------------------------------------------------------------------------
+
+
+TUNING
+ 1.0  5.0 /
+ /
+ /
+
+INCLUDE
+ 'include/b1_vfp_flowline.inc' /
+
+INCLUDE
+ 'include/d1_vfp_flowline.inc' /
+
+INCLUDE
+ './include/flowline_e1_vfp.inc' /
+
+
+GRUPTREE
+ 'PLAT-A' 'FIELD' /
+
+ 'MOD1'   'PLAT-A' /
+
+ 'B1_M'   'MOD1' /
+ 'D1_M'   'MOD1' /
+ 'C1_M'   'MOD1' /
+
+ 'E1_M'   'PLAT-A' /
+/
+
+SLAVES
+  'RES-1'  'RC-01_MOD1_PRED'   1*  '../mod1'  4 /
+  'RES-2'  'RC-01_MOD2_PRED'   1*  '../mod2'  1 /
+/
+
+GRUPMAST
+  'D1_M' 'RES-1'  'MANI-D'  1*  /
+  'B1_M' 'RES-1'  'MANI-B'  1*  /
+  'C1_M' 'RES-1'  'MANI-C'  1*  /
+  'E1_M' 'RES-2'  'E1'  1*  /
+/
+
+-- DUMPCUPL
+-- F /
+
+BRANPROP
+--  Downtree  Uptree	  #VFP  ALQ
+    B1_M	'PLAT-A'    3   1* /
+    D1_M	'PLAT-A'    4   1* /
+    E1_M	'PLAT-A'    5	1* /
+/
+
+NODEPROP
+--  Node_name  Press  autoChoke?  addGasLift?  Group_name
+     PLAT-A	21.0   NO        NO	    1*  /
+     B1_M	1*     NO	 NO	    1*  /
+     D1_M	1*     NO	 NO	    1*  /
+     E1_M	1*     NO	 NO	    1*  /
+/
+
+GUIDERAT
+ 30.0 OIL 1.0 1.0 1* 1*  1.0  0.2  1*  0.1  /
+
+
+GCONPROD
+ 'FIELD' 'ORAT'   9200.0  1*  6.9E6   1*   'RATE'  /
+
+ 'D1_M'  'ORAT'   9200.0  1*  6.9E6   1*   'RATE'  1*  1*  'FORM'  /
+ 'B1_M'  'ORAT'   9200.0  1*  6.9E6   1*   'RATE'  1*  1*  'FORM'  /
+ 'C1_M'  'ORAT'   9200.0  1*  6.9E6   1*   'RATE'  1*  1*  'FORM'  /
+ 'E1_M'  'ORAT'   9200.0  1*  6.9E6   1*   'RATE'  1*  1*  'FORM'  /
+/
+
+GCONSUMP
+  'FIELD'  200000 /
+/
+
+GCONINJE
+ 'FIELD' 'GAS'   'REIN'   4.0E6  1*  1.0  /
+ 'D1_M'  'GAS'   'RATE'   4.0E6  4*  1.0  'RATE' /
+ 'B1_M'  'GAS'   'RATE'   4.0E6  4*  1.0  'RATE' /
+ 'C1_M'  'GAS'   'RATE'   4.0E6  4*  1.0  'RATE' /
+ 'E1_M'  'GAS'   'RATE'   4.0E6  4*  1.0  'RATE' /
+ 'D1_M'  'WATER' 'RATE'   4.0E6  4*  1.0  'RATE' /
+ 'B1_M'  'WATER' 'RATE'   4.0E6  4*  1.0  'RATE' /
+ 'C1_M'  'WATER' 'RATE'   4.0E6  4*  1.0  'RATE' /
+ 'E1_M'  'WATER' 'RATE'   4.0E6  4*  1.0  'RATE' /
+/
+
+DATES
+ 1 NOV 2018 /
+/
+
+GCONINJE
+ 'MOD1'  'WATER' 'VREP'  10000.0  2*   1.0 /
+/
+
+DATES
+ 1 DEC 2018 /
+ 1 JAN 2019 /
+/
+
+GCONPROD
+ 'FIELD' 'ORAT'  13100.0  1*  6.9E6   1*   'RATE'  /
+/
+
+DATES
+ 1 FEB 2019 /
+/
+
+DATES
+ 1 MAR 2019 /
+ 1 APR 2019 /
+ 1 MAY 2019 /
+ 1 JUN 2019 /
+ 1 JUL 2019 /
+/
+
+GCONSALE
+ FIELD 1.0E6 1.05E6 0.99E6 RATE  /
+/
+
+DATES
+ 1 AUG 2019 /
+ 1 SEP 2019 /
+ 1 OCT 2019 /
+ 1 NOV 2019 /
+ 1 DEC 2019 /
+/
+
+DATES
+ 1 JAN 2020 /
+ 1 FEB 2020 /
+ 1 MAR 2020 /
+ 1 APR 2020 /
+ 1 MAY 2020 /
+ 1 JUN 2020 /
+ 1 JUL 2020 /
+ 1 AUG 2020 /
+ 1 SEP 2020 /
+ 1 OCT 2020 /
+ 1 NOV 2020 /
+ 1 DEC 2020 /
+/
+
+DATES
+ 1 JAN 2021 /
+ 1 FEB 2021 /
+ 1 MAR 2021 /
+ 1 APR 2021 /
+ 1 MAY 2021 /
+ 1 JUN 2021 /
+ 1 JUL 2021 /
+ 1 AUG 2021 /
+ 1 SEP 2021 /
+ 1 OCT 2021 /
+ 1 NOV 2021 /
+ 1 DEC 2021 /
+
+/
+
+
+END
