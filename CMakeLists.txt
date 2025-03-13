@@ -491,7 +491,9 @@ target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+if(MPI_FOUND)
+  target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+endif()
 
 include (${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
 
