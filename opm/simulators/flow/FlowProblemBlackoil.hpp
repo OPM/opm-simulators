@@ -1354,11 +1354,15 @@ protected:
                     dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
                                                 gasSaturationData[dofIdx]);
             }
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
-                dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
-                                            1.0
-                                            - waterSaturationData[dofIdx]
-                                            - gasSaturationData[dofIdx]);
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const Scalar soil = 1.0 - waterSaturationData[dofIdx] - gasSaturationData[dofIdx];
+                if (soil < smallSaturationTolerance_) {
+                    dofFluidState.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
+                }
+                else {
+                    dofFluidState.setSaturation(FluidSystem::oilPhaseIdx, soil);
+                }
+            }
 
             //////
             // set phase pressures
@@ -1420,11 +1424,10 @@ protected:
     {
         // each phase needs to be above certain value to be claimed to be existing
         // this is used to recover some RESTART running with the defaulted single-precision format
-        const Scalar smallSaturationTolerance = 1.e-6;
         Scalar sumSaturation = 0.0;
         for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
-                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance)
+                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance_)
                     elemFluidState.setSaturation(phaseIdx, 0.0);
 
                 sumSaturation += elemFluidState.saturation(phaseIdx);
@@ -1432,7 +1435,7 @@ protected:
 
         }
         if constexpr (enableSolvent) {
-            if (solventSaturation < smallSaturationTolerance)
+            if (solventSaturation < smallSaturationTolerance_)
                 solventSaturation = 0.0;
 
             sumSaturation += solventSaturation;
@@ -1582,6 +1585,8 @@ protected:
 
     bool enableEclOutput_;
     std::unique_ptr<EclWriterType> eclWriter_;
+
+    const Scalar smallSaturationTolerance_ = 1.e-6;
 #if HAVE_DAMARIS
     bool enableDamarisOutput_ = false ;
     std::unique_ptr<DamarisWriterType> damarisWriter_;
