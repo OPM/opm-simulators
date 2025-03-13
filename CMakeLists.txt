@@ -732,6 +732,7 @@ if(CUDA_FOUND)
   if(USE_HIP)
     set(gpu_label "gpu_hip")
   endif()
+
   set_tests_properties(cusparse_safe_call
                        cublas_safe_call
                        gpu_safe_call
@@ -745,7 +746,6 @@ if(CUDA_FOUND)
                        GpuVector
                        GpuSparseMatrix
                        GpuSeqILU0
-                       GpuOwnerOverlapCopy
                        solver_adapter
                        GpuBuffer
                        GpuView
@@ -757,6 +757,9 @@ if(CUDA_FOUND)
                        is_gpu_pointer
                        throw_macros_on_gpu
                        PROPERTIES LABELS ${gpu_label})
+  if(MPI_FOUND)
+    set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
+  endif()
 endif()
 
 if(HYPRE_FOUND)

@@ -19,26 +19,31 @@
 #ifndef OPM_SOLVERADAPTER_HPP
 #define OPM_SOLVERADAPTER_HPP
 
-#include <memory>
-
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/operators.hh>
 #include <dune/istl/paamg/pinfo.hh>
 #include <dune/istl/schwarz.hh>
 #include <dune/istl/solver.hh>
+
 #include <opm/common/ErrorMacros.hpp>
+
 #include <opm/simulators/linalg/gpuistl/GpuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/has_function.hpp>
+
+#if HAVE_MPI
+#include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
+#endif
 
 #ifdef OPEN_MPI
 #if OPEN_MPI
 #include "mpi-ext.h"
 #endif
 #endif
+
+#include <memory>
 
 namespace Opm::gpuistl
 {
@@ -141,6 +146,7 @@ private:
 
     // TODO: Use a std::forward
     // This is the MPI parallel case (general communication object)
+#if HAVE_MPI
     template <class Comm>
     UnderlyingSolver<XGPU> constructSolver(std::shared_ptr<Dune::Preconditioner<X, X>> prec,
                                            scalar_real_type reduction,
@@ -223,6 +229,7 @@ private:
         return UnderlyingSolver<XGPU>(
             overlappingCudaOperator, scalarProduct, mpiPreconditioner, reduction, maxit, verbose);
     }
+#endif
 
     // This is the serial case (specific overload for Dune::Amg::SequentialInformation)
     UnderlyingSolver<XGPU> constructSolver(std::shared_ptr<Dune::Preconditioner<X, X>> prec,
@@ -261,6 +268,7 @@ private:
     std::unique_ptr<XGPU> m_inputBuffer;
     std::unique_ptr<XGPU> m_outputBuffer;
 };
+
 } // namespace Opm::gpuistl
 
 #endif
