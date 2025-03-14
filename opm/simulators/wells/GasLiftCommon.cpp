@@ -93,10 +93,10 @@ logMessage_(const std::string& prefix,
         "  {} ({}) :{} {}", prefix, type_str, rank, msg);
     switch (msg_type) {
     case MessageType::INFO:
-        this->deferred_logger_.info(message);
+        this->deferred_logger_.debug(message);
         break;
     case MessageType::WARNING:
-        this->deferred_logger_.info(message);
+        this->deferred_logger_.debug(message);
         break;
     default:
         throw std::runtime_error("This should not happen");
