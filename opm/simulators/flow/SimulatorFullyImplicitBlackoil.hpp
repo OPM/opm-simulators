@@ -139,7 +139,6 @@ public:
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
     explicit SimulatorFullyImplicitBlackoil(Simulator& simulator)
         : simulator_(simulator)
-        , convergence_output_(simulator_.vanguard().eclState())
         , serializer_(*this,
                       FlowGenericVanguard::comm(),
                       simulator_.vanguard().eclState().getIOConfig(),
@@ -160,8 +159,9 @@ public:
                 { return std::string_view { compNames.name(compIdx) }; }
             };
 
-            convergence_output_.
-                startThread(Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
+            this->convergence_output_.
+                startThread(this->simulator_.vanguard().eclState(),
+                            Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
                             R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
                             getPhaseName);
         }
@@ -650,7 +650,7 @@ protected:
     std::unique_ptr<time::StopWatch> totalTimer_;
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
 
-    SimulatorConvergenceOutput convergence_output_;
+    SimulatorConvergenceOutput convergence_output_{};
 
 #ifdef RESERVOIR_COUPLING_ENABLED
     bool slaveMode_{false};
