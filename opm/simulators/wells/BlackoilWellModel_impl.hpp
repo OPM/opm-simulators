@@ -196,7 +196,7 @@ namespace Opm {
         DeferredLogger local_deferredLogger{};
 
         this->report_step_starts_ = true;
-
+        this->report_step_start_events_ = this->schedule()[timeStepIdx].wellgroup_events();
 
         this->rateConverter_ = std::make_unique<RateConverterType>
             (this->phase_usage_, std::vector<int>(this->local_num_cells_, 0));
@@ -790,12 +790,13 @@ namespace Opm {
         if (nw > 0) {
             well_container_.reserve(nw);
 
-            const auto& wg_events = this->schedule()[report_step].wellgroup_events();
+            const auto& wmatcher = this->schedule().wellMatcher(report_step);
+            const auto& wcycle = this->schedule()[report_step].wcycle.get();
 
             // First loop and check for status changes. This is necessary
             // as wcycle needs the updated open/close times.
             std::for_each(this->wells_ecl_.begin(), this->wells_ecl_.end(),
-                          [this, &wg_events](const auto& well_ecl)
+                          [this, &wg_events = this->report_step_start_events_](const auto& well_ecl)
                           {
                               if (!well_ecl.hasConnections()) {
                                   // No connections in this well.  Nothing to do.
@@ -819,9 +820,6 @@ namespace Opm {
                                   }
                               }
                           });
-
-            const auto& wmatcher = this->schedule().wellMatcher(report_step);
-            const auto& wcycle = this->schedule()[report_step].wcycle.get();
 
             // Grab wcycle states. This needs to run before the schedule gets processed
             const auto cycle_states = wcycle.wellStatus(this->simulator_.time(),
@@ -947,10 +945,11 @@ namespace Opm {
             }
 
             if (!wcycle.empty()) {
-                auto schedule_open = [&wg_events](const std::string& name)
-                {
-                    return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
-                };
+                const auto schedule_open =
+                    [&wg_events = this->report_step_start_events_](const std::string& name)
+                    {
+                        return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
+                    };
                 for (const auto& [wname, wscale] : wcycle.efficiencyScale(this->simulator_.time(),
                                                                           this->simulator_.timeStepSize(),
                                                                           wmatcher,
