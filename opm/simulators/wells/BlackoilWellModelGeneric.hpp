@@ -226,6 +226,7 @@ public:
 
     const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
     const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
+    const WellGroupEvents& reportStepStartEvents() const { return report_step_start_events_; }
 
     std::vector<int> getCellsForConnections(const Well& well) const;
 
@@ -523,6 +524,7 @@ protected:
     WGState<Scalar> active_wgstate_;
     WGState<Scalar> last_valid_wgstate_;
     WGState<Scalar> nupcol_wgstate_;
+    WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
     bool wellStructureChangedDynamically_{false};
 

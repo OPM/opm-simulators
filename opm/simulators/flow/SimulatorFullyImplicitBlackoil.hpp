@@ -425,7 +425,9 @@ public:
                                         wmatcher,
                                         this->wellModel_().wellOpenTimes(),
                                         this->wellModel_().wellCloseTimes(),
-                                        [timeStep, &wg_events = schedule[reportStep].wellgroup_events()](const std::string& name)
+                                        [timeStep,
+                                         &wg_events = this->wellModel_().reportStepStartEvents()]
+                                        (const std::string& name)
                                         {
                                             if (timeStep != 0) {
                                                 return false;
