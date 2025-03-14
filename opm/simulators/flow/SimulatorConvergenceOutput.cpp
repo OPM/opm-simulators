@@ -71,7 +71,11 @@ startThread(const EclipseState&                           eclState,
 void SimulatorConvergenceOutput::
 write(const std::vector<StepReport>& reports)
 {
-    if (! this->convergenceOutputThread_.has_value()) {
+    if (! this->convergenceOutputThread_.has_value() ||
+        (reports.size() == this->alreadyReportedSteps_))
+    {
+        // Convergence output not requested or we've already written all
+        // known reports.  Nothing to do.
         return;
     }
 
