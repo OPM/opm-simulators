@@ -29,6 +29,7 @@
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 
 #include <algorithm>
+#include <iterator>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -74,16 +75,18 @@ write(const std::vector<StepReport>& reports)
         return;
     }
 
-    auto new_reports = std::vector<StepReport> {
-        reports.begin() + this->alreadyReportedSteps_, reports.end()
-    };
+    const auto begin = reports.begin() + this->alreadyReportedSteps_;
+    const auto end = reports.end();
 
     auto requests = std::vector<ConvergenceReportQueue::OutputRequest>{};
-    requests.reserve(new_reports.size());
+    requests.reserve(std::distance(begin, end));
 
-    for (auto&& report : new_reports) {
-        requests.push_back({ report.report_step, report.current_step, std::move(report.report) });
-    }
+    std::transform(begin, end, std::back_inserter(requests),
+                   [](const StepReport& report) {
+                       return ConvergenceReportQueue::OutputRequest {
+                           report.report_step, report.current_step, report.report
+                       };
+                   });
 
     this->alreadyReportedSteps_ = reports.size();
 
