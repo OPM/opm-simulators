@@ -320,6 +320,7 @@ public:
         report_step_starts_ = true;
         last_run_wellpi_ = 1;
         local_shut_wells_ = {2, 3};
+        force_shut_wells_ = {4, 5};
         closed_this_step_ = {"test1", "test2"};
         guideRate_.setSerializationTestData();
         node_pressures_ = {{"test3", 4.0}};
