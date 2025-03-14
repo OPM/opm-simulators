@@ -131,6 +131,11 @@ void export_PyGasWaterSimulator(py::module& m)
     using namespace Opm::Pybind::DocStrings;
     using TypeTag = Opm::Properties::TTag::FlowGasWaterProblem;
 
+    py::class_<PyBaseSimulator<TypeTag>>(
+        m,
+        "_BaseSimulatorGW",
+        py::module_local()
+    );
     py::class_<PyGasWaterSimulator, PyBaseSimulator<TypeTag> >(m, "GasWaterSimulator")
         .def(py::init<const std::string&,
                       const std::vector<std::string>&>(),
@@ -143,7 +148,7 @@ void export_PyGasWaterSimulator(py::module& m)
              std::shared_ptr<Opm::SummaryConfig>,
              const std::vector<std::string>&>(),
              PyGasWaterSimulator_objects_constructor_docstring,
-             py::arg("Deck"), py::arg("EclipseState"), py::arg("Schedule"), py::arg("SummaryConfig"),  
+             py::arg("Deck"), py::arg("EclipseState"), py::arg("Schedule"), py::arg("SummaryConfig"),
              py::arg("args") = std::vector<std::string>{})
         .def("advance", &PyBaseSimulator<TypeTag>::advance, advance_docstring, py::arg("report_step"))
         .def("check_simulation_finished", &PyBaseSimulator<TypeTag>::checkSimulationFinished,
@@ -169,6 +174,7 @@ void export_PyGasWaterSimulator(py::module& m)
         .def("step_cleanup", &PyBaseSimulator<TypeTag>::stepCleanup, stepCleanup_docstring)
         .def("step_init", &PyGasWaterSimulator::stepInit, stepInit_docstring);
 }
+
 
 } // namespace Opm::Pybind
 

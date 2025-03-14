@@ -19,6 +19,8 @@
 
 #include "config.h"
 #include <opm/simulators/flow/python/PyBaseSimulator.hpp>
+#include <opm/simulators/flow/TTagFlowProblemGasWater.hpp>
+#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
 
 namespace py = pybind11;
 
@@ -271,5 +273,8 @@ PyBaseSimulator<TypeTag>::getMaterialState() const
 // {
 
 // }
+
+template class PyBaseSimulator<Opm::Properties::TTag::FlowProblemTPFA>;
+template class PyBaseSimulator<Opm::Properties::TTag::FlowGasWaterProblem>;
 
 }  // namespace Opm::Pybind

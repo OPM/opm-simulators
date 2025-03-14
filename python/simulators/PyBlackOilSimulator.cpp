@@ -105,38 +105,11 @@ void export_PyBlackOilSimulator(py::module& m)
 {
     using namespace Opm::Pybind::DocStrings;
     using TypeTag = Opm::Properties::TTag::FlowProblemTPFA;
-
-    py::class_<PyBaseSimulator<TypeTag> > (m, "BaseSimulatorBO")
-        .def(py::init<const std::string&,
-            const std::vector<std::string>&>())
-        .def(py::init<
-            std::shared_ptr<Opm::Deck>,
-            std::shared_ptr<Opm::EclipseState>,
-            std::shared_ptr<Opm::Schedule>,
-            std::shared_ptr<Opm::SummaryConfig>,
-            const std::vector<std::string>&>())
-        .def("advance", &PyBaseSimulator<TypeTag>::advance, advance_docstring, py::arg("report_step"))
-        .def("check_simulation_finished", &PyBaseSimulator<TypeTag>::checkSimulationFinished,
-                checkSimulationFinished_docstring)
-        .def("current_step", &PyBaseSimulator<TypeTag>::currentStep, currentStep_docstring)
-        .def("get_cell_volumes", &PyBaseSimulator<TypeTag>::getCellVolumes, getCellVolumes_docstring)
-        .def("get_dt", &PyBaseSimulator<TypeTag>::getDT, getDT_docstring)
-        // .def("get_fluidstate_variable", &PyBaseSimulator<TypeTag>::getFluidStateVariable,
-        //     py::return_value_policy::copy, getFluidStateVariable_docstring, py::arg("name"))
-        .def("get_porosity", &PyBaseSimulator<TypeTag>::getPorosity, getPorosity_docstring)
-        .def("get_primary_variable_meaning", &PyBaseSimulator<TypeTag>::getPrimaryVarMeaning,
-            py::return_value_policy::copy, getPrimaryVarMeaning_docstring, py::arg("variable"))
-        .def("get_primary_variable_meaning_map", &PyBaseSimulator<TypeTag>::getPrimaryVarMeaningMap,
-            py::return_value_policy::copy, getPrimaryVarMeaningMap_docstring, py::arg("variable"))
-        .def("get_primary_variable", &PyBaseSimulator<TypeTag>::getPrimaryVariable,
-            py::return_value_policy::copy, getPrimaryVariable_docstring, py::arg("variable"))
-        .def("set_porosity", &PyBaseSimulator<TypeTag>::setPorosity, setPorosity_docstring, py::arg("array"))
-        .def("set_primary_variable", &PyBaseSimulator<TypeTag>::setPrimaryVariable,
-            py::arg("variable"), setPrimaryVariable_docstring, py::arg("value"))
-        .def("setup_mpi", &PyBaseSimulator<TypeTag>::setupMpi, setupMpi_docstring, py::arg("init"), py::arg("finalize"))
-        .def("step", &PyBaseSimulator<TypeTag>::step, step_docstring)
-        .def("step_cleanup", &PyBaseSimulator<TypeTag>::stepCleanup, stepCleanup_docstring);
-
+    py::class_<PyBaseSimulator<TypeTag>>(
+        m,
+        "_BaseSimulatorBO",
+        py::module_local()
+    );
     py::class_<PyBlackOilSimulator, PyBaseSimulator<TypeTag> >(m, "BlackOilSimulator")
         .def(py::init<const std::string&,
                       const std::vector<std::string>&>(),
@@ -151,30 +124,31 @@ void export_PyBlackOilSimulator(py::module& m)
              PyBlackOilSimulator_objects_constructor_docstring,
              py::arg("Deck"), py::arg("EclipseState"), py::arg("Schedule"), py::arg("SummaryConfig"),
              py::arg("args") = std::vector<std::string>{})
-        // .def("advance", &PyBaseSimulator<TypeTag>::advance, advance_docstring, py::arg("report_step"))
-        // .def("check_simulation_finished", &PyBaseSimulator<TypeTag>::checkSimulationFinished,
-        //      checkSimulationFinished_docstring)
-        // .def("current_step", &PyBaseSimulator<TypeTag>::currentStep, currentStep_docstring)
-        // .def("get_cell_volumes", &PyBaseSimulator<TypeTag>::getCellVolumes, getCellVolumes_docstring)
-        // .def("get_dt", &PyBaseSimulator<TypeTag>::getDT, getDT_docstring)
-        // .def("get_fluidstate_variable", &PyBaseSimulator<TypeTag>::getFluidStateVariable,
-        //     py::return_value_policy::copy, getFluidStateVariable_docstring, py::arg("name"))
-        // .def("get_porosity", &PyBaseSimulator<TypeTag>::getPorosity, getPorosity_docstring)
-        // .def("get_primary_variable_meaning", &PyBaseSimulator<TypeTag>::getPrimaryVarMeaning,
-        //     py::return_value_policy::copy, getPrimaryVarMeaning_docstring, py::arg("variable"))
-        // .def("get_primary_variable_meaning_map", &PyBaseSimulator<TypeTag>::getPrimaryVarMeaningMap,
-        //     py::return_value_policy::copy, getPrimaryVarMeaningMap_docstring, py::arg("variable"))
-        // .def("get_primary_variable", &PyBaseSimulator<TypeTag>::getPrimaryVariable,
-        //     py::return_value_policy::copy, getPrimaryVariable_docstring, py::arg("variable"))
+        .def("advance", &PyBaseSimulator<TypeTag>::advance, advance_docstring, py::arg("report_step"))
+        .def("check_simulation_finished", &PyBaseSimulator<TypeTag>::checkSimulationFinished,
+             checkSimulationFinished_docstring)
+        .def("current_step", &PyBaseSimulator<TypeTag>::currentStep, currentStep_docstring)
+        .def("get_cell_volumes", &PyBaseSimulator<TypeTag>::getCellVolumes, getCellVolumes_docstring)
+        .def("get_dt", &PyBaseSimulator<TypeTag>::getDT, getDT_docstring)
+        .def("get_fluidstate_variable", &PyBaseSimulator<TypeTag>::getFluidStateVariable,
+            py::return_value_policy::copy, getFluidStateVariable_docstring, py::arg("name"))
+        .def("get_porosity", &PyBaseSimulator<TypeTag>::getPorosity, getPorosity_docstring)
+        .def("get_primary_variable_meaning", &PyBaseSimulator<TypeTag>::getPrimaryVarMeaning,
+            py::return_value_policy::copy, getPrimaryVarMeaning_docstring, py::arg("variable"))
+        .def("get_primary_variable_meaning_map", &PyBaseSimulator<TypeTag>::getPrimaryVarMeaningMap,
+            py::return_value_policy::copy, getPrimaryVarMeaningMap_docstring, py::arg("variable"))
+        .def("get_primary_variable", &PyBaseSimulator<TypeTag>::getPrimaryVariable,
+            py::return_value_policy::copy, getPrimaryVariable_docstring, py::arg("variable"))
         .def("run", &PyBlackOilSimulator::run, run_docstring)
-        // .def("set_porosity", &PyBaseSimulator<TypeTag>::setPorosity, setPorosity_docstring, py::arg("array"))
-        // .def("set_primary_variable", &PyBaseSimulator<TypeTag>::setPrimaryVariable,
-        //     py::arg("variable"), setPrimaryVariable_docstring, py::arg("value"))
-        // .def("setup_mpi", &PyBaseSimulator<TypeTag>::setupMpi, setupMpi_docstring, py::arg("init"), py::arg("finalize"))
-        // .def("step", &PyBaseSimulator<TypeTag>::step, step_docstring)
-        // .def("step_cleanup", &PyBaseSimulator<TypeTag>::stepCleanup, stepCleanup_docstring)
+        .def("set_porosity", &PyBaseSimulator<TypeTag>::setPorosity, setPorosity_docstring, py::arg("array"))
+        .def("set_primary_variable", &PyBaseSimulator<TypeTag>::setPrimaryVariable,
+            py::arg("variable"), setPrimaryVariable_docstring, py::arg("value"))
+        .def("setup_mpi", &PyBaseSimulator<TypeTag>::setupMpi, setupMpi_docstring, py::arg("init"), py::arg("finalize"))
+        .def("step", &PyBaseSimulator<TypeTag>::step, step_docstring)
+        .def("step_cleanup", &PyBaseSimulator<TypeTag>::stepCleanup, stepCleanup_docstring)
         .def("step_init", &PyBlackOilSimulator::stepInit, stepInit_docstring);
 }
+
 
 } // namespace Opm::Pybind
 
