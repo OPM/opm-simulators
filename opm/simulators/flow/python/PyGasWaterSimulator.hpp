@@ -17,16 +17,16 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
-#define OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
+#ifndef OPM_PY_GAS_WATER_SIMULATOR_HEADER_INCLUDED
+#define OPM_PY_GAS_WATER_SIMULATOR_HEADER_INCLUDED
 
-#include <python/simulators/PyMain.hpp>
+#include <python/simulators/PyMainGW.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/FlowMain.hpp>
-#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
+#include <opm/simulators/flow/TTagFlowProblemGasWater.hpp>
 #include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
 #include <opm/simulators/flow/python/Pybind11Exporter.hpp>
@@ -42,16 +42,16 @@
 
 namespace Opm::Pybind {
 
-class PyBlackOilSimulator
+class PyGasWaterSimulator
 {
 private:
-    using TypeTag = Opm::Properties::TTag::FlowProblemTPFA;
+    using TypeTag = Opm::Properties::TTag::FlowGasWaterProblem;
     using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
 public:
-    PyBlackOilSimulator(const std::string& deckFilename,
+    PyGasWaterSimulator(const std::string& deckFilename,
                         const std::vector<std::string>& args);
-    PyBlackOilSimulator(
+    PyGasWaterSimulator(
         std::shared_ptr<Opm::Deck> deck,
         std::shared_ptr<Opm::EclipseState> state,
         std::shared_ptr<Opm::Schedule> schedule,
@@ -93,7 +93,7 @@ private:
     // This *must* be declared before other pointers
     // to simulator objects. This in order to deinitialize
     // MPI at the correct time (ie after the other objects).
-    std::unique_ptr<Opm::PyMain> main_;
+    std::unique_ptr<Opm::PyMainGW> main_;
 
     std::unique_ptr<Opm::FlowMain<TypeTag>> flow_main_;
     Simulator* simulator_;

@@ -10,3 +10,4 @@
 #  but could be possible future extensions..
 #
 from .simulators import BlackOilSimulator
+from .simulators import GasWaterSimulator
