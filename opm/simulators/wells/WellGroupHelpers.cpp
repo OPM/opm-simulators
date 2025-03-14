@@ -1329,11 +1329,14 @@ control_group(const Group& group,
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
 
     if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
-        const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
-        return control_group(parent,
-                             group_state,
-                             reportStepIdx,
-                             schedule);
+        const auto& parent_name = group.control_group();
+        if (parent_name) {
+            const auto& parent = schedule.getGroup(parent_name.value(), reportStepIdx);
+            return control_group(parent,
+                                group_state,
+                                reportStepIdx,
+                                schedule);
+        }
     }
 
     return group.name();
