@@ -629,15 +629,15 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
                           "");
     }
 
-    ss << fmt::format("{:>6}:{:>6}:{:>6}:",
+    ss << fmt::format("{:>6}:{:>6}:{:>6}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:",
                       wellInjNames[WellInjDataType::CTRLModeOil],
                       wellInjNames[WellInjDataType::CTRLModeWat],
-                      wellInjNames[WellInjDataType::CTRLModeGas]);
-    ss << std::setprecision(1)
-       << std::setw(11) << wellInj[WellInjDataType::OilRate]          << ':'
-       << std::setw(11) << wellInj[WellInjDataType::WaterRate]        << ':'
-       << std::setw(11) << wellInj[WellInjDataType::GasRate]          << ':'
-       << std::setw(11) << wellInj[WellInjDataType::FluidResVol]      << ':';
+                      wellInjNames[WellInjDataType::CTRLModeGas],
+                      wellInj[WellInjDataType::OilRate],
+                      wellInj[WellInjDataType::WaterRate],
+                      wellInj[WellInjDataType::GasRate],
+                      wellInj[WellInjDataType::FluidResVol]);
+    ss << std::setprecision(1);
 
     if (! isWellRecord) {
         ss << std::setw(8) << "" << ':' << std::setw(8) << "" << ':'; //wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
