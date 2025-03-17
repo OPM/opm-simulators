@@ -20,8 +20,6 @@
 #ifndef OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
 #define OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
 
-#include <python/simulators/PyMainBO.hpp>
-
 #include <opm/simulators/flow/python/PyBaseSimulator.hpp>
 #include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
 
@@ -49,15 +47,6 @@ public:
     : BaseType(deck, state, schedule, summary_config, args)
     {}
 
-    int run();
-    int stepInit();
-
-private:
-    //bool debug_ = false;
-    // This *must* be declared before other pointers
-    // to simulator objects. This in order to deinitialize
-    // MPI at the correct time (ie after the other objects).
-    std::unique_ptr<Opm::PyMainBO> main_;
 };
 
 } // namespace Opm::Pybind

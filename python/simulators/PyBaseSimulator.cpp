@@ -22,6 +22,30 @@
 #include <opm/simulators/flow/TTagFlowProblemGasWater.hpp>
 #include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
 
+namespace Opm {
+template<class TypeTag>
+std::unique_ptr<FlowMain<TypeTag>>
+flowMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    return std::make_unique<FlowMain<TypeTag>>(argc, argv, outputCout, outputFiles);
+}
+
+// Explicit instantiation of the above flowMainInit() for the two problem types
+template std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
+flowMainInit<Properties::TTag::FlowProblemTPFA>(
+    int argc, char** argv, bool outputCout, bool outputFiles
+);
+template std::unique_ptr<FlowMain<Properties::TTag::FlowGasWaterProblem>>
+flowMainInit<Properties::TTag::FlowGasWaterProblem>(
+    int argc, char** argv, bool outputCout, bool outputFiles
+);
+
+}  // namespace Opm
+
 namespace py = pybind11;
 
 namespace Opm::Pybind {
@@ -49,8 +73,8 @@ PyBaseSimulator<TypeTag>::PyBaseSimulator(
 {
 }
 
-// Public methods
-// --------------
+// Public methods alphabetically sorted
+// ------------------------------------
 template<class TypeTag>
 void PyBaseSimulator<TypeTag>::advance(int report_step)
 {
@@ -96,7 +120,7 @@ py::array_t<double> PyBaseSimulator<TypeTag>::getPorosity()
 }
 
 template<class TypeTag>
-py::array_t<double> 
+py::array_t<double>
 PyBaseSimulator<TypeTag>::
 getFluidStateVariable(const std::string &name) const
 {
@@ -196,36 +220,58 @@ int PyBaseSimulator<TypeTag>::stepCleanup()
     return getFlowMain().executeStepsCleanup();
 }
 
-// void PyBaseSimulator<TypeTag>::initMain()
-// {
-//     if (this->has_run_init_) {
-//         // Running step_init() multiple times is not implemented yet,
-//         if (this->has_run_cleanup_) {
-//             throw std::logic_error("step_init() called again");
-//         }
-//         else {
-//             return EXIT_SUCCESS;
-//         }
-//     }
-//     if (this->deck_) {
-//         this->main_ = std::make_unique<Opm::PyBaseMain>(
-//             this->deck_->getDataFile(),
-//             this->eclipse_state_,
-//             this->schedule_,
-//             this->summary_config_,
-//             this->mpi_init_,
-//             this->mpi_finalize_
-//         );
-//     }
-//     else {
-//         this->main_ = std::make_unique<Opm::PyBaseMain>(
-//             this->deck_filename_,
-//             this->mpi_init_,
-//             this->mpi_finalize_
-//         );
-//     }
-//     this->main_->setArguments(args_);
-// }
+template<class TypeTag>
+int PyBaseSimulator<TypeTag>::stepInit()
+{
+
+    if (this->has_run_init_) {
+        // Running step_init() multiple times is not implemented yet,
+        if (this->has_run_cleanup_) {
+            throw std::logic_error("step_init() called again");
+        }
+        else {
+            return EXIT_SUCCESS;
+        }
+    }
+    if (this->deck_) {
+        this->main_ = std::make_unique<Opm::PyMain<TypeTag>>(
+            this->deck_->getDataFile(),
+            this->eclipse_state_,
+            this->schedule_,
+            this->summary_config_,
+            this->mpi_init_,
+            this->mpi_finalize_
+        );
+    }
+    else {
+        this->main_ = std::make_unique<Opm::PyMain<TypeTag>>(
+            this->deck_filename_,
+            this->mpi_init_,
+            this->mpi_finalize_
+        );
+    }
+    this->main_->setArguments(args_);
+    int exit_code = EXIT_SUCCESS;
+    this->flow_main_ = this->main_->initFlowBlackoil(exit_code);
+    if (this->flow_main_) {
+        int result = this->flow_main_->executeInitStep();
+        this->has_run_init_ = true;
+        this->simulator_ = this->flow_main_->getSimulatorPtr();
+        this->fluid_state_ = std::make_unique<PyFluidState<TypeTag>>(this->simulator_);
+        this->material_state_ = std::make_unique<PyMaterialState<TypeTag>>(this->simulator_);
+        return result;
+    }
+    else {
+        return exit_code;
+    }
+}
+
+template<class TypeTag>
+int PyBaseSimulator<TypeTag>::run()
+{
+    auto main_object = Opm::Main( this->deck_filename_ );
+    return main_object.runStatic<TypeTag>();
+}
 
 // Private methods
 // ---------------
@@ -268,12 +314,9 @@ PyBaseSimulator<TypeTag>::getMaterialState() const
     }
 }
 
-// Exported functions
-// void export_PyBaseSimulator(py::module& m)
-// {
-
-// }
-
+// NOTE: We need the below explicit instantiations or else the the symbols
+//       will not be available in the shared library and we will get
+//       undefined symbol errors when trying to import the module in Python.
 template class PyBaseSimulator<Opm::Properties::TTag::FlowProblemTPFA>;
 template class PyBaseSimulator<Opm::Properties::TTag::FlowGasWaterProblem>;
 

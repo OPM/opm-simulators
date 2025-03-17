@@ -20,13 +20,8 @@
 #ifndef OPM_PY_GAS_WATER_SIMULATOR_HEADER_INCLUDED
 #define OPM_PY_GAS_WATER_SIMULATOR_HEADER_INCLUDED
 
-#include <python/simulators/PyMainGW.hpp>
-
 #include <opm/simulators/flow/python/PyBaseSimulator.hpp>
 #include <opm/simulators/flow/TTagFlowProblemGasWater.hpp>
-
-#include <flow/flow_gaswater.hpp>
-
 #include <memory>
 
 namespace Opm::Pybind {
@@ -47,18 +42,10 @@ public:
                         std::shared_ptr<Opm::EclipseState> state,
                         std::shared_ptr<Opm::Schedule> schedule,
                         std::shared_ptr<Opm::SummaryConfig> summary_config,
-                        const std::vector<std::string>& args)   
+                        const std::vector<std::string>& args)
     : BaseType(deck, state, schedule, summary_config, args)
     {}
 
-    int run();
-    int stepInit();
-
-private:
-    // // This *must* be declared before other pointers
-    // // to simulator objects. This in order to deinitialize
-    // // MPI at the correct time (ie after the other objects).
-    std::unique_ptr<Opm::PyMainGW> main_;
 };
 
 } // namespace Opm::Pybind

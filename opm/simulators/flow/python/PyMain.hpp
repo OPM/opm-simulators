@@ -20,14 +20,14 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_PYMAINGW_HEADER_INCLUDED
-#define OPM_PYMAINGW_HEADER_INCLUDED
+#ifndef OPM_PYMAINBO_HEADER_INCLUDED
+#define OPM_PYMAINBO_HEADER_INCLUDED
 
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/flow/TTagFlowProblemGasWater.hpp>
+#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
 
-#include <flow/flow_gaswater.hpp>
+#include <flow/flow_blackoil.hpp>
 
 #include <cstddef>
 #include <cstdlib>
@@ -36,13 +36,17 @@
 #include <vector>
 
 namespace Opm {
+template <class TypeTag>
+std::unique_ptr<FlowMain<TypeTag>> flowMainInit(int argc, char** argv,
+                                                bool outputCout,
+                                                bool outputFiles);
 
-// ----------------- Python Main class -----------------
 // Adds a python-only initialization method
-class PyMainGW : public Main
+template<class TypeTag>
+class PyMain : public Main
 {
 public:
-    using FlowMainType = FlowMain<Properties::TTag::FlowGasWaterProblem>;
+    using FlowMainType = FlowMain<TypeTag>;
 
     using Main::Main;
 
@@ -74,7 +78,7 @@ public:
     // initialization and then return a pointer to the FlowMain object that
     // can later be accessed directly from the Python interface to
     // e.g. advance the simulator one report step
-    std::unique_ptr<FlowMainType> initFlowGasWater(int& exitCode)
+    std::unique_ptr<FlowMainType> initFlowBlackoil(int& exitCode)
     {
         exitCode = EXIT_SUCCESS;
 
@@ -83,8 +87,7 @@ public:
             // case. E.g. check that number of phases == 3
             this->setupVanguard();
 
-            return flowGasWaterMainInit
-                (argc_, argv_, outputCout_, outputFiles_);
+            return flowMainInit<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
         }
 
         // NOTE: exitCode was set by initialize_() above;
@@ -97,4 +100,4 @@ private:
 
 } // namespace Opm
 
-#endif // OPM_PYMAINGW_HEADER_INCLUDED
+#endif // OPM_PYMAINBO_HEADER_INCLUDED

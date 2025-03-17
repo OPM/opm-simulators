@@ -27,78 +27,10 @@
 #include <stdexcept>
 #include <string>
 
-namespace Opm {
-
-std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
-flowBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
-{
-    // we always want to use the default locale, and thus spare us the trouble
-    // with incorrect locale settings.
-    resetLocale();
-
-    return std::make_unique<FlowMain<Properties::TTag::FlowProblemTPFA>>(
-        argc, argv, outputCout, outputFiles);
-}
-
-}
-
 namespace py = pybind11;
 
 namespace Opm::Pybind {
 
-// Public methods alphabetically sorted
-// ------------------------------------
-
-int PyBlackOilSimulator::run()
-{
-    auto main_object = Opm::Main( this->deck_filename_ );
-    return main_object.runStatic<Opm::Properties::TTag::FlowProblemTPFA>();
-}
-
-int PyBlackOilSimulator::stepInit()
-{
-
-    if (this->has_run_init_) {
-        // Running step_init() multiple times is not implemented yet,
-        if (this->has_run_cleanup_) {
-            throw std::logic_error("step_init() called again");
-        }
-        else {
-            return EXIT_SUCCESS;
-        }
-    }
-    if (this->deck_) {
-        this->main_ = std::make_unique<Opm::PyMainBO>(
-            this->deck_->getDataFile(),
-            this->eclipse_state_,
-            this->schedule_,
-            this->summary_config_,
-            this->mpi_init_,
-            this->mpi_finalize_
-        );
-    }
-    else {
-        this->main_ = std::make_unique<Opm::PyMainBO>(
-            this->deck_filename_,
-            this->mpi_init_,
-            this->mpi_finalize_
-        );
-    }
-    this->main_->setArguments(args_);
-    int exit_code = EXIT_SUCCESS;
-    this->flow_main_ = this->main_->initFlowBlackoil(exit_code);
-    if (this->flow_main_) {
-        int result = this->flow_main_->executeInitStep();
-        this->has_run_init_ = true;
-        this->simulator_ = this->flow_main_->getSimulatorPtr();
-        this->fluid_state_ = std::make_unique<PyFluidState<TypeTag>>(this->simulator_);
-        this->material_state_ = std::make_unique<PyMaterialState<TypeTag>>(this->simulator_);
-        return result;
-    }
-    else {
-        return exit_code;
-    }
-}
 
 // Exported functions
 void export_PyBlackOilSimulator(py::module& m)
@@ -139,14 +71,14 @@ void export_PyBlackOilSimulator(py::module& m)
             py::return_value_policy::copy, getPrimaryVarMeaningMap_docstring, py::arg("variable"))
         .def("get_primary_variable", &PyBaseSimulator<TypeTag>::getPrimaryVariable,
             py::return_value_policy::copy, getPrimaryVariable_docstring, py::arg("variable"))
-        .def("run", &PyBlackOilSimulator::run, run_docstring)
+        .def("run", &PyBaseSimulator<TypeTag>::run, run_docstring)
         .def("set_porosity", &PyBaseSimulator<TypeTag>::setPorosity, setPorosity_docstring, py::arg("array"))
         .def("set_primary_variable", &PyBaseSimulator<TypeTag>::setPrimaryVariable,
             py::arg("variable"), setPrimaryVariable_docstring, py::arg("value"))
         .def("setup_mpi", &PyBaseSimulator<TypeTag>::setupMpi, setupMpi_docstring, py::arg("init"), py::arg("finalize"))
         .def("step", &PyBaseSimulator<TypeTag>::step, step_docstring)
         .def("step_cleanup", &PyBaseSimulator<TypeTag>::stepCleanup, stepCleanup_docstring)
-        .def("step_init", &PyBlackOilSimulator::stepInit, stepInit_docstring);
+        .def("step_init", &PyBaseSimulator<TypeTag>::stepInit, stepInit_docstring);
 }
 
 

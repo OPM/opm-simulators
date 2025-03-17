@@ -26,6 +26,7 @@
 
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
+#include <opm/simulators/flow/python/PyMain.hpp>
 #include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
 #include <opm/simulators/flow/python/Pybind11Exporter.hpp>
@@ -68,7 +69,7 @@ public:
     py::array_t<double> getPrimaryVariable(const std::string &variable) const;
     py::array_t<int> getPrimaryVarMeaning(const std::string &variable) const;
     std::map<std::string, int> getPrimaryVarMeaningMap(const std::string &variable) const;
-    // int run();
+    int run();
     void setPorosity(
          py::array_t<double, py::array::c_style | py::array::forcecast> array);
     void setPrimaryVariable(
@@ -78,6 +79,8 @@ public:
     void setupMpi(bool init_mpi, bool finalize_mpi);
     int step();
     int stepCleanup();
+    int stepInit();
+
     // void initMain();
 
 protected:
@@ -91,11 +94,12 @@ protected:
     bool mpi_init_ = true;
     bool mpi_finalize_ = true;
     //bool debug_ = false;
-    // This *must* be declared before other pointers
-    // to simulator objects. This in order to deinitialize
-    // MPI at the correct time (ie after the other objects).
-    // std::unique_ptr<Opm::PyBaseMain> main_;
 
+    // NOTE: the main_ pointer *must* be declared before the flow_main_ pointer
+    // to ensure that it is destroyed before the main object since the main object
+    // destructor will call MPI_Finalize() and flow_main_ object destructor will call
+    // MPI_Comm_free().
+    std::unique_ptr<Opm::PyMain<TypeTag>> main_;
     std::unique_ptr<Opm::FlowMain<TypeTag>> flow_main_;
     Simulator* simulator_;
     std::unique_ptr<PyFluidState<TypeTag>> fluid_state_;
