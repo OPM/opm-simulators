@@ -105,6 +105,18 @@ std::string producerCModeToString(const Opm::WellProducerCMode cmode)
     return cmodeStr;
 }
 
+template<class Array>
+std::string formatBorder(const Array& widths)
+{
+    std::string ss;
+    std::for_each(widths.begin(), widths.end(),
+                  [&ss](const auto w)
+                  { ss += fmt::format(":{:->{}}", "", w); });
+    ss += ':';
+
+    return ss;
+}
+
 } // Namespace anonymous
 
 namespace Opm {
@@ -603,9 +615,8 @@ void LogOutputHelper<Scalar>::beginInjectionReport_() const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::endInjectionReport_() const
 {
-    const auto ss = std::string { ":--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:" };
-
-    OpmLog::note(ss);
+    const auto widths = std::array{8, 11, 6, 6, 6, 11, 11, 11, 11, 8, 8};
+    OpmLog::note(formatBorder(widths));
 }
 
 template<class Scalar>
