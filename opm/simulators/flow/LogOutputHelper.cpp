@@ -32,13 +32,14 @@
 #include <opm/simulators/utils/PressureAverage.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
-#include <fmt/format.h>
-
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
+#include <string_view>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace {
 
@@ -113,6 +114,19 @@ std::string formatBorder(const Array& widths)
                   [&ss](const auto w)
                   { ss += fmt::format(":{:->{}}", "", w); });
     ss += ':';
+
+    return ss;
+}
+
+template<std::size_t size>
+std::string formatTextRow(const std::array<int, size>& widths,
+                          const std::array<std::string_view, size>& entries)
+{
+    std::string ss;
+    std::for_each(widths.begin(), widths.end(),
+                  [&entries, &ss, i = 0](const auto w) mutable
+                  { ss += fmt::format(":{:^{}}", entries[i++], w); });
+    ss += ":\n";
 
     return ss;
 }
@@ -592,22 +606,98 @@ outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
 template <typename Scalar>
 void LogOutputHelper<Scalar>::beginInjectionReport_() const
 {
-    const auto unitType = this->eclState_.getUnits().getType();
+    const auto& units = this->eclState_.getUnits();
+    const auto widths = std::array{8, 11, 6, 6, 6, 11, 11, 11, 11, 8, 8};
+
+    using namespace std::string_view_literals;
+
+    auto oil_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto wat_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto gas_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSCF/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto res_vol =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "RCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "RB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "RCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+
+    const auto unitStrings = std::array{
+                                ""sv,
+                                ""sv,
+                                "OIL"sv,
+                                "WAT"sv,
+                                "GAS"sv,
+                                oil_rate(),
+                                wat_rate(),
+                                gas_rate(),
+                                res_vol(),
+                                std::string_view{units.name(UnitSystem::measure::pressure)},
+                                std::string_view{units.name(UnitSystem::measure::pressure)},
+                             };
 
     std::ostringstream ss;
-    ss << "\n=================================================== INJECTION REPORT ========================================\n"//===================== \n"
-       << ":  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :\n"// STEADY-ST II       :\n"
-       << ":  NAME  :  (I,J,K)  : MODE : MODE : MODE :    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.:\n";// OR POTENTIAL       :\n";
-
-    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << ":        :           : OIL  : WAT  : GAS  :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  BARSA :  BARSA :\n";//                    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-        ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n";
-    }
-
-    ss << "=============================================================================================================";//=====================";
+    ss << fmt::format("\n{:=^109}\n", " INJECTION REPORT ")
+       << formatTextRow(widths,
+                        std::array{
+                            "WELL"sv,
+                            "LOCATION"sv,
+                            "CTRL"sv,
+                            "CTRL"sv,
+                            "CTRL"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "FLUID"sv,
+                            "BHP OR"sv,
+                            "THP OR"sv,
+                        })
+       << formatTextRow(widths,
+                        std::array{
+                            "NAME"sv,
+                            "(I,J,K)"sv,
+                            "MODE"sv,
+                            "MODE"sv,
+                            "MODE"sv,
+                            "RATE"sv,
+                            "RATE"sv,
+                            "RATE"sv,
+                            "RES.VOL."sv,
+                            "CON.PR."sv,
+                            "BLK.PR."sv,
+                        })
+       << formatTextRow(widths, unitStrings)
+       << fmt::format("{:=>109}", "");
 
     OpmLog::note(ss.str());
 }
