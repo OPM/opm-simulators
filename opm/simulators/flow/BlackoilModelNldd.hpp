@@ -380,6 +380,17 @@ public:
         return report;
     }
 
+    void logWells()
+    {
+        for (size_t i = 0; i < domain_reports_accumulated_.size(); ++i) {
+            auto& domain_report = domain_reports_accumulated_[i];
+            domain_report.success.num_wells = 0;
+        }
+        for (const auto& [wname, domain] : wellModel_.well_domain()) {
+            domain_reports_accumulated_[domain].success.num_wells++;
+        }
+    }
+
     /// return the statistics of local solves accumulated for this rank
     const SimulatorReport& localAccumulatedReports() const
     {
@@ -387,8 +398,9 @@ public:
     }
 
     /// return the statistics of local solves accumulated for each domain on this rank
-    const std::vector<SimulatorReport>& domainAccumulatedReports() const
+    std::vector<SimulatorReport>& domainAccumulatedReports()
     {
+        logWells();
         return domain_reports_accumulated_;
     }
 
@@ -469,6 +481,14 @@ private:
         local_reports_accumulated_.success.num_domains = num_domains;
         local_reports_accumulated_.success.num_overlap_cells = overlap_cells;
         local_reports_accumulated_.success.num_owned_cells = owned_cells;
+
+        // Set statistics for each domain report
+        for (size_t i = 0; i < domain_reports_accumulated_.size(); ++i) {
+            auto& domain_report = domain_reports_accumulated_[i];
+            domain_report.success.num_domains = 1;
+            domain_report.success.num_overlap_cells = 0;
+            domain_report.success.num_owned_cells = domains_[i].cells.size();
+        }
 
         // Gather data from all ranks
         std::vector<int> all_owned(comm.size());
