@@ -618,7 +618,6 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
 
     std::ostringstream ss;
     ss << fmt::format(":{:<8}:", wellInjNames[WellInjDataType::WellName]);
-    ss << std::right << std::fixed << std::setprecision(0) << std::setw(8);
 
     if (! isWellRecord) {
         ss << fmt::format("{:11}:", "");
@@ -637,13 +636,13 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
                       wellInj[WellInjDataType::WaterRate],
                       wellInj[WellInjDataType::GasRate],
                       wellInj[WellInjDataType::FluidResVol]);
-    ss << std::setprecision(1);
 
     if (! isWellRecord) {
-        ss << std::setw(8) << "" << ':' << std::setw(8) << "" << ':'; //wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
+        ss << fmt::format("{0:8}:{0:8}:", "");
     } else {
-        ss << std::setw(8) << wellInj[WellInjDataType::BHP] << ':'
-           << std::setw(8) << wellInj[WellInjDataType::THP] << ':'; //wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
+        ss << fmt::format("{:>8.1f}:{:>8.1f}:",
+                          wellInj[WellInjDataType::BHP],
+                          wellInj[WellInjDataType::THP]);
     }
 
     OpmLog::note(ss.str());
