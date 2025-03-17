@@ -1018,65 +1018,73 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
     }
 
     const UnitSystem& units = eclState_.getUnits();
+    const auto widths = std::array{25, 43, 16, 43};
+
+    auto topEntry = [&units](const char* text,
+                             const Scalar value,
+                             const UnitSystem::measure m)
+    {
+        return fmt::format("{0: >52}:{0: >8}{1:<5}={2:>14.0f}  {3:<18}:\n",
+                           "", text, value, units.name(m));
+    };
+
+    auto topLabel = [](const char* text)
+    {
+        return fmt::format("{: >52}: {:^47}:\n", "", text);
+    };
+
+    auto formatEntry = [](auto& fip, std::string_view label)
+    {
+        return fmt::format(":{:<25}:{:^15.0f}{:^14.0f}{:^14.0f}:{:^16.0f}:"
+                           "{:^15.0f}{:^14.0f}{:^14.0f}:\n",
+                           label,
+                           fip[Inplace::Phase::OilInLiquidPhase],
+                           fip[Inplace::Phase::OilInGasPhase],
+                           fip[Inplace::Phase::OIL],
+                           fip[Inplace::Phase::WATER],
+                           fip[Inplace::Phase::GasInGasPhase],
+                           fip[Inplace::Phase::GasInLiquidPhase],
+                           fip[Inplace::Phase::GAS]);
+    };
+
     std::ostringstream ss;
-
-    ss << '\n';
-
+    ss << fmt::format("\n{0: >52}{0:=>50}\n", "");
     if (reg == 0) {
-        ss << "                                                     ==================================================\n"
-           << "                                                     :               FIELD TOTALS                     :\n";
+        ss << fmt::format("{0: >52}:{1:^48}:\n", "", "FIELD TOTALS");
     }
     else {
-        ss << "                                                     ==================================================\n"
-           << "                                                     :        " << name << " REPORT REGION  "
-           << std::setw(8 - name.size()) << reg << "                :\n";
+        ss << fmt::format("{0: >52}:{1:>20} REPORT REGION {2:>{3}}{0: ^11}:\n",
+                          "", name, reg, 8 - name.size());
     }
-    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << "                                                     :         PAV = " << std::setw(14) << pav << " BARSA             :\n"
-           << std::fixed << std::setprecision(0)
-           << "                                                     :         PORV= " << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "  RM3              :\n";
-        if (!reg) {
-            ss << "                                                     : Pressure is weighted by hydrocarbon pore volume:\n"
-               << "                                                     : Porv volumes are taken at reference conditions :\n";
-        }
-        ss << "                           :--------------- OIL    SM3 ----------------:-- WAT    SM3 --:--------------- GAS    SM3  ---------------:\n";
-    } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << std::fixed << std::setprecision(0) 
-           << "                                                     :         PAV =" << std::setw(14) << pav << "  PSIA              :\n"
-           << std::fixed << std::setprecision(0)
-           << "                                                     :         PORV=" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RB               :\n";
-        if (!reg) {
-            ss << "                                                     : Pressure is weighted by hydrocarbon pore volume:\n"
-               << "                                                     : Pore volumes are taken at reference conditions :\n";
-        }
-        ss << "                           :--------------- OIL    STB ----------------:-- WAT    STB --:--------------- GAS   MSCF ----------------:\n";
+    ss << topEntry("PAV", pav, UnitSystem::measure::pressure)
+       << topEntry("PORV", cip[Inplace::Phase::PoreVolume], UnitSystem::measure::volume);
+    if (!reg) {
+        ss << topLabel("Pressure is weighted by hydrocarbon pore volume")
+           << topLabel("Pore volumes are taken at reference conditions");
     }
-    ss << "                           :      LIQUID        VAPOUR         TOTAL   :      TOTAL     :       FREE      DISSOLVED         TOTAL   :" << "\n"
-       << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:" << "\n"
-       << " :CURRENTLY IN PLACE       :" << std::setw(14) << cip[Inplace::Phase::OilInLiquidPhase]
-       << std::setw(14) << cip[Inplace::Phase::OilInGasPhase]
-       << std::setw(15) << cip[Inplace::Phase::OIL] << ":"
-       << std::setw(14) << cip[Inplace::Phase::WATER] << "  :"
-       << std::setw(14) << (cip[Inplace::Phase::GasInGasPhase])
-       << std::setw(14) << cip[Inplace::Phase::GasInLiquidPhase]
-       << std::setw(15) << cip[Inplace::Phase::GAS] << ":\n"
-       << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:\n"
-       << " :ORIGINALLY IN PLACE      :" << std::setw(14) << oip[Inplace::Phase::OilInLiquidPhase]
-       << std::setw(14) << oip[Inplace::Phase::OilInGasPhase]
-       << std::setw(15) << oip[Inplace::Phase::OIL] << ":"
-       << std::setw(14) << oip[Inplace::Phase::WATER] << "  :"
-       << std::setw(14) << oip[Inplace::Phase::GasInGasPhase]
-       << std::setw(14) << oip[Inplace::Phase::GasInLiquidPhase]
-       << std::setw(15) << oip[Inplace::Phase::GAS] << ":\n";
-    
-    if (reg == 0){
-       ss << " ====================================================================================================================================\n\n";
-    
-    } else {
-       ss << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:\n";
-       ss << " ====================================================================================================================================\n\n";
+
+    ss << fmt::format("{0: >26}:{0:->15} OIL {1:>4} {0:->18}:"
+                      "-- WAT{0: >2} {1:>4} --:{0:->14}  GAS{0: >3} {2:>4} {0:-^15}:\n",
+                      "",
+                      units.name(UnitSystem::measure::liquid_surface_volume),
+                      units.name(UnitSystem::measure::gas_surface_volume))
+       << fmt::format("{0: >26}:{1:^15}{2:^14}{3:^14}:{3:^16}:{4:^15}{5:^14}{3:^14}:\n",
+                      "",
+                      "LIQUID",
+                      "VAPOUR",
+                      "TOTAL",
+                      "FREE",
+                      "DISSOLVED")
+       << formatBorder(widths) << '\n'
+       << formatEntry(cip, "CURRENTLY IN PLACE")
+       << formatBorder(widths) << '\n'
+       << formatEntry(oip, "ORIGINALLY IN PLACE");
+
+    if (reg != 0) {
+        ss << formatBorder(widths) << '\n';
     }
-       
+    ss << fmt::format("{:=^132}\n\n", "");
+
     OpmLog::note(ss.str());
 }
 
