@@ -289,16 +289,16 @@ BOOST_FIXTURE_TEST_CASE(FipResv, LogNoteFixture)
 {
     const auto reference = std::string {
         R"(
-                                                     ===================================
-                                                     :  RESERVOIR VOLUMES      RB      :
- :---------:---------------:---------------:---------------:---------------:---------------:
- : REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :
- :         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :
- :         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :
- :---------:---------------:---------------:---------------:---------------:---------------
- :   FIELD :            176:             13:             19:             25:             38:
- :       1 :            176:            170:            164:            176:            346:
- ===========================================================================================
+                                                    ===================================
+                                                    :  RESERVOIR VOLUMES      RB      :
+:---------:---------------:---------------:---------------:---------------:---------------:
+: REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  :  PORE VOLUME  :  PORE VOLUME  :
+:         :    VOLUME     :  CONTAINING   :  CONTAINING   :  CONTAINING   :  CONTAINING   :
+:         :               :      OIL      :     WATER     :      GAS      : HYDRO-CARBON  :
+:---------:---------------:---------------:---------------:---------------:---------------:
+:FIELD    :            176:             13:             19:             25:             38:
+:1        :            176:            170:            164:            176:            346:
+===========================================================================================
 )"
     };
 
