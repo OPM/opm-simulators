@@ -551,9 +551,8 @@ void LogOutputHelper<Scalar>::beginCumulativeReport_() const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::endCumulativeReport_() const
 {
-    const auto ss = std::string { ":--------:-----------:--------:----:-----------:-----------:-----------:-----------:-----------:-----------:-----------:-----------:" };
-
-    OpmLog::note(ss);
+    const auto widths = std::array{8, 11, 8, 4, 11, 11, 11, 11, 11, 11, 11, 11};
+    OpmLog::note(formatBorder(widths));
 }
 
 template<class Scalar>
