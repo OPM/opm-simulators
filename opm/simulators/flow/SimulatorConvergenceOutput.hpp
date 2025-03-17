@@ -32,19 +32,20 @@
 
 namespace Opm {
 
-class EclipseState;
-struct StepReport;
+    class EclipseState;
+    struct StepReport;
+
+} // namespace Opm
+
+namespace Opm {
 
 /// Class handling convergence history output for a simulator.
 class SimulatorConvergenceOutput
 {
 public:
-    explicit SimulatorConvergenceOutput(const EclipseState& eclState)
-        : eclState_(eclState)
-    {}
-
-    void startThread(std::string_view convOutputOptions,
-                     std::string_view optionName,
+    void startThread(const EclipseState& eclState,
+                     std::string_view    convOutputOptions,
+                     std::string_view    optionName,
                      ConvergenceOutputThread::ComponentToPhaseName getPhaseName);
 
     void write(const std::vector<StepReport>& reports);
@@ -52,9 +53,7 @@ public:
     void endThread();
 
 private:
-    const EclipseState& eclState_;
-
-    std::size_t already_reported_steps_ = 0;
+    std::vector<StepReport>::size_type alreadyReportedSteps_ = 0;
 
     std::optional<ConvergenceReportQueue> convergenceOutputQueue_{};
     std::optional<ConvergenceOutputThread> convergenceOutputObject_{};
