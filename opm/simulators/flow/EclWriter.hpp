@@ -402,6 +402,7 @@ public:
                 outputModule_->outputProdLog(rstep - 1, rpt.at("WELLS") > 1);
                 outputModule_->outputInjLog(rstep - 1, rpt.at("WELLS") > 1);
                 outputModule_->outputCumLog(rstep - 1, rpt.at("WELLS") > 1);
+                outputModule_->outputMSWLog(rstep - 1);
             }
 
             outputModule_->outputFipAndResvLog(inplace_,

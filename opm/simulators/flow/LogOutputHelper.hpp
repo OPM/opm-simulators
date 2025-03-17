@@ -39,6 +39,7 @@ class EclipseState;
 class Inplace;
 class Schedule;
 class SummaryState;
+class Well;
 
 template<class Scalar>
 class LogOutputHelper {
@@ -67,6 +68,9 @@ public:
     //! \brief Write injection report to output.
     void injection(const std::size_t reportStepNum,
                    const std::map<std::pair<std::string,int>, double>& block_pressures) const;
+
+    //! \brief Write msw report to output.
+    void msw(const std::size_t reportStepNum) const;
 
     //! \brief Write production report to output.
     void production(const std::size_t reportStepNum,
@@ -106,6 +110,10 @@ private:
     void outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
                                       const std::vector<std::string>& wellInjNames,
                                       const std::vector<ConnData>& connData) const;
+
+    void beginMSWReport_() const;
+    void endMSWReport_() const;
+    void outputMSWReportRecord_(const Well& well) const;
 
     void beginProductionReport_() const;
     void endProductionReport_() const;
