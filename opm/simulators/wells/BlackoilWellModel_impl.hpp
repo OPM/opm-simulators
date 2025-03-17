@@ -1194,15 +1194,15 @@ namespace Opm {
         bool do_network_update = true;
         bool well_group_control_changed = false;
         // after certain number of the iterations, we use relaxed tolerance for the network update
-        const std::size_t iteration_to_relax = param_.network_max_strict_iterations_;
+        const std::size_t iteration_to_relax = param_.network_max_strict_outer_iterations_;
         // after certain number of the iterations, we terminate
         const std::size_t max_iteration = param_.network_max_outer_iterations_;
         std::size_t network_update_iteration = 0;
-        const int episodeIdx = simulator_.episodeIndex();
-        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         while (do_network_update) {
             if (network_update_iteration >= max_iteration ) {
                 // only output to terminal if we at the last newton iterations where we try to balance the network.
+                const int episodeIdx = simulator_.episodeIndex();
+                const int iterationIdx = simulator_.model().newtonMethod().numIterations();
                 if (this->shouldBalanceNetwork(episodeIdx, iterationIdx + 1)) {
                     local_deferredLogger.debug("maximum of " + std::to_string(max_iteration) + " network iterations has been used, we stop the update \n "
                                                 " and try again after the next newton iteration.");
@@ -1237,7 +1237,7 @@ namespace Opm {
                                           DeferredLogger& local_deferredLogger)
     {
         OPM_TIMEFUNCTION();
-        auto [well_group_control_changed, inner_network_not_balanced] =
+        auto [well_group_control_changed, more_inner_network_update] =
                 updateWellControls(mandatory_network_balance,
                                    local_deferredLogger,
                                    relax_network_tolerance);
@@ -1282,8 +1282,8 @@ namespace Opm {
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
-        bool more_network_update = this->shouldBalanceNetwork(reportStepIdx, iterationIdx) &&
-                    (inner_network_not_balanced || well_group_control_changed || alq_updated);
+        const bool more_network_update = this->shouldBalanceNetwork(reportStepIdx, iterationIdx) &&
+                    (more_inner_network_update || well_group_control_changed || alq_updated);
         return {more_network_update, well_group_control_changed};
     }
 
@@ -1448,6 +1448,10 @@ namespace Opm {
 
                 for (auto& well : this->well_container_) {
                     std::string well_name = well->name();
+
+                    if (well->isInjector() || !well->wellEcl().predictionMode())
+                        continue;
+
                     if (group.hasWell(well_name)) {
                         well->setDynamicThpLimit(well_group_thp);
                     }

@@ -301,7 +301,7 @@ public:
     bool check_group_constraints_inner_well_iterations_; 
 
     /// Maximum number of iterations in the network solver before relaxing tolerance
-    int network_max_strict_iterations_;
+    int network_max_strict_outer_iterations_;
 
     /// Maximum number of iterations in the network solver before giving up
     int network_max_outer_iterations_;

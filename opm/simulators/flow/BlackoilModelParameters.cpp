@@ -96,7 +96,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     local_domain_partition_imbalance_ = std::max(Scalar{1.0}, Parameters::Get<Parameters::LocalDomainsPartitioningImbalance<Scalar>>());
     local_domain_partition_method_ = Parameters::Get<Parameters::LocalDomainsPartitioningMethod>();
     deck_file_name_ = Parameters::Get<Parameters::EclDeckFileName>();
-    network_max_strict_iterations_ = Parameters::Get<Parameters::NetworkMaxStrictOuterIterations>();
+    network_max_strict_outer_iterations_ = Parameters::Get<Parameters::NetworkMaxStrictOuterIterations>();
     network_max_outer_iterations_ = Parameters::Get<Parameters::NetworkMaxOuterIterations>();
     network_max_sub_iterations_ = Parameters::Get<Parameters::NetworkMaxSubIterations>();
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
