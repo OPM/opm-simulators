@@ -894,31 +894,33 @@ outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
 
     std::ostringstream ss;
 
-    ss << std::right << std::fixed << ':'
-       << std::setw(8) << wellProdNames[WellProdDataType::WellName] << ':';
+    ss << fmt::format(":{:<8}:", wellProdNames[WellProdDataType::WellName]);
 
     if (! isWellRecord) {
-        ss << std::setprecision(0) << std::setw(11) << "" << ':';
+        ss << fmt::format("{:11}:", "");
     } else {
-        ss << std::setprecision(0)
-           << std::setw(5) << wellProd[WellProdDataType::WellLocationi] << ','
-           << std::setw(5) << wellProd[WellProdDataType::WellLocationj] << ':';
+        ss << fmt::format("{:>3},{:>3} {:>3}:",
+                          wellProd[WellProdDataType::WellLocationi] ,
+                          wellProd[WellProdDataType::WellLocationj],
+                          "");
     }
 
-    ss << std::setw( 4) << wellProdNames[WellProdDataType::CTRLMode] << ':' << std::setprecision(1)
-       << std::setw(11) << wellProd[WellProdDataType::OilRate]       << ':'
-       << std::setw(11) << wellProd[WellProdDataType::WaterRate]     << ':'
-       << std::setw(11) << wellProd[WellProdDataType::GasRate]       << ':'
-       << std::setw(11) << wellProd[WellProdDataType::FluidResVol]   << ':' << std::setprecision(3)
-       << std::setw(11) << wellProd[WellProdDataType::WaterCut]      << ':' << std::setprecision(2)
-       << std::setw(10) << wellProd[WellProdDataType::GasOilRatio]   << ':' << std::setprecision(4)
-       << std::setw(12) << wellProd[WellProdDataType::WatGasRatio]   << ':' << std::setprecision(1);
+    ss << fmt::format("{:>4}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.3f}:{:>10.2f}:{:>12.4f}:",
+                      wellProdNames[WellProdDataType::CTRLMode],
+                      wellProd[WellProdDataType::OilRate],
+                      wellProd[WellProdDataType::WaterRate],
+                      wellProd[WellProdDataType::GasRate],
+                      wellProd[WellProdDataType::FluidResVol],
+                      wellProd[WellProdDataType::WaterCut],
+                      wellProd[WellProdDataType::GasOilRatio],
+                      wellProd[WellProdDataType::WatGasRatio]);
 
     if (! isWellRecord) {
-        ss << std::setw(8) << "" << ':' << std::setw(8) << "" << ':';
+        ss << fmt::format("{0:8}:{0:8}:", "");
     } else {
-        ss << std::setw(8) << wellProd[WellProdDataType::BHP] << ':'
-           << std::setw(8) << wellProd[WellProdDataType::THP] << ':';
+        ss << fmt::format("{:>8.1f}:{:>8.1f}:",
+                          wellProd[WellProdDataType::BHP],
+                          wellProd[WellProdDataType::THP]);
     }
 
     OpmLog::note(ss.str());
