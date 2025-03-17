@@ -621,10 +621,12 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
     ss << std::right << std::fixed << std::setprecision(0) << std::setw(8);
 
     if (! isWellRecord) {
-        ss << std::setw(11) << "" << ':';
+        ss << fmt::format("{:11}:", "");
     } else {
-        ss << std::setw( 5) << wellInj[WellInjDataType::WellLocationi] << ','
-           << std::setw( 5) << wellInj[WellInjDataType::WellLocationj] << ':';
+        ss << fmt::format("{:>3},{:>3} {:>3}:",
+                          wellInj[WellInjDataType::WellLocationi],
+                          wellInj[WellInjDataType::WellLocationj],
+                          "");
     }
 
     ss << std::setw( 6) << wellInjNames[WellInjDataType::CTRLModeOil] << ':'
