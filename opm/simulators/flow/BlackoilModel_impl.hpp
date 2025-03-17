@@ -997,6 +997,16 @@ domainAccumulatedReports() const
 template <class TypeTag>
 void
 BlackoilModel<TypeTag>::
+writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const
+{
+    if (hasNlddSolver()) {
+        nlddSolver_->writeNonlinearIterationsPerCell(odir);
+    }
+}
+
+template <class TypeTag>
+void
+BlackoilModel<TypeTag>::
 writePartitions(const std::filesystem::path& odir) const
 {
     if (hasNlddSolver()) {

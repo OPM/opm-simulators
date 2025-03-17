@@ -393,6 +393,10 @@ namespace Opm {
         {
             if (simulator_->model().hasNlddSolver()) {
                 {
+                    // Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
+                    const auto& odir = eclState().getIOConfig().getOutputDir();
+                    simulator_->model().writeNonlinearIterationsPerCell(odir);
+
                     // Create a deferred logger and add the report with rank as tag
                     DeferredLogger local_log;
                     std::ostringstream ss;

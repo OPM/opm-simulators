@@ -456,6 +456,65 @@ public:
         }
     }
 
+    /// Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
+    void writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const
+    {
+        const auto& elementMapper = this->model_.simulator().model().elementMapper();
+        const auto& cartMapper = this->model_.simulator().vanguard().cartesianIndexMapper();
+        const auto& dims = cartMapper.cartesianDimensions();
+        const auto total_size = dims[0] * dims[1] * dims[2];
+
+        const auto& grid = this->model_.simulator().vanguard().grid();
+        const auto& comm = grid.comm();
+
+        // Create a cell-to-iterations mapping for this process
+        std::vector<int> cell_iterations(grid.size(0), 0);
+
+        // Populate the mapping with iteration counts for each domain
+        for (size_t domain_idx = 0; domain_idx < domains_.size(); ++domain_idx) {
+            const auto& domain = domains_[domain_idx];
+            const auto& report = domain_reports_accumulated_[domain_idx];
+            const int iterations = report.success.total_newton_iterations + 
+                                 report.failure.total_newton_iterations;
+
+            for (const int cell_idx : domain.cells) {
+                cell_iterations[cell_idx] = iterations;
+            }
+        }
+
+        // Create a full-sized vector initialized with zeros (indicating inactive cells)
+        auto full_iterations = std::vector<int>(total_size, 0);
+
+        // Convert local cell indices to cartesian indices
+        const auto& gridView = grid.leafGridView();
+        for (const auto& cell : elements(gridView, Dune::Partitions::interior)) {
+            const int cell_idx = elementMapper.index(cell);
+            const int cart_idx = cartMapper.cartesianIndex(cell_idx);
+            full_iterations[cart_idx] = cell_iterations[cell_idx];
+        }
+
+        // Gather all iteration data using max operation
+        comm.max(full_iterations.data(), full_iterations.size());
+
+        // Only rank 0 writes the file
+        if (this->rank_ == 0) {
+            auto fname = odir / "ResInsight_nonlinear_iterations.txt";
+            std::ofstream resInsightFile { fname };
+            if (!resInsightFile) {
+                OPM_THROW(std::runtime_error,
+                          "Failed to open NLDD nonlinear iterations output file: " + fname.string());
+            }
+            // Write header
+            resInsightFile << "NLDD_ITER" << '\n';
+
+            // Write all cells, including inactive ones
+            for (const auto& val : full_iterations) {
+                resInsightFile << val << '\n';
+            }
+            resInsightFile << "/" << '\n';
+        }
+    }
+
 private:
     void printDomainDistributionSummary(const std::vector<int>& partition_vector)
     {
