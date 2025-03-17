@@ -351,7 +351,6 @@ template<class Scalar>
 void LogOutputHelper<Scalar>::
 timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const
 {
-
     std::ostringstream ss;
     boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
     ss.imbue(std::locale(std::locale::classic(), facet));
@@ -775,22 +774,8 @@ void LogOutputHelper<Scalar>::beginProductionReport_() const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::endProductionReport_() const
 {
-    std::ostringstream ss;
-
-    ss << ':' << std::setfill ('-') << std::setw (9) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw ( 5) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (11) << ':'
-       << std::setfill ('-') << std::setw (13) << ':'
-       << std::setfill ('-') << std::setw ( 9) << ':'
-       << std::setfill ('-') << std::setw ( 9) << ':';
-
-    OpmLog::note(ss.str());
+    const auto widths = std::array{8, 11, 4, 11, 11, 11, 11, 11, 10, 12, 8, 8};
+    OpmLog::note(formatBorder(widths));
 }
 
 template<class Scalar>
