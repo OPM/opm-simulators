@@ -689,14 +689,15 @@ public:
      * TODO: The API of this is a bit ad-hoc, it would be better to use context objects.
      */
     template <class LhsEval>
-    LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants) const
+    LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
         OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier);
         if (!enableSaltPrecipitation)
             return 1.0;
 
         const auto& fs = intQuants.fluidState();
-        unsigned tableIdx = fs.pvtRegionIndex();
+        unsigned tableIdx = this->simulator().problem().satnumRegionIndex(elementIdx);
+        
         LhsEval porosityFactor = decay<LhsEval>(1. - fs.saltSaturation());
         porosityFactor = min(porosityFactor, 1.0);
         const auto& permfactTable = BrineModule::permfactTable(tableIdx);
