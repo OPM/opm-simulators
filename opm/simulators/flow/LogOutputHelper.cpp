@@ -640,38 +640,41 @@ outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
 {
     std::ostringstream ss;
 
-    ss << std::right << std::fixed << std::setprecision(0) << ':'
-       << std::setw(8) << wellCumNames[WellCumDataType::WellName] << ':';
+    ss << fmt::format(":{:<8}:", wellCumNames[WellCumDataType::WellName]);
 
     if (wellCum[WellCumDataType::WellLocationi] < 1) {
-        ss << std::setw(11) <<  "" << ':';
+        ss << fmt::format("{:11}:", "");
     } else {
-        ss << std::setw( 5) << wellCum[WellCumDataType::WellLocationi] << ','
-           << std::setw( 5) << wellCum[WellCumDataType::WellLocationj] << ':';
+        ss << fmt::format("{:>3},{:>3} {:>3}:",
+                          wellCum[WellCumDataType::WellLocationi],
+                          wellCum[WellCumDataType::WellLocationj],
+                          "");
     }
 
-    auto scaledValue = [&wellCum](const typename WellCumDataType::WCId quantity)
+    auto scaledValue = [&wellCum](const auto quantity)
     {
         // Unit M*
         return wellCum[quantity] / 1000.0;
     };
 
-    auto scaledGasValue = [&wellCum](const typename WellCumDataType::WCId quantity)
+    auto scaledGasValue = [&wellCum](const auto quantity)
     {
         // Unit MM*
         return wellCum[quantity] / (1000.0 * 1000.0);
     };
 
-    ss << std::setw( 8) << wellCumNames[WellCumDataType::WCId::WellType]       << ':'
-       << std::setw( 4) << wellCumNames[WellCumDataType::WCId::WellCTRL]       << ':' << std::setprecision(1)
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::OilProd)         << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::WaterProd)       << ':'
-       << std::setw(11) << scaledGasValue(WellCumDataType::WCId::GasProd)      << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::FluidResVolProd) << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::OilInj)          << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::WaterInj)        << ':'
-       << std::setw(11) << scaledGasValue(WellCumDataType::WCId::GasInj)       << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::FluidResVolInj)  << ':';
+    ss << fmt::format("{:>8}:{:>4}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:"
+                      "{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:",
+                      wellCumNames[WellCumDataType::WCId::WellType],
+                      wellCumNames[WellCumDataType::WCId::WellCTRL],
+                      scaledValue(WellCumDataType::WCId::OilProd),
+                      scaledValue(WellCumDataType::WCId::WaterProd),
+                      scaledGasValue(WellCumDataType::WCId::GasProd),
+                      scaledValue(WellCumDataType::WCId::FluidResVolProd),
+                      scaledValue(WellCumDataType::WCId::OilInj),
+                      scaledValue(WellCumDataType::WCId::WaterInj),
+                      scaledGasValue(WellCumDataType::WCId::GasInj),
+                      scaledValue(WellCumDataType::WCId::FluidResVolInj));
 
     OpmLog::note(ss.str());
 }
