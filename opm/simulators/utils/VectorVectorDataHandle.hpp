@@ -31,6 +31,7 @@
 #include <dune/grid/common/datahandleif.hh>
 
 #include <cstddef>
+#include <utility>
 
 namespace Opm
 {
@@ -45,12 +46,12 @@ namespace Opm
 template<class GridView, class Vector>
 class VectorVectorDataHandle
   : public Dune::CommDataHandleIF<VectorVectorDataHandle<GridView,Vector>,
-                                  std::decay_t<decltype(Vector()[0][0])>>
+                                  std::decay_t<decltype(std::declval<Vector>()[0][0])>> // NVCC needs declval
 {
 public:
 
   /// \brief the data type we send
-  using DataType = std::decay_t<decltype(Vector()[0][0])>;
+  using DataType = std::decay_t<decltype(std::declval<Vector>()[0][0])>;  // NVCC needs declval
 
   /// \brief Constructor
   /// \param data The vector of data vectors
