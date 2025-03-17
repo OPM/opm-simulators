@@ -617,9 +617,8 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
         wellInj[WellProdDataType::WellLocationi] >= 1;
 
     std::ostringstream ss;
-
-    ss << std::right << std::fixed << std::setprecision(0) << ':'
-       << std::setw(8) << wellInjNames[WellInjDataType::WellName] << ':';
+    ss << fmt::format(":{:<8}:", wellInjNames[WellInjDataType::WellName]);
+    ss << std::right << std::fixed << std::setprecision(0) << std::setw(8);
 
     if (! isWellRecord) {
         ss << std::setw(11) << "" << ':';
