@@ -323,13 +323,40 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
 }
 
 template<class Scalar>
-void SingleWellState<Scalar>::
-update_targets(const Well& ecl_well, const SummaryState& st)
+bool SingleWellState<Scalar>::
+update_type_and_targets(const Well& ecl_well, const SummaryState& st)
 {
+    bool switchedToProducer = false;
+    if (this->producer != ecl_well.isProducer()) {
+        // type has changed due to ACTIONX
+        // Make sure that we consistent with the ecl_well
+        switchedToProducer = this->producer = ecl_well.isProducer();
+        if (switchedToProducer) {
+            this->production_cmode = ecl_well.productionControls(st).cmode;
+            // clear injection rates
+            for(auto&& val: this->surface_rates) {
+                if (val > 0.0) {
+                    val = 0.0;
+                }
+            }
+        } else {
+            perf_data.prepareInjectorContainers();
+            this->injection_cmode = ecl_well.injectionControls(st).cmode;
+            // clear production rates
+            for(auto&& val: this->surface_rates) {
+                if (val < 0.0) {
+                    val = 0.0;
+                }
+            }
+        }
+    }
+
     if (this->producer)
         this->update_producer_targets(ecl_well, st);
     else
         this->update_injector_targets(ecl_well, st);
+
+    return switchedToProducer;
 }
 
 template<class Scalar>

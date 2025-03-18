@@ -867,7 +867,10 @@ updateEclWellsConstraints(const int              timeStepIdx,
         auto& ws = this->wellState().well(wellIdx);
 
         ws.updateStatus(well.getStatus());
-        ws.update_targets(well, st);
+        auto switchToProducer = ws.update_type_and_targets(well, st);
+        if (switchToProducer) {
+            this->wellState().switchToProducer(well.name());
+        }
     });
 }
 
