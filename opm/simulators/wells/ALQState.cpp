@@ -42,6 +42,12 @@ ALQState<Scalar> ALQState<Scalar>::serializationTestObject()
 }
 
 template<class Scalar>
+void ALQState<Scalar>::insert(const std::string& wname)
+{
+    this->current_alq_.emplace(wname, 0.0);
+}
+
+template<class Scalar>
 Scalar ALQState<Scalar>::get(const std::string& wname) const
 {
     auto iter = this->current_alq_.find(wname);
