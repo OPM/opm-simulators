@@ -267,8 +267,9 @@ template<class Scalar> class WellContributions;
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
 
-            std::pair<bool, bool>
-            updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
+            bool updateWellControls(DeferredLogger& deferred_logger);
+
+            bool updateNetwork(const bool mandatory_network_balance, const int network_update_iteration, DeferredLogger& deferred_logger);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -416,10 +417,11 @@ template<class Scalar> class WellContributions;
             // the function handles one iteration of updating well controls and network pressures.
             // it is possible to decouple the update of well controls and network pressures further.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
-            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
-                                                                        const bool relax_network_tolerance,
-                                                                        const double dt,
-                                                                        DeferredLogger& local_deferredLogger);
+            bool updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
+                                                       const int network_update_iteration,
+                                                       const double dt,
+                                                       bool& well_group_control_changed,
+                                                       DeferredLogger& local_deferredLogger);
 
             bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
                                               const double dt,
