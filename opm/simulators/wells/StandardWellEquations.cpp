@@ -376,13 +376,13 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             bweights[0][blockSz-1] = 1.0;
             diagElem = 1.0; // better scaling could have used the calculation below if weights were calculated
         } else {
-            for (std::size_t i = 0; i < cell_weights.size(); ++i) {
+            for (std::size_t i = 0; i < blockSz; ++i) {
                 bweights[0][i] = cell_weights[i];
             }
             bweights[0][blockSz-1] = 0.0;
             diagElem = 0.0;
             const auto& locmat = duneD_[0][0];
-            for (std::size_t i = 0; i < cell_weights.size(); ++i) {
+            for (std::size_t i = 0; i < blockSz; ++i) {
                 diagElem += locmat[i][bhp_var_index] * cell_weights[i];
             }
 

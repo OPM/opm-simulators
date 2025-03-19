@@ -1193,8 +1193,7 @@ add_test_compareECLFiles(CASENAME micp
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR micp
-                         TEST_ARGS --linear-solver=ilu0)
+                         DIR micp)
 
 add_test_compareECLFiles(CASENAME 0_base_model6
                          FILENAME 0_BASE_MODEL6
@@ -1223,8 +1222,7 @@ add_test_compareECLFiles(CASENAME base_wt_tracer
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR tracer
-			 RESTART_STEP 1,3,7)
-
+                         RESTART_STEP 1,3,7)
 
 add_test_compareECLFiles(CASENAME min_bhp_1
                          FILENAME MIN_BHP_1
