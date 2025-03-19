@@ -159,6 +159,8 @@ struct ConvergenceMonitoringCutOff { static constexpr int value = 6; };
 template<class Scalar>
 struct ConvergenceMonitoringDecayFactor { static constexpr Scalar value = 0.75; };
 
+struct RelativeChangeVersion { static constexpr auto value = "pressure"; };
+
 template<class Scalar>
 struct NupcolGroupRateTolerance { static constexpr Scalar value = 0.001; };
 
@@ -345,6 +347,9 @@ public:
     };
 
     ConvergenceMonitorParams monitor_params_; //!< Convergence monitoring parameters
+
+    /// Version of relative change used in time step control
+    std::string relative_change_version_;
 
     // Relative tolerance of group rates (VREP, REIN)
     // If violated the nupcol wellstate is updated
