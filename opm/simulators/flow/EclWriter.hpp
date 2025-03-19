@@ -203,7 +203,7 @@ public:
     {
         OPM_TIMEBLOCK(evalSummaryState);
         const int reportStepNum = simulator_.episodeIndex() + 1;
-        
+
         /*
           The summary data is not evaluated for timestep 0, that is
           implemented with a:
@@ -221,7 +221,7 @@ public:
           "Correct" in this context means unchanged behavior, might very
           well be more correct to actually remove this if test.
         */
-        
+
         if (reportStepNum == 0)
             return;
 
@@ -274,22 +274,22 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
                                        this->simulator_.vanguard().grid().comm());
         }
-        
+
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
         Inplace inplace;
-        
+
         {
             OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
 
             inplace = outputModule_->calc_inplace(miscSummaryData, regionData, simulator_.gridView().comm());
-            
+
             if (this->collectOnIORank_.isIORank()){
                 inplace_ = inplace;
             }
         }
-        
+
         // Add TCPU
         if (totalCpuTime != 0.0) {
             miscSummaryData["TCPU"] = totalCpuTime;
@@ -379,28 +379,35 @@ public:
 
             if (this->collectOnIORank_.isIORank()) {
                 inplace_ = inplace;
-                
+
                 outputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time,
                                                   false, simulator_.gridView().comm());
             }
         }
     }
 
-    void writeReports(const SimulatorTimer& timer) {
+    void writeReports(const SimulatorTimer& timer)
+    {
         auto rstep = timer.reportStepNum();
 
-        if ((rstep > 0) && (this->collectOnIORank_.isIORank())){
-
+        if ((rstep > 0) && (this->collectOnIORank_.isIORank())) {
             const auto& rpt = this->schedule_[rstep-1].rpt_config.get();
             if (rpt.contains("WELLS") && rpt.at("WELLS") > 0) {
-                outputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime());
-                outputModule_->outputProdLog(rstep-1);
-                outputModule_->outputInjLog(rstep-1);
-                outputModule_->outputCumLog(rstep-1);
+                outputModule_->outputTimeStamp("WELLS",
+                                               timer.simulationTimeElapsed(),
+                                               rstep,
+                                               timer.currentDateTime());
+                outputModule_->outputProdLog(rstep - 1);
+                outputModule_->outputInjLog(rstep - 1);
+                outputModule_->outputCumLog(rstep - 1);
             }
 
-            outputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
-                                               timer.currentDateTime(), false, simulator_.gridView().comm());
+            outputModule_->outputFipAndResvLog(inplace_,
+                                               rstep,
+                                               timer.simulationTimeElapsed(),
+                                               timer.currentDateTime(),
+                                               false,
+                                               simulator_.gridView().comm());
 
 
             OpmLog::note("");   // Blank line after all reports.
@@ -469,7 +476,7 @@ public:
         if (this->collectOnIORank_.isIORank()) {
             const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
-            std::optional<int> timeStepIdx; 
+            std::optional<int> timeStepIdx;
             if (Parameters::Get<Parameters::EnableWriteAllSolutions>()) {
                 timeStepIdx = simulator_.timeStepIndex();
             }

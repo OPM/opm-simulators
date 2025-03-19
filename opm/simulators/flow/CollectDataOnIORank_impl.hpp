@@ -1017,14 +1017,14 @@ collect(const data::Solution&                                localCellData,
 
     PackUnPackWellData packUnpackWellData {
         localWellData,
-                this->globalWellData_,
-                this->isIORank()
+        this->globalWellData_,
+        this->isIORank()
     };
 
     PackUnPackGroupAndNetworkValues packUnpackGroupAndNetworkData {
         localGroupAndNetworkData,
-                this->globalGroupAndNetworkData_,
-                this->isIORank()
+        this->globalGroupAndNetworkData_,
+        this->isIORank()
     };
 
     PackUnPackBlockData packUnpackBlockData {
@@ -1041,8 +1041,8 @@ collect(const data::Solution&                                localCellData,
 
     PackUnPackAquiferData packUnpackAquiferData {
         localAquiferData,
-                this->globalAquiferData_,
-                this->isIORank()
+        this->globalAquiferData_,
+        this->isIORank()
     };
 
     PackUnPackWellTestState packUnpackWellTestState {
