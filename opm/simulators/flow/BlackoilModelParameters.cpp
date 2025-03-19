@@ -93,15 +93,16 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     local_tolerance_scaling_cnv_ = Parameters::Get<Parameters::LocalToleranceScalingCnv<Scalar>>();
     nldd_num_initial_newton_iter_ = Parameters::Get<Parameters::NlddNumInitialNewtonIter>();
     num_local_domains_ = Parameters::Get<Parameters::NumLocalDomains>();
-    local_domain_partition_imbalance_ = std::max(Scalar{1.0}, Parameters::Get<Parameters::LocalDomainsPartitioningImbalance<Scalar>>());
-    local_domain_partition_method_ = Parameters::Get<Parameters::LocalDomainsPartitioningMethod>();
+    local_domains_partition_imbalance_ = std::max(Scalar{1.0}, Parameters::Get<Parameters::LocalDomainsPartitioningImbalance<Scalar>>());
+    local_domains_partition_method_ = Parameters::Get<Parameters::LocalDomainsPartitioningMethod>();
+    local_domains_partition_well_neighbor_levels_ = Parameters::Get<Parameters::LocalDomainsPartitionWellNeighborLevels>();
     deck_file_name_ = Parameters::Get<Parameters::EclDeckFileName>();
     network_max_strict_outer_iterations_ = Parameters::Get<Parameters::NetworkMaxStrictOuterIterations>();
     network_max_outer_iterations_ = Parameters::Get<Parameters::NetworkMaxOuterIterations>();
     network_max_sub_iterations_ = Parameters::Get<Parameters::NetworkMaxSubIterations>();
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
     network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
-    local_domain_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
+    local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
     monitor_params_.enabled_ = Parameters::Get<Parameters::ConvergenceMonitoring>();
@@ -253,6 +254,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "'zoltan', "
          "'simple', "
          "and the name of a partition file ending with '.partition'.");
+    Parameters::Register<Parameters::LocalDomainsPartitionWellNeighborLevels>
+        ("Number of neighbor levels around wells to include in the same domain during NLDD partitioning");
     Parameters::Register<Parameters::LocalDomainsOrderingMeasure>
         ("Subdomain ordering measure. Allowed values are "
          "'maxpressure', "
