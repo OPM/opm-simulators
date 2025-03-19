@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e # Make sure the script fails if a command fails
 
 # the script is intended to be run like this: bash hipify_file.sh ${PROJECT_BUILD_DIR} ${PROJECT_BINARY_DIR}
 # it should be run automatically on the correct files through cmake
