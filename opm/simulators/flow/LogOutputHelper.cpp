@@ -298,7 +298,6 @@ fip(const Inplace& inplace,
     }
 }
 
-
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 fipResv(const Inplace& inplace, const std::string& name) const
@@ -346,12 +345,10 @@ fipResv(const Inplace& inplace, const std::string& name) const
     OpmLog::note(ss.str());
 }
 
-
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const
 {
-
     std::ostringstream ss;
     boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
     ss.imbue(std::locale(std::locale::classic(), facet));
@@ -365,7 +362,6 @@ timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::
 
     OpmLog::note(ss.str());
 }
-
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
@@ -752,22 +748,131 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
 template <typename Scalar>
 void LogOutputHelper<Scalar>::beginProductionReport_() const
 {
-    const auto unitType = this->eclState_.getUnits().getType();
+    const auto& units = this->eclState_.getUnits();
+    const auto widths = std::array{8, 11, 4, 11, 11, 11, 11, 11, 10, 12, 8, 8};
+
+    using namespace std::string_view_literals;
+
+    auto oil_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto wat_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto gas_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "RCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSCF/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "RCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto res_vol =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/SCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "RB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/SCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto water_cut =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/SCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return ""sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/SCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto gas_oil_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/SCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSCF/STB"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/SCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto wat_gas_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/SCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/MSCF"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/SCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+
+    const auto unitStrings = std::array{
+                                ""sv,
+                                ""sv,
+                                ""sv,
+                                oil_rate(),
+                                wat_rate(),
+                                gas_rate(),
+                                res_vol(),
+                                water_cut(),
+                                gas_oil_rate(),
+                                wat_gas_rate(),
+                                std::string_view{units.name(UnitSystem::measure::pressure)},
+                                std::string_view{units.name(UnitSystem::measure::pressure)},
+                             };
 
     std::ostringstream ss;
-    ss << "\n======================================================= PRODUCTION REPORT =======================================================\n"//=================== \n"
-       << ":  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :\n"// STEADY-ST PI       :\n"
-       << ":  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :    CUT    :  RATIO   :   RATIO    : CON.PR.: BLK.PR.:\n";// OR POTN OF PREF. PH:\n";
-
-    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << ":        :           :    :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  SCM/SCM  :  SCM/SCM :  SCM/SCM   :  BARSA :  BARSA :\n";//                    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << ":        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :\n";//                    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-        ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
-    }
-
-    ss << "=================================================================================================================================";//===================";
+    ss << fmt::format("\n{:=^{}}\n", " PRODUCTION REPORT ", 129)
+       << formatTextRow(widths,
+                        std::array{
+                            "WELL"sv,
+                            "LOCATION"sv,
+                            "CTRL"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "FLUID"sv,
+                            "WATER"sv,
+                            "GAS/OIL"sv,
+                            "WAT/GAS"sv,
+                            "BHP OR"sv,
+                            "THP OR"sv,
+                        })
+       << formatTextRow(widths,
+                        std::array{
+                            "NAME"sv,
+                            "(I,J,K)"sv,
+                            "MODE"sv,
+                            "RATE"sv,
+                            "RATE"sv,
+                            "RATE"sv,
+                            "RES.VOL."sv,
+                            "CUT"sv,
+                            "RATIO"sv,
+                            "RATIO"sv,
+                            "CON.PR."sv,
+                            "BLK.PR."sv,
+                        })
+       << formatTextRow(widths, unitStrings)
+       << fmt::format("{:=>{}}", "", 129);
 
     OpmLog::note(ss.str());
 }
@@ -775,22 +880,8 @@ void LogOutputHelper<Scalar>::beginProductionReport_() const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::endProductionReport_() const
 {
-    std::ostringstream ss;
-
-    ss << ':' << std::setfill ('-') << std::setw (9) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw ( 5) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (11) << ':'
-       << std::setfill ('-') << std::setw (13) << ':'
-       << std::setfill ('-') << std::setw ( 9) << ':'
-       << std::setfill ('-') << std::setw ( 9) << ':';
-
-    OpmLog::note(ss.str());
+    const auto widths = std::array{8, 11, 4, 11, 11, 11, 11, 11, 10, 12, 8, 8};
+    OpmLog::note(formatBorder(widths));
 }
 
 template<class Scalar>
@@ -803,31 +894,33 @@ outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
 
     std::ostringstream ss;
 
-    ss << std::right << std::fixed << ':'
-       << std::setw(8) << wellProdNames[WellProdDataType::WellName] << ':';
+    ss << fmt::format(":{:<8}:", wellProdNames[WellProdDataType::WellName]);
 
     if (! isWellRecord) {
-        ss << std::setprecision(0) << std::setw(11) << "" << ':';
+        ss << fmt::format("{:11}:", "");
     } else {
-        ss << std::setprecision(0)
-           << std::setw(5) << wellProd[WellProdDataType::WellLocationi] << ','
-           << std::setw(5) << wellProd[WellProdDataType::WellLocationj] << ':';
+        ss << fmt::format("{:>3},{:>3} {:>3}:",
+                          wellProd[WellProdDataType::WellLocationi] ,
+                          wellProd[WellProdDataType::WellLocationj],
+                          "");
     }
 
-    ss << std::setw( 4) << wellProdNames[WellProdDataType::CTRLMode] << ':' << std::setprecision(1)
-       << std::setw(11) << wellProd[WellProdDataType::OilRate]       << ':'
-       << std::setw(11) << wellProd[WellProdDataType::WaterRate]     << ':'
-       << std::setw(11) << wellProd[WellProdDataType::GasRate]       << ':'
-       << std::setw(11) << wellProd[WellProdDataType::FluidResVol]   << ':' << std::setprecision(3)
-       << std::setw(11) << wellProd[WellProdDataType::WaterCut]      << ':' << std::setprecision(2)
-       << std::setw(10) << wellProd[WellProdDataType::GasOilRatio]   << ':' << std::setprecision(4)
-       << std::setw(12) << wellProd[WellProdDataType::WatGasRatio]   << ':' << std::setprecision(1);
+    ss << fmt::format("{:>4}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.3f}:{:>10.2f}:{:>12.4f}:",
+                      wellProdNames[WellProdDataType::CTRLMode],
+                      wellProd[WellProdDataType::OilRate],
+                      wellProd[WellProdDataType::WaterRate],
+                      wellProd[WellProdDataType::GasRate],
+                      wellProd[WellProdDataType::FluidResVol],
+                      wellProd[WellProdDataType::WaterCut],
+                      wellProd[WellProdDataType::GasOilRatio],
+                      wellProd[WellProdDataType::WatGasRatio]);
 
     if (! isWellRecord) {
-        ss << std::setw(8) << "" << ':' << std::setw(8) << "" << ':';
+        ss << fmt::format("{0:8}:{0:8}:", "");
     } else {
-        ss << std::setw(8) << wellProd[WellProdDataType::BHP] << ':'
-           << std::setw(8) << wellProd[WellProdDataType::THP] << ':';
+        ss << fmt::format("{:>8.1f}:{:>8.1f}:",
+                          wellProd[WellProdDataType::BHP],
+                          wellProd[WellProdDataType::THP]);
     }
 
     OpmLog::note(ss.str());
