@@ -527,23 +527,101 @@ production(const std::size_t reportStepNum) const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::beginCumulativeReport_() const
 {
-    const auto unitType = this->eclState_.getUnits().getType();
+    const auto& units = this->eclState_.getUnits();
+    const auto widths = std::array{8, 11, 8, 4, 11, 11, 11, 11, 11, 11, 11, 11};
+
+    using namespace std::string_view_literals;
+
+    auto oil_unit =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "MSCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSTB"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "MSCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto wat_unit =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "MSCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSTB"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "MSCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto gas_unit =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "MMSCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MMSCF"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "MMSCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto res_unit =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "MRCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MRB"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "MRCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+
+    const auto unitStrings = std::array{
+                                ""sv,
+                                ""sv,
+                                ""sv,
+                                ""sv,
+                                oil_unit(),
+                                wat_unit(),
+                                gas_unit(),
+                                res_unit(),
+                                oil_unit(),
+                                wat_unit(),
+                                gas_unit(),
+                                res_unit(),
+                             };
 
     std::ostringstream ss;
-
-    ss << "\n=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================\n"
-       << ":  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :\n"
-       << ":  NAME  :  (I,J,K)  :  TYPE  :MODE:    PROD   :   PROD    :    PROD   :  RES.VOL. :    INJ    :   INJ     :    INJ    :  RES.VOL. :\n";
-
-    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << ":        :           :        :    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << ":        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-        ss << ":        :           :        :    :     MSCC  :   MSCC    :    MMSCC  :   MRCC    :    MSCC   :   MSCC    :    MMSCC  :   MRCC    :\n";
-    }
-
-    ss << "====================================================================================================================================";
+    ss << fmt::format("\n{:=^132}\n", " CUMULATIVE PRODUCTION/INJECTION TOTALS ")
+       << formatTextRow(widths,
+                        std::array{
+                            "WELL"sv,
+                            "LOCATION"sv,
+                            "WELL"sv,
+                            "CTRL"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "Prod"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "INJ"sv,
+                        })
+       << formatTextRow(widths,
+                        std::array{
+                            "NAME"sv,
+                            "(I,J,K)"sv,
+                            "TYPE"sv,
+                            "MODE"sv,
+                            "PROD"sv,
+                            "PROD"sv,
+                            "PROD"sv,
+                            "RES.VOL."sv,
+                            "INJ"sv,
+                            "INJ"sv,
+                            "INJ"sv,
+                            "RES.VOL."sv,
+                        })
+       << formatTextRow(widths, unitStrings)
+       << fmt::format("{:=>132}", "");
 
     OpmLog::note(ss.str());
 }
@@ -551,9 +629,8 @@ void LogOutputHelper<Scalar>::beginCumulativeReport_() const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::endCumulativeReport_() const
 {
-    const auto ss = std::string { ":--------:-----------:--------:----:-----------:-----------:-----------:-----------:-----------:-----------:-----------:-----------:" };
-
-    OpmLog::note(ss);
+    const auto widths = std::array{8, 11, 8, 4, 11, 11, 11, 11, 11, 11, 11, 11};
+    OpmLog::note(formatBorder(widths));
 }
 
 template<class Scalar>
@@ -563,38 +640,41 @@ outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
 {
     std::ostringstream ss;
 
-    ss << std::right << std::fixed << std::setprecision(0) << ':'
-       << std::setw(8) << wellCumNames[WellCumDataType::WellName] << ':';
+    ss << fmt::format(":{:<8}:", wellCumNames[WellCumDataType::WellName]);
 
     if (wellCum[WellCumDataType::WellLocationi] < 1) {
-        ss << std::setw(11) <<  "" << ':';
+        ss << fmt::format("{:11}:", "");
     } else {
-        ss << std::setw( 5) << wellCum[WellCumDataType::WellLocationi] << ','
-           << std::setw( 5) << wellCum[WellCumDataType::WellLocationj] << ':';
+        ss << fmt::format("{:>3},{:>3} {:>3}:",
+                          wellCum[WellCumDataType::WellLocationi],
+                          wellCum[WellCumDataType::WellLocationj],
+                          "");
     }
 
-    auto scaledValue = [&wellCum](const typename WellCumDataType::WCId quantity)
+    auto scaledValue = [&wellCum](const auto quantity)
     {
         // Unit M*
         return wellCum[quantity] / 1000.0;
     };
 
-    auto scaledGasValue = [&wellCum](const typename WellCumDataType::WCId quantity)
+    auto scaledGasValue = [&wellCum](const auto quantity)
     {
         // Unit MM*
         return wellCum[quantity] / (1000.0 * 1000.0);
     };
 
-    ss << std::setw( 8) << wellCumNames[WellCumDataType::WCId::WellType]       << ':'
-       << std::setw( 4) << wellCumNames[WellCumDataType::WCId::WellCTRL]       << ':' << std::setprecision(1)
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::OilProd)         << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::WaterProd)       << ':'
-       << std::setw(11) << scaledGasValue(WellCumDataType::WCId::GasProd)      << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::FluidResVolProd) << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::OilInj)          << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::WaterInj)        << ':'
-       << std::setw(11) << scaledGasValue(WellCumDataType::WCId::GasInj)       << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::FluidResVolInj)  << ':';
+    ss << fmt::format("{:>8}:{:>4}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:"
+                      "{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:",
+                      wellCumNames[WellCumDataType::WCId::WellType],
+                      wellCumNames[WellCumDataType::WCId::WellCTRL],
+                      scaledValue(WellCumDataType::WCId::OilProd),
+                      scaledValue(WellCumDataType::WCId::WaterProd),
+                      scaledGasValue(WellCumDataType::WCId::GasProd),
+                      scaledValue(WellCumDataType::WCId::FluidResVolProd),
+                      scaledValue(WellCumDataType::WCId::OilInj),
+                      scaledValue(WellCumDataType::WCId::WaterInj),
+                      scaledGasValue(WellCumDataType::WCId::GasInj),
+                      scaledValue(WellCumDataType::WCId::FluidResVolInj));
 
     OpmLog::note(ss.str());
 }
@@ -840,7 +920,7 @@ void LogOutputHelper<Scalar>::beginProductionReport_() const
                              };
 
     std::ostringstream ss;
-    ss << fmt::format("\n{:=^{}}\n", " PRODUCTION REPORT ", 129)
+    ss << fmt::format("\n{:=^129}\n", " PRODUCTION REPORT ")
        << formatTextRow(widths,
                         std::array{
                             "WELL"sv,
@@ -872,7 +952,7 @@ void LogOutputHelper<Scalar>::beginProductionReport_() const
                             "BLK.PR."sv,
                         })
        << formatTextRow(widths, unitStrings)
-       << fmt::format("{:=>{}}", "", 129);
+       << fmt::format("{:=>129}", "");
 
     OpmLog::note(ss.str());
 }

@@ -133,15 +133,15 @@ END
 BOOST_FIXTURE_TEST_CASE(Cumulative, LogNoteFixture)
 {
     const auto reference = std::string {
-        R"(=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================
-:  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :
-:  NAME  :  (I,J,K)  :  TYPE  :MODE:    PROD   :   PROD    :    PROD   :  RES.VOL. :    INJ    :   INJ     :    INJ    :  RES.VOL. :
-:        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :
+        R"(============================================== CUMULATIVE PRODUCTION/INJECTION TOTALS ==============================================
+:  WELL  : LOCATION  :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :    INJ    :
+:  NAME  :  (I,J,K)  :  TYPE  :MODE:   PROD    :   PROD    :   PROD    : RES.VOL.  :    INJ    :    INJ    :    INJ    : RES.VOL.  :
+:        :           :        :    :   MSTB    :   MSTB    :   MMSCF   :    MRB    :   MSTB    :   MSTB    :   MMSCF   :    MRB    :
 ====================================================================================================================================
-:   FIELD:           :        :    :        1.0:        2.0:        3.0:        4.0:        5.0:        6.0:        7.0:        8.0:
-:      G1:           :        :    :        9.0:       10.0:       11.0:       12.0:       13.0:       14.0:       15.0:       15.0:
-:    PROD:   10,   10:    PROD:ORAT:       16.0:       17.0:       18.0:       19.0:       20.0:       21.0:       22.0:       23.0:
-:     INJ:    1,    1:     INJ:GRAT:       24.0:       25.0:       26.0:       27.0:       28.0:       29.0:       30.0:       31.0:
+:FIELD   :           :        :    :        1.0:        2.0:        3.0:        4.0:        5.0:        6.0:        7.0:        8.0:
+:G1      :           :        :    :        9.0:       10.0:       11.0:       12.0:       13.0:       14.0:       15.0:       15.0:
+:PROD    : 10, 10    :    PROD:ORAT:       16.0:       17.0:       18.0:       19.0:       20.0:       21.0:       22.0:       23.0:
+:INJ     :  1,  1    :     INJ:GRAT:       24.0:       25.0:       26.0:       27.0:       28.0:       29.0:       30.0:       31.0:
 :--------:-----------:--------:----:-----------:-----------:-----------:-----------:-----------:-----------:-----------:-----------:
 )"
     };
