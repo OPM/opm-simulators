@@ -4,6 +4,7 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 # Set absolute tolerance to be used passed to the macros in the following tests
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
+set(moderate_rel_tol 1e-3)
 set(coarse_rel_tol 1e-2)
 
 add_test_compareECLFiles(CASENAME spe1flowexp
@@ -106,37 +107,39 @@ add_test_compareECLFiles(CASENAME spe1_precsalt
                          REL_TOL ${rel_tol}
                          DIR spe1_precsalt)
 
+set(network_test_args --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-target-newton-iterations=15 --time-step-control-growth-rate=3.0 --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1e-3 --max-newton-iterations-with-inner-well-iterations=15)
+
 add_test_compareECLFiles(CASENAME network_balance_01
-		                 FILENAME NETWORK-01
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true)
+	                 FILENAME NETWORK-01
+	                 SIMULATOR flow
+	                 ABS_TOL ${abs_tol}
+	                 REL_TOL ${moderate_rel_tol}
+	                 DIR network
+	                 TEST_ARGS ${network_test_args})
 
 add_test_compareECLFiles(CASENAME network_standard
-		                 FILENAME NETWORK-01_STANDARD
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true)
+	                 FILENAME NETWORK-01_STANDARD
+	                 SIMULATOR flow
+	                 ABS_TOL ${abs_tol}
+	                 REL_TOL ${moderate_rel_tol}
+	                 DIR network
+	                 TEST_ARGS ${network_test_args})
 
 add_test_compareECLFiles(CASENAME network_01_reroute
-		                 FILENAME NETWORK-01-REROUTE
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+	                 FILENAME NETWORK-01-REROUTE
+	                 SIMULATOR flow
+	                 ABS_TOL ${abs_tol}
+	                 REL_TOL ${rel_tol}
+	                 DIR network
+	                 TEST_ARGS ${network_test_args})
 
 add_test_compareECLFiles(CASENAME network_01_reroute_std
-		                 FILENAME NETWORK-01-REROUTE_STD
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+	                 FILENAME NETWORK-01-REROUTE_STD
+	                 SIMULATOR flow
+	                 ABS_TOL ${abs_tol}
+	                 REL_TOL ${rel_tol}
+	                 DIR network
+	                 TEST_ARGS ${network_test_args})
 
 add_test_compareECLFiles(CASENAME gas_precsalt
                          FILENAME GASWATER_VAPWAT_PRECSALT
