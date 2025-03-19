@@ -1475,7 +1475,7 @@ forceShutWellByName(const std::string& wellname,
                         continue;
                 }
             }
-            wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+            wellTestState().close_well(wellname, WellTestConfig::Reason::CONVERGENCE, simulation_time);
             well_was_shut = 1;
             break;
         }
@@ -1824,10 +1824,7 @@ getWellsForTesting(const int timeStepIdx,
                    const double simulationTime)
 {
   const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
-  if (!wtest_config.empty()) { // there is a WTEST request
-      return wellTestState().test_wells(wtest_config, simulationTime);
-  } else
-      return {};
+  return wellTestState().test_wells(wtest_config, simulationTime);
 }
 
 template<class Scalar>
