@@ -49,7 +49,8 @@ public:
                     const std::string& moduleVersionName);
 
     //! \brief Write cumulative production and injection reports to output.
-    void cumulative(const std::size_t reportStepNum) const;
+    void cumulative(const std::size_t reportStepNum,
+                    const bool withConns) const;
 
     //! \brief Write error report to output.
     void error(const std::vector<int>& failedCellsPbub,
@@ -88,7 +89,8 @@ private:
     void beginCumulativeReport_() const;
     void endCumulativeReport_() const;
     void outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
-                                       const std::vector<std::string>& wellCumNames) const;
+                                       const std::vector<std::string>& wellCumNames,
+                                       const std::vector<ConnData>& connData) const;
 
     void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
                                    std::unordered_map<Inplace::Phase, Scalar> cip,

@@ -200,9 +200,10 @@ accumulateDensityParallel()
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
-outputCumLog(std::size_t reportStepNum)
+outputCumLog(std::size_t reportStepNum,
+             const bool connData)
 {
-    this->logOutput_.cumulative(reportStepNum);
+    this->logOutput_.cumulative(reportStepNum, connData);
 }
 
 template<class FluidSystem>

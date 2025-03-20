@@ -99,7 +99,8 @@ public:
     void accumulateDensityParallel();
 
     // write cumulative production and injection reports to output
-    void outputCumLog(std::size_t reportStepNum);
+    void outputCumLog(std::size_t reportStepNum,
+                      const bool connData);
 
     // write production report to output
     void outputProdLog(std::size_t reportStepNum,
