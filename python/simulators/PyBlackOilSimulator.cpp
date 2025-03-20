@@ -100,5 +100,10 @@ void export_PyBlackOilSimulator(py::module& m)
         .def("step_init", &PyBaseSimulator<TypeTag>::stepInit, stepInit_docstring);
 }
 
+PYBIND11_MODULE(BlackOil, m)
+{
+    export_PyBlackOilSimulator(m);
+}
+
 } // namespace Opm::Pybind
 

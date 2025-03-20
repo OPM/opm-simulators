@@ -25,8 +25,6 @@
 
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
-
 
 #include <cstddef>
 #include <cstdlib>

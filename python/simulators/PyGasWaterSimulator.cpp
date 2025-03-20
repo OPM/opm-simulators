@@ -127,6 +127,10 @@ void export_PyGasWaterSimulator(py::module& m)
         .def("step_init", &PyBaseSimulator<TypeTag>::stepInit, stepInit_docstring);
 }
 
+PYBIND11_MODULE(GasWater, m)
+{
+    export_PyGasWaterSimulator(m);
+}
 
 } // namespace Opm::Pybind
 

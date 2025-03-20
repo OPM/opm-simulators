@@ -39,14 +39,12 @@ add_custom_command(
 #
 pybind11_add_module(BlackOil ${PYBIND11_SYSTEM}
   $<TARGET_OBJECTS:moduleVersion>
-  Pybind11Exporter.cpp
   PyBlackOilSimulator.cpp
   ${PYTHON_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
 )
 
 pybind11_add_module(GasWater ${PYBIND11_SYSTEM}
   $<TARGET_OBJECTS:moduleVersion>
-  Pybind11Exporter.cpp
   PyGasWaterSimulator.cpp
   ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
   )
