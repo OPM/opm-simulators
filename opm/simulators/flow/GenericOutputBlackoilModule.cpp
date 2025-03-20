@@ -214,9 +214,13 @@ outputProdLog(std::size_t reportStepNum)
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
-outputInjLog(std::size_t reportStepNum)
+outputInjLog(std::size_t reportStepNum,
+             const bool connData)
 {
-    this->logOutput_.injection(reportStepNum);
+    this->logOutput_.injection(reportStepNum,
+                               connData
+                                   ? this->extraBlockData_
+                                   : decltype(this->extraBlockData_){});
 }
 
 template<class FluidSystem>

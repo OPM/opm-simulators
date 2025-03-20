@@ -63,6 +63,15 @@ DZV
   20.0 30.0 50.0 /
 TOPS
   100*8325.0 /
+GRID
+PORO
+  300*0.3 /
+PERMX
+  300*0.3 /
+PERMY
+  300*0.3 /
+PERMZ
+  300*0.3 /
 START        -- 0
 31 AUG 1993 /
 SCHEDULE
@@ -70,6 +79,9 @@ WELSPECS
 -- Item #: 1   2  3 4 5  6
   'PROD'  'G1'  10  10  8400  'OIL' /
   'INJ' 'G1'  1 1 8335  'GAS' /
+/
+COMPDAT
+   'INJ'   1   1   1    1    OPEN     1*    1.172656E+2   0.21600   1*   0.00000   1*   'Z' /
 /
 WCONPROD
 -- Item #:1 2      3     4     5  9
@@ -359,7 +371,57 @@ BOOST_FIXTURE_TEST_CASE(Injection, LogNoteFixture)
     st.update_well_var("INJ", "WTHP", 14.0);
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
-    helper.injection(0);
+    helper.injection(0, {});
+
+    const auto data = trimStream(str);
+    BOOST_CHECK_EQUAL(data, reference);
+}
+
+BOOST_FIXTURE_TEST_CASE(InjectionW2, LogNoteFixture)
+{
+    const auto reference = std::string {
+        R"(============================================= INJECTION REPORT ==============================================
+:  WELL  : LOCATION  : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :
+:  NAME  :  (I,J,K)  : MODE : MODE : MODE :   RATE    :   RATE    :   RATE    : RES.VOL.  :CON.PR. :BLK.PR. :
+:        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  : MSCF/DAY  :  RB/DAY   :  PSIA  :  PSIA  :
+=============================================================================================================
+:FIELD   :           :      :      :      :        1.0:        2.0:        3.0:        4.0:        :        :
+:G1      :           :      :      :      :        5.0:        6.0:        7.0:        8.0:        :        :
+:INJ     :  1,  1    :      :      :  GRAT:        9.0:       10.0:       11.0:       12.0:    13.0:    14.0:
+:  BLOCK :  1,  1,  1:      :      :      :       15.0:       16.0:       17.0:       18.0:    19.0:    20.0:
+:--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:
+)"
+    };
+
+    st.set("FOIR", 1.0);
+    st.set("FWIR", 2.0);
+    st.set("FGIR", 3.0);
+    st.set("FVIR", 4.0);
+
+    st.update_group_var("G1", "GOIR", 5.0);
+    st.update_group_var("G1", "GWIR", 6.0);
+    st.update_group_var("G1", "GGIR", 7.0);
+    st.update_group_var("G1", "GVIR", 8.0);
+
+    st.update_well_var("INJ", "WOIR",  9.0);
+    st.update_well_var("INJ", "WWIR", 10.0);
+    st.update_well_var("INJ", "WGIR", 11.0);
+    st.update_well_var("INJ", "WVIR", 12.0);
+    st.update_well_var("INJ", "WBHP", 13.0);
+    st.update_well_var("INJ", "WTHP", 14.0);
+
+    st.update_conn_var("INJ", "COIR", 1, 15.0);
+    st.update_conn_var("INJ", "CWIR", 1, 16.0);
+    st.update_conn_var("INJ", "CGIR", 1, 17.0);
+    st.update_conn_var("INJ", "CVIR", 1, 18.0);
+    st.update_conn_var("INJ", "CPR", 1, 19.0);
+
+    const auto bprs = std::map<std::pair<std::string,int>,double> {
+        {{"BPR", 1}, eclState.getUnits().to_si(Opm::UnitSystem::measure::pressure, 20.0)},
+    };
+
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
+    helper.injection(0, bprs);
 
     const auto data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
