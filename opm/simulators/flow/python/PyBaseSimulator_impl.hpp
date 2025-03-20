@@ -1,5 +1,5 @@
 /*
-  Copyright 2020 Equinor ASA.
+  Copyright 2025 Equinor ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,36 +16,14 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_PY_BASE_SIMULATOR_IMPL_HEADER_INCLUDED
+#define OPM_PY_BASE_SIMULATOR_IMPL_HEADER_INCLUDED
 
-#include "config.h"
+// Improve IDE experience
+#ifndef OPM_PY_BASE_SIMULATOR_HEADER_INCLUDED
+#include <config.h>
 #include <opm/simulators/flow/python/PyBaseSimulator.hpp>
-#include <opm/simulators/flow/TTagFlowProblemGasWater.hpp>
-#include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
-
-namespace Opm {
-template<class TypeTag>
-std::unique_ptr<FlowMain<TypeTag>>
-flowMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
-{
-    // we always want to use the default locale, and thus spare us the trouble
-    // with incorrect locale settings.
-    resetLocale();
-
-    return std::make_unique<FlowMain<TypeTag>>(argc, argv, outputCout, outputFiles);
-}
-
-// Explicit instantiation of the above flowMainInit() for the two problem types
-template std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
-flowMainInit<Properties::TTag::FlowProblemTPFA>(
-    int argc, char** argv, bool outputCout, bool outputFiles
-);
-template std::unique_ptr<FlowMain<Properties::TTag::FlowGasWaterProblem>>
-flowMainInit<Properties::TTag::FlowGasWaterProblem>(
-    int argc, char** argv, bool outputCout, bool outputFiles
-);
-
-}  // namespace Opm
-
+#endif
 namespace py = pybind11;
 
 namespace Opm::Pybind {
@@ -202,7 +180,7 @@ int PyBaseSimulator<TypeTag>::step()
         throw std::logic_error("step() called before step_init()");
     }
     if (this->has_run_cleanup_) {
-        throw std::logic_error("step() called after step_cleanup()");
+        throw std::logic_error("step() called after step_cleanup().");
     }
     if(checkSimulationFinished()) {
         throw std::logic_error("step() called, but simulation is done");
@@ -314,10 +292,7 @@ PyBaseSimulator<TypeTag>::getMaterialState() const
     }
 }
 
-// NOTE: We need the below explicit instantiations or else the the symbols
-//       will not be available in the shared library and we will get
-//       undefined symbol errors when trying to import the module in Python.
-template class PyBaseSimulator<Opm::Properties::TTag::FlowProblemTPFA>;
-template class PyBaseSimulator<Opm::Properties::TTag::FlowGasWaterProblem>;
 
 }  // namespace Opm::Pybind
+
+#endif // OPM_PY_BASE_SIMULATOR_IMPL_HEADER_INCLUDED

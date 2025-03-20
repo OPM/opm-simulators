@@ -27,7 +27,6 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/TTagFlowProblemTPFA.hpp>
 
-#include <flow/flow_blackoil.hpp>
 
 #include <cstddef>
 #include <cstdlib>
@@ -36,10 +35,17 @@
 #include <vector>
 
 namespace Opm {
-template <class TypeTag>
-std::unique_ptr<FlowMain<TypeTag>> flowMainInit(int argc, char** argv,
-                                                bool outputCout,
-                                                bool outputFiles);
+
+template<class TypeTag>
+std::unique_ptr<FlowMain<TypeTag>>
+flowMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    return std::make_unique<FlowMain<TypeTag>>(argc, argv, outputCout, outputFiles);
+}
 
 // Adds a python-only initialization method
 template<class TypeTag>

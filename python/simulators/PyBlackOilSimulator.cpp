@@ -29,10 +29,29 @@
 
 namespace py = pybind11;
 
+// NOTE: We need the below explicit instantiations or else the symbols
+//       will not be available in the shared library and we will get
+//       undefined symbol errors when trying to import the module in Python.
 namespace Opm::Pybind {
 
+template class PyBaseSimulator<Opm::Properties::TTag::FlowProblemTPFA>;
 
-// Exported functions
+} // namespace Opm::Pybind
+
+namespace Opm {
+
+template class PyMain<Opm::Properties::TTag::FlowProblemTPFA>;
+template std::unique_ptr<FlowMain<Opm::Properties::TTag::FlowProblemTPFA>>
+  flowMainInit<Opm::Properties::TTag::FlowProblemTPFA>(
+    int argc, char** argv, bool outputCout, bool outputFiles);
+
+}  // namespace Opm
+
+namespace py = pybind11;
+
+namespace Opm::Pybind {
+
+// Exported functions x
 void export_PyBlackOilSimulator(py::module& m)
 {
     using namespace Opm::Pybind::DocStrings;
@@ -80,7 +99,6 @@ void export_PyBlackOilSimulator(py::module& m)
         .def("step_cleanup", &PyBaseSimulator<TypeTag>::stepCleanup, stepCleanup_docstring)
         .def("step_init", &PyBaseSimulator<TypeTag>::stepInit, stepInit_docstring);
 }
-
 
 } // namespace Opm::Pybind
 

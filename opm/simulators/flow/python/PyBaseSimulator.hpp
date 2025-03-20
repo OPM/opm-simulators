@@ -19,12 +19,9 @@
 #ifndef OPM_PY_BASE_SIMULATOR_HEADER_INCLUDED
 #define OPM_PY_BASE_SIMULATOR_HEADER_INCLUDED
 
-// #include <python/simulators/PyBaseMain.hpp>
-
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
-#include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/python/PyMain.hpp>
 #include <opm/simulators/flow/python/PyFluidState.hpp>
@@ -113,4 +110,6 @@ protected:
 
 }  // namespace Opm::Pybind
 
-#endif
+#include <opm/simulators/flow/python/PyBaseSimulator_impl.hpp>
+
+#endif  // OPM_PY_BASE_SIMULATOR_HEADER_INCLUDED

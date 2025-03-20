@@ -55,6 +55,24 @@ namespace Opm {
     }
 }
 
+// NOTE: We need the below explicit instantiations or else the symbols
+//       will not be available in the shared library and we will get
+//       undefined symbol errors when trying to import the module in Python.
+namespace Opm::Pybind {
+
+template class PyBaseSimulator<Opm::Properties::TTag::FlowGasWaterProblem>;
+
+} // namespace Opm::Pybind
+
+namespace Opm {
+
+template class PyMain<Opm::Properties::TTag::FlowGasWaterProblem>;
+template std::unique_ptr<FlowMain<Opm::Properties::TTag::FlowGasWaterProblem>>
+  flowMainInit<Opm::Properties::TTag::FlowGasWaterProblem>(
+    int argc, char** argv, bool outputCout, bool outputFiles);
+
+}  // namespace Opm
+
 namespace py = pybind11;
 
 namespace Opm::Pybind {

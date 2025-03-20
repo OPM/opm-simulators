@@ -37,24 +37,64 @@ add_custom_command(
 #  https://cmake.org/cmake/help/latest/command/target_include_directories.html
 #  https://pybind11.readthedocs.io/en/stable/compiling.html
 #
-pybind11_add_module(simulators ${PYBIND11_SYSTEM}
+pybind11_add_module(BlackOil ${PYBIND11_SYSTEM}
   $<TARGET_OBJECTS:moduleVersion>
   Pybind11Exporter.cpp
-  PyBaseSimulator.cpp
   PyBlackOilSimulator.cpp
-  PyGasWaterSimulator.cpp
   ${PYTHON_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
+)
+
+pybind11_add_module(GasWater ${PYBIND11_SYSTEM}
+  $<TARGET_OBJECTS:moduleVersion>
+  Pybind11Exporter.cpp
+  PyGasWaterSimulator.cpp
   ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
   )
 
-set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
+# NOTE: instead of using file( COPY ...) which copies the files at configure time (not at build time)
+#  we should add copying of the files at build time such that running "make" or "make all" will
+#  update the files if they have been modified. We use the install.py script in opm-common, see also
+#  CMakeLists.txt in opm-common
+add_custom_target(copy_python ALL
+    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
+        ${PROJECT_SOURCE_DIR}/python/opm ${PROJECT_BINARY_DIR}/python 0
+    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
+        ${PROJECT_SOURCE_DIR}/python/test ${PROJECT_BINARY_DIR}/python 0
+    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
+        ${PROJECT_SOURCE_DIR}/python/test_data ${PROJECT_BINARY_DIR}/python 0
+)
 
-target_link_libraries( simulators PRIVATE opmsimulators )
-# Add the binary (build) directory to the include directories for the target
+foreach(target_name IN ITEMS BlackOil GasWater)
+  set_target_properties(
+    ${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH}
+  )
+  target_link_libraries( ${target_name} PRIVATE opmsimulators )
+  # Add the binary (build) directory to the include directories for the target
 
-  # Add the build directory where the generated hpp file will be
-#  to the include directories for the target
-target_include_directories(simulators PRIVATE ${PROJECT_BINARY_DIR}/python)
+    # Add the build directory where the generated hpp file will be
+  #  to the include directories for the target
+  target_include_directories(${target_name} PRIVATE ${PROJECT_BINARY_DIR}/python)
+  add_dependencies(${target_name} copy_python)
+
+  # Since the installation of Python code is nonstandard it is protected by an
+  # extra cmake switch, OPM_INSTALL_PYTHON. If you prefer you can still invoke
+  # setup.py install manually - optionally with the generated script
+  # setup-install.sh - and completely bypass cmake in the installation phase.
+  if (OPM_INSTALL_PYTHON)
+    include(PyInstallPrefix)  # from opm-common
+    install(
+      TARGETS ${target_name}
+      DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm
+    )
+    install(
+      CODE "execute_process(
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${PYTHON_INSTALL_PY}
+                ${PROJECT_BINARY_DIR}/python/opm
+                ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX} 1)"
+    )
+  endif()
+endforeach()
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "
 import site, sys
@@ -91,25 +131,11 @@ find_file(PYTHON_INSTALL_PY install.py
   PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
   PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
 
-# NOTE: instead of using file( COPY ...) which copies the files at configure time (not at build time)
-#  we should add copying of the files at build time such that running "make" or "make all" will
-#  update the files if they have been modified. We use the install.py script in opm-common, see also
-#  CMakeLists.txt in opm-common
-add_custom_target(copy_python ALL
-    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
-        ${PROJECT_SOURCE_DIR}/python/opm ${PROJECT_BINARY_DIR}/python 0
-    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
-        ${PROJECT_SOURCE_DIR}/python/test ${PROJECT_BINARY_DIR}/python 0
-    COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_INSTALL_PY}"
-        ${PROJECT_SOURCE_DIR}/python/test_data ${PROJECT_BINARY_DIR}/python 0
-)
-
 file(COPY ${PROJECT_SOURCE_DIR}/python/opm/CMakeLists.txt DESTINATION ${PROJECT_BINARY_DIR}/python)
 file(COPY ${PROJECT_SOURCE_DIR}/python/requirements.txt DESTINATION ${PROJECT_BINARY_DIR}/python)
 file(COPY ${PROJECT_SOURCE_DIR}/python/README.md DESTINATION ${PROJECT_BINARY_DIR}/python)
 file(COPY ${PROJECT_SOURCE_DIR}/python/MANIFEST.in DESTINATION ${PROJECT_BINARY_DIR}/python)
 file(COPY ${PROJECT_SOURCE_DIR}/python/pyproject.toml DESTINATION ${PROJECT_BINARY_DIR}/python)
-
 
 set(opm-simulators_PYTHON_PACKAGE_VERSION ${OPM_PYTHON_PACKAGE_VERSION_TAG})
 
@@ -119,19 +145,4 @@ configure_file(${PROJECT_SOURCE_DIR}/python/setup.py.in
 file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/python/setup.py
                INPUT ${PROJECT_BINARY_DIR}/python/setup.py.tmp)
 
-add_dependencies(simulators copy_python)
 
-# Since the installation of Python code is nonstandard it is protected by an
-# extra cmake switch, OPM_INSTALL_PYTHON. If you prefer you can still invoke
-# setup.py install manually - optionally with the generated script
-# setup-install.sh - and completely bypass cmake in the installation phase.
-if (OPM_INSTALL_PYTHON)
-  include(PyInstallPrefix)  # from opm-common
-  install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm)
-  install(
-    CODE "execute_process(
-      COMMAND ${PYTHON_EXECUTABLE}
-              ${PYTHON_INSTALL_PY}
-              ${PROJECT_BINARY_DIR}/python/opm
-              ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX} 1)")
-endif()
