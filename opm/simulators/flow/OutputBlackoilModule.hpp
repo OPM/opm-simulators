@@ -52,6 +52,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
 #include <opm/simulators/flow/OutputExtractor.hpp>
@@ -100,6 +101,9 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     using Dir = FaceDir::DirEnum;
     using BlockExtractor = detail::BlockExtractor<TypeTag>;
     using Extractor = detail::Extractor<TypeTag>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
+    using CollectDataOnIORankType = CollectDataOnIORank<Grid,EquilGrid,GridView>;
 
     static constexpr int conti0EqIdx = Indices::conti0EqIdx;
     static constexpr int numPhases = FluidSystem::numPhases;
@@ -122,10 +126,9 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     }
 
 public:
-    template <class CollectDataToIORankType>
     OutputBlackOilModule(const Simulator& simulator,
                          const SummaryConfig& smryCfg,
-                         const CollectDataToIORankType& collectToIORank)
+                         const CollectDataOnIORankType& collectOnIORank)
         : BaseType(simulator.vanguard().eclState(),
                    simulator.vanguard().schedule(),
                    smryCfg,
@@ -145,20 +148,21 @@ public:
                    getPropValue<TypeTag, Properties::EnableExtbo>(),
                    getPropValue<TypeTag, Properties::EnableMICP>())
         , simulator_(simulator)
+        , collectOnIORank_(collectOnIORank)
     {
         for (auto& region_pair : this->regions_) {
             this->createLocalRegion_(region_pair.second);
         }
 
-        auto isCartIdxOnThisRank = [&collectToIORank](const int idx) {
-            return collectToIORank.isCartIdxOnThisRank(idx);
+        auto isCartIdxOnThisRank = [&collectOnIORank](const int idx) {
+            return collectOnIORank.isCartIdxOnThisRank(idx);
         };
 
         this->setupBlockData(isCartIdxOnThisRank);
 
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
-            if (collectToIORank.isIORank()) {
+            if (collectOnIORank.isIORank()) {
                 OpmLog::error(msg);
             }
             OPM_THROW_NOLOG(std::runtime_error, msg);
@@ -207,10 +211,11 @@ public:
     }
 
     //! \brief Setup list of active element-level data extractors
-    void setupExtractors()
+    void setupExtractors(const bool isSubStep,
+                         const int  reportStepNum)
     {
         this->setupElementExtractors_();
-        this->setupBlockExtractors_();
+        this->setupBlockExtractors_(isSubStep, reportStepNum);
     }
 
     //! \brief Clear list of active element-level data extractors
@@ -218,6 +223,7 @@ public:
     {
         this->extractors_.clear();
         this->blockExtractors_.clear();
+        this->extraBlockExtractors_.clear();
     }
 
     /*!
@@ -277,7 +283,7 @@ public:
             return;
         }
 
-        if (this->blockExtractors_.empty()) {
+        if (this->blockExtractors_.empty() && this->extraBlockExtractors_.empty()) {
             return;
         }
 
@@ -287,7 +293,10 @@ public:
             const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
 
             const auto be_it = this->blockExtractors_.find(cartesianIdx);
-            if (be_it == this->blockExtractors_.end()) {
+            const auto bee_it = this->extraBlockExtractors_.find(cartesianIdx);
+            if (be_it == this->blockExtractors_.end() &&
+                bee_it == this->extraBlockExtractors_.end())
+            {
                 continue;
             }
 
@@ -302,7 +311,12 @@ public:
                 elemCtx,
             };
 
-            BlockExtractor::process(be_it->second, ectx);
+            if (be_it != this->blockExtractors_.end()) {
+                BlockExtractor::process(be_it->second, ectx);
+            }
+            if (bee_it != this->extraBlockExtractors_.end()) {
+                BlockExtractor::process(bee_it->second, ectx);
+            }
         }
     }
 
@@ -1565,7 +1579,8 @@ private:
     }
 
     //! \brief Setup extractor execution map for block data.
-    void setupBlockExtractors_()
+    void setupBlockExtractors_(const bool isSubStep,
+                               const int  reportStepNum)
     {
         using Entry = typename BlockExtractor::Entry;
         using Context = typename BlockExtractor::Context;
@@ -1574,7 +1589,25 @@ private:
 
         using namespace std::string_view_literals;
 
+        const auto pressure_handler =
+            Entry{ScalarEntry{std::vector{"BPR"sv, "BPRESSUR"sv},
+                              [](const Context& ectx)
+                              {
+                                  if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                                      return getValue(ectx.fs.pressure(oilPhaseIdx));
+                                  }
+                                  else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                                      return getValue(ectx.fs.pressure(gasPhaseIdx));
+                                  }
+                                  else { //if (FluidSystem::phaseIsActive(waterPhaseIdx))
+                                      return getValue(ectx.fs.pressure(waterPhaseIdx));
+                                  }
+                              }
+                  }
+            };
+
         const auto handlers = std::array{
+            pressure_handler,
             Entry{PhaseEntry{std::array{
                                 std::array{"BWSAT"sv, "BOSAT"sv, "BGSAT"sv},
                                 std::array{"BSWAT"sv, "BSOIL"sv, "BSGAS"sv}
@@ -1589,21 +1622,6 @@ private:
                               [](const Context& ectx)
                               {
                                   return ectx.intQuants.solventSaturation().value();
-                              }
-                  }
-            },
-            Entry{ScalarEntry{std::vector{"BPR"sv, "BPRESSUR"sv},
-                              [](const Context& ectx)
-                              {
-                                  if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                                      return getValue(ectx.fs.pressure(oilPhaseIdx));
-                                  }
-                                  else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                                      return getValue(ectx.fs.pressure(gasPhaseIdx));
-                                  }
-                                  else { //if (FluidSystem::phaseIsActive(waterPhaseIdx))
-                                      return getValue(ectx.fs.pressure(waterPhaseIdx));
-                                  }
                               }
                   }
             },
@@ -1893,11 +1911,30 @@ private:
         };
 
         this->blockExtractors_ = BlockExtractor::setupExecMap(this->blockData_, handlers);
+
+        this->extraBlockData_.clear();
+        if (reportStepNum > 0 && !isSubStep) {
+            // check we need extra block pressures for RPTSCHED
+            const auto& rpt = this->schedule_[reportStepNum - 1].rpt_config.get();
+            if (rpt.contains("WELLS") && rpt.at("WELLS") > 1) {
+                this->setupExtraBlockData(reportStepNum,
+                                          [&c = this->collectOnIORank_](const int idx)
+                                          { return c.isCartIdxOnThisRank(idx); });
+
+                const auto extraHandlers = std::array{
+                    pressure_handler,
+                };
+
+                this->extraBlockExtractors_ = BlockExtractor::setupExecMap(this->extraBlockData_, extraHandlers);
+            }
+        }
     }
 
     const Simulator& simulator_;
+    const CollectDataOnIORankType& collectOnIORank_;
     std::vector<typename Extractor::Entry> extractors_;
     typename BlockExtractor::ExecMap blockExtractors_;
+    typename BlockExtractor::ExecMap extraBlockExtractors_;
 };
 
 } // namespace Opm
