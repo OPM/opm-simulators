@@ -102,7 +102,8 @@ public:
     void outputCumLog(std::size_t reportStepNum);
 
     // write production report to output
-    void outputProdLog(std::size_t reportStepNum);
+    void outputProdLog(std::size_t reportStepNum,
+                       const bool connData);
 
     // write injection report to output
     void outputInjLog(std::size_t reportStepNum,

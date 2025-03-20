@@ -82,6 +82,7 @@ WELSPECS
 /
 COMPDAT
    'INJ'   1   1   1    1    OPEN     1*    1.172656E+2   0.21600   1*   0.00000   1*   'Z' /
+   'PROD'  2   2   1    1    OPEN     1*    1.172656E+2   0.21600   1*   0.00000   1*   'Z' /
 /
 WCONPROD
 -- Item #:1 2      3     4     5  9
@@ -466,7 +467,65 @@ BOOST_FIXTURE_TEST_CASE(Production, LogNoteFixture)
     st.update_well_var("PROD", "WTHP", 20.0);
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
-    helper.production(0);
+    helper.production(0, {});
+
+    const auto data = trimStream(str);
+    BOOST_CHECK_EQUAL(data, reference);
+}
+
+BOOST_FIXTURE_TEST_CASE(ProductionW2, LogNoteFixture)
+{
+    const auto reference = std::string {
+        R"(======================================================= PRODUCTION REPORT =======================================================
+:  WELL  : LOCATION  :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :
+:  NAME  :  (I,J,K)  :MODE:   RATE    :   RATE    :   RATE    : RES.VOL.  :    CUT    :  RATIO   :   RATIO    :CON.PR. :BLK.PR. :
+:        :           :    :  STB/DAY  :  STB/DAY  : MSCF/DAY  :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :
+=================================================================================================================================
+:FIELD   :           :    :        1.0:        2.0:        3.0:        4.0:      5.000:      6.00:      0.6667:        :        :
+:G1      :           :    :        7.0:        8.0:        9.0:       10.0:     11.000:     12.00:      0.8889:        :        :
+:PROD    : 10, 10    :ORAT:       13.0:       14.0:       15.0:       16.0:     17.000:     18.00:      0.9333:    19.0:    20.0:
+:  BLOCK :  2,  2,  1:    :       21.0:       22.0:       23.0:       24.0:     25.000:      0.91:      0.9565:    26.0:    27.0:
+:--------:-----------:----:-----------:-----------:-----------:-----------:-----------:----------:------------:--------:--------:
+)"
+    };
+
+    st.set("FOPR", 1.0);
+    st.set("FWPR", 2.0);
+    st.set("FGPR", 3.0);
+    st.set("FVPR", 4.0);
+    st.set("FWCT", 5.0);
+    st.set("FGOR", 6.0);
+
+    st.update_group_var("G1", "GOPR",  7.0);
+    st.update_group_var("G1", "GWPR",  8.0);
+    st.update_group_var("G1", "GGPR",  9.0);
+    st.update_group_var("G1", "GVPR", 10.0);
+    st.update_group_var("G1", "GWCT", 11.0);
+    st.update_group_var("G1", "GGOR", 12.0);
+
+    st.update_well_var("PROD", "WOPR", 13.0);
+    st.update_well_var("PROD", "WWPR", 14.0);
+    st.update_well_var("PROD", "WGPR", 15.0);
+    st.update_well_var("PROD", "WVPR", 16.0);
+    st.update_well_var("PROD", "WWCT", 17.0);
+    st.update_well_var("PROD", "WGOR", 18.0);
+    st.update_well_var("PROD", "WBHP", 19.0);
+    st.update_well_var("PROD", "WTHP", 20.0);
+
+    st.update_conn_var("PROD", "COPR", 12, 21.0);
+    st.update_conn_var("PROD", "CWPR", 12, 22.0);
+    st.update_conn_var("PROD", "CGPR", 12, 23.0);
+    st.update_conn_var("PROD", "CVPR", 12, 24.0);
+    st.update_conn_var("PROD", "CWCT", 12, 25.0);
+    st.update_conn_var("PROD", "CGOR", 12, 21.0 / 23.0);
+    st.update_conn_var("PROD", "CPR", 12, 26.0);
+
+    const auto bprs = std::map<std::pair<std::string,int>,double> {
+        {{"BPR", 12}, eclState.getUnits().to_si(Opm::UnitSystem::measure::pressure, 27.0)},
+    };
+
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
+    helper.production(0, bprs);
 
     const auto data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
