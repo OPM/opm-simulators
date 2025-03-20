@@ -247,8 +247,10 @@ public:
         if (this->collectOnIORank_.isParallel()) {
             OPM_BEGIN_PARALLEL_TRY_CATCH()
 
+            std::map<std::pair<std::string,int>,double> dummy;
             this->collectOnIORank_.collect({},
                                            outputModule_->getBlockData(),
+                                           dummy,
                                            localWellData,
                                            localWBP,
                                            localGroupAndNetworkData,
@@ -458,6 +460,7 @@ public:
 
             this->collectOnIORank_.collect(localCellData,
                                            this->outputModule_->getBlockData(),
+                                           this->outputModule_->getExtraBlockData(),
                                            localWellData,
                                            /* wbpData = */ {},
                                            localGroupAndNetworkData,
@@ -732,7 +735,7 @@ private:
             OPM_TIMEBLOCK(prepareCellBasedData);
 
             this->outputModule_->prepareDensityAccumulation();
-            this->outputModule_->setupExtractors();
+            this->outputModule_->setupExtractors(isSubStep, reportStepNum);
             for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);

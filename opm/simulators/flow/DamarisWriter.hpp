@@ -448,7 +448,7 @@ private:
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
         OPM_TIMEBLOCK(prepareCellBasedData);
-        damarisOutputModule_->setupExtractors();
+        damarisOutputModule_->setupExtractors(isSubStep, reportStepNum);
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);

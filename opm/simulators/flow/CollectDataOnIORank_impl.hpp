@@ -968,6 +968,7 @@ template <class Grid, class EquilGrid, class GridView>
 void CollectDataOnIORank<Grid,EquilGrid,GridView>::
 collect(const data::Solution&                                localCellData,
         const std::map<std::pair<std::string, int>, double>& localBlockData,
+        std::map<std::pair<std::string, int>, double>&       extraBlockData,
         const data::Wells&                                   localWellData,
         const data::WellBlockAveragePressures&               localWBPData,
         const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
@@ -979,6 +980,7 @@ collect(const data::Solution&                                localCellData,
 {
     globalCellData_ = {};
     globalBlockData_.clear();
+    std::map<std::pair<std::string,int>,double> globalExtraBlockData;
     globalWellData_.clear();
     globalWBPData_.values.clear();
     globalGroupAndNetworkData_.clear();
@@ -1033,6 +1035,12 @@ collect(const data::Solution&                                localCellData,
                 this->isIORank()
     };
 
+    PackUnPackBlockData packUnpackExtraBlockData {
+        extraBlockData,
+        globalExtraBlockData,
+        this->isIORank()
+    };
+
     PackUnPackWBPData packUnpackWBPData {
         localWBPData,
         this->globalWBPData_,
@@ -1073,6 +1081,7 @@ collect(const data::Solution&                                localCellData,
     toIORankComm_.exchange(packUnpackWellData);
     toIORankComm_.exchange(packUnpackGroupAndNetworkData);
     toIORankComm_.exchange(packUnpackBlockData);
+    toIORankComm_.exchange(packUnpackExtraBlockData);
     toIORankComm_.exchange(packUnpackWBPData);
     toIORankComm_.exchange(packUnpackAquiferData);
     toIORankComm_.exchange(packUnpackWellTestState);
@@ -1084,6 +1093,8 @@ collect(const data::Solution&                                localCellData,
     // make sure every process is on the same page
     toIORankComm_.barrier();
 #endif
+
+    extraBlockData = globalExtraBlockData;
 }
 
 template <class Grid, class EquilGrid, class GridView>
