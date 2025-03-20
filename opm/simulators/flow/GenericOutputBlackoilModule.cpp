@@ -207,9 +207,13 @@ outputCumLog(std::size_t reportStepNum)
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
-outputProdLog(std::size_t reportStepNum)
+outputProdLog(std::size_t reportStepNum,
+              const bool connData)
 {
-    this->logOutput_.production(reportStepNum);
+    this->logOutput_.production(reportStepNum,
+                                connData
+                                    ? this->extraBlockData_
+                                    : decltype(this->extraBlockData_){});
 }
 
 template<class FluidSystem>

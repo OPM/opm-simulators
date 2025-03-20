@@ -470,7 +470,8 @@ injection(const std::size_t reportStepNum,
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-production(const std::size_t reportStepNum) const
+production(const std::size_t reportStepNum,
+           const std::map<std::pair<std::string,int>,double>& block_pressures) const
 {
     this->beginProductionReport_();
 
@@ -503,7 +504,7 @@ production(const std::size_t reportStepNum) const
             values[Ix::WatGasRatio] = 0.0;
         }
 
-        this->outputProductionReportRecord_(values, names);
+        this->outputProductionReportRecord_(values, names, {});
     }
 
     for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
@@ -544,7 +545,34 @@ production(const std::size_t reportStepNum) const
             values[Ix::WatGasRatio] = 0.0;
         }
 
-        this->outputProductionReportRecord_(values, names);
+        std::vector<ConnData> connData;
+        if (!block_pressures.empty()) {
+            const auto& units = this->eclState_.getUnits();
+            for (const auto& connection : well.getConnections()) {
+                ConnData& conn = connData.emplace_back(connection);
+                conn.data.resize(WellProdDataType::numWPValues);
+                const auto gindex = connection.global_index() + 1;
+                const auto bpr = block_pressures.at({"BPR", gindex});
+                conn.data[Ix::OilRate]     = st.get_conn_var(wname, "COPR", gindex);
+                conn.data[Ix::WaterRate]   = st.get_conn_var(wname, "CWPR", gindex);
+                conn.data[Ix::GasRate]     = st.get_conn_var(wname, "CGPR", gindex);
+                conn.data[Ix::FluidResVol] = st.get_conn_var(wname, "CVPR", gindex);
+                conn.data[Ix::WaterCut]    = st.get_conn_var(wname, "CWCT", gindex);
+                conn.data[Ix::GasOilRatio] = st.get_conn_var(wname, "CGOR", gindex);
+                conn.data[Ix::CPR]         = st.get_conn_var(wname, "CPR", gindex);
+                conn.data[Ix::BPR]         = units.from_si(UnitSystem::measure::pressure, bpr);
+                if (conn.data[Ix::WaterRate] == 0.0) {
+                    conn.data[Ix::WatGasRatio] = 0.0;
+                } else {
+                    conn.data[Ix::WatGasRatio] = conn.data[Ix::WaterRate] / conn.data[Ix::GasRate];
+                }
+                if (std::isnan(values[Ix::WatGasRatio])) {
+                    conn.data[Ix::WatGasRatio] = 0.0;
+                }
+            }
+        }
+
+        this->outputProductionReportRecord_(values, names, connData);
     }
 
     this->endProductionReport_();
@@ -1007,7 +1035,8 @@ void LogOutputHelper<Scalar>::endProductionReport_() const
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
-                              const std::vector<std::string>& wellProdNames) const
+                              const std::vector<std::string>& wellProdNames,
+                              const std::vector<ConnData>& connData) const
 {
     const auto isWellRecord =
         wellProd[WellProdDataType::WellLocationi] >= 1;
@@ -1041,6 +1070,22 @@ outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
         ss << fmt::format("{:>8.1f}:{:>8.1f}:",
                           wellProd[WellProdDataType::BHP],
                           wellProd[WellProdDataType::THP]);
+    }
+
+    for (const auto& conn : connData) {
+        ss << fmt::format("\n:  BLOCK :{0:>3},{1:>3},{2:>3}:{3:>4}:",
+                          conn.I, conn.J, conn.K, "")
+           << fmt::format("{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:"
+                          "{:>11.3f}:{:>10.2f}:{:>12.4f}:{:>8.1f}:{:>8.1f}:",
+                          conn.data[WellProdDataType::OilRate],
+                          conn.data[WellProdDataType::WaterRate],
+                          conn.data[WellProdDataType::GasRate],
+                          conn.data[WellProdDataType::FluidResVol],
+                          conn.data[WellProdDataType::WaterCut],
+                          conn.data[WellProdDataType::GasOilRatio],
+                          conn.data[WellProdDataType::WatGasRatio],
+                          conn.data[WellProdDataType::CPR],
+                          conn.data[WellProdDataType::BPR]);
     }
 
     OpmLog::note(ss.str());

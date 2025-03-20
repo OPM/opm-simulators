@@ -68,9 +68,13 @@ public:
                    const std::map<std::pair<std::string,int>, double>& block_pressures) const;
 
     //! \brief Write production report to output.
-    void production(const std::size_t reportStepNum) const;
+    void production(const std::size_t reportStepNum,
+                    const std::map<std::pair<std::string,int>, double>& block_pressures) const;
 
-    void timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const;
+    void timeStamp(const std::string& lbl,
+                   double elapsed,
+                   int rstep,
+                   boost::posix_time::ptime currentDate) const;
 
 private:
     struct ConnData
@@ -104,7 +108,8 @@ private:
     void beginProductionReport_() const;
     void endProductionReport_() const;
     void outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
-                                       const std::vector<std::string>& wellProdNames) const;
+                                       const std::vector<std::string>& wellProdNames,
+                                       const std::vector<ConnData>& connData) const;
 
     void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const;
     void pressureUnitConvert_(Scalar& pav) const;
@@ -169,7 +174,9 @@ private:
             GasOilRatio = 7, // GOR
             WatGasRatio = 8, // WGR
             BHP = 9, // BHP
+            CPR = 9, // Connection pressure
             THP = 10, // THP
+            BPR = 10, // Block pressures for connections
             SteadyStatePI = 11, // SteadyStatePI
             WellName = 0, // WName
             CTRLMode = 1, // CTRL
