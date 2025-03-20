@@ -27,6 +27,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <opm/simulators/utils/PressureAverage.hpp>
@@ -131,9 +132,26 @@ std::string formatTextRow(const std::array<int, size>& widths,
     return ss;
 }
 
+double conn_value_or_zero(const Opm::SummaryState& st,
+                          const std::string& wname,
+                          const std::string& name,
+                          const std::size_t gindex)
+{
+    return st.has_conn_var(wname, name, gindex)
+        ? st.get_conn_var(wname, name, gindex)
+        : 0.0;
+}
+
 } // Namespace anonymous
 
 namespace Opm {
+
+template<class Scalar>
+LogOutputHelper<Scalar>::ConnData::ConnData(const Connection& conn)
+    : I(conn.getI() + 1)
+    , J(conn.getJ() + 1)
+    , K(conn.getK() + 1)
+{}
 
 template<class Scalar>
 LogOutputHelper<Scalar>::LogOutputHelper(const EclipseState& eclState,
@@ -363,7 +381,8 @@ timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-injection(const std::size_t reportStepNum) const
+injection(const std::size_t reportStepNum,
+          const std::map<std::pair<std::string,int>, double>& block_pressures) const
 {
     this->beginInjectionReport_();
 
@@ -384,7 +403,7 @@ injection(const std::size_t reportStepNum) const
         values[Ix::GasRate]     = isField ? st.get("FGIR", 0.0) : st.get_group_var(gname, "GGIR", 0.0);
         values[Ix::FluidResVol] = isField ? st.get("FVIR", 0.0) : st.get_group_var(gname, "GVIR", 0.0);
 
-        this->outputInjectionReportRecord_(values, names);
+        this->outputInjectionReportRecord_(values, names, {});
     }
 
     for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
@@ -434,7 +453,28 @@ injection(const std::size_t reportStepNum) const
 
         // values[Ix::SteadyStateII] = 0;
 
-        this->outputInjectionReportRecord_(values, names);
+        std::vector<ConnData> connData;
+        if (!block_pressures.empty()) {
+            const auto& units = this->eclState_.getUnits();
+            for (const auto& connection : well.getConnections()) {
+                const auto gindex = connection.global_index() + 1;
+                const auto bpr_it = block_pressures.find({"BPR", gindex});
+                const auto bpr =
+                    bpr_it == block_pressures.end()
+                         ? 0.0
+                         : units.from_si(UnitSystem::measure::pressure, bpr_it->second);
+                ConnData& conn = connData.emplace_back(connection);
+                conn.data.resize(WellInjDataType::numWIValues);
+                conn.data[Ix::OilRate]     = conn_value_or_zero(st, wname, "COIR", gindex);
+                conn.data[Ix::WaterRate]   = conn_value_or_zero(st, wname, "CWIR", gindex);
+                conn.data[Ix::GasRate]     = conn_value_or_zero(st, wname, "CGIR", gindex);
+                conn.data[Ix::FluidResVol] = conn_value_or_zero(st, wname, "CVIR", gindex);
+                conn.data[Ix::CPR]         = conn_value_or_zero(st, wname, "CPR", gindex);
+                conn.data[Ix::BPR]         = bpr;
+            }
+        }
+
+        this->outputInjectionReportRecord_(values, names, connData);
     }
 
     this->endInjectionReport_();
@@ -786,7 +826,8 @@ void LogOutputHelper<Scalar>::endInjectionReport_() const
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
-                             const std::vector<std::string>& wellInjNames) const
+                             const std::vector<std::string>& wellInjNames,
+                             const std::vector<ConnData>& connData) const
 {
     const auto isWellRecord =
         wellInj[WellProdDataType::WellLocationi] >= 1;
@@ -818,6 +859,19 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
         ss << fmt::format("{:>8.1f}:{:>8.1f}:",
                           wellInj[WellInjDataType::BHP],
                           wellInj[WellInjDataType::THP]);
+    }
+
+    for (const auto& conn : connData) {
+        ss << fmt::format("\n:  BLOCK :{0:>3},{1:>3},{2:>3}:"
+                          "{3:>6}:{3:>6}:{3:>6}:",
+                          conn.I, conn.J, conn.K, "")
+           << fmt::format("{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>8.1f}:{:>8.1f}:",
+                          conn.data[WellInjDataType::OilRate],
+                          conn.data[WellInjDataType::WaterRate],
+                          conn.data[WellInjDataType::GasRate],
+                          conn.data[WellInjDataType::FluidResVol],
+                          conn.data[WellInjDataType::CPR],
+                          conn.data[WellInjDataType::BPR]);
     }
 
     OpmLog::note(ss.str());

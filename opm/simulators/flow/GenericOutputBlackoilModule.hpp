@@ -105,7 +105,8 @@ public:
     void outputProdLog(std::size_t reportStepNum);
 
     // write injection report to output
-    void outputInjLog(std::size_t reportStepNum);
+    void outputInjLog(std::size_t reportStepNum,
+                      const bool connData);
 
     // calculate Initial Fluid In Place
     Inplace calc_initial_inplace(const Parallel::Communication& comm);
