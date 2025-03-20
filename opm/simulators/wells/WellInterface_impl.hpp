@@ -887,7 +887,7 @@ namespace Opm
 
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = simulator.model().newtonMethod().numIterations();
-        if (iteration_idx < this->param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
+        if (iteration_idx < this->param_.max_niter_inner_well_iter_) {
             const auto& ws = well_state.well(this->indexOfWell());
             const bool nonzero_rate_original =
                 std::any_of(ws.surface_rates.begin(),
