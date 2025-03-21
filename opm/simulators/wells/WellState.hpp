@@ -277,6 +277,10 @@ public:
     void shutWell(int well_index);
     void stopWell(int well_index);
 
+    void switchToProducer(const std::string& name) {
+        alq_state.insert(name);
+    }
+
     /// The number of phases present.
     int numPhases() const
     {

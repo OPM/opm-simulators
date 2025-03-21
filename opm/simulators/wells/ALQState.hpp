@@ -37,6 +37,7 @@ public:
 
     Scalar get(const std::string& wname) const;
     void update_default(const std::string& wname, Scalar value);
+    void insert(const std::string& wname);
     void set(const std::string& wname, Scalar value);
     bool oscillation(const std::string& wname) const;
     void update_count(const std::string& wname, bool increase);

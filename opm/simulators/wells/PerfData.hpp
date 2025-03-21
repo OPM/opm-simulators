@@ -48,6 +48,11 @@ public:
     bool empty() const;
     bool try_assign(const PerfData& other);
 
+    /// \brief Make containers valid for injectors
+    ///
+    /// Needed if a producer is switched to an injector,
+    void prepareInjectorContainers();
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {

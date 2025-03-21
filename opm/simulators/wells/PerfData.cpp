@@ -51,13 +51,19 @@ PerfData<Scalar>::PerfData(const std::size_t num_perf,
     , ecl_index(num_perf)
 {
     if (injector) {
-        this->water_throughput.resize(num_perf);
-        this->skin_pressure.resize(num_perf);
-        this->water_velocity.resize(num_perf);
-        this->filtrate_data.resize(num_perf);
+        prepareInjectorContainers();
     }
 }
 
+template<class Scalar>
+void PerfData<Scalar>::prepareInjectorContainers()
+{
+    auto num_perf = pressure.size();
+    this->water_throughput.resize(num_perf);
+    this->skin_pressure.resize(num_perf);
+    this->water_velocity.resize(num_perf);
+    this->filtrate_data.resize(num_perf);
+}
 template<class Scalar>
 PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
 {
