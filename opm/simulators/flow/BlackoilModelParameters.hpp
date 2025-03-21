@@ -100,7 +100,7 @@ struct TolerancePressureMsWells { static constexpr Scalar value = 0.01*1e5; };
 template<class Scalar>
 struct MaxPressureChangeMsWells { static constexpr Scalar value = 10*1e5; };
 
-struct MaxNewtonIterationsWithInnerWellIterations { static constexpr int value = 8; };
+struct MaxNewtonIterationsWithInnerWellIterations { static constexpr int value = 99; };
 struct MaxInnerIterMsWells { static constexpr int value = 100; };
 struct MaxInnerIterWells { static constexpr int value = 50; };
 struct ShutUnsolvableWells { static constexpr bool value = true; };
