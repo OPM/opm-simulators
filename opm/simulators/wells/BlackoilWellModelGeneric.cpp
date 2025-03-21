@@ -1270,7 +1270,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     // before we copy to well_state_nupcol_.
     this->wellState().updateGlobalIsGrup(comm_);
 
-    if (iterationIdx <= nupcol) {
+    if (iterationIdx < nupcol) {
         OPM_TIMEBLOCK(updateNupcol);
         this->updateNupcolWGState();
     } else {
