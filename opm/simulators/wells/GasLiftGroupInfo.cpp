@@ -418,10 +418,10 @@ checkNewtonIterationIdxOk_(const std::string& well_name)
                 "LIFTOPT item4 == YES, it = {}, nupcol = {} -->  GLIFT optimize = {}",
                 this->iteration_idx_,
                 nupcol,
-                ((this->iteration_idx_ <= nupcol) ? "TRUE" : "FALSE"));
+                ((this->iteration_idx_ < nupcol) ? "TRUE" : "FALSE"));
             displayDebugMessage_(msg, well_name);
         }
-        return this->iteration_idx_ <= nupcol;
+        return this->iteration_idx_ < nupcol;
     }
     else {
         if (this->debug) {
