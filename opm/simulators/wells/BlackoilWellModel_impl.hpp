@@ -880,21 +880,18 @@ namespace Opm {
                 bool wellIsStopped = false;
                 if (this->wellTestState().well_is_closed(well_name))
                 {
-                    if (well_ecl.getAutomaticShutIn()) {
+                    //stopped wells where cross flow is not allowed is shut
+                    //so is wells shut by the simulator due to convergence issues.
+                    bool shut_well = well_ecl.getAutomaticShutIn() || !well_ecl.getAllowCrossFlow()
+                                    || this->wellTestState().well_is_closed_due_to_convergence_issues(well_name);
+
+                    if (shut_well) {
                         // shut wells are not added to the well container
                         this->wellState().shutWell(w);
                         this->well_close_times_.erase(well_name);
                         this->well_open_times_.erase(well_name);
                         continue;
                     } else {
-                        if (!well_ecl.getAllowCrossFlow()) {
-                            // stopped wells where cross flow is not allowed
-                            // are not added to the well container
-                            this->wellState().shutWell(w);
-                            this->well_close_times_.erase(well_name);
-                            this->well_open_times_.erase(well_name);
-                            continue;
-                        }
                         // stopped wells are added to the container but marked as stopped
                         this->wellState().stopWell(w);
                         wellIsStopped = true;
