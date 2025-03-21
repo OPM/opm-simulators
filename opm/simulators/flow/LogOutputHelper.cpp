@@ -27,6 +27,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <opm/simulators/utils/PressureAverage.hpp>
@@ -136,6 +137,13 @@ std::string formatTextRow(const std::array<int, size>& widths,
 namespace Opm {
 
 template<class Scalar>
+LogOutputHelper<Scalar>::ConnData::ConnData(const Connection& conn)
+    : I(conn.getI() + 1)
+    , J(conn.getJ() + 1)
+    , K(conn.getK() + 1)
+{}
+
+template<class Scalar>
 LogOutputHelper<Scalar>::LogOutputHelper(const EclipseState& eclState,
                                          const Schedule& schedule,
                                          const SummaryState& summaryState,
@@ -148,7 +156,8 @@ LogOutputHelper<Scalar>::LogOutputHelper(const EclipseState& eclState,
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-cumulative(const std::size_t reportStepNum) const
+cumulative(const std::size_t reportStepNum,
+           const bool        withConns) const
 {
     this->beginCumulativeReport_();
 
@@ -172,7 +181,7 @@ cumulative(const std::size_t reportStepNum) const
         values[Ix::GasInj]          = isField ? st.get("FGIT", 0.0) : st.get_group_var(gname, "GGIT", 0.0);
         values[Ix::FluidResVolInj]  = isField ? st.get("FVIT", 0.0) : st.get_group_var(gname, "GVIT", 0.0);
 
-        this->outputCumulativeReportRecord_(values, names);
+        this->outputCumulativeReportRecord_(values, names, {});
     }
 
     for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
@@ -218,7 +227,24 @@ cumulative(const std::size_t reportStepNum) const
         values[Ix::GasInj]          = st.get_well_var(wname, "WGIT", 0.0);
         values[Ix::FluidResVolInj]  = st.get_well_var(wname, "WVIT", 0.0);
 
-        this->outputCumulativeReportRecord_(values, names);
+        std::vector<ConnData> connData;
+        if (withConns) {
+            for (const auto& connection : well.getConnections()) {
+                ConnData& conn = connData.emplace_back(connection);
+                conn.data.resize(WellCumDataType::numWCValues);
+                const auto gindex = connection.global_index() + 1;
+                conn.data[Ix::OilProd]         = st.get_conn_var(wname, "COPT", gindex);
+                conn.data[Ix::WaterProd]       = st.get_conn_var(wname, "CWPT", gindex);
+                conn.data[Ix::GasProd]         = st.get_conn_var(wname, "CGPT", gindex);
+                conn.data[Ix::FluidResVolProd] = st.get_conn_var(wname, "CVPT", gindex);
+                conn.data[Ix::OilInj]          = st.get_conn_var(wname, "COIT", gindex);
+                conn.data[Ix::WaterInj]        = st.get_conn_var(wname, "CWIT", gindex);
+                conn.data[Ix::GasInj]          = st.get_conn_var(wname, "CGIT", gindex);
+                conn.data[Ix::FluidResVolInj]  = st.get_conn_var(wname, "CVIT", gindex);
+            }
+        }
+
+        this->outputCumulativeReportRecord_(values, names, connData);
     }
 
     this->endCumulativeReport_();
@@ -363,7 +389,8 @@ timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-injection(const std::size_t reportStepNum) const
+injection(const std::size_t reportStepNum,
+          const std::map<std::pair<std::string,int>, double>& block_pressures) const
 {
     this->beginInjectionReport_();
 
@@ -384,7 +411,7 @@ injection(const std::size_t reportStepNum) const
         values[Ix::GasRate]     = isField ? st.get("FGIR", 0.0) : st.get_group_var(gname, "GGIR", 0.0);
         values[Ix::FluidResVol] = isField ? st.get("FVIR", 0.0) : st.get_group_var(gname, "GVIR", 0.0);
 
-        this->outputInjectionReportRecord_(values, names);
+        this->outputInjectionReportRecord_(values, names, {});
     }
 
     for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
@@ -434,7 +461,24 @@ injection(const std::size_t reportStepNum) const
 
         // values[Ix::SteadyStateII] = 0;
 
-        this->outputInjectionReportRecord_(values, names);
+        std::vector<ConnData> connData;
+        if (!block_pressures.empty()) {
+            const auto& units = this->eclState_.getUnits();
+            for (const auto& connection : well.getConnections()) {
+                ConnData& conn = connData.emplace_back(connection);
+                conn.data.resize(WellInjDataType::numWIValues);
+                const auto gindex = connection.global_index() + 1;
+                const auto bpr = block_pressures.at({"BPR", gindex});
+                conn.data[Ix::OilRate]     = st.get_conn_var(wname, "COIR", gindex);
+                conn.data[Ix::WaterRate]   = st.get_conn_var(wname, "CWIR", gindex);
+                conn.data[Ix::GasRate]     = st.get_conn_var(wname, "CGIR", gindex);
+                conn.data[Ix::FluidResVol] = st.get_conn_var(wname, "CVIR", gindex);
+                conn.data[Ix::CPR]         = st.get_conn_var(wname, "CPR", gindex);
+                conn.data[Ix::BPR]         = units.from_si(UnitSystem::measure::pressure, bpr);
+            }
+        }
+
+        this->outputInjectionReportRecord_(values, names, connData);
     }
 
     this->endInjectionReport_();
@@ -442,7 +486,8 @@ injection(const std::size_t reportStepNum) const
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-production(const std::size_t reportStepNum) const
+production(const std::size_t reportStepNum,
+           const std::map<std::pair<std::string,int>,double>& block_pressures) const
 {
     this->beginProductionReport_();
 
@@ -475,7 +520,7 @@ production(const std::size_t reportStepNum) const
             values[Ix::WatGasRatio] = 0.0;
         }
 
-        this->outputProductionReportRecord_(values, names);
+        this->outputProductionReportRecord_(values, names, {});
     }
 
     for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
@@ -516,7 +561,34 @@ production(const std::size_t reportStepNum) const
             values[Ix::WatGasRatio] = 0.0;
         }
 
-        this->outputProductionReportRecord_(values, names);
+        std::vector<ConnData> connData;
+        if (!block_pressures.empty()) {
+            const auto& units = this->eclState_.getUnits();
+            for (const auto& connection : well.getConnections()) {
+                ConnData& conn = connData.emplace_back(connection);
+                conn.data.resize(WellProdDataType::numWPValues);
+                const auto gindex = connection.global_index() + 1;
+                const auto bpr = block_pressures.at({"BPR", gindex});
+                conn.data[Ix::OilRate]     = st.get_conn_var(wname, "COPR", gindex);
+                conn.data[Ix::WaterRate]   = st.get_conn_var(wname, "CWPR", gindex);
+                conn.data[Ix::GasRate]     = st.get_conn_var(wname, "CGPR", gindex);
+                conn.data[Ix::FluidResVol] = st.get_conn_var(wname, "CVPR", gindex);
+                conn.data[Ix::WaterCut]    = st.get_conn_var(wname, "CWCT", gindex);
+                conn.data[Ix::GasOilRatio] = st.get_conn_var(wname, "CGOR", gindex);
+                conn.data[Ix::CPR]         = st.get_conn_var(wname, "CPR", gindex);
+                conn.data[Ix::BPR]         = units.from_si(UnitSystem::measure::pressure, bpr);
+                if (conn.data[Ix::WaterRate] == 0.0) {
+                    conn.data[Ix::WatGasRatio] = 0.0;
+                } else {
+                    conn.data[Ix::WatGasRatio] = conn.data[Ix::WaterRate] / conn.data[Ix::GasRate];
+                }
+                if (std::isnan(values[Ix::WatGasRatio])) {
+                    conn.data[Ix::WatGasRatio] = 0.0;
+                }
+            }
+        }
+
+        this->outputProductionReportRecord_(values, names, connData);
     }
 
     this->endProductionReport_();
@@ -634,7 +706,8 @@ void LogOutputHelper<Scalar>::endCumulativeReport_() const
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
-                              const std::vector<std::string>& wellCumNames) const
+                              const std::vector<std::string>& wellCumNames,
+                              const std::vector<ConnData>& connData) const
 {
     std::ostringstream ss;
 
@@ -649,30 +722,45 @@ outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
                           "");
     }
 
-    auto scaledValue = [&wellCum](const auto quantity)
+    auto scaledValue = [](const auto& wc, const auto quantity)
     {
         // Unit M*
-        return wellCum[quantity] / 1000.0;
+        return wc[quantity] / 1000.0;
     };
 
-    auto scaledGasValue = [&wellCum](const auto quantity)
+    auto scaledGasValue = [](const auto& wc, const auto quantity)
     {
         // Unit MM*
-        return wellCum[quantity] / (1000.0 * 1000.0);
+        return wc[quantity] / (1000.0 * 1000.0);
     };
 
     ss << fmt::format("{:>8}:{:>4}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:"
                       "{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:",
                       wellCumNames[WellCumDataType::WCId::WellType],
                       wellCumNames[WellCumDataType::WCId::WellCTRL],
-                      scaledValue(WellCumDataType::WCId::OilProd),
-                      scaledValue(WellCumDataType::WCId::WaterProd),
-                      scaledGasValue(WellCumDataType::WCId::GasProd),
-                      scaledValue(WellCumDataType::WCId::FluidResVolProd),
-                      scaledValue(WellCumDataType::WCId::OilInj),
-                      scaledValue(WellCumDataType::WCId::WaterInj),
-                      scaledGasValue(WellCumDataType::WCId::GasInj),
-                      scaledValue(WellCumDataType::WCId::FluidResVolInj));
+                      scaledValue(wellCum, WellCumDataType::WCId::OilProd),
+                      scaledValue(wellCum, WellCumDataType::WCId::WaterProd),
+                      scaledGasValue(wellCum, WellCumDataType::WCId::GasProd),
+                      scaledValue(wellCum, WellCumDataType::WCId::FluidResVolProd),
+                      scaledValue(wellCum, WellCumDataType::WCId::OilInj),
+                      scaledValue(wellCum, WellCumDataType::WCId::WaterInj),
+                      scaledGasValue(wellCum, WellCumDataType::WCId::GasInj),
+                      scaledValue(wellCum, WellCumDataType::WCId::FluidResVolInj));
+
+    for (const auto& conn : connData) {
+        ss << fmt::format("\n:  BLOCK :{0:>3},{1:>3},{2:>3}:{3:>8}:{3:>4}:",
+                          conn.I, conn.J, conn.K, "")
+           << fmt::format("{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:"
+                          "{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:",
+                          scaledValue(conn.data, WellCumDataType::WCId::OilProd),
+                          scaledValue(conn.data, WellCumDataType::WCId::WaterProd),
+                          scaledGasValue(conn.data, WellCumDataType::WCId::GasProd),
+                          scaledValue(conn.data, WellCumDataType::WCId::FluidResVolProd),
+                          scaledValue(conn.data, WellCumDataType::WCId::OilInj),
+                          scaledValue(conn.data, WellCumDataType::WCId::WaterInj),
+                          scaledGasValue(conn.data, WellCumDataType::WCId::GasInj),
+                          scaledValue(conn.data, WellCumDataType::WCId::FluidResVolInj));
+    }
 
     OpmLog::note(ss.str());
 }
@@ -786,7 +874,8 @@ void LogOutputHelper<Scalar>::endInjectionReport_() const
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
-                             const std::vector<std::string>& wellInjNames) const
+                             const std::vector<std::string>& wellInjNames,
+                             const std::vector<ConnData>& connData) const
 {
     const auto isWellRecord =
         wellInj[WellProdDataType::WellLocationi] >= 1;
@@ -818,6 +907,19 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
         ss << fmt::format("{:>8.1f}:{:>8.1f}:",
                           wellInj[WellInjDataType::BHP],
                           wellInj[WellInjDataType::THP]);
+    }
+
+    for (const auto& conn : connData) {
+        ss << fmt::format("\n:  BLOCK :{0:>3},{1:>3},{2:>3}:"
+                          "{3:>6}:{3:>6}:{3:>6}:",
+                          conn.I, conn.J, conn.K, "")
+           << fmt::format("{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>8.1f}:{:>8.1f}:",
+                          conn.data[WellInjDataType::OilRate],
+                          conn.data[WellInjDataType::WaterRate],
+                          conn.data[WellInjDataType::GasRate],
+                          conn.data[WellInjDataType::FluidResVol],
+                          conn.data[WellInjDataType::CPR],
+                          conn.data[WellInjDataType::BPR]);
     }
 
     OpmLog::note(ss.str());
@@ -965,7 +1067,8 @@ void LogOutputHelper<Scalar>::endProductionReport_() const
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
-                              const std::vector<std::string>& wellProdNames) const
+                              const std::vector<std::string>& wellProdNames,
+                              const std::vector<ConnData>& connData) const
 {
     const auto isWellRecord =
         wellProd[WellProdDataType::WellLocationi] >= 1;
@@ -999,6 +1102,22 @@ outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
         ss << fmt::format("{:>8.1f}:{:>8.1f}:",
                           wellProd[WellProdDataType::BHP],
                           wellProd[WellProdDataType::THP]);
+    }
+
+    for (const auto& conn : connData) {
+        ss << fmt::format("\n:  BLOCK :{0:>3},{1:>3},{2:>3}:{3:>4}:",
+                          conn.I, conn.J, conn.K, "")
+           << fmt::format("{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:"
+                          "{:>11.3f}:{:>10.2f}:{:>12.4f}:{:>8.1f}:{:>8.1f}:",
+                          conn.data[WellProdDataType::OilRate],
+                          conn.data[WellProdDataType::WaterRate],
+                          conn.data[WellProdDataType::GasRate],
+                          conn.data[WellProdDataType::FluidResVol],
+                          conn.data[WellProdDataType::WaterCut],
+                          conn.data[WellProdDataType::GasOilRatio],
+                          conn.data[WellProdDataType::WatGasRatio],
+                          conn.data[WellProdDataType::CPR],
+                          conn.data[WellProdDataType::BPR]);
     }
 
     OpmLog::note(ss.str());

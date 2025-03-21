@@ -179,7 +179,8 @@ public:
     }
 
     //! \brief Setup list of active element-level data extractors
-    void setupExtractors()
+    void setupExtractors(const bool         /*isSubStep*/,
+                         const std::size_t  /*reportStepNum*/)
     {
         using Entry = typename Extractor::Entry;
         using ExtractContext = typename Extractor::Context;

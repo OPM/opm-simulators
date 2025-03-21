@@ -77,6 +77,7 @@ public:
     // gather solution to rank 0 for EclipseWriter
     void collect(const data::Solution&                                localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
+                 std::map<std::pair<std::string, int>, double>&       localExtraBlockData,
                  const data::Wells&                                   localWellData,
                  const data::WellBlockAveragePressures&               localWBPData,
                  const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
