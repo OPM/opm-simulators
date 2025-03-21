@@ -888,8 +888,8 @@ namespace Opm
                     }
 
             } else {
-                // unsolvable wells are treated as not operable and will not be solved for in this iteration.
-                if (this->param_.shut_unsolvable_wells_)
+                // unsolvable wells are treated as not operable and thus stopped in this iterations.
+                if (this->param_.shut_unsolvable_wells_ && !this->wellIsStopped())
                     this->operability_status_.solvable = false;
             }
         }
