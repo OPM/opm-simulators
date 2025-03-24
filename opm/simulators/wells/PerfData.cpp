@@ -64,6 +64,7 @@ void PerfData<Scalar>::prepareInjectorContainers()
     this->water_velocity.resize(num_perf);
     this->filtrate_data.resize(num_perf);
 }
+
 template<class Scalar>
 PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
 {
