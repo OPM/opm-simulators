@@ -173,7 +173,7 @@ public:
     /*!
      * \brief Returns the initial polymer concentration for a given a cell index
      */
-    Scalar  polymerConcentration(unsigned elemIdx) const;
+    Scalar polymerConcentration(unsigned elemIdx) const;
 
     /*!
     * \brief Returns the polymer molecule weight for a given cell index
@@ -184,27 +184,27 @@ public:
     /*!
      * \brief Returns the initial microbial concentration for a given a cell index
      */
-    Scalar  microbialConcentration(unsigned elemIdx) const;
+    Scalar microbialConcentration(unsigned elemIdx) const;
 
     /*!
      * \brief Returns the initial oxygen concentration for a given a cell index
      */
-    Scalar  oxygenConcentration(unsigned elemIdx) const;
+    Scalar oxygenConcentration(unsigned elemIdx) const;
 
     /*!
      * \brief Returns the initial urea concentration for a given a cell index
      */
-    Scalar  ureaConcentration(unsigned elemIdx) const;
+    Scalar ureaConcentration(unsigned elemIdx) const;
 
     /*!
      * \brief Returns the initial biofilm concentration for a given a cell index
      */
-    Scalar  biofilmConcentration(unsigned elemIdx) const;
+    Scalar biofilmConcentration(unsigned elemIdx) const;
 
     /*!
      * \brief Returns the initial calcite concentration for a given a cell index
      */
-    Scalar  calciteConcentration(unsigned elemIdx) const;
+    Scalar calciteConcentration(unsigned elemIdx) const;
 
     /*!
      * \brief Returns the index the relevant PVT region given a cell index

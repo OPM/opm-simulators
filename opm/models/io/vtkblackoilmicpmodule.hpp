@@ -141,8 +141,9 @@ public:
                 }
 
                 if (params_.ureaConcentrationOutput_) {
+                    // multypliging by scaling factor 10 (see WellInterfaceGeneric.cpp)
                     ureaConcentration_[globalDofIdx] =
-                        10 * scalarValue(intQuants.ureaConcentration());//Multypliging by scaling factor 10 (see WellInterface_impl.hpp)
+                        10 * scalarValue(intQuants.ureaConcentration());
                 }
 
                 if (params_.biofilmConcentrationOutput_) {

@@ -24,6 +24,8 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 namespace Opm {
 namespace Properties {
@@ -36,6 +38,10 @@ template<class TypeTag>
 struct EnableMICP<TypeTag, TTag::FlowMICPProblem> {
     static constexpr bool value = true;
 };
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowMICPProblem> { using type = TpfaLinearizer<TypeTag>; };
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowMICPProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowMICPProblem>
@@ -58,6 +64,13 @@ public:
                                          /*enabledCompIdx=*/FluidSystem::waterCompIdx,
                                          5>; //Five MICP components
 };
+
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::FlowMICPProblem> { static constexpr bool value = true; };
+
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::FlowMICPProblem> { static constexpr bool value = true; };
+
 }}
 
 namespace Opm {

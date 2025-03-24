@@ -486,6 +486,6 @@ public:
 
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

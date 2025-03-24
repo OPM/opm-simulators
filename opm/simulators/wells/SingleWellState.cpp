@@ -194,6 +194,24 @@ Scalar SingleWellState<Scalar>::sum_solvent_rates() const
 }
 
 template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_microbial_rates() const
+{
+    return this->sum_connection_rates(this->perf_data.microbial_rates);
+}
+
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_oxygen_rates() const
+{
+    return this->sum_connection_rates(this->perf_data.oxygen_rates);
+}
+
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_urea_rates() const
+{
+    return this->sum_connection_rates(this->perf_data.urea_rates);
+}
+
+template<class Scalar>
 Scalar SingleWellState<Scalar>::sum_filtrate_rate() const
 {
     if (this->producer) return 0.;
