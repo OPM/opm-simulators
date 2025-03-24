@@ -124,7 +124,10 @@ public:
                           const std::variant<Scalar,EvalWell>& polymerConcentration) const;
 
     std::tuple<Eval,Eval,Eval>
-    connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+    connectionRatesMICP(Scalar& rate_m,
+                        Scalar& rate_o,
+                        Scalar& rate_u,
+                        const std::vector<EvalWell>& cq_s,
                         const std::variant<Scalar,EvalWell>& microbialConcentration,
                         const std::variant<Scalar,EvalWell>& oxygenConcentration,
                         const std::variant<Scalar,EvalWell>& ureaConcentration) const;

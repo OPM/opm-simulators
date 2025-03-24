@@ -486,17 +486,6 @@ public:
                     });
             });
         }
-
-        // Deal with "clogging" for the MICP model
-        if constexpr (enableMICP) {
-            auto& model = this->model();
-            const auto& residual = model.linearizer().residual();
-
-            for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); ++globalDofIdx) {
-                auto& phi = this->referencePorosity_[/*timeIdx=*/1][globalDofIdx];
-                MICPModule::checkCloggingMICP(model, phi, globalDofIdx);
-            }
-        }
     }
 
     /*!
@@ -629,6 +618,12 @@ public:
             if constexpr (enablePolymer) {
                 rate[Indices::polymerConcentrationIdx] += source.rate({ijk, SourceComponent::POLYMER}) / this->model().dofTotalVolume(globalDofIdx);
             }
+            if constexpr (enableMICP) {
+                rate[Indices::microbialConcentrationIdx] += source.rate({ijk, SourceComponent::MICR}) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::oxygenConcentrationIdx] += source.rate({ijk, SourceComponent::OXYG}) / this->model().dofTotalVolume(globalDofIdx);
+                // dividing by scaling factor 10 (see WellInterfaceGeneric.cpp)
+                rate[Indices::ureaConcentrationIdx] += source.rate({ijk, SourceComponent::UREA}) / (this->model().dofTotalVolume(globalDofIdx) * 10);
+            }
             if constexpr (enableEnergy) {
                 for (unsigned i = 0; i < phidx_map.size(); ++i) {
                     const auto phaseIdx = phidx_map[i];
@@ -692,7 +687,7 @@ public:
     LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
         OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier);
-        if (!enableSaltPrecipitation)
+        if (!enableSaltPrecipitation && !enableMICP)
             return 1.0;
 
         const auto& fs = intQuants.fluidState();
@@ -700,8 +695,15 @@ public:
         
         LhsEval porosityFactor = decay<LhsEval>(1. - fs.saltSaturation());
         porosityFactor = min(porosityFactor, 1.0);
-        const auto& permfactTable = BrineModule::permfactTable(tableIdx);
-        return permfactTable.eval(porosityFactor, /*extrapolation=*/true);
+        if constexpr (enableSaltPrecipitation) {
+            const auto& permfactTable = BrineModule::permfactTable(tableIdx);
+            return permfactTable.eval(porosityFactor, /*extrapolation=*/true);
+        }
+        if constexpr (enableMICP){
+            const auto& permfactTable = MICPModule::permfactTable(tableIdx);
+            return permfactTable.eval(porosityFactor, /*extrapolation=*/true);
+        }
+        return 1.0;
     }
 
     // temporary solution to facilitate output of initial state from flow
@@ -763,6 +765,9 @@ public:
                         break;
                     case BCComponent::SOLVENT:
                     case BCComponent::POLYMER:
+                    case BCComponent::MICR:
+                    case BCComponent::OXYG:
+                    case BCComponent::UREA:
                     case BCComponent::NONE:
                         throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
                 }
@@ -1514,6 +1519,31 @@ protected:
             throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
 
         rate[Indices::polymerConcentrationIdx] = bc.rate;
+    }
+
+    void handleMicrBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    {
+        if constexpr (!enableMICP)
+            throw std::logic_error("MICP is disabled and you're trying to add microbes to BC");
+
+        rate[Indices::microbialConcentrationIdx] = bc.rate;
+    }
+
+    void handleOxygBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    {
+        if constexpr (!enableMICP)
+            throw std::logic_error("MICP is disabled and you're trying to add oxygen to BC");
+
+        rate[Indices::oxygenConcentrationIdx] = bc.rate;
+    }
+
+    void handleUreaBC(const BCProp::BCFace& bc, RateVector& rate) const override
+    {
+        if constexpr (!enableMICP)
+            throw std::logic_error("MICP is disabled and you're trying to add urea to BC");
+
+        // dividing by scaling factor 10 (see WellInterfaceGeneric.cpp)
+        rate[Indices::ureaConcentrationIdx] = bc.rate / 10;
     }
 
     void updateExplicitQuantities_(const bool first_step_after_restart)

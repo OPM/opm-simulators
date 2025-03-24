@@ -623,7 +623,10 @@ namespace Opm
             std::tie(connectionRates[perf][Indices::contiMicrobialEqIdx],
                      connectionRates[perf][Indices::contiOxygenEqIdx],
                      connectionRates[perf][Indices::contiUreaEqIdx]) =
-                this->connections_.connectionRatesMICP(cq_s,
+                this->connections_.connectionRatesMICP(perf_data.microbial_rates[perf],
+                                                       perf_data.oxygen_rates[perf],
+                                                       perf_data.urea_rates[perf],
+                                                       cq_s,
                                                        microbialConcentration,
                                                        oxygenConcentration,
                                                        ureaConcentration);

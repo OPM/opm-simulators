@@ -36,10 +36,10 @@ namespace Opm
         // to and from active ones. That said, they are not considered by num_phases or
         // MaxNumPhases. The crypto phases which are currently implemented are solvent,
         // polymer, energy, polymer molecular weight, foam and brine.
-        static const int NumCryptoPhases = 7;
+        static const int NumCryptoPhases = 8;
 
         // enum ComponentIndex { Water = 0, Oil = 1, Gas = 2 };
-        enum PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2, Solvent = 3, Polymer = 4, Energy = 5, PolymerMW = 6, Foam = 7, Brine = 8, ZFraction = 9 };
+        enum PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2, Solvent = 3, Polymer = 4, Energy = 5, PolymerMW = 6, Foam = 7, Brine = 8, ZFraction = 9, MICP = 10 };
     };
 
     struct PhaseUsage : public BlackoilPhases
@@ -60,6 +60,7 @@ namespace Opm
         bool has_foam{};
         bool has_brine{};
         bool has_zFraction{};
+        bool has_micp{};
 
     };
 

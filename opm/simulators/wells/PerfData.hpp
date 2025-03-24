@@ -66,7 +66,9 @@ public:
         serializer(polymer_rates);
         serializer(brine_rates);
         serializer(prod_index);
-        serializer(micp_rates);
+        serializer(microbial_rates);
+        serializer(oxygen_rates);
+        serializer(urea_rates);
         serializer(cell_index);
         serializer(connection_transmissibility_factor);
         serializer(connection_d_factor);
@@ -97,7 +99,9 @@ public:
     std::vector<Scalar> polymer_rates{};
     std::vector<Scalar> brine_rates{};
     std::vector<Scalar> prod_index{};
-    std::vector<Scalar> micp_rates{};
+    std::vector<Scalar> microbial_rates{};
+    std::vector<Scalar> oxygen_rates{};
+    std::vector<Scalar> urea_rates{};
     std::vector<std::size_t> cell_index{};
     std::vector<Scalar> connection_transmissibility_factor{};
     std::vector<Scalar> connection_d_factor{};

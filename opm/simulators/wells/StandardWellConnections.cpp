@@ -756,7 +756,10 @@ std::tuple<typename StandardWellConnections<FluidSystem,Indices>::Eval,
            typename StandardWellConnections<FluidSystem,Indices>::Eval,
            typename StandardWellConnections<FluidSystem,Indices>::Eval>
 StandardWellConnections<FluidSystem,Indices>::
-connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+connectionRatesMICP(Scalar& rate_m,
+                    Scalar& rate_o,
+                    Scalar& rate_u,
+                    const std::vector<EvalWell>& cq_s,
                     const std::variant<Scalar,EvalWell>& microbialConcentration,
                     const std::variant<Scalar,EvalWell>& oxygenConcentration,
                     const std::variant<Scalar,EvalWell>& ureaConcentration) const
@@ -769,6 +772,8 @@ connectionRatesMICP(const std::vector<EvalWell>& cq_s,
         cq_s_microbe *= std::get<EvalWell>(microbialConcentration);
     }
 
+    rate_m = cq_s_microbe.value();
+
     EvalWell cq_s_oxygen = cq_s[waterCompIdx];
     if (well_.isInjector()) {
         cq_s_oxygen *= std::get<Scalar>(oxygenConcentration);
@@ -776,12 +781,17 @@ connectionRatesMICP(const std::vector<EvalWell>& cq_s,
         cq_s_oxygen *= std::get<EvalWell>(oxygenConcentration);
     }
 
+    rate_o = cq_s_oxygen.value();
+
     EvalWell cq_s_urea = cq_s[waterCompIdx];
     if (well_.isInjector()) {
         cq_s_urea *= std::get<Scalar>(ureaConcentration);
     } else {
         cq_s_urea *= std::get<EvalWell>(ureaConcentration);
     }
+
+    // rescaling back the urea concentration (see WellInterfaceGeneric.cpp)
+    rate_u = cq_s_urea.value() * 10;
 
     return {well_.restrictEval(cq_s_microbe),
             well_.restrictEval(cq_s_oxygen),

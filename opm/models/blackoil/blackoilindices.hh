@@ -147,24 +147,24 @@ struct BlackOilIndices
         numPolymers > 1 ? polymerConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the first MICP component
-    static constexpr int microbialConcentrationIdx =
+    static constexpr int biofilmConcentrationIdx =
         enableMICP ? PVOffset + numPhases + numSolvents : -1000;
 
     //! Index of the primary variable for the second MICP component
-    static constexpr int oxygenConcentrationIdx =
-        numMICPs > 1 ? microbialConcentrationIdx + 1 : -1000;
+    static constexpr int microbialConcentrationIdx =
+        numMICPs > 1 ? biofilmConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the third MICP component
-    static constexpr int ureaConcentrationIdx =
-        numMICPs > 2 ? oxygenConcentrationIdx + 1 : -1000;
+    static constexpr int oxygenConcentrationIdx =
+        numMICPs > 2 ? microbialConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the fourth MICP component
-    static constexpr int biofilmConcentrationIdx =
-        numMICPs > 3 ? ureaConcentrationIdx + 1 : -1000;
+    static constexpr int ureaConcentrationIdx =
+        numMICPs > 3 ? oxygenConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the fifth MICP component
     static constexpr int calciteConcentrationIdx =
-        numMICPs > 4 ? biofilmConcentrationIdx + 1 : -1000;
+        numMICPs > 4 ? ureaConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the foam
     static constexpr int foamConcentrationIdx =
@@ -204,24 +204,24 @@ struct BlackOilIndices
         numPolymers > 1 ? contiPolymerEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the first MICP component
-    static constexpr int contiMicrobialEqIdx =
+    static constexpr int contiBiofilmEqIdx =
         enableMICP ? PVOffset + numPhases + numSolvents + numExtbos : -1000;
 
     //! Index of the continuity equation for the second MICP component
-    static constexpr int contiOxygenEqIdx =
-        numMICPs > 1 ? contiMicrobialEqIdx + 1 : -1000;
+    static constexpr int contiMicrobialEqIdx =
+        numMICPs > 1 ? contiBiofilmEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the third MICP component
-    static constexpr int contiUreaEqIdx =
-        numMICPs > 2 ? contiOxygenEqIdx + 1 : -1000;
+    static constexpr int contiOxygenEqIdx =
+        numMICPs > 2 ? contiMicrobialEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the fourth MICP component
-    static constexpr int contiBiofilmEqIdx =
-        numMICPs > 3 ? contiUreaEqIdx + 1 : -1000;
+    static constexpr int contiUreaEqIdx =
+        numMICPs > 3 ? contiOxygenEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the fifth MICP component
     static constexpr int contiCalciteEqIdx =
-        numMICPs > 4 ? contiBiofilmEqIdx + 1 : -1000;
+        numMICPs > 4 ? contiUreaEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the foam component
     static constexpr int contiFoamEqIdx =

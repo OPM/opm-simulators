@@ -338,6 +338,91 @@ assignCo2InWater(const unsigned globalDofIdx,
 }
 
 template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+hasMicrobialMass() const
+{
+    return has(Inplace::Phase::MicrobialMass);
+}
+
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignMicrobialMass(const unsigned globalDofIdx,
+                    const Scalar   microbialMass)
+{
+    this->fip_[Inplace::Phase::MicrobialMass][globalDofIdx] = microbialMass;
+}
+
+template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+hasOxygenMass() const
+{
+    return has(Inplace::Phase::OxygenMass);
+}
+
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignOxygenMass(const unsigned globalDofIdx,
+                 const Scalar   oxygenMass)
+{
+    this->fip_[Inplace::Phase::OxygenMass][globalDofIdx] = oxygenMass;
+}
+
+template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+hasUreaMass() const
+{
+    return has(Inplace::Phase::UreaMass);
+}
+
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignUreaMass(const unsigned globalDofIdx,
+               const Scalar   ureaMass)
+{
+    this->fip_[Inplace::Phase::UreaMass][globalDofIdx] = ureaMass;
+}
+
+template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+hasBiofilmMass() const
+{
+    return has(Inplace::Phase::BiofilmMass);
+}
+
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignBiofilmMass(const unsigned globalDofIdx,
+                  const Scalar   biofilmMass)
+{
+    this->fip_[Inplace::Phase::BiofilmMass][globalDofIdx] = biofilmMass;
+}
+
+template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+hasCalciteMass() const
+{
+    return has(Inplace::Phase::CalciteMass);
+}
+
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignCalciteMass(const unsigned globalDofIdx,
+                  const Scalar   calciteMass)
+{
+    this->fip_[Inplace::Phase::CalciteMass][globalDofIdx] = calciteMass;
+}
+
+template<class FluidSystem>
 void
 FIPContainer<FluidSystem>::
 assignOilGasDistribution(const unsigned globalDofIdx,
