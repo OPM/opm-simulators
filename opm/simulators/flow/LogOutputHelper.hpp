@@ -76,6 +76,15 @@ public:
     void production(const std::size_t reportStepNum,
                     const std::map<std::pair<std::string,int>, double>& block_pressures) const;
 
+    //! \brief Write well specification report to output.
+    //!
+    //! \param[in] changedWells List of wells whose structure changed at
+    //! this time.
+    //!
+    //! \param[in] reportStepNum Report step index (1-based).
+    void wellSpecification(const std::vector<std::string>& changedWells,
+                           const std::size_t               reportStepNum) const;
+
     void timeStamp(const std::string& lbl,
                    double elapsed,
                    int rstep,
