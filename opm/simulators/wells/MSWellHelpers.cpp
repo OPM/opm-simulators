@@ -115,7 +115,11 @@ template<class X, class Y>
 void ParallellMSWellB<MatrixType>::
 mv (const X& x, Y& y) const
 {
-    B_.mv(x, y);
+    // x.size() == 0 indicates that there are no active perforations on this process.
+    // Then all contributions come from the communication below.
+    if (x.size() > 0) {
+        B_.mv(x, y);
+    }
 
     if (this->parallel_well_info_.communication().size() > 1)
     {
