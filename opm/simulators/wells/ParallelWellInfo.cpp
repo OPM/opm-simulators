@@ -524,6 +524,22 @@ ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& w
 }
 
 template<class Scalar>
+void ParallelWellInfo<Scalar>::setActiveToLocalMap(const std::unordered_map<int,int> activeToLocalMap) const {
+    //activeToLocalMap_ is marked as mutable
+    activeToLocalMap_ = activeToLocalMap;
+}
+
+template<class Scalar>
+int ParallelWellInfo<Scalar>::activeToLocal(const int activeIndex) const {
+    if (comm_->size() == 1)
+        return activeIndex;
+    auto it = activeToLocalMap_.find(activeIndex);
+    if (it == activeToLocalMap_.end())
+        return -1; // Active index not found
+    return it->second;
+}
+
+template<class Scalar>
 int ParallelWellInfo<Scalar>::localToGlobal(std::size_t localIndex) const {
     if(globalPerfCont_)
         return globalPerfCont_->localToGlobal(localIndex);

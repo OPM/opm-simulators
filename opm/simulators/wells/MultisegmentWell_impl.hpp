@@ -347,7 +347,7 @@ namespace Opm
         const auto& segment_pressure = segments_copy.pressure;
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 // If local_perf_index == -1, then the perforation is not on this process
                 // If this->well_cells_.size() == 0, then this process contains only shut perforations
                 if (local_perf_index < 0 or this->well_cells_.size() == 0)
@@ -895,7 +895,7 @@ namespace Opm
                     PerforationRates<Scalar>& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
-        const int local_perf_index = this->pw_info_.globalToLocal(perf);
+        const int local_perf_index = this->pw_info_.activeToLocal(perf);
         // If local_perf_index == -1, then the perforation is not on this process
         // If this->cell_perforation_pressure_diffs_.size() == 0, then this process contains only shut perforations
         if (local_perf_index < 0 or this->cell_perforation_pressure_diffs_.size() == 0)
@@ -1285,7 +1285,7 @@ namespace Opm
                                                  seg_dp);
             seg_dp[seg] = dp;
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 // If local_perf_index == -1, then the perforation is not on this process
                 // If this->well_cells_.size() == 0, then this process contains only shut perforations
                 if (local_perf_index < 0 or this->well_cells_.size() == 0)
@@ -1799,7 +1799,7 @@ namespace Opm
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 // If local_perf_index == -1, then the perforation is not on this process
                 // If this->well_cells_.size() == 0, then this process contains only shut perforations
                 if (local_perf_index < 0 or this->well_cells_.size() == 0)
@@ -1952,7 +1952,7 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             const EvalWell segment_pressure = this->primary_variables_.getSegmentPressure(seg);
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 // If local_perf_index == -1, then the perforation is not on this process
                 // If this->well_cells_.size() == 0, then this process contains only shut perforations
                 if (local_perf_index < 0 or this->well_cells_.size() == 0)
@@ -2188,7 +2188,7 @@ namespace Opm
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 // If local_perf_index == -1, then the perforation is not on this process
                 // If this->well_cells_.size() == 0, then this process contains only shut perforations
                 if (local_perf_index < 0 or this->well_cells_.size() == 0)
@@ -2222,7 +2222,7 @@ namespace Opm
             // calculating the perforation rate for each perforation that belongs to this segment
             const Scalar seg_pressure = getValue(this->primary_variables_.getSegmentPressure(seg));
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 // If local_perf_index == -1, then the perforation is not on this process
                 // If this->well_cells_.size() == 0, then this process contains only shut perforations
                 if (local_perf_index < 0 or this->well_cells_.size() == 0)

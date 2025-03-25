@@ -104,7 +104,7 @@ MultisegmentWellSegments(const int numSegments,
             perforations_[segment_index].push_back(i_perf_wells);
             well.perfDepth()[i_perf_wells] = connection.depth();
             const Scalar segment_depth = segment_set[segment_index].depth();
-            int local_perf_index = parallel_well_info.globalToLocal(i_perf_wells);
+            int local_perf_index = parallel_well_info.activeToLocal(i_perf_wells);
             // If local_perf_index == -1, then the perforation is not on this process
             // If local_perforation_depth_diffs_.size() == 0, then this process contains only shut perforations
             if (local_perf_index > -1 and local_perforation_depth_diffs_.size() > 0) {
