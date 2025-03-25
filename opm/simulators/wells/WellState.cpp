@@ -691,6 +691,7 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // that is why I think we should use a well model to initialize the WellState here
             std::vector<std::vector<int>> segment_perforations(well_nseg);
             std::unordered_map<int,int> active_perf_index_local_to_global = {};
+            std::unordered_map<int,int> active_to_local = {};
             for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
                 const Connection& connection = completion_set.get(perf);
                 if (connection.state() == Connection::State::OPEN) {
@@ -706,11 +707,13 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     segment_perforations[segment_index].push_back(n_activeperf);
                     if (ws.parallel_info.get().globalToLocal(perf) > -1) {
                         active_perf_index_local_to_global.insert({n_activeperf_local, n_activeperf});
+                        active_to_local.insert({n_activeperf, ws.parallel_info.get().globalToLocal(perf)});
                         n_activeperf_local++;
                     }
                     n_activeperf++;
                 }
             }
+            ws.parallel_info.get().setActiveToLocalMap(active_to_local);
 
             if (!this->enableDistributedWells_ && static_cast<int>(ws.perf_data.size()) != n_activeperf)
                 throw std::logic_error("Distributed multi-segment wells cannot be initialized properly yet.");
@@ -851,7 +854,7 @@ calculateSegmentRatesBeforeSum(const ParallelWellInfo<Scalar>& pw_info,
     }
     // contributions from the perforations belong to this segment
     for (const int& perf : segment_perforations[segment]) {
-        auto local_perf = pw_info.globalToLocal(perf);
+        auto local_perf = pw_info.activeToLocal(perf);
         // If local_perf == -1, then the perforation is not on this process.
         // The perforation of the other processes are added in calculateSegmentRates.
         if (local_perf > -1) {

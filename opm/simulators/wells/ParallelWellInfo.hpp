@@ -217,6 +217,9 @@ public:
     /// \brief Collectively decide which rank has first perforation.
     void communicateFirstPerforation(bool hasFirst);
 
+    void setActiveToLocalMap(const std::unordered_map<int,int> active_to_local_map) const;
+    int activeToLocal(const int activeIndex) const;
+    int localToActive(std::size_t localIndex) const;
     int globalToLocal(const int globalIndex) const;
     int localToGlobal(std::size_t localIndex) const;
 
@@ -342,6 +345,9 @@ private:
     std::unique_ptr<CommunicateAboveBelow<Scalar>> commAboveBelow_;
 
     std::unique_ptr<GlobalPerfContainerFactory<Scalar>> globalPerfCont_;
+
+    mutable std::unordered_map<int,int> active_to_local_map_; // Cache for active perforation index to local perforation index mapping
+    mutable std::unordered_map<int,int> local_to_active_map_; // Cache for local perforation index to active perforation index mapping
 };
 
 /// \brief Class checking that all connections are on active cells
