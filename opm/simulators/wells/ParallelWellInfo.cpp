@@ -133,7 +133,7 @@ void GlobalPerfContainerFactory<Scalar>::buildLocalToGlobalMap() const {
 
 template<class Scalar>
 int GlobalPerfContainerFactory<Scalar>::localToGlobal(std::size_t localIndex) const {
-    if (local_indices_.size() == 0)
+    if (comm_.size() == 1)
         return localIndex;
     if (!l2g_map_built_)
         buildLocalToGlobalMap();
@@ -154,7 +154,7 @@ void GlobalPerfContainerFactory<Scalar>::buildGlobalToLocalMap() const {
 
 template<class Scalar>
 int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) const {
-    if (local_indices_.size() == 0)
+    if (comm_.size() == 1)
         return globalIndex;
     if (!g2l_map_built_) {
         buildGlobalToLocalMap();
