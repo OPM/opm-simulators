@@ -844,6 +844,10 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
+        if (this->number_of_local_perforations_ == 0) {
+            // If there are no open perforations on this process, there are no contributions to the jacobian.
+            return;
+        }
         this->linSys_.extract(jacobian);
     }
 
@@ -857,6 +861,10 @@ namespace Opm
                              const bool use_well_weights,
                              const WellState<Scalar>& well_state) const
     {
+        if (this->number_of_local_perforations_ == 0) {
+            // If there are no open perforations on this process, there are no contributions the cpr pressure matrix.
+            return;
+        }
         // Add the pressure contribution to the cpr system for the well
         this->linSys_.extractCPRPressureMatrix(jacobian,
                                                weights,
