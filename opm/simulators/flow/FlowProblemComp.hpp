@@ -362,6 +362,9 @@ public:
             Dune::FieldVector<Scalar, numComponents> z(0.0);
             Scalar sumMoles = 0.0;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (Indices::waterEnabled && phaseIdx == static_cast<unsigned int>(waterPhaseIdx)){ 
+                    continue;
+                }
                 const auto saturation = fs.saturation(phaseIdx);
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     Scalar tmp = fs.molarity(phaseIdx, compIdx) * saturation;
@@ -413,6 +416,12 @@ public:
                 " Threshold Pressures are not supported by compostional simulation ");
         return thresholdPressures_;
     }
+
+    const EclWriterType& eclWriter() const
+    { return *eclWriter_; }
+
+    EclWriterType& eclWriter()
+    { return *eclWriter_; }
 
     // TODO: do we need this one?
     template<class Serializer>
@@ -491,7 +500,7 @@ protected:
         const bool gas_active = FluidSystem::phaseIsActive(gasPhaseIdx);
         const bool oil_active = FluidSystem::phaseIsActive(oilPhaseIdx);
 
-        if (water_active && Indices::numPhases > 1)
+        if (water_active && Indices::numPhases > 2)
             waterSaturationData = fp.get_double("SWAT");
         else
             waterSaturationData.resize(numDof);
@@ -526,6 +535,10 @@ protected:
                                             1.0
                                             - waterSaturationData[dofIdx]
                                             - gasSaturationData[dofIdx]);
+            }
+            if (water_active) {
+                dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
+                                            waterSaturationData[dofIdx]);
             }
 
             //////

@@ -57,6 +57,11 @@ struct FlowBaseProblem {
 
 }
 
+template<class TypeTag, class MyTypeTag>
+struct NonlinearSystem { using type = UndefinedProperty; };
+
+
+
 // The class which deals with ECL aquifers
 template<class TypeTag, class MyTypeTag>
 struct AquiferModel { using type = UndefinedProperty; };

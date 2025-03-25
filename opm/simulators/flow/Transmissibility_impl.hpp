@@ -313,7 +313,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-    for (const auto& chunk : ElementChunks(gridView_, num_threads)) {
+    for (const auto& chunk : ElementChunks(gridView_, Dune::Partitions::all, num_threads)) {
         for (const auto& elem : chunk) {
             FaceInfo inside;
             FaceInfo outside;

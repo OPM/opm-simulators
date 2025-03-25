@@ -87,6 +87,7 @@ struct MaxSinglePrecisionDays { static constexpr Scalar value = 20.0; };
 struct MinStrictCnvIter { static constexpr int value = -1; };
 struct MinStrictMbIter { static constexpr int value = -1; };
 struct SolveWelleqInitially { static constexpr bool value = true; };
+struct PreSolveNetwork { static constexpr bool value = true; };
 struct UpdateEquationsScaling { static constexpr bool value = false; };
 struct UseUpdateStabilization { static constexpr bool value = true; };
 struct MatrixAddWellContributions { static constexpr bool value = false; };
@@ -128,8 +129,8 @@ struct UseImplicitIpr { static constexpr bool value = true; };
 struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = true; };
 
 // Network solver parameters
-struct NetworkMaxStrictIterations { static constexpr int value = 10; };
-struct NetworkMaxIterations { static constexpr int value = 20; };
+struct NetworkMaxStrictOuterIterations { static constexpr int value = 10; };
+struct NetworkMaxOuterIterations { static constexpr int value = 10; };
 struct NetworkMaxSubIterations { static constexpr int value = 20; };
 template<class Scalar>
 struct NetworkPressureUpdateDampingFactor { static constexpr Scalar value = 0.1; };
@@ -254,6 +255,9 @@ public:
     /// Solve well equation initially
     bool solve_welleq_initially_;
 
+    /// Pre solve and iterate network model
+    bool pre_solve_network_;
+
     /// Update scaling factors for mass balance equations
     bool update_equations_scaling_;
 
@@ -297,10 +301,10 @@ public:
     bool check_group_constraints_inner_well_iterations_; 
 
     /// Maximum number of iterations in the network solver before relaxing tolerance
-    int network_max_strict_iterations_;
+    int network_max_strict_outer_iterations_;
 
     /// Maximum number of iterations in the network solver before giving up
-    int network_max_iterations_;
+    int network_max_outer_iterations_;
 
     /// Maximum number of sub-iterations to update network pressures (within a single well/group control update)
     int network_max_sub_iterations_;

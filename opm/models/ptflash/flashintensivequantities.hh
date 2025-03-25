@@ -76,6 +76,9 @@ class FlashIntensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { dimWorld = GridView::dimensionworld };
     enum { pressure0Idx = Indices::pressure0Idx };
+    enum { water0Idx = Indices::water0Idx};
+
+    static constexpr bool waterEnabled = Indices::waterEnabled;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -216,19 +219,26 @@ public:
 
 
         // Update saturation
-        // \Note: the current implementation assume oil-gas system.
+        Evaluation Sw = 0.0;
+        if constexpr (waterEnabled) {
+            Sw = priVars.makeEvaluation(water0Idx, timeIdx);
+        }
         Evaluation L = fluidState_.L();
-        Evaluation So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-        Evaluation Sg = Opm::max(1 - So, 0.0);
-        Scalar sumS = Opm::getValue(So) + Opm::getValue(Sg);
+        Evaluation So = Opm::max((1 - Sw) * (L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
+        Evaluation Sg = Opm::max(1 - So - Sw, 0.0);
+        Scalar sumS = Opm::getValue(So) + Opm::getValue(Sg) + Opm::getValue(Sw);
         So /= sumS;
         Sg /= sumS;
 
-        fluidState_.setSaturation(0, So);
-        fluidState_.setSaturation(1, Sg);
+        fluidState_.setSaturation(FluidSystem::oilPhaseIdx, So);
+        fluidState_.setSaturation(FluidSystem::gasPhaseIdx, Sg);
+        if constexpr (waterEnabled) {
+            Sw /= sumS;
+            fluidState_.setSaturation(FluidSystem::waterPhaseIdx, Sw);
+        }
 
-        fluidState_.setCompressFactor(0, Z_L);
-        fluidState_.setCompressFactor(1, Z_V);
+        fluidState_.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
+        fluidState_.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
 
         // Print saturation
         if (flashVerbosity >= 5) {
@@ -250,7 +260,10 @@ public:
 
         // set the phase viscosity and density
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            paramCache.updatePhase(fluidState_, phaseIdx);
+            if (phaseIdx == static_cast<unsigned int>(FluidSystem::oilPhaseIdx) 
+             || phaseIdx == static_cast<unsigned int>(FluidSystem::gasPhaseIdx)) {
+                paramCache.updatePhase(fluidState_, phaseIdx);
+            }
 
             const Evaluation& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
 

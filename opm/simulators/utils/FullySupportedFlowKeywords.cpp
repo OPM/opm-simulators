@@ -33,6 +33,12 @@ fullySupported()
 {
    static const SupportedKeywordItems<std::string> fully_supported_keywords_strings = {
          {
+            "GEFAC",
+            {
+               {3,{true, is_bool_convertible {}, "GEFAC(GRPNETWK): String value must be convertible to bool."}}, // USE_GEFAC_IN_NETWORK
+            },
+         },
+         {
             "NEXTSTEP",
             {
                {2,{true, is_bool_convertible {}, "NEXTSTEP(NSTEP2): String value must be convertible to bool."}}, // APPLY_TO_FUTURE_REPORT_STEPS
@@ -42,6 +48,12 @@ fullySupported()
             "WCONHIST",
             {
                {3,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP"}, "WCONHIST(TARGET): should be set to ORAT/WRAT/GRAT/LRAT/RESV or BHP"}}, // CMODE
+            },
+         },
+         {
+            "WEFAC",
+            {
+               {3,{true, is_bool_convertible {}, "WEFAC(WELNETWK): String value must be convertible to bool."}}, // USE_WEFAC_IN_NETWORK
             },
          },
    };
@@ -66,6 +78,12 @@ const SupportedKeywordItems<double>&
 fullySupported()
 {
    static const SupportedKeywordItems<double> fully_supported_keywords_double = {
+         {
+            "NEFAC",
+            {
+               {2,{true, [](double x) { return x > 0 && x <= 1.0; }, "NEFAC(EFF_FACTOR: Efficiency must be in the range (0,1]"}}, // NETWORK_EFF_FACTOR
+            },
+         },
          {
             "WPIMULT",
             {

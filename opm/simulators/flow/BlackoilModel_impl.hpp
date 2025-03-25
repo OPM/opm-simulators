@@ -59,8 +59,6 @@ BlackoilModel(Simulator& simulator,
     , phaseUsage_(phaseUsageFromDeck(eclState()))
     , param_( param )
     , well_model_ (well_model)
-    , rst_conv_(simulator_.problem().eclWriter()->collectOnIORank().localIdxToGlobalIdxMapping(),
-                grid_.comm())
     , terminal_output_ (terminal_output)
     , current_relaxation_(1.0)
     , dx_old_(simulator_.model().numGridDof())
@@ -143,14 +141,15 @@ prepareStep(const SimulatorTimerInterface& timer)
         return -1;
     };
     const auto& schedule = simulator_.vanguard().schedule();
-    rst_conv_.init(simulator_.vanguard().globalNumCells(),
-                   schedule[timer.reportStepNum()].rst_config(),
-                   {getIdx(FluidSystem::oilPhaseIdx),
-                    getIdx(FluidSystem::gasPhaseIdx),
-                    getIdx(FluidSystem::waterPhaseIdx),
-                    contiPolymerEqIdx,
-                    contiBrineEqIdx,
-                    contiSolventEqIdx});
+    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
+    rst_conv.init(simulator_.vanguard().globalNumCells(),
+                  schedule[timer.reportStepNum()].rst_config(),
+                  {getIdx(FluidSystem::oilPhaseIdx),
+                   getIdx(FluidSystem::gasPhaseIdx),
+                   getIdx(FluidSystem::waterPhaseIdx),
+                   contiPolymerEqIdx,
+                   contiBrineEqIdx,
+                   contiSolventEqIdx});
 
     return report;
 }
@@ -246,7 +245,8 @@ nonlinearIteration(const int iteration,
                                                            nonlinear_solver);
     }
 
-    rst_conv_.update(simulator_.model().linearizer().residual());
+    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
+    rst_conv.update(simulator_.model().linearizer().residual());
 
     return result;
 }
@@ -353,7 +353,6 @@ afterStep(const SimulatorTimerInterface&)
     Dune::Timer perfTimer;
     perfTimer.start();
     simulator_.problem().endTimeStep();
-    simulator_.problem().setConvData(rst_conv_.getData());
     report.pre_post_time += perfTimer.stop();
     return report;
 }

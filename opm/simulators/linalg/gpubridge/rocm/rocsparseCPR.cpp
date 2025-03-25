@@ -306,7 +306,7 @@ apply_amg(const Scalar& y,
 
 template <class Scalar, unsigned int block_size>
 void rocsparseCPR<Scalar, block_size>::
-apply(Scalar& y,
+apply(const Scalar &y,
       Scalar& x)
 {
     Dune::Timer t_bilu0;

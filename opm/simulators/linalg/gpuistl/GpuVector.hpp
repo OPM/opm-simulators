@@ -203,6 +203,7 @@ public:
      * @note assumes that this vector has numberOfElements elements
      */
     void copyFromHost(const T* dataPointer, size_t numberOfElements);
+    void copyFromHost(const T* dataPointer, size_t numberOfElements, cudaStream_t stream);
 
     /**
      * @brief copyFromHost copies numberOfElements to the CPU memory dataPointer

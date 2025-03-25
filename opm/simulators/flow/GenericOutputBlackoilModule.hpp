@@ -34,12 +34,15 @@
 
 #include <opm/simulators/flow/ExtboContainer.hpp>
 #include <opm/simulators/flow/FIPContainer.hpp>
-#include <opm/simulators/flow/FlowsData.hpp>
+#include <opm/simulators/flow/FlowsContainer.hpp>
 #include <opm/simulators/flow/InterRegFlows.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
 #include <opm/simulators/flow/MechContainer.hpp>
 #include <opm/simulators/flow/MICPContainer.hpp>
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
+#include <opm/simulators/flow/RFTContainer.hpp>
+#include <opm/simulators/flow/RSTConv.hpp>
+#include <opm/simulators/flow/TracerContainer.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -62,6 +65,7 @@ struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false;
 namespace Opm {
 
 namespace data { class Solution; }
+class EclHysteresisConfig;
 class EclipseState;
 class Schedule;
 class SummaryConfig;
@@ -75,16 +79,6 @@ public:
 
     // Virtual destructor for safer inheritance.
     virtual ~GenericOutputBlackoilModule();
-
-    Scalar* getPRESSURE_ptr()
-    {
-        return this->fluidPressure_.data();
-    }
-
-    int getPRESSURE_size()
-    {
-        return this->fluidPressure_.size();
-    }
 
     /*!
      * \brief Register all run-time parameters for the Vtk output module.
@@ -130,10 +124,10 @@ public:
 
     void outputErrorLog(const Parallel::Communication& comm) const;
 
-    void accumulateRftDataParallel(const Parallel::Communication& comm);
-
     void addRftDataToWells(data::Wells& wellDatas,
-                           std::size_t reportStepNum);
+                           std::size_t reportStepNum,
+                           const Parallel::Communication& comm)
+    { this->rftC_.addToWells(wellDatas, reportStepNum, comm); }
 
     /*!
      * \brief Move all buffers to data::Solution.
@@ -200,53 +194,14 @@ public:
         return 0;
     }
 
+    const std::vector<Scalar>& getFluidPressure() const
+    { return fluidPressure_; }
+
     const MICPContainer<Scalar>& getMICP() const
     { return this->micpC_; }
 
-    const std::array<FlowsData<double>, 3>& getFlowsn() const
-    {
-        return this->flowsn_;
-    }
-
-    bool hasFlowsn() const
-    {
-        return enableFlowsn_;
-    }
-
-    bool hasFlows() const
-    {
-        return enableFlows_;
-    }
-
-    bool hasBlockFlows() const
-    {
-        return blockFlows_;
-    }
-
-    bool anyFlows() const
-    {
-        return anyFlows_;
-    }
-
-    const std::array<FlowsData<double>, 3>& getFloresn() const
-    {
-        return this->floresn_;
-    }
-
-    bool hasFloresn() const
-    {
-        return enableFloresn_;
-    }
-
-    bool hasFlores() const
-    {
-        return enableFlores_;
-    }
-
-    bool anyFlores() const
-    {
-        return anyFlores_;
-    }
+    const FlowsContainer<FluidSystem>& getFlows() const
+    { return this->flowsC_; }
 
     bool needInterfaceFluxes([[maybe_unused]] const bool isSubStep) const
     {
@@ -275,16 +230,17 @@ public:
         local_data_valid_ = true;
     }
 
-    void setCnvData(const std::vector<std::vector<int>>& data)
-    {
-        cnvData_ = data;
-    }
-
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
         serializer(initialInplace_);
     }
+
+    RSTConv& getConv()
+    { return this->rst_conv_; }
+
+    const RSTConv& getConv() const
+    { return this->rst_conv_; }
 
     //! \brief Assign fields that are in global numbering to the solution.
     //! \detail This is used to add fields that for some reason cannot be collected
@@ -297,9 +253,9 @@ protected:
     using StringBuffer = std::vector<std::string>;
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
-    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
+    static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
+    static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
@@ -310,6 +266,8 @@ protected:
                                 const SummaryConfig& summaryConfig,
                                 const SummaryState& summaryState,
                                 const std::string& moduleVersionName,
+                                RSTConv::LocalToGlobalCellFunc globalCell,
+                                const Parallel::Communication& comm,
                                 bool enableEnergy,
                                 bool enableTemperature,
                                 bool enableMech,
@@ -319,21 +277,16 @@ protected:
                                 bool enableBrine,
                                 bool enableSaltPrecipitation,
                                 bool enableExtbo,
-                                bool enableMICP,
-                                bool isCompositional = false);
+                                bool enableMICP);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
                         const bool substep,
                         const bool log,
                         const bool isRestart,
-                        const bool vapparsActive = false,
-                        const bool enablePCHysteresis = false,
-                        const bool enableNonWettingHysteresis =false,
-                        const bool enableWettingHysteresis = false,
-                        unsigned numTracers = 0,
-                        const std::vector<bool>& enableSolTracers = {},
-                        unsigned numOutputNnc = 0);
+                        const EclHysteresisConfig* hysteresisConfig,
+                        unsigned numOutputNnc = 0,
+                        std::map<std::string, int> rstKeywords = {});
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -368,8 +321,6 @@ protected:
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
 
-    void gatherAndUpdateRftMap(std::map<std::size_t, Scalar>& local_map, const Parallel::Communication& comm);
-
     const EclipseState& eclState_;
     const Schedule& schedule_;
     const SummaryState& summaryState_;
@@ -390,19 +341,10 @@ protected:
     bool enableSaltPrecipitation_{false};
     bool enableExtbo_{false};
     bool enableMICP_{false};
-    bool isCompositional_{false};
 
     bool forceDisableFipOutput_{false};
     bool forceDisableFipresvOutput_{false};
     bool computeFip_{false};
-
-    bool anyFlows_{false};
-    bool anyFlores_{false};
-    bool blockFlows_{false};
-    bool enableFlows_{false};
-    bool enableFlores_{false};
-    bool enableFlowsn_{false};
-    bool enableFloresn_{false};
 
     FIPContainer<FluidSystem> fipC_;
     std::unordered_map<std::string, std::vector<int>> regions_;
@@ -468,27 +410,16 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
-    // total mole fractions for each component
-    std::array<ScalarBuffer, numComponents> moleFractions_;
-    // mole fractions for each component in each phase
-    std::array<std::array<ScalarBuffer, numComponents>, numPhases> phaseMoleFractions_;
-    std::vector<ScalarBuffer> freeTracerConcentrations_;
-    std::vector<ScalarBuffer> solTracerConcentrations_;
+    TracerContainer<FluidSystem> tracerC_;
 
     std::array<ScalarBuffer, numPhases> residual_;
 
-    std::array<std::array<ScalarBuffer, numPhases>, 6> flows_;
-    std::array<std::array<ScalarBuffer, numPhases>, 6> flores_;
+    FlowsContainer<FluidSystem> flowsC_;
 
-    std::array<FlowsData<double>, 3> floresn_;
-    std::array<FlowsData<double>, 3> flowsn_;
+    RFTContainer<FluidSystem> rftC_;
+    RSTConv rst_conv_; //!< Helper class for RPTRST CONV
 
-    std::map<std::size_t, Scalar> oilConnectionPressures_;
-    std::map<std::size_t, Scalar> waterConnectionSaturations_;
-    std::map<std::size_t, Scalar> gasConnectionSaturations_;
     std::map<std::pair<std::string, int>, double> blockData_;
-
-    std::vector<std::vector<int>> cnvData_; //!< Data for CNV_xxx arrays
 
     std::optional<Inplace> initialInplace_;
     bool local_data_valid_{false};

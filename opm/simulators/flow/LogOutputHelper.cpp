@@ -27,17 +27,19 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <opm/simulators/utils/PressureAverage.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
-
-#include <fmt/format.h>
 
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
+#include <string_view>
 #include <vector>
+
+#include <fmt/format.h>
 
 namespace {
 
@@ -78,6 +80,57 @@ void logUniqueFailedCells(const std::string& messageTag,
     Opm::OpmLog::warning(messageTag, errlog.str());
 }
 
+std::string injectorCModeToString(const Opm::WellInjectorCMode cmode)
+{
+    auto cmodeStr = std::string{};
+
+    // CMODE_UNDEFINED => ""
+    if (cmode != Opm::WellInjectorCMode::CMODE_UNDEFINED) {
+        cmodeStr = Opm::WellInjectorCMode2String(cmode);
+    }
+
+    return cmodeStr;
+}
+
+std::string producerCModeToString(const Opm::WellProducerCMode cmode)
+{
+    auto cmodeStr = std::string{};
+
+    // NONE && CMODE_UNDEFINED => ""
+    if ((cmode != Opm::WellProducerCMode::NONE) &&
+        (cmode != Opm::WellProducerCMode::CMODE_UNDEFINED))
+    {
+        cmodeStr = Opm::WellProducerCMode2String(cmode);
+    }
+
+    return cmodeStr;
+}
+
+template<class Array>
+std::string formatBorder(const Array& widths)
+{
+    std::string ss;
+    std::for_each(widths.begin(), widths.end(),
+                  [&ss](const auto w)
+                  { ss += fmt::format(":{:->{}}", "", w); });
+    ss += ':';
+
+    return ss;
+}
+
+template<std::size_t size>
+std::string formatTextRow(const std::array<int, size>& widths,
+                          const std::array<std::string_view, size>& entries)
+{
+    std::string ss;
+    std::for_each(widths.begin(), widths.end(),
+                  [&entries, &ss, i = 0](const auto w) mutable
+                  { ss += fmt::format(":{:^{}}", entries[i++], w); });
+    ss += ":\n";
+
+    return ss;
+}
+
 } // Namespace anonymous
 
 namespace Opm {
@@ -99,132 +152,73 @@ cumulative(const std::size_t reportStepNum) const
 {
     this->beginCumulativeReport_();
 
-    std::vector<Scalar> tmp_values(WellCumDataType::numWCValues, 0.0);
-    std::vector<std::string> tmp_names(WellCumDataType::numWCNames, "");
+    using Ix = typename WellCumDataType::WCId;
 
     const auto& st = summaryState_;
-    for (const auto& gname : schedule_.groupNames()) {
-        auto gName = static_cast<std::string>(gname);
-        auto get = [&st, &gName](const std::string& vector)
-        {
-            const auto key = vector + ':' + gName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+    for (const auto& gname : this->schedule_.groupNames()) {
+        std::vector<Scalar> values(WellCumDataType::numWCValues);
+        std::vector<std::string> names(WellCumDataType::numWCNames);
 
-        tmp_names[0] = gname;
+        names[Ix::WellName] = gname;
 
-        if (tmp_names[0] == "FIELD") {
-            tmp_values[2] = st.get("FOPT", 0.0); // WellCumDataType::OilProd
-            tmp_values[3] = st.get("FWPT", 0.0); // WellCumDataType::WaterProd
-            tmp_values[4] = st.get("FGPT", 0.0); // WellCumDataType::GasProd
-            tmp_values[5] = st.get("FVPT", 0.0); // WellCumDataType::FluidResVolProd
-            tmp_values[6] = st.get("FOIT", 0.0); // WellCumDataType::OilInj
-            tmp_values[7] = st.get("FWIT", 0.0); // WellCumDataType::WaterInj
-            tmp_values[8] = st.get("FGIT", 0.0); // WellCumDataType::GasInj
-            tmp_values[9] = st.get("FVIT", 0.0); // WellCumDataType::FluidResVolInj
-        } else {
-            tmp_values[2] = get("GOPT"); // WellCumDataType::OilProd
-            tmp_values[3] = get("GWPT"); // WellCumDataType::WaterProd
-            tmp_values[4] = get("GGPT"); // WellCumDataType::GasProd
-            tmp_values[5] = get("GVPT"); // WellCumDataType::FluidResVolProd
-            tmp_values[6] = get("GOIT"); // WellCumDataType::OilInj
-            tmp_values[7] = get("GWIT"); // WellCumDataType::WaterInj
-            tmp_values[8] = get("GGIT"); // WellCumDataType::GasInj
-            tmp_values[9] = get("GVIT"); // WellCumDataType::FluidResVolInj
-        }
+        const auto isField = gname == "FIELD";
 
-        this->outputCumulativeReportRecord_(tmp_values, tmp_names);
+        values[Ix::OilProd]         = isField ? st.get("FOPT", 0.0) : st.get_group_var(gname, "GOPT", 0.0);
+        values[Ix::WaterProd]       = isField ? st.get("FWPT", 0.0) : st.get_group_var(gname, "GWPT", 0.0);
+        values[Ix::GasProd]         = isField ? st.get("FGPT", 0.0) : st.get_group_var(gname, "GGPT", 0.0);
+        values[Ix::FluidResVolProd] = isField ? st.get("FVPT", 0.0) : st.get_group_var(gname, "GVPT", 0.0);
+        values[Ix::OilInj]          = isField ? st.get("FOIT", 0.0) : st.get_group_var(gname, "GOIT", 0.0);
+        values[Ix::WaterInj]        = isField ? st.get("FWIT", 0.0) : st.get_group_var(gname, "GWIT", 0.0);
+        values[Ix::GasInj]          = isField ? st.get("FGIT", 0.0) : st.get_group_var(gname, "GGIT", 0.0);
+        values[Ix::FluidResVolInj]  = isField ? st.get("FVIT", 0.0) : st.get_group_var(gname, "GVIT", 0.0);
+
+        this->outputCumulativeReportRecord_(values, names);
     }
 
-    for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-        const auto& well = schedule_.getWell(wname, reportStepNum);
-        tmp_names[0] = wname; // WellCumDataType::WellName
-        auto wName = static_cast<std::string>(wname);
-        auto get = [&st, &wName](const std::string& vector)
-        {
-            const auto key = vector + ':' + wName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
+        const auto& well = this->schedule_.getWell(wname, reportStepNum);
+
+        std::vector<Scalar> values(WellCumDataType::numWCValues);
+        std::vector<std::string> names(WellCumDataType::numWCNames);
+
+        names[Ix::WellName] = wname;
 
         if (well.isInjector()) {
             const auto& controls = well.injectionControls(st);
             const auto ctlMode = controls.cmode;
-            const auto injType = controls.injector_type;
-            using CMode = ::Opm::Well::InjectorCMode;
-            using WType = ::Opm::InjectorType;
 
-            auto ftype = [](const auto wtype) -> std::string
-            {
-                switch (wtype) {
-                case WType::OIL:   return "Oil";
-                case WType::WATER: return "Wat";
-                case WType::GAS:   return "Gas";
-                case WType::MULTI: return "Multi";
-                default: return "";
-                }
-            };
+            names[Ix::WellType] = "INJ";
 
-            auto fctl = [](const auto wmctl) -> std::string
-            {
-                switch (wmctl) {
-                case CMode::RATE: return "RATE";
-                case CMode::RESV: return "RESV";
-                case CMode::THP:  return "THP";
-                case CMode::BHP:  return "BHP";
-                case CMode::GRUP: return "GRUP";
-                default: return "";
-                }
-            };
-
-            tmp_names[1] = "INJ"; // WellCumDataType::WellType
-            const auto flowctl = fctl(ctlMode);
-            if (flowctl == "RATE") { // WellCumDataType::WellCTRL
-                const auto flowtype = ftype(injType);
-                if (flowtype == "Oil") {
-                    tmp_names[2] = "ORAT";
-                } else if (flowtype == "Wat") {
-                    tmp_names[2] = "WRAT";
-                } else if (flowtype == "Gas") {
-                    tmp_names[2] = "GRAT";
-                }
-            } else {
-                tmp_names[2] = flowctl;
+            if (ctlMode != Well::InjectorCMode::RATE) {
+                names[Ix::WellCTRL] = injectorCModeToString(ctlMode);
             }
-        } else if (well.isProducer()) {
-            const auto& controls = well.productionControls(st);
-            using CMode = ::Opm::Well::ProducerCMode;
+            else {
+                const auto injType = controls.injector_type;
+                if      (injType == InjectorType::OIL)   { names[Ix::WellCTRL] = "ORAT"; }
+                else if (injType == InjectorType::WATER) { names[Ix::WellCTRL] = "WRAT"; }
+                else if (injType == InjectorType::GAS)   { names[Ix::WellCTRL] = "GRAT"; }
+            }
+        }
+        else if (well.isProducer()) {
+            const auto cmode = well.productionControls(st).cmode;
 
-            auto fctl = [](const auto wmctl) -> std::string
-            {
-                switch (wmctl) {
-                case CMode::ORAT: return "ORAT";
-                case CMode::WRAT: return "WRAT";
-                case CMode::GRAT: return "GRAT";
-                case CMode::LRAT: return "LRAT";
-                case CMode::RESV: return "RESV";
-                case CMode::THP:  return "THP";
-                case CMode::BHP:  return "BHP";
-                case CMode::CRAT: return "CRAT";
-                case CMode::GRUP: return "GRUP";
-                default: return "none";
-                }
-            };
-            tmp_names[1] = "PROD"; // WellProdDataType::CTRLMode
-            tmp_names[2] = fctl(controls.cmode); // WellProdDataType::CTRLMode
+            names[Ix::WellType] = "PROD";
+            names[Ix::WellCTRL] = producerCModeToString(cmode);
         }
 
-        tmp_values[0] = well.getHeadI() + 1; // WellCumDataType::wellLocationi
-        tmp_values[1] = well.getHeadJ() + 1; // WellCumDataType::wellLocationj
-        tmp_values[2] = get("WOPT"); // WellCumDataType::OilProd
-        tmp_values[3] = get("WWPT"); // WellCumDataType::WaterProd
-        tmp_values[4] = get("WGPT"); // WellCumDataType::GasProd
-        tmp_values[5] = get("WVPT"); // WellCumDataType::FluidResVolProd
-        tmp_values[6] = get("WOIT"); // WellCumDataType::OilInj
-        tmp_values[7] = get("WWIT"); // WellCumDataType::WaterInj
-        tmp_values[8] = get("WGIT"); // WellCumDataType::GasInj
-        tmp_values[9] = get("WVIT"); // WellCumDataType::FluidResVolInj
+        values[Ix::WellLocationi] = well.getHeadI() + 1;
+        values[Ix::WellLocationj] = well.getHeadJ() + 1;
 
-        this->outputCumulativeReportRecord_(tmp_values, tmp_names);
+        values[Ix::OilProd]         = st.get_well_var(wname, "WOPT", 0.0);
+        values[Ix::WaterProd]       = st.get_well_var(wname, "WWPT", 0.0);
+        values[Ix::GasProd]         = st.get_well_var(wname, "WGPT", 0.0);
+        values[Ix::FluidResVolProd] = st.get_well_var(wname, "WVPT", 0.0);
+        values[Ix::OilInj]          = st.get_well_var(wname, "WOIT", 0.0);
+        values[Ix::WaterInj]        = st.get_well_var(wname, "WWIT", 0.0);
+        values[Ix::GasInj]          = st.get_well_var(wname, "WGIT", 0.0);
+        values[Ix::FluidResVolInj]  = st.get_well_var(wname, "WVIT", 0.0);
+
+        this->outputCumulativeReportRecord_(values, names);
     }
 
     this->endCumulativeReport_();
@@ -304,7 +298,6 @@ fip(const Inplace& inplace,
     }
 }
 
-
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 fipResv(const Inplace& inplace, const std::string& name) const
@@ -347,17 +340,13 @@ fipResv(const Inplace& inplace, const std::string& name) const
         this->outputResvFluidInPlace_(current_values, reg);
     }
     
-    std::ostringstream ss;
-    ss << " ===========================================================================================";
-    OpmLog::note(ss.str());
+    OpmLog::note(fmt::format("{:=^91}", ""));
 }
-
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const
 {
-
     std::ostringstream ss;
     boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
     ss.imbue(std::locale(std::locale::classic(), facet));
@@ -372,122 +361,80 @@ timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::
     OpmLog::note(ss.str());
 }
 
-
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 injection(const std::size_t reportStepNum) const
 {
     this->beginInjectionReport_();
 
-    std::vector<Scalar> tmp_values(WellInjDataType::numWIValues, 0.0);
-    std::vector<std::string> tmp_names(WellInjDataType::numWINames, "");
+    using Ix = typename WellInjDataType::WIId;
 
-    const auto& st = summaryState_;
-    for (const auto& gname : schedule_.groupNames()) {
-        auto gName = static_cast<std::string>(gname);
-        auto get = [&st, &gName](const std::string& vector)
-        {
-            const auto key = vector + ':' + gName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+    const auto& st = this->summaryState_;
 
-        tmp_names[0] = gname;
-        if (tmp_names[0] == "FIELD") {
-            tmp_values[2] = st.get("FOIR", 0.0); // WellInjDataType::OilRate
-            tmp_values[3] = st.get("FWIR", 0.0); // WellInjDataType::WaterRate
-            tmp_values[4] = st.get("FGIR", 0.0); // WellInjDataType::GasRate
-            tmp_values[5] = st.get("FVIR", 0.0); // WellInjDataType::FluidResVol
-        } else {
-            tmp_values[2] = get("GOIR"); // WellInjDataType::OilRate
-            tmp_values[3] = get("GWIR"); // WellInjDataType::WaterRate
-            tmp_values[4] = get("GGIR"); // WellInjDataType::GasRate
-            tmp_values[5] = get("GVIR"); // WellInjDataType::FluidResVol
-        }
+    for (const auto& gname : this->schedule_.groupNames()) {
+        std::vector<Scalar> values(WellInjDataType::numWIValues);
+        std::vector<std::string> names(WellInjDataType::numWINames);
 
-        this->outputInjectionReportRecord_(tmp_values, tmp_names);
+        names[Ix::WellName] = gname;
+
+        const auto isField = gname == "FIELD";
+
+        values[Ix::OilRate]     = isField ? st.get("FOIR", 0.0) : st.get_group_var(gname, "GOIR", 0.0);
+        values[Ix::WaterRate]   = isField ? st.get("FWIR", 0.0) : st.get_group_var(gname, "GWIR", 0.0);
+        values[Ix::GasRate]     = isField ? st.get("FGIR", 0.0) : st.get_group_var(gname, "GGIR", 0.0);
+        values[Ix::FluidResVol] = isField ? st.get("FVIR", 0.0) : st.get_group_var(gname, "GVIR", 0.0);
+
+        this->outputInjectionReportRecord_(values, names);
     }
 
-    for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-        const auto& well = schedule_.getWell(wname, reportStepNum);
+    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
+        const auto& well = this->schedule_.getWell(wname, reportStepNum);
 
-        // Ignore Producer wells
+        // Ignore production wells for the injection report.
         if (well.isProducer()) {
             continue;
         }
 
-        tmp_names[0] = wname; // WellInjDataType::WellName
-        auto wName = static_cast<std::string>(wname);
-        auto get = [&st, &wName](const std::string& vector)
-        {
-            const auto key = vector + ':' + wName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+        std::vector<Scalar> values(WellInjDataType::numWIValues);
+        std::vector<std::string> names(WellInjDataType::numWINames);
+
+        names[Ix::WellName] = wname;
 
         const auto& controls = well.injectionControls(st);
         const auto ctlMode = controls.cmode;
         const auto injType = controls.injector_type;
-        using CMode = Well::InjectorCMode;
-        using WType = InjectorType;
 
-        auto ftype = [](const auto wtype) -> std::string
-        {
-            switch (wtype) {
-            case WType::OIL:   return "Oil";
-            case WType::WATER: return "Wat";
-            case WType::GAS:   return "Gas";
-            case WType::MULTI: return "Multi";
-            default: return "";
-            }
-        };
+        const auto isRate = ctlMode == Well::InjectorCMode::RATE;
 
-        auto fctl = [](const auto wmctl) -> std::string
-        {
-            switch (wmctl) {
-            case CMode::RATE: return "RATE";
-            case CMode::RESV: return "RESV";
-            case CMode::THP:  return "THP";
-            case CMode::BHP:  return "BHP";
-            case CMode::GRUP: return "GRUP";
-            default: return "";
-            }
-        };
-
-        const auto flowtype = ftype(injType);
-        const auto flowctl = fctl(ctlMode);
-        if (flowtype == "Oil") { // WellInjDataType::CTRLModeOil
-            if (flowctl == "RATE") {
-                tmp_names[1] = "ORAT";
-            } else {
-                tmp_names[1] =  flowctl;
-            }
+        if (injType == InjectorType::OIL) {
+            names[Ix::CTRLModeOil] = isRate
+                ? "ORAT"
+                : injectorCModeToString(ctlMode);
         }
-        else if (flowtype == "Wat") { // WellInjDataType::CTRLModeWat
-            if (flowctl == "RATE") {
-                tmp_names[3] = "WRAT";
-            } else {
-                tmp_names[2] =  flowctl;
-            }
+        else if (injType == InjectorType::WATER) {
+            names[Ix::CTRLModeWat] = isRate
+                ? "WRAT"
+                : injectorCModeToString(ctlMode);
         }
-        else if (flowtype == "Gas") // WellInjDataType::CTRLModeGas
-        {
-            if (flowctl == "RATE") {
-                tmp_names[3] = "GRAT";
-            } else {
-                tmp_names[3] =  flowctl;
-            }
+        else if (injType == InjectorType::GAS) {
+            names[Ix::CTRLModeGas] = isRate
+                ? "GRAT"
+                : injectorCModeToString(ctlMode);
         }
 
-        tmp_values[0] = well.getHeadI() + 1; // WellInjDataType::wellLocationi
-        tmp_values[1] = well.getHeadJ() + 1; // WellInjDataType::wellLocationj
-        tmp_values[2] = get("WOIR"); // WellInjDataType::OilRate
-        tmp_values[3] = get("WWIR"); // WellInjDataType::WaterRate
-        tmp_values[4] = get("WGIR"); // WellInjDataType::GasRate
-        tmp_values[5] = get("WVIR");// WellInjDataType::FluidResVol
-        tmp_values[6] = get("WBHP"); // WellInjDataType::BHP
-        tmp_values[7] = get("WTHP"); // WellInjDataType::THP
-        //tmp_values[8] = 0; // WellInjDataType::SteadyStateII
+        values[Ix::WellLocationi] = well.getHeadI() + 1;
+        values[Ix::WellLocationj] = well.getHeadJ() + 1;
 
-        this->outputInjectionReportRecord_(tmp_values, tmp_names);
+        values[Ix::OilRate]     = st.get_well_var(wname, "WOIR", 0.0);
+        values[Ix::WaterRate]   = st.get_well_var(wname, "WWIR", 0.0);
+        values[Ix::GasRate]     = st.get_well_var(wname, "WGIR", 0.0);
+        values[Ix::FluidResVol] = st.get_well_var(wname, "WVIR", 0.0);
+        values[Ix::BHP]         = st.get_well_var(wname, "WBHP", 0.0);
+        values[Ix::THP]         = st.get_well_var(wname, "WTHP", 0.0);
+
+        // values[Ix::SteadyStateII] = 0;
+
+        this->outputInjectionReportRecord_(values, names);
     }
 
     this->endInjectionReport_();
@@ -499,100 +446,77 @@ production(const std::size_t reportStepNum) const
 {
     this->beginProductionReport_();
 
-    std::vector<Scalar> tmp_values(WellProdDataType::numWPValues, 0.0);
-    std::vector<std::string> tmp_names(WellProdDataType::numWPNames, "");
+    using Ix = typename WellProdDataType::WPId;
 
-    const auto& st = summaryState_;
-    for (const auto& gname : schedule_.groupNames()) {
-        auto gName = static_cast<std::string>(gname);
-        auto get = [&st, &gName](const std::string& vector)
-        {
-            const auto key = vector + ':' + gName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+    const auto& st = this->summaryState_;
 
-        tmp_names[0] = gname;
-        if (tmp_names[0] == "FIELD") {
-            tmp_values[2] = st.get("FOPR", 0.0); // WellProdDataType::OilRate
-            tmp_values[3] = st.get("FWPR", 0.0); // WellProdDataType::WaterRate
-            tmp_values[4] = st.get("FGPR", 0.0); // WellProdDataType::GasRate
-            tmp_values[5] = st.get("FVPR", 0.0); // WellProdDataType::FluidResVol
-            tmp_values[6] = st.get("FWCT", 0.0); // WellProdDataType::WaterCut
-            tmp_values[7] = st.get("FGOR", 0.0); // WellProdDataType::GasOilRatio
+    for (const auto& gname : this->schedule_.groupNames()) {
+        std::vector<Scalar> values(WellProdDataType::numWPValues);
+        std::vector<std::string> names(WellProdDataType::numWPNames);
+
+        names[0] = gname;
+
+        const auto isField = gname == "FIELD";
+
+        values[Ix::OilRate]     = isField ? st.get("FOPR", 0.0) : st.get_group_var(gname, "GOPR", 0.0);
+        values[Ix::WaterRate]   = isField ? st.get("FWPR", 0.0) : st.get_group_var(gname, "GWPR", 0.0);
+        values[Ix::GasRate]     = isField ? st.get("FGPR", 0.0) : st.get_group_var(gname, "GGPR", 0.0);
+        values[Ix::FluidResVol] = isField ? st.get("FVPR", 0.0) : st.get_group_var(gname, "GVPR", 0.0);
+        values[Ix::WaterCut]    = isField ? st.get("FWCT", 0.0) : st.get_group_var(gname, "GWCT", 0.0);
+        values[Ix::GasOilRatio] = isField ? st.get("FGOR", 0.0) : st.get_group_var(gname, "GGOR", 0.0);
+
+        if (values[Ix::WaterRate] == 0.0) {
+            values[Ix::WatGasRatio] = 0;
         } else {
-            tmp_values[2] = get("GOPR"); // WellProdDataType::OilRate
-            tmp_values[3] = get("GWPR"); // WellProdDataType::WaterRate
-            tmp_values[4] = get("GGPR"); // WellProdDataType::GasRate
-            tmp_values[5] = get("GVPR"); // WellProdDataType::FluidResVol
-            tmp_values[6] = get("GWCT"); // WellProdDataType::WaterCut
-            tmp_values[7] = get("GGOR"); // WellProdDataType::GasOilRatio
+            values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
         }
 
-        tmp_values[8] = tmp_values[3] / tmp_values[4]; // WellProdDataType::WaterGasRatio
-        if (std::isnan(tmp_values[8])) {
-            tmp_values[8] = 0.0;
+        if (std::isnan(values[Ix::WatGasRatio])) {
+            values[Ix::WatGasRatio] = 0.0;
         }
 
-        this->outputProductionReportRecord_(tmp_values, tmp_names);
+        this->outputProductionReportRecord_(values, names);
     }
 
-    for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-        const auto& well = schedule_.getWell(wname, reportStepNum);
+    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
+        const auto& well = this->schedule_.getWell(wname, reportStepNum);
 
-        // Ignore injector wells
+        // Ignore injection wells for the production report.
         if (well.isInjector()) {
             continue;
         }
 
-        tmp_names[0] = wname; // WellProdDataType::WellName
+        std::vector<Scalar> values(WellProdDataType::numWPValues);
+        std::vector<std::string> names(WellProdDataType::numWPNames);
 
+        names[Ix::WellName] = wname;
+        names[Ix::CTRLMode] = producerCModeToString(well.productionControls(st).cmode);
 
-        auto wName = static_cast<std::string>(wname);
-        auto get = [&st, &wName](const std::string& vector)
-        {
-            const auto key = vector + ':' + wName;
-            return st.has(key) ? st.get(key) : 0.0;
-        };
+        values[Ix::WellLocationi] = well.getHeadI() + 1;
+        values[Ix::WellLocationj] = well.getHeadJ() + 1;
 
-        const auto& controls = well.productionControls(st);
-        using CMode = Well::ProducerCMode;
+        values[Ix::OilRate]     = st.get_well_var(wname, "WOPR", 0.0);
+        values[Ix::WaterRate]   = st.get_well_var(wname, "WWPR", 0.0);
+        values[Ix::GasRate]     = st.get_well_var(wname, "WGPR", 0.0);
+        values[Ix::FluidResVol] = st.get_well_var(wname, "WVPR", 0.0);
+        values[Ix::WaterCut]    = st.get_well_var(wname, "WWCT", 0.0);
+        values[Ix::GasOilRatio] = st.get_well_var(wname, "WGOR", 0.0);
+        values[Ix::BHP]         = st.get_well_var(wname, "WBHP", 0.0);
+        values[Ix::THP]         = st.get_well_var(wname, "WTHP", 0.0);
 
-        auto fctl = [](const auto wmctl) -> std::string
-        {
-            switch (wmctl) {
-            case CMode::ORAT: return "ORAT";
-            case CMode::WRAT: return "WRAT";
-            case CMode::GRAT: return "GRAT";
-            case CMode::LRAT: return "LRAT";
-            case CMode::RESV: return "RESV";
-            case CMode::THP:  return "THP";
-            case CMode::BHP:  return "BHP";
-            case CMode::CRAT: return "CRate";
-            case CMode::GRUP: return "GRUP";
-            default: return "none";
-            }
-        };
+        // values[Ix::SteadyStatePI] = 0;
 
-        tmp_names[1] = fctl(controls.cmode); // WellProdDataType::CTRLMode
-
-        tmp_values[0] = well.getHeadI() + 1; // WellProdDataType::WellLocationi
-        tmp_values[1] = well.getHeadJ() + 1; // WellProdDataType::WellLocationj
-        tmp_values[2] = get("WOPR"); // WellProdDataType::OilRate
-        tmp_values[3] = get("WWPR"); // WellProdDataType::WaterRate
-        tmp_values[4] = get("WGPR"); // WellProdDataType::GasRate
-        tmp_values[5] = get("WVPR"); // WellProdDataType::FluidResVol
-        tmp_values[6] = get("WWCT"); // WellProdDataType::WaterCut
-        tmp_values[7] = get("WGOR"); // WellProdDataType::GasOilRatio
-        tmp_values[9] = get("WBHP"); // WellProdDataType::BHP
-        tmp_values[10] = get("WTHP"); // WellProdDataType::THP
-        //tmp_values[11] = 0; //WellProdDataType::SteadyStatePI //
-
-        tmp_values[8] = tmp_values[3] / tmp_values[4]; // WellProdDataType::WaterGasRatio
-        if (std::isnan(tmp_values[8])) {
-            tmp_values[8] = 0.0;
+        if (values[Ix::WaterRate] == 0.0) {
+            values[Ix::WatGasRatio] = 0.0;
+        } else {
+            values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
         }
 
-        this->outputProductionReportRecord_(tmp_values, tmp_names);
+        if (std::isnan(values[Ix::WatGasRatio])) {
+            values[Ix::WatGasRatio] = 0.0;
+        }
+
+        this->outputProductionReportRecord_(values, names);
     }
 
     this->endProductionReport_();
@@ -601,23 +525,101 @@ production(const std::size_t reportStepNum) const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::beginCumulativeReport_() const
 {
-    const auto unitType = this->eclState_.getUnits().getType();
+    const auto& units = this->eclState_.getUnits();
+    const auto widths = std::array{8, 11, 8, 4, 11, 11, 11, 11, 11, 11, 11, 11};
+
+    using namespace std::string_view_literals;
+
+    auto oil_unit =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "MSCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSTB"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "MSCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto wat_unit =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "MSCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSTB"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "MSCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto gas_unit =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "MMSCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MMSCF"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "MMSCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto res_unit =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "MRCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MRB"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "MRCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+
+    const auto unitStrings = std::array{
+                                ""sv,
+                                ""sv,
+                                ""sv,
+                                ""sv,
+                                oil_unit(),
+                                wat_unit(),
+                                gas_unit(),
+                                res_unit(),
+                                oil_unit(),
+                                wat_unit(),
+                                gas_unit(),
+                                res_unit(),
+                             };
 
     std::ostringstream ss;
-
-    ss << "\n=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================\n"
-       << ":  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :\n"
-       << ":  NAME  :  (I,J,K)  :  TYPE  :MODE:    PROD   :   PROD    :    PROD   :  RES.VOL. :    INJ    :   INJ     :    INJ    :  RES.VOL. :\n";
-
-    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << ":        :           :        :    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << ":        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-        ss << ":        :           :        :    :     MSCC  :   MSCC    :    MMSCC  :   MRCC    :    MSCC   :   MSCC    :    MMSCC  :   MRCC    :\n";
-    }
-
-    ss << "====================================================================================================================================";
+    ss << fmt::format("\n{:=^132}\n", " CUMULATIVE PRODUCTION/INJECTION TOTALS ")
+       << formatTextRow(widths,
+                        std::array{
+                            "WELL"sv,
+                            "LOCATION"sv,
+                            "WELL"sv,
+                            "CTRL"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "Prod"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "INJ"sv,
+                        })
+       << formatTextRow(widths,
+                        std::array{
+                            "NAME"sv,
+                            "(I,J,K)"sv,
+                            "TYPE"sv,
+                            "MODE"sv,
+                            "PROD"sv,
+                            "PROD"sv,
+                            "PROD"sv,
+                            "RES.VOL."sv,
+                            "INJ"sv,
+                            "INJ"sv,
+                            "INJ"sv,
+                            "RES.VOL."sv,
+                        })
+       << formatTextRow(widths, unitStrings)
+       << fmt::format("{:=>132}", "");
 
     OpmLog::note(ss.str());
 }
@@ -625,9 +627,8 @@ void LogOutputHelper<Scalar>::beginCumulativeReport_() const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::endCumulativeReport_() const
 {
-    const auto ss = std::string { ":--------:-----------:--------:----:-----------:-----------:-----------:-----------:-----------:-----------:-----------:-----------:" };
-
-    OpmLog::note(ss);
+    const auto widths = std::array{8, 11, 8, 4, 11, 11, 11, 11, 11, 11, 11, 11};
+    OpmLog::note(formatBorder(widths));
 }
 
 template<class Scalar>
@@ -637,38 +638,41 @@ outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
 {
     std::ostringstream ss;
 
-    ss << std::right << std::fixed << std::setprecision(0) << ':'
-       << std::setw(8) << wellCumNames[WellCumDataType::WellName] << ':';
+    ss << fmt::format(":{:<8}:", wellCumNames[WellCumDataType::WellName]);
 
     if (wellCum[WellCumDataType::WellLocationi] < 1) {
-        ss << std::setw(11) <<  "" << ':';
+        ss << fmt::format("{:11}:", "");
     } else {
-        ss << std::setw( 5) << wellCum[WellCumDataType::WellLocationi] << ','
-           << std::setw( 5) << wellCum[WellCumDataType::WellLocationj] << ':';
+        ss << fmt::format("{:>3},{:>3} {:>3}:",
+                          wellCum[WellCumDataType::WellLocationi],
+                          wellCum[WellCumDataType::WellLocationj],
+                          "");
     }
 
-    auto scaledValue = [&wellCum](const typename WellCumDataType::WCId quantity)
+    auto scaledValue = [&wellCum](const auto quantity)
     {
         // Unit M*
         return wellCum[quantity] / 1000.0;
     };
 
-    auto scaledGasValue = [&wellCum](const typename WellCumDataType::WCId quantity)
+    auto scaledGasValue = [&wellCum](const auto quantity)
     {
         // Unit MM*
         return wellCum[quantity] / (1000.0 * 1000.0);
     };
 
-    ss << std::setw( 8) << wellCumNames[WellCumDataType::WCId::WellType]       << ':'
-       << std::setw( 4) << wellCumNames[WellCumDataType::WCId::WellCTRL]       << ':' << std::setprecision(1)
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::OilProd)         << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::WaterProd)       << ':'
-       << std::setw(11) << scaledGasValue(WellCumDataType::WCId::GasProd)      << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::FluidResVolProd) << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::OilInj)          << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::WaterInj)        << ':'
-       << std::setw(11) << scaledGasValue(WellCumDataType::WCId::GasInj)       << ':'
-       << std::setw(11) << scaledValue(WellCumDataType::WCId::FluidResVolInj)  << ':';
+    ss << fmt::format("{:>8}:{:>4}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:"
+                      "{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:",
+                      wellCumNames[WellCumDataType::WCId::WellType],
+                      wellCumNames[WellCumDataType::WCId::WellCTRL],
+                      scaledValue(WellCumDataType::WCId::OilProd),
+                      scaledValue(WellCumDataType::WCId::WaterProd),
+                      scaledGasValue(WellCumDataType::WCId::GasProd),
+                      scaledValue(WellCumDataType::WCId::FluidResVolProd),
+                      scaledValue(WellCumDataType::WCId::OilInj),
+                      scaledValue(WellCumDataType::WCId::WaterInj),
+                      scaledGasValue(WellCumDataType::WCId::GasInj),
+                      scaledValue(WellCumDataType::WCId::FluidResVolInj));
 
     OpmLog::note(ss.str());
 }
@@ -676,22 +680,98 @@ outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
 template <typename Scalar>
 void LogOutputHelper<Scalar>::beginInjectionReport_() const
 {
-    const auto unitType = this->eclState_.getUnits().getType();
+    const auto& units = this->eclState_.getUnits();
+    const auto widths = std::array{8, 11, 6, 6, 6, 11, 11, 11, 11, 8, 8};
+
+    using namespace std::string_view_literals;
+
+    auto oil_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto wat_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto gas_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSCF/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto res_vol =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "RCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "RB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "RCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+
+    const auto unitStrings = std::array{
+                                ""sv,
+                                ""sv,
+                                "OIL"sv,
+                                "WAT"sv,
+                                "GAS"sv,
+                                oil_rate(),
+                                wat_rate(),
+                                gas_rate(),
+                                res_vol(),
+                                std::string_view{units.name(UnitSystem::measure::pressure)},
+                                std::string_view{units.name(UnitSystem::measure::pressure)},
+                             };
 
     std::ostringstream ss;
-    ss << "\n=================================================== INJECTION REPORT ========================================\n"//===================== \n"
-       << ":  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :\n"// STEADY-ST II       :\n"
-       << ":  NAME  :  (I,J,K)  : MODE : MODE : MODE :    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.:\n";// OR POTENTIAL       :\n";
-
-    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << ":        :           : OIL  : WAT  : GAS  :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  BARSA :  BARSA :\n";//                    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-        ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n";
-    }
-
-    ss << "=============================================================================================================";//=====================";
+    ss << fmt::format("\n{:=^109}\n", " INJECTION REPORT ")
+       << formatTextRow(widths,
+                        std::array{
+                            "WELL"sv,
+                            "LOCATION"sv,
+                            "CTRL"sv,
+                            "CTRL"sv,
+                            "CTRL"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "FLUID"sv,
+                            "BHP OR"sv,
+                            "THP OR"sv,
+                        })
+       << formatTextRow(widths,
+                        std::array{
+                            "NAME"sv,
+                            "(I,J,K)"sv,
+                            "MODE"sv,
+                            "MODE"sv,
+                            "MODE"sv,
+                            "RATE"sv,
+                            "RATE"sv,
+                            "RATE"sv,
+                            "RES.VOL."sv,
+                            "CON.PR."sv,
+                            "BLK.PR."sv,
+                        })
+       << formatTextRow(widths, unitStrings)
+       << fmt::format("{:=>109}", "");
 
     OpmLog::note(ss.str());
 }
@@ -699,9 +779,8 @@ void LogOutputHelper<Scalar>::beginInjectionReport_() const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::endInjectionReport_() const
 {
-    const auto ss = std::string { ":--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:" };
-
-    OpmLog::note(ss);
+    const auto widths = std::array{8, 11, 6, 6, 6, 11, 11, 11, 11, 8, 8};
+    OpmLog::note(formatBorder(widths));
 }
 
 template<class Scalar>
@@ -713,30 +792,32 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
         wellInj[WellProdDataType::WellLocationi] >= 1;
 
     std::ostringstream ss;
-
-    ss << std::right << std::fixed << std::setprecision(0) << ':'
-       << std::setw(8) << wellInjNames[WellInjDataType::WellName] << ':';
+    ss << fmt::format(":{:<8}:", wellInjNames[WellInjDataType::WellName]);
 
     if (! isWellRecord) {
-        ss << std::setw(11) << "" << ':';
+        ss << fmt::format("{:11}:", "");
     } else {
-        ss << std::setw( 5) << wellInj[WellInjDataType::WellLocationi] << ','
-           << std::setw( 5) << wellInj[WellInjDataType::WellLocationj] << ':';
+        ss << fmt::format("{:>3},{:>3} {:>3}:",
+                          wellInj[WellInjDataType::WellLocationi],
+                          wellInj[WellInjDataType::WellLocationj],
+                          "");
     }
 
-    ss << std::setw( 6) << wellInjNames[WellInjDataType::CTRLModeOil] << ':'
-       << std::setw( 6) << wellInjNames[WellInjDataType::CTRLModeWat] << ':'
-       << std::setw( 6) << wellInjNames[WellInjDataType::CTRLModeGas] << ':' << std::setprecision(1)
-       << std::setw(11) << wellInj[WellInjDataType::OilRate]          << ':'
-       << std::setw(11) << wellInj[WellInjDataType::WaterRate]        << ':'
-       << std::setw(11) << wellInj[WellInjDataType::GasRate]          << ':'
-       << std::setw(11) << wellInj[WellInjDataType::FluidResVol]      << ':';
+    ss << fmt::format("{:>6}:{:>6}:{:>6}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:",
+                      wellInjNames[WellInjDataType::CTRLModeOil],
+                      wellInjNames[WellInjDataType::CTRLModeWat],
+                      wellInjNames[WellInjDataType::CTRLModeGas],
+                      wellInj[WellInjDataType::OilRate],
+                      wellInj[WellInjDataType::WaterRate],
+                      wellInj[WellInjDataType::GasRate],
+                      wellInj[WellInjDataType::FluidResVol]);
 
     if (! isWellRecord) {
-        ss << std::setw(8) << "" << ':' << std::setw(8) << "" << ':'; //wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
+        ss << fmt::format("{0:8}:{0:8}:", "");
     } else {
-        ss << std::setw(8) << wellInj[WellInjDataType::BHP] << ':'
-           << std::setw(8) << wellInj[WellInjDataType::THP] << ':'; //wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
+        ss << fmt::format("{:>8.1f}:{:>8.1f}:",
+                          wellInj[WellInjDataType::BHP],
+                          wellInj[WellInjDataType::THP]);
     }
 
     OpmLog::note(ss.str());
@@ -745,22 +826,131 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
 template <typename Scalar>
 void LogOutputHelper<Scalar>::beginProductionReport_() const
 {
-    const auto unitType = this->eclState_.getUnits().getType();
+    const auto& units = this->eclState_.getUnits();
+    const auto widths = std::array{8, 11, 4, 11, 11, 11, 11, 11, 10, 12, 8, 8};
+
+    using namespace std::string_view_literals;
+
+    auto oil_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto wat_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/HR"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto gas_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "RCM/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSCF/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "RCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto res_vol =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/SCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "RB/DAY"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/SCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto water_cut =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/SCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return ""sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/SCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto gas_oil_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/SCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "MSCF/STB"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/SCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+    auto wat_gas_rate =
+        [utype = units.getType()]()
+        {
+            switch (utype) {
+            case UnitSystem::UnitType::UNIT_TYPE_METRIC: return "SCM/SCM"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_FIELD: return "STB/MSCF"sv;
+            case UnitSystem::UnitType::UNIT_TYPE_LAB: return "SCC/SCC"sv;
+            default: return "unsupp"sv;
+            }
+        };
+
+    const auto unitStrings = std::array{
+                                ""sv,
+                                ""sv,
+                                ""sv,
+                                oil_rate(),
+                                wat_rate(),
+                                gas_rate(),
+                                res_vol(),
+                                water_cut(),
+                                gas_oil_rate(),
+                                wat_gas_rate(),
+                                std::string_view{units.name(UnitSystem::measure::pressure)},
+                                std::string_view{units.name(UnitSystem::measure::pressure)},
+                             };
 
     std::ostringstream ss;
-    ss << "\n======================================================= PRODUCTION REPORT =======================================================\n"//=================== \n"
-       << ":  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :\n"// STEADY-ST PI       :\n"
-       << ":  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :    CUT    :  RATIO   :   RATIO    : CON.PR.: BLK.PR.:\n";// OR POTN OF PREF. PH:\n";
-
-    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << ":        :           :    :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  SCM/SCM  :  SCM/SCM :  SCM/SCM   :  BARSA :  BARSA :\n";//                    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << ":        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :\n";//                    :\n";
-    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-        ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
-    }
-
-    ss << "=================================================================================================================================";//===================";
+    ss << fmt::format("\n{:=^129}\n", " PRODUCTION REPORT ")
+       << formatTextRow(widths,
+                        std::array{
+                            "WELL"sv,
+                            "LOCATION"sv,
+                            "CTRL"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "FLUID"sv,
+                            "WATER"sv,
+                            "GAS/OIL"sv,
+                            "WAT/GAS"sv,
+                            "BHP OR"sv,
+                            "THP OR"sv,
+                        })
+       << formatTextRow(widths,
+                        std::array{
+                            "NAME"sv,
+                            "(I,J,K)"sv,
+                            "MODE"sv,
+                            "RATE"sv,
+                            "RATE"sv,
+                            "RATE"sv,
+                            "RES.VOL."sv,
+                            "CUT"sv,
+                            "RATIO"sv,
+                            "RATIO"sv,
+                            "CON.PR."sv,
+                            "BLK.PR."sv,
+                        })
+       << formatTextRow(widths, unitStrings)
+       << fmt::format("{:=>129}", "");
 
     OpmLog::note(ss.str());
 }
@@ -768,22 +958,8 @@ void LogOutputHelper<Scalar>::beginProductionReport_() const
 template <typename Scalar>
 void LogOutputHelper<Scalar>::endProductionReport_() const
 {
-    std::ostringstream ss;
-
-    ss << ':' << std::setfill ('-') << std::setw (9) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw ( 5) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (12) << ':'
-       << std::setfill ('-') << std::setw (11) << ':'
-       << std::setfill ('-') << std::setw (13) << ':'
-       << std::setfill ('-') << std::setw ( 9) << ':'
-       << std::setfill ('-') << std::setw ( 9) << ':';
-
-    OpmLog::note(ss.str());
+    const auto widths = std::array{8, 11, 4, 11, 11, 11, 11, 11, 10, 12, 8, 8};
+    OpmLog::note(formatBorder(widths));
 }
 
 template<class Scalar>
@@ -796,31 +972,33 @@ outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
 
     std::ostringstream ss;
 
-    ss << std::right << std::fixed << ':'
-       << std::setw(8) << wellProdNames[WellProdDataType::WellName] << ':';
+    ss << fmt::format(":{:<8}:", wellProdNames[WellProdDataType::WellName]);
 
     if (! isWellRecord) {
-        ss << std::setprecision(0) << std::setw(11) << "" << ':';
+        ss << fmt::format("{:11}:", "");
     } else {
-        ss << std::setprecision(0)
-           << std::setw(5) << wellProd[WellProdDataType::WellLocationi] << ','
-           << std::setw(5) << wellProd[WellProdDataType::WellLocationj] << ':';
+        ss << fmt::format("{:>3},{:>3} {:>3}:",
+                          wellProd[WellProdDataType::WellLocationi] ,
+                          wellProd[WellProdDataType::WellLocationj],
+                          "");
     }
 
-    ss << std::setw( 4) << wellProdNames[WellProdDataType::CTRLMode] << ':' << std::setprecision(1)
-       << std::setw(11) << wellProd[WellProdDataType::OilRate]       << ':'
-       << std::setw(11) << wellProd[WellProdDataType::WaterRate]     << ':'
-       << std::setw(11) << wellProd[WellProdDataType::GasRate]       << ':'
-       << std::setw(11) << wellProd[WellProdDataType::FluidResVol]   << ':' << std::setprecision(3)
-       << std::setw(11) << wellProd[WellProdDataType::WaterCut]      << ':' << std::setprecision(2)
-       << std::setw(10) << wellProd[WellProdDataType::GasOilRatio]   << ':' << std::setprecision(4)
-       << std::setw(12) << wellProd[WellProdDataType::WatGasRatio]   << ':' << std::setprecision(1);
+    ss << fmt::format("{:>4}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>11.3f}:{:>10.2f}:{:>12.4f}:",
+                      wellProdNames[WellProdDataType::CTRLMode],
+                      wellProd[WellProdDataType::OilRate],
+                      wellProd[WellProdDataType::WaterRate],
+                      wellProd[WellProdDataType::GasRate],
+                      wellProd[WellProdDataType::FluidResVol],
+                      wellProd[WellProdDataType::WaterCut],
+                      wellProd[WellProdDataType::GasOilRatio],
+                      wellProd[WellProdDataType::WatGasRatio]);
 
     if (! isWellRecord) {
-        ss << std::setw(8) << "" << ':' << std::setw(8) << "" << ':';
+        ss << fmt::format("{0:8}:{0:8}:", "");
     } else {
-        ss << std::setw(8) << wellProd[WellProdDataType::BHP] << ':'
-           << std::setw(8) << wellProd[WellProdDataType::THP] << ':';
+        ss << fmt::format("{:>8.1f}:{:>8.1f}:",
+                          wellProd[WellProdDataType::BHP],
+                          wellProd[WellProdDataType::THP]);
     }
 
     OpmLog::note(ss.str());
@@ -840,65 +1018,73 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
     }
 
     const UnitSystem& units = eclState_.getUnits();
+    const auto widths = std::array{25, 43, 16, 43};
+
+    auto topEntry = [&units](const char* text,
+                             const Scalar value,
+                             const UnitSystem::measure m)
+    {
+        return fmt::format("{0: >52}:{0: >8}{1:<5}={2:>14.0f}  {3:<18}:\n",
+                           "", text, value, units.name(m));
+    };
+
+    auto topLabel = [](const char* text)
+    {
+        return fmt::format("{: >52}: {:^47}:\n", "", text);
+    };
+
+    auto formatEntry = [](auto& fip, std::string_view label)
+    {
+        return fmt::format(":{:<25}:{:^15.0f}{:^14.0f}{:^14.0f}:{:^16.0f}:"
+                           "{:^15.0f}{:^14.0f}{:^14.0f}:\n",
+                           label,
+                           fip[Inplace::Phase::OilInLiquidPhase],
+                           fip[Inplace::Phase::OilInGasPhase],
+                           fip[Inplace::Phase::OIL],
+                           fip[Inplace::Phase::WATER],
+                           fip[Inplace::Phase::GasInGasPhase],
+                           fip[Inplace::Phase::GasInLiquidPhase],
+                           fip[Inplace::Phase::GAS]);
+    };
+
     std::ostringstream ss;
-
-    ss << '\n';
-
+    ss << fmt::format("\n{0: >52}{0:=>50}\n", "");
     if (reg == 0) {
-        ss << "                                                     ==================================================\n"
-           << "                                                     :               FIELD TOTALS                     :\n";
+        ss << fmt::format("{0: >52}:{1:^48}:\n", "", "FIELD TOTALS");
     }
     else {
-        ss << "                                                     ==================================================\n"
-           << "                                                     :        " << name << " REPORT REGION  "
-           << std::setw(8 - name.size()) << reg << "                :\n";
+        ss << fmt::format("{0: >52}:{1:>20} REPORT REGION {2:>{3}}{0: ^11}:\n",
+                          "", name, reg, 8 - name.size());
     }
-    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << "                                                     :         PAV = " << std::setw(14) << pav << " BARSA             :\n"
-           << std::fixed << std::setprecision(0)
-           << "                                                     :         PORV= " << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "  RM3              :\n";
-        if (!reg) {
-            ss << "                                                     : Pressure is weighted by hydrocarbon pore volume:\n"
-               << "                                                     : Porv volumes are taken at reference conditions :\n";
-        }
-        ss << "                           :--------------- OIL    SM3 ----------------:-- WAT    SM3 --:--------------- GAS    SM3  ---------------:\n";
-    } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << std::fixed << std::setprecision(0) 
-           << "                                                     :         PAV =" << std::setw(14) << pav << "  PSIA              :\n"
-           << std::fixed << std::setprecision(0)
-           << "                                                     :         PORV=" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RB               :\n";
-        if (!reg) {
-            ss << "                                                     : Pressure is weighted by hydrocarbon pore volume:\n"
-               << "                                                     : Pore volumes are taken at reference conditions :\n";
-        }
-        ss << "                           :--------------- OIL    STB ----------------:-- WAT    STB --:--------------- GAS   MSCF ----------------:\n";
+    ss << topEntry("PAV", pav, UnitSystem::measure::pressure)
+       << topEntry("PORV", cip[Inplace::Phase::PoreVolume], UnitSystem::measure::volume);
+    if (!reg) {
+        ss << topLabel("Pressure is weighted by hydrocarbon pore volume")
+           << topLabel("Pore volumes are taken at reference conditions");
     }
-    ss << "                           :      LIQUID        VAPOUR         TOTAL   :      TOTAL     :       FREE      DISSOLVED         TOTAL   :" << "\n"
-       << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:" << "\n"
-       << " :CURRENTLY IN PLACE       :" << std::setw(14) << cip[Inplace::Phase::OilInLiquidPhase]
-       << std::setw(14) << cip[Inplace::Phase::OilInGasPhase]
-       << std::setw(15) << cip[Inplace::Phase::OIL] << ":"
-       << std::setw(14) << cip[Inplace::Phase::WATER] << "  :"
-       << std::setw(14) << (cip[Inplace::Phase::GasInGasPhase])
-       << std::setw(14) << cip[Inplace::Phase::GasInLiquidPhase]
-       << std::setw(15) << cip[Inplace::Phase::GAS] << ":\n"
-       << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:\n"
-       << " :ORIGINALLY IN PLACE      :" << std::setw(14) << oip[Inplace::Phase::OilInLiquidPhase]
-       << std::setw(14) << oip[Inplace::Phase::OilInGasPhase]
-       << std::setw(15) << oip[Inplace::Phase::OIL] << ":"
-       << std::setw(14) << oip[Inplace::Phase::WATER] << "  :"
-       << std::setw(14) << oip[Inplace::Phase::GasInGasPhase]
-       << std::setw(14) << oip[Inplace::Phase::GasInLiquidPhase]
-       << std::setw(15) << oip[Inplace::Phase::GAS] << ":\n";
-    
-    if (reg == 0){
-       ss << " ====================================================================================================================================\n\n";
-    
-    } else {
-       ss << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:\n";
-       ss << " ====================================================================================================================================\n\n";
+
+    ss << fmt::format("{0: >26}:{0:->15} OIL {1:>4} {0:->18}:"
+                      "-- WAT{0: >2} {1:>4} --:{0:->14}  GAS{0: >3} {2:>4} {0:-^15}:\n",
+                      "",
+                      units.name(UnitSystem::measure::liquid_surface_volume),
+                      units.name(UnitSystem::measure::gas_surface_volume))
+       << fmt::format("{0: >26}:{1:^15}{2:^14}{3:^14}:{3:^16}:{4:^15}{5:^14}{3:^14}:\n",
+                      "",
+                      "LIQUID",
+                      "VAPOUR",
+                      "TOTAL",
+                      "FREE",
+                      "DISSOLVED")
+       << formatBorder(widths) << '\n'
+       << formatEntry(cip, "CURRENTLY IN PLACE")
+       << formatBorder(widths) << '\n'
+       << formatEntry(oip, "ORIGINALLY IN PLACE");
+
+    if (reg != 0) {
+        ss << formatBorder(widths) << '\n';
     }
-       
+    ss << fmt::format("{:=^132}\n\n", "");
+
     OpmLog::note(ss.str());
 }
 
@@ -908,35 +1094,54 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
                         const int reg) const
 {
     const UnitSystem& units = eclState_.getUnits();
+    using namespace std::string_view_literals;
+
     std::ostringstream ss;
-
     if (reg == 0) {
-        ss << "\n                                                     ===================================\n";
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            ss << "                                                     :  RESERVOIR VOLUMES      RM3     :\n";
-        } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            ss << "                                                     :  RESERVOIR VOLUMES      RB      :\n";
-        }
-        ss << " :---------:---------------:---------------:---------------:---------------:---------------:\n"
-           << " : REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :\n"
-           << " :         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :\n"
-           << " :         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :\n"
-           << " :---------:---------------:---------------:---------------:---------------:---------------\n";
-
-        ss << std::right << std::fixed << std::setprecision(0) << " :"
-           << std::setw (8) <<  "FIELD" << " :";
-
+        const auto widths = std::array{9, 15, 15, 15, 15, 15};
+        ss << fmt::format("\n{0: >52}{0:=>35}", "")
+           << fmt::format("\n{0: >52}:  RESERVOIR VOLUMES {1:^13}:\n",
+                          "",  units.name(UnitSystem::measure::volume))
+           << formatBorder(widths) << '\n'
+           << formatTextRow(widths,
+                            std::array{
+                                "REGION"sv,
+                                "TOTAL PORE"sv,
+                                "PORE VOLUME"sv,
+                                "PORE VOLUME"sv,
+                                "PORE VOLUME"sv,
+                                "PORE VOLUME"sv,
+                            })
+           << formatTextRow(widths,
+                            std::array{
+                                ""sv,
+                                "VOLUME"sv,
+                                "CONTAINING"sv,
+                                "CONTAINING"sv,
+                                "CONTAINING"sv,
+                                "CONTAINING"sv,
+                            })
+           << formatTextRow(widths,
+                            std::array{
+                                ""sv,
+                                ""sv,
+                                "OIL"sv,
+                                "WATER"sv,
+                                "GAS"sv,
+                                "HYDRO-CARBON"sv,
+                            })
+           << formatBorder(widths) << '\n'
+           << fmt::format(":{:<9}:", "FIELD");
     } else {
-        ss << std::right << std::fixed << std::setprecision(0) << " :"
-           << std::setw (8) <<  reg << " :";
+        ss << fmt::format(":{:<9}:", reg);
     }    
         
-    ss << std::setw(15) << cipr[Inplace::Phase::DynamicPoreVolume] << ":"
-       << std::setw(15) << cipr[Inplace::Phase::OilResVolume] << ":"
-       << std::setw(15) << cipr[Inplace::Phase::WaterResVolume] << ":"
-       << std::setw(15) << cipr[Inplace::Phase::GasResVolume] << ":"
-       << std::setw(15) << cipr[Inplace::Phase::OilResVolume] +
-                           cipr[Inplace::Phase::GasResVolume] << ":";
+    ss << fmt::format("{0:>15.0f}:{1:>15.0f}:{2:>15.0f}:{3:>15.0f}:{4:>15.0f}:",
+                      cipr[Inplace::Phase::DynamicPoreVolume],
+                      cipr[Inplace::Phase::OilResVolume],
+                      cipr[Inplace::Phase::WaterResVolume],
+                      cipr[Inplace::Phase::GasResVolume],
+                      cipr[Inplace::Phase::OilResVolume] + cipr[Inplace::Phase::GasResVolume]);
     
     OpmLog::note(ss.str());
 }

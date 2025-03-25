@@ -84,6 +84,8 @@ struct SerialPartitioning{ static constexpr bool value = false; };
 template<class Scalar>
 struct ZoltanImbalanceTol { static constexpr Scalar value = 1.1; };
 
+struct ZoltanPhgEdgeSizeThreshold { static constexpr auto value = 0.35; };
+
 struct ZoltanParams { static constexpr auto value = "graph"; };
 
 } // namespace Opm::Parameters
@@ -380,6 +382,7 @@ protected:
 
     bool zoltanImbalanceTolSet_;
     double zoltanImbalanceTol_;
+    double zoltanPhgEdgeSizeThreshold_;
     std::string zoltanParams_;
 
     std::string metisParams_;

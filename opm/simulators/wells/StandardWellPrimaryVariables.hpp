@@ -92,9 +92,6 @@ public:
         : well_(well)
     {}
 
-    //! \brief Initialize evaluations from values.
-    void init();
-
     //! \brief Resize values and evaluations.
     void resize(const int numWellEq);
 
@@ -151,13 +148,16 @@ public:
     { value_[idx] = val; }
 
 private:
+    //! \brief Initialize evaluations from values.
+    void setEvaluationsFromValues();
+
     //! \brief Calculate a relaxation factor for producers.
     //! \details To avoid overshoot of the fractions which might result in negative rates.
     Scalar relaxationFactorFractionsProducer(const BVectorWell& dwells,
                                              DeferredLogger& deferred_logger) const;
 
     //! \brief Returns volume fraction for a component.
-    EvalWell volumeFraction(const unsigned compIdx) const;
+    EvalWell volumeFraction(const int compIdx) const;
 
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions();

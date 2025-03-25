@@ -135,6 +135,10 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlashModel>
 { static constexpr bool value = false; };
 
+template<class TypeTag>
+struct EnableWater<TypeTag, TTag::MultiPhaseBaseModel> 
+{ static constexpr int value = GetPropType<TypeTag, Properties::FluidSystem>::waterEnabled; };
+
 } // namespace Opm::Properties
 
 namespace Opm {

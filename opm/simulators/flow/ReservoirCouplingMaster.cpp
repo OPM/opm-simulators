@@ -68,7 +68,7 @@ maybeSpawnSlaveProcesses(int report_step)
     auto slave_count = rescoup.slaveCount();
     auto master_group_count = rescoup.masterGroupCount();
     if (slave_count > 0 && master_group_count > 0) {
-        ReservoirCouplingSpawnSlaves spawn_slaves{*this, rescoup, report_step};
+        ReservoirCouplingSpawnSlaves spawn_slaves{*this, rescoup};
         spawn_slaves.spawn();
     }
 }

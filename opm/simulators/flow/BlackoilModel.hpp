@@ -267,9 +267,6 @@ public:
 
     void writePartitions(const std::filesystem::path& odir) const;
 
-    const std::vector<std::vector<int>>& getConvCells() const
-    { return rst_conv_.getData(); }
-
     /// return the StandardWells object
     BlackoilWellModel<TypeTag>&
     wellModel()
@@ -323,8 +320,6 @@ protected:
 
     // Well Model
     BlackoilWellModel<TypeTag>& well_model_;
-
-    RSTConv rst_conv_; //!< Helper class for RPTRST CONV
 
     /// \brief Whether we print something to std::cout
     bool terminal_output_;

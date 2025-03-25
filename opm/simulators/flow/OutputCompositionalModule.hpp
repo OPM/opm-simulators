@@ -32,17 +32,23 @@
 #include <opm/simulators/utils/moduleVersion.hpp>
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/CompositionalContainer.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
+#include <opm/simulators/flow/OutputExtractor.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -53,8 +59,7 @@
 #include <vector>
 
 
-namespace Opm
-{
+namespace Opm {
 
 // forward declaration
 template <class TypeTag>
@@ -76,6 +81,7 @@ class OutputCompositionalModule : public GenericOutputBlackoilModule<GetPropType
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using BaseType = GenericOutputBlackoilModule<FluidSystem>;
+    using Extractor = detail::Extractor<TypeTag>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
@@ -93,6 +99,9 @@ public:
                    smryCfg,
                    simulator.vanguard().summaryState(),
                    moduleVersionName(),
+                   [this](const int idx)
+                   { return simulator_.problem().eclWriter().collectOnIORank().localIdxToGlobalIdx(idx); },
+                   simulator.vanguard().grid().comm(),
                    getPropValue<TypeTag, Properties::EnableEnergy>(),
                    getPropValue<TypeTag, Properties::EnableTemperature>(),
                    getPropValue<TypeTag, Properties::EnableMech>(),
@@ -102,8 +111,7 @@ public:
                    getPropValue<TypeTag, Properties::EnableBrine>(),
                    getPropValue<TypeTag, Properties::EnableSaltPrecipitation>(),
                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                   getPropValue<TypeTag, Properties::EnableMICP>(),
-                   true)
+                   getPropValue<TypeTag, Properties::EnableMICP>())
         , simulator_(simulator)
     {
         for (auto& region_pair : this->regions_) {
@@ -155,12 +163,82 @@ public:
             return;
         }
 
-        this->doAllocBuffers(bufferSize,
-                              reportStepNum,
-                              substep,
-                              log,
-                              isRestart);
+        auto rstKeywords = this->schedule_.rst_keywords(reportStepNum);
+        this->compC_.allocate(bufferSize, rstKeywords);
+
+        this->doAllocBuffers(bufferSize, reportStepNum, substep, log, isRestart,
+                             /* hysteresisConfig = */ nullptr,
+                             /* numOutputNnc =*/ 0,
+                             std::move(rstKeywords));
     }
+
+    void assignToSolution(data::Solution& sol)
+    {
+        this->compC_.outputRestart(sol, this->saturation_[oilPhaseIdx]);
+        BaseType::assignToSolution(sol);
+    }
+
+    //! \brief Setup list of active element-level data extractors
+    void setupExtractors()
+    {
+        using Entry = typename Extractor::Entry;
+        using ExtractContext = typename Extractor::Context;
+        using ScalarEntry = typename Extractor::ScalarEntry;
+        using PhaseEntry = typename Extractor::PhaseEntry;
+
+        auto extractors = std::array{
+            Entry{PhaseEntry{&this->saturation_,
+                  [](const unsigned phase, const ExtractContext& ectx)
+                  { return getValue(ectx.fs.saturation(phase)); }}
+            },
+            Entry{ScalarEntry{&this->fluidPressure_,
+                  [](const ExtractContext& ectx)
+                  {
+                      if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                          // Output oil pressure as default
+                          return getValue(ectx.fs.pressure(oilPhaseIdx));
+                      }
+                      else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                          // Output gas if oil is not present
+                          return getValue(ectx.fs.pressure(gasPhaseIdx));
+                      }
+                      else {
+                          // Output water if neither oil nor gas is present
+                          return getValue(ectx.fs.pressure(waterPhaseIdx));
+                      }
+                  }}
+            },
+            Entry{ScalarEntry{&this->temperature_,
+                  [](const ExtractContext& ectx)
+                  { return getValue(ectx.fs.temperature(oilPhaseIdx)); }}
+            },
+            Entry{[&compC = this->compC_](const ExtractContext& ectx)
+                  {
+                      compC.assignMoleFractions(ectx.globalDofIdx,
+                                                [&fs = ectx.fs](const unsigned compIdx)
+                                                { return getValue(fs.moleFraction(compIdx)); });
+
+                      if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                          compC.assignGasFractions(ectx.globalDofIdx,
+                                                   [&fs = ectx.fs](const unsigned compIdx)
+                                                   { return getValue(fs.moleFraction(gasPhaseIdx, compIdx)); });
+                      }
+
+                      if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                          compC.assignOilFractions(ectx.globalDofIdx,
+                                                   [&fs = ectx.fs](const unsigned compIdx)
+                                                   { return getValue(fs.moleFraction(oilPhaseIdx, compIdx)); });
+                      }
+                  }, this->compC_.allocated()
+            },
+        };
+
+        this->extractors_ = Extractor::removeInactive(extractors);
+    }
+
+    //! \brief Clear list of active element-level data extractors
+    void clearExtractors()
+    { this->extractors_.clear(); }
 
     /*!
      * \brief Modify the internal buffers according to the intensive
@@ -169,59 +247,25 @@ public:
     void processElement(const ElementContext& elemCtx)
     {
         OPM_TIMEBLOCK_LOCAL(processElement);
-        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
+        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
+        }
 
+        typename Extractor::HysteresisParams hysterParams{};
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            // const unsigned pvtRegionIdx = 0; // elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
+            const typename Extractor::Context ectx{
+                elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0),
+                0, // elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex(),
+                elemCtx.simulator().episodeIndex(),
+                fs,
+                intQuants,
+                hysterParams
+            };
 
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (this->saturation_[phaseIdx].empty())
-                    continue;
-
-                this->saturation_[phaseIdx][globalDofIdx] = getValue(fs.saturation(phaseIdx));
-                Valgrind::CheckDefined(this->saturation_[phaseIdx][globalDofIdx]);
-            }
-
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (this->moleFractions_[compIdx].empty()) continue;
-
-                this->moleFractions_[compIdx][globalDofIdx] = getValue(fs.moleFraction(compIdx));
-            }
-            // XMF and YMF
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    if (this->phaseMoleFractions_[oilPhaseIdx][compIdx].empty()) continue;
-                    this->phaseMoleFractions_[oilPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(oilPhaseIdx, compIdx));
-                }
-                if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    if (this->phaseMoleFractions_[gasPhaseIdx][compIdx].empty()) continue;
-                    this->phaseMoleFractions_[gasPhaseIdx][compIdx][globalDofIdx] = getValue(fs.moleFraction(gasPhaseIdx, compIdx));
-                }
-            }
-
-            if (!this->fluidPressure_.empty()) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    // Output oil pressure as default
-                    this->fluidPressure_[globalDofIdx] = getValue(fs.pressure(oilPhaseIdx));
-                } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    // Output gas if oil is not present
-                    this->fluidPressure_[globalDofIdx] = getValue(fs.pressure(gasPhaseIdx));
-                } else {
-                    // Output water if neither oil nor gas is present
-                    this->fluidPressure_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx));
-                }
-                Valgrind::CheckDefined(this->fluidPressure_[globalDofIdx]);
-            }
-
-            if (!this->temperature_.empty()) {
-                this->temperature_[globalDofIdx] = getValue(fs.temperature(oilPhaseIdx));
-                Valgrind::CheckDefined(this->temperature_[globalDofIdx]);
-            }
+            Extractor::process(ectx, extractors_);
         }
     }
 
@@ -332,6 +376,8 @@ private:
     }
 
     const Simulator& simulator_;
+    CompositionalContainer<FluidSystem> compC_;
+    std::vector<typename Extractor::Entry> extractors_;
 };
 
 } // namespace Opm

@@ -118,13 +118,13 @@ template<class Scalar> class WellContributions;
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
-            typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
-            typedef Dune::BlockVector<VectorBlockType> BVector;
+            using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
+            using BVector = Dune::BlockVector<VectorBlockType>;
 
-            typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-            typedef BlackOilMICPModule<TypeTag> MICPModule;
+            using PolymerModule = BlackOilPolymerModule<TypeTag>;
+            using MICPModule = BlackOilMICPModule<TypeTag>;
 
-            // For the conversion between the surface volume rate and resrevoir voidage rate
+            // For the conversion between the surface volume rate and reservoir voidage rate
             using RateConverterType = RateConverter::
                 SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
@@ -213,10 +213,10 @@ template<class Scalar> class WellContributions;
                     const auto& mswTracerRates = simulator_.problem()
                         .tracerModel().getMswTracerRates();
 
-                    this->assignWellTracerRates(wsrpt, tracerRates);
-                    this->assignWellTracerRates(wsrpt, freeTracerRates);
-                    this->assignWellTracerRates(wsrpt, solTracerRates);
-                    this->assignMswTracerRates(wsrpt, mswTracerRates);
+                    this->assignWellTracerRates(wsrpt, tracerRates, this->reportStepIndex());
+                    this->assignWellTracerRates(wsrpt, freeTracerRates, this->reportStepIndex());
+                    this->assignWellTracerRates(wsrpt, solTracerRates, this->reportStepIndex());
+                    this->assignMswTracerRates(wsrpt, mswTracerRates, this->reportStepIndex());
                 }
 
                 BlackoilWellModelGuideRates(*this)
@@ -257,8 +257,8 @@ template<class Scalar> class WellContributions;
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
-            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
-            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
+            // it should be able to go to prepareTimeStep(), however, the updateWellControls()
+            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above function
             // twice at the beginning of the time step
             /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
             /// at the beginning of the time step and no derivatives are included in these quantities
@@ -266,7 +266,6 @@ template<class Scalar> class WellContributions;
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
-            void initPrimaryVariablesEvaluation() const;
 
             std::pair<bool, bool>
             updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);

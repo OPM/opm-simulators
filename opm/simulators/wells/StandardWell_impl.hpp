@@ -88,17 +88,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    void StandardWell<TypeTag>::
-    initPrimaryVariablesEvaluation()
-    {
-        this->primary_variables_.init();
-    }
-
-
-
-
-
-    template<typename TypeTag>
     template<class Value>
     void
     StandardWell<TypeTag>::
@@ -396,7 +385,7 @@ namespace Opm
 
         auto& perf_data = ws.perf_data;
         auto& perf_rates = perf_data.phase_rates;
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             // Calculate perforation quantities.
             std::vector<EvalWell> cq_s(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.0});
             EvalWell water_flux_s{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
@@ -778,7 +767,7 @@ namespace Opm
         std::fill(this->ipr_a_.begin(), this->ipr_a_.end(), 0.);
         std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
 
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             std::vector<Scalar> mob(this->num_components_, 0.0);
             getMobility(simulator, perf, mob, deferred_logger);
 
@@ -1061,7 +1050,7 @@ namespace Opm
     {
         bool all_drawdown_wrong_direction = true;
 
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
@@ -1308,7 +1297,7 @@ namespace Opm
             comm.sum(wellPI, np);
         }
 
-        assert ((static_cast<int>(subsetPerfID) == this->number_of_perforations_) &&
+        assert ((static_cast<int>(subsetPerfID) == this->number_of_local_perforations_) &&
                 "Internal logic error in processing connections for PI/II");
     }
 
@@ -1412,7 +1401,6 @@ namespace Opm
                                 DeferredLogger& deferred_logger)
     {
         updatePrimaryVariables(simulator, well_state, deferred_logger);
-        initPrimaryVariablesEvaluation();
         computeWellConnectionPressures(simulator, well_state, deferred_logger);
         this->computeAccumWell();
     }
@@ -1485,7 +1473,7 @@ namespace Opm
 
         const bool allow_cf = this->getAllowCrossFlow();
 
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             // flux for each perforation
@@ -1564,7 +1552,6 @@ namespace Opm
                     = sign * ws.well_potentials[phase];
         }
         well_copy.updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
-        well_copy.initPrimaryVariablesEvaluation();
         well_copy.computeAccumWell();
 
         const double dt = simulator.timeStepSize();
@@ -1576,7 +1563,6 @@ namespace Opm
         }
         well_copy.updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
         well_copy.computeWellConnectionPressures(simulator, well_state_copy, deferred_logger);
-        well_copy.initPrimaryVariablesEvaluation();
         well_copy.computeWellRatesWithBhp(simulator, bhp, well_flux, deferred_logger);
     }
 
@@ -2064,7 +2050,7 @@ namespace Opm
             auto& perf_water_throughput = well_state.well(this->index_of_well_)
                 .perf_data.water_throughput;
 
-            for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+            for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
                 const Scalar perf_water_vel =
                     this->primary_variables_.value(Bhp + 1 + perf);
 
@@ -2129,7 +2115,7 @@ namespace Opm
         const auto& perf_data = ws.perf_data;
         const auto& perf_water_throughput = perf_data.water_throughput;
         const Scalar throughput = perf_water_throughput[perf];
-        const int pskin_index = Bhp + 1 + this->number_of_perforations_ + perf;
+        const int pskin_index = Bhp + 1 + this->number_of_local_perforations_ + perf;
 
         EvalWell poly_conc(this->primary_variables_.numWellEq() + Indices::numEq, 0.0);
         poly_conc.setValue(this->wpolymer());
@@ -2253,7 +2239,7 @@ namespace Opm
         };
 
         Scalar max_pressure = 0.0;
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& int_quants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             const auto& fs = int_quants.fluidState();
@@ -2382,7 +2368,6 @@ namespace Opm
             // this function or we use different functions for the well testing purposes.
             // We don't allow for switching well controls while computing well potentials and testing wells
             // updateWellControl(simulator, well_state, deferred_logger);
-            initPrimaryVariablesEvaluation();
         } while (it < max_iter);
 
         return converged;
@@ -2478,7 +2463,6 @@ namespace Opm
 
             ++it;
             solveEqAndUpdateWellState(simulator, well_state, deferred_logger);
-            initPrimaryVariablesEvaluation();
 
         } while (it < max_iter);
 
@@ -2514,7 +2498,7 @@ namespace Opm
         std::vector<Scalar> well_q_s(this->num_components_, 0.);
         const EvalWell& bhp = this->primary_variables_.eval(Bhp);
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(simulator);
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_local_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             std::vector<Scalar> mob(this->num_components_, 0.);

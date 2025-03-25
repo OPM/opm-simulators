@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
         }
     }
 
-    Opm::RSTConv cnv(cellMapping, cc);
+    Opm::RSTConv cnv([&cellMapping](const int idx) { return cellMapping[idx]; }, cc);
     cnv.init(10*cc.size(), rst, sample.phase);
 
     cnv.update(residual);

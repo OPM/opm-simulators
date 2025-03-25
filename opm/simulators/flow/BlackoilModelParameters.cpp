@@ -66,6 +66,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     min_strict_cnv_iter_ = Parameters::Get<Parameters::MinStrictCnvIter>();
     min_strict_mb_iter_ = Parameters::Get<Parameters::MinStrictMbIter>();
     solve_welleq_initially_ = Parameters::Get<Parameters::SolveWelleqInitially>();
+    pre_solve_network_ = Parameters::Get<Parameters::PreSolveNetwork>();
     update_equations_scaling_ = Parameters::Get<Parameters::UpdateEquationsScaling>();
     use_update_stabilization_ = Parameters::Get<Parameters::UseUpdateStabilization>();
     matrix_add_well_contributions_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
@@ -95,8 +96,8 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     local_domain_partition_imbalance_ = std::max(Scalar{1.0}, Parameters::Get<Parameters::LocalDomainsPartitioningImbalance<Scalar>>());
     local_domain_partition_method_ = Parameters::Get<Parameters::LocalDomainsPartitioningMethod>();
     deck_file_name_ = Parameters::Get<Parameters::EclDeckFileName>();
-    network_max_strict_iterations_ = Parameters::Get<Parameters::NetworkMaxStrictIterations>();
-    network_max_iterations_ = Parameters::Get<Parameters::NetworkMaxIterations>();
+    network_max_strict_outer_iterations_ = Parameters::Get<Parameters::NetworkMaxStrictOuterIterations>();
+    network_max_outer_iterations_ = Parameters::Get<Parameters::NetworkMaxOuterIterations>();
     network_max_sub_iterations_ = Parameters::Get<Parameters::NetworkMaxSubIterations>();
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
     network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
@@ -196,6 +197,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
          "number of Newton iterations are reached.");
     Parameters::Register<Parameters::SolveWelleqInitially>
         ("Fully solve the well equations before each iteration of the reservoir model");
+    Parameters::Register<Parameters::PreSolveNetwork>
+        ("Pre solve and iterate the network model at start-up");
     Parameters::Register<Parameters::UpdateEquationsScaling>
         ("Update scaling factors for mass balance equations during the run");
     Parameters::Register<Parameters::UseUpdateStabilization>
@@ -219,10 +222,10 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Compute implict IPR for stability checks and stable solution search");
     Parameters::Register<Parameters::CheckGroupConstraintsInnerWellIterations>
         ("Allow checking of group constraints during inner well iterations");        
-    Parameters::Register<Parameters::NetworkMaxStrictIterations>
-        ("Maximum iterations in network solver before relaxing tolerance");
-    Parameters::Register<Parameters::NetworkMaxIterations>
-        ("Maximum number of iterations in the network solver before giving up");
+    Parameters::Register<Parameters::NetworkMaxStrictOuterIterations>
+        ("Maximum outer iterations in network solver before relaxing tolerance");
+    Parameters::Register<Parameters::NetworkMaxOuterIterations>
+        ("Maximum outer number of iterations in the network solver before giving up");
     Parameters::Register<Parameters::NetworkMaxSubIterations>
         ("Maximum number of sub-iterations to update network pressures (within a single well/group control update)");
     Parameters::Register<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>

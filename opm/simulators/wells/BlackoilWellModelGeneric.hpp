@@ -32,7 +32,6 @@
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-
 #include <opm/simulators/wells/BlackoilWellModelWBP.hpp>
 #include <opm/simulators/wells/ConnectionIndexMap.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
@@ -40,6 +39,7 @@
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/WellTracerRate.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 
 #include <cstddef>
@@ -226,6 +226,7 @@ public:
 
     const std::map<std::string, double>& wellOpenTimes() const { return well_open_times_; }
     const std::map<std::string, double>& wellCloseTimes() const { return well_close_times_; }
+    const WellGroupEvents& reportStepStartEvents() const { return report_step_start_events_; }
 
     std::vector<int> getCellsForConnections(const Well& well) const;
 
@@ -449,12 +450,16 @@ protected:
     std::vector<std::string> getWellsForTesting(const int timeStepIdx,
                                                 const double simulationTime);
 
-    using WellTracerRates = std::map<std::pair<std::string, std::string>, Scalar>;
+    using WellTracerRates = std::unordered_map<int, std::vector<WellTracerRate<Scalar>>>;
     void assignWellTracerRates(data::Wells& wsrpt,
-                               const WellTracerRates& wellTracerRates) const;
-    using MswTracerRates = std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>;
+                               const WellTracerRates& wellTracerRates,
+                               const unsigned reportStep) const;
+
+    using MswTracerRates = std::unordered_map<int, std::vector<MSWellTracerRate<Scalar>>>;
     void assignMswTracerRates(data::Wells& wsrpt,
-                              const MswTracerRates& mswTracerRates) const;
+                              const MswTracerRates& mswTracerRates,
+                              const unsigned reportStep) const;
+
     void assignMassGasRate(data::Wells& wsrpt,
                            const Scalar& gasDensity) const;
 
@@ -519,6 +524,7 @@ protected:
     WGState<Scalar> active_wgstate_;
     WGState<Scalar> last_valid_wgstate_;
     WGState<Scalar> nupcol_wgstate_;
+    WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
     bool wellStructureChangedDynamically_{false};
 

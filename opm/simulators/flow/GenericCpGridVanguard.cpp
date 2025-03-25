@@ -158,11 +158,20 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                const int                                numJacobiBlocks,
                const bool                               enableEclOutput)
 {
-    if ((partitionMethod == Dune::PartitionMethod::zoltan
-         || partitionMethod == Dune::PartitionMethod::zoltanGoG) && !this->zoltanParams().empty())
-        this->grid_->setPartitioningParams(setupZoltanParams(this->zoltanParams()));
-    if (partitionMethod == Dune::PartitionMethod::metis && !this->metisParams().empty())
-        this->grid_->setPartitioningParams(setupMetisParams(this->metisParams()));
+    if (((partitionMethod == Dune::PartitionMethod::zoltan) ||
+         (partitionMethod == Dune::PartitionMethod::zoltanGoG)) &&
+        !this->zoltanParams().empty())
+    {
+        this->grid_->setPartitioningParams
+            (setupZoltanParams(this->zoltanParams(),
+                               this->zoltanPhgEdgeSizeThreshold()));
+    }
+    else if ((partitionMethod == Dune::PartitionMethod::metis) &&
+        !this->metisParams().empty())
+    {
+        this->grid_->setPartitioningParams
+            (setupMetisParams(this->metisParams()));
+    }
 
     const auto mpiSize = this->grid_->comm().size();
 
@@ -481,15 +490,6 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
 
-    // --- Add LGRs and update Leaf Grid View ---
-    // Check if input file contains Lgrs.
-    //
-    // If there are lgrs, create the grid with them, and update the leaf grid view.
-    if (const auto& lgrs = eclState.getLgrs(); lgrs.size() > 0) {
-        OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
-        this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
-    }
-
 #if HAVE_MPI
     if (this->grid_->comm().size() > 1) {
         // Numerical aquifers generate new NNCs during grid processing.  We
@@ -520,7 +520,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     }
 #endif
 
-    // --- Copy grid with LGRs to equilGrid_ ---
+    // --- Copy grid to equilGrid_ ---
     // We use separate grid objects: one for the calculation of the initial
     // condition via EQUIL and one for the actual simulation. The reason is
     // that the EQUIL code is allergic to distributed grids and the

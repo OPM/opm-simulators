@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_resources.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/kernel_enums.hpp>
 #include <optional>
 #include <type_traits>
@@ -84,8 +85,11 @@ public:
     //! \brief Updates the matrix data.
     void update() final;
 
+    //! \brief perform matrix splitting and reordering
+    void reorderAndSplitMatrix(int moveThreadBlockSize);
+
     //! \brief Compute LU factorization, and update the data of the reordered matrix
-    void LUFactorizeAndMoveData(int moveThreadBlockSize, int factorizationThreadBlockSize);
+    void LUFactorizeMatrix(int factorizationThreadBlockSize);
 
     //! \brief function that will experimentally tune the thread block sizes of the important cuda kernels
     void tuneThreadBlockSizes();
@@ -152,6 +156,16 @@ private:
     int m_lowerSolveThreadBlockSize = -1;
     int m_moveThreadBlockSize = -1;
     int m_ILU0FactorizationThreadBlockSize = -1;
+
+    // Graphs for Apply
+    std::map<std::pair<field_type*, const field_type*>, GPUGraph> m_apply_graphs;
+    std::map<std::pair<field_type*, const field_type*>, GPUGraphExec> m_executableGraphs;
+
+    // Stream for the DILU operations on the GPU
+    GPUStream m_stream{};
+    // Events for synchronization with main stream
+    GPUEvent m_before{};
+    GPUEvent m_after{};
 };
 } // end namespace Opm::gpuistl
 

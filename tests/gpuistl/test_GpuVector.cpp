@@ -151,7 +151,6 @@ BOOST_AUTO_TEST_CASE(TestDot)
     for (size_t i = 0; i < dataA.size(); ++i) {
         correctAnswer += dataA[i] * dataB[i];
     }
-    correctAnswer = correctAnswer;
     BOOST_CHECK_EQUAL(correctAnswer, dot);
 }
 

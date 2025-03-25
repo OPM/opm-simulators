@@ -123,6 +123,7 @@ TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingHardcoded, serializationTestObj
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPID, serializationTestObjectPID)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPIDIt, serializationTestObjectPIDIt)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingSimple, serializationTestObjectSimple)
+TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeStepping3rdOrder, serializationTestObject3rdOrder)
 
 namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::TestTypeTag>; }
 TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
@@ -424,7 +425,7 @@ public:
     {
         GenericTracerModelTest result(gridView, eclState, cartMapper, dofMapper, centroids);
         result.tracerConcentration_ = {{{1.0, 2.0}}, {{3.0, 4.0}}, {{5.0, 6.0}}};
-        result.wellTracerRate_.insert({{"foo", "bar"}, 4.0});
+        result.wellTracerRate_.emplace(1, std::vector{Opm::WellTracerRate<double>{"foo", 4.0}});
 
         return result;
     }

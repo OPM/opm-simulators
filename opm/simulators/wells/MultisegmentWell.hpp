@@ -86,8 +86,6 @@ namespace Opm {
                   const std::vector<Scalar>& B_avg,
                   const bool changed_to_open_this_step) override;
 
-        void initPrimaryVariablesEvaluation() override;
-
         /// updating the well state based the current control mode
         void updateWellStateWithTarget(const Simulator& simulator,
                                        const GroupState<Scalar>& group_state,
@@ -226,7 +224,7 @@ namespace Opm {
         // get the mobility for specific perforation
         template<class Value>
         void getMobility(const Simulator& simulator,
-                         const int perf,
+                         const int local_perf_index,
                          std::vector<Value>& mob,
                          DeferredLogger& deferred_logger) const;
 

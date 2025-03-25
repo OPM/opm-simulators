@@ -68,6 +68,9 @@ cublasScal([[maybe_unused]] cublasHandle_t handle,
            [[maybe_unused]] int incx)
 {
     OPM_THROW(std::runtime_error, "cublasScal multiplication for integer vectors is not implemented yet.");
+
+    // Avoid warning about missing return statement
+    return CUBLAS_STATUS_NOT_SUPPORTED;
 }
 inline cublasStatus_t
 cublasAxpy(cublasHandle_t handle,
@@ -115,6 +118,9 @@ cublasAxpy([[maybe_unused]] cublasHandle_t handle,
            [[maybe_unused]] int incy)
 {
     OPM_THROW(std::runtime_error, "axpy multiplication for integer vectors is not implemented yet.");
+
+    // Avoid warning about missing return statement
+    return CUBLAS_STATUS_NOT_SUPPORTED;
 }
 
 inline cublasStatus_t
@@ -139,6 +145,9 @@ cublasDot([[maybe_unused]] cublasHandle_t handle,
           [[maybe_unused]] int* result)
 {
     OPM_THROW(std::runtime_error, "inner product for integer vectors is not implemented yet.");
+
+    // Avoid warning about missing return statement
+    return CUBLAS_STATUS_NOT_SUPPORTED;
 }
 
 inline cublasStatus_t
@@ -162,6 +171,9 @@ cublasNrm2([[maybe_unused]] cublasHandle_t handle,
            [[maybe_unused]] int* result)
 {
     OPM_THROW(std::runtime_error, "norm2 for integer vectors is not implemented yet.");
+
+    // Avoid warning about missing return statement
+    return CUBLAS_STATUS_NOT_SUPPORTED;
 }
 
 } // namespace Opm::gpuistl::detail

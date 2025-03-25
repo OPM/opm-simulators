@@ -42,7 +42,7 @@ gliftDebug([[maybe_unused]] const std::string& msg,
         if (terminal_output_) {
             const std::string message =
                 fmt::format("  GLIFT (DEBUG) : BlackoilWellModel : {}", msg);
-            deferred_logger.info(message);
+            deferred_logger.debug(message);
         }
     }
 }

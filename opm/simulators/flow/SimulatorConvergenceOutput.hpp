@@ -32,32 +32,80 @@
 
 namespace Opm {
 
-class EclipseState;
-struct StepReport;
+    class EclipseState;
+    struct StepReport;
+
+} // namespace Opm
+
+namespace Opm {
 
 /// Class handling convergence history output for a simulator.
 class SimulatorConvergenceOutput
 {
 public:
-    explicit SimulatorConvergenceOutput(const EclipseState& eclState)
-        : eclState_(eclState)
-    {}
-
-    void startThread(std::string_view convOutputOptions,
-                     std::string_view optionName,
+    /// Start convergence output thread.
+    ///
+    /// Thread starts only if explicitly requested in runtime user options.
+    ///
+    /// \param[in] eclState Static model object.  Needed to determine run's
+    /// output directory, base name, and unit conventions.
+    ///
+    /// \param[in] convOutputOptions Comma separated option string as
+    /// required by class ConvergenceOutputConfiguration.
+    ///
+    /// \param[in] optionName Name of command line option whose value is \p
+    /// convOutputOptions.  Used as diagnostic information only.
+    ///
+    /// \param[in] getPhaseName Callable object for converting component
+    /// indices into human readable component names.
+    void startThread(const EclipseState& eclState,
+                     std::string_view    convOutputOptions,
+                     std::string_view    optionName,
                      ConvergenceOutputThread::ComponentToPhaseName getPhaseName);
 
+    /// Create convergence output requests.
+    ///
+    /// Must not be called before startThread() or after endThread().
+    ///
+    /// Only those reports which have not previously been emitted will be
+    /// written, and only if the run actually requests convergence output at
+    /// the non-linear iteration level.
+    ///
+    /// \param[in] reports All step reports generated in the simulation run
+    /// so far.  Class SimulatorConvergenceOutput maintains a record of
+    /// which reports have been written.
     void write(const std::vector<StepReport>& reports);
 
+    /// Request that convergence output thread be shut down.
+    ///
+    /// No additional output requests should be submitted to write() once
+    /// this function is called.
     void endThread();
 
 private:
-    const EclipseState& eclState_;
+    /// Number of step reports which have already been written.
+    std::vector<StepReport>::size_type alreadyReportedSteps_ = 0;
 
-    std::size_t already_reported_steps_ = 0;
-
+    /// Communication channel between main thread creating output requests
+    /// and output thread actually writing those requests to file on disk.
+    ///
+    /// Nullopt unless convergence output has been requested at the
+    /// non-linear iteration level.
     std::optional<ConvergenceReportQueue> convergenceOutputQueue_{};
+
+    /// Output request controller object.
+    ///
+    /// Nullopt unless convergence output has been requested at the
+    /// non-linear iteration level.
     std::optional<ConvergenceOutputThread> convergenceOutputObject_{};
+
+    /// Output request thread.
+    ///
+    /// Calls output writing member functions on the
+    /// convergenceOutputObject_.
+    ///
+    /// Nullopt unless convergence output has been requested at the
+    /// non-linear iteration level.
     std::optional<std::thread> convergenceOutputThread_{};
 };
 

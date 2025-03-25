@@ -44,11 +44,10 @@
   using Scalar = float;
   using ValueVector = std::vector<Scalar>;
   using GPUBuffer = Opm::gpuistl::GpuBuffer<Scalar>;
-  using GPUView = Opm::gpuistl::GpuView<const Scalar>;
+  using GPUView = Opm::gpuistl::GpuView<Scalar>;
 
   using TraitsT = Opm::TwoPhaseMaterialTraits<Scalar, 1, 2>;
   using CPUParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TraitsT>;
-  using constGPUBufferParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TraitsT, const GPUBuffer>;
   using GPUBufferParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TraitsT, GPUBuffer>;
   using GPUViewParams = Opm::PiecewiseLinearTwoPhaseMaterialParams<TraitsT, GPUView>;
 
@@ -73,7 +72,7 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
     cpuParams.setKrnSamples(cx, cy);
     cpuParams.finalize();
 
-    constGPUBufferParams gpuBufferParams = Opm::gpuistl::copy_to_gpu<const GPUBuffer>(cpuParams);
+    GPUBufferParams gpuBufferParams = Opm::gpuistl::copy_to_gpu<GPUBuffer>(cpuParams);
 
     GPUViewParams gpuViewParams = Opm::gpuistl::make_view<GPUView>(gpuBufferParams);
 

@@ -24,6 +24,7 @@
 #ifndef OPM_ADAPTIVE_TIME_STEPPING_HPP
 #include <config.h>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
+#include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #endif
 
 #include <opm/common/Exceptions.hpp>
@@ -58,6 +59,7 @@ namespace Opm {
 template<class TypeTag>
 AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(
                                  const UnitSystem& unit_system,
+                                 const SimulatorReport& report,
                                  const double max_next_tstep,
                                  const bool terminal_output
 )
@@ -84,7 +86,7 @@ AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(
     , use_newton_iteration_{false}
     , min_time_step_before_shutting_problematic_wells_{
         Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day}
-
+    , report_(report)
 {
     init_(unit_system);
 }
@@ -95,6 +97,7 @@ template<class TypeTag>
 AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(double max_next_tstep,
                                                  const Tuning& tuning,
                                                  const UnitSystem& unit_system,
+                                                 const SimulatorReport& report,
                                                  const bool terminal_output
 )
     : time_step_control_{}
@@ -115,6 +118,7 @@ AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(double max_next_tstep,
     , use_newton_iteration_{false}
     , min_time_step_before_shutting_problematic_wells_{
         Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day}
+    , report_(report)
 {
     init_(unit_system);
 }
@@ -143,6 +147,9 @@ operator==(const AdaptiveTimeStepping<TypeTag>& rhs)
         break;
     case TimeStepControlType::PID:
         result = castAndComp<PIDTimeStepControl>(rhs);
+        break;
+    case TimeStepControlType::General3rdOrder:
+        result = castAndComp<General3rdOrderController>(rhs);
         break;
     }
 
@@ -233,6 +240,9 @@ serializeOp(Serializer& serializer)
     case TimeStepControlType::PID:
         allocAndSerialize<PIDTimeStepControl>(serializer);
         break;
+    case TimeStepControlType::General3rdOrder:
+        allocAndSerialize<General3rdOrderController>(serializer);
+        break;
     }
     serializer(this->restart_factor_);
     serializer(this->growth_factor_);
@@ -248,6 +258,14 @@ serializeOp(Serializer& serializer)
     serializer(this->timestep_after_event_);
     serializer(this->use_newton_iteration_);
     serializer(this->min_time_step_before_shutting_problematic_wells_);
+}
+
+template<class TypeTag>
+SimulatorReport&
+AdaptiveTimeStepping<TypeTag>::
+report()
+{
+    return report_;
 }
 
 template<class TypeTag>
@@ -280,6 +298,14 @@ AdaptiveTimeStepping<TypeTag>::
 serializationTestObjectSimple()
 {
     return serializationTestObject_<SimpleIterationCountTimeStepControl>();
+}
+
+template<class TypeTag>
+AdaptiveTimeStepping<TypeTag>
+AdaptiveTimeStepping<TypeTag>::
+serializationTestObject3rdOrder()
+{
+    return serializationTestObject_<General3rdOrderController>();
 }
 
 
@@ -763,6 +789,9 @@ run()
 
         //Pass substep to eclwriter for summary output
         problem.setSubStepReport(substep_report);
+        auto& full_report = adaptive_time_stepping_.report();
+        full_report += substep_report;
+        problem.setSimulationReport(full_report);
 
         report += substep_report;
 
@@ -771,7 +800,7 @@ run()
 
             const int iterations = getNumIterations_(substep_report);
             auto dt_estimate = timeStepControlComputeEstimate_(
-                                     dt, iterations, this->substep_timer_.simulationTimeElapsed());
+                                     dt, iterations, this->substep_timer_);
 
             assert(dt_estimate > 0);
             dt_estimate = maybeRestrictTimeStepGrowth_(dt, dt_estimate, restarts);
@@ -866,7 +895,7 @@ template<class TypeTag>
 template<class Solver>
 void
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-checkTimeStepMinLimit_(const int new_time_step) const
+checkTimeStepMinLimit_(const double new_time_step) const
 {
     // If we have restarted (i.e. cut the timestep) too
     // much, we have failed and throw an exception.
@@ -903,7 +932,7 @@ template<class TypeTag>
 template<class Solver>
 bool
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-chopTimeStepOrCloseFailingWells_(const int new_time_step)
+chopTimeStepOrCloseFailingWells_(const double new_time_step)
 {
     bool wells_shut = false;
     // We are below the threshold, and will check if there are any
@@ -1223,12 +1252,12 @@ template <class TypeTag>
 template <class Solver>
 double
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-timeStepControlComputeEstimate_(const double dt, const int iterations, double elapsed) const
+timeStepControlComputeEstimate_(const double dt, const int iterations, AdaptiveSimulatorTimer& substepTimer) const
 {
     // create object to compute the time error, simply forwards the call to the model
     SolutionTimeErrorSolverWrapper<Solver> relative_change{solver_()};
     return this->adaptive_time_stepping_.time_step_control_->computeTimeStepSize(
-        dt, iterations, relative_change, elapsed);
+        dt, iterations, relative_change, substepTimer);
 }
 
 template <class TypeTag>

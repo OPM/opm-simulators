@@ -57,6 +57,7 @@ struct TimeStepControlGrowthDampingFactor { static constexpr double value = 3.2;
 struct TimeStepControlFileName { static constexpr auto value = "timesteps"; };
 struct MinTimeStepBeforeShuttingProblematicWellsInDays { static constexpr double value = 0.01; };
 struct MinTimeStepBasedOnNewtonIterations { static constexpr double value = 0.0; };
+struct TimeStepControlSafetyFactor { static constexpr double value = 0.8; };
 
 } // namespace Opm::Parameters
 
@@ -148,9 +149,9 @@ private:
     private:
         bool checkContinueOnUnconvergedSolution_(double dt) const;
         void checkTimeStepMaxRestartLimit_(const int restarts) const;
-        void checkTimeStepMinLimit_(const int new_time_step) const;
+        void checkTimeStepMinLimit_(const double new_time_step) const;
         void chopTimeStep_(const double new_time_step);
-        bool chopTimeStepOrCloseFailingWells_(const int new_time_step);
+        bool chopTimeStepOrCloseFailingWells_(const double new_time_step);
         boost::posix_time::ptime currentDateTime_() const;
         int getNumIterations_(const SimulatorReportSingle &substep_report) const;
         double growthFactor_() const;
@@ -173,7 +174,7 @@ private:
         const SimulatorTimer& simulatorTimer_() const;
         boost::posix_time::ptime startDateTime_() const;
         double timeStepControlComputeEstimate_(
-            const double dt, const int iterations, double elapsed) const;
+            const double dt, const int iterations, AdaptiveSimulatorTimer& substepTimer) const;
         bool timeStepVerbose_() const;
         void updateSuggestedNextStep_();
         bool useNewtonIteration_() const;
@@ -192,6 +193,7 @@ public:
 
     AdaptiveTimeStepping(
         const UnitSystem& unitSystem,
+        const SimulatorReport& full_report,
         const double max_next_tstep = -1.0,
         const bool terminalOutput = true
     );
@@ -200,6 +202,7 @@ public:
         double max_next_tstep,
         const Tuning& tuning,
         const UnitSystem& unitSystem,
+        const SimulatorReport& full_report,
         const bool terminalOutput = true
     );
     bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs);
@@ -225,10 +228,13 @@ public:
     template<class Serializer>
     void serializeOp(Serializer& serializer);
 
+    SimulatorReport& report();
+
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectHardcoded();
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectPID();
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectPIDIt();
     static AdaptiveTimeStepping<TypeTag> serializationTestObjectSimple();
+    static AdaptiveTimeStepping<TypeTag> serializationTestObject3rdOrder();
 
 private:
     void maybeModifySuggestedTimeStepAtBeginningOfReportStep_(const double original_time_step,
@@ -270,6 +276,10 @@ protected:
     ReservoirCouplingMaster *reservoir_coupling_master_ = nullptr;
     ReservoirCouplingSlave *reservoir_coupling_slave_ = nullptr;
 #endif
+    // We store a copy of the full simulator run report for output purposes,
+    // so it can be updated and passed to the summary writing code every
+    // substep (not just every report step).
+    SimulatorReport report_;
 };
 
 } // namespace Opm

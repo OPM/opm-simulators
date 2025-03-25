@@ -91,8 +91,6 @@ public:
         , wellModel_(model)
     {}
 
-    void initPrimaryVariablesEvaluation(const Domain& domain) const;
-
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const BVector& weights,
                                   const bool use_well_weights,

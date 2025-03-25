@@ -491,6 +491,9 @@ target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
 target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+if(MPI_FOUND)
+  target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+endif()
 
 include (${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
 
@@ -545,6 +548,14 @@ if(TARGET fmt::fmt)
   target_link_libraries(MainDispatchDynamic fmt::fmt)
 endif()
 
+if(TARGET opmcommon)
+  add_dependencies(MainDispatchDynamic opmcommon)
+endif()
+
+if(USE_TRACY_PROFILER AND Tracy_FOUND)
+  target_link_libraries(MainDispatchDynamic Tracy::TracyClient)
+endif()
+
 # Strictly we only depend on the update-version target,
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
@@ -567,6 +578,9 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   endif()
   if(TARGET opmcommon)
       add_dependencies(flow_lib${OBJ} opmcommon)
+  endif()
+  if(USE_TRACY_PROFILER AND Tracy_FOUND)
+    target_link_libraries(flow_lib${OBJ} Tracy::TracyClient)
   endif()
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE
@@ -634,6 +648,7 @@ opm_add_test(flowexp_blackoil
 set(FLOWEXP_COMPONENTS_SOURCES)
 foreach(component IN LISTS OPM_COMPILE_COMPONENTS)
   list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}.cpp)
+  list(APPEND FLOWEXP_COMPONENTS_SOURCES flowexperimental/comp/flowexp_comp${component}_2p.cpp)
 endforeach()
 
 opm_add_test(flowexp_comp
@@ -717,6 +732,7 @@ if(CUDA_FOUND)
   if(USE_HIP)
     set(gpu_label "gpu_hip")
   endif()
+
   set_tests_properties(cusparse_safe_call
                        cublas_safe_call
                        gpu_safe_call
@@ -730,7 +746,6 @@ if(CUDA_FOUND)
                        GpuVector
                        GpuSparseMatrix
                        GpuSeqILU0
-                       GpuOwnerOverlapCopy
                        solver_adapter
                        GpuBuffer
                        GpuView
@@ -740,7 +755,11 @@ if(CUDA_FOUND)
                        gpu_resources
                        gpu_smart_pointers
                        is_gpu_pointer
+                       throw_macros_on_gpu
                        PROPERTIES LABELS ${gpu_label})
+  if(MPI_FOUND)
+    set_tests_properties(GpuOwnerOverlapCopy PROPERTIES LABELS ${gpu_label})
+  endif()
 endif()
 
 if(HYPRE_FOUND)

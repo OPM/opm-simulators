@@ -26,8 +26,8 @@
 #include <cmath>
 
 using Evaluation = Opm::DenseAd::Evaluation<double, 3>;
-using GpuB = const Opm::gpuistl::GpuBuffer<double>;
-using GpuV = Opm::gpuistl::GpuView<const double>;
+using GpuB = Opm::gpuistl::GpuBuffer<double>;
+using GpuV = Opm::gpuistl::GpuView<double>;
 
 using GpuTab = Opm::UniformTabulated2DFunction<double, GpuV>;
 
@@ -172,7 +172,7 @@ BOOST_FIXTURE_TEST_CASE(TestEvaluateUniformTabulated2DFunctionOnGpu, Fixture) {
     Opm::UniformTabulated2DFunction<double> cpuTab(1.0, 6.0, 3, 1.0, 6.0, 2, tabData);
 
     // Move data to GPU buffer and create a view for GPU operations
-    Opm::UniformTabulated2DFunction<double, GpuB> gpuBufTab = Opm::gpuistl::copy_to_gpu<double, GpuB>(cpuTab);
+    Opm::UniformTabulated2DFunction<double, GpuB> gpuBufTab = Opm::gpuistl::copy_to_gpu<GpuB>(cpuTab);
     GpuTab gpuViewTab = Opm::gpuistl::make_view<GpuV>(gpuBufTab);
 
     // Evaluation points on the CPU
@@ -204,7 +204,7 @@ BOOST_FIXTURE_TEST_CASE(TestUseCO2OnGpu, Fixture) {
     // use the CO2 tables to aquire the viscosity at 290[K] and 2e5[Pa]
     double viscosityReference = Opm::CO2<double, Opm::CO2Tables<double, std::vector<double>>>::gasViscosity(co2Tables, temp, pressure, true).value();
 
-    GpuBufCo2Tables gpuBufCo2Table = Opm::gpuistl::copy_to_gpu<double, std::vector<double>, GpuB>(co2Tables);
+    GpuBufCo2Tables gpuBufCo2Table = Opm::gpuistl::copy_to_gpu<GpuB>(co2Tables);
     GpuViewCO2Tables gpuViewCo2Table = Opm::gpuistl::make_view<GpuV>(gpuBufCo2Table);
 
     gpuComputedResultOnCpu = launchKernelAndRetrieveResult(gpuCO2GasViscosity, gpuViewCo2Table, gpuTemp, gpuPressure);
@@ -252,7 +252,7 @@ BOOST_FIXTURE_TEST_CASE(TestBrine_CO2OnGPU, Fixture) {
     // use the CO2 tables to aquire the viscosity at 290[K] and 2e5[Pa]
     double viscosity = Opm::CO2<double, Opm::CO2Tables<double, std::vector<double>>>::gasViscosity(co2Tables, temp, pressure, true).value();
 
-    GpuBufCo2Tables gpuBufCo2Table = Opm::gpuistl::copy_to_gpu<double, std::vector<double>, GpuB>(co2Tables);
+    GpuBufCo2Tables gpuBufCo2Table = Opm::gpuistl::copy_to_gpu<GpuB>(co2Tables);
     GpuViewCO2Tables gpuViewCo2Table = Opm::gpuistl::make_view<GpuV>(gpuBufCo2Table);
 
     gpuComputedResultOnCpu = launchKernelAndRetrieveResult(brineCO2GasDiffCoeff, gpuViewCo2Table, gpuTemp, gpuPressure);
@@ -268,9 +268,9 @@ BOOST_FIXTURE_TEST_CASE(TestCo2GasPvt, Fixture) {
     CpuCo2Pvt cpuCo2Pvt(salinities);
     double internalEnergyReference = cpuCo2Pvt.internalEnergy(1, temp, pressure, Evaluation(0.4), Evaluation(0.0)).value();
 
-    const GpuBufCo2Pvt gpuBufCo2Pvt = Opm::gpuistl::copy_to_gpu<double, GpuBufCo2Tables, GpuB>(cpuCo2Pvt);
-    const auto brineReferenceDensityCPUCopy = gpuBufCo2Pvt.getBrineReferenceDensity().asStdVector();
-    const GpuViewCo2Pvt gpuViewCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufCo2Pvt);
+    GpuBufCo2Pvt gpuBufCo2Pvt = Opm::gpuistl::copy_to_gpu<GpuB, GpuBufCo2Tables>(cpuCo2Pvt);
+    auto brineReferenceDensityCPUCopy = gpuBufCo2Pvt.getBrineReferenceDensity().asStdVector();
+    GpuViewCo2Pvt gpuViewCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufCo2Pvt);
 
     gpuComputedResultOnCpu = launchKernelAndRetrieveResult(co2GasPvtInternalEnergy, gpuViewCo2Pvt, gpuTemp, gpuPressure);
 
@@ -287,8 +287,8 @@ BOOST_FIXTURE_TEST_CASE(TestBrineCo2Pvt, Fixture) {
     CpuBrineCo2Pvt cpuBrineCo2Pvt(salinities);
     double internalEnergyReference = cpuBrineCo2Pvt.internalEnergy(1, temp, pressure, rs, saltConcentration).value();
 
-    const GpuBufBrineCo2Pvt gpuBufBrineCo2Pvt = Opm::gpuistl::copy_to_gpu<double, GpuBufCo2Tables, GpuB>(cpuBrineCo2Pvt);
-    const GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufBrineCo2Pvt);
+    GpuBufBrineCo2Pvt gpuBufBrineCo2Pvt = Opm::gpuistl::copy_to_gpu<GpuBufCo2Tables, GpuB>(cpuBrineCo2Pvt);
+    GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt = Opm::gpuistl::make_view<GpuV, GpuViewCO2Tables>(gpuBufBrineCo2Pvt);
 
     // Allocate memory for the result on the GPU
     double* resultOnGpu = nullptr;

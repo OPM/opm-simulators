@@ -188,6 +188,7 @@ GpuBuffer<T>::copyFromHost(const std::vector<T>& data)
 {
     copyFromHost(data.data(), data.size());
 }
+
 template <class T>
 void
 GpuBuffer<T>::copyToHost(std::vector<T>& data) const
@@ -200,12 +201,21 @@ template class GpuBuffer<float>;
 template class GpuBuffer<int>;
 
 template <class T>
+GpuView<T> make_view(GpuBuffer<T>& buf) {
+    return GpuView<T>(buf.data(), buf.size());
+}
+
+template GpuView<double> make_view(GpuBuffer<double>&);
+template GpuView<float> make_view(GpuBuffer<float>&);
+template GpuView<int> make_view(GpuBuffer<int>&);
+
+template <class T>
 GpuView<const T> make_view(const GpuBuffer<T>& buf) {
     return GpuView<const T>(buf.data(), buf.size());
 }
 
-template GpuView<const double> make_view<double>(const GpuBuffer<double>&);
-template GpuView<const float> make_view<float>(const GpuBuffer<float>&);
-template GpuView<const int> make_view<int>(const GpuBuffer<int>&);
+template GpuView<const double> make_view(const GpuBuffer<double>&);
+template GpuView<const float> make_view(const GpuBuffer<float>&);
+template GpuView<const int> make_view(const GpuBuffer<int>&);
 
 } // namespace Opm::gpuistl

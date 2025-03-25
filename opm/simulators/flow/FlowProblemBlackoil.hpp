@@ -392,15 +392,10 @@ public:
             this->drift_ = 0.0;
         }
 
-        if (this->enableVtkOutput_() && eclState.getIOConfig().initOnly()) {
-            simulator.setTimeStepSize(0.0);
-            FlowProblemType::writeOutput(true);
-        }
-
         // after finishing the initialization and writing the initial solution, we move
         // to the first "real" episode/report step
         // for restart the episode index and start is already set
-        if (!initconfig.restartRequested()) {
+        if (!initconfig.restartRequested() && !eclState.getIOConfig().initOnly()) {
             simulator.startNextEpisode(schedule.seconds(1));
             simulator.setEpisodeIndex(0);
             simulator.setTimeStepIndex(0);
@@ -430,6 +425,12 @@ public:
         this->mixControls_.init(this->model().numGridDof(),
                                 this->episodeIndex(),
                                 eclState.runspec().tabdims().getNumPVTTables());
+
+        if (this->enableVtkOutput_() && eclState.getIOConfig().initOnly()) {
+            simulator.setTimeStepSize(0.0);
+            simulator.model().applyInitialSolution();
+            FlowProblemType::writeOutput(true);
+        }
     }
 
     /*!
@@ -445,7 +446,7 @@ public:
     {
         // After the solution is updated, the values in output module needs
         // also updated.
-        this->eclWriter()->mutableOutputModule().invalidateLocalData();
+        this->eclWriter().mutableOutputModule().invalidateLocalData();
 
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
         const auto& grid = this->simulator().vanguard().gridView().grid();
@@ -463,6 +464,10 @@ public:
 
             const int episodeIdx = this->episodeIndex();
             auto& simulator = this->simulator();
+
+            // Clear out any existing events as these have already been
+            // processed when we're running an action block
+            this->simulator().vanguard().schedule().clearEvents(episodeIdx);
 
             // Re-ordering in case of Alugrid
             this->actionHandler_
@@ -684,14 +689,15 @@ public:
      * TODO: The API of this is a bit ad-hoc, it would be better to use context objects.
      */
     template <class LhsEval>
-    LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants) const
+    LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
         OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier);
         if (!enableSaltPrecipitation)
             return 1.0;
 
         const auto& fs = intQuants.fluidState();
-        unsigned tableIdx = fs.pvtRegionIndex();
+        unsigned tableIdx = this->simulator().problem().satnumRegionIndex(elementIdx);
+        
         LhsEval porosityFactor = decay<LhsEval>(1. - fs.saltSaturation());
         porosityFactor = min(porosityFactor, 1.0);
         const auto& permfactTable = BrineModule::permfactTable(tableIdx);
@@ -822,17 +828,13 @@ public:
     }
 
 
-    const std::unique_ptr<EclWriterType>& eclWriter() const
-    {
-        return eclWriter_;
-    }
+    const EclWriterType& eclWriter() const
+    { return *eclWriter_; }
 
-    void setConvData(const std::vector<std::vector<int>>& data)
-    {
-        eclWriter_->mutableOutputModule().setCnvData(data);
-    }
+    EclWriterType& eclWriter()
+    { return *eclWriter_; }
 
-        /*!
+    /*!
      * \brief Returns the maximum value of the gas dissolution factor at the current time
      *        for a given degree of freedom.
      */
@@ -1357,11 +1359,15 @@ protected:
                     dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
                                                 gasSaturationData[dofIdx]);
             }
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
-                dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
-                                            1.0
-                                            - waterSaturationData[dofIdx]
-                                            - gasSaturationData[dofIdx]);
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const Scalar soil = 1.0 - waterSaturationData[dofIdx] - gasSaturationData[dofIdx];
+                if (soil < smallSaturationTolerance_) {
+                    dofFluidState.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
+                }
+                else {
+                    dofFluidState.setSaturation(FluidSystem::oilPhaseIdx, soil);
+                }
+            }
 
             //////
             // set phase pressures
@@ -1423,11 +1429,10 @@ protected:
     {
         // each phase needs to be above certain value to be claimed to be existing
         // this is used to recover some RESTART running with the defaulted single-precision format
-        const Scalar smallSaturationTolerance = 1.e-6;
         Scalar sumSaturation = 0.0;
         for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
-                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance)
+                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance_)
                     elemFluidState.setSaturation(phaseIdx, 0.0);
 
                 sumSaturation += elemFluidState.saturation(phaseIdx);
@@ -1435,7 +1440,7 @@ protected:
 
         }
         if constexpr (enableSolvent) {
-            if (solventSaturation < smallSaturationTolerance)
+            if (solventSaturation < smallSaturationTolerance_)
                 solventSaturation = 0.0;
 
             sumSaturation += solventSaturation;
@@ -1585,6 +1590,8 @@ protected:
 
     bool enableEclOutput_;
     std::unique_ptr<EclWriterType> eclWriter_;
+
+    const Scalar smallSaturationTolerance_ = 1.e-6;
 #if HAVE_DAMARIS
     bool enableDamarisOutput_ = false ;
     std::unique_ptr<DamarisWriterType> damarisWriter_;

@@ -1099,7 +1099,8 @@ add_test_compareECLFiles(CASENAME nnc
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR editnnc)
+                         DIR editnnc
+                         TEST_ARGS --enable-opm-rst-file=1)
 
 add_test_compareECLFiles(CASENAME nonnc
                          FILENAME NONNC
@@ -1159,13 +1160,19 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          DIR parallel_fieldprops)
 
 
+add_test_compareECLFiles(CASENAME actionx_gconinje
+                         FILENAME ACTIONX_GCONINJE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
+
 add_test_compareECLFiles(CASENAME actionx_gconprod
                          FILENAME ACTIONX_GCONPROD
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR actionx)
-
 
 add_test_compareECLFiles(CASENAME actionx_wefac
                          FILENAME ACTIONX_WEFAC
@@ -1186,8 +1193,7 @@ add_test_compareECLFiles(CASENAME micp
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR micp
-                         TEST_ARGS --linear-solver=ilu0)
+                         DIR micp)
 
 add_test_compareECLFiles(CASENAME 0_base_model6
                          FILENAME 0_BASE_MODEL6
@@ -1216,8 +1222,7 @@ add_test_compareECLFiles(CASENAME base_wt_tracer
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR tracer
-			 RESTART_STEP 1,3,7)
-
+                         RESTART_STEP 1,3,7)
 
 add_test_compareECLFiles(CASENAME min_bhp_1
                          FILENAME MIN_BHP_1
@@ -1546,7 +1551,12 @@ add_test_compareECLFiles(CASENAME 11_multxyz
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR mult)
-
+add_test_compareECLFiles(CASENAME gsatprod
+                         FILENAME GSATPROD2
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR satellite)
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
                            FILENAME SPE1CASE2

@@ -81,9 +81,6 @@ public:
     //! \brief Resize values and evaluations.
     void resize(const int numSegments);
 
-    //! \brief Initialize evaluations from values.
-    void init();
-
     //! \brief Copy values from well state.
     void update(const WellState<Scalar>& well_state,
                 const bool stop_or_zero_rate_target);
@@ -115,7 +112,7 @@ public:
     //! \brief Returns upwinding rate for a component in a segment.
     EvalWell getSegmentRateUpwinding(const int seg,
                                      const int seg_upwind,
-                                     const std::size_t comp_idx) const;
+                                     const int comp_idx) const;
 
     //! \brief Get bottomhole pressure.
     EvalWell getBhp() const;
@@ -149,12 +146,15 @@ public:
     void outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const;
 
 private:
+    //! \brief Initialize evaluations from values.
+    void setEvaluationsFromValues();
+
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions(const int seg);
 
     //! \brief Returns volume fraction for component in a segment.
     EvalWell volumeFraction(const int seg,
-                            const unsigned compIdx) const;
+                            const int compIdx) const;
 
     //! \brief The values for the primary variables
     //! \details Based on different solution strategies, the wells can have different primary variables

@@ -97,7 +97,7 @@ partiallySupported()
             "GCONPROD",
             {
                {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV"}}, // CONTROL_MODE
-               {7,{true, allow_values<std::string> {"NONE", "RATE", "WELL"}, "GCONPROD(ACTION): Only NONE and RATE are supported"}}, 
+               {7,{true, allow_values<std::string> {"NONE", "RATE", "WELL"}, "GCONPROD(ACTION): Only NONE, RATE and WELL are supported"}}, 
                {11,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTWAT): Only NONE and RATE are supported"}}, // WATER_EXCEED_PROCEDURE
                {12,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTGAS): Only NONE and RATE are supported"}}, // GAS_EXCEED_PROCEDURE
                {13,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTLIQ): Only NONE and RATE are supported"}}, // LIQUID_EXCEED_PROCEDURE
@@ -109,12 +109,6 @@ partiallySupported()
             {
                {7,{true, allow_values<std::string> {"NONE"}, "GECON(WORKOVER): Workover procedures not implemented"}},
                {8,{true, allow_values<std::string> {"NO"}, "GECON(ENDRUN): End run not implemented"}},
-            },
-         },
-         {
-            "GEFAC",
-            {
-               {3,{true, allow_values<std::string> {"YES"}, "GEFAC(GRPNETWK): Extended Network Model efficiency NO option not implemented"}}, // TRANSFER_EXT_NET
             },
          },
          {
@@ -271,12 +265,6 @@ partiallySupported()
                {3,{true, allow_values<std::string> {"YES"}, "WAGHYSTR(GAS_MODEL): only the YES option is supported – will STOP"}}, // GAS_MODEL
                {4,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(RES_OIL): only the NO option is supported – will STOP"}}, // RES_OIL
                {5,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(WATER_MODEL): only the NO option is supported – will STOP"}}, // WATER_MODEL
-            },
-         },
-         {
-            "WEFAC",
-            {
-               {3,{true, allow_values<std::string> {"YES"}, "WEFAC(WELNETWK): only the YES option is supported"}}, // EXTENDED_NETWORK_OPT
             },
          },
          {

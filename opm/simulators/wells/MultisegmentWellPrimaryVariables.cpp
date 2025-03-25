@@ -54,7 +54,7 @@ resize(const int numSegments)
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
-init()
+setEvaluationsFromValues()
 {
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
@@ -166,6 +166,7 @@ update(const WellState<Scalar>& well_state,
         }
         }
     }
+    setEvaluationsFromValues();
 }
 
 template<class FluidSystem, class Indices>
@@ -222,6 +223,7 @@ updateNewton(const BVectorWell& dwells,
     if (stop_or_zero_rate_target) {
         value_[0][WQTotal] = 0.;
     }
+    setEvaluationsFromValues();
 }
 
 template<class FluidSystem, class Indices>
@@ -532,7 +534,7 @@ template<typename FluidSystem, typename Indices>
 typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 volumeFraction(const int seg,
-               const unsigned compIdx) const
+               const int compIdx) const
 {
     if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
         return evaluation_[seg][WFrac];
@@ -601,7 +603,7 @@ typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
 MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentRateUpwinding(const int seg,
                         const int seg_upwind,
-                        const std::size_t comp_idx) const
+                        const int comp_idx) const
 {
     // the result will contain the derivative with respect to WQTotal in segment seg,
     // and the derivatives with respect to WFrac GFrac in segment seg_upwind.
