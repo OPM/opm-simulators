@@ -696,11 +696,15 @@ public:
 
     const Evaluation& permFactor() const
     {
-        if constexpr (enableMICP)
+        if constexpr (enableMICP) {
             return MICPIntQua::permFactor();
-        if constexpr (enableSaltPrecipitation)
+        }
+        else if constexpr (enableSaltPrecipitation) {
             return BrineIntQua::permFactor();
-        throw std::logic_error("permFactor() called but salt precipitation or MICP are disabled"); 
+        }
+        else {
+            throw std::logic_error("permFactor() called but salt precipitation or MICP are disabled");
+        }
     }
 
 private:
