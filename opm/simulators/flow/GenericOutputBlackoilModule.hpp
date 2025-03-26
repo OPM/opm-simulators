@@ -99,13 +99,16 @@ public:
     void accumulateDensityParallel();
 
     // write cumulative production and injection reports to output
-    void outputCumLog(std::size_t reportStepNum);
+    void outputCumLog(std::size_t reportStepNum,
+                      const bool connData);
 
     // write production report to output
-    void outputProdLog(std::size_t reportStepNum);
+    void outputProdLog(std::size_t reportStepNum,
+                       const bool connData);
 
     // write injection report to output
-    void outputInjLog(std::size_t reportStepNum);
+    void outputInjLog(std::size_t reportStepNum,
+                      const bool connData);
 
     // calculate Initial Fluid In Place
     Inplace calc_initial_inplace(const Parallel::Communication& comm);
@@ -213,6 +216,11 @@ public:
         return blockData_;
     }
 
+    std::map<std::pair<std::string, int>, double>& getExtraBlockData()
+    {
+        return extraBlockData_;
+    }
+
     const Inplace& initialInplace() const
     {
         return this->initialInplace_.value();
@@ -318,6 +326,8 @@ protected:
     static Scalar sum(const ScalarBuffer& v);
 
     void setupBlockData(std::function<bool(int)> isCartIdxOnThisRank);
+    void setupExtraBlockData(const std::size_t        reportStepNum,
+                             std::function<bool(int)> isCartIdxOnThisRank);
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
 
@@ -420,6 +430,9 @@ protected:
     RSTConv rst_conv_; //!< Helper class for RPTRST CONV
 
     std::map<std::pair<std::string, int>, double> blockData_;
+    // Extra block data required for non-summary output reasons
+    // Example is the block pressures for RPTSCHED WELLS=2
+    std::map<std::pair<std::string, int>, double> extraBlockData_;
 
     std::optional<Inplace> initialInplace_;
     bool local_data_valid_{false};

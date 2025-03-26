@@ -25,6 +25,7 @@
 #include <opm/output/eclipse/Inplace.hpp>
 
 #include <cstddef>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -33,6 +34,7 @@
 
 namespace Opm {
 
+class Connection;
 class EclipseState;
 class Inplace;
 class Schedule;
@@ -47,7 +49,8 @@ public:
                     const std::string& moduleVersionName);
 
     //! \brief Write cumulative production and injection reports to output.
-    void cumulative(const std::size_t reportStepNum) const;
+    void cumulative(const std::size_t reportStepNum,
+                    const bool withConns) const;
 
     //! \brief Write error report to output.
     void error(const std::vector<int>& failedCellsPbub,
@@ -62,18 +65,32 @@ public:
     void fipResv(const Inplace& inplace, const std::string& name) const;
 
     //! \brief Write injection report to output.
-    void injection(const std::size_t reportStepNum) const;
+    void injection(const std::size_t reportStepNum,
+                   const std::map<std::pair<std::string,int>, double>& block_pressures) const;
 
     //! \brief Write production report to output.
-    void production(const std::size_t reportStepNum) const;
+    void production(const std::size_t reportStepNum,
+                    const std::map<std::pair<std::string,int>, double>& block_pressures) const;
 
-    void timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const;
+    void timeStamp(const std::string& lbl,
+                   double elapsed,
+                   int rstep,
+                   boost::posix_time::ptime currentDate) const;
 
 private:
+    struct ConnData
+    {
+        ConnData(const Connection& conn);
+
+        int I, J, K;
+        std::vector<Scalar> data;
+    };
+
     void beginCumulativeReport_() const;
     void endCumulativeReport_() const;
     void outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
-                                       const std::vector<std::string>& wellCumNames) const;
+                                       const std::vector<std::string>& wellCumNames,
+                                       const std::vector<ConnData>& connData) const;
 
     void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
                                    std::unordered_map<Inplace::Phase, Scalar> cip,
@@ -87,12 +104,14 @@ private:
     void beginInjectionReport_() const;
     void endInjectionReport_() const;
     void outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
-                                      const std::vector<std::string>& wellInjNames) const;
+                                      const std::vector<std::string>& wellInjNames,
+                                      const std::vector<ConnData>& connData) const;
 
     void beginProductionReport_() const;
     void endProductionReport_() const;
     void outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
-                                       const std::vector<std::string>& wellProdNames) const;
+                                       const std::vector<std::string>& wellProdNames,
+                                       const std::vector<ConnData>& connData) const;
 
     void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const;
     void pressureUnitConvert_(Scalar& pav) const;
@@ -130,7 +149,9 @@ private:
             GasRate = 4, // GR
             FluidResVol = 5, // FRV
             BHP = 6, // BHP
+            CPR = 6, // Connection pressure
             THP = 7, // THP
+            BPR = 7, // Block pressures for connections
             SteadyStateII = 8, // SteadyStateII
             WellName = 0, // WName
             CTRLModeOil = 1, // CTRLo
@@ -155,7 +176,9 @@ private:
             GasOilRatio = 7, // GOR
             WatGasRatio = 8, // WGR
             BHP = 9, // BHP
+            CPR = 9, // Connection pressure
             THP = 10, // THP
+            BPR = 10, // Block pressures for connections
             SteadyStatePI = 11, // SteadyStatePI
             WellName = 0, // WName
             CTRLMode = 1, // CTRL

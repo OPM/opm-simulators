@@ -38,6 +38,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/input/eclipse/Schedule/RFTConfig.hpp>
+#include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
@@ -199,23 +200,32 @@ accumulateDensityParallel()
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
-outputCumLog(std::size_t reportStepNum)
+outputCumLog(std::size_t reportStepNum,
+             const bool connData)
 {
-    this->logOutput_.cumulative(reportStepNum);
+    this->logOutput_.cumulative(reportStepNum, connData);
 }
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
-outputProdLog(std::size_t reportStepNum)
+outputProdLog(std::size_t reportStepNum,
+              const bool connData)
 {
-    this->logOutput_.production(reportStepNum);
+    this->logOutput_.production(reportStepNum,
+                                connData
+                                    ? this->extraBlockData_
+                                    : decltype(this->extraBlockData_){});
 }
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
-outputInjLog(std::size_t reportStepNum)
+outputInjLog(std::size_t reportStepNum,
+             const bool connData)
 {
-    this->logOutput_.injection(reportStepNum);
+    this->logOutput_.injection(reportStepNum,
+                               connData
+                                   ? this->extraBlockData_
+                                   : decltype(this->extraBlockData_){});
 }
 
 template<class FluidSystem>
@@ -1156,6 +1166,23 @@ setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
                                      std::forward_as_tuple(node.keyword(),
                                                            node.number()),
                                      std::forward_as_tuple(0.0));
+        }
+    }
+}
+
+template<class FluidSystem>
+void GenericOutputBlackoilModule<FluidSystem>::
+setupExtraBlockData(const std::size_t        reportStepNum,
+                    std::function<bool(int)> isCartIdxOnThisRank)
+{
+    for (const auto& well : schedule_.getWells(reportStepNum - 1)) {
+        for (const auto& connection : well.getConnections()) {
+            if (isCartIdxOnThisRank(connection.global_index())) {
+                this->extraBlockData_.emplace(std::piecewise_construct,
+                                              std::forward_as_tuple("BPR",
+                                                                    connection.global_index() + 1),
+                                              std::forward_as_tuple(0.0));
+            }
         }
     }
 }
