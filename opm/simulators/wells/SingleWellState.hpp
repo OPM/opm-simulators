@@ -126,7 +126,12 @@ public:
     void reset_connection_factors(const std::vector<PerforationData<Scalar>>& new_perf_data);
     void update_producer_targets(const Well& ecl_well, const SummaryState& st);
     void update_injector_targets(const Well& ecl_well, const SummaryState& st);
-    void update_targets(const Well& ecl_well, const SummaryState& st);
+    /// \brief update the type of the well and the targets.
+    ///
+    /// This called after ACTIONX is executed to update well rates. The new status is
+    /// in ecl_well and st.
+    /// \return whether well was switched to a producer
+    bool update_type_and_targets(const Well& ecl_well, const SummaryState& st);
     void updateStatus(WellStatus status);
     void init_timestep(const SingleWellState& other);
     void shut();
