@@ -343,41 +343,44 @@ fipResv(const Inplace& inplace, const std::string& name) const
     {
         std::unordered_map<Inplace::Phase, Scalar> current_values;
 
-        for (const auto& phase : Inplace::phases()) 
+        for (const auto& phase : Inplace::phases()) {
             current_values[phase] = inplace.get(phase);
-            
+        }
         Scalar field_dyn_pv = 0.0;
 
-
-        for (auto nreg = inplace.max_region(name), reg = 0*nreg + 1; reg <= nreg; ++reg)       
+        for (auto nreg = inplace.max_region(name), reg = 0*nreg + 1; reg <= nreg; ++reg) {
             field_dyn_pv = field_dyn_pv + inplace.get(name, Inplace::Phase::DynamicPoreVolume, reg);
-        
+        }
         current_values[Inplace::Phase::DynamicPoreVolume] = field_dyn_pv;
-        
+
         this->fipUnitConvert_(current_values);
         this->outputResvFluidInPlace_(current_values, 0);
     }
-    
-    for (auto nreg = inplace.max_region(), reg = 0*nreg + 1; reg <= nreg; ++reg) {        
+
+    for (auto nreg = inplace.max_region(), reg = 0*nreg + 1; reg <= nreg; ++reg) {
         std::unordered_map<Inplace::Phase, Scalar> current_values;
-              
+
         for (const auto& phase : Inplace::phases()) {
-            if (reg <= inplace.max_region(name))
+            if (reg <= inplace.max_region(name)) {
                 current_values[phase] = inplace.get(name, phase, reg);
-            else    
+            }
+            else {
                 current_values[phase] = 0.0;
+            }
         }
-        
-        if (reg <= inplace.max_region(name))
+
+        if (reg <= inplace.max_region(name)) {
             current_values[Inplace::Phase::DynamicPoreVolume] =
                 inplace.get(name, Inplace::Phase::DynamicPoreVolume, reg);
-        else
+        }
+        else {
             current_values[Inplace::Phase::DynamicPoreVolume] = 0.0;
- 
+        }
+
         this->fipUnitConvert_(current_values);
         this->outputResvFluidInPlace_(current_values, reg);
     }
-    
+
     OpmLog::note(fmt::format("{:=^91}", ""));
 }
 
@@ -390,7 +393,7 @@ timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::
     ss.imbue(std::locale(std::locale::classic(), facet));
 
     ss  << "\n                              **************************************************************************\n"
-        << "  " << std::left << std::setw(9) << lbl << "AT" << std::right << std::setw(10) 
+        << "  " << std::left << std::setw(9) << lbl << "AT" << std::right << std::setw(10)
         << (double)unit::convert::to(elapsed, unit::day) << "  DAYS" << " *" << std::setw(30) << eclState_.getTitle() << "                                          *\n"
         << "  REPORT " << std::setw(4) << rstep << "    " << currentDate
         << "  *                                             Flow  version " << std::setw(11) << flowVersionName_ << "  *\n"
@@ -1442,15 +1445,15 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
            << fmt::format(":{:<9}:", "FIELD");
     } else {
         ss << fmt::format(":{:<9}:", reg);
-    }    
-        
+    }
+
     ss << fmt::format("{0:>15.0f}:{1:>15.0f}:{2:>15.0f}:{3:>15.0f}:{4:>15.0f}:",
                       cipr[Inplace::Phase::DynamicPoreVolume],
                       cipr[Inplace::Phase::OilResVolume],
                       cipr[Inplace::Phase::WaterResVolume],
                       cipr[Inplace::Phase::GasResVolume],
                       cipr[Inplace::Phase::OilResVolume] + cipr[Inplace::Phase::GasResVolume]);
-    
+
     OpmLog::note(ss.str());
 }
 
