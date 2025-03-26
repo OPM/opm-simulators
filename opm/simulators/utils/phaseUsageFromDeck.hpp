@@ -40,7 +40,7 @@ namespace Opm
     /// to determine active phases.
     PhaseUsage phaseUsageFromDeck(const Deck& deck);
 
-    /// Handels MICP
+    /// Handles MICP
     PhaseUsage phaseUsageMICP(const Phases& phases);
 }
 
