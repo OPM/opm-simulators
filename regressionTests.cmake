@@ -1222,6 +1222,20 @@ add_test_compareECLFiles(CASENAME actionx_gconprod
                          REL_TOL ${rel_tol}
                          DIR actionx)
 
+add_test_compareECLFiles(CASENAME actionx_wconhist
+                         FILENAME ACTIONX_WCONHIST
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
+
+add_test_compareECLFiles(CASENAME actionx_wconinjh
+                         FILENAME ACTIONX_WCONINJH
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
+
 add_test_compareECLFiles(CASENAME actionx_wefac
                          FILENAME ACTIONX_WEFAC
                          SIMULATOR flow
