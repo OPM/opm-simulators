@@ -17,7 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "SingleCompWellState.hpp"
+#ifndef OPM_COMP_WELL_PRIMARY_VARIABLES_IMPL_HPP
+#define OPM_COMP_WELL_PRIMARY_VARIABLES_IMPL_HPP
+
+#include <flowexperimental/comp/wells/SingleCompWellState.hpp>
 
 namespace Opm {
 
@@ -39,6 +42,8 @@ update(const SingleCompWellState<Scalar>& well_state)
         value_[i + 1] = mole_fractions[i] / sum_mole_fraction;
     }
     value_[Bhp] = well_state.bhp;
+
+    temperature_ = well_state.temperature;
 
     updateEvaluation();
 }
@@ -77,7 +82,7 @@ toFluidStateScalar() const
     fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
     fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
 
-    fluid_state.setTemperature(273.15 + 150.0);
+    fluid_state.setTemperature(temperature_);
 
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
         fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
@@ -112,7 +117,7 @@ toFluidState() const
     fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
     fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
 
-    fluid_state.setTemperature(273.15 + 150.0);
+    fluid_state.setTemperature(temperature_);
 
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
         fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
@@ -194,3 +199,5 @@ updateNewton(const BVectorWell& dwells)
 }
 
 } // end of namespace Opm
+
+#endif // OPM_COMP_WELL_PRIMARY_VARIABLES_IMPL_HPP

@@ -44,6 +44,7 @@ public:
 
     void init(const std::vector<Well>& wells_ecl,
               const std::vector<Scalar>& cell_pressures,
+              const Scalar cell_temperature,
               const std::vector<std::vector<Scalar>>& cell_mole_fractions,
               const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
               const SummaryState& sumary_state,
@@ -64,23 +65,27 @@ private:
 
     void base_init(const std::vector<Well>& wells_ecl,
                    const std::vector<Scalar>& cell_pressures,
+                   const Scalar temperature,
                    const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                    const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
                    const SummaryState& summary_state);
 
     void initSingleWell(const Well& well,
                         const std::vector<Scalar>& cell_pressures,
+                        const Scalar tempearture,
                         const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const std::vector<CompConnectionData<Scalar> >& conn_data,
                         const SummaryState& summary_state);
 
     void initSingleInjector(const Well& well,
                             const std::vector<Scalar>& cell_pressures,
+                            const Scalar temperature,
                             const std::vector<CompConnectionData<Scalar> >& conn_data,
                             const SummaryState& summary_state);
 
     void initSingleProducer(const Well& well,
                             const std::vector<Scalar>& cell_pressures,
+                            const Scalar temperature,
                             const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                             const std::vector<CompConnectionData<Scalar> >& conn_data,
                             const SummaryState& summary_state);
