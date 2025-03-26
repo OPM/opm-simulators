@@ -78,6 +78,9 @@ public:
     //! \param segment_inlets Cell indices for segment inlets
     //! \param segment_perforations Cell indices for segment perforations
     void init(const int numPerfs,
+              const int num_cells_all_processes_of_this_well,
+              const int num_perfs_whole_mswell,
+              const std::vector<int>& cells_whole_mswell,
               const std::vector<int>& cells,
               const std::vector<std::vector<int>>& segment_inlets,
               const std::vector<std::vector<int>>& segment_perforations);
@@ -131,6 +134,16 @@ public:
     {
         return resWell_;
     }
+
+    //! \brief Returns a const reference to duneD_.
+    const DiagMatWell& duneD() const
+    {
+        return duneD_;
+    }
+
+
+    OffDiagMatWell duneBGlobal_;
+    OffDiagMatWell duneCGlobal_;
 
   private:
     friend class MultisegmentWellEquationAccess<Scalar,numWellEq,numEq>;
