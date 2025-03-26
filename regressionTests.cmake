@@ -522,6 +522,24 @@ add_test_compareECLFiles(CASENAME gpmaint11
                          REL_TOL ${rel_tol}
                          DIR gpmaint)
 
+set(_gconprod_cases
+  T1L
+  T1W
+  T2G
+  T2O
+  )
+
+foreach(gconprod_case ${_gconprod_cases})
+  string(TOLOWER ${gconprod_case} gconprod_test)
+  add_test_compareECLFiles(CASENAME gconprod_${gconprod_test}
+    FILENAME ${gconprod_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    DIR gconprod
+    )
+endforeach()
+
 set(_pinch_cases
   T1A_GAP T1A_NOGAP T1A_NOPINCH
   T1A1_NOGAP
