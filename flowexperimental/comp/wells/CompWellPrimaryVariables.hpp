@@ -80,6 +80,9 @@ public:
 private:
     std::array<Scalar, numWellEq> value_;
     std::array<EvalWell, numWellEq> evaluation_;
+    // temperature for now is constant, so it is not part of the primary variables
+    // we need it for the flash calculation
+    Scalar temperature_{0.};
 };
 
 } // end of namespace Opm

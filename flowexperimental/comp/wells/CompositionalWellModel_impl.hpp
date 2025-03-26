@@ -132,6 +132,8 @@ initWellState()
     auto cell_mole_fractions = std::vector<std::vector<Scalar>>(this->local_num_cells_,
                                            std::vector<Scalar>(FluidSystem::numComponents, Scalar{0.}));
 
+    auto cell_temperature = std::vector<Scalar>(this->local_num_cells_, Scalar{0.});
+
     auto elemCtx = ElementContext { this->simulator_ };
     const auto& gridView = this->simulator_.vanguard().gridView();
 
@@ -144,6 +146,8 @@ initWellState()
         const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
 
         cell_pressure[ix] = fs.pressure(pressIx).value();
+        // TODO: we are not simulating dynamic temperature, so all the phases and cells have the same temperature for now
+        cell_temperature[ix] = fs.temperature(0).value();
         for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx) {
             cell_mole_fractions[ix][compIdx] = fs.moleFraction(compIdx).value();
         }
@@ -152,8 +156,9 @@ initWellState()
                            this->simulator_.vanguard().grid().comm());
 
     /* TODO: no prev well state for now */
+    // \Note:: we are not supporting dynamic temperature, so the temperature is constant, so we just pass in a single value
     this->comp_well_states_.init(this->wells_ecl_,
-                                 cell_pressure, cell_mole_fractions, this->well_connection_data_,
+                                 cell_pressure, cell_temperature[0], cell_mole_fractions, this->well_connection_data_,
                                  this->summary_state_);
 }
 
