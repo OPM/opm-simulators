@@ -417,6 +417,10 @@ namespace Opm
 
         WellTestState welltest_state_temp;
 
+        for (const auto& well: well_test_state.get_follow_on_wells()) {
+            welltest_state_temp.add_follow_on_well(well);
+        }
+
         bool testWell = true;
         // if a well is closed because all completions are closed, we need to check each completion
         // individually. We first open all completions, then we close one by one by calling updateWellTestState
