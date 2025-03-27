@@ -217,11 +217,10 @@ private:
    Adapts a matrix A plus another linear operator W (typically from
    wells) to the assembled linear operator interface by returning S
    from getmat() and making apply() and applyscaleadd() apply both A
-   and W to the input vector. In addition this is a parallel-aware
-   adapter, that does not require the W operator to be parallel, but
-   makes it into one by making the proper projections.
+   and W to the input vector. The adapter is for serial use only as the
+   current parallel version in use is WellModelGhostLastMatrixAdapter.
  */
-template<class M, class X, class Y, bool overlapping >
+template<class M, class X, class Y>
 class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
 {
 public:
@@ -230,23 +229,16 @@ public:
     using range_type = Y;
     using field_type = typename X::field_type;
     using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
-#if HAVE_MPI
-    using communication_type = Dune::OwnerOverlapCopyCommunication<int,int>;
-#else
-    using communication_type = Dune::Communication<int>;
-#endif
 
     Dune::SolverCategory::Category category() const override
     {
-        return overlapping ?
-               Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
+        return Dune::SolverCategory::sequential;
     }
 
     //! constructor: just store a reference to a matrix
     WellModelMatrixAdapter (const M& A,
-                            const LinearOperatorExtra<X, Y>& wellOper,
-                            const std::shared_ptr<communication_type>& comm = {})
-        : A_( A ), wellOper_( wellOper ), comm_(comm)
+                            const LinearOperatorExtra<X, Y>& wellOper)
+        : A_( A ), wellOper_( wellOper )
     {}
 
     void apply( const X& x, Y& y ) const override
@@ -256,12 +248,6 @@ public:
 
       // add well model modification to y
       wellOper_.apply(x, y);
-
-  #if HAVE_MPI
-      if (comm_) {
-        comm_->project(y);
-      }
-  #endif
     }
 
     // y += \alpha * A * x
@@ -272,12 +258,6 @@ public:
 
       // add scaled well model modification to y
       wellOper_.applyscaleadd(alpha, x, y);
-
-  #if HAVE_MPI
-      if (comm_) {
-          comm_->project( y );
-      }
-  #endif
     }
 
     const matrix_type& getmat() const override { return A_; }
@@ -304,7 +284,6 @@ public:
 protected:
     const matrix_type& A_ ;
     const LinearOperatorExtra<X, Y>& wellOper_;
-    std::shared_ptr<communication_type> comm_;
 };
 
 /*!
