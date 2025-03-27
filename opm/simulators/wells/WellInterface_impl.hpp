@@ -295,7 +295,7 @@ namespace Opm
         }
         const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
 
-        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(well_state.well(this->index_of_well_).status == WellStatus::OPEN)) {
            return false;
         }
 
@@ -511,7 +511,7 @@ namespace Opm
             if (!this->param_.local_well_solver_control_switching_){
                 converged = this->iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
             } else {
-                if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && this->wellHasTHPConstraints(summary_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+                if (this->param_.use_implicit_ipr_ && this->well_ecl_.isProducer() && this->wellHasTHPConstraints(summary_state) && (well_state.well(this->index_of_well_).status == WellStatus::OPEN)) {
                     converged = solveWellWithTHPConstraint(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
                 } else {
                     converged = this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);

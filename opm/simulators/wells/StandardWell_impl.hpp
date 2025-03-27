@@ -2406,8 +2406,7 @@ namespace Opm
         auto well_status_cur = well_status_orig;
         int status_switch_count = 0;
         // don't allow opening wells that are stopped from schedule or has a stopped well state
-        const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
-                                 well_state.well(this->index_of_well_).status == WellStatus::OPEN;
+        const bool allow_open = well_state.well(this->index_of_well_).status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
         const bool allow_switching =
             !this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) &&
