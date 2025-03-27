@@ -1251,7 +1251,7 @@ namespace Opm {
                                                           local_deferredLogger);
 
             prepareWellsBeforeAssembling(dt, local_deferredLogger);
-        }
+        }        
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "updateWellControlsAndNetworkIteration() failed: ",
                                        this->terminal_output_, grid().comm());
@@ -1493,6 +1493,12 @@ namespace Opm {
         for (auto& well : well_container_) {
             well->prepareWellBeforeAssembling(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
+        const int reportStepIdx = simulator_.episodeIndex();
+        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
+        this->updateAndCommunicateGroupData(reportStepIdx,
+                                    iterationIdx,
+                                    param_.nupcol_group_rate_tolerance_,
+                                    deferred_logger);
     }
 
 
