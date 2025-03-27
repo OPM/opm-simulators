@@ -269,7 +269,7 @@ struct MatrixDimension<Opm::MatrixBlock<Scalar, n, m> >
 { };
 
 
-#if HAVE_UMFPACK
+#if HAVE_SUITESPARSE_UMFPACK
 /// \brief UMFPack specialization for Opm::MatrixBlock to make AMG happy
 ///
 /// Without this the empty default implementation would be used.
