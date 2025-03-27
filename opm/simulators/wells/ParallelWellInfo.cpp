@@ -133,7 +133,7 @@ void GlobalPerfContainerFactory<Scalar>::buildLocalToGlobalMap() const {
 
 template<class Scalar>
 int GlobalPerfContainerFactory<Scalar>::localToGlobal(std::size_t localIndex) const {
-    if (local_indices_.size() == 0)
+    if (comm_.size() == 1)
         return localIndex;
     if (!l2g_map_built_)
         buildLocalToGlobalMap();
@@ -154,7 +154,7 @@ void GlobalPerfContainerFactory<Scalar>::buildGlobalToLocalMap() const {
 
 template<class Scalar>
 int GlobalPerfContainerFactory<Scalar>::globalToLocal(const int globalIndex) const {
-    if (local_indices_.size() == 0)
+    if (comm_.size() == 1)
         return globalIndex;
     if (!g2l_map_built_) {
         buildGlobalToLocalMap();
@@ -521,6 +521,22 @@ ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& w
 #endif
     commAboveBelow_.reset(new CommunicateAboveBelow<Scalar>(*comm_));
     isOwner_ = (comm_->rank() == 0);
+}
+
+template<class Scalar>
+void ParallelWellInfo<Scalar>::setActiveToLocalMap(const std::unordered_map<int,int> activeToLocalMap) const {
+    //activeToLocalMap_ is marked as mutable
+    activeToLocalMap_ = activeToLocalMap;
+}
+
+template<class Scalar>
+int ParallelWellInfo<Scalar>::activeToLocal(const int activeIndex) const {
+    if (comm_->size() == 1)
+        return activeIndex;
+    auto it = activeToLocalMap_.find(activeIndex);
+    if (it == activeToLocalMap_.end())
+        return -1; // Active index not found
+    return it->second;
 }
 
 template<class Scalar>
