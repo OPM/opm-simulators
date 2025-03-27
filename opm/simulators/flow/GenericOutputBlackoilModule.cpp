@@ -229,6 +229,13 @@ outputInjLog(std::size_t reportStepNum,
 }
 
 template<class FluidSystem>
+void GenericOutputBlackoilModule<FluidSystem>::
+outputMSWLog(std::size_t reportStepNum)
+{
+    this->logOutput_.msw(reportStepNum);
+}
+
+template<class FluidSystem>
 Inplace GenericOutputBlackoilModule<FluidSystem>::
 calc_initial_inplace(const Parallel::Communication& comm)
 {

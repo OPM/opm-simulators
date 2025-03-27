@@ -96,6 +96,51 @@ END
 )");
     }
 
+    Opm::Deck mswDeck()
+    {
+        return Opm::Parser{}.parseString(R"(RUNSPEC
+OIL
+GAS
+WATER
+FIELD
+DIMENS
+  10 10 3 /
+DXV
+  10*1000.0 /
+DYV
+  10*1000.0 /
+DZV
+  20.0 30.0 50.0 /
+TOPS
+  100*8325.0 /
+GRID
+PORO
+  300*0.3 /
+PERMX
+  300*0.3 /
+PERMY
+  300*0.3 /
+PERMZ
+  300*0.3 /
+START        -- 0
+31 AUG 1993 /
+SCHEDULE
+WELSPECS
+  'PROD'  'G1'  10  10  8400  'OIL' /
+  'INJ' 'G1'  1 1 8335  'GAS' /
+/
+WELSEGS
+PROD          123.4          0.0000       1*        INC         'HF-' /
+   2             2            1              1              49.36537      3.56589          0.15200     0.00001 /
+/
+COMPSEGS
+   PROD /
+   2     2     1     2             0.00000          0.10000         /
+/
+END
+)");
+    }
+
     std::string trimStream(std::stringstream& str)
     {
         std::string data;
@@ -114,10 +159,10 @@ END
         return data;
     }
 
-    template <int type>
+    template <int type, bool msw = false>
     struct LogFixture
     {
-        LogFixture() : LogFixture { deck() } {}
+        LogFixture() : LogFixture { msw ? mswDeck() : deck() } {}
 
         explicit LogFixture(const Opm::Deck& deck)
             : eclState { deck }
@@ -139,6 +184,7 @@ END
     };
 
     using LogNoteFixture = LogFixture<Opm::Log::MessageType::Note>;
+    using LogNoteFixtureMSW = LogFixture<Opm::Log::MessageType::Note, true>;
     using LogWarningFixture = LogFixture<Opm::Log::MessageType::Warning>;
 
 } // Anonymous namespace
@@ -509,6 +555,56 @@ BOOST_FIXTURE_TEST_CASE(InjectionW2, LogNoteFixture)
     const auto data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
+
+BOOST_FIXTURE_TEST_CASE(MultiSegment, LogNoteFixtureMSW)
+{
+    const auto reference = std::string {
+        R"(================================================ MULTI-SEGMENT WELL REPORT =================================================
+:   WELL   : BRN : SEG :    OIL    :   WATER   :    GAS    : MIXTURE :HOLDUP FRACTION :PRESSURE :   PRESSURE HEAD LOSSES   :
+:   NAME   : NO. : NO. :   FLOW    :   FLOW    :   FLOW    :VELOCITY : OIL  WAT  GAS  :         :H-STATIC:FRICTION:ACCELRTN:
+:          :     :     :  STB/DAY  :  STB/DAY  : MSCF/DAY  : FT/SEC  :                :  PSIA   :  PSI   :  PSI   :  PSI   :
+============================================================================================================================
+: PROD     :  1  :  1  :        1.0:        2.0:        3.0:   12.200: 0.40 0.50 0.60 :     10.0:  11.000:  12.000:  13.000:
+:          :     :  2  :       14.0:       15.0:       16.0:   11.360: 0.17 0.18 0.19 :     23.0:  24.000:  25.000:  27.000:
+:----------:-----:-----:-----------:-----------:-----------:---------:----------------:---------:--------:--------:--------:
+)"
+    };
+
+    st.update_segment_var("PROD", "SOFR", 1, 1.0);
+    st.update_segment_var("PROD", "SWFR", 1, 2.0);
+    st.update_segment_var("PROD", "SGFR", 1, 3.0);
+    st.update_segment_var("PROD", "SOHF", 1, 0.4);
+    st.update_segment_var("PROD", "SWHF", 1, 0.5);
+    st.update_segment_var("PROD", "SGHF", 1, 0.6);
+    st.update_segment_var("PROD", "SOFV", 1, 7.0);
+    st.update_segment_var("PROD", "SWFV", 1, 8.0);
+    st.update_segment_var("PROD", "SGFV", 1, 9.0);
+    st.update_segment_var("PROD", "SPR", 1, 10.0);
+    st.update_segment_var("PROD", "SPRDH", 1, 11.0);
+    st.update_segment_var("PROD", "SPRDF", 1, 12.0);
+    st.update_segment_var("PROD", "SPRDA", 1, 13.0);
+
+    st.update_segment_var("PROD", "SOFR", 2, 14.0);
+    st.update_segment_var("PROD", "SWFR", 2, 15.0);
+    st.update_segment_var("PROD", "SGFR", 2, 16.0);
+    st.update_segment_var("PROD", "SOHF", 2, 0.17);
+    st.update_segment_var("PROD", "SWHF", 2, 0.18);
+    st.update_segment_var("PROD", "SGHF", 2, 0.19);
+    st.update_segment_var("PROD", "SOFV", 2, 20.0);
+    st.update_segment_var("PROD", "SWFV", 2, 21.0);
+    st.update_segment_var("PROD", "SGFV", 2, 22.0);
+    st.update_segment_var("PROD", "SPR", 2, 23.0);
+    st.update_segment_var("PROD", "SPRDH", 2, 24.0);
+    st.update_segment_var("PROD", "SPRDF", 2, 25.0);
+    st.update_segment_var("PROD", "SPRDA", 2, 26.0);
+    st.update_segment_var("PROD", "SPRDA", 2, 27.0);
+
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
+    helper.msw(0);
+    const auto data = trimStream(str);
+    BOOST_CHECK_EQUAL(data, reference);
+}
+
 
 BOOST_FIXTURE_TEST_CASE(Production, LogNoteFixture)
 {

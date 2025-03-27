@@ -110,6 +110,9 @@ public:
     void outputInjLog(std::size_t reportStepNum,
                       const bool connData);
 
+    // write msw report to output
+    void outputMSWLog(std::size_t reportStepNum);
+
     // calculate Initial Fluid In Place
     Inplace calc_initial_inplace(const Parallel::Communication& comm);
 

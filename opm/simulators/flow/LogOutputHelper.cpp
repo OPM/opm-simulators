@@ -29,6 +29,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
 #include <opm/simulators/utils/PressureAverage.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
@@ -36,6 +37,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <numeric>
 #include <sstream>
 #include <string_view>
 #include <vector>
@@ -341,41 +343,44 @@ fipResv(const Inplace& inplace, const std::string& name) const
     {
         std::unordered_map<Inplace::Phase, Scalar> current_values;
 
-        for (const auto& phase : Inplace::phases()) 
+        for (const auto& phase : Inplace::phases()) {
             current_values[phase] = inplace.get(phase);
-            
+        }
         Scalar field_dyn_pv = 0.0;
 
-
-        for (auto nreg = inplace.max_region(name), reg = 0*nreg + 1; reg <= nreg; ++reg)       
+        for (auto nreg = inplace.max_region(name), reg = 0*nreg + 1; reg <= nreg; ++reg) {
             field_dyn_pv = field_dyn_pv + inplace.get(name, Inplace::Phase::DynamicPoreVolume, reg);
-        
+        }
         current_values[Inplace::Phase::DynamicPoreVolume] = field_dyn_pv;
-        
+
         this->fipUnitConvert_(current_values);
         this->outputResvFluidInPlace_(current_values, 0);
     }
-    
-    for (auto nreg = inplace.max_region(), reg = 0*nreg + 1; reg <= nreg; ++reg) {        
+
+    for (auto nreg = inplace.max_region(), reg = 0*nreg + 1; reg <= nreg; ++reg) {
         std::unordered_map<Inplace::Phase, Scalar> current_values;
-              
+
         for (const auto& phase : Inplace::phases()) {
-            if (reg <= inplace.max_region(name))
+            if (reg <= inplace.max_region(name)) {
                 current_values[phase] = inplace.get(name, phase, reg);
-            else    
+            }
+            else {
                 current_values[phase] = 0.0;
+            }
         }
-        
-        if (reg <= inplace.max_region(name))
+
+        if (reg <= inplace.max_region(name)) {
             current_values[Inplace::Phase::DynamicPoreVolume] =
                 inplace.get(name, Inplace::Phase::DynamicPoreVolume, reg);
-        else
+        }
+        else {
             current_values[Inplace::Phase::DynamicPoreVolume] = 0.0;
- 
+        }
+
         this->fipUnitConvert_(current_values);
         this->outputResvFluidInPlace_(current_values, reg);
     }
-    
+
     OpmLog::note(fmt::format("{:=^91}", ""));
 }
 
@@ -388,7 +393,7 @@ timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::
     ss.imbue(std::locale(std::locale::classic(), facet));
 
     ss  << "\n                              **************************************************************************\n"
-        << "  " << std::left << std::setw(9) << lbl << "AT" << std::right << std::setw(10) 
+        << "  " << std::left << std::setw(9) << lbl << "AT" << std::right << std::setw(10)
         << (double)unit::convert::to(elapsed, unit::day) << "  DAYS" << " *" << std::setw(30) << eclState_.getTitle() << "                                          *\n"
         << "  REPORT " << std::setw(4) << rstep << "    " << currentDate
         << "  *                                             Flow  version " << std::setw(11) << flowVersionName_ << "  *\n"
@@ -497,6 +502,27 @@ injection(const std::size_t reportStepNum,
 
     this->endInjectionReport_();
 }
+
+template<class Scalar>
+void LogOutputHelper<Scalar>::
+msw(const std::size_t reportStepNum) const
+{
+    const auto& wells = this->schedule_.getWells(reportStepNum);
+    if (std::any_of(wells.begin(), wells.end(),
+                    [](const auto& well) { return well.isMultiSegment(); }))
+    {
+        this->beginMSWReport_();
+        std::for_each(wells.begin(), wells.end(),
+                      [this](const auto& well)
+                      {
+                          if (well.isMultiSegment()) {
+                              this->outputMSWReportRecord_(well);
+                          }
+                      });
+        this->endMSWReport_();
+    }
+}
+
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
@@ -943,6 +969,155 @@ outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
 }
 
 template <typename Scalar>
+void LogOutputHelper<Scalar>::beginMSWReport_() const
+{
+    const auto& units = this->eclState_.getUnits();
+    const auto widths  = std::array{10, 5, 5, 11, 11, 11, 9, 16, 9, 8, 8, 8};
+    const auto widths2 = std::array{10, 5, 5, 11, 11, 11, 9, 16, 9, 26};
+
+    using namespace std::string_view_literals;
+
+    std::ostringstream ss;
+    ss << fmt::format("\n{:=^124}\n", " MULTI-SEGMENT WELL REPORT ")
+       << formatTextRow(widths2,
+                        std::array{
+                            "WELL"sv,
+                            "BRN"sv,
+                            "SEG"sv,
+                            "OIL"sv,
+                            "WATER"sv,
+                            "GAS"sv,
+                            "MIXTURE"sv,
+                            "HOLDUP FRACTION"sv,
+                            "PRESSURE"sv,
+                            "PRESSURE HEAD LOSSES"sv,
+                        })
+       << formatTextRow(widths,
+                        std::array{
+                            "NAME"sv,
+                            "NO."sv,
+                            "NO."sv,
+                            "FLOW"sv,
+                            "FLOW"sv,
+                            "FLOW"sv,
+                            "VELOCITY"sv,
+                            "OIL  WAT  GAS"sv,
+                            ""sv,
+                            "H-STATIC"sv,
+                            "FRICTION"sv,
+                            "ACCELRTN"sv,
+                        })
+       << formatTextRow(widths,
+                        std::array{
+                            ""sv,
+                            ""sv,
+                            ""sv,
+                            std::string_view{units.name(UnitSystem::measure::liquid_surface_rate)},
+                            std::string_view{units.name(UnitSystem::measure::liquid_surface_rate)},
+                            std::string_view{units.name(UnitSystem::measure::gas_surface_rate)},
+                            std::string_view{units.name(UnitSystem::measure::pipeflow_velocity)},
+                            ""sv,
+                            std::string_view{units.name(UnitSystem::measure::pressure)},
+                            std::string_view{units.name(UnitSystem::measure::pressure_drop)},
+                            std::string_view{units.name(UnitSystem::measure::pressure_drop)},
+                            std::string_view{units.name(UnitSystem::measure::pressure_drop)},
+                        })
+       << fmt::format("{:=>124}", "");
+
+    OpmLog::note(ss.str());
+}
+
+template <typename Scalar>
+void LogOutputHelper<Scalar>::endMSWReport_() const
+{
+    const auto widths = std::array{10, 5, 5, 11, 11, 11, 9, 16, 9, 8, 8, 8};
+    OpmLog::note(formatBorder(widths));
+}
+
+template<class Scalar>
+void LogOutputHelper<Scalar>::
+outputMSWReportRecord_(const Well& well) const
+{
+    const auto& st = this->summaryState_;
+
+    using namespace std::string_view_literals;
+
+    auto clampToZero = [](const auto& number)
+    {
+        return std::fabs(number) > 1e-6 ? number : 0.0;
+    };
+
+    auto get_phase_values =
+        [&st,
+         &clampToZero,
+         &wname = well.name()](const int segmentNumber,
+                               const std::array<std::string_view, 3>& fields)
+        {
+            std::array<Scalar, 3> result;
+            for (std::size_t p = 0; p < 3; ++p) {
+                const auto value =
+                    st.has_segment_var(wname, std::string{fields[p]}, segmentNumber)
+                        ? st.get_segment_var(wname, std::string{fields[p]}, segmentNumber)
+                        : 0.0;
+                result[p] = clampToZero(value);
+            }
+            return result;
+        };
+
+    std::ostringstream ss;
+    ss << fmt::format(": {:<9}:",  well.name());
+
+    for (int i = 1; i <= well.maxBranchID(); ++i) {
+        if (i != 1) {
+            ss << fmt::format(": {:<9}:", "");
+        }
+        ss << fmt::format("{:^5}:", i);
+        const auto& segments = well.getSegments().branchSegments(i);
+        bool first = true;
+
+        for (const auto& segment : segments) {
+            if (!first) {
+                ss << fmt::format("\n:{0:>10}:{0:>5}:", "");
+            }
+            const auto rates = get_phase_values(segment.segmentNumber(),
+                                                std::array{"SOFR"sv, "SWFR"sv, "SGFR"sv});
+            const auto holdups = get_phase_values(segment.segmentNumber(),
+                                                  std::array{"SOHF"sv, "SWHF"sv, "SGHF"sv});
+            const auto velocities = get_phase_values(segment.segmentNumber(),
+                                                  std::array{"SOFV"sv, "SWFV"sv, "SGFV"sv});
+            const auto press_drop = get_phase_values(segment.segmentNumber(),
+                                                     std::array{"SPRDH"sv, "SPRDF"sv, "SPRDA"sv});
+
+            const auto mixture_vel = std::inner_product(holdups.begin(), holdups.end(),
+                                                        velocities.begin(), 0.0);
+
+            ss << fmt::format("{:^5}:{:>11.1f}:{:>11.1f}:{:>11.1f}:{:>9.3f}:"
+                              " {:>3.2f} {:>3.2f} {:>3.2f} :"
+                              "{:>9.1f}:{:>8.3f}:{:>8.3f}:{:>8.3f}:",
+                              segment.segmentNumber(),
+                              rates[0],
+                              rates[1],
+                              rates[2],
+                              mixture_vel,
+                              holdups[0],
+                              holdups[1],
+                              holdups[2],
+                              clampToZero(st.has_segment_var(well.name(), "SPR",
+                                                             segment.segmentNumber())
+                                   ? st.get_segment_var(well.name(), "SPR",
+                                                        segment.segmentNumber())
+                                   : 0.0
+                              ),
+                              press_drop[0],
+                              press_drop[1],
+                              press_drop[2]);
+            first = false;
+        }
+    }
+    OpmLog::note(ss.str());
+}
+
+template <typename Scalar>
 void LogOutputHelper<Scalar>::beginProductionReport_() const
 {
     const auto& units = this->eclState_.getUnits();
@@ -1270,15 +1445,15 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
            << fmt::format(":{:<9}:", "FIELD");
     } else {
         ss << fmt::format(":{:<9}:", reg);
-    }    
-        
+    }
+
     ss << fmt::format("{0:>15.0f}:{1:>15.0f}:{2:>15.0f}:{3:>15.0f}:{4:>15.0f}:",
                       cipr[Inplace::Phase::DynamicPoreVolume],
                       cipr[Inplace::Phase::OilResVolume],
                       cipr[Inplace::Phase::WaterResVolume],
                       cipr[Inplace::Phase::GasResVolume],
                       cipr[Inplace::Phase::OilResVolume] + cipr[Inplace::Phase::GasResVolume]);
-    
+
     OpmLog::note(ss.str());
 }
 
