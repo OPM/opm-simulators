@@ -142,7 +142,8 @@ BOOST_AUTO_TEST_CASE(PartitionCellsTest)
         auto [part, num_part] = Opm::partitionCells("simple", 3, grid.leafGridView(),
                                                    std::vector<Opm::Well>{},
                                                    std::unordered_map<std::string, std::set<int>>{},
-                                                   zoltan_ctrl);
+                                                   zoltan_ctrl,
+                                                   0);
         BOOST_CHECK_EQUAL(num_part, 3);
         BOOST_CHECK_EQUAL(part.size(), 12);
 
@@ -158,7 +159,8 @@ BOOST_AUTO_TEST_CASE(PartitionCellsTest)
         auto [part, num_part] = Opm::partitionCells("zoltan", 3, grid.leafGridView(),
                                                    std::vector<Opm::Well>{},
                                                    std::unordered_map<std::string, std::set<int>>{},
-                                                   zoltan_ctrl);
+                                                   zoltan_ctrl,
+                                                   0);
         BOOST_CHECK_EQUAL(num_part, 3);
         BOOST_CHECK_EQUAL(part.size(), 12);
 
@@ -198,7 +200,8 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithWellMergeTest)
     auto [part, num_part] = Opm::partitionCells("zoltan", 4, grid.leafGridView(),
                                                wells,
                                                std::unordered_map<std::string, std::set<int>>{},
-                                               zoltan_ctrl);
+                                               zoltan_ctrl,
+                                               0);
 
     // Verify number of partitions
     BOOST_CHECK_EQUAL(num_part, 4);
@@ -241,7 +244,8 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithOverlappingWellsTest)
     auto [part, num_part] = Opm::partitionCells("zoltan", 4, grid.leafGridView(),
                                                wells,
                                                std::unordered_map<std::string, std::set<int>>{},
-                                               zoltan_ctrl);
+                                               zoltan_ctrl,
+                                               0);
 
     // Verify number of partitions
     BOOST_CHECK_EQUAL(num_part, 4);
@@ -321,7 +325,8 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithOverlappingWells3DTest)
     auto [part, num_part] = Opm::partitionCells("zoltan", 10, grid.leafGridView(),
                                                wells,
                                                std::unordered_map<std::string, std::set<int>>{},
-                                               zoltan_ctrl);
+                                               zoltan_ctrl,
+                                               0);
 
     // Verify number of partitions
     BOOST_CHECK_EQUAL(num_part, 10);
@@ -434,7 +439,8 @@ BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
     auto [part, num_part] = Opm::partitionCells("zoltan", 15, grid.leafGridView(),
                                                wells,
                                                std::unordered_map<std::string, std::set<int>>{},
-                                               zoltan_ctrl);
+                                               zoltan_ctrl,
+                                               0);
 
     // Verify number of partitions and grid size
     BOOST_CHECK_EQUAL(num_part, 15);
@@ -591,7 +597,8 @@ BOOST_AUTO_TEST_CASE(PartitionCellsWithNonReachableCellsTest)
     auto [part, num_part] = Opm::partitionCells("zoltan", 5, grid.leafGridView(),
                                                wells,
                                                std::unordered_map<std::string, std::set<int>>{},
-                                               zoltan_ctrl);
+                                               zoltan_ctrl,
+                                               0);
 
     BOOST_CHECK_EQUAL(num_part, 5);
     BOOST_CHECK_EQUAL(part.size(), 16);

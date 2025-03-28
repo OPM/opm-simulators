@@ -111,7 +111,7 @@ public:
     ///   partitioning.
     ///
     /// \param[in] num_neighbor_levels Number of neighbor levels to include when connecting well cells.
-    ///   Default is 0, which means only direct well connections are considered.
+    ///   0 means only direct well connections are considered, 1 means one level of neighbors, etc.
     template <class GridView, class Element>
     void buildLocalGraph(const GridView&                                       grid_view,
                          const std::vector<Opm::Well>&                         wells,
@@ -121,10 +121,13 @@ public:
 
     /// Connect neighbors of cells up to a specified level.
     ///
-    /// \param[in,out] cells Initial cells to find neighbors of. Updated to include all neighbors
-    ///   up to specified level.
+    /// Starting from initial cells (level 0), adds their neighbors iteratively.
+    /// For each level k from 1 to num_levels, adds cells that are direct neighbors
+    /// of level k-1 cells.
     ///
-    /// \param[in] num_levels Number of neighbor levels to include.
+    /// \param[in,out] cells Initial cells (level 0). Returns these plus all neighbors
+    ///                      up to specified level.
+    /// \param[in] num_levels Number of neighbor levels to include. 0 keeps only initial cells.
     void connectNeighbors(std::vector<int>& cells,
                           const int num_levels) const;
 
@@ -201,7 +204,7 @@ private:
     ///   on-rank active cell IDs.  Return value from \c connectElements().
     ///
     /// \param[in] num_neighbor_levels Number of neighbor levels to include when connecting well cells.
-    ///   Default is 0, which means only direct well connections are considered.
+    ///   0 means only direct well connections are considered, 1 means one level of neighbors, etc.
     template <typename Comm>
     void connectWells(const Comm                                     comm,
                       const std::vector<Opm::Well>&                  wells,
