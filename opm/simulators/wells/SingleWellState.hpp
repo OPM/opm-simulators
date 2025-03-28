@@ -65,7 +65,7 @@ public:
         serializer(well_potentials);
         serializer(productivity_index);
         serializer(implicit_ipr_a);
-        serializer(implicit_ipr_b);        
+        serializer(implicit_ipr_b);
         serializer(surface_rates);
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
@@ -76,9 +76,8 @@ public:
         serializer(production_cmode);
         serializer(filtrate_conc);
         serializer(perf_data);
-        serializer(stw_primaryvar);
-        serializer(multiseg_primaryvar);
-        serializer(initialized_from_reservoir_);
+        serializer(primaryvar);
+        serializer(initialized_from_reservoir);
     }
 
     bool operator==(const SingleWellState&) const;
@@ -118,7 +117,8 @@ public:
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
-
+    std::vector<Scalar> primaryvar;
+    bool initialized_from_reservoir{false};
 
     /// Special purpose method to support dynamically rescaling a well's
     /// CTFs through WELPI.
@@ -153,13 +153,8 @@ public:
 
     Scalar sum_filtrate_rate() const;
     Scalar sum_filtrate_total() const;
-    std::vector<Scalar> stw_primaryvar;
-    std::vector<std::array<Scalar, 4>> multiseg_primaryvar;
-    bool initializedFromReservoir() const { return initialized_from_reservoir_; }
-   void setInitializedFromReservoir(bool value) { initialized_from_reservoir_ = value; }
-private:
-    bool initialized_from_reservoir_ = false;
 
+private:
     Scalar sum_connection_rates(const std::vector<Scalar>& connection_rates) const;
 };
 
