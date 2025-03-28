@@ -39,7 +39,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
                                  SummaryState& summaryState,
                                  const std::vector<Opm::RestartKey>& solutionKeys,
                                  const std::vector<Opm::RestartKey>& extraKeys,
-                                 Parallel::Communication comm)
+                                 [[maybe_unused]] Parallel::Communication comm)
 {
 #if HAVE_MPI
     RestartValue restartValues{};
@@ -54,7 +54,6 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
     ser.broadcast(0, restartValues, summaryState);
     return restartValues;
 #else
-    (void) comm;
     return eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
 #endif
 }
