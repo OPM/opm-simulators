@@ -18,12 +18,13 @@
 */
 
 #include <config.h>
-#include <opm/simulators/utils/moduleVersion.hpp>
+
 #include <opm/simulators/flow/LogOutputHelper.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
@@ -31,8 +32,12 @@
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
-#include <opm/simulators/utils/PressureAverage.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
+
+#include <opm/output/eclipse/report/WellSpecification.hpp>
+
+#include <opm/simulators/utils/moduleVersion.hpp>
+#include <opm/simulators/utils/PressureAverage.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -635,6 +640,25 @@ production(const std::size_t reportStepNum,
     }
 
     this->endProductionReport_();
+}
+
+template<class Scalar>
+void LogOutputHelper<Scalar>::
+wellSpecification(const std::vector<std::string>& changedWells,
+                  const std::size_t               reportStepNum) const
+{
+    std::ostringstream ss;
+
+    auto blockDepth = PrtFile::Reports::BlockDepthCallback {
+        [&grid = this->eclState_.getInputGrid()]
+        (const std::size_t globalCellIndex)
+        { return grid.getCellDepth(globalCellIndex); }
+    };
+
+    PrtFile::Reports::wellSpecification(changedWells, reportStepNum,
+                                        this->schedule_, blockDepth, ss);
+
+    OpmLog::note(ss.str());
 }
 
 template <typename Scalar>
