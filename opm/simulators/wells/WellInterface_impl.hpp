@@ -1625,9 +1625,11 @@ namespace Opm
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateWellStateRates(const Simulator& simulator,
-                         WellState<Scalar>& well_state,
-                         DeferredLogger& deferred_logger) const
+    initializeWellState(const Simulator& simulator,
+                        const GroupState<Scalar>& /*group_state*/,
+                        const SummaryState& /* summary_state */,
+                        WellState<Scalar>& well_state,
+                        DeferredLogger& deferred_logger) const
     {
         OPM_TIMEFUNCTION();
         // Check if the rates of this well only are single-phase, do nothing
@@ -1647,7 +1649,9 @@ namespace Opm
         }
 
         // Calculate the rates that follow from the current primary variables.
+        // TODO switch to ccomputeWellRatesWithBhp().
         std::vector<Scalar> well_q_s = computeCurrentWellRates(simulator, deferred_logger);
+        ws.setInitializedFromReservoir(true);
 
         if (nonzero_rate_index == -1) {
             // No nonzero rates.

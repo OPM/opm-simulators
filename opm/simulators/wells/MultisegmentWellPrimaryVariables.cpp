@@ -111,7 +111,19 @@ update(const WellState<Scalar>& well_state,
         if (stop_or_zero_rate_target && seg == 0) {
             value_[seg][WQTotal] = 0;
         }
-        if (std::abs(total_seg_rate) > 0.) {
+
+        // Production wells should have been initialized using reservoir data.
+        assert(well_.isProducer() == ws.initializedFromReservoir());
+
+        // todo to map old fraction to new perforations for now start from scratch.
+        if (ws.multiseg_primaryvar.size() == value_.size()) {
+            if (has_wfrac_variable) {
+                value_[seg][WFrac] = ws.multiseg_primaryvar[seg][WFrac];
+            }
+            if (has_gfrac_variable) {
+                value_[seg][GFrac] = ws.multiseg_primaryvar[seg][GFrac];
+            }
+        } else if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
                 const int water_pos = pu.phase_pos[Water];
                 value_[seg][WFrac] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
@@ -120,6 +132,7 @@ update(const WellState<Scalar>& well_state,
                 const int gas_pos = pu.phase_pos[Gas];
                 value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate;
             }
+            // what about water and gas injection?
         } else { // total_seg_rate == 0
             if (well_.isInjector()) {
                 // only single phase injection handled
@@ -230,6 +243,9 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     const int oil_pos = pu.phase_pos[Oil];
 
     auto& ws = well_state.well(well_.indexOfWell());
+    if constexpr ( numWellEq == 4) {
+        ws.multiseg_primaryvar = value_;
+    }
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
     auto& disgas = segments.dissolved_gas_rate;

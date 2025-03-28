@@ -163,7 +163,20 @@ update(const WellState<Scalar>& well_state,
             }
     }
 
-    if (std::abs(total_well_rate) > 0.) {
+    // Production wells should have been initialized using reservoir data.
+    assert(well_.isProducer() == ws.initializedFromReservoir());
+
+    if (ws.stw_primaryvar.size() > 0) {
+        if constexpr (has_wfrac_variable) {
+             value_[WFrac] = ws.stw_primaryvar[WFrac];
+        }
+        if constexpr (has_gfrac_variable) {
+             value_[GFrac] = ws.stw_primaryvar[GFrac];
+        }
+        if constexpr (Indices::enableSolvent) {
+            value_[SFrac] = ws.stw_primaryvar[SFrac];
+         }
+    } else if (std::abs(total_well_rate) > 0.) {
         if constexpr (has_wfrac_variable) {
             value_[WFrac] = well_.scalingFactor(pu.phase_pos[Water]) * ws.surface_rates[pu.phase_pos[Water]] / total_well_rate;
         }
@@ -175,7 +188,6 @@ update(const WellState<Scalar>& well_state,
         if constexpr (Indices::enableSolvent) {
             value_[SFrac] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
         }
-
     } else { // total_well_rate == 0
         if (well_.isInjector()) {
             // only single phase injection handled
@@ -334,7 +346,6 @@ copyToWellState(WellState<Scalar>& well_state,
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
-
     const PhaseUsage& pu = well_.phaseUsage();
     std::vector<Scalar> F(well_.numPhases(), 0.0);
     [[maybe_unused]] Scalar F_solvent = 0.0;
@@ -399,6 +410,7 @@ copyToWellState(WellState<Scalar>& well_state,
     }
 
     auto& ws = well_state.well(well_.indexOfWell());
+    ws.stw_primaryvar = value_;
     ws.bhp = value_[Bhp];
 
     // calculate the phase rates based on the primary variables
