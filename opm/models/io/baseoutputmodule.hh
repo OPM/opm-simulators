@@ -335,7 +335,7 @@ protected:
             oss << i;
             snprintf(name, 512, pattern, oss.str().c_str());
 
-            this->commitScalarBuffer(baseWriter, name, buffer[i], bufferType);
+            this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
         }
     }
 
