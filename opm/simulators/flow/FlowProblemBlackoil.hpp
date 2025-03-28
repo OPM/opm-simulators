@@ -1093,7 +1093,6 @@ protected:
         return true;
     }
 
-
     void readEclRestartSolution_()
     {
         // Throw an exception if the grid has LGRs. Refined grid are not supported for restart.

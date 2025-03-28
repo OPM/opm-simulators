@@ -32,8 +32,7 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
 RestartValue loadParallelRestart(const EclipseIO* eclIO,
                                  Action::State& actionState,

@@ -23,8 +23,7 @@
 
 #include <vector>
 
-namespace Opm
-{
+namespace Opm {
 
 class EclipseIO;
 class SummaryState;

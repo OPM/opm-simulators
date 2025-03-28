@@ -687,7 +687,7 @@ extractPorosity_()
         }
     }
     else {
-        throw std::logic_error("Can't read the porosityfrom the ecl state. "
+        throw std::logic_error("Can't read the porosity from the ecl state. "
                                "(The PORO keywords are missing)");
     }
 }
