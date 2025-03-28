@@ -346,10 +346,6 @@ public:
                              WellState<Scalar>& well_state,
                              DeferredLogger& deferred_logger) const;
 
-    // void updateWellStateRates(const Simulator& simulator,
-    //                           WellState<Scalar>& well_state,
-    //                           DeferredLogger& deferred_logger) const;
-
     void solveWellEquation(const Simulator& simulator,
                            WellState<Scalar>& well_state,
                            const GroupState<Scalar>& group_state,

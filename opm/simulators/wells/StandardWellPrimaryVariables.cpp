@@ -162,11 +162,11 @@ update(const WellState<Scalar>& well_state,
                 value_[WQTotal] = 0.;
             }
     }
-    assert(ws.initializedFromReservoir());
-    //if (std::abs(total_well_rate) > 0.) {
-        
-    bool prim_set = ws.stw_primaryvar.size()>0;
-    if(prim_set){   
+
+    // Production wells should have been initialized using reservoir data.
+    assert(well_.isProducer() == ws.initializedFromReservoir());
+
+    if (ws.stw_primaryvar.size() > 0) {
         if constexpr (has_wfrac_variable) {
              value_[WFrac] = ws.stw_primaryvar[WFrac];
         }
@@ -176,16 +176,14 @@ update(const WellState<Scalar>& well_state,
         if constexpr (Indices::enableSolvent) {
             value_[SFrac] = ws.stw_primaryvar[SFrac];
          }
-     }else{
-     assert(prim_set==false);   
-     if (std::abs(total_well_rate) > 0.) {
+    } else if (std::abs(total_well_rate) > 0.) {
         if constexpr (has_wfrac_variable) {
             value_[WFrac] = well_.scalingFactor(pu.phase_pos[Water]) * ws.surface_rates[pu.phase_pos[Water]] / total_well_rate;
         }
         if constexpr (has_gfrac_variable) {
             value_[GFrac] = well_.scalingFactor(pu.phase_pos[Gas]) *
-                             (ws.surface_rates[pu.phase_pos[Gas]] -
-                              (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate ;
+                            (ws.surface_rates[pu.phase_pos[Gas]] -
+                             (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate ;
         }
         if constexpr (Indices::enableSolvent) {
             value_[SFrac] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
@@ -234,8 +232,8 @@ update(const WellState<Scalar>& well_state,
             OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
         }
     }
-    }
-    //BHP
+
+    // BHP
     value_[Bhp] = ws.bhp;
     setEvaluationsFromValues();
 }
@@ -410,7 +408,7 @@ copyToWellState(WellState<Scalar>& well_state,
         F_solvent /= well_.scalingFactor(Indices::contiSolventEqIdx);
         F[pu.phase_pos[Gas]] += F_solvent;
     }
-    
+
     auto& ws = well_state.well(well_.indexOfWell());
     ws.stw_primaryvar = value_;
     ws.bhp = value_[Bhp];

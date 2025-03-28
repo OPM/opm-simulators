@@ -111,29 +111,29 @@ update(const WellState<Scalar>& well_state,
         if (stop_or_zero_rate_target && seg == 0) {
             value_[seg][WQTotal] = 0;
         }
-        assert(ws.initializedFromReservoir());
-        // tot to map old fraction to new perforations for now start from scratch.
-        bool prim_set = ws.multiseg_primaryvar.size() == value_.size();
-        if(prim_set){
-        //if (std::abs(total_seg_rate) > 0.) {
+
+        // Production wells should have been initialized using reservoir data.
+        assert(well_.isProducer() == ws.initializedFromReservoir());
+
+        // todo to map old fraction to new perforations for now start from scratch.
+        if (ws.multiseg_primaryvar.size() == value_.size()) {
             if (has_wfrac_variable) {
                 value_[seg][WFrac] = ws.multiseg_primaryvar[seg][WFrac];
             }
             if (has_gfrac_variable) {
                 value_[seg][GFrac] = ws.multiseg_primaryvar[seg][GFrac];
             }
-        } else {
-        if (std::abs(total_seg_rate) > 0.) {
+        } else if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
                 const int water_pos = pu.phase_pos[Water];
                 value_[seg][WFrac] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
             }
             if (has_gfrac_variable) {
                 const int gas_pos = pu.phase_pos[Gas];
-                value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate; 
+                value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate;
             }
             // what about water and gas injection?
-         } else { // total_seg_rate == 0
+        } else { // total_seg_rate == 0
             if (well_.isInjector()) {
                 // only single phase injection handled
                 auto phase = well.getInjectionProperties().injectorType;
@@ -163,7 +163,6 @@ update(const WellState<Scalar>& well_state,
                     value_[seg][GFrac] = 1.0 / well_.numPhases();
                 }
             }
-        }
         }
     }
     setEvaluationsFromValues();
@@ -237,7 +236,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     static constexpr int Gas = BlackoilPhases::Vapour;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Water = BlackoilPhases::Aqua;
-    
+
     const auto pvtReg = std::max(well_.wellEcl().pvt_table_number() - 1, 0);
 
     const PhaseUsage& pu = well_.phaseUsage();
