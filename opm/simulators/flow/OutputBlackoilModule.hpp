@@ -1544,35 +1544,36 @@ private:
 
         if constexpr (getPropValue<TypeTag, Properties::EnableMech>()) {
             if (this->mech_.allocated()) {
-                this->extractors_.emplace(
-                    [&mech = this->mech_,
-                     &model = simulator_.problem().geoMechModel()](const Context& ectx)
-                    {
-                        mech.assignDelStress(ectx.globalDofIdx,
-                                             model.delstress(ectx.globalDofIdx));
+                this->extractors_.push_back(
+                    Entry{[&mech = this->mech_,
+                           &model = simulator_.problem().geoMechModel()](const Context& ectx)
+                           {
+                              mech.assignDelStress(ectx.globalDofIdx,
+                                                   model.delstress(ectx.globalDofIdx));
 
-                        mech.assignDisplacement(ectx.globalDofIdx,
-                                                model.disp(ectx.globalDofIdx, /*include_fracture*/true));
+                              mech.assignDisplacement(ectx.globalDofIdx,
+                                                      model.disp(ectx.globalDofIdx, /*include_fracture*/true));
 
-                        // is the tresagii stress which make rock fracture
-                        mech.assignFracStress(ectx.globalDofIdx,
-                                              model.fractureStress(ectx.globalDofIdx));
+                              // is the tresagii stress which make rock fracture
+                              mech.assignFracStress(ectx.globalDofIdx,
+                                                    model.fractureStress(ectx.globalDofIdx));
 
-                        mech.assignLinStress(ectx.globalDofIdx,
-                                             model.linstress(ectx.globalDofIdx));
+                              mech.assignLinStress(ectx.globalDofIdx,
+                                                   model.linstress(ectx.globalDofIdx));
 
-                        mech.assignPotentialForces(ectx.globalDofIdx,
-                                                   model.mechPotentialForce(ectx.globalDofIdx),
-                                                   model.mechPotentialPressForce(ectx.globalDofIdx),
-                                                   model.mechPotentialTempForce(ectx.globalDofIdx));
+                              mech.assignPotentialForces(ectx.globalDofIdx,
+                                                         model.mechPotentialForce(ectx.globalDofIdx),
+                                                         model.mechPotentialPressForce(ectx.globalDofIdx),
+                                                         model.mechPotentialTempForce(ectx.globalDofIdx));
 
-                        mech.assignStrain(ectx.globalDofIdx,
-                                          model.strain(ectx.globalDofIdx, /*include_fracture*/true));
+                              mech.assignStrain(ectx.globalDofIdx,
+                                                model.strain(ectx.globalDofIdx, /*include_fracture*/true));
 
-                        // Total stress is not stored but calculated result is Voigt notation
-                        mech.assignStress(ectx.globalDofIdx,
-                                          model.stress(ectx.globalDofIdx, /*include_fracture*/true));
-                     }, true
+                              // Total stress is not stored but calculated result is Voigt notation
+                              mech.assignStress(ectx.globalDofIdx,
+                                                model.stress(ectx.globalDofIdx, /*include_fracture*/true));
+                           }
+                    }
                 );
             }
         }
