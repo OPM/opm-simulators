@@ -114,8 +114,11 @@ prepareStep(const SimulatorTimerInterface& timer)
     simulator_.setTimeStepSize(timer.currentStepLength());
     simulator_.model().newtonMethod().setIterationIndex(0);
 
-    simulator_.problem().beginTimeStep();
-
+    // we skip the presolving of wells,
+    // the optimization of gaslift and rebalancing of network
+    if (!lastStepFailed) {
+        simulator_.problem().beginTimeStep();
+    }
     unsigned numDof = simulator_.model().numGridDof();
     wasSwitched_.resize(numDof);
     std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
