@@ -37,7 +37,7 @@ ConnectionData(std::size_t num_connection,
 
 template <class Scalar>
 ConnectionData<Scalar>::
-ConnectionData(const std::vector<CompConnectionData<Scalar>>& connections,
+ConnectionData(const std::vector<CompConnectionData>& connections,
                const PhaseUsage& phase_usage,
                const CompositionalConfig& comp_config)
   : ConnectionData(connections.size(), phase_usage.num_phases, comp_config.numComps())
@@ -55,7 +55,7 @@ SingleCompWellState(const std::string& well_name,
                     const CompositionalConfig& comp_config,
                     const PhaseUsage& phase_usage_input,
                     const Scalar temperature_arg,
-                    const std::vector<CompConnectionData<Scalar>>& connections,
+                    const std::vector<CompConnectionData>& connections,
                     bool is_producer)
    : name(well_name)
    , phase_usage(phase_usage_input)

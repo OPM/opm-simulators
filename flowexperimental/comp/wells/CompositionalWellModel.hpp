@@ -25,17 +25,16 @@
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
 #include <flowexperimental/comp/wells/CompWell.hpp>
+#include <flowexperimental/comp/wells/CompWellState.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
-#include "CompConnectionData.hpp"
+#include <opm/simulators/wells/PerforationData.hpp>
 
-#include "CompWellState.hpp"
 
 #include <vector>
 
@@ -53,6 +52,7 @@ class CompositionalWellModel : WellConnectionAuxiliaryModule<TypeTag, Compositio
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using CompConnectionData = PerforationData<Scalar>;
 
     // using NeighborSet = typename BaseAuxiliaryModule<TypeTag>::NeighborSet;
 
@@ -151,7 +151,7 @@ private:
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;
-     std::vector<std::vector<CompConnectionData<Scalar> > > well_connection_data_;
+     std::vector<std::vector<CompConnectionData> > well_connection_data_;
      // const Schedule& schedule_;
      std::vector<CompWellPtr> well_container_;
 

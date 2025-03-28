@@ -28,7 +28,7 @@ template <typename TypeTag>
 CompWell<TypeTag>::
 CompWell(const Well& well,
          int index_of_well,
-         const std::vector<CompConnectionData<Scalar>>& well_connection_data)
+         const std::vector<CompConnectionData>& well_connection_data)
   : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
 {
 }

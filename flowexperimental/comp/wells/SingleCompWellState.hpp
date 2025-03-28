@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-#include "CompConnectionData.hpp"
+#include <opm/simulators/wells/PerforationData.hpp>
 
 namespace Opm {
 
@@ -33,12 +33,13 @@ template <typename Scalar>
 class ConnectionData
 {
 public:
+    using CompConnectionData = PerforationData<Scalar>;
     ConnectionData() = default;
     ConnectionData(std::size_t num_connection,
                    std::size_t num_phases,
                    std::size_t num_components);
 
-    ConnectionData(const std::vector<CompConnectionData<Scalar>>& connections,
+    ConnectionData(const std::vector<CompConnectionData>& connections,
                    const PhaseUsage& phase_usage,
                    const CompositionalConfig& comp_config);
 
@@ -57,11 +58,12 @@ template <typename Scalar>
 class SingleCompWellState
 {
 public:
+    using CompConnectionData = PerforationData<Scalar>;
     SingleCompWellState(const std::string& name,
                         const CompositionalConfig& comp_config,
                         const PhaseUsage& phase_usage_input,
                         const Scalar temperature,
-                        const std::vector<CompConnectionData<Scalar> >& connections,
+                        const std::vector<CompConnectionData>& connections,
                         bool is_producer);
 
     std::string name;
