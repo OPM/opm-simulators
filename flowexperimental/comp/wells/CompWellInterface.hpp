@@ -21,16 +21,13 @@
 #define OPM_COMP_WELLINTERFACE_HPP
 
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/simulators/wells/PerforationData.hpp>
 
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <flowexperimental/comp/wells/SingleCompWellState.hpp>
 
 #include <string>
 
-#include "SingleCompWellState.hpp"
-
 namespace Opm {
-template <typename Scalar>
-class CompConnectionData;
 
 template <typename TypeTag> // TODO: do we need to use TypeTag here?
 class CompWellInterface
@@ -45,10 +42,11 @@ public:
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
+    using CompConnectionData = PerforationData<Scalar>;
 
     CompWellInterface(const Well& well,
                       const int index_of_well,
-                      const std::vector<CompConnectionData<Scalar>>& well_connection_data);
+                      const std::vector<CompConnectionData>& well_connection_data);
 
     const std::string& name() const;
 

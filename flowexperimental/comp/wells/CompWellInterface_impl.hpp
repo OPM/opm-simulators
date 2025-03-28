@@ -17,8 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "CompConnectionData.hpp"
-
 #include <string>
 
 namespace Opm {
@@ -26,7 +24,7 @@ template <typename TypeTag>
 CompWellInterface<TypeTag>::
 CompWellInterface(const Well& well,
                   const int index_of_well,
-                  const std::vector<CompConnectionData<Scalar> >& well_connection_data)
+                  const std::vector<CompConnectionData>& well_connection_data)
     : well_ecl_(well)
     , index_of_well_(index_of_well)
     , number_of_connection_(well_connection_data.size())

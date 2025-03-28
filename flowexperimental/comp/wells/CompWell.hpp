@@ -25,9 +25,8 @@
 #include <flowexperimental/comp/wells/CompWellEquations.hpp>
 #include <flowexperimental/comp/wells/CompWellInterface.hpp>
 #include <flowexperimental/comp/wells/CompWellPrimaryVariables.hpp>
-#include <flowexperimental/comp/wells/CompConnectionData.hpp>
 
-#include <string>
+#include <opm/simulators/wells/PerforationData.hpp>
 
 namespace Opm {
 
@@ -51,6 +50,8 @@ public:
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
+
+    using CompConnectionData = PerforationData<Scalar>;
 
     // TODO: this can be a rate converter role later
     // currently, it has the surface densities for each phase and volume fractions for each phase
@@ -82,7 +83,7 @@ public:
 
     CompWell(const Well& well,
              int index_of_well,
-             const std::vector<CompConnectionData<Scalar>>& well_connection_data);
+             const std::vector<CompConnectionData>& well_connection_data);
 
     void init() override;
 

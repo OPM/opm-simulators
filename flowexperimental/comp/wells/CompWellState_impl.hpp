@@ -35,7 +35,7 @@ init(const std::vector<Well>& wells_ecl,
      const std::vector<Scalar>& cell_pressures,
      const Scalar temperature,
      const std::vector<std::vector<Scalar>>& cell_mole_fractions,
-     const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
+     const std::vector<std::vector<CompConnectionData> >& well_connection_data,
      const SummaryState& summary_state,
      const CompWellState* /*prev_well_state*/)
 {
@@ -51,7 +51,7 @@ base_init(const std::vector<Well>& wells_ecl,
           const std::vector<Scalar>& cell_pressures,
           const Scalar temperature,
           const std::vector<std::vector<Scalar>>& cell_mole_fractions,
-          const std::vector<std::vector<CompConnectionData<Scalar> > >& well_connection_data,
+          const std::vector<std::vector<CompConnectionData>>& well_connection_data,
           const SummaryState& summary_state)
 {
     this->wells_.clear();
@@ -72,7 +72,7 @@ initSingleWell(const Well& well,
                const std::vector<Scalar>& cell_pressures,
                const Scalar tempearture,
                const std::vector<std::vector<Scalar>>& cell_mole_fractions,
-               const std::vector<CompConnectionData<Scalar> >& conn_data,
+               const std::vector<CompConnectionData>& conn_data,
                const SummaryState& summary_state)
 {
     if (well.isInjector()) {
@@ -88,7 +88,7 @@ void CompWellState<Scalar>::
 initSingleInjector(const Well& well,
                    const std::vector<Scalar>& /* cell_pressures */,
                    const Scalar temperature,
-                   const std::vector<CompConnectionData<Scalar> >& conn_data,
+                   const std::vector<CompConnectionData>& conn_data,
                    const SummaryState& summary_state)
 {
     auto& ws = this->wells_.add(well.name(),
@@ -107,7 +107,7 @@ initSingleProducer(const Well& well,
                    const std::vector<Scalar>& /* cell_pressures */,
                    const Scalar temperature,
                    const std::vector<std::vector<Scalar>>& cell_mole_fractions,
-                   const std::vector<CompConnectionData<Scalar> >& conn_data,
+                   const std::vector<CompConnectionData>& conn_data,
                    const SummaryState& summary_state)
 {
     auto& ws = this->wells_.add(well.name(),
