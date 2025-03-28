@@ -109,11 +109,24 @@ public:
     ///
     /// \param[in] zoltan_ctrl Control parameters for on-rank subdomain
     ///   partitioning.
+    ///
+    /// \param[in] num_neighbor_levels Number of neighbor levels to include when connecting well cells.
+    ///   Default is 0, which means only direct well connections are considered.
     template <class GridView, class Element>
     void buildLocalGraph(const GridView&                                       grid_view,
                          const std::vector<Opm::Well>&                         wells,
                          const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                         const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl);
+                         const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl,
+                         const int                                             num_neighbor_levels);
+
+    /// Connect neighbors of cells up to a specified level.
+    ///
+    /// \param[in,out] cells Initial cells to find neighbors of. Updated to include all neighbors
+    ///   up to specified level.
+    ///
+    /// \param[in] num_levels Number of neighbor levels to include.
+    void connectNeighbors(std::vector<int>& cells,
+                          const int num_levels) const;
 
     /// Partition rank's interior cells into non-overlapping domains using
     /// the Zoltan graph partitioning software package.
@@ -148,6 +161,9 @@ private:
     /// Zoltan partitioning backend.
     Opm::ParallelNLDDPartitioningZoltan partitioner_;
 
+    /// Map of cell indices to their neighbors for fast lookup
+    std::unordered_map<int, std::unordered_set<int>> neighbor_map_;
+
     /// Form internal connectivity graph between rank's reachable, interior
     /// cells.
     ///
@@ -166,7 +182,8 @@ private:
     template <class GridView, class Element>
     std::unordered_map<int, int>
     connectElements(const GridView&                                grid_view,
-                    const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl);
+                    const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl,
+                    const bool                                     build_neighbor_map);
 
     /// Adapt internal connectivity graph to account for connections induced
     /// by well reservoir connections.
@@ -182,11 +199,15 @@ private:
     ///
     /// \param[in] g2l Mapping from globally unique cell IDs to local,
     ///   on-rank active cell IDs.  Return value from \c connectElements().
+    ///
+    /// \param[in] num_neighbor_levels Number of neighbor levels to include when connecting well cells.
+    ///   Default is 0, which means only direct well connections are considered.
     template <typename Comm>
     void connectWells(const Comm                                     comm,
                       const std::vector<Opm::Well>&                  wells,
                       std::unordered_map<std::string, std::set<int>> possibleFutureConnections,
-                      const std::unordered_map<int, int>&            g2l);
+                      const std::unordered_map<int, int>&            g2l,
+                      const int                                      num_neighbor_levels);
 };
 
 // Note: "grid_view.size(0)" is intentional here.  It is not an error.  The
@@ -203,9 +224,43 @@ template <class GridView, class Element>
 void ZoltanPartitioner::buildLocalGraph(const GridView&                                       grid_view,
                                         const std::vector<Opm::Well>&                         wells,
                                         const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                                        const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl)
+                                        const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl,
+                                        const int                                             num_neighbor_levels)
 {
-    this->connectWells(grid_view.comm(), wells, possibleFutureConnections, this->connectElements(grid_view, zoltan_ctrl));
+    const bool build_neighbor_map = num_neighbor_levels > 0;
+    auto g2l = this->connectElements(grid_view, zoltan_ctrl, build_neighbor_map);
+    this->connectWells(grid_view.comm(), wells, possibleFutureConnections, g2l, num_neighbor_levels);
+}
+
+void ZoltanPartitioner::connectNeighbors(std::vector<int>& cells,
+                                        const int num_levels) const
+{
+    // Initialize search structures
+    std::unordered_set<int> visited(cells.begin(), cells.end());
+    std::vector<int> frontier;
+    std::vector<int> new_frontier;
+    frontier.swap(cells);
+
+    // Breadth-first search for neighbor cells up to num_levels away
+    for (int level = 0; level < num_levels && !frontier.empty(); ++level) {
+        new_frontier.clear();
+        new_frontier.reserve(frontier.size() * 2);
+
+        // Expand current frontier using precomputed neighbor map
+        for (const int cell : frontier) {
+            for (const int neighbor : neighbor_map_.at(cell)) {
+                if (visited.insert(neighbor).second) {  // New discovery
+                    new_frontier.push_back(neighbor);
+                }
+            }
+        }
+
+        frontier.swap(new_frontier);  // Prepare next level
+    }
+
+    // Sort final result for faster processing in later steps
+    cells.assign(visited.begin(), visited.end());
+    std::sort(cells.begin(), cells.end());
 }
 
 template <class GridView, class Element>
@@ -233,35 +288,30 @@ ZoltanPartitioner::partition(const int                                      num_
             num_domains = domainId + 1;
         }
     }
-
-    // Fix-up for an extreme case: Interior cells whose neighbours are all
-    // on a different rank--i.e., interior cells which do not have on-rank
-    // neighbours.  Make each such cell be a separate domain on this rank.
-    // Don't remove this code unless you've taken remedial action elsewhere
-    // to ensure the situation doesn't happen.  For what it's worth, we've
-    // seen this case occur in practice when testing on field cases.
-    for (auto& domainId : domains) {
-        if (domainId < 0) {
-            domainId = num_domains++;
-        }
-    }
-
     return partition;
 }
 
 template <class GridView, class Element>
 std::unordered_map<int, int>
 ZoltanPartitioner::connectElements(const GridView&                                grid_view,
-                                   const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl)
+                                   const Opm::ZoltanPartitioningControl<Element>& zoltan_ctrl,
+                                   const bool                                     build_neighbor_map)
 {
     auto g2l = std::unordered_map<int, int>{};
+    if (build_neighbor_map) {
+        neighbor_map_.clear();
+    }
 
     for (const auto& element : elements(grid_view, Dune::Partitions::interior)) {
         {
             const auto c = zoltan_ctrl.index(element);
             g2l.insert_or_assign(zoltan_ctrl.local_to_global(c), c);
-        }
 
+            if (build_neighbor_map) {
+                // Initialize neighbor set for this cell
+                neighbor_map_[c];
+            }
+        }
         for (const auto& is : intersections(grid_view, element)) {
             if (! is.neighbor()) {
                 continue;
@@ -282,6 +332,12 @@ ZoltanPartitioner::connectElements(const GridView&                              
 
             this->partitioner_.registerConnection(c1, c2);
             this->partitioner_.registerConnection(c2, c1);
+
+            if (build_neighbor_map) {
+                // Store neighbors in both directions
+                neighbor_map_[c1].insert(c2);
+                neighbor_map_[c2].insert(c1);
+            }
         }
     }
 
@@ -292,7 +348,8 @@ template <typename Comm>
 void ZoltanPartitioner::connectWells(const Comm                                     comm,
                                      const std::vector<Opm::Well>&                  wells,
                                      std::unordered_map<std::string, std::set<int>> possibleFutureConnections,
-                                     const std::unordered_map<int, int>&            g2l)
+                                     const std::unordered_map<int, int>&            g2l,
+                                     const int                                      num_neighbor_levels)
 {
     auto distributedWells = 0;
 
@@ -310,7 +367,6 @@ void ZoltanPartitioner::connectWells(const Comm                                 
                 ++otherProc;
                 continue;
             }
-
             cellIx.push_back(locPos->second);
         }
         const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
@@ -330,17 +386,23 @@ void ZoltanPartitioner::connectWells(const Comm                                 
             continue;
         }
 
-        const auto nc = cellIx.size();
-        for (auto ic1 = 0*nc; ic1 < nc; ++ic1) {
-            for (auto ic2 = ic1 + 1; ic2 < nc; ++ic2) {
-                this->partitioner_.registerConnection(cellIx[ic1], cellIx[ic2]);
-                this->partitioner_.registerConnection(cellIx[ic2], cellIx[ic1]);
-            }
+        // Process neighbors and get deduplicated result
+        if (num_neighbor_levels > 0 && !cellIx.empty()) {
+            connectNeighbors(cellIx, num_neighbor_levels);
         }
 
-        if (! cellIx.empty()) {
-            // All cells intersected by a single well go in the same domain.
-            this->partitioner_.forceSameDomain(std::move(cellIx));
+        const auto nc = cellIx.size();
+        if (nc == 0) {
+            continue;
+        }
+        for (auto ic1 = 0*nc; ic1 < nc-1; ++ic1) {
+            this->partitioner_.registerConnection(cellIx[ic1], cellIx[ic1+1]);
+            this->partitioner_.registerConnection(cellIx[ic1+1], cellIx[ic1]);
+        }
+
+        // Collect all cells for the well into a vertex group
+        if (!cellIx.empty()) {
+            this->partitioner_.addVertexGroup(cellIx);
         }
     }
 
@@ -356,7 +418,8 @@ This is not supported in the current NLDD implementation.)",
         };
     }
 
-    OPM_END_PARALLEL_TRY_CATCH(std::string { "ZoltanPartitioner::connectWells()" }, comm)
+    OPM_END_PARALLEL_TRY_CATCH(std::string{"ZoltanPartitioner::connectWells(): Distributed well detected. "
+                                          "This is not supported in the current NLDD implementation"}, comm)
 }
 
 template <class GridView, class Element>
@@ -365,7 +428,8 @@ partitionCellsZoltan(const int                                             num_d
                      const GridView&                                       grid_view,
                      const std::vector<Opm::Well>&                         wells,
                      const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                     const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl)
+                     const Opm::ZoltanPartitioningControl<Element>&        zoltan_ctrl,
+                     const int                                             num_neighbor_levels)
 {
     if (num_domains <= 1) {     // No partitioning => every cell in domain zero.
         const auto num_interior_cells =
@@ -379,7 +443,8 @@ partitionCellsZoltan(const int                                             num_d
     }
 
     auto partitioner = ZoltanPartitioner { grid_view, zoltan_ctrl.local_to_global };
-    partitioner.buildLocalGraph(grid_view, wells, possibleFutureConnections, zoltan_ctrl);
+
+    partitioner.buildLocalGraph(grid_view, wells, possibleFutureConnections, zoltan_ctrl, num_neighbor_levels);
 
     return partitioner.partition(num_domains, grid_view, zoltan_ctrl);
 }
@@ -600,12 +665,13 @@ Opm::partitionCells(const std::string& method,
                     const GridView&    grid_view,
                     [[maybe_unused]] const std::vector<Well>&                              wells,
                     [[maybe_unused]] const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                    [[maybe_unused]] const ZoltanPartitioningControl<Element>&             zoltan_ctrl)
+                    [[maybe_unused]] const ZoltanPartitioningControl<Element>&             zoltan_ctrl,
+                    [[maybe_unused]] const int                                             num_neighbor_levels)
 {
     if (method == "zoltan") {
 #if HAVE_MPI && HAVE_ZOLTAN
 
-        return partitionCellsZoltan(num_local_domains, grid_view, wells, possibleFutureConnections, zoltan_ctrl);
+        return partitionCellsZoltan(num_local_domains, grid_view, wells, possibleFutureConnections, zoltan_ctrl, num_neighbor_levels);
 
 #else // !HAVE_MPI || !HAVE_ZOLTAN
 
@@ -700,7 +766,8 @@ Opm::partitionCellsSimple(const int num_cells, const int num_domains)
                         const std::unordered_map<std::string, std::set<int>>&, \
                         const Opm::ZoltanPartitioningControl<                  \
                         typename std::remove_cv_t<std::remove_reference_t<     \
-                        decltype(std::declval<Grid>().leafGridView())>>::template Codim<0>::Entity>&)
+                        decltype(std::declval<Grid>().leafGridView())>>::template Codim<0>::Entity>&, \
+                        const int)
 
 // ---------------------------------------------------------------------------
 // Grid types built into Flow.

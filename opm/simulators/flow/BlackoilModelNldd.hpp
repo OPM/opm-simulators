@@ -107,7 +107,26 @@ public:
         , rank_(model_.simulator().vanguard().grid().comm().rank())
     {
         // Create partitions.
-        const auto& [partition_vector, num_domains] = this->partitionCells();
+        const auto& [partition_vector_initial, num_domains_initial] = this->partitionCells();
+
+        int num_domains = num_domains_initial;
+        std::vector<int> partition_vector = partition_vector_initial;
+
+        // Fix-up for an extreme case: Interior cells who do not have any on-rank
+        // neighbours. Move all such cells into a single domain on this rank,
+        // and mark the domain for skipping. For what it's worth, we've seen this
+        // case occur in practice when testing on field cases.
+        bool isolated_cells = false;
+        for (auto& domainId : partition_vector) {
+            if (domainId < 0) {
+                domainId = num_domains;
+                domains_to_skip_.push_back(domainId);
+                isolated_cells = true;
+            }
+        }
+        if (isolated_cells) {
+            num_domains++;
+        }
 
         // Set nldd handler in main well model
         model.wellModel().setNlddAdapter(&wellModel_);
@@ -222,6 +241,9 @@ public:
         for (const int domain_index : domain_order) {
             const auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
+            if (std::find(domains_to_skip_.begin(), domains_to_skip_.end(), domain.index) != domains_to_skip_.end()) {
+                continue;
+            }
             try {
                 switch (model_.param().local_solve_approach_) {
                 case DomainSolveApproach::Jacobi:
@@ -340,23 +362,55 @@ public:
         return local_reports_accumulated_;
     }
 
+    /// Write the partition vector to a file in ResInsight compatible format for inspection
+    /// and a partition file for each rank, that can be used as input for OPM.
     void writePartitions(const std::filesystem::path& odir) const
     {
         const auto& elementMapper = this->model_.simulator().model().elementMapper();
         const auto& cartMapper = this->model_.simulator().vanguard().cartesianIndexMapper();
+        const auto& dims = cartMapper.cartesianDimensions();
+        const auto total_size = dims[0] * dims[1] * dims[2];
 
         const auto& grid = this->model_.simulator().vanguard().grid();
         const auto& comm = grid.comm();
-        const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
 
-        std::ofstream pfile { odir / fmt::format("{1:0>{0}}", nDigit, comm.rank()) };
+        // Create a full-sized vector initialized with -1 (indicating inactive cells)
+        auto full_partition = std::vector<int>(total_size, -1);
 
+        // Fill active cell values for this rank
         const auto p = this->reconstitutePartitionVector();
         auto i = 0;
         for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
+            full_partition[cartMapper.cartesianIndex(elementMapper.index(cell))] = p[i++];
+        }
+
+        // Gather all partitions using max operation
+        comm.max(full_partition.data(), full_partition.size());
+
+        // Only rank 0 writes the file
+        if (this->rank_ == 0) {
+            auto fname = odir / "ResInsight_compatible_partition.txt";
+            std::ofstream resInsightFile { fname };
+
+            // Write header
+            resInsightFile << "NLDD_DOM" << '\n';
+
+            // Write all cells, including inactive ones
+            for (const auto& val : full_partition) {
+                resInsightFile << val << '\n';
+            }
+            resInsightFile << "/" << '\n';
+        }
+
+        const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
+        auto partition_fname = odir / fmt::format("{1:0>{0}}", nDigit, comm.rank());
+        std::ofstream pfile { partition_fname };
+
+        auto cell_index = 0;
+        for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
             pfile << comm.rank() << ' '
                   << cartMapper.cartesianIndex(elementMapper.index(cell)) << ' '
-                  << p[i++] << '\n';
+                  << p[cell_index++] << '\n';
         }
     }
 
@@ -763,7 +817,7 @@ private:
         } else if (model_.param().local_solve_approach_ == DomainSolveApproach::GaussSeidel) {
             // Calculate the measure used to order the domains.
             std::vector<Scalar> measure_per_domain(domains_.size());
-            switch (model_.param().local_domain_ordering_) {
+            switch (model_.param().local_domains_ordering_) {
             case DomainOrderingMeasure::AveragePressure: {
                 // Use average pressures to order domains.
                 for (const auto& domain : domains_) {
@@ -802,7 +856,7 @@ private:
                 }
                 break;
             }
-            } // end of switch (model_.param().local_domain_ordering_)
+            } // end of switch (model_.param().local_domains_ordering_)
 
             // Sort by largest measure, keeping index order if equal.
             const auto& m = measure_per_domain;
@@ -937,7 +991,7 @@ private:
 
         auto zoltan_ctrl = ZoltanPartitioningControl<Element>{};
 
-        zoltan_ctrl.domain_imbalance = param.local_domain_partition_imbalance_;
+        zoltan_ctrl.domain_imbalance = param.local_domains_partition_imbalance_;
 
         zoltan_ctrl.index =
             [elementMapper = &this->model_.simulator().model().elementMapper()]
@@ -954,7 +1008,7 @@ private:
         };
 
         // Forming the list of wells is expensive, so do this only if needed.
-        const auto need_wells = param.local_domain_partition_method_ == "zoltan";
+        const auto need_wells = param.local_domains_partition_method_ == "zoltan";
 
         const auto wells = need_wells
             ? this->model_.simulator().vanguard().schedule().getWellsatEnd()
@@ -969,10 +1023,10 @@ private:
         const int num_domains = (param.num_local_domains_ > 0)
             ? param.num_local_domains_
             : detail::countGlobalCells(grid) / default_cells_per_domain;
-
-        return ::Opm::partitionCells(param.local_domain_partition_method_,
+        return ::Opm::partitionCells(param.local_domains_partition_method_,
                                      num_domains, grid.leafGridView(), wells,
-                                     possibleFutureConnectionSet, zoltan_ctrl);
+                                     possibleFutureConnectionSet, zoltan_ctrl,
+                                     param.local_domains_partition_well_neighbor_levels_);
     }
 
     std::vector<int> reconstitutePartitionVector() const
@@ -1008,6 +1062,7 @@ private:
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
+    std::vector<int> domains_to_skip_; //!< Vector of domains to skip
     SimulatorReportSingle local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers
     int rank_ = 0; //!< MPI rank of this process
 };
