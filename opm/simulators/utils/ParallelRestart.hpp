@@ -26,6 +26,7 @@
 namespace Opm {
 
 class EclipseIO;
+namespace data { class Solution; }
 class SummaryState;
 class RestartKey;
 class RestartValue;
@@ -41,6 +42,11 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
                                  const std::vector<RestartKey>& solutionKeys,
                                  const std::vector<RestartKey>& extraKeys,
                                  Parallel::Communication comm);
+
+data::Solution loadParallelRestartSolution(const EclipseIO* eclIO,
+                                           const std::vector<RestartKey>& solutionKeys,
+                                           Parallel::Communication comm,
+                                           const int step);
 
 } // end namespace Opm
 
