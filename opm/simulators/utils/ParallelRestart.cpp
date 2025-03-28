@@ -58,4 +58,27 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
 #endif
 }
 
+data::Solution loadParallelRestartSolution(const EclipseIO* eclIO,
+                                           const std::vector<Opm::RestartKey>& solutionKeys,
+                                           [[maybe_unused]] Parallel::Communication comm,
+                                           const int step)
+{
+#if HAVE_MPI
+    data::Solution sol{};
+
+    if (eclIO)
+    {
+        assert(comm.rank() == 0);
+        sol = eclIO->loadRestartSolution(solutionKeys, step);
+    }
+
+    Parallel::MpiSerializer ser(comm);
+    ser.broadcast(0, sol);
+    return sol;
+#else
+    return eclIO->loadRestartSolution(solutionKeys, step);
+#endif
+}
+
+
 } // end namespace Opm
