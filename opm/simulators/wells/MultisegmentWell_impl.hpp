@@ -98,6 +98,10 @@ namespace Opm
             OPM_THROW(std::runtime_error, "water evaporation is not supported by multisegment well yet");
         }
 
+        if constexpr (Base::has_micp) {
+            OPM_THROW(std::runtime_error, "MICP is not supported by multisegment well yet");
+        }
+
         if(this->rsRvInj() > 0) {
             OPM_THROW(std::runtime_error,
                       "dissolved gas/ vapporized oil in injected oil/gas not supported by multisegment well yet."

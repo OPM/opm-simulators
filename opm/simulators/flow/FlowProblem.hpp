@@ -1102,7 +1102,7 @@ public:
 
 
     /*!
-     * \brief Return the well transmissibility multiplier due to rock changues.
+     * \brief Return the well transmissibility multiplier due to rock changes.
      */
     template <class LhsEval>
     LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
@@ -1152,6 +1152,15 @@ public:
             break;
         case BCComponent::POLYMER:
             this->handlePolymerBC(bc, rate);
+            break;
+        case BCComponent::MICR:
+            this->handleMicrBC(bc, rate);
+            break;
+        case BCComponent::OXYG:
+            this->handleOxygBC(bc, rate);
+            break;
+        case BCComponent::UREA:
+            this->handleUreaBC(bc, rate);
             break;
         case BCComponent::NONE:
             throw std::logic_error("you need to specify the component when RATE type is set in BC");
@@ -1700,6 +1709,12 @@ protected:
     virtual void handleSolventBC(const BCProp::BCFace&, RateVector&) const = 0;
 
     virtual void handlePolymerBC(const BCProp::BCFace&, RateVector&) const = 0;
+
+    virtual void handleMicrBC(const BCProp::BCFace&, RateVector&) const = 0;
+
+    virtual void handleOxygBC(const BCProp::BCFace&, RateVector&) const = 0;
+
+    virtual void handleUreaBC(const BCProp::BCFace&, RateVector&) const = 0;
 
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;

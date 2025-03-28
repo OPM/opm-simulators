@@ -173,12 +173,6 @@ namespace Opm
       return 0.0;
     }
 
-    // The urea injection concentration is scaled down by a factor of 10, since its value
-    // can be much bigger than 1 (not doing this slows the simulations). The
-    // corresponding values are scaled accordingly in blackoilmicpmodules.hh when computing
-    // the reactions and also when writing the output files (vtk and eclipse format, i.e.,
-    // vtkblackoilmicpmodule.hh and ecloutputblackoilmodel.hh respectively).
-
     template<typename TypeTag>
     typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::
