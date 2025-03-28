@@ -1237,11 +1237,12 @@ protected:
         bool has_swat     = fp.has_double("SWAT");
         bool has_sgas     = fp.has_double("SGAS");
         bool has_rs       = fp.has_double("RS");
+        bool has_rsw      = fp.has_double("RSW");
         bool has_rv       = fp.has_double("RV");
-        bool has_rvw       = fp.has_double("RVW");
+        bool has_rvw      = fp.has_double("RVW");
         bool has_pressure = fp.has_double("PRESSURE");
-        bool has_salt = fp.has_double("SALT");
-        bool has_saltp = fp.has_double("SALTP");
+        bool has_salt     = fp.has_double("SALT");
+        bool has_saltp    = fp.has_double("SALTP");
 
         // make sure all required quantities are enables
         if (Indices::numPhases > 1) {
@@ -1257,13 +1258,16 @@ protected:
                                      "keyword if the model is initialized explicitly");
         if (FluidSystem::enableDissolvedGas() && !has_rs)
             throw std::runtime_error("The ECL input file requires the RS keyword to be present if"
-                                     " dissolved gas is enabled");
+                                     " dissolved gas is enabled and the model is initialized explicitly");
+        if (FluidSystem::enableDissolvedGasInWater() && !has_rsw)
+            OpmLog::warning("The model is initialized explicitly and the RSW keyword is not present in the"
+                            " ECL input file. The RSW values are set equal to 0");
         if (FluidSystem::enableVaporizedOil() && !has_rv)
             throw std::runtime_error("The ECL input file requires the RV keyword to be present if"
-                                     " vaporized oil is enabled");
+                                     " vaporized oil is enabled and the model is initialized explicitly");
         if (FluidSystem::enableVaporizedWater() && !has_rvw)
             throw std::runtime_error("The ECL input file requires the RVW keyword to be present if"
-                                     " vaporized water is enabled");
+                                     " vaporized water is enabled and the model is initialized explicitly");
         if (enableBrine && !has_salt)
             throw std::runtime_error("The ECL input file requires the SALT keyword to be present if"
                                      " brine is enabled and the model is initialized explicitly");
@@ -1279,6 +1283,7 @@ protected:
         std::vector<double> gasSaturationData;
         std::vector<double> pressureData;
         std::vector<double> rsData;
+        std::vector<double> rswData;
         std::vector<double> rvData;
         std::vector<double> rvwData;
         std::vector<double> tempiData;
@@ -1298,6 +1303,9 @@ protected:
         pressureData = fp.get_double("PRESSURE");
         if (FluidSystem::enableDissolvedGas())
             rsData = fp.get_double("RS");
+
+        if (FluidSystem::enableDissolvedGasInWater() && has_rsw)
+            rswData = fp.get_double("RSW");
 
         if (FluidSystem::enableVaporizedOil())
             rvData = fp.get_double("RV");
@@ -1398,6 +1406,9 @@ protected:
                 dofFluidState.setRs(rsData[dofIdx]);
             else if (Indices::gasEnabled && Indices::oilEnabled)
                 dofFluidState.setRs(0.0);
+
+            if (FluidSystem::enableDissolvedGasInWater() && has_rsw)
+                dofFluidState.setRsw(rswData[dofIdx]);
 
             if (FluidSystem::enableVaporizedOil())
                 dofFluidState.setRv(rvData[dofIdx]);
