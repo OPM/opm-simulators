@@ -120,7 +120,6 @@ public:
         for (auto& domainId : partition_vector) {
             if (domainId < 0) {
                 domainId = num_domains;
-                domains_to_skip_.push_back(domainId);
                 isolated_cells = true;
             }
         }
@@ -172,10 +171,13 @@ public:
 
             Dune::SubGridPart<Grid> view{grid, std::move(seeds[index])};
 
+            // Mark the last domain for skipping if it contains isolated cells
+            const bool skip = isolated_cells && (index == num_domains - 1);
             this->domains_.emplace_back(index,
                                         std::move(partitions[index]),
                                         std::move(interior),
-                                        std::move(view));
+                                        std::move(view),
+                                        skip);
         }
 
         // Set up container for the local system matrices.
@@ -241,7 +243,9 @@ public:
         for (const int domain_index : domain_order) {
             const auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
-            if (std::find(domains_to_skip_.begin(), domains_to_skip_.end(), domain.index) != domains_to_skip_.end()) {
+            if (domain.skip) {
+                local_report.converged = true;
+                domain_reports[domain.index] = local_report;
                 continue;
             }
             try {
@@ -1062,7 +1066,6 @@ private:
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
-    std::vector<int> domains_to_skip_; //!< Vector of domains to skip
     SimulatorReportSingle local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers
     int rank_ = 0; //!< MPI rank of this process
 };

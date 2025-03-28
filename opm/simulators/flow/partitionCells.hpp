@@ -85,6 +85,7 @@ struct ZoltanPartitioningControl
 ///    partitioning.  Not used unless \code method == "zoltan" \endcode.
 ///
 /// \param[in] num_neighbor_levels Number of neighbor levels to consider for partitioning.
+///   0 means only direct well connections are considered, 1 means one level of neighbors, etc.
 ///
 /// \return Partition vector--subdomain ID for each cell in \p grid_view
 ///    traversal order for its interior cells--and the number of subdomains
@@ -97,7 +98,7 @@ partitionCells(const std::string&                                    method,
                const std::vector<Well>&                              wells,
                const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
                const ZoltanPartitioningControl<Element>&             zoltan_ctrl,
-               const int                                             num_neighbor_levels = 0);
+               const int                                             num_neighbor_levels);
 
 /// Read a partitioning from file, assumed to contain one number per cell, its partition number.
 /// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
