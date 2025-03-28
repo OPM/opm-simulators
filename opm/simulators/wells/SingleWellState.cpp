@@ -49,6 +49,7 @@ SingleWellState(const std::string& name_,
     , surface_rates(pu_.num_phases)
     , reservoir_rates(pu_.num_phases)
     , prev_surface_rates(pu_.num_phases)
+    , composition_fractions(pu_.num_phases)
     , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
     , trivial_group_target(false)
 {
@@ -100,6 +101,7 @@ void SingleWellState<Scalar>::shut()
     std::fill(this->productivity_index.begin(), this->productivity_index.end(), 0);
     std::fill(this->implicit_ipr_a.begin(), this->implicit_ipr_a.end(), 0);
     std::fill(this->implicit_ipr_b.begin(), this->implicit_ipr_b.end(), 0);
+    // TODO: should we set the compostion_fractions also?
 
     auto& connpi = this->perf_data.prod_index;
     connpi.assign(connpi.size(), 0);
@@ -372,6 +374,7 @@ bool SingleWellState<Scalar>::operator==(const SingleWellState& rhs) const
            this->surface_rates == rhs.surface_rates &&
            this->reservoir_rates == rhs.reservoir_rates &&
            this->prev_surface_rates == rhs.prev_surface_rates &&
+           this->composition_fractions == rhs.composition_fractions &&
            this->perf_data == rhs.perf_data &&
            this->filtrate_conc == rhs.filtrate_conc &&
            this->trivial_group_target == rhs.trivial_group_target &&

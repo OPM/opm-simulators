@@ -497,6 +497,7 @@ computePropertiesForPressures(const WellState<Scalar>&         well_state,
     const auto& perf_press = ws.perf_data.pressure;
     const auto  p_above    = this->well_.parallelWellInfo()
         .communicateAboveValues(ws.bhp, perf_press.data(), nperf);
+    const auto& fractions = ws.composition_fractions;
 
     for (int perf = 0; perf < nperf; ++perf) {
         const int cell_idx = well_.cells()[perf];
@@ -512,12 +513,13 @@ computePropertiesForPressures(const WellState<Scalar>&         well_state,
             if (FluidSystem::enableDissolvedGasInWater()) {
                 // TODO support mutual solubility in water and oil
                 assert(!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-                const Scalar waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]);
+                const Scalar water_frac = fractions[pu.phase_pos[Water]];
                 props.rswmax_perf[perf] = FluidSystem::waterPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg, saltConcentration);
-                if (waterrate > 0) {
-                    const Scalar gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
-                    if (gasrate > 0) {
-                        rsw = gasrate / waterrate;
+                if (water_frac > 0) {
+                    // TODO: this is wrong, we need to have solvent_fractions also
+                    const Scalar gas_frac = fractions[pu.phase_pos[Gas]] - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
+                    if (gas_frac > 0) {
+                        rsw = gas_frac / water_frac;
                     }
                     rsw = std::min(rsw, props.rswmax_perf[perf]);
                 }
@@ -534,32 +536,26 @@ computePropertiesForPressures(const WellState<Scalar>&         well_state,
             Scalar rvw = 0.0;
             Scalar rv = 0.0;
             if (oilPresent) {
-                // in order to handle negative rates in producers
-                const Scalar oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]);
-                props.rvmax_perf[perf] = FluidSystem::gasPvt()
-                    .saturatedOilVaporizationFactor(region_idx, temperature, p_avg);
-
-                if (oilrate > 0) {
-                    const Scalar gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
-                    if (gasrate > 0) {
-                        rv = oilrate / gasrate;
+                const Scalar oil_frac = fractions[pu.phase_pos[Oil]];
+                props.rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(region_idx, temperature, p_avg);
+                if (oil_frac > 0) {
+                    // TODO: this is wrong, we need to have solvent_fractions also
+                    const Scalar gas_frac = fractions[pu.phase_pos[Gas]] - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
+                    if (gas_frac > 0) {
+                        rv = oil_frac / gas_frac;
                     }
                     rv = std::min(rv, props.rvmax_perf[perf]);
                 }
             }
 
             if (waterPresent) {
-                // in order to handle negative rates in producers
-                const Scalar waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]);
-                props.rvwmax_perf[perf] = FluidSystem::gasPvt()
-                    .saturatedWaterVaporizationFactor(region_idx, temperature, p_avg);
-
-                if (waterrate > 0) {
-                    const Scalar gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]])
-                        - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
-
-                    if (gasrate > 0) {
-                        rvw = waterrate / gasrate;
+                const Scalar water_frac = fractions[pu.phase_pos[Water]];
+                props.rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(region_idx, temperature, p_avg);
+                if (water_frac > 0) {
+                    // TODO: this is wrong, we need to have solvent_fractions also
+                    const Scalar gas_frac = fractions[pu.phase_pos[Gas]] - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
+                    if (gas_frac > 0) {
+                        rvw = water_frac / gas_frac;
                     }
 
                     rvw = std::min(rvw, props.rvwmax_perf[perf]);
@@ -576,16 +572,12 @@ computePropertiesForPressures(const WellState<Scalar>&         well_state,
 
             Scalar rs = 0.0;
             if (gasPresent) {
-                props.rsmax_perf[perf] = FluidSystem::oilPvt()
-                    .saturatedGasDissolutionFactor(region_idx, temperature, p_avg);
-
-                const Scalar gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]])
-                    - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
-
-                if (gasrate > 0) {
-                    const Scalar oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]);
-                    if (oilrate > 0) {
-                        rs = gasrate / oilrate;
+                props.rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg);
+                const Scalar gas_frac = std::abs(fractions[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
+                if (gas_frac > 0) {
+                    const Scalar oil_frac = std::abs(fractions[pu.phase_pos[Oil]]);
+                    if (oil_frac > 0) {
+                        rs = gas_frac / oil_frac;
                     }
                     rs = std::min(rs, props.rsmax_perf[perf]);
                 }
