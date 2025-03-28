@@ -51,7 +51,7 @@ SingleWellState(const std::string& name_,
     , prev_surface_rates(pu_.num_phases)
     , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
     , trivial_group_target(false)
-    , initialized_from_reservoir_(false)
+    , initialized_from_reservoir(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
         this->perf_data.cell_index[perf] = perf_input[perf].cell_index;
@@ -263,14 +263,20 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
     case Well::ProducerCMode::GRUP:
     case Well::ProducerCMode::THP:
     case Well::ProducerCMode::BHP:
+        // Setting all rates to zero, they will be initialized properly in
+        // a call to WellInterface::initializeWellState() later, which will
+        // use the reservoir state to find a better initial value.
+        // This also applies to the ORAT/WRAT/GRAT above, but then only the
+        // rate not set in the above will be modified in
+        // WellInterface::initializeWellState().
         if (this->pu.phase_used[BlackoilPhases::Liquid]) {
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = 0;//-1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = 0.0;
         }
         if (this->pu.phase_used[BlackoilPhases::Aqua]) {
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = 0;//-1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = 0.0;
         }
         if (this->pu.phase_used[BlackoilPhases::Vapour]){
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = 0;//-100000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = 0.0;
         }
         break;
 
