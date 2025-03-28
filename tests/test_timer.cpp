@@ -22,34 +22,52 @@
 #define NVERBOSE  // Suppress own messages when throw()ing
 
 #define BOOST_TEST_MODULE OPM-TimerTest
+
 #include <boost/test/unit_test.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include <opm/input/eclipse/Deck/Deck.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/input/eclipse/Units/Units.hpp>
-#include <opm/input/eclipse/Python/Python.hpp>
-#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+
+#include <opm/input/eclipse/Python/Python.hpp>
+
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
-#include <string>
-#include <iostream>
-#include <vector>
+#include <opm/input/eclipse/Units/Units.hpp>
+
+#include <opm/input/eclipse/Deck/Deck.hpp>
+
+#include <opm/input/eclipse/Parser/Parser.hpp>
+
 #include <memory>
+#include <string>
 
 BOOST_AUTO_TEST_CASE(CreateTimer)
 {
     const std::string filename1 = "TESTTIMER.DATA";
-    Opm::Parser parser;
-    Opm::Deck parserDeck = parser.parseFile( filename1);
-    auto python = std::make_shared<Opm::Python>();
+    const auto parserDeck = Opm::Parser{}.parseFile( filename1);
+
+    // Must be mutable.
     Opm::EclipseGrid grid(10,10,10);
-    Opm::FieldPropsManager fp(parserDeck, Opm::Phases{true, true, true}, grid, Opm::TableManager());
-    Opm::Runspec runspec(parserDeck);
-    Opm::Schedule schedule( parserDeck, grid, fp, runspec, python );
+
+    const Opm::FieldPropsManager fp {
+        parserDeck,
+        Opm::Phases{true, true, true},
+        grid,
+        Opm::TableManager{}
+    };
+
+    const Opm::Runspec runspec { parserDeck };
+    const Opm::Schedule schedule {
+        parserDeck, grid, fp,
+        Opm::NumericalAquifers{},
+        runspec, std::make_shared<Opm::Python>()
+    };
+
     Opm::SimulatorTimer simtimer;
 
     boost::gregorian::date defaultStartDate( 2012, 1, 1);
@@ -117,7 +135,4 @@ BOOST_AUTO_TEST_CASE(CreateTimer)
                        Opm::unit::convert::to(simtimer.totalTime(), Opm::unit::minute) );
     BOOST_CHECK_EQUAL( Opm::unit::convert::to(testCurrentTime2, Opm::unit::minute),
                        Opm::unit::convert::to(simtimer.totalTime(), Opm::unit::minute) );
-
-
-
 }
