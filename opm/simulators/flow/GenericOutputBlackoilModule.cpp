@@ -905,14 +905,15 @@ doAllocBuffers(const unsigned bufferSize,
                                                }
                                            }
                                        }
-
+                                       unsigned phaseIdx = 0;
                                        for (int phase : phases) {
                                            if (FluidSystem::phaseIsActive(phase)) {
                                                handleScalarEntry((*v)[phase],
-                                                                 getName(entry.kw, entry.phaseType, phase),
+                                                                 getName(entry.kw, entry.phaseType, phaseIdx),
                                                                  entry.supported,
                                                                  required);
                                             }
+                                            ++phaseIdx;
                                        }
                                     }
                                  }, entry.data);
