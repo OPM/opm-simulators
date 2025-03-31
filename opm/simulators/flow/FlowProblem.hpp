@@ -342,7 +342,7 @@ public:
     /*!
      * \brief Called by the simulator before each time integration.
      */
-    void beginTimeStep()
+    void beginTimeStep(bool failed = false)
     {
         OPM_TIMEBLOCK(beginTimeStep);
         const int episodeIdx = this->episodeIndex();
@@ -366,7 +366,7 @@ public:
             this->model().linearizer().updateBoundaryConditionData();
         }
 
-        wellModel_.beginTimeStep();
+        wellModel_.beginTimeStep(failed);
         aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
 

@@ -116,9 +116,9 @@ prepareStep(const SimulatorTimerInterface& timer)
 
     // we skip the presolving of wells,
     // the optimization of gaslift and rebalancing of network
-    if (!lastStepFailed) {
-        simulator_.problem().beginTimeStep();
-    }
+    //if (!lastStepFailed) {
+        simulator_.problem().beginTimeStep(lastStepFailed);
+    //}
     unsigned numDof = simulator_.model().numGridDof();
     wasSwitched_.resize(numDof);
     std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
