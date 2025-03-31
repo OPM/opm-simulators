@@ -565,6 +565,18 @@ namespace Opm {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
 
+            const auto& network = this->schedule()[timeStepIdx].network();
+            if (network.active() && !this->node_pressures_.empty()) {
+                if (well->isProducer()) {
+                    const auto it = this->node_pressures_.find(well->wellEcl().groupName());
+                    if (it != this->node_pressures_.end()) {
+                        // The well belongs to a group which has a network nodal pressure,
+                        // set the dynamic THP constraint based on the network nodal pressure
+                        const Scalar nodal_pressure = it->second;
+                        well->setDynamicThpLimit(nodal_pressure);
+                    }
+                }
+            }
             try {
                 using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
                 GLiftEclWells ecl_well_map;

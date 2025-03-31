@@ -397,6 +397,15 @@ namespace Opm
         WellState<Scalar> well_state_copy = well_state;
         auto& ws = well_state_copy.well(this->indexOfWell());
 
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
+        if (has_thp_limit) {
+            ws.production_cmode = Well::ProducerCMode::THP;
+        }
+        else {
+            ws.production_cmode = Well::ProducerCMode::BHP;
+        }
+
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
@@ -715,19 +724,8 @@ namespace Opm
                         DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
-        // keep a copy of the original well state
-        const WellState<Scalar> well_state0 = well_state;
         const double dt = simulator.timeStepSize();
-        const auto& summary_state = simulator.vanguard().summaryState();
-        const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
-        bool converged;
-        if (has_thp_limit) {
-            well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
-        }
-        else {
-            well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
-        }
-        converged = iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
+        const bool converged = iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
             return true;
@@ -735,7 +733,6 @@ namespace Opm
         const int max_iter = this->param_.max_welleq_iter_;
         deferred_logger.debug("WellTest: Well equation for well " + this->name() + " failed converging in "
                               + std::to_string(max_iter) + " iterations");
-        well_state = well_state0;
         return false;
     }
 
