@@ -63,7 +63,7 @@ public:
     void deserialize(Restarter& /*res*/){};
 
     void beginEpisode(){};
-    void beginTimeStep(){};
+    void beginTimeStep(bool failed = false){};
     void beginIteration(){};
     // add the water rate due to aquifers to the source term.
     template<class RateVector, class Context>

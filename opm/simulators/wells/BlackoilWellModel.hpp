@@ -144,7 +144,7 @@ template<class Scalar> class WellContributions;
                 beginReportStep(simulator_.episodeIndex());
             }
 
-            void beginTimeStep();
+            void beginTimeStep(bool failed = false);
 
             void beginIteration()
             {
