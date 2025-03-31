@@ -136,6 +136,8 @@ T
 CompWellPrimaryVariables<FluidSystem, Indices>::
 getValue_(int index) const
 {
+    static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWellPrimaryVariables::getValue_");
+
     if constexpr (std::is_same_v<T, Scalar>) {
         return value_[index];
     } else {
@@ -149,6 +151,8 @@ typename CompWellPrimaryVariables<FluidSystem, Indices>::template FluidState<T>
 CompWellPrimaryVariables<FluidSystem, Indices>::
 toFluidState() const
 {
+    static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWellPrimaryVariables::toFluidState");
+
     CompositionalFluidState<T, FluidSystem> fluid_state;
     const auto& pressure = getValue_<T>(Bhp);
     std::array<T, FluidSystem::numComponents> total_molar_fractions;
@@ -162,10 +166,8 @@ toFluidState() const
     for (int i = 0; i < FluidSystem::numComponents; ++i) {
         if constexpr (std::is_same_v<T, EvalWell>) {
             total_molar_fractions[i].setValue(std::max(getValue(total_molar_fractions[i]), 1.e-10));
-        } else if constexpr (std::is_same_v<T, Scalar>) { // Scalar
+        } else { // Scalar
             total_molar_fractions[i] = std::max(total_molar_fractions[i], 1.e-10);
-        } else {
-            static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWellPrimaryVariables::toFluidState");
         }
         fluid_state.setMoleFraction(i, total_molar_fractions[i]);
     }

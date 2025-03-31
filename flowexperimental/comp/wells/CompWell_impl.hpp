@@ -21,6 +21,7 @@
 #include <opm/models/immiscible/immisciblemodel.hh>
 
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/StandardCond.hpp>
 
 namespace Opm {
 
@@ -51,46 +52,9 @@ calculateExplicitQuantities(const Simulator& simulator,
     updatePrimaryVariables(simulator, well_state);
     {
         // flash calculation in the wellbore
-        using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
-        FluidState fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
-        const bool single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state_scalar, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
-        // calculating the mass within the wellbore
-        constexpr Scalar R = Constants<Scalar>::R;
-        typename FluidSystem::template ParameterCache<Scalar> param_cache {CompositionalConfig::EOSType::PR};
-        param_cache.updatePhase(fluid_state_scalar, FluidSystem::oilPhaseIdx);
-        const Scalar Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state_scalar.pressure(FluidSystem::oilPhaseIdx) )/
-                           (R * fluid_state_scalar.temperature(FluidSystem::oilPhaseIdx));
-        param_cache.updatePhase(fluid_state_scalar, FluidSystem::gasPhaseIdx);
-        const Scalar Z_V = (param_cache.molarVolume(FluidSystem::gasPhaseIdx) * fluid_state_scalar.pressure(FluidSystem::gasPhaseIdx) )/
-                           (R * fluid_state_scalar.temperature(FluidSystem::gasPhaseIdx));
+        auto fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
 
-        Scalar L = fluid_state_scalar.L();
-        if (single_phase) {
-            // we check whether the phase label is correct
-            if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
-                L = 0.;
-                fluid_state_scalar.setLvalue(L);
-            } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
-                L = 1.;
-                fluid_state_scalar.setLvalue(L);
-            }
-        }
-        Scalar So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-        Scalar Sg = Opm::max(1 - So, 0.0);
-        Scalar sumS = So + Sg;
-        So /= sumS;
-        Sg /= sumS;
-
-        fluid_state_scalar.setSaturation(FluidSystem::oilPhaseIdx, So);
-        fluid_state_scalar.setSaturation(FluidSystem::gasPhaseIdx, Sg);
-
-        fluid_state_scalar.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
-        fluid_state_scalar.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
-
-        fluid_state_scalar.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state_scalar, param_cache, FluidSystem::oilPhaseIdx));
-        fluid_state_scalar.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state_scalar, param_cache, FluidSystem::gasPhaseIdx));
-        const auto density_oil = fluid_state_scalar.density(FluidSystem::oilPhaseIdx);
-        const auto density_gas = fluid_state_scalar.density(FluidSystem::gasPhaseIdx);
+        flashFluidState_(fluid_state_scalar);
 
         std::array<Scalar, FluidSystem::numComponents> oil_mass_fractions;
         std::array<Scalar, FluidSystem::numComponents> gas_mass_fractions;
@@ -100,9 +64,14 @@ calculateExplicitQuantities(const Simulator& simulator,
         }
 
         const Scalar wellbore_volume = this->wellbore_volume_;
+        const auto& so = fluid_state_scalar.saturation(FluidSystem::oilPhaseIdx);
+        const auto& sg = fluid_state_scalar.saturation(FluidSystem::gasPhaseIdx);
+        const auto& density_oil = fluid_state_scalar.density(FluidSystem::oilPhaseIdx);
+        const auto& density_gas = fluid_state_scalar.density(FluidSystem::gasPhaseIdx);
+
         for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-            this->component_masses_[compidx] = (oil_mass_fractions[compidx] * density_oil * So +
-                                          gas_mass_fractions[compidx] * density_gas * Sg) * wellbore_volume;
+            this->component_masses_[compidx] = (oil_mass_fractions[compidx] * density_oil * so +
+                                          gas_mass_fractions[compidx] * density_gas * sg) * wellbore_volume;
         }
     }
 }
@@ -132,46 +101,9 @@ CompWell<TypeTag>::
 updateTotalMass()
 {
     // flash calculation in the wellbore
-    using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
-    FluidState fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
-    const bool single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
-    // calculating the mass within the wellbore
-    constexpr Scalar R = Constants<Scalar>::R;
-    typename FluidSystem::template ParameterCache<EvalWell> param_cache {CompositionalConfig::EOSType::PR};
-    param_cache.updatePhase(fluid_state, FluidSystem::oilPhaseIdx);
-    const EvalWell Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state.pressure(FluidSystem::oilPhaseIdx) )/
-                       (R * fluid_state.temperature(FluidSystem::oilPhaseIdx));
-    param_cache.updatePhase(fluid_state, FluidSystem::gasPhaseIdx);
-    const EvalWell Z_V = (param_cache.molarVolume(FluidSystem::gasPhaseIdx) * fluid_state.pressure(FluidSystem::gasPhaseIdx) )/
-                       (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
+    auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
 
-    EvalWell L = fluid_state.L();
-    if (single_phase) {
-        // we check whether the phase label is correct
-        if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
-            L = 0.;
-            fluid_state.setLvalue(L);
-        } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
-            L = 1.;
-            fluid_state.setLvalue(L);
-        }
-    }
-    EvalWell So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-    EvalWell Sg = Opm::max(1 - So, 0.0);
-    EvalWell sumS = So + Sg;
-    So /= sumS;
-    Sg /= sumS;
-
-    fluid_state.setSaturation(FluidSystem::oilPhaseIdx, So);
-    fluid_state.setSaturation(FluidSystem::gasPhaseIdx, Sg);
-
-    fluid_state.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
-    fluid_state.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
-
-    fluid_state.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::oilPhaseIdx));
-    fluid_state.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::gasPhaseIdx));
-    const auto density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
-    const auto density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
+    flashFluidState_(fluid_state);
 
     std::array<EvalWell, FluidSystem::numComponents> oil_mass_fractions;
     std::array<EvalWell, FluidSystem::numComponents> gas_mass_fractions;
@@ -181,15 +113,19 @@ updateTotalMass()
     }
 
     EvalWell total_mass = 0.;
+    const auto& so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
+    const auto& sg = fluid_state.saturation(FluidSystem::gasPhaseIdx);
+    const auto& density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
+    const auto& density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
     const Scalar wellbore_volume = this->wellbore_volume_;
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-        this->new_component_masses_[compidx] = (oil_mass_fractions[compidx] * density_oil * So +
-                                      gas_mass_fractions[compidx] * density_gas * Sg) * wellbore_volume;
+        this->new_component_masses_[compidx] = (oil_mass_fractions[compidx] * density_oil * so +
+                                      gas_mass_fractions[compidx] * density_gas * sg) * wellbore_volume;
         total_mass += this->new_component_masses_[compidx];
     }
 
     // TODO: some properties should go to the fluid_state?
-    fluid_density_ = density_oil * So + density_gas * Sg;
+    fluid_density_ = density_oil * so + density_gas * sg;
 
     // TODO: the derivative of the mass fractions does not look correct
     for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
@@ -205,133 +141,15 @@ updateSurfaceQuantities(const Simulator& simulator)
     const auto& surface_cond = simulator.vanguard().eclState().getTableManager().stCond();
     if (this->well_ecl_.isInjector()) { // we look for well stream for injection composition
         const auto& inj_composition = this->well_ecl_.getInjectionProperties().gasInjComposition();
-        using FluidStateScalar = CompositionalFluidState<Scalar, FluidSystem>;
-        FluidStateScalar fluid_state;
-        fluid_state.setTemperature(surface_cond.temperature);
-        // we can have a function to set the pressure for all the phases
-        fluid_state.setPressure(FluidSystem::oilPhaseIdx, surface_cond.pressure);
-        fluid_state.setPressure(FluidSystem::gasPhaseIdx, surface_cond.pressure);
-
+        FluidState<Scalar> fluid_state;
         for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents; ++comp_idx) {
             fluid_state.setMoleFraction(comp_idx, std::max(inj_composition[comp_idx], 1.e-10));
         }
-
-        for (int i = 0; i < FluidSystem::numComponents; ++i) {
-            fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
-        }
-
-        fluid_state.setLvalue(-1.);
-
-        const bool single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
-
-        constexpr Scalar R = Constants<Scalar>::R;
-        typename FluidSystem::template ParameterCache<Scalar> param_cache {CompositionalConfig::EOSType::PR};
-        param_cache.updatePhase(fluid_state, FluidSystem::oilPhaseIdx);
-        const Scalar Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state.pressure(FluidSystem::oilPhaseIdx) )/
-                           (R * fluid_state.temperature(FluidSystem::oilPhaseIdx));
-        param_cache.updatePhase(fluid_state, FluidSystem::gasPhaseIdx);
-        const Scalar Z_V = (param_cache.molarVolume(FluidSystem::gasPhaseIdx) * fluid_state.pressure(FluidSystem::gasPhaseIdx) )/
-                           (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
-
-        Scalar L = fluid_state.L();
-        if (single_phase) {
-            // we check whether the phase label is correct
-            if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
-                L = 0.;
-                fluid_state.setLvalue(L);
-            } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
-                L = 1.;
-                fluid_state.setLvalue(L);
-            }
-        }
-        Scalar So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-        Scalar Sg = Opm::max(1 - So, 0.0);
-        Scalar sumS = So + Sg;
-        So /= sumS;
-        Sg /= sumS;
-
-        fluid_state.setSaturation(FluidSystem::oilPhaseIdx, So);
-        fluid_state.setSaturation(FluidSystem::gasPhaseIdx, Sg);
-
-        fluid_state.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
-        fluid_state.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
-
-        fluid_state.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::oilPhaseIdx));
-        fluid_state.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::gasPhaseIdx));
-        const auto density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
-        const auto density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
-
-        for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-            this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
-                    fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
-            this->surface_conditions_.mass_fractions_[FluidSystem::gasPhaseIdx][compidx] =
-                    fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
-        }
-        this->surface_conditions_.surface_densities_[FluidSystem::oilPhaseIdx] = density_oil;
-        this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
-        this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = So;
-        this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = Sg;
+        updateSurfanceCondition_(surface_cond, fluid_state);
     } else { // the composition will be from the wellbore
         // here, it will use the composition from the wellbore and the pressure and temperature from the surface condition
-        using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
-        FluidState fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
-        fluid_state.setTemperature(surface_cond.temperature);
-        fluid_state.setPressure(FluidSystem::oilPhaseIdx, surface_cond.pressure);
-        fluid_state.setPressure(FluidSystem::gasPhaseIdx, surface_cond.pressure);
-
-        for (int i = 0; i < FluidSystem::numComponents; ++i) {
-            fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
-        }
-
-        const bool single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
-
-        constexpr Scalar R = Constants<Scalar>::R;
-        typename FluidSystem::template ParameterCache<EvalWell> param_cache {CompositionalConfig::EOSType::PR};
-        param_cache.updatePhase(fluid_state, FluidSystem::oilPhaseIdx);
-        const EvalWell Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state.pressure(FluidSystem::oilPhaseIdx) )/
-                             (R * fluid_state.temperature(FluidSystem::oilPhaseIdx));
-        param_cache.updatePhase(fluid_state, FluidSystem::gasPhaseIdx);
-        const EvalWell Z_V = (param_cache.molarVolume(FluidSystem::gasPhaseIdx) * fluid_state.pressure(FluidSystem::gasPhaseIdx) )/
-                             (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
-
-        EvalWell L = fluid_state.L();
-        if (single_phase) {
-            // we check whether the phase label is correct
-            if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
-                L = 0.;
-                fluid_state.setLvalue(L);
-            } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
-                L = 1.;
-                fluid_state.setLvalue(L);
-            }
-        }
-        EvalWell So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-        EvalWell Sg = Opm::max(1 - So, 0.0);
-        EvalWell sumS = So + Sg;
-        So /= sumS;
-        Sg /= sumS;
-
-        fluid_state.setSaturation(FluidSystem::oilPhaseIdx, So);
-        fluid_state.setSaturation(FluidSystem::gasPhaseIdx, Sg);
-
-        fluid_state.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
-        fluid_state.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
-
-        fluid_state.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::oilPhaseIdx));
-        fluid_state.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::gasPhaseIdx));
-        const auto density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
-        const auto density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
-
-        for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
-            this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
-                    fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
-            this->surface_conditions_.mass_fractions_[FluidSystem::gasPhaseIdx][compidx] =
-                    fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
-        }
-        this->surface_conditions_.surface_densities_[FluidSystem::oilPhaseIdx] = density_oil;
-        this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
-        this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = So;
-        this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = Sg;
+        auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
+        updateSurfanceCondition_(surface_cond, fluid_state);
      }
 }
 
@@ -779,6 +597,89 @@ updateWellControl(const SummaryState& summary_state,
         }
         std::cout << " well " << this->well_ecl_.name() << " changed control from " << from << " to " << to << std::endl;
     }
+}
+
+template <typename TypeTag>
+template <typename T>
+void
+CompWell<TypeTag>::
+updateSurfanceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state)
+{
+    static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::updateSurfanceCondition_");
+
+    fluid_state.setTemperature(surface_cond.temperature);
+    fluid_state.setPressure(FluidSystem::oilPhaseIdx, surface_cond.pressure);
+    fluid_state.setPressure(FluidSystem::gasPhaseIdx, surface_cond.pressure);
+
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
+    }
+
+    flashFluidState_(fluid_state);
+
+    for (unsigned compidx = 0; compidx < FluidSystem::numComponents; ++compidx) {
+        this->surface_conditions_.mass_fractions_[FluidSystem::oilPhaseIdx][compidx] =
+                fluid_state.massFraction(FluidSystem::oilPhaseIdx, compidx);
+        this->surface_conditions_.mass_fractions_[FluidSystem::gasPhaseIdx][compidx] =
+                fluid_state.massFraction(FluidSystem::gasPhaseIdx, compidx);
+    }
+    const auto& density_oil = fluid_state.density(FluidSystem::oilPhaseIdx);
+    const auto& density_gas = fluid_state.density(FluidSystem::gasPhaseIdx);
+    this->surface_conditions_.surface_densities_[FluidSystem::oilPhaseIdx] = density_oil;
+    this->surface_conditions_.surface_densities_[FluidSystem::gasPhaseIdx] = density_gas;
+    this->surface_conditions_.volume_fractions_[FluidSystem::oilPhaseIdx] = fluid_state.saturation(FluidSystem::oilPhaseIdx);
+    this->surface_conditions_.volume_fractions_[FluidSystem::gasPhaseIdx] = fluid_state.saturation(FluidSystem::gasPhaseIdx);
+}
+
+template <typename TypeTag>
+template <typename T>
+void
+CompWell<TypeTag>::
+flashFluidState_(FluidState<T>& fluid_state)
+{
+    static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::flashFluidState_");
+
+    bool single_phase = false;
+    if constexpr (std::is_same_v<T, Scalar>) {
+        single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
+    } else { // EvalWell
+        single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
+    }
+
+    constexpr Scalar R = Constants<Scalar>::R;
+    typename FluidSystem::template ParameterCache<T> param_cache {CompositionalConfig::EOSType::PR};
+    param_cache.updatePhase(fluid_state, FluidSystem::oilPhaseIdx);
+    const auto Z_L = (param_cache.molarVolume(FluidSystem::oilPhaseIdx) * fluid_state.pressure(FluidSystem::oilPhaseIdx) )/
+                     (R * fluid_state.temperature(FluidSystem::oilPhaseIdx));
+    param_cache.updatePhase(fluid_state, FluidSystem::gasPhaseIdx);
+    const auto Z_V = (param_cache.molarVolume(FluidSystem::gasPhaseIdx) * fluid_state.pressure(FluidSystem::gasPhaseIdx) )/
+                     (R * fluid_state.temperature(FluidSystem::gasPhaseIdx));
+
+    auto L = fluid_state.L();
+    if (single_phase) {
+        // we check whether the phase label is correct
+        if (L > 0.9 && Z_L > 0.8) { // marked as liquid phase while compress factor shows it is gas
+            L = 0.;
+            fluid_state.setLvalue(L);
+        } else if (L < 0.1 && Z_V < 0.5) { // marked as gas phase while compress factor shows it is liquid
+            L = 1.;
+            fluid_state.setLvalue(L);
+        }
+    }
+    T So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
+    T Sg = Opm::max(1 - So, 0.0);
+    T sumS = So + Sg;
+    So /= sumS;
+    Sg /= sumS;
+
+    fluid_state.setSaturation(FluidSystem::oilPhaseIdx, So);
+    fluid_state.setSaturation(FluidSystem::gasPhaseIdx, Sg);
+
+    fluid_state.setCompressFactor(FluidSystem::oilPhaseIdx, Z_L);
+    fluid_state.setCompressFactor(FluidSystem::gasPhaseIdx, Z_V);
+
+    fluid_state.setDensity(FluidSystem::oilPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::oilPhaseIdx));
+    fluid_state.setDensity(FluidSystem::gasPhaseIdx, FluidSystem::density(fluid_state, param_cache, FluidSystem::gasPhaseIdx));
 }
 
 } // end of namespace Opm

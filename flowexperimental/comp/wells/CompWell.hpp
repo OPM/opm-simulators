@@ -53,6 +53,9 @@ public:
 
     using CompConnectionData = PerforationData<Scalar>;
 
+    template <typename T>
+    using FluidState = CompositionalFluidState<T, FluidSystem>;
+
     // TODO: this can be a rate converter role later
     // currently, it has the surface densities for each phase and volume fractions for each phase
     // it is part of the secondary variables used in the assembling of the well equations
@@ -173,6 +176,14 @@ private:
 
     void updateWellControl(const SummaryState& summary_state,
                            SingleCompWellState<Scalar>& well_state) const;
+
+    template <typename T>
+    void
+    updateSurfanceCondition_(const StandardCond& surface_cond, FluidState<T>& fluid_state);
+
+    template <typename T>
+    void
+    flashFluidState_(FluidState<T>& fluid_state);
 };
 
 } // end of namespace Opm
