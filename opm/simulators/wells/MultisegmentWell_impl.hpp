@@ -1942,7 +1942,7 @@ namespace Opm
         refill(this->linSys_.duneCGlobal_, flatC);
 
         // Open the file for writing
-        std::ofstream outFile(this->name() + "-rank" + std::to_string(this->parallel_well_info_.communication().size()) + "-" + std::to_string(this->parallel_well_info_.communication().rank()) + ".txt");
+        std::ofstream outFile(this->name() + "-rank" + std::to_string(this->parallel_well_info_.communication().size()) + "-" + std::to_string(this->parallel_well_info_.communication().rank()) + ".txt", std::ios::app);
 
         if (outFile.is_open()) {
             // Write the three matrices
