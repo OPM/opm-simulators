@@ -52,7 +52,7 @@ calculateExplicitQuantities(const Simulator& simulator,
     {
         // flash calculation in the wellbore
         using FluidState = CompositionalFluidState<Scalar, FluidSystem>;
-        FluidState fluid_state_scalar = this->primary_variables_.toFluidStateScalar();
+        FluidState fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
         const bool single_phase = PTFlash<Scalar, FluidSystem>::flash_solve_scalar_(fluid_state_scalar, "ssi", 1.e-6, CompositionalConfig::EOSType::PR); //, 3);
         // calculating the mass within the wellbore
         constexpr Scalar R = Constants<Scalar>::R;
@@ -133,7 +133,7 @@ updateTotalMass()
 {
     // flash calculation in the wellbore
     using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
-    FluidState fluid_state = this->primary_variables_.toFluidState();
+    FluidState fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
     const bool single_phase = PTFlash<Scalar, FluidSystem>::solve(fluid_state, "ssi", 1.e-6, CompositionalConfig::EOSType::PR);
     // calculating the mass within the wellbore
     constexpr Scalar R = Constants<Scalar>::R;
@@ -274,7 +274,7 @@ updateSurfaceQuantities(const Simulator& simulator)
     } else { // the composition will be from the wellbore
         // here, it will use the composition from the wellbore and the pressure and temperature from the surface condition
         using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
-        FluidState fluid_state = this->primary_variables_.toFluidState();
+        FluidState fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
         fluid_state.setTemperature(surface_cond.temperature);
         fluid_state.setPressure(FluidSystem::oilPhaseIdx, surface_cond.pressure);
         fluid_state.setPressure(FluidSystem::gasPhaseIdx, surface_cond.pressure);
@@ -658,7 +658,7 @@ updateWellStateFromPrimaryVariables(SingleCompWellState<Scalar>& well_state) con
     well_state.bhp = this->primary_variables_.getBhp().value();
 
     auto& total_molar_fractions = well_state.total_molar_fractions;
-    const auto fluid_state = this->primary_variables_.toFluidStateScalar();
+    const auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
     for (unsigned comp_idx = 0; comp_idx < FluidSystem::numComponents - 1; ++comp_idx) {
         total_molar_fractions[comp_idx] = fluid_state.moleFraction(comp_idx);
     }

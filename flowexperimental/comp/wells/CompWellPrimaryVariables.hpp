@@ -57,15 +57,14 @@ public:
 
     using BVectorWell = typename CompWellEquations<Scalar, numWellEq, numResEq>::BVectorWell;
 
-    // TODO: trying to refactor to avoid duplication
-    using FluidStateScalar = CompositionalFluidState<Scalar, FluidSystem>;
-    using FluidState = CompositionalFluidState<EvalWell, FluidSystem>;
+    template <typename T>
+    using FluidState = CompositionalFluidState<T, FluidSystem>;
 
-    FluidStateScalar toFluidStateScalar() const;
-
-    FluidState toFluidState() const;
+    template <typename T>
+    FluidState<T> toFluidState() const;
 
     void update(const SingleCompWellState<Scalar>& well_state);
+
     void updateEvaluation();
 
     EvalWell getBhp() const;
@@ -77,12 +76,17 @@ public:
     static Eval restrictEval(const EvalWell& in);
 
     void updateNewton(const BVectorWell& dwells);
+
 private:
     std::array<Scalar, numWellEq> value_;
     std::array<EvalWell, numWellEq> evaluation_;
     // temperature for now is constant, so it is not part of the primary variables
     // we need it for the flash calculation
     Scalar temperature_{0.};
+
+    template <typename T>
+    T getValue_(int index) const;
+
 };
 
 } // end of namespace Opm

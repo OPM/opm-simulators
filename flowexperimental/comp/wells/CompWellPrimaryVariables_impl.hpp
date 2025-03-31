@@ -61,74 +61,6 @@ updateEvaluation()
 }
 
 template <typename FluidSystem, typename Indices>
-typename CompWellPrimaryVariables<FluidSystem, Indices>::FluidStateScalar
-CompWellPrimaryVariables<FluidSystem, Indices>::
-toFluidStateScalar() const
-{
-    FluidStateScalar fluid_state;
-    // will be different if more connections are involved
-    const auto& pressure = value_[Bhp];
-    std::array<Scalar, FluidSystem::numComponents> total_molar_fractions;
-    for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
-        total_molar_fractions[i] = value_[i + 1];
-    }
-    total_molar_fractions[FluidSystem::numComponents - 1] = 1.0 - std::accumulate(total_molar_fractions.begin(),
-                                                                                 total_molar_fractions.end() - 1,
-                                                                                 0.0);
-    for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setMoleFraction(i, std::max(total_molar_fractions[i], 1.e-10));
-    }
-
-    fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
-    fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
-
-    fluid_state.setTemperature(temperature_);
-
-    for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
-    }
-
-    fluid_state.setLvalue(-1.);
-
-    return fluid_state;
-}
-
-template <typename FluidSystem, typename Indices>
-typename CompWellPrimaryVariables<FluidSystem, Indices>::FluidState
-CompWellPrimaryVariables<FluidSystem, Indices>::
-toFluidState() const
-{
-    FluidState fluid_state;
-    // will be different if more connections are involved
-    const auto& pressure = evaluation_[Bhp];
-    std::array<EvalWell, FluidSystem::numComponents> total_molar_fractions;
-    EvalWell sum = 0.;
-    for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
-        total_molar_fractions[i] = evaluation_[i + 1];
-        sum += total_molar_fractions[i];
-    }
-    total_molar_fractions[FluidSystem::numComponents - 1] = 1.0 - sum;
-
-    for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        total_molar_fractions[i].setValue(std::max(total_molar_fractions[i].value(), 1.e-10));
-        fluid_state.setMoleFraction(i, total_molar_fractions[i]);
-    }
-
-    fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
-    fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
-
-    fluid_state.setTemperature(temperature_);
-
-    for (int i = 0; i < FluidSystem::numComponents; ++i) {
-        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
-    }
-
-    fluid_state.setLvalue(-1.);
-
-    return fluid_state;
-}
-
-template <typename FluidSystem, typename Indices>
 typename CompWellPrimaryVariables<FluidSystem, Indices>::EvalWell
 CompWellPrimaryVariables<FluidSystem, Indices>::
 getBhp() const
@@ -196,6 +128,60 @@ updateNewton(const BVectorWell& dwells)
     value_[2] = mole_fractions[1] / sum_mole_fraction;
 
     updateEvaluation();
+}
+
+template <typename FluidSystem, typename Indices>
+template <typename T>
+T
+CompWellPrimaryVariables<FluidSystem, Indices>::
+getValue_(int index) const
+{
+    if constexpr (std::is_same_v<T, Scalar>) {
+        return value_[index];
+    } else {
+        return evaluation_[index];
+    }
+}
+
+template <typename FluidSystem, typename Indices>
+template <typename T>
+typename CompWellPrimaryVariables<FluidSystem, Indices>::template FluidState<T>
+CompWellPrimaryVariables<FluidSystem, Indices>::
+toFluidState() const
+{
+    CompositionalFluidState<T, FluidSystem> fluid_state;
+    const auto& pressure = getValue_<T>(Bhp);
+    std::array<T, FluidSystem::numComponents> total_molar_fractions;
+    T sum = 0.;
+    for (int i = 0; i < FluidSystem::numComponents - 1; ++i) {
+        total_molar_fractions[i] = getValue_<T>(i + 1);
+        sum += total_molar_fractions[i];
+    }
+    total_molar_fractions[FluidSystem::numComponents - 1] = 1.0 - sum;
+
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        if constexpr (std::is_same_v<T, EvalWell>) {
+            total_molar_fractions[i].setValue(std::max(getValue(total_molar_fractions[i]), 1.e-10));
+        } else if constexpr (std::is_same_v<T, Scalar>) { // Scalar
+            total_molar_fractions[i] = std::max(total_molar_fractions[i], 1.e-10);
+        } else {
+            static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWellPrimaryVariables::toFluidState");
+        }
+        fluid_state.setMoleFraction(i, total_molar_fractions[i]);
+    }
+
+    fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
+    fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
+
+    fluid_state.setTemperature(temperature_);
+
+    for (int i = 0; i < FluidSystem::numComponents; ++i) {
+        fluid_state.setKvalue(i, fluid_state.wilsonK_(i));
+    }
+
+    fluid_state.setLvalue(-1.);
+
+    return fluid_state;
 }
 
 } // end of namespace Opm
