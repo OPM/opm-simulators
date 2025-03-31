@@ -176,3 +176,17 @@ under the Apache 2.0 License.},
 	year = {2023},
 	file = {2308.03120v1.Bandicoot_C_Library_for_GPU_Linear_Algebra_and_Scientific_Computing.pdf:/home/kjetil/Zotero/storage/TMSPZFI9/2308.03120v1.Bandicoot_C_Library_for_GPU_Linear_Algebra_and_Scientific_Computing.pdf:application/pdf},
 }
+
+@proceedings{andersen_ilu_dilu_rsc,
+    author = {Andersen, T. M. and Torben, J. and Lye, K. O. and Rasmussen, A. F. and Lie, K. A.},
+    title = {A Comparison of DILU And ILU(0) as GPU-Accelerated Preconditioners},
+    volume = {SPE Reservoir Simulation Conference},
+    series = {SPE Reservoir Simulation Conference},
+    pages = {D021S009R004},
+    year = {2025},
+    month = {03},
+    abstract = {We develop auto-tuned GPU implementations of ILU(0) and DILU preconditioners using mixed precision and compare their performance against various GPU-based ILU(0) implementations, integrated into the open-source OPM Flow reservoir simulator. The preconditioners are parallelized conservatively to ensure that the results match those from serial computation up to instruction set equivalence. Our implementation incorporates techniques such as graph coloring, row reordering, matrix splitting, mixed-precision schemes, and auto-tuning to improve runtime efficiency.We evaluate the preconditioners on both NVIDIA and AMD architectures, spanning consumer-grade, workstation, and HPC-grade GPUs. The results show that ILU(0) and DILU exhibit similar numerical behavior and performance for the benchmark runs, although DILU can be implemented to use significantly less memory. Both implementations outperform a reference ILU(0) preconditioner using hipSPARSE or cuSPARSE. The triangular solve achieves a maximum speedup of 4x, and the factorization is sped up by a factor of 16, resulting in an overall linear solver speedup of 2.8x. Profiling confirms that we use more than half of the available memory bandwidth on a gaming-grade GPU and close to half on an HPC-grade GPU. Additionally, our preconditioners outperform the more sophisticated CPR preconditioner on a 16-core CPU for medium and large realizations of Case C from the 11th SPE Comparative Solution Project, achieving speedups of up to 2.5x per linear solve. However, the implementations do not fully scale to utilize the resources of the HPC card efficiently, as their performance is comparable to that of consumer-grade GPUs.},
+    doi = {10.2118/223873-MS},
+    url = {https://doi.org/10.2118/223873-MS},
+    eprint = {https://onepetro.org/spersc/proceedings-pdf/25RSC/25RSC/D021S009R004/4646931/spe-223873-ms.pdf},
+}
