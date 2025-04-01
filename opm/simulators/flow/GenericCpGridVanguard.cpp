@@ -289,7 +289,7 @@ distributeFieldProps_(EclipseState& eclState1)
 {
     OPM_TIMEBLOCK(distributeFProps);
     const auto mpiSize = this->grid_->comm().size();
-
+   
     if (mpiSize == 1) {
         return;
     }

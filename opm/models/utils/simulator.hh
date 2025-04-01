@@ -141,13 +141,13 @@ public:
 
         // Only relevant for CpGrid and serial runs.
         if (verbose_) {
-            std::cout << "Adding LGRs, if any, in serial run\n" << std::flush;
+            std::cout << "Adding LGRs, if any\n" << std::flush;
         }
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
             vanguard_->addLgrs();
-            OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation vanguard in serial run failed: ", comm);
+            OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation vanguard failed: ", comm);
         }
 
         if (verbose_) {

@@ -335,8 +335,8 @@ protected:
         for (const auto& element : elements(this->gridView()))
         {
             const auto elemIdx = elemMapper.index(element);
-            unsigned cartesianCellIdx = cartesianIndex(elemIdx);
-            cartesianToCompressed_[cartesianCellIdx] = elemIdx;
+            unsigned cartesianCellIdx = this->gridView().grid().globalIdSet().id(element); //cartesianIndex(elemIdx);
+            cartesianToCompressed_[cartesianCellIdx] = elemIdx; // old code rewrites entry for children same parent
             if (element.partitionType() == Dune::InteriorEntity)
             {
                 is_interior_[elemIdx] = 1;
@@ -362,11 +362,14 @@ protected:
             cellCenterDepth_[elemIdx] = cellCenterDepth(element);
 
             if (!num_aqu_cells.empty()) {
-                const unsigned int global_index = cartesianIndex(elemIdx);
+                std::cout<< num_aqu_cells.size() << "num_aq_cells size " << std::endl;
+                const unsigned int global_index  = this->gridView().grid().globalIdSet().id(element.getOrigin());
+                    //cartesianIndex(elemIdx); // this is not the global index for CpGrid with LGRs
                 const auto search = num_aqu_cells.find(global_index);
                 if (search != num_aqu_cells.end()) {
                     // updating the cell depth using aquifer cell depth
-                    cellCenterDepth_[elemIdx] = search->second->depth;
+                   cellCenterDepth_[elemIdx] = // search->second->depth; // this is depth of parent cell!!!!
+                       cellCenterDepth(element);
                 }
             }
         }

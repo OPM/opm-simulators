@@ -272,7 +272,7 @@ public:
         auto finishTransmissibilities = [updated = false, this]() mutable
         {
             if (updated) { return; }
-
+            std::cout<< "hola from finishTrans flowProBO" << std::endl;
             this->transmissibilities_.finishInit([&vg = this->simulator().vanguard()](const unsigned int it) {
                 return vg.gridIdxToEquilGridIdx(it);
             });
@@ -378,6 +378,7 @@ public:
             const auto& vanguard = this->simulator().vanguard();
             const auto& gridView = vanguard.gridView();
             const int numElements = gridView.size(/*codim=*/0);
+            std::cout<< "numEleme from fpbo above polymer: " << numElements << std::endl;
             this->polymer_.maxAdsorption.resize(numElements, 0.0);
         }
 
@@ -481,7 +482,7 @@ public:
                             [&vg = this->simulator().vanguard()]
                             (const unsigned int i)
                     {
-                        return vg.gridIdxToEquilGridIdx(i);
+                        return vg.gridIdxToEquilGridIdx(i); // lookupdata???
                     });
             });
         }

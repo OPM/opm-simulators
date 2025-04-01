@@ -852,7 +852,7 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
     , globalInterRegFlows_(InterRegFlowMap::createMapFromNames(toVector(fipRegionsInterregFlow)))
 {
     // index maps only have to be build when reordering is needed
-    if (!needsReordering && !isParallel())
+    if ((!needsReordering && !isParallel()) || (isParallel() && (grid.maxLevel()>0)))
         return;
 
     const CollectiveCommunication& comm = grid.comm();
@@ -880,6 +880,7 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
             // We need a mapping from local to global grid, here we
             // use equilGrid which represents a view on the global grid
             // reserve memory
+
             const std::size_t globalSize = equilGrid->leafGridView().size(0);
             globalCartesianIndex_.resize(globalSize, -1);
             const EquilGridView equilGridView = equilGrid->leafGridView();
