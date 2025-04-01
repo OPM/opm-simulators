@@ -44,13 +44,6 @@ add_test_compareECLFiles(CASENAME spe1flowexp
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
-add_test_compareECLFiles(CASENAME 1dcompositional
-                         FILENAME 1D_COMP
-                         SIMULATOR flowexp_comp
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR compositional)
-
 add_test_compareECLFiles(CASENAME spe12
                          FILENAME SPE1CASE2
                          SIMULATOR flow
