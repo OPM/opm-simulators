@@ -1619,6 +1619,12 @@ add_test_compareECLFiles(CASENAME gsatprod
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR satellite)
+add_test_compareECLFiles(CASENAME network_01_wtest
+                         FILENAME NETWORK-01-WTEST
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR network)
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
                            FILENAME SPE1CASE2
