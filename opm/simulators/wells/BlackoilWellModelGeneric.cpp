@@ -1408,13 +1408,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 }
 
 template<class Scalar>
-bool BlackoilWellModelGeneric<Scalar>::
-hasTHPConstraints() const
-{
-    return BlackoilWellModelConstraints(*this).hasTHPConstraints();
-}
-
-template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 updateNetworkActiveState(const int report_step) {
     const auto& network = schedule()[report_step].network();

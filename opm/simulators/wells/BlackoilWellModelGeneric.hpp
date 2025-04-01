@@ -154,7 +154,7 @@ public:
     }
 
     /*
-      Will return the currently active nupcolWellState; ze
+      Will return the currently active nupcolWellState; must update
       the internal nupcol wellstate with updateNupcolWGState() first.
     */
     const WellState<Scalar>& nupcolWellState() const
@@ -195,9 +195,6 @@ public:
     }
 
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
-
-    /// Return true if any well has a THP constraint.
-    bool hasTHPConstraints() const;
 
     /// Checks if network is active (at least one network well on prediction).
     void updateNetworkActiveState(const int report_step);
