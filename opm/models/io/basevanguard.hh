@@ -121,6 +121,15 @@ public:
         }
     }
 
+    /*!
+     * \brief Synchronize cell ids, if LGRs were added before/after loadBalance. Only supported for CpGrid - for now.
+     */
+    void synchronizeCellIds()
+    {
+        if(&asImp_() != this) { // this check prevents an infinite-recursion warning
+            asImp_().synchronizeCellIds();
+        }
+    }
 protected:
     // this method should be called after the grid has been allocated
     void finalizeInit_()

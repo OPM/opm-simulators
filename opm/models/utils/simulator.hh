@@ -185,16 +185,20 @@ public:
                                exceptionThrown, what);
 
         if (verbose_)
-            std::cout << "Distributing the vanguard's data\n" << std::flush;
+            std::cout << "Distributing the vanguard's data, adding LGRs - if any - on distributed view.\n" << std::flush;
 
         try
-        { vanguard_->loadBalance(); }
+        {
+            vanguard_->loadBalance();
+            if (comm.size()>1) {
+                vanguard_->addLgrs();
+                vanguard_->synchronizeCellIds();}
+        }
         catch (const std::exception& e) {
             catchAction(e, verbose_);
         }
-        checkParallelException("Could not distribute the vanguard data: ",
+        checkParallelException(" Could not distribute the vanguard data: ",
                                exceptionThrown, what);
-        
 
         if (verbose_)
             std::cout << "Allocating the model\n" << std::flush;
