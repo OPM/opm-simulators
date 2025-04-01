@@ -608,14 +608,14 @@ updateGroupIndividualControl(const Group& group,
             if (group_is_oscillating) {
                 continue;
             }
-
+            const auto currentControl = wellModel_.groupState().injection_control(group.name(), phase);
             const auto& changed_this = this->checkGroupInjectionConstraints(group,
                                                                             reportStepIdx,
                                                                             phase);
             if (changed_this.first != Group::InjectionCMode::NONE)
             {
                 switched_inj[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(
-                             changed_this.first);
+                             currentControl);
 
                 this->actionOnBrokenConstraints(group, changed_this.first, phase,
                                                 group_state, deferred_logger);
@@ -660,6 +660,7 @@ updateGroupIndividualControl(const Group& group,
 
         if (changed_this.first != Group::ProductionCMode::NONE)
         {
+            const auto currentControl = wellModel_.groupState().production_control(group.name());
             std::optional<std::string> worst_offending_well = std::nullopt;
             changed = this->actionOnBrokenConstraints(group, reportStepIdx,              
                                             controls.group_limit_action,
@@ -668,7 +669,7 @@ updateGroupIndividualControl(const Group& group,
                                             group_state, deferred_logger);
 
             if(changed) {
-                switched_prod[group.name()].push_back(changed_this.first);
+                switched_prod[group.name()].push_back(currentControl);
                 WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                               group,
                                                                               wellModel_.schedule(),
