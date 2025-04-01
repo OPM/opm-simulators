@@ -508,9 +508,9 @@ public:
 
         // the MICP processes change the porosity
         if constexpr (enableMICP){
-          Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
-          Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
-          porosity_ += - biofilm_ - calcite_;
+            Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
+            Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
+            porosity_ += - biofilm_ - calcite_;
         }
 
         // deal with salt-precipitation

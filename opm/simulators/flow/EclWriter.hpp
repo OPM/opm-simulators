@@ -368,7 +368,7 @@ public:
 
         // We always calculate the initial fip values as it may be used by various
         // keywords in the Schedule, e.g. FIP=2 in RPTSCHED but no FIP in RPTSOL
-        const Inplace inplace = outputModule_->calc_initial_inplace(simulator_.gridView().comm());
+        outputModule_->calc_initial_inplace(simulator_.gridView().comm());
 
         // check if RPTSOL entry has FIP output
         const auto& fip = simulator_.vanguard().eclState().getEclipseConfig().fip();
@@ -380,7 +380,7 @@ public:
                 boost::posix_time::from_time_t(simulator_.vanguard().schedule().getStartTime());
 
             if (this->collectOnIORank_.isIORank()) {
-                inplace_ = inplace;
+                inplace_ = outputModule_->initialInplace();
 
                 outputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time,
                                                   false, simulator_.gridView().comm());
@@ -559,6 +559,37 @@ public:
         const auto& gridView = this->simulator_.vanguard().gridView();
         const auto numElements = gridView.size(/*codim=*/0);
 
+        // Try to load restart step 0 to calculate initial FIP
+        {
+            this->outputModule_->allocBuffers(numElements,
+                                              0,
+                                              /*isSubStep = */false,
+                                              /*log = */      false,
+                                              /*isRestart = */true);
+
+            const auto restartSolution =
+                loadParallelRestartSolution(this->eclIO_.get(),
+                                            solutionKeys, gridView.comm(), 0);
+
+            if (!restartSolution.empty()) {
+                for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
+                    const auto globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                    this->outputModule_->setRestart(restartSolution, elemIdx, globalIdx);
+                }
+
+                this->simulator_.problem().readSolutionFromOutputModule(0, true);
+                ElementContext elemCtx(this->simulator_);
+                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                    this->outputModule_->updateFluidInPlace(elemCtx);
+                }
+
+                this->outputModule_->calc_initial_inplace(this->simulator_.gridView().comm());
+            }
+        }
+
         {
             // The episodeIndex is rewound one step back before calling
             // beginRestart() and cannot be used here.  We just ask the
@@ -649,26 +680,13 @@ public:
 
     void endRestart()
     {
-        // We need these objects to satisfy the interface requirements of
-        // member function calc_inplace(), but the objects are otherwise
-        // unused and intentionally so.
-        auto miscSummaryData = std::map<std::string, double>{};
-        auto regionData = std::map<std::string, std::vector<double>>{};
-
-        // Note: calc_inplace() *also* assigns the output module's
-        // "initialInplace_" data member.  This is, semantically speaking,
-        // very wrong, as the run's intial volumes then correspond to the
-        // volumes at the restart time instead of the start of the base run.
-        // Nevertheless, this is how Flow has "always" done it.
-        //
-        // See GenericOutputBlackoilModule::accumulateRegionSums() for
-        // additional comments.
-        auto inplace = this->outputModule_
-            ->calc_inplace(miscSummaryData, regionData,
-                           this->simulator_.gridView().comm());
+        // Calculate initial in-place volumes.
+        // Does nothing if they have already been calculated,
+        // e.g. from restart data at T=0.
+        this->outputModule_->calc_initial_inplace(this->simulator_.gridView().comm());
 
         if (this->collectOnIORank_.isIORank()) {
-            this->inplace_ = std::move(inplace);
+            this->inplace_ = this->outputModule_->initialInplace();
         }
     }
 

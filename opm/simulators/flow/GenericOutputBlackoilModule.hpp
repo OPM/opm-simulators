@@ -114,7 +114,7 @@ public:
     void outputMSWLog(std::size_t reportStepNum);
 
     // calculate Initial Fluid In Place
-    Inplace calc_initial_inplace(const Parallel::Communication& comm);
+    void calc_initial_inplace(const Parallel::Communication& comm);
 
     // calculate Fluid In Place
     Inplace calc_inplace(std::map<std::string, double>& miscSummaryData,

@@ -967,6 +967,113 @@ public:
         }
     }
 
+    //!\brief Read simulator solution state from the outputmodule (used with restart)
+    //! \param restart_step Step to read at
+    //! \param fip_init True to do limited simulator initialization
+    //! \details \a fip_init is used when calculating original FIP from restart state
+    void readSolutionFromOutputModule(const int restart_step, bool fip_init)
+    {
+        auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
+
+        std::size_t numElems = this->model().numGridDof();
+        this->initialFluidStates_.resize(numElems);
+        if constexpr (enableSolvent) {
+            this->solventSaturation_.resize(numElems, 0.0);
+            this->solventRsw_.resize(numElems, 0.0);
+        }
+
+        if constexpr (enablePolymer)
+            this->polymer_.concentration.resize(numElems, 0.0);
+
+        if constexpr (enablePolymerMolarWeight) {
+            const std::string msg {"Support of the RESTART for polymer molecular weight "
+                                   "is not implemented yet. The polymer weight value will be "
+                                   "zero when RESTART begins"};
+            OpmLog::warning("NO_POLYMW_RESTART", msg);
+            this->polymer_.moleWeight.resize(numElems, 0.0);
+        }
+
+        if constexpr (enableMICP) {
+            this->micp_.resize(numElems);
+        }
+
+        // Initialize mixing controls before trying to set any lastRx valuesx
+        this->mixControls_.init(numElems, restart_step, eclState.runspec().tabdims().getNumPVTTables());
+
+        if constexpr (enableMICP) {
+            this->micp_ = this->eclWriter_->outputModule().getMICP().getSolution();
+        }
+
+        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            auto& elemFluidState = this->initialFluidStates_[elemIdx];
+            elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
+            this->eclWriter_->outputModule().initHysteresisParams(simulator, elemIdx);
+            this->eclWriter_->outputModule().assignToFluidState(elemFluidState, elemIdx);
+
+            // Note: Function processRestartSaturations_() mutates the
+            // 'ssol' argument--the value from the restart file--if solvent
+            // is enabled.  Then, store the updated solvent saturation into
+            // 'solventSaturation_'.  Otherwise, just pass a dummy value to
+            // the function and discard the unchanged result.  Do not index
+            // into 'solventSaturation_' unless solvent is enabled.
+            {
+                auto ssol = enableSolvent
+                            ? this->eclWriter_->outputModule().getSolventSaturation(elemIdx)
+                            : Scalar(0);
+
+                this->processRestartSaturations_(elemFluidState, ssol);
+
+                if constexpr (enableSolvent) {
+                    this->solventSaturation_[elemIdx] = ssol;
+                    this->solventRsw_[elemIdx] = this->eclWriter_->outputModule().getSolventRsw(elemIdx);
+                }
+            }
+
+            // For CO2STORE and H2STORE we need to set the initial temperature for isothermal simulations
+            bool isThermal = eclState.getSimulationConfig().isThermal();
+            bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
+            if (!isThermal && needTemperature) {
+                const auto& fp = simulator.vanguard().eclState().fieldProps();
+                elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
+            }
+
+            this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
+
+            if constexpr (enablePolymer)
+                this->polymer_.concentration[elemIdx] = this->eclWriter_->outputModule().getPolymerConcentration(elemIdx);
+            // if we need to restart for polymer molecular weight simulation, we need to add related here
+        }
+
+        const int episodeIdx = this->episodeIndex();
+        this->mixControls_.updateMaxValues(episodeIdx, simulator.timeStepSize());
+
+        // assign the restart solution to the current solution. note that we still need
+        // to compute real initial solution after this because the initial fluid states
+        // need to be correct for stuff like boundary conditions.
+        auto& sol = this->model().solution(/*timeIdx=*/0);
+        const auto& gridView = this->gridView();
+        ElementContext elemCtx(simulator);
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+            elemCtx.updatePrimaryStencil(elem);
+            int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            this->initial(sol[elemIdx], elemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
+        }
+
+        // make sure that the ghost and overlap entities exhibit the correct
+        // solution. alternatively, this could be done in the loop above by also
+        // considering non-interior elements. Since the initial() method might not work
+        // 100% correctly for such elements, let's play safe and explicitly synchronize
+        // using message passing.
+        this->model().syncOverlap();
+
+        if (fip_init) {
+            this->updateReferencePorosity_();
+            this->mixControls_.init(this->model().numGridDof(),
+                                    this->episodeIndex(),
+                                    eclState.runspec().tabdims().getNumPVTTables());
+        }
+    }
 
     /*!
      * \copydoc BlackOilBaseProblem::thresholdPressure
@@ -1093,7 +1200,6 @@ protected:
         return true;
     }
 
-
     void readEclRestartSolution_()
     {
         // Throw an exception if the grid has LGRs. Refined grid are not supported for restart.
@@ -1119,96 +1225,7 @@ protected:
         Scalar dt = std::min(this->eclWriter_->restartTimeStepSize(), simulator.episodeLength());
         simulator.setTimeStepSize(dt);
 
-        std::size_t numElems = this->model().numGridDof();
-        this->initialFluidStates_.resize(numElems);
-        if constexpr (enableSolvent) {
-            this->solventSaturation_.resize(numElems, 0.0);
-            this->solventRsw_.resize(numElems, 0.0);
-        }
-
-        if constexpr (enablePolymer)
-            this->polymer_.concentration.resize(numElems, 0.0);
-
-        if constexpr (enablePolymerMolarWeight) {
-            const std::string msg {"Support of the RESTART for polymer molecular weight "
-                                   "is not implemented yet. The polymer weight value will be "
-                                   "zero when RESTART begins"};
-            OpmLog::warning("NO_POLYMW_RESTART", msg);
-            this->polymer_.moleWeight.resize(numElems, 0.0);
-        }
-
-        if constexpr (enableMICP) {
-            this->micp_.resize(numElems);
-        }
-
-        // Initialize mixing controls before trying to set any lastRx valuesx
-        this->mixControls_.init(numElems, restart_step, eclState.runspec().tabdims().getNumPVTTables());
-
-        if constexpr (enableMICP) {
-            this->micp_ = this->eclWriter_->outputModule().getMICP().getSolution();
-        }
-
-        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = this->initialFluidStates_[elemIdx];
-            elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
-            this->eclWriter_->outputModule().initHysteresisParams(simulator, elemIdx);
-            this->eclWriter_->outputModule().assignToFluidState(elemFluidState, elemIdx);
-
-            // Note: Function processRestartSaturations_() mutates the
-            // 'ssol' argument--the value from the restart file--if solvent
-            // is enabled.  Then, store the updated solvent saturation into
-            // 'solventSaturation_'.  Otherwise, just pass a dummy value to
-            // the function and discard the unchanged result.  Do not index
-            // into 'solventSaturation_' unless solvent is enabled.
-            {
-                auto ssol = enableSolvent
-                            ? this->eclWriter_->outputModule().getSolventSaturation(elemIdx)
-                            : Scalar(0);
-
-                this->processRestartSaturations_(elemFluidState, ssol);
-
-                if constexpr (enableSolvent) {
-                    this->solventSaturation_[elemIdx] = ssol;
-                    this->solventRsw_[elemIdx] = this->eclWriter_->outputModule().getSolventRsw(elemIdx);
-                }
-            }
-
-            // For CO2STORE and H2STORE we need to set the initial temperature for isothermal simulations
-            bool isThermal = eclState.getSimulationConfig().isThermal();
-            bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
-            if (!isThermal && needTemperature) {
-                const auto& fp = simulator.vanguard().eclState().fieldProps();
-                elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
-            }
-
-            this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
-
-            if constexpr (enablePolymer)
-                this->polymer_.concentration[elemIdx] = this->eclWriter_->outputModule().getPolymerConcentration(elemIdx);
-            // if we need to restart for polymer molecular weight simulation, we need to add related here
-        }
-
-        const int episodeIdx = this->episodeIndex();
-        this->mixControls_.updateMaxValues(episodeIdx, simulator.timeStepSize());
-
-        // assign the restart solution to the current solution. note that we still need
-        // to compute real initial solution after this because the initial fluid states
-        // need to be correct for stuff like boundary conditions.
-        auto& sol = this->model().solution(/*timeIdx=*/0);
-        const auto& gridView = this->gridView();
-        ElementContext elemCtx(simulator);
-        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-            elemCtx.updatePrimaryStencil(elem);
-            int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            this->initial(sol[elemIdx], elemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
-        }
-
-        // make sure that the ghost and overlap entities exhibit the correct
-        // solution. alternatively, this could be done in the loop above by also
-        // considering non-interior elements. Since the initial() method might not work
-        // 100% correctly for such elements, let's play safe and explicitly synchronize
-        // using message passing.
-        this->model().syncOverlap();
+        this->readSolutionFromOutputModule(restart_step, false);
 
         this->eclWriter_->endRestart();
     }

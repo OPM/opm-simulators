@@ -236,11 +236,12 @@ outputMSWLog(std::size_t reportStepNum)
 }
 
 template<class FluidSystem>
-Inplace GenericOutputBlackoilModule<FluidSystem>::
+void GenericOutputBlackoilModule<FluidSystem>::
 calc_initial_inplace(const Parallel::Communication& comm)
 {
-    // calling accumulateRegionSums() updates InitialInplace_ as a side effect
-    return this->accumulateRegionSums(comm);
+    if (!this->initialInplace_.has_value()) {
+        this->initialInplace_ = this->accumulateRegionSums(comm);
+    }
 }
 
 template<class FluidSystem>
@@ -1058,15 +1059,6 @@ accumulateRegionSums(const Parallel::Communication& comm)
         makeRegionSum(inplace, region.first, comm);
     }
 
-    // The first time the outputFipLog function is run we store the inplace values in
-    // the initialInplace_ member. This has a problem:
-    //
-    //   o For restarted runs this is obviously wrong.
-    //
-    // Finally it is of course not desirable to mutate state in an output
-    // routine.
-    if (!this->initialInplace_.has_value())
-        this->initialInplace_ = inplace;
     return inplace;
 }
 

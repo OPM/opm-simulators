@@ -32,15 +32,14 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
 RestartValue loadParallelRestart(const EclipseIO* eclIO,
                                  Action::State& actionState,
                                  SummaryState& summaryState,
                                  const std::vector<Opm::RestartKey>& solutionKeys,
                                  const std::vector<Opm::RestartKey>& extraKeys,
-                                 Parallel::Communication comm)
+                                 [[maybe_unused]] Parallel::Communication comm)
 {
 #if HAVE_MPI
     RestartValue restartValues{};
@@ -55,9 +54,31 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
     ser.broadcast(0, restartValues, summaryState);
     return restartValues;
 #else
-    (void) comm;
     return eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
 #endif
 }
+
+data::Solution loadParallelRestartSolution(const EclipseIO* eclIO,
+                                           const std::vector<Opm::RestartKey>& solutionKeys,
+                                           [[maybe_unused]] Parallel::Communication comm,
+                                           const int step)
+{
+#if HAVE_MPI
+    data::Solution sol{};
+
+    if (eclIO)
+    {
+        assert(comm.rank() == 0);
+        sol = eclIO->loadRestartSolution(solutionKeys, step);
+    }
+
+    Parallel::MpiSerializer ser(comm);
+    ser.broadcast(0, sol);
+    return sol;
+#else
+    return eclIO->loadRestartSolution(solutionKeys, step);
+#endif
+}
+
 
 } // end namespace Opm
