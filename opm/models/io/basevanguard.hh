@@ -121,6 +121,27 @@ public:
         }
     }
 
+    /*!
+     * \brief Add LGRs to the global grid view, if any. Only supported for CpGrid - for now.
+     */
+    void addLgrsInGlobalView()
+    {
+        if(&asImp_() != this) { // this check prevents an infinite-recursion warning
+            asImp_().addLgrsInGlobalView();
+            updateGridView_();
+        }
+    }
+
+    /*!
+     * \brief Synchronize cell ids, if LGRs were added before/after loadBalance. Only supported for CpGrid - for now.
+     */
+    void synchronizeCellIds()
+    {
+        if(&asImp_() != this) { // this check prevents an infinite-recursion warning
+            asImp_().synchronizeCellIds();
+            updateGridView_();
+        }
+    }
 protected:
     // this method should be called after the grid has been allocated
     void finalizeInit_()

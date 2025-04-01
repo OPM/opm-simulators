@@ -129,17 +129,6 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Allocating the simulation vanguard failed: ", comm);
         }
 
-        // Only relevant for CpGrid
-        if (verbose_) {
-            std::cout << "Adding LGRs, if any\n" << std::flush;
-        }
-
-        {
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
-            vanguard_->addLgrs();
-            OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation vanguard failed: ", comm);
-        }
-
         if (verbose_) {
             std::cout << "Distributing the vanguard's data\n" << std::flush;
         }
@@ -148,6 +137,32 @@ public:
             OPM_BEGIN_PARALLEL_TRY_CATCH();
             vanguard_->loadBalance();
             OPM_END_PARALLEL_TRY_CATCH("Could not distribute the vanguard data: ", comm);
+        }
+
+        if (verbose_) {
+            std::cout << "Adding LGRs, if any, in the global grid view (serial run).\n" << std::flush;
+        }
+
+        {
+            if (comm.size()==1) { // serial run
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
+                vanguard_->addLgrs();
+                OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation - in serial - vanguard failed: ", comm);
+            }
+        }
+
+        if (verbose_) {
+            std::cout << "Adding LGRs, if any, in global and distributed grid view (parallel run)\n" << std::flush;
+        }
+
+        {
+            if (comm.size()>1) { // parallel run
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
+                vanguard_->addLgrsInGlobalView();
+                vanguard_->addLgrs();
+                vanguard_->synchronizeCellIds();
+                OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation - in parallel - vanguard failed: ", comm);
+            }
         }
 
         if (verbose_) {

@@ -204,6 +204,11 @@ public:
     // do nothing: AluGrid with LGRs not supported yet!
     }
 
+    void synchronizeCellIds()
+    {
+    // do nothing: AluGrid with LGRs not supported yet!
+    }
+
     template<class DataHandle>
     void scatterData(DataHandle& /*handle*/) const
     {

@@ -371,7 +371,8 @@ void FlowGenericProblem<GridView,FluidSystem>::
 updatePvtnum_()
 {
     const auto num_regions = eclState_.getTableManager().getTabdims().getNumPVTTables();
-    updateNum("PVTNUM", pvtnum_, num_regions);
+    std::cout<< "from updatePvtnum " << num_regions << std::endl;
+    updateNum("PVTNUM", pvtnum_, num_regions); 
 }
 
 template<class GridView, class FluidSystem>
