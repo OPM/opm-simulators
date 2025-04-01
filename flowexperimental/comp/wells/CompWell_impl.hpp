@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/models/immiscible/immisciblemodel.hh>
 
@@ -399,14 +401,6 @@ iterateWellEq(const Simulator& simulator,
         converged = this->getConvergence();
 
         if (converged) {
-#if 0
-            std::cout << " the well " << this->well_ecl_.name() << " has converged after " << it << " iterations" << std::endl;
-            std::cout << " the residuals ";
-            for (const auto& val : this->well_equations_.residual()[0]) {
-                std::cout << val << " ";
-            }
-            std::cout << std::endl;
-#endif
             break;
         }
 
@@ -595,7 +589,7 @@ updateWellControl(const SummaryState& summary_state,
         } else {
             to = WellProducerCMode2String(well_state.production_cmode);
         }
-        std::cout << " well " << this->well_ecl_.name() << " changed control from " << from << " to " << to << std::endl;
+        OpmLog::info(fmt::format("Well {} changed control from {} to {} \n", this->well_ecl_.name(), from, to));
     }
 }
 
