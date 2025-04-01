@@ -444,17 +444,17 @@ public:
                 short interiorDofIdx = 0; // NB
                 short exteriorDofIdx = 1; // NB
 
-                EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
-                                                                         interiorDofIdx, // focusDofIndex,
-                                                                         interiorDofIdx,
-                                                                         exteriorDofIdx,
-                                                                         intQuantsIn,
-                                                                         intQuantsEx,
-                                                                         intQuantsIn.fluidState(),
-                                                                         intQuantsEx.fluidState(),
-                                                                         inAlpha,
-                                                                         outAlpha,
-                                                                         faceArea);
+                EnergyModule::ExtensiveQuantities::updateEnergy(heatFlux,
+                                                                interiorDofIdx, // focusDofIndex,
+                                                                interiorDofIdx,
+                                                                exteriorDofIdx,
+                                                                intQuantsIn,
+                                                                intQuantsEx,
+                                                                intQuantsIn.fluidState(),
+                                                                intQuantsEx.fluidState(),
+                                                                inAlpha,
+                                                                outAlpha,
+                                                                faceArea);
             }
             EnergyModule::addHeatFlux(flux, heatFlux);
         }
@@ -616,12 +616,12 @@ public:
             Scalar alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
             unsigned inIdx = 0;//dummy
             // always calculated with derivatives of this cell
-            EnergyModule::ExtensiveQuantities::template updateEnergyBoundary(heatFlux,
-                                                                             insideIntQuants,
-                                                                             /*focusDofIndex*/ inIdx,
-                                                                             inIdx,
-                                                                             alpha,
-                                                                             bdyInfo.exFluidState);
+            EnergyModule::ExtensiveQuantities::updateEnergyBoundary(heatFlux,
+                                                                    insideIntQuants,
+                                                                    /*focusDofIndex*/ inIdx,
+                                                                    inIdx,
+                                                                    alpha,
+                                                                    bdyInfo.exFluidState);
             EnergyModule::addHeatFlux(bdyFlux, heatFlux);
         }
 
@@ -658,12 +658,12 @@ public:
             Scalar alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
             unsigned inIdx = 0;//dummy
             // always calculated with derivatives of this cell
-            EnergyModule::ExtensiveQuantities::template updateEnergyBoundary(heatFlux,
-                                                                             insideIntQuants,
-                                                                             /*focusDofIndex*/ inIdx,
-                                                                             inIdx,
-                                                                             alpha,
-                                                                             bdyInfo.exFluidState);
+            EnergyModule::ExtensiveQuantities::updateEnergyBoundary(heatFlux,
+                                                                    insideIntQuants,
+                                                                    /*focusDofIndex*/ inIdx,
+                                                                    inIdx,
+                                                                    alpha,
+                                                                    bdyInfo.exFluidState);
             EnergyModule::addHeatFlux(bdyFlux, heatFlux);
         }
 
