@@ -20,10 +20,10 @@
 namespace Opm {
 
 template <class Scalar>
-ConnectionData<Scalar>::
-ConnectionData(std::size_t num_connection,
-               std::size_t num_phases,
-               std::size_t num_components)
+CompConnectionData<Scalar>::
+CompConnectionData(std::size_t num_connection,
+                   std::size_t num_phases,
+                   std::size_t num_components)
   : pressure(num_connection)
   , surface_phase_rates(num_connection * num_phases)
   , reservoir_phase_rates(num_connection * num_phases)
@@ -36,11 +36,11 @@ ConnectionData(std::size_t num_connection,
 
 
 template <class Scalar>
-ConnectionData<Scalar>::
-ConnectionData(const std::vector<CompConnectionData>& connections,
-               const PhaseUsage& phase_usage,
-               const CompositionalConfig& comp_config)
-  : ConnectionData(connections.size(), phase_usage.num_phases, comp_config.numComps())
+CompConnectionData<Scalar>::
+CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
+                   const PhaseUsage& phase_usage,
+                   const CompositionalConfig& comp_config)
+  : CompConnectionData(connections.size(), phase_usage.num_phases, comp_config.numComps())
 {
     for (std::size_t con = 0; con < connections.size(); ++con) {
         this->tranmissibility_factor[con] = connections[con].connection_transmissibility_factor;
@@ -55,7 +55,7 @@ SingleCompWellState(const std::string& well_name,
                     const CompositionalConfig& comp_config,
                     const PhaseUsage& phase_usage_input,
                     const Scalar temperature_arg,
-                    const std::vector<CompConnectionData>& connections,
+                    const std::vector<PerforationData<Scalar>>& connections,
                     bool is_producer)
    : name(well_name)
    , phase_usage(phase_usage_input)

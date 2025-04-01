@@ -21,27 +21,26 @@
 #define OPM_SINGLE_COMP_WELL_STATE_HPP
 
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 
 #include <string>
 #include <vector>
 
-#include <opm/simulators/wells/PerforationData.hpp>
 
 namespace Opm {
 
 template <typename Scalar>
-class ConnectionData
+class CompConnectionData
 {
 public:
-    using CompConnectionData = PerforationData<Scalar>;
-    ConnectionData() = default;
-    ConnectionData(std::size_t num_connection,
-                   std::size_t num_phases,
-                   std::size_t num_components);
+    CompConnectionData() = default;
+    CompConnectionData(std::size_t num_connection,
+                       std::size_t num_phases,
+                       std::size_t num_components);
 
-    ConnectionData(const std::vector<CompConnectionData>& connections,
-                   const PhaseUsage& phase_usage,
-                   const CompositionalConfig& comp_config);
+    CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
+                       const PhaseUsage& phase_usage,
+                       const CompositionalConfig& comp_config);
 
     std::vector<Scalar> pressure {};
     std::vector<Scalar> surface_phase_rates {}; // surface phase rates
@@ -58,12 +57,11 @@ template <typename Scalar>
 class SingleCompWellState
 {
 public:
-    using CompConnectionData = PerforationData<Scalar>;
     SingleCompWellState(const std::string& name,
                         const CompositionalConfig& comp_config,
                         const PhaseUsage& phase_usage_input,
                         const Scalar temperature,
-                        const std::vector<CompConnectionData>& connections,
+                        const std::vector<PerforationData<Scalar>>& connections,
                         bool is_producer);
 
     std::string name;
@@ -82,7 +80,7 @@ public:
     // WXMF WYMF and WAMF
     std::vector<std::vector<Scalar> > phase_molar_fractions;
 
-    ConnectionData<Scalar> connection_data;
+    CompConnectionData<Scalar> connection_data;
 
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
