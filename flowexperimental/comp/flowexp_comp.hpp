@@ -31,7 +31,6 @@
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include <flowexperimental/comp/EmptyModel.hpp>
-#include <flowexperimental/comp/wells/CompositionalWellModel.hpp>
 
 // // the current code use eclnewtonmethod adding other conditions to proceed_ should do the trick for KA
 // // adding linearshe sould be chaning the update_ function in the same class with condition that the error is reduced.
@@ -123,7 +122,7 @@ struct AquiferModel<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
 
 template<class TypeTag, int NumComp, bool EnableWater>
 struct WellModel<TypeTag, TTag::FlowExpCompProblem<NumComp, EnableWater>> {
-    using type = CompositionalWellModel<TypeTag>;
+    using type = EmptyModel<TypeTag>;
 };
 
 template<class TypeTag, int NumComp, bool EnableWater>
