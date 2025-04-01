@@ -1870,7 +1870,6 @@ private:
                                   return getValue(ectx.fs.Rv()) *
                                          getValue(ectx.fs.invB(gasPhaseIdx)) *
                                          getValue(ectx.fs.saturation(gasPhaseIdx)) *
-                                         getValue(ectx.fs.saturation(gasPhaseIdx)) *
                                          model.dofTotalVolume(ectx.globalDofIdx) *
                                          getValue(ectx.intQuants.porosity());
                               }
