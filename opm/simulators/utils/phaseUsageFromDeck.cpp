@@ -137,8 +137,12 @@ PhaseUsage phaseUsage(const Phases& phases)
 PhaseUsage phaseUsageFromDeck(const EclipseState& eclipseState)
 {
     const auto& phases = eclipseState.runspec().phases();
-
-    if (eclipseState.runspec().micp()) {
+    if (eclipseState.runspec().co2Storage() || eclipseState.runspec().h2Storage()) {
+        PhaseUsage pu = phaseUsage(phases);
+        pu.has_co2_or_h2store = true;
+        return pu;
+    }
+    else if (eclipseState.runspec().micp()) {
         PhaseUsage pu = phaseUsage(phases);
         pu.has_micp = true;
         return pu;

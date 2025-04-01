@@ -48,12 +48,13 @@ Opm::PhaseUsage::PhaseUsage(std::vector<BlackoilPhases::PhaseIndex> phases)
     if (this->phase_used[BlackoilPhases::Vapour])
         this->num_phases++;
 
-    this->has_solvent   = this->phase_used[BlackoilPhases::Solvent];
-    this->has_polymer   = this->phase_used[BlackoilPhases::Polymer];
-    this->has_energy    = this->phase_used[BlackoilPhases::Energy];
-    this->has_polymermw = this->phase_used[BlackoilPhases::PolymerMW];
-    this->has_foam      = this->phase_used[BlackoilPhases::Foam];
-    this->has_brine     = this->phase_used[BlackoilPhases::Brine];
-    this->has_zFraction = this->phase_used[BlackoilPhases::ZFraction];
-    this->has_micp      = false;
+    this->has_solvent        = this->phase_used[BlackoilPhases::Solvent];
+    this->has_polymer        = this->phase_used[BlackoilPhases::Polymer];
+    this->has_energy         = this->phase_used[BlackoilPhases::Energy];
+    this->has_polymermw      = this->phase_used[BlackoilPhases::PolymerMW];
+    this->has_foam           = this->phase_used[BlackoilPhases::Foam];
+    this->has_brine          = this->phase_used[BlackoilPhases::Brine];
+    this->has_zFraction      = this->phase_used[BlackoilPhases::ZFraction];
+    this->has_micp           = false;
+    this->has_co2_or_h2store = false;
 }
