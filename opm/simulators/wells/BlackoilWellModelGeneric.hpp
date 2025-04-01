@@ -154,8 +154,8 @@ public:
     }
 
     /*
-      Will return the currently active nupcolWellState; must initialize
-      the internal nupcol wellstate with initNupcolWellState() first.
+      Will return the currently active nupcolWellState; ze
+      the internal nupcol wellstate with updateNupcolWGState() first.
     */
     const WellState<Scalar>& nupcolWellState() const
     {
@@ -285,19 +285,19 @@ protected:
           try again with a smaller timestep we need to recover the last
           valid wellstate. This is maintained with the
           last_valid_well_state_ member and the functions
-          commitWellState() and resetWellState().
+          commitWGState() and resetWellState().
 
         3. For the NUPCOL functionality we should either use the
            currently active wellstate or a wellstate frozen at max
            nupcol iterations. This is handled with the member
-           nupcol_well_state_ and the initNupcolWellState() function.
+           nupcol_well_state_ and the updateNupcolWGState() function.
     */
 
     /*
       Will return the last good wellstate. This is typcially used when
       initializing a new report step where the Schedule object might
       have introduced new wells. The wellstate returned by
-      prevWellState() must have been stored with the commitWellState()
+      prevWellState() must have been stored with the commitWGState()
       function first.
     */
     const WellState<Scalar>& prevWellState() const
@@ -519,7 +519,7 @@ protected:
       The various wellState members should be accessed and modified
       through the accessor functions wellState(), prevWellState(),
       commitWellState(), resetWellState(), nupcolWellState() and
-      updateNupcolWellState().
+      updateNupcolWGState().
     */
     WGState<Scalar> active_wgstate_;
     WGState<Scalar> last_valid_wgstate_;
