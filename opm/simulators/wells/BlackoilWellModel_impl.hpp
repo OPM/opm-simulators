@@ -1096,33 +1096,24 @@ namespace Opm {
         const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
-        const std::size_t max_iter = param_.network_max_outer_iterations_;
+
         bool converged = false;
-        std::size_t iter = 0;
         bool changed_well_group = false;
-        do {
-            changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
-            assembleWellEqWithoutIteration(dt, deferred_logger);
-            converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
-            if (converged) {
-                break;
-            }
-            ++iter;
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
-            for (auto& well : this->well_container_) {
-                well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
-            }
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
-                                       this->simulator_.vanguard().grid().comm());
-        } while (iter < max_iter);
+
+        changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
+        assembleWellEqWithoutIteration(dt, deferred_logger);
+        converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (auto& well : this->well_container_) {
+            well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
+        }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
+                                    this->simulator_.vanguard().grid().comm());
 
         if (!converged) {
-            const std::string msg = fmt::format("Initial (pre-step) network balance did not get converged with {} iterations, "
-                                                "unconverged network balance result will be used", max_iter);
+            const std::string msg = fmt::format("Initial (pre-step) network balance did not converge.");
             deferred_logger.warning(msg);
-        } else {
-            const std::string msg = fmt::format("Initial (pre-step) network balance converged with {} iterations", iter);
-            deferred_logger.debug(msg);
         }
     }
 
