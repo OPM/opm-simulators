@@ -38,19 +38,6 @@
 namespace Opm {
 
 template<class Scalar>
-bool BlackoilWellModelConstraints<Scalar>::
-hasTHPConstraints() const
-{
-    int local_result = false;
-    for (const auto& well : wellModel_.genericWells()) {
-        if (well->wellHasTHPConstraints(wellModel_.summaryState())) {
-            local_result = true;
-        }
-    }
-    return wellModel_.comm().max(local_result);
-}
-
-template<class Scalar>
 std::pair<Group::InjectionCMode, Scalar>
 BlackoilWellModelConstraints<Scalar>::
 checkGroupInjectionConstraints(const Group& group,
