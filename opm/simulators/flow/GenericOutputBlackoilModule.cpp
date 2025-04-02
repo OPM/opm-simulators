@@ -265,57 +265,6 @@ calc_inplace(std::map<std::string, double>& miscSummaryData,
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
-outputFipAndResvLog(const Inplace& inplace,
-                         const std::size_t reportStepNum,
-                         double elapsed,
-                         boost::posix_time::ptime currentDate,
-                         const bool substep,
-                         const Parallel::Communication& comm)
-{
-    if (comm.rank() != 0) {
-        return;
-    }
-
-    // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
-    std::unique_ptr<FIPConfig> fipSched;
-    if (reportStepNum > 0) {
-        const auto& rpt = this->schedule_[reportStepNum-1].rpt_config.get();
-        fipSched = std::make_unique<FIPConfig>(rpt);
-    }
-    const FIPConfig& fipc = reportStepNum == 0 ? this->eclState_.getEclipseConfig().fip()
-                                               : *fipSched;
-
-    if (!substep && !forceDisableFipOutput_ && fipc.output(FIPConfig::OutputField::FIELD)) {
-
-        logOutput_.timeStamp("BALANCE", elapsed, reportStepNum, currentDate);
-
-        logOutput_.fip(inplace, this->initialInplace(), "");  
-        
-        if (fipc.output(FIPConfig::OutputField::FIPNUM)) { 
-            logOutput_.fip(inplace, this->initialInplace(), "FIPNUM");    
-            
-            if (fipc.output(FIPConfig::OutputField::RESV))
-                logOutput_.fipResv(inplace, "FIPNUM"); 
-        }
-        
-        if (fipc.output(FIPConfig::OutputField::FIP)) {
-            for (const auto& reg : this->regions_) {
-                if (reg.first != "FIPNUM") {
-                    std::ostringstream ss;
-                    ss << "BAL" << reg.first.substr(3);
-                    logOutput_.timeStamp(ss.str(), elapsed, reportStepNum, currentDate);
-                    logOutput_.fip(inplace, this->initialInplace(), reg.first);
-                    
-                    if (fipc.output(FIPConfig::OutputField::RESV))
-                        logOutput_.fipResv(inplace, reg.first); 
-                }
-            }
-        }
-    }
-}
-
-template<class FluidSystem>
-void GenericOutputBlackoilModule<FluidSystem>::
 assignToSolution(data::Solution& sol)
 {
     using DataEntry =

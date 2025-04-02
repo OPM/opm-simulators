@@ -121,13 +121,6 @@ public:
                          std::map<std::string, std::vector<double>>& regionData,
                          const Parallel::Communication& comm);
 
-    void outputFipAndResvLog(const Inplace& inplace,
-                         const std::size_t reportStepNum,
-                         double elapsed,
-                         boost::posix_time::ptime currentDate,
-                         const bool substep,
-                         const Parallel::Communication& comm);
-
     void outputErrorLog(const Parallel::Communication& comm) const;
 
     void addRftDataToWells(data::Wells& wellDatas,
@@ -224,9 +217,9 @@ public:
         return extraBlockData_;
     }
 
-    const Inplace& initialInplace() const
+    const std::optional<Inplace>& initialInplace() const
     {
-        return this->initialInplace_.value();
+        return this->initialInplace_;
     }
 
     bool localDataValid() const{
