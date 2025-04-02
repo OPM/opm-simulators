@@ -2,6 +2,8 @@ from skbuild import setup
 
 import os
 
+# This script is used by the docker/Dockerfile to build wheels for the python bindings.
+
 setupdir = os.path.dirname(__file__)
 if setupdir != '':
   os.chdir( setupdir )
@@ -31,7 +33,7 @@ setup(
     test_suite='tests',
     setup_requires=["pytest-runner", 'setuptools_scm'],
     install_requires=requires,
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",

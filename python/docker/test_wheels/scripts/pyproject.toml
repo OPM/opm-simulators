@@ -1,0 +1,26 @@
+[project]
+name = "opm_wheels"
+version = "0.1.0"
+description = "Wheel tools for OPM"
+readme = "README.md"
+requires-python = ">=3.11"
+
+packages = [{include = "opm_wheels", from = "src"}]
+dependencies = [
+    "click>=8.1.8",
+]
+
+[project.scripts]
+opm-wheels = "opm_wheels.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/opm_wheels"]
+
+[tool.uv]
+
+[tool.coverage.report]
+fail_under = 100

@@ -42,3 +42,7 @@ python/sphinx_docs/docs/_build/
 # Python cache directories
 **/__pycache__/
 
+# Python docker files
+/python/docker/wheelhouse*
+/python/docker/build*.log
+/python/docker/extracted_wheels/
