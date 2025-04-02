@@ -1387,11 +1387,10 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                                          well_state_nupcol,
                                                          this->groupState());
 
-    // We use the rates from the previous time-step to reduce oscillations
     WellGroupHelpers<Scalar>::updateWellRates(fieldGroup,
                                               schedule(),
                                               reportStepIdx,
-                                              this->prevWellState(),
+                                              well_state_nupcol,
                                               well_state);
 
     // Set ALQ for off-process wells to zero
