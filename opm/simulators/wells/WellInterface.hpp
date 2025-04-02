@@ -339,12 +339,10 @@ public:
 
     /// Modify the well_state's rates if there is only one nonzero rate.
     /// If so, that rate is kept as is, but the others are set proportionally
-    /// to the rates returned by computeCurrentWellRates().
-    void initializeWellState(const Simulator& simulator,
-                             const GroupState<Scalar>& group_state,
-                             const SummaryState& summary_state,
-                             WellState<Scalar>& well_state,
-                             DeferredLogger& deferred_logger) const;
+    /// to the rates at bhp limit or bhp 1 bar.
+    void initializeProducerWellState(const Simulator& simulator,
+                                     WellState<Scalar>& well_state,
+                                     DeferredLogger& deferred_logger) const;
 
     void solveWellEquation(const Simulator& simulator,
                            WellState<Scalar>& well_state,
