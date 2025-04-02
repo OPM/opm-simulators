@@ -30,6 +30,7 @@
 
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
+#include <opm/simulators/flow/NlddReporting.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 #if HAVE_MPI
@@ -392,47 +393,14 @@ namespace Opm {
         void runSimulatorAfterSim_(SimulatorReport &report)
         {
             if (simulator_->model().hasNlddSolver()) {
-                {
-                    // Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
-                    const auto& odir = eclState().getIOConfig().getOutputDir();
-                    simulator_->model().writeNonlinearIterationsPerCell(odir);
-
-                    // Create a deferred logger and add the report with rank as tag
-                    DeferredLogger local_log;
-                    std::ostringstream ss;
-
-                    // Accumulate reports per domain
-                    const auto& domain_reports = simulator_->model().domainAccumulatedReports();
-                    for (size_t i = 0; i < domain_reports.size(); ++i) {
-                        const auto& dr = domain_reports[i];
-                        ss << "======  Accumulated local solve data for domain " << i << " on rank " << mpi_rank_ << " ======\n";
-                        dr.reportNLDD(ss);
-                        // Use combined rank and domain index as tag to ensure global uniqueness and correct ordering
-                        local_log.debug(fmt::format("R{:05d}D{:05d}", mpi_rank_, i), ss.str());
-                        ss.str(""); // Clear the stringstream
-                        ss.clear(); // Clear any error flags
-                    }
-                    // Gather all logs and output them in sorted order
-                    auto global_log = gatherDeferredLogger(local_log, FlowGenericVanguard::comm());
-                    if (this->output_cout_) {
-                        global_log.logMessages();
-                    }
-                }
-                {
-                    // Create a deferred logger and add the report with rank as tag
-                    DeferredLogger local_log;
-                    std::ostringstream ss;
-                    ss << "======  Accumulated local solve data for rank " << mpi_rank_ << " ======\n";
-                    simulator_->model().localAccumulatedReports().reportNLDD(ss);
-                    // Use rank number as tag to ensure correct ordering
-                    local_log.debug(fmt::format("{:05d}", mpi_rank_), ss.str());
-
-                    // Gather all logs and output them in sorted order
-                    auto global_log = gatherDeferredLogger(local_log, FlowGenericVanguard::comm());
-                    if (this->output_cout_) {
-                        global_log.logMessages();
-                    }
-                }
+                const auto& odir = eclState().getIOConfig().getOutputDir();
+                // Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
+                simulator_->model().writeNonlinearIterationsPerCell(odir);
+                // Write the NLDD statistics to the DBG file
+                reportNlddStatistics(simulator_->model().domainAccumulatedReports(),
+                                     simulator_->model().localAccumulatedReports(),
+                                     this->output_cout_,
+                                     FlowGenericVanguard::comm());
             }
 
             if (! this->output_cout_) {

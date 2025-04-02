@@ -31,9 +31,10 @@
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/NlddReporting.hpp>
+#include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/partitionCells.hpp>
 #include <opm/simulators/flow/priVarsPacking.hpp>
-#include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
 
 #include <opm/simulators/linalg/extractMatrix.hpp>
@@ -60,12 +61,7 @@
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
-#include <fstream>
-#include <functional>
-#include <iomanip>
-#include <ios>
 #include <memory>
-#include <numeric>
 #include <set>
 #include <sstream>
 #include <string>
@@ -207,7 +203,13 @@ public:
         domain_reports_accumulated_.resize(num_domains);
 
         // Print domain distribution summary
-        printDomainDistributionSummary(partition_vector);
+        ::Opm::printDomainDistributionSummary(
+            partition_vector,
+            domains_,
+            local_reports_accumulated_,
+            domain_reports_accumulated_,
+            grid,
+            wellModel_.numLocalWellsEnd());
     }
 
     //! \brief Called before starting a time step.
@@ -301,7 +303,8 @@ public:
         int& num_domains = counts[3];
         {
             auto step_newtons = 0;
-            for (size_t i = 0; i < domain_reports.size(); ++i) {
+            const auto dr_size = domain_reports.size();
+            for (auto i = 0*dr_size; i < dr_size; ++i) {
                 const auto& dr = domain_reports[i];
                 if (dr.converged) {
                     ++num_converged;
@@ -380,17 +383,6 @@ public:
         return report;
     }
 
-    void logWells()
-    {
-        for (size_t i = 0; i < domain_reports_accumulated_.size(); ++i) {
-            auto& domain_report = domain_reports_accumulated_[i];
-            domain_report.success.num_wells = 0;
-        }
-        for (const auto& [wname, domain] : wellModel_.well_domain()) {
-            domain_reports_accumulated_[domain].success.num_wells++;
-        }
-    }
-
     /// return the statistics of local solves accumulated for this rank
     const SimulatorReport& localAccumulatedReports() const
     {
@@ -398,9 +390,19 @@ public:
     }
 
     /// return the statistics of local solves accumulated for each domain on this rank
-    std::vector<SimulatorReport>& domainAccumulatedReports()
+    const std::vector<SimulatorReport>& domainAccumulatedReports() const
     {
-        logWells();
+        // Update the number of wells for each domain that has been added to the well model at this point
+        // this is a mutable operation that updates the well counts in the domain reports.
+        const auto dr_size = domain_reports_accumulated_.size();
+        // Reset well counts before updating
+        for (auto i = 0*dr_size; i < dr_size; ++i) {
+            domain_reports_accumulated_[i].success.num_wells = 0;
+        }
+        // Update the number of wells for each domain
+        for (const auto& [wname, domain] : wellModel_.well_domain()) {
+            domain_reports_accumulated_[domain].success.num_wells++;
+        }
         return domain_reports_accumulated_;
     }
 
@@ -408,195 +410,35 @@ public:
     /// and a partition file for each rank, that can be used as input for OPM.
     void writePartitions(const std::filesystem::path& odir) const
     {
+        const auto& grid = this->model_.simulator().vanguard().grid();
         const auto& elementMapper = this->model_.simulator().model().elementMapper();
         const auto& cartMapper = this->model_.simulator().vanguard().cartesianIndexMapper();
-        const auto& dims = cartMapper.cartesianDimensions();
-        const auto total_size = dims[0] * dims[1] * dims[2];
 
-        const auto& grid = this->model_.simulator().vanguard().grid();
-        const auto& comm = grid.comm();
-
-        // Create a full-sized vector initialized with -1 (indicating inactive cells)
-        auto full_partition = std::vector<int>(total_size, -1);
-
-        // Fill active cell values for this rank
-        const auto p = this->reconstitutePartitionVector();
-        auto i = 0;
-        for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
-            full_partition[cartMapper.cartesianIndex(elementMapper.index(cell))] = p[i++];
-        }
-
-        // Gather all partitions using max operation
-        comm.max(full_partition.data(), full_partition.size());
-
-        // Only rank 0 writes the file
-        if (this->rank_ == 0) {
-            auto fname = odir / "ResInsight_compatible_partition.txt";
-            std::ofstream resInsightFile { fname };
-
-            // Write header
-            resInsightFile << "NLDD_DOM" << '\n';
-
-            // Write all cells, including inactive ones
-            for (const auto& val : full_partition) {
-                resInsightFile << val << '\n';
-            }
-            resInsightFile << "/" << '\n';
-        }
-
-        const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
-        auto partition_fname = odir / fmt::format("{1:0>{0}}", nDigit, comm.rank());
-        std::ofstream pfile { partition_fname };
-
-        auto cell_index = 0;
-        for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
-            pfile << comm.rank() << ' '
-                  << cartMapper.cartesianIndex(elementMapper.index(cell)) << ' '
-                  << p[cell_index++] << '\n';
-        }
+        ::Opm::writePartitions(
+            odir,
+            domains_,
+            grid,
+            elementMapper,
+            cartMapper);
     }
 
     /// Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
     void writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const
     {
+        const auto& grid = this->model_.simulator().vanguard().grid();
         const auto& elementMapper = this->model_.simulator().model().elementMapper();
         const auto& cartMapper = this->model_.simulator().vanguard().cartesianIndexMapper();
-        const auto& dims = cartMapper.cartesianDimensions();
-        const auto total_size = dims[0] * dims[1] * dims[2];
 
-        const auto& grid = this->model_.simulator().vanguard().grid();
-        const auto& comm = grid.comm();
-
-        // Create a cell-to-iterations mapping for this process
-        std::vector<int> cell_iterations(grid.size(0), 0);
-
-        // Populate the mapping with iteration counts for each domain
-        for (size_t domain_idx = 0; domain_idx < domains_.size(); ++domain_idx) {
-            const auto& domain = domains_[domain_idx];
-            const auto& report = domain_reports_accumulated_[domain_idx];
-            const int iterations = report.success.total_newton_iterations + 
-                                 report.failure.total_newton_iterations;
-
-            for (const int cell_idx : domain.cells) {
-                cell_iterations[cell_idx] = iterations;
-            }
-        }
-
-        // Create a full-sized vector initialized with zeros (indicating inactive cells)
-        auto full_iterations = std::vector<int>(total_size, 0);
-
-        // Convert local cell indices to cartesian indices
-        const auto& gridView = grid.leafGridView();
-        for (const auto& cell : elements(gridView, Dune::Partitions::interior)) {
-            const int cell_idx = elementMapper.index(cell);
-            const int cart_idx = cartMapper.cartesianIndex(cell_idx);
-            full_iterations[cart_idx] = cell_iterations[cell_idx];
-        }
-
-        // Gather all iteration data using max operation
-        comm.max(full_iterations.data(), full_iterations.size());
-
-        // Only rank 0 writes the file
-        if (this->rank_ == 0) {
-            auto fname = odir / "ResInsight_nonlinear_iterations.txt";
-            std::ofstream resInsightFile { fname };
-            if (!resInsightFile) {
-                OPM_THROW(std::runtime_error,
-                          "Failed to open NLDD nonlinear iterations output file: " + fname.string());
-            }
-            // Write header
-            resInsightFile << "NLDD_ITER" << '\n';
-
-            // Write all cells, including inactive ones
-            for (const auto& val : full_iterations) {
-                resInsightFile << val << '\n';
-            }
-            resInsightFile << "/" << '\n';
-        }
+        ::Opm::writeNonlinearIterationsPerCell(
+            odir,
+            domains_,
+            domain_reports_accumulated_,
+            grid,
+            elementMapper,
+            cartMapper);
     }
 
 private:
-    void printDomainDistributionSummary(const std::vector<int>& partition_vector)
-    {
-        const auto& grid = model_.simulator().vanguard().grid();
-        const auto& gridView = grid.leafGridView();
-        const auto& comm = grid.comm();
-
-        const int num_wells = wellModel_.numLocalWellsEnd();
-        const int num_domains = domains_.size();
-        const int owned_cells = partition_vector.size();
-
-        // Count overlap cells using grid view iteration
-        // can this be avoided?
-        int overlap_cells = 0;
-        for (const auto& cell : elements(gridView)) {
-            if (cell.partitionType() == Dune::OverlapEntity) {
-                ++overlap_cells;
-            }
-        }
-
-        // Store data for summary output
-        local_reports_accumulated_.success.num_wells = num_wells;
-        local_reports_accumulated_.success.num_domains = num_domains;
-        local_reports_accumulated_.success.num_overlap_cells = overlap_cells;
-        local_reports_accumulated_.success.num_owned_cells = owned_cells;
-
-        // Set statistics for each domain report
-        for (size_t i = 0; i < domain_reports_accumulated_.size(); ++i) {
-            auto& domain_report = domain_reports_accumulated_[i];
-            domain_report.success.num_domains = 1;
-            domain_report.success.num_overlap_cells = 0;
-            domain_report.success.num_owned_cells = domains_[i].cells.size();
-        }
-
-        // Gather data from all ranks
-        std::vector<int> all_owned(comm.size());
-        std::vector<int> all_overlap(comm.size());
-        std::vector<int> all_wells(comm.size());
-        std::vector<int> all_domains(comm.size());
-
-        comm.gather(&owned_cells, all_owned.data(), 1, 0);
-        comm.gather(&overlap_cells, all_overlap.data(), 1, 0);
-        comm.gather(&num_wells, all_wells.data(), 1, 0);
-        comm.gather(&num_domains, all_domains.data(), 1, 0);
-
-        if (rank_ == 0) {
-            std::ostringstream ss;
-            ss << "\nNLDD domain distribution summary:\n"
-            << "  rank   owned cells   overlap cells   total cells   wells   domains\n"
-            << "--------------------------------------------------------------------\n";
-
-            int total_owned = 0;
-            int total_overlap = 0;
-            int total_wells = 0;
-            int total_domains = 0;
-
-            for (int r = 0; r < comm.size(); ++r) {
-                ss << std::setw(6) << r
-                << std::setw(13) << all_owned[r]
-                << std::setw(15) << all_overlap[r]
-                << std::setw(14) << (all_owned[r] + all_overlap[r])
-                << std::setw(8) << all_wells[r]
-                << std::setw(9) << all_domains[r] << '\n';
-
-                total_owned += all_owned[r];
-                total_overlap += all_overlap[r];
-                total_wells += all_wells[r];
-                total_domains += all_domains[r];
-            }
-
-            ss << "--------------------------------------------------------------------\n"
-            << "   sum"
-            << std::setw(13) << total_owned
-            << std::setw(15) << total_overlap
-            << std::setw(14) << (total_owned + total_overlap)
-            << std::setw(8) << total_wells
-            << std::setw(9) << total_domains << '\n';
-
-            OpmLog::info(ss.str());
-        }
-    }
-
     //! \brief Solve the equation system for a single domain.
     ConvergenceReport
     solveDomain(const Domain& domain,
@@ -1222,41 +1064,14 @@ private:
                                      param.local_domains_partition_well_neighbor_levels_);
     }
 
-    std::vector<int> reconstitutePartitionVector() const
-    {
-        const auto& grid = this->model_.simulator().vanguard().grid();
-
-        auto numD = std::vector<int>(grid.comm().size() + 1, 0);
-        numD[grid.comm().rank() + 1] = static_cast<int>(this->domains_.size());
-        grid.comm().sum(numD.data(), numD.size());
-        std::partial_sum(numD.begin(), numD.end(), numD.begin());
-
-        auto p = std::vector<int>(grid.size(0));
-        auto maxCellIdx = std::numeric_limits<int>::min();
-
-        auto d = numD[grid.comm().rank()];
-        for (const auto& domain : this->domains_) {
-            for (const auto& cell : domain.cells) {
-                p[cell] = d;
-                if (cell > maxCellIdx) {
-                    maxCellIdx = cell;
-                }
-            }
-
-            ++d;
-        }
-
-        p.erase(p.begin() + maxCellIdx + 1, p.end());
-        return p;
-    }
-
     BlackoilModel<TypeTag>& model_; //!< Reference to model
     BlackoilWellModelNldd<TypeTag> wellModel_; //!< NLDD well model adapter
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
     SimulatorReport local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers per rank
-    std::vector<SimulatorReport> domain_reports_accumulated_; //!< Accumulated convergence reports per domain
+    // mutable because we need to update the number of wells for each domain in getDomainAccumulatedReports()
+    mutable std::vector<SimulatorReport> domain_reports_accumulated_; //!< Accumulated convergence reports per domain
     int rank_ = 0; //!< MPI rank of this process
 };
 

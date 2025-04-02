@@ -977,21 +977,24 @@ computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
 }
 
 template <class TypeTag>
-SimulatorReport
+const SimulatorReport&
 BlackoilModel<TypeTag>::
 localAccumulatedReports() const
 {
-    return hasNlddSolver() ? nlddSolver_->localAccumulatedReports()
-                           : SimulatorReport{};
+    if (!hasNlddSolver()) {
+        OPM_THROW(std::runtime_error, "Cannot get local reports from a model without NLDD solver");
+    }
+    return nlddSolver_->localAccumulatedReports();
 }
 
 template <class TypeTag>
-std::vector<SimulatorReport>
+const std::vector<SimulatorReport>&
 BlackoilModel<TypeTag>::
 domainAccumulatedReports() const
 {
-    return hasNlddSolver() ? nlddSolver_->domainAccumulatedReports()
-                           : std::vector<SimulatorReport>{};
+    if (!nlddSolver_)
+        OPM_THROW(std::runtime_error, "Cannot get domain reports from a model without NLDD solver");
+    return nlddSolver_->domainAccumulatedReports();
 }
 
 template <class TypeTag>
