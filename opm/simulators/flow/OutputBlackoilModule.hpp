@@ -320,6 +320,57 @@ public:
         }
     }
 
+    void outputFipAndResvLog(const Inplace& inplace,
+                             const std::size_t reportStepNum,
+                             double elapsed,
+                             boost::posix_time::ptime currentDate,
+                             const bool substep,
+                             const Parallel::Communication& comm)
+    {
+
+        if (comm.rank() != 0) {
+            return;
+        }
+
+        // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
+        std::unique_ptr<FIPConfig> fipSched;
+        if (reportStepNum > 0) {
+            const auto& rpt = this->schedule_[reportStepNum-1].rpt_config.get();
+            fipSched = std::make_unique<FIPConfig>(rpt);
+        }
+        const FIPConfig& fipc = reportStepNum == 0 ? this->eclState_.getEclipseConfig().fip()
+                                                   : *fipSched;
+
+        if (!substep && !this->forceDisableFipOutput_ && fipc.output(FIPConfig::OutputField::FIELD)) {
+
+            this->logOutput_.timeStamp("BALANCE", elapsed, reportStepNum, currentDate);
+
+            const auto& initial_inplace = this->initialInplace().value();
+            this->logOutput_.fip(inplace, initial_inplace, "");
+
+            if (fipc.output(FIPConfig::OutputField::FIPNUM)) {
+                this->logOutput_.fip(inplace, initial_inplace, "FIPNUM");
+
+                if (fipc.output(FIPConfig::OutputField::RESV))
+                    this->logOutput_.fipResv(inplace, "FIPNUM");
+            }
+
+            if (fipc.output(FIPConfig::OutputField::FIP)) {
+                for (const auto& reg : this->regions_) {
+                    if (reg.first != "FIPNUM") {
+                        std::ostringstream ss;
+                        ss << "BAL" << reg.first.substr(3);
+                        this->logOutput_.timeStamp(ss.str(), elapsed, reportStepNum, currentDate);
+                        this->logOutput_.fip(inplace, initial_inplace, reg.first);
+
+                        if (fipc.output(FIPConfig::OutputField::RESV))
+                            this->logOutput_.fipResv(inplace, reg.first);
+                    }
+                }
+            }
+        }
+    }
+
     /*!
      * \brief Capture connection fluxes, particularly to account for inter-region flows.
      *

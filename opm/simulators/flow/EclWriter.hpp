@@ -380,8 +380,7 @@ public:
                 boost::posix_time::from_time_t(simulator_.vanguard().schedule().getStartTime());
 
             if (this->collectOnIORank_.isIORank()) {
-                inplace_ = outputModule_->initialInplace();
-
+                inplace_ = outputModule_->initialInplace().value();
                 outputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time,
                                                   false, simulator_.gridView().comm());
             }
@@ -686,7 +685,9 @@ public:
         this->outputModule_->calc_initial_inplace(this->simulator_.gridView().comm());
 
         if (this->collectOnIORank_.isIORank()) {
-            this->inplace_ = this->outputModule_->initialInplace();
+            if (this->outputModule_->initialInplace().has_value()) {
+                this->inplace_ = this->outputModule_->initialInplace().value();
+            }
         }
     }
 

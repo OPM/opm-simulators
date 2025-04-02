@@ -144,7 +144,7 @@ protected:
                      const std::map<std::string, double>&                 miscSummaryData,
                      const std::map<std::string, std::vector<double>>&    regionData,
                      const Inplace&                                       inplace,
-                     const Inplace&                                       initialInPlace,
+                     const std::optional<Inplace>&                        initialInPlace,
                      const InterRegFlowMap&                               interRegFlows,
                      SummaryState&                                        summaryState,
                      UDQState&                                            udqState);
