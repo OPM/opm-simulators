@@ -110,6 +110,9 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     monitor_params_.decay_factor_ = Parameters::Get<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>();
 
     nupcol_group_rate_tolerance_ = Parameters::Get<Parameters::NupcolGroupRateTolerance<Scalar>>();
+    group_control_max_iterations_ = Parameters::Get<Parameters::GroupMaxIterations>();
+
+
 }
 
 template<class Scalar>
@@ -275,6 +278,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Tolerance for acceptable changes in VREP/RAIN group rates");
 
     Parameters::Hide<Parameters::DebugEmitCellPartition>();
+
+    Parameters::Register<Parameters::GroupMaxIterations>
+    ("Maximum number of iterations in the group solver algorithm");
 
     // if openMP is available, use two threads per mpi rank by default
 #if _OPENMP
