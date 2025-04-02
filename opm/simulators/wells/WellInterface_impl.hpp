@@ -841,6 +841,8 @@ namespace Opm
                                 DeferredLogger& deferred_logger)
     {
         OPM_TIMEFUNCTION();
+        updatePrimaryVariables(simulator, well_state, deferred_logger);
+        initPrimaryVariablesEvaluation();
         const bool old_well_operable = this->operability_status_.isOperableAndSolvable();
 
         if (this->param_.check_well_operability_iter_)
@@ -1161,6 +1163,7 @@ namespace Opm
                 ws.surface_rates[p] = 0;
             }
             ws.thp = 0;
+            //this->updatePrimaryVariables(simulator, well_state, deferred_logger); // can not called becase it is notconst
             return;
         }
 
@@ -1517,6 +1520,7 @@ namespace Opm
                 ws.bhp = controls.bhp_limit;
             }
         }
+        //this->updatePrimaryVariables(simulator, well_state, deferred_logger);// can not be called because it is not const
     }
 
     template<typename TypeTag>
