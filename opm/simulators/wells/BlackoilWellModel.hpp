@@ -74,6 +74,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace Opm {
@@ -267,7 +268,7 @@ template<class Scalar> class WellContributions;
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
 
-            std::pair<bool, bool>
+            std::tuple<bool, bool, Scalar>
             updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
 
             void updateAndCommunicate(const int reportStepIdx,
@@ -416,8 +417,9 @@ template<class Scalar> class WellContributions;
             // the function handles one iteration of updating well controls and network pressures.
             // it is possible to decouple the update of well controls and network pressures further.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
-            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
+            std::tuple<bool, bool, Scalar> updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
                                                                         const bool relax_network_tolerance,
+                                                                        const bool optimize_gas_lift,
                                                                         const double dt,
                                                                         DeferredLogger& local_deferredLogger);
 
