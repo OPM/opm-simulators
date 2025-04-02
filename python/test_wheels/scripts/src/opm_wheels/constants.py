@@ -14,6 +14,7 @@ class BaseEnum(enum.Enum):
 
 class Directories:
     docker_files = "dockerfiles"
+    python = "python"
     wheelhouse = "wheelhouse"
 
 

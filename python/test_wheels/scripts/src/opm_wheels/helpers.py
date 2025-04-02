@@ -35,18 +35,27 @@ def get_testing_root_dir() -> Path:
         raise RuntimeError("Testing directory does not exist.")
     return testing_root
 
-def get_wheel_dir() -> Path:
+def get_wheel_default_dir() -> Path:
+    """Return the default wheel directory as a relative path."""
+    wheel_default_dir = Path(Directories.python) / Directories.wheelhouse
+    return wheel_default_dir
+
+def get_wheel_abs_dir(wheel_dir: Path) -> Path:
     """Return the absolute path of the wheel directory."""
-    testing_root = get_testing_root_dir()
-    wheel_dir = testing_root / Directories.wheelhouse
+    # Check if the wheel_dir is an absolute path
+    if wheel_dir.is_absolute():
+        return wheel_dir
+    # If it's not absolute, resolve it relative to the testing root directory
+    git_root = get_git_root()
+    wheel_dir = git_root / wheel_dir
     if not wheel_dir.exists():
-        raise RuntimeError("Wheel directory does not exist.")
+        raise RuntimeError(f"Wheel directory {wheel_dir} does not exist.")
     return wheel_dir
 
-def get_wheel_file(name: str) -> Path:
+def get_wheel_file(wheel_dir: str, name: str) -> Path:
     """Get the path to the wheel file. NAME is the name of a wheel file, relative to the
     python/wheelhouse directory of the Git repository."""
-    wheel_dir = get_wheel_dir()
+    wheel_dir = get_wheel_abs_dir(wheel_dir)
     wheel_file = wheel_dir / name
     if not wheel_file.exists():
         raise FileNotFoundError(f"Wheel file {wheel_file} does not exist")
@@ -93,7 +102,6 @@ def run_docker_run(
     python_versions: list[PythonVersion]
 ) -> None:
     try:
-#-v $WHEELDIR_HOST:${WHEELDIR_CONTAINER}
         result = subprocess.run(
             [
                 "docker", "run",

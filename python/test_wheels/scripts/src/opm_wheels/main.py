@@ -6,7 +6,8 @@ from pathlib import Path
 import click
 
 from opm_wheels import click_helpers, helpers
-from opm_wheels.constants import Directories, LibType, PythonVersion
+from opm_wheels.click_helpers import ClickOptions
+from opm_wheels.constants import Directories, PythonVersion
 
 @click.group()
 @click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
@@ -23,12 +24,13 @@ def main(ctx: click.Context, verbose: bool) -> None:
 
 @main.command()
 @click.argument("name", type=str)
-def show_wheel_files(name: str) -> None:
+@ClickOptions.wheel_dir
+def show_wheel_files(name: str, wheel_dir: str) -> None:
     """Show the files in wheel file. NAME is the name of a wheel file, relative to the
     python/wheelhouse directory."""
     if not name.endswith(".whl"):
         raise click.BadParameter("NAME must end with .whl")
-    wheel_file = helpers.get_wheel_file(name)
+    wheel_file = helpers.get_wheel_file(wheel_dir, name)
     # Check that
     with zipfile.ZipFile(wheel_file, "r") as zf:
         for name in zf.namelist():
@@ -106,6 +108,7 @@ def build_docker_image(
     default="ubuntu:22.04",
     help="The OS for the Docker image. Currently only ubuntu:22.04 is supported."
 )
+@ClickOptions.wheel_dir
 @click.option(
     "--python-versions", "-p",
     type=str,
@@ -115,6 +118,7 @@ def build_docker_image(
 )
 def run_docker_image(
     docker_os: str,
+    wheel_dir: str,
     python_versions: list[PythonVersion],
 ) -> None:
     """Run the Docker image. The option "--docker-tag" specifies the tag of the Docker
@@ -122,6 +126,6 @@ def run_docker_image(
     use for testing. Valid values are: 3.6, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12. The value should
     be a comma-separated list of versions without separating space. For example: 3.6,3.7,3.8.
     If not given, the default value is 3.6,3.7,3.8,3.9,3.10,3.11,3.12."""
-    wheel_dir = helpers.get_wheel_dir()
+    wheel_dir = helpers.get_wheel_abs_dir(wheel_dir)
     docker_tag = helpers.get_docker_tag(docker_os)
     helpers.run_docker_run(docker_tag, wheel_dir, python_versions)

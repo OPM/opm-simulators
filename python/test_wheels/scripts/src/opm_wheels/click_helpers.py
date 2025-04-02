@@ -1,17 +1,8 @@
-from opm_wheels.constants import LibType, PythonVersion
+from opm_wheels.constants import PythonVersion
 from typing import Union
 import click
 
-def validate_lib_type(
-    ctx: click.Context, param: Union[click.Option, click.Parameter], value: str
-) -> str:
-    if value is None:
-        value = LibType.SHARED.value
-    if value not in LibType.values():
-        raise click.BadParameter(
-            f"Invalid library type '{value}'. Must be one of {', '.join(LibType.values())}."
-        )
-    return value
+from opm_wheels import helpers
 
 def validate_python_versions(
     ctx: click.Context, param: Union[click.Option, click.Parameter], value: str
@@ -27,3 +18,11 @@ def validate_python_versions(
                 f"Invalid python version '{version}'. Must be one of {', '.join([str(v) for v in valid_versions])}."
             )
     return versions
+
+class ClickOptions:
+    wheel_dir = lambda func: click.option(
+        "--wheel-dir", "-wd",
+        type=str,
+        default=str(helpers.get_wheel_default_dir()),
+        help=f"The directory containing the wheels. Can be relative to the root of the opm-simulators repository, or an absolute path. The default value is {str(helpers.get_wheel_default_dir())} directory."
+    )(func)
