@@ -790,8 +790,7 @@ connectionRatesMICP(Scalar& rate_m,
         cq_s_urea *= std::get<EvalWell>(ureaConcentration);
     }
 
-    // rescaling back the urea concentration (see WellInterfaceGeneric.cpp)
-    rate_u = cq_s_urea.value() * 10;
+    rate_u = cq_s_urea.value();
 
     return {well_.restrictEval(cq_s_microbe),
             well_.restrictEval(cq_s_oxygen),

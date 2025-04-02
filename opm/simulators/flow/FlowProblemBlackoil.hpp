@@ -621,8 +621,7 @@ public:
             if constexpr (enableMICP) {
                 rate[Indices::microbialConcentrationIdx] += source.rate({ijk, SourceComponent::MICR}) / this->model().dofTotalVolume(globalDofIdx);
                 rate[Indices::oxygenConcentrationIdx] += source.rate({ijk, SourceComponent::OXYG}) / this->model().dofTotalVolume(globalDofIdx);
-                // dividing by scaling factor 10 (see WellInterfaceGeneric.cpp)
-                rate[Indices::ureaConcentrationIdx] += source.rate({ijk, SourceComponent::UREA}) / (this->model().dofTotalVolume(globalDofIdx) * 10);
+                rate[Indices::ureaConcentrationIdx] += source.rate({ijk, SourceComponent::UREA}) / (this->model().dofTotalVolume(globalDofIdx));
             }
             if constexpr (enableEnergy) {
                 for (unsigned i = 0; i < phidx_map.size(); ++i) {
@@ -1542,8 +1541,9 @@ protected:
         if constexpr (!enableMICP)
             throw std::logic_error("MICP is disabled and you're trying to add urea to BC");
 
-        // dividing by scaling factor 10 (see WellInterfaceGeneric.cpp)
-        rate[Indices::ureaConcentrationIdx] = bc.rate / 10;
+        rate[Indices::ureaConcentrationIdx] = bc.rate;
+        // since the urea concentration can be much larger than 1, then we apply a scaling factor
+        rate[Indices::ureaConcentrationIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
     }
 
     void updateExplicitQuantities_(const bool first_step_after_restart)

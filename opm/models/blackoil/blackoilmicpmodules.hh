@@ -135,7 +135,7 @@ public:
             const auto& fs = intQuants.fluidState();
             LhsEval surfaceVolumeWater = Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx))
                                          * Toolbox::template decay<LhsEval>(intQuants.porosity());
-            // avoid singular matrix if no water is present.
+            // avoid singular matrix if no water is present
             surfaceVolumeWater = max(surfaceVolumeWater, 1e-10);
             // suspended microbes in water phase
             const LhsEval massMicrobes = surfaceVolumeWater * Toolbox::template decay<LhsEval>(intQuants.microbialConcentration());
@@ -145,10 +145,11 @@ public:
             const LhsEval massOxygen = surfaceVolumeWater * Toolbox::template decay<LhsEval>(intQuants.oxygenConcentration());
             LhsEval accumulationOxygen = massOxygen;
             storage[contiOxygenEqIdx] += accumulationOxygen;
-            // urea in water phase
+            // urea in water phase (applying the scaling factor for the urea equation)
             const LhsEval massUrea = surfaceVolumeWater * Toolbox::template decay<LhsEval>(intQuants.ureaConcentration());
             LhsEval accumulationUrea = massUrea;
             storage[contiUreaEqIdx] += accumulationUrea;
+            storage[contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
             // biofilm
             const LhsEval massBiofilm = Toolbox::template decay<LhsEval>(intQuants.biofilmConcentration());
             LhsEval accumulationBiofilm = massBiofilm;
@@ -175,6 +176,14 @@ public:
             flux[contiUreaEqIdx] +=
                 decay<UpEval>(upFs.ureaConcentration())
                 * volumeFlux;
+        }
+    }
+
+    // since the urea concentration can be much larger than 1, then we apply a scaling factor
+    static void applyScaling(RateVector& flux)
+    {
+        if constexpr (enableMICP) {
+            flux[contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
         }
     }
 
@@ -236,29 +245,42 @@ public:
             Scalar k_str = detachmentRate(satnumIdx);
             Scalar eta = detachmentExponent(satnumIdx);
             Scalar k_o = halfVelocityOxygen(satnumIdx);
-            Scalar k_u = halfVelocityUrea(satnumIdx) / 10;// dividing by scaling factor 10 (see WellInterfaceGeneric.cpp)
+            Scalar k_u = halfVelocityUrea(satnumIdx);
             Scalar mu = maximumGrowthRate(satnumIdx);
-            Scalar mu_u = maximumUreaUtilization(satnumIdx) / 10;// dividing by scaling factor 10
+            Scalar mu_u = maximumUreaUtilization(satnumIdx);
             Scalar Y_sb = yieldGrowthCoefficient(satnumIdx);
             Scalar F = oxygenConsumptionFactor(satnumIdx);
-            Scalar Y_uc = yieldUreaToCalciteCoefficient(satnumIdx) * 10;// multiplying by scaling factor 10
+            Scalar Y_uc = yieldUreaToCalciteCoefficient(satnumIdx);
+
+            // compute Monod terms (the negative region is replaced by a straight line)
+            // Schäfer et al (1998) https://doi.org/10.1016/S0169-7722(97)00060-0
+            Evaluation k_g = mu * intQuants.oxygenConcentration() / (k_o + intQuants.oxygenConcentration());
+            Evaluation k_c = mu_u * intQuants.ureaConcentration() / (k_u + intQuants.ureaConcentration());
+            if (intQuants.oxygenConcentration() < 0)
+                k_g = mu * intQuants.oxygenConcentration() / k_o;
+            if (intQuants.ureaConcentration() < 0)
+                k_c = mu_u * intQuants.ureaConcentration() / k_u;
 
             // compute the processes
-            source[Indices::contiMicrobialEqIdx] += intQuants.microbialConcentration() * intQuants.porosity() * b *
-                                                        (Y_sb * mu * intQuants.oxygenConcentration() / (k_o + intQuants.oxygenConcentration()) - k_d - k_a)
-                                                        + rho_b * intQuants.biofilmConcentration() * k_str * pow(normVelocityCell, eta);
+            source[Indices::contiMicrobialEqIdx] += intQuants.microbialConcentration() * intQuants.porosity() *
+                                                    b * (Y_sb * k_g - k_d - k_a) +
+                                                    rho_b * intQuants.biofilmConcentration() * k_str * pow(normVelocityCell, eta);
 
-            source[Indices::contiOxygenEqIdx] -= (intQuants.microbialConcentration() * intQuants.porosity() * b + rho_b * intQuants.biofilmConcentration()) *
-                                                        F * mu * intQuants.oxygenConcentration() / (k_o + intQuants.oxygenConcentration());
+            source[Indices::contiOxygenEqIdx] -= (intQuants.microbialConcentration() * intQuants.porosity() * 
+                                                  b + rho_b * intQuants.biofilmConcentration()) * F * k_g;
 
-            source[Indices::contiUreaEqIdx] -= rho_b * intQuants.biofilmConcentration() * mu_u * intQuants.ureaConcentration() / (k_u + intQuants.ureaConcentration());
+            source[Indices::contiUreaEqIdx] -= rho_b * intQuants.biofilmConcentration() * k_c;
 
-            source[Indices::contiBiofilmEqIdx] += intQuants.biofilmConcentration() * (Y_sb * mu * intQuants.oxygenConcentration() / (k_o + intQuants.oxygenConcentration()) - k_d
-                                                            - k_str * pow(normVelocityCell, eta) - Y_uc * (rho_b / rho_c) * intQuants.biofilmConcentration() * mu_u *
-                                                                    (intQuants.ureaConcentration() / (k_u + intQuants.ureaConcentration())) / (intQuants.porosity() + intQuants.biofilmConcentration()))
-                                                + k_a * intQuants.microbialConcentration() * intQuants.porosity() * b / rho_b;
+            source[Indices::contiBiofilmEqIdx] += intQuants.biofilmConcentration() * (Y_sb * k_g - k_d -
+                                                  k_str * pow(normVelocityCell, eta) - Y_uc * (rho_b / rho_c) * 
+                                                  intQuants.biofilmConcentration() * k_c / (intQuants.porosity() + 
+                                                  intQuants.biofilmConcentration())) + k_a * intQuants.microbialConcentration() *
+                                                  intQuants.porosity() * b / rho_b;
 
-            source[Indices::contiCalciteEqIdx] += (rho_b / rho_c) * intQuants.biofilmConcentration() * Y_uc * mu_u * intQuants.ureaConcentration() / (k_u + intQuants.ureaConcentration());
+            source[Indices::contiCalciteEqIdx] += (rho_b / rho_c) * intQuants.biofilmConcentration() * Y_uc * k_c;
+            
+            // since the urea concentration can be much larger than 1, then we apply a scaling factor
+            source[Indices::contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
         }
     }
 

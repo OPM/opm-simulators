@@ -481,8 +481,6 @@ public:
         static_assert(!enableBrine, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-
-
         // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
         if constexpr(enableDiffusion){
             typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
@@ -496,6 +494,7 @@ public:
                                               effectiveDiffusionCoefficient);
 
         }
+
         // deal with dispersion (if present). opm-models expects per area flux (added in the tmpdispersivity).
         if constexpr(enableDispersion){
             typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
@@ -508,6 +507,11 @@ public:
                                                 tmpdispersivity,
                                                 normVelocityAvg);
 
+        }
+        
+        // apply the scaling for the urea equation in MICP
+        if constexpr (enableMICP) {
+            MICPModule::applyScaling(flux);
         }
     }
 
@@ -635,7 +639,6 @@ public:
 
         static_assert(!enableSolvent, "Relevant treatment of boundary conditions must be implemented before enabling.");
         static_assert(!enablePolymer, "Relevant treatment of boundary conditions must be implemented before enabling.");
-        //static_assert(!enableMICP, "Relevant treatment of boundary conditions must be implemented before enabling.");
 
         // make sure that the right mass conservation quantities are used
         adaptMassConservationQuantities_(bdyFlux, insideIntQuants.pvtRegionIndex());
@@ -697,7 +700,7 @@ public:
         MICPModule::addSource(source, problem, insideIntQuants, globalSpaceIdex);
 
         // scale the source term of the energy equation
-        if (enableEnergy)
+        if constexpr(enableEnergy)
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
@@ -714,7 +717,7 @@ public:
         MICPModule::addSource(source, problem, insideIntQuants, globalSpaceIdex);
 
         // scale the source term of the energy equation
-        if (enableEnergy)
+        if constexpr(enableEnergy)
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
@@ -735,7 +738,7 @@ public:
 
         // scale the source term of the energy equation
         if constexpr(enableEnergy)
-                        source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+            source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     template <class UpEval, class FluidState>

@@ -134,33 +134,18 @@ PhaseUsage phaseUsage(const Phases& phases)
     return pu;
 }
 
-PhaseUsage phaseUsageMICP()
-{
-    PhaseUsage pu;
-    pu.phase_used.fill(0);
-    for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases + BlackoilPhases::NumCryptoPhases; ++phaseIdx) {
-        pu.phase_used[phaseIdx] = 0;
-        pu.phase_pos[phaseIdx] = -1;
-    }
-    pu.phase_used[BlackoilPhases::Aqua] = 1;
-    pu.phase_used[BlackoilPhases::MICP] = 1;
-    pu.phase_pos[BlackoilPhases::Aqua] = 0;
-    pu.phase_pos[BlackoilPhases::MICP] = 1;
-    pu.num_phases = 1;
-    pu.has_micp = true;
-
-    return pu;
-}
-
 PhaseUsage phaseUsageFromDeck(const EclipseState& eclipseState)
 {
     const auto& phases = eclipseState.runspec().phases();
 
     if (eclipseState.runspec().micp()) {
-        return phaseUsageMICP();
+        PhaseUsage pu = phaseUsage(phases);
+        pu.has_micp = true;
+        return pu;
     }
-
-    return phaseUsage(phases);
+    else {
+        return phaseUsage(phases);
+    }
 }
 
 /// Looks at presence of WATER, OIL and GAS keywords in deck

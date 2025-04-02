@@ -785,11 +785,6 @@ Scalar WellInterfaceGeneric<Scalar>::wpolymer_() const
     }
 }
 
-// The urea injection concentration is scaled down by a factor of 10, since its value
-// can be much bigger than 1 (not doing this slows the simulations). The corresponding
-// values are scaled accordingly when computing the reactions and also when writing
-// the output files.
-
 template<class Scalar>
 Scalar WellInterfaceGeneric<Scalar>::wurea_() const
 {
@@ -797,7 +792,7 @@ Scalar WellInterfaceGeneric<Scalar>::wurea_() const
 
     if (injectorType == InjectorType::WATER) {
         WellMICPProperties urea = this->well_ecl_.getMICPProperties();
-        const Scalar urea_injection_concentration = urea.m_ureaConcentration / 10;
+        const Scalar urea_injection_concentration = urea.m_ureaConcentration;
         return urea_injection_concentration;
     } else {
         // Not a water injection well => no urea.

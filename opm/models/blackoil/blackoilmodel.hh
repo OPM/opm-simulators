@@ -197,6 +197,19 @@ public:
     static constexpr Scalar value = 1.0/(30.0*4184.0*alpha);
 };
 
+//! similarly to the energy equation, the urea equation in MICP is scaled by a factor of 0.1
+template<class TypeTag>
+struct BlackOilUreaScalingFactor<TypeTag, TTag::BlackOilModel>
+{
+private:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr Scalar alpha = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>() ? 1000.0 : 1.0;
+
+public:
+    using type = Scalar;
+    static constexpr Scalar value = 1.0/(10.0*alpha);
+};
+
 // by default, ebos formulates the conservation equations in terms of mass not surface
 // volumes
 template<class TypeTag>

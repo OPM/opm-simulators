@@ -1036,8 +1036,7 @@ private:
                         const IntensiveQuantities& intQuants,
                         const double               surfVolWat)
     {
-        // rescaling back the urea concentration (see WellInterfaceGeneric.cpp)
-        const Scalar mass = surfVolWat * intQuants.ureaConcentration().value() * 10;
+        const Scalar mass = surfVolWat * intQuants.ureaConcentration().value();
 
         this->fipC_.assignUreaMass(globalDofIdx, mass);
     }
@@ -1512,8 +1511,7 @@ private:
                       micpC.assign(ectx.globalDofIdx,
                                    ectx.intQuants.microbialConcentration().value(),
                                    ectx.intQuants.oxygenConcentration().value(),
-                                   // rescaling back the urea concentration (see WellInterfaceGeneric.cpp)
-                                   10 * ectx.intQuants.ureaConcentration().value(),
+                                   ectx.intQuants.ureaConcentration().value(),
                                    ectx.intQuants.biofilmConcentration().value(),
                                    ectx.intQuants.calciteConcentration().value());
                   }, this->micpC_.allocated()
@@ -2050,10 +2048,9 @@ private:
             Entry{ScalarEntry{"BMUIP",
                               [&model = this->simulator_.model()](const Context& ectx)
                               {
-                                  // rescaling back the urea concentration (see WellInterfaceGeneric.cpp)
                                   return getValue(ectx.intQuants.ureaConcentration()) *
                                          getValue(ectx.intQuants.porosity()) *
-                                         model.dofTotalVolume(ectx.globalDofIdx) * 10;
+                                         model.dofTotalVolume(ectx.globalDofIdx) * 1;
                               }
                   }
             },

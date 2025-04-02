@@ -372,9 +372,11 @@ protected:
                 nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.pressMin_, bparams_.pressMax_);
             }
 
-
             // keep the values above 0
-            // for the biofilm and calcite, we set an upper limit
+            // for the biofilm and calcite, we set an upper limit equal to the initial porosity
+            // minus 1e-8. This prevents singularities (e.g., one of the calcite source term is 
+            // evaluated at 1/(iniPoro - calcite)). The value 1e-8 is taken from the salt precipitation
+            // clapping above. 
             if constexpr (enableMICP) {
                 if (pvIdx == Indices::microbialConcentrationIdx) {
                     nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
@@ -386,10 +388,12 @@ protected:
                     nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                 }
                 if (pvIdx == Indices::biofilmConcentrationIdx) {
-                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, this->problem().referencePorosity(globalDofIdx, 0) - 1.e-8);
+                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
+                                                                    this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
                 }
                 if (pvIdx == Indices::calciteConcentrationIdx) {
-                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, this->problem().referencePorosity(globalDofIdx, 0) - 1.e-8);
+                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
+                                                                    this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
                 }
             }
         }

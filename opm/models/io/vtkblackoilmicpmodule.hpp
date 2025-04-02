@@ -141,9 +141,8 @@ public:
                 }
 
                 if (params_.ureaConcentrationOutput_) {
-                    // multiplying by scaling factor 10 (see WellInterfaceGeneric.cpp)
                     ureaConcentration_[globalDofIdx] =
-                        10 * scalarValue(intQuants.ureaConcentration());
+                        scalarValue(intQuants.ureaConcentration());
                 }
 
                 if (params_.biofilmConcentrationOutput_) {

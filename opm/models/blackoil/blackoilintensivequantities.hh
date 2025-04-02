@@ -510,9 +510,10 @@ public:
 
         // deal with MICP
         if constexpr (enableMICP){
-          Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
-          Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
-          porosity_ += max(- biofilm_ - calcite_, -referencePorosity_+1e-8);
+            Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
+            Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
+            // minimum porosity of 1e-8 to prevent numerical issues 
+            porosity_ -= min(biofilm_ + calcite_, referencePorosity_ - 1e-8);
         }
 
         // deal with salt-precipitation

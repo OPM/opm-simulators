@@ -39,9 +39,6 @@ namespace Opm
     /// Looks at presence of WATER, OIL and GAS keywords in deck
     /// to determine active phases.
     PhaseUsage phaseUsageFromDeck(const Deck& deck);
-
-    /// Handles MICP
-    PhaseUsage phaseUsageMICP(const Phases& phases);
 }
 
 #endif // OPM_PHASEUSAGEFROMDECK_HEADER_INCLUDED

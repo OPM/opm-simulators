@@ -527,12 +527,7 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
             micp_.oxygenConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SUREA")) {
-            // dividing by scaling factor 10 (see WellInterfaceGeneric.cpp)
-            micp_.ureaConcentration.resize(numDof, 0.1);
-            const auto& urea = getArray(eclState_.fieldProps().get_double("SUREA"));
-            for (std::size_t xIdx = 0; xIdx < numDof; ++xIdx) {
-                micp_.ureaConcentration[xIdx] *= urea[xIdx];
-            }
+            micp_.ureaConcentration = getArray(eclState_.fieldProps().get_double("SUREA"));
         } else {
             micp_.ureaConcentration.resize(numDof, 0.0);
         }
