@@ -112,9 +112,6 @@ update(const WellState<Scalar>& well_state,
             value_[seg][WQTotal] = 0;
         }
 
-        // Production wells should have been initialized using reservoir data.
-        assert(well_.isProducer() == ws.initialized_from_reservoir);
-
         // todo to map old fraction to new perforations for now start from scratch.
         if (ws.primaryvar.size() == value_.size() * numWellEq) {
             if (has_wfrac_variable) {

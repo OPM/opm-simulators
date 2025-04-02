@@ -1603,12 +1603,11 @@ namespace Opm
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::
-    initializeWellState(const Simulator& simulator,
-                        const GroupState<Scalar>& /*group_state*/,
-                        const SummaryState& /* summary_state */,
-                        WellState<Scalar>& well_state,
-                        DeferredLogger& deferred_logger) const
+    initializeProducerWellState(const Simulator& simulator,
+                                WellState<Scalar>& well_state,
+                                DeferredLogger& deferred_logger) const
     {
+        assert(this->isProducer());
         OPM_TIMEFUNCTION();
         // Check if the rates of this well only are single-phase, do nothing
         // if more than one nonzero rate.
@@ -1626,29 +1625,48 @@ namespace Opm
             }
         }
 
-        // Calculate the rates that follow from the current primary variables.
-        // TODO switch to ccomputeWellRatesWithBhp().
-        std::vector<Scalar> well_q_s = computeCurrentWellRates(simulator, deferred_logger);
-        ws.initialized_from_reservoir = true;
+        // Calculate rates at bhp limit, or 1 bar if no limit.
+        std::vector<Scalar> well_q_s(this->number_of_phases_, 0.0);
+        bool rates_evaluated_at_1bar = false;
+        {
+            const auto& summary_state = simulator.vanguard().summaryState();
+            const auto& prod_controls = this->well_ecl_.productionControls(summary_state);
+            const double bhp_limit = std::max(prod_controls.bhp_limit, 1.0 * unit::barsa);
+            this->computeWellRatesWithBhp(simulator, bhp_limit, well_q_s, deferred_logger);
+            // Remember of we evaluated the rates at (approx.) 1 bar or not.
+            rates_evaluated_at_1bar = (bhp_limit < 1.1 * unit::barsa);
+            // Check that no rates are positive.
+            if (std::any_of(well_q_s.begin(), well_q_s.end(), [](Scalar q) { return q > 0.0; })) {
+                // Did we evaluate at 1 bar? If not, then we can try again at 1 bar.
+                if (!rates_evaluated_at_1bar) {
+                    this->computeWellRatesWithBhp(simulator, 1.0 * unit::barsa, well_q_s, deferred_logger);
+                    rates_evaluated_at_1bar = true;
+                }
+                // At this point we can only set the wrong-direction (if any) values to zero.
+                for (auto& q : well_q_s) {
+                    q = std::min(q, Scalar{0.0});
+                }
+            }
+        }
 
         if (nonzero_rate_index == -1) {
             // No nonzero rates.
-            // Use the computed rate directly
+            // Use the computed rate directly, or scaled by a factor
+            // 0.5 (to avoid too high values) if it was evaluated at 1 bar.
+            const double factor = rates_evaluated_at_1bar ? 0.5 : 1.0;
             for (int p = 0; p < this->number_of_phases_; ++p) {
-               ws.surface_rates[p] = well_q_s[this->flowPhaseToModelCompIdx(p)];
+               ws.surface_rates[p] = factor * well_q_s[p];
             }
             return;
         }
 
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
         const Scalar initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
-        const int comp_idx_nz = this->flowPhaseToModelCompIdx(nonzero_rate_index);
-        if (std::abs(well_q_s[comp_idx_nz]) > floating_point_error_epsilon) {
+        if (std::abs(well_q_s[nonzero_rate_index]) > floating_point_error_epsilon) {
             for (int p = 0; p < this->number_of_phases_; ++p) {
                 if (p != nonzero_rate_index) {
-                    const int comp_idx = this->flowPhaseToModelCompIdx(p);
                     Scalar& rate = ws.surface_rates[p];
-                    rate = (initial_nonzero_rate / well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
+                    rate = (initial_nonzero_rate / well_q_s[nonzero_rate_index]) * (well_q_s[p]);
                 }
             }
         }

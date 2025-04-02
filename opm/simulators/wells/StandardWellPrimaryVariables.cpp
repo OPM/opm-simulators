@@ -163,9 +163,6 @@ update(const WellState<Scalar>& well_state,
             }
     }
 
-    // Production wells should have been initialized using reservoir data.
-    assert(well_.isProducer() == ws.initialized_from_reservoir);
-
     if (ws.primaryvar.size() > 0) {
         if constexpr (has_wfrac_variable) {
              value_[WFrac] = ws.primaryvar[WFrac];
