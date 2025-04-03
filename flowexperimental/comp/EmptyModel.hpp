@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_EMPTY_MODEL_HPP
+#define OPM_EMPTY_MODEL_HPP
 
 // this is an empty model that having a lot of empty interfaces.
 // it is use for the development when some facility class are not ready
@@ -26,7 +28,6 @@
 #include <opm/output/data/Wells.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
-#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 namespace Opm {
 
@@ -96,3 +97,5 @@ public:
 };
 
 } // end of namespace Opm
+
+#endif // OPM_EMPTY_MODEL_HPP
