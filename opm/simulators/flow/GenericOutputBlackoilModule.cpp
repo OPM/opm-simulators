@@ -324,7 +324,12 @@ assignToSolution(data::Solution& sol)
     std::vector<DataEntry> baseSolutionVector;
     addEntry(baseSolutionVector, "1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_[gasPhaseIdx],                                              gasPhaseIdx);
     addEntry(baseSolutionVector, "1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   invB_[oilPhaseIdx],                                              oilPhaseIdx);
-    addEntry(baseSolutionVector, "1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx],                                            waterPhaseIdx);
+
+    // avoid output with generic fluid system and disabled water phase
+    if constexpr (numPhases > 2) {
+        addEntry(baseSolutionVector,
+                                 "1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx],                                            waterPhaseIdx);
+    }
     addEntry(baseSolutionVector, "FOAM",     UnitSystem::measure::identity,                              cFoam_);
     addEntry(baseSolutionVector, "GASKR",    UnitSystem::measure::identity,                              relativePermeability_[gasPhaseIdx],                              gasPhaseIdx);
     addEntry(baseSolutionVector, "GAS_DEN",  UnitSystem::measure::density,                               density_[gasPhaseIdx],                                           gasPhaseIdx);
@@ -354,9 +359,13 @@ assignToSolution(data::Solution& sol)
     addEntry(baseSolutionVector, "SSOLVENT", UnitSystem::measure::identity,                              sSol_);
     addEntry(baseSolutionVector, "SWHY1",    UnitSystem::measure::identity,                              swmin_);
     addEntry(baseSolutionVector, "SWMAX",    UnitSystem::measure::identity,                              swMax_);
-    addEntry(baseSolutionVector, "WATKR",    UnitSystem::measure::identity,                              relativePermeability_[waterPhaseIdx],                            waterPhaseIdx);
-    addEntry(baseSolutionVector, "WAT_DEN",  UnitSystem::measure::density,                               density_[waterPhaseIdx],                                         waterPhaseIdx);
-    addEntry(baseSolutionVector, "WAT_VISC", UnitSystem::measure::viscosity,                             viscosity_[waterPhaseIdx],                                       waterPhaseIdx);
+
+    // avoid output with generic fluid system and disabled water phase
+    if constexpr (numPhases > 2) {
+        addEntry(baseSolutionVector, "WATKR",    UnitSystem::measure::identity,                          relativePermeability_[waterPhaseIdx],                            waterPhaseIdx);
+        addEntry(baseSolutionVector, "WAT_DEN",  UnitSystem::measure::density,                           density_[waterPhaseIdx],                                         waterPhaseIdx);
+        addEntry(baseSolutionVector, "WAT_VISC", UnitSystem::measure::viscosity,                         viscosity_[waterPhaseIdx],                                       waterPhaseIdx);
+    }
 
     auto extendedSolutionArrays = std::array {
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
