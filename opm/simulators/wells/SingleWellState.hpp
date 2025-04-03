@@ -144,6 +144,9 @@ public:
     Scalar sum_solvent_rates() const;
     Scalar sum_polymer_rates() const;
     Scalar sum_brine_rates() const;
+    Scalar sum_microbial_rates() const;
+    Scalar sum_oxygen_rates() const;
+    Scalar sum_urea_rates() const;
 
     Scalar sum_filtrate_rate() const;
     Scalar sum_filtrate_total() const;

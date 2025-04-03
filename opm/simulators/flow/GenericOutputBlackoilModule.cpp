@@ -760,7 +760,7 @@ doAllocBuffers(const unsigned bufferSize,
        Entry{&cFoam_,                             "", enableFoam_},
        Entry{&cSalt_,                             "", enableBrine_},
        Entry{&pSalt_,                             "", enableSaltPrecipitation_},
-       Entry{&permFact_,                          "", enableSaltPrecipitation_},
+       Entry{&permFact_,                          "", enableSaltPrecipitation_ || enableMICP_},
        Entry{&soMax_,                             "", oilvap.getType() == OilVapP::VAPPARS},
        Entry{&soMax_,                             "", hysteresisConfig &&
                                                       hysteresisConfig->enableNonWettingHysteresis() &&

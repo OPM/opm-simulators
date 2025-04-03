@@ -90,6 +90,9 @@ struct EnableMech { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct BlackOilEnergyScalingFactor { using type = UndefinedProperty; };
 
+//! Similarly to the energy equation, a scaling is applied to the urea equation in MICP
+template<class TypeTag, class MyTypeTag>
+struct BlackOilUreaScalingFactor { using type = UndefinedProperty; };
 
 } // namespace Opm::Properties
 

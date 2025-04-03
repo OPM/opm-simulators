@@ -792,7 +792,7 @@ Scalar WellInterfaceGeneric<Scalar>::wurea_() const
 
     if (injectorType == InjectorType::WATER) {
         WellMICPProperties urea = this->well_ecl_.getMICPProperties();
-        const Scalar urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
+        const Scalar urea_injection_concentration = urea.m_ureaConcentration;
         return urea_injection_concentration;
     } else {
         // Not a water injection well => no urea.

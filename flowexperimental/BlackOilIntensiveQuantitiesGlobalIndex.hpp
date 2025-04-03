@@ -54,6 +54,7 @@
 
 #include <opm/utility/CopyablePtr.hpp>
 
+#include <stdexcept>
 #include <utility>
 
 #include <fmt/format.h>
@@ -518,6 +519,11 @@ public:
      */
     Scalar referencePorosity() const
     { return referencePorosity_; }
+
+    const Evaluation& permFactor() const
+    {
+        throw std::logic_error("permFactor() is not yet implemented for compositional modeling"); 
+    }
 
 private:
     friend BlackOilSolventIntensiveQuantities<TypeTag>;

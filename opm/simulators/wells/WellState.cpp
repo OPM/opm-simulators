@@ -577,6 +577,12 @@ WellState<Scalar>::report(const int* globalCellIdxMap,
             well.rates.set(rt::brine, ws.sum_brine_rates());
         }
 
+        if (pu.has_micp) {
+            well.rates.set(rt::microbial, ws.sum_microbial_rates());
+            well.rates.set(rt::oxygen, ws.sum_oxygen_rates());
+            well.rates.set(rt::urea, ws.sum_urea_rates());
+        }
+
         if (ws.producer) {
             well.rates.set(rt::alq, getALQ(wname));
         }
@@ -1121,6 +1127,14 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
     if (pu.has_solvent) {
         for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
             connections[i].rates.set(rt::solvent, perf_data.solvent_rates[i]);
+        }
+    }
+
+    if (pu.has_micp) {
+        for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
+            connections[i].rates.set(rt::microbial, perf_data.microbial_rates[i]);
+            connections[i].rates.set(rt::oxygen, perf_data.oxygen_rates[i]);
+            connections[i].rates.set(rt::urea, perf_data.urea_rates[i]);
         }
     }
 }

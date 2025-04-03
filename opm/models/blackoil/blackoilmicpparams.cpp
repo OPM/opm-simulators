@@ -26,7 +26,11 @@
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/EclipseState/MICPpara.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/BiofilmTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/DiffMICPTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PermfactTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
 #include <algorithm>
@@ -59,33 +63,71 @@ initFromState(const EclipseState& eclState)
     if (!eclState.runspec().micp())
         return; // MICP treatment is supposed to be disabled*/
 
-    // initialize the objects which deal with the MICPpara keyword
-    const auto& MICPpara = eclState.getMICPpara();
-    densityBiofilm_ = MICPpara.getDensityBiofilm();
-    densityCalcite_ = MICPpara.getDensityCalcite();
-    detachmentRate_ = MICPpara.getDetachmentRate();
-    criticalPorosity_ = MICPpara.getCriticalPorosity();
-    fittingFactor_ = MICPpara.getFittingFactor();
-    halfVelocityOxygen_ = MICPpara.getHalfVelocityOxygen();
-    halfVelocityUrea_ = MICPpara.getHalfVelocityUrea();
-    maximumGrowthRate_ = MICPpara.getMaximumGrowthRate();
-    maximumUreaUtilization_ = MICPpara.getMaximumUreaUtilization();
-    microbialAttachmentRate_ = MICPpara.getMicrobialAttachmentRate();
-    microbialDeathRate_ = MICPpara.getMicrobialDeathRate();
-    minimumPermeability_ = MICPpara.getMinimumPermeability();
-    oxygenConsumptionFactor_ = MICPpara.getOxygenConsumptionFactor();
-    yieldGrowthCoefficient_ = MICPpara.getYieldGrowthCoefficient();
-    maximumOxygenConcentration_ = MICPpara.getMaximumOxygenConcentration();
-    maximumUreaConcentration_ = MICPpara.getMaximumUreaConcentration();
-    toleranceBeforeClogging_ = MICPpara.getToleranceBeforeClogging();
+    const auto& tableManager = eclState.getTableManager();
+    unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+    unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
 
-    // obtain the porosity for the clamp in the blackoilnewtonmethod
-    if constexpr (std::is_same_v<Scalar, float>) {
-        const auto phi = eclState.fieldProps().get_double("PORO");
-        phi_.resize(phi.size());
-        std::copy(phi.begin(), phi.end(), phi_.begin());
-    } else {
-        phi_ = eclState.fieldProps().get_double("PORO");
+    // initialize the objects which deal with the MICP parameters
+    const TableContainer& biofilmTables = tableManager.getBiofilmTables();
+    if (biofilmTables.empty()) {
+        throw std::runtime_error("MICP requires the BIOFPARA keyword");
+    }
+    densityBiofilm_.resize(numSatRegions);
+    densityCalcite_.resize(numSatRegions);
+    detachmentRate_.resize(numSatRegions);
+    detachmentExponent_.resize(numSatRegions);
+    halfVelocityOxygen_.resize(numSatRegions);
+    halfVelocityUrea_.resize(numSatRegions);
+    maximumGrowthRate_.resize(numSatRegions);
+    maximumUreaUtilization_.resize(numSatRegions);
+    microbialAttachmentRate_.resize(numSatRegions);
+    microbialDeathRate_.resize(numSatRegions);
+    oxygenConsumptionFactor_.resize(numSatRegions);
+    yieldGrowthCoefficient_.resize(numSatRegions);
+    yieldUreaToCalciteCoefficient_.resize(numSatRegions);
+    for (unsigned stnRegionIdx = 0; stnRegionIdx < numSatRegions; ++stnRegionIdx) {
+        const BiofilmTable& biofilmTable = biofilmTables.getTable<BiofilmTable>(stnRegionIdx);
+        densityBiofilm_[stnRegionIdx] = biofilmTable.getDensityBiofilm().front();
+        densityCalcite_[stnRegionIdx] = biofilmTable.getDensityCalcite().front();
+        detachmentRate_[stnRegionIdx] = biofilmTable.getDetachmentRate().front();
+        detachmentExponent_[stnRegionIdx] = biofilmTable.getDetachmentExponent().front();
+        halfVelocityOxygen_[stnRegionIdx] = biofilmTable.getHalfVelocityOxygen().front();
+        halfVelocityUrea_[stnRegionIdx] = biofilmTable.getHalfVelocityUrea().front();
+        maximumGrowthRate_[stnRegionIdx] = biofilmTable.getMaximumGrowthRate().front();
+        maximumUreaUtilization_[stnRegionIdx] = biofilmTable.getMaximumUreaUtilization().front();
+        microbialAttachmentRate_[stnRegionIdx] = biofilmTable.getMicrobialAttachmentRate().front();
+        microbialDeathRate_[stnRegionIdx] = biofilmTable.getMicrobialDeathRate().front();
+        oxygenConsumptionFactor_[stnRegionIdx] = biofilmTable.getOxygenConsumptionFactor().front();
+        yieldGrowthCoefficient_[stnRegionIdx] = biofilmTable.getYieldGrowthCoefficient().front();
+        yieldUreaToCalciteCoefficient_[stnRegionIdx] = biofilmTable.getYieldUreaToCalciteCoefficient().front();
+    }
+
+    const TableContainer& diffMICPTables = tableManager.getDiffMICPTables();
+    microbialDiffusion_.resize(numPvtRegions);
+    oxygenDiffusion_.resize(numPvtRegions);
+    ureaDiffusion_.resize(numPvtRegions);
+    for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++pvtRegionIdx) {
+        if (!diffMICPTables.empty()) {
+            const DiffMICPTable& diffMICPTable = diffMICPTables.getTable<DiffMICPTable>(pvtRegionIdx);
+            microbialDiffusion_[pvtRegionIdx] = diffMICPTable.getMicrobialDiffusion().front();
+            oxygenDiffusion_[pvtRegionIdx] = diffMICPTable.getOxygenDiffusion().front();
+            ureaDiffusion_[pvtRegionIdx] = diffMICPTable.getUreaDiffusion().front();
+        }
+        else {
+            microbialDiffusion_[pvtRegionIdx] = 0.0;
+            oxygenDiffusion_[pvtRegionIdx] = 0.0;
+            ureaDiffusion_[pvtRegionIdx] = 0.0;
+        }
+    }
+
+    const TableContainer& permfactTables = tableManager.getPermfactTables();
+    if (permfactTables.empty()) {
+        throw std::runtime_error("MICP requires the PERMFACT keyword");
+    }
+    permfactTable_.resize(numSatRegions);
+    for (std::size_t i = 0; i < permfactTables.size(); ++i) {
+        const PermfactTable& permfactTable = permfactTables.getTable<PermfactTable>(i);
+        permfactTable_[i].setXYContainers(permfactTable.getPorosityChangeColumn(), permfactTable.getPermeabilityMultiplierColumn());
     }
 }
 #endif

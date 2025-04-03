@@ -28,6 +28,8 @@
 #ifndef OPM_BLACK_OIL_MICP_PARAMS_HPP
 #define OPM_BLACK_OIL_MICP_PARAMS_HPP
 
+#include <opm/material/common/Tabulated1DFunction.hpp>
+
 #include <vector>
 
 namespace Opm {
@@ -45,24 +47,26 @@ struct BlackOilMICPParams
     void initFromState(const EclipseState& eclState);
 #endif
 
-    Scalar densityBiofilm_;
-    Scalar densityCalcite_;
-    Scalar detachmentRate_;
-    Scalar criticalPorosity_;
-    Scalar fittingFactor_;
-    Scalar halfVelocityOxygen_;
-    Scalar halfVelocityUrea_;
-    Scalar maximumGrowthRate_;
-    Scalar maximumUreaUtilization_;
-    Scalar microbialAttachmentRate_;
-    Scalar microbialDeathRate_;
-    Scalar minimumPermeability_;
-    Scalar oxygenConsumptionFactor_;
-    Scalar yieldGrowthCoefficient_;
-    Scalar maximumOxygenConcentration_;
-    Scalar maximumUreaConcentration_;
-    Scalar toleranceBeforeClogging_;
-    std::vector<Scalar> phi_;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+
+    std::vector<TabulatedFunction> permfactTable_;
+
+    std::vector<Scalar> densityBiofilm_;
+    std::vector<Scalar> densityCalcite_;
+    std::vector<Scalar> detachmentRate_;
+    std::vector<Scalar> detachmentExponent_;
+    std::vector<Scalar> halfVelocityOxygen_;
+    std::vector<Scalar> halfVelocityUrea_;
+    std::vector<Scalar> maximumGrowthRate_;
+    std::vector<Scalar> maximumUreaUtilization_;
+    std::vector<Scalar> microbialAttachmentRate_;
+    std::vector<Scalar> microbialDeathRate_;
+    std::vector<Scalar> oxygenConsumptionFactor_;
+    std::vector<Scalar> yieldGrowthCoefficient_;
+    std::vector<Scalar> yieldUreaToCalciteCoefficient_;
+    std::vector<Scalar> microbialDiffusion_;
+    std::vector<Scalar> oxygenDiffusion_;
+    std::vector<Scalar> ureaDiffusion_;
 };
 
 } // namespace Opm

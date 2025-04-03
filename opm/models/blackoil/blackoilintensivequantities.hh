@@ -132,6 +132,8 @@ class BlackOilIntensiveQuantities
 
     using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
+    using BrineIntQua = BlackOilBrineIntensiveQuantities<TypeTag, enableSaltPrecipitation>;
+    using MICPIntQua = BlackOilMICPIntensiveQuantities<TypeTag, enableMICP>;
 
 
 public:
@@ -509,11 +511,12 @@ public:
         // deal with water induced rock compaction
         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
-        // the MICP processes change the porosity
+        // deal with MICP
         if constexpr (enableMICP){
             Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
             Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
-            porosity_ += - biofilm_ - calcite_;
+            // minimum porosity of 1e-8 to prevent numerical issues 
+            porosity_ -= min(biofilm_ + calcite_, referencePorosity_ - 1e-8);
         }
 
         // deal with salt-precipitation
@@ -703,6 +706,19 @@ public:
      */
     Scalar referencePorosity() const
     { return referencePorosity_; }
+
+    const Evaluation& permFactor() const
+    {
+        if constexpr (enableMICP) {
+            return MICPIntQua::permFactor();
+        }
+        else if constexpr (enableSaltPrecipitation) {
+            return BrineIntQua::permFactor();
+        }
+        else {
+            throw std::logic_error("permFactor() called but salt precipitation or MICP are disabled");
+        }
+    }
 
 private:
     friend BlackOilSolventIntensiveQuantities<TypeTag>;

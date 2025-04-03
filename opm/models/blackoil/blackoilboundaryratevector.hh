@@ -182,6 +182,8 @@ public:
             (*this)[Indices::contiMicrobialEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.microbialConcentration();
             (*this)[Indices::contiOxygenEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.oxygenConcentration();
             (*this)[Indices::contiUreaEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.ureaConcentration();
+            // since the urea concentration can be much larger than 1, then we apply a scaling factor
+            (*this)[Indices::contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
         }
 
         // make sure that the right mass conservation quantities are used

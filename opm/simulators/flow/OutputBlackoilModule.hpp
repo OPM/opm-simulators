@@ -114,6 +114,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     static constexpr int oilCompIdx = FluidSystem::oilCompIdx;
     static constexpr int waterCompIdx = FluidSystem::waterCompIdx;
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
 
     template<int idx, class VectorType>
     static Scalar value_or_zero(const VectorType& v)
@@ -873,6 +874,25 @@ private:
         {
             this->updateCO2InWater(globalDofIdx, pv, fs);
         }
+
+        if constexpr(enableMICP) {
+            const auto surfVolWat = pv * getValue(fs.invB(waterPhaseIdx));
+            if (this->fipC_.hasMicrobialMass()) {
+                this->updateMicrobialMass(globalDofIdx, intQuants, surfVolWat);
+            }
+            if (this->fipC_.hasOxygenMass()) {
+                this->updateOxygenMass(globalDofIdx, intQuants, surfVolWat);
+            }
+            if (this->fipC_.hasUreaMass()) {
+                this->updateUreaMass(globalDofIdx, intQuants, surfVolWat);
+            }
+            if (this->fipC_.hasBiofilmMass()) {
+                this->updateBiofilmMass(globalDofIdx, intQuants, totVolume);
+            }
+            if (this->fipC_.hasCalciteMass()) {
+                this->updateCalciteMass(globalDofIdx, intQuants, totVolume);
+            }
+        }
     }
 
     template <typename FluidState, typename FIPArray>
@@ -989,6 +1009,56 @@ private:
         const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
 
         return xoG * pv * rhoo * so / mM;
+    }
+
+    template <typename IntensiveQuantities>
+    void updateMicrobialMass(const unsigned             globalDofIdx,
+                             const IntensiveQuantities& intQuants,
+                             const double               surfVolWat)
+    {
+        const Scalar mass = surfVolWat * intQuants.microbialConcentration().value();
+
+        this->fipC_.assignMicrobialMass(globalDofIdx, mass);
+    }
+
+    template <typename IntensiveQuantities>
+    void updateOxygenMass(const unsigned             globalDofIdx,
+                          const IntensiveQuantities& intQuants,
+                          const double               surfVolWat)
+    {
+        const Scalar mass = surfVolWat * intQuants.oxygenConcentration().value();
+
+        this->fipC_.assignOxygenMass(globalDofIdx, mass);
+    }
+
+    template <typename IntensiveQuantities>
+    void updateUreaMass(const unsigned             globalDofIdx,
+                        const IntensiveQuantities& intQuants,
+                        const double               surfVolWat)
+    {
+        const Scalar mass = surfVolWat * intQuants.ureaConcentration().value();
+
+        this->fipC_.assignUreaMass(globalDofIdx, mass);
+    }
+
+    template <typename IntensiveQuantities>
+    void updateBiofilmMass(const unsigned             globalDofIdx,
+                           const IntensiveQuantities& intQuants,
+                           const double               totVolume)
+    {
+        const Scalar mass = totVolume * intQuants.biofilmMass().value();
+
+        this->fipC_.assignBiofilmMass(globalDofIdx, mass);
+    }
+
+    template <typename IntensiveQuantities>
+    void updateCalciteMass(const unsigned             globalDofIdx,
+                           const IntensiveQuantities& intQuants,
+                           const double               totVolume)
+    {
+        const Scalar mass = totVolume * intQuants.calciteMass().value();
+
+        this->fipC_.assignCalciteMass(globalDofIdx, mass);
     }
 
     //! \brief Setup extractors for element-level data.
@@ -1441,8 +1511,7 @@ private:
                       micpC.assign(ectx.globalDofIdx,
                                    ectx.intQuants.microbialConcentration().value(),
                                    ectx.intQuants.oxygenConcentration().value(),
-                                   // Rescaling back the urea concentration (see WellInterface_impl.hpp)
-                                   10 * ectx.intQuants.ureaConcentration().value(),
+                                   ectx.intQuants.ureaConcentration().value(),
                                    ectx.intQuants.biofilmConcentration().value(),
                                    ectx.intQuants.calciteConcentration().value());
                   }, this->micpC_.allocated()
@@ -1956,6 +2025,49 @@ private:
                                 const auto dz = problem.dofCenterDepth(ectx.globalDofIdx) - datum;
                                 return press - density*dz*grav[GridView::dimensionworld - 1];
                             }
+                  }
+            },
+            Entry{ScalarEntry{"BMMIP",
+                              [&model = this->simulator_.model()](const Context& ectx)
+                              {
+                                  return getValue(ectx.intQuants.microbialConcentration()) *
+                                         getValue(ectx.intQuants.porosity()) *
+                                         model.dofTotalVolume(ectx.globalDofIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BMOIP",
+                              [&model = this->simulator_.model()](const Context& ectx)
+                              {
+                                  return getValue(ectx.intQuants.oxygenConcentration()) *
+                                         getValue(ectx.intQuants.porosity()) *
+                                         model.dofTotalVolume(ectx.globalDofIdx);
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BMUIP",
+                              [&model = this->simulator_.model()](const Context& ectx)
+                              {
+                                  return getValue(ectx.intQuants.ureaConcentration()) *
+                                         getValue(ectx.intQuants.porosity()) *
+                                         model.dofTotalVolume(ectx.globalDofIdx) * 1;
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BMBIP",
+                              [&model = this->simulator_.model()](const Context& ectx)
+                              {
+                                  return model.dofTotalVolume(ectx.globalDofIdx) *
+                                         getValue(ectx.intQuants.biofilmMass());
+                              }
+                  }
+            },
+            Entry{ScalarEntry{"BMCIP",
+                              [&model = this->simulator_.model()](const Context& ectx)
+                              {
+                                  return model.dofTotalVolume(ectx.globalDofIdx) *
+                                         getValue(ectx.intQuants.calciteMass());
+                              }
                   }
             },
         };
