@@ -85,6 +85,33 @@ namespace {
 
         return regions;
     }
+
+    //! \brief Functor for reordering phase indices for name resolution.
+    //! \details This is the identity mapping for BlackoilFluidSystem.
+    template<class T>
+    struct PhaseReorder
+    {
+        int operator()(const int phase)
+        {
+            return phase;
+        }
+    };
+
+    //! \brief Functor for reordering phase indices for name resolution.
+    //! \details Re-order the GenericOilGasWaterFluidSystem phase indices to match
+    //!          BlackoilFluidSystem order.
+    template<class Scalar, int NumComp, bool enableWater>
+    struct PhaseReorder<Opm::GenericOilGasWaterFluidSystem<Scalar,NumComp,enableWater>>
+    {
+        int operator()(const int phase)
+        {
+            switch (phase) {
+            case 0: return 1;
+            case 1: return 2;
+            default: return 0;
+            }
+        }
+    };
 }
 
 namespace Opm {
@@ -778,6 +805,12 @@ doAllocBuffers(const unsigned bufferSize,
             "OIL",
             "GAS",
         };
+
+        // This method assumes blackoil ordering of phases.
+        // Apply a reordering for other fluid systems (compositional).
+        PhaseReorder<FluidSystem> reorder;
+        phase = reorder(phase);
+
         switch (type) {
         case EntryPhaseType::None:
             return std::string(kw);
