@@ -569,32 +569,35 @@ regionSum(const ScalarBuffer& property,
           std::size_t maxNumberOfRegions,
           const Parallel::Communication& comm)
 {
-        ScalarBuffer totals(maxNumberOfRegions, 0.0);
+    ScalarBuffer totals(maxNumberOfRegions, 0.0);
 
-        if (property.empty())
-            return totals;
-
-        // the regionId contains the ghost cells
-        // the property does not contain the ghostcells
-        // This code assumes that that the ghostcells are
-        // added after the interior cells
-        // OwnerCellsFirst = True
-        assert(regionId.size() >= property.size());
-        for (std::size_t j = 0; j < property.size(); ++j) {
-            const int regionIdx = regionId[j] - 1;
-            // the cell is not attributed to any region. ignore it!
-            if (regionIdx < 0)
-                continue;
-
-            assert(regionIdx < static_cast<int>(maxNumberOfRegions));
-            totals[regionIdx] += property[j];
-        }
-
-        for (std::size_t i = 0; i < maxNumberOfRegions; ++i)
-            totals[i] = comm.sum(totals[i]);
-
+    if (property.empty()) {
         return totals;
     }
+
+    // the regionId contains the ghost cells
+    // the property does not contain the ghostcells
+    // This code assumes that that the ghostcells are
+    // added after the interior cells
+    // OwnerCellsFirst = True
+    assert(regionId.size() >= property.size());
+    for (std::size_t j = 0; j < property.size(); ++j) {
+        const int regionIdx = regionId[j] - 1;
+        // the cell is not attributed to any region. ignore it!
+        if (regionIdx < 0) {
+            continue;
+        }
+
+        assert(regionIdx < static_cast<int>(maxNumberOfRegions));
+        totals[regionIdx] += property[j];
+    }
+
+    for (std::size_t i = 0; i < maxNumberOfRegions; ++i) {
+        totals[i] = comm.sum(totals[i]);
+    }
+
+    return totals;
+}
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
