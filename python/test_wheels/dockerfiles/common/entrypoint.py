@@ -73,8 +73,10 @@ def install_and_test(python_version, pyenv_full_version):
         return False
 
 def main():
-    python_versions_env = os.environ.get("PYTHON_VERSIONS", "3.6,3.7,3.8,3.9,3.10,3.11,3.12")
-    version_map = json.loads(os.environ.get("PYTHON_VERSION_MAP", "{}"))
+    with open("/test/common/python_version_map.json") as f:
+        version_map = json.load(f)
+    default_versions = ",".join(version_map.keys())
+    python_versions_env = os.environ.get("PYTHON_VERSIONS", default_versions)
 
     print(f"Running tests.. Requested Python versions: {python_versions_env}")
 

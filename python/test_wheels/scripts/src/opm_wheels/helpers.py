@@ -22,8 +22,9 @@ def get_git_root() -> Path:
         raise RuntimeError("Not a valid Git repository or other error occurred.")
     root = output.decode("utf-8").strip()
     # Extra check to ensure we're in the correct repository, check that there is a
-    # directory called wheels in the root directory
-    if not Path(root).joinpath("wheels").exists():
+    # directory called python/test_wheels in the root directory
+
+    if not Path(root).joinpath("python/test_wheels").exists():
         raise RuntimeError("Current cwd is not inside repository.")
     return Path(root)
 
@@ -40,9 +41,10 @@ def get_wheel_default_dir() -> Path:
     wheel_default_dir = Path(Directories.python) / Directories.wheelhouse
     return wheel_default_dir
 
-def get_wheel_abs_dir(wheel_dir: Path) -> Path:
+def get_wheel_abs_dir(wheel_dir: Path|str) -> Path:
     """Return the absolute path of the wheel directory."""
     # Check if the wheel_dir is an absolute path
+    wheel_dir = Path(wheel_dir)
     if wheel_dir.is_absolute():
         return wheel_dir
     # If it's not absolute, resolve it relative to the testing root directory

@@ -2,7 +2,8 @@ import os
 import json
 import subprocess
 
-version_map = json.loads(os.environ["PYTHON_VERSION_MAP"])
+with open("/test/common/python_version_map.json") as f:
+    version_map = json.load(f)
 
 # Initialize pyenv
 subprocess.run('eval "$(pyenv init -)"', shell=True, executable="/bin/bash")

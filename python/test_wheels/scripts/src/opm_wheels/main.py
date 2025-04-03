@@ -84,6 +84,7 @@ def build_docker_image(
     """Build the Docker image. The option "--docker-os specifies the name of the OS to use
     in the Docker image. Currently only ubuntu:22.04 is supported. If option --docker-progress
     is given, the Docker build will use option "--progress=plain". The default value is False."""
+
     testing_root = helpers.get_testing_root_dir()
     docker_tag = helpers.get_docker_tag(docker_os)
     dockerfile = testing_root / Directories.docker_files / docker_os / "Dockerfile"
