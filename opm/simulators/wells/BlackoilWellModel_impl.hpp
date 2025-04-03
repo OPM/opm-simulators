@@ -1097,12 +1097,9 @@ namespace Opm {
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
 
-        bool converged = false;
-        bool changed_well_group = false;
-
-        changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
+        const bool changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
         assembleWellEqWithoutIteration(dt, deferred_logger);
-        converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+        const bool converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (auto& well : this->well_container_) {
