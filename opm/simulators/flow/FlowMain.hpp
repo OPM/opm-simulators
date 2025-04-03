@@ -30,6 +30,7 @@
 
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/FlowUtils.hpp>
+#include <opm/simulators/flow/NlddReporting.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 #if HAVE_MPI
@@ -391,6 +392,17 @@ namespace Opm {
         // Output summary after simulation has completed
         void runSimulatorAfterSim_(SimulatorReport &report)
         {
+            if (simulator_->model().hasNlddSolver()) {
+                const auto& odir = eclState().getIOConfig().getOutputDir();
+                // Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
+                simulator_->model().writeNonlinearIterationsPerCell(odir);
+                // Write the NLDD statistics to the DBG file
+                reportNlddStatistics(simulator_->model().domainAccumulatedReports(),
+                                     simulator_->model().localAccumulatedReports(),
+                                     this->output_cout_,
+                                     FlowGenericVanguard::comm());
+            }
+
             if (! this->output_cout_) {
                 return;
             }
@@ -402,7 +414,7 @@ namespace Opm {
                 = omp_get_max_threads();
 #endif
 
-            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, simulator_->model().localAccumulatedReports());
+            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report);
 
             detail::handleExtraConvergenceOutput(report,
                                                  Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),

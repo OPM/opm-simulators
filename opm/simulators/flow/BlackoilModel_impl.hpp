@@ -125,7 +125,7 @@ prepareStep(const SimulatorTimerInterface& timer)
         //updateEquationsScaling();
     }
 
-    if (nlddSolver_) {
+    if (hasNlddSolver()) {
         nlddSolver_->prepareStep();
     }
 
@@ -977,12 +977,34 @@ computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
 }
 
 template <class TypeTag>
-SimulatorReportSingle
+const SimulatorReport&
 BlackoilModel<TypeTag>::
 localAccumulatedReports() const
 {
-    return nlddSolver_ ? nlddSolver_->localAccumulatedReports()
-                       : SimulatorReportSingle{};
+    if (!hasNlddSolver()) {
+        OPM_THROW(std::runtime_error, "Cannot get local reports from a model without NLDD solver");
+    }
+    return nlddSolver_->localAccumulatedReports();
+}
+
+template <class TypeTag>
+const std::vector<SimulatorReport>&
+BlackoilModel<TypeTag>::
+domainAccumulatedReports() const
+{
+    if (!nlddSolver_)
+        OPM_THROW(std::runtime_error, "Cannot get domain reports from a model without NLDD solver");
+    return nlddSolver_->domainAccumulatedReports();
+}
+
+template <class TypeTag>
+void
+BlackoilModel<TypeTag>::
+writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const
+{
+    if (hasNlddSolver()) {
+        nlddSolver_->writeNonlinearIterationsPerCell(odir);
+    }
 }
 
 template <class TypeTag>
@@ -990,8 +1012,8 @@ void
 BlackoilModel<TypeTag>::
 writePartitions(const std::filesystem::path& odir) const
 {
-    if (this->nlddSolver_ != nullptr) {
-        this->nlddSolver_->writePartitions(odir);
+    if (hasNlddSolver()) {
+        nlddSolver_->writePartitions(odir);
         return;
     }
 

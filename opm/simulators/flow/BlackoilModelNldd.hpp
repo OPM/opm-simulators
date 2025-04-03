@@ -31,9 +31,10 @@
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/NlddReporting.hpp>
+#include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/partitionCells.hpp>
 #include <opm/simulators/flow/priVarsPacking.hpp>
-#include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
 
 #include <opm/simulators/linalg/extractMatrix.hpp>
@@ -60,12 +61,7 @@
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
-#include <fstream>
-#include <functional>
-#include <iomanip>
-#include <ios>
 #include <memory>
-#include <numeric>
 #include <set>
 #include <sstream>
 #include <string>
@@ -203,6 +199,17 @@ public:
         }
 
         assert(int(domains_.size()) == num_domains);
+
+        domain_reports_accumulated_.resize(num_domains);
+
+        // Print domain distribution summary
+        ::Opm::printDomainDistributionSummary(
+            partition_vector,
+            domains_,
+            local_reports_accumulated_,
+            domain_reports_accumulated_,
+            grid,
+            wellModel_.numLocalWellsEnd());
     }
 
     //! \brief Called before starting a time step.
@@ -220,7 +227,6 @@ public:
     {
         // -----------   Set up reports and timer   -----------
         SimulatorReportSingle report;
-        Dune::Timer perfTimer;
 
         model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), nonlinear_solver.maxIter(), timer);
 
@@ -229,13 +235,17 @@ public:
         }
 
         // -----------   If not converged, do an NLDD iteration   -----------
-
+        Dune::Timer localSolveTimer;
+        Dune::Timer detailTimer;
+        localSolveTimer.start();
+        detailTimer.start();
         auto& solution = model_.simulator().model().solution(0);
         auto initial_solution = solution;
         auto locally_solved = initial_solution;
 
         // -----------   Decide on an ordering for the domains   -----------
         const auto domain_order = this->getSubdomainOrder();
+        local_reports_accumulated_.success.pre_post_time += detailTimer.stop();
 
         // -----------   Solve each domain separately   -----------
         DeferredLogger logger;
@@ -243,6 +253,8 @@ public:
         for (const int domain_index : domain_order) {
             const auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
+            detailTimer.reset();
+            detailTimer.start();
             if (domain.skip) {
                 local_report.converged = true;
                 domain_reports[domain.index] = local_report;
@@ -272,9 +284,11 @@ public:
                 // TODO: more proper treatment, including in parallel.
                 logger.debug(fmt::format("Convergence failure in domain {} on rank {}." , domain.index, rank_));
             }
+            local_report.solver_time += detailTimer.stop();
             domain_reports[domain.index] = local_report;
         }
-
+        detailTimer.reset();
+        detailTimer.start();
         // Communicate and log all messages.
         auto global_logger = gatherDeferredLogger(logger, model_.simulator().vanguard().grid().comm());
         global_logger.logMessages();
@@ -288,18 +302,23 @@ public:
         int& num_local_newtons = counts[2];
         int& num_domains = counts[3];
         {
-            SimulatorReportSingle rep;
-            for (const auto& dr : domain_reports) {
+            auto step_newtons = 0;
+            const auto dr_size = domain_reports.size();
+            for (auto i = 0*dr_size; i < dr_size; ++i) {
+                const auto& dr = domain_reports[i];
                 if (dr.converged) {
                     ++num_converged;
                     if (dr.total_newton_iterations == 0) {
                         ++num_converged_already;
                     }
                 }
-                rep += dr;
+                step_newtons += dr.total_newton_iterations;
+                // Accumulate local reports per domain
+                domain_reports_accumulated_[i] += dr;
+                // Accumulate local reports per rank
+                local_reports_accumulated_ += dr;
             }
-            num_local_newtons = rep.total_newton_iterations;
-            local_reports_accumulated_ += rep;
+            num_local_newtons = step_newtons;
         }
 
         if (model_.param().local_solve_approach_ == DomainSolveApproach::Jacobi) {
@@ -346,6 +365,10 @@ public:
             OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains did no work. {} total local Newton iterations.\n",
                                       num_converged, num_domains, num_converged_already, num_local_newtons));
         }
+        auto total_local_solve_time = localSolveTimer.stop();
+        report.local_solve_time += total_local_solve_time;
+        local_reports_accumulated_.success.total_time += total_local_solve_time;
+        local_reports_accumulated_.success.pre_post_time += detailTimer.stop();
 
         // Finish with a Newton step.
         // Note that the "iteration + 100" is a simple way to avoid entering
@@ -360,78 +383,72 @@ public:
         return report;
     }
 
-    /// return the statistics if the nonlinearIteration() method failed
-    const SimulatorReportSingle& localAccumulatedReports() const
+    /// return the statistics of local solves accumulated for this rank
+    const SimulatorReport& localAccumulatedReports() const
     {
         return local_reports_accumulated_;
+    }
+
+    /// return the statistics of local solves accumulated for each domain on this rank
+    const std::vector<SimulatorReport>& domainAccumulatedReports() const
+    {
+        // Update the number of wells for each domain that has been added to the well model at this point
+        // this is a mutable operation that updates the well counts in the domain reports.
+        const auto dr_size = domain_reports_accumulated_.size();
+        // Reset well counts before updating
+        for (auto i = 0*dr_size; i < dr_size; ++i) {
+            domain_reports_accumulated_[i].success.num_wells = 0;
+        }
+        // Update the number of wells for each domain
+        for (const auto& [wname, domain] : wellModel_.well_domain()) {
+            domain_reports_accumulated_[domain].success.num_wells++;
+        }
+        return domain_reports_accumulated_;
     }
 
     /// Write the partition vector to a file in ResInsight compatible format for inspection
     /// and a partition file for each rank, that can be used as input for OPM.
     void writePartitions(const std::filesystem::path& odir) const
     {
+        const auto& grid = this->model_.simulator().vanguard().grid();
         const auto& elementMapper = this->model_.simulator().model().elementMapper();
         const auto& cartMapper = this->model_.simulator().vanguard().cartesianIndexMapper();
-        const auto& dims = cartMapper.cartesianDimensions();
-        const auto total_size = dims[0] * dims[1] * dims[2];
 
+        ::Opm::writePartitions(
+            odir,
+            domains_,
+            grid,
+            elementMapper,
+            cartMapper);
+    }
+
+    /// Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
+    void writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const
+    {
         const auto& grid = this->model_.simulator().vanguard().grid();
-        const auto& comm = grid.comm();
+        const auto& elementMapper = this->model_.simulator().model().elementMapper();
+        const auto& cartMapper = this->model_.simulator().vanguard().cartesianIndexMapper();
 
-        // Create a full-sized vector initialized with -1 (indicating inactive cells)
-        auto full_partition = std::vector<int>(total_size, -1);
-
-        // Fill active cell values for this rank
-        const auto p = this->reconstitutePartitionVector();
-        auto i = 0;
-        for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
-            full_partition[cartMapper.cartesianIndex(elementMapper.index(cell))] = p[i++];
-        }
-
-        // Gather all partitions using max operation
-        comm.max(full_partition.data(), full_partition.size());
-
-        // Only rank 0 writes the file
-        if (this->rank_ == 0) {
-            auto fname = odir / "ResInsight_compatible_partition.txt";
-            std::ofstream resInsightFile { fname };
-
-            // Write header
-            resInsightFile << "NLDD_DOM" << '\n';
-
-            // Write all cells, including inactive ones
-            for (const auto& val : full_partition) {
-                resInsightFile << val << '\n';
-            }
-            resInsightFile << "/" << '\n';
-        }
-
-        const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
-        auto partition_fname = odir / fmt::format("{1:0>{0}}", nDigit, comm.rank());
-        std::ofstream pfile { partition_fname };
-
-        auto cell_index = 0;
-        for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
-            pfile << comm.rank() << ' '
-                  << cartMapper.cartesianIndex(elementMapper.index(cell)) << ' '
-                  << p[cell_index++] << '\n';
-        }
+        ::Opm::writeNonlinearIterationsPerCell(
+            odir,
+            domains_,
+            domain_reports_accumulated_,
+            grid,
+            elementMapper,
+            cartMapper);
     }
 
 private:
     //! \brief Solve the equation system for a single domain.
-    std::pair<SimulatorReportSingle, ConvergenceReport>
+    ConvergenceReport
     solveDomain(const Domain& domain,
                 const SimulatorTimerInterface& timer,
+                SimulatorReportSingle& local_report,
                 DeferredLogger& logger,
                 [[maybe_unused]] const int global_iteration,
                 const bool initial_assembly_required)
     {
         auto& modelSimulator = model_.simulator();
-
-        SimulatorReportSingle report;
-        Dune::Timer solveTimer;
-        solveTimer.start();
         Dune::Timer detailTimer;
 
         modelSimulator.model().newtonMethod().setIterationIndex(0);
@@ -449,18 +466,25 @@ private:
             wellModel_.assemble(modelSimulator.model().newtonMethod().numIterations(),
                                 modelSimulator.timeStepSize(),
                                 domain);
+            const double tt0 = detailTimer.stop();
+            local_report.assemble_time += tt0;
+            local_report.assemble_time_well += tt0;
+            detailTimer.reset();
+            detailTimer.start();
             // Assemble reservoir locally.
-            report += this->assembleReservoirDomain(domain);
-            report.assemble_time += detailTimer.stop();
+            this->assembleReservoirDomain(domain);
+            local_report.assemble_time += detailTimer.stop();
+            local_report.total_linearizations += 1;
         }
         detailTimer.reset();
         detailTimer.start();
         std::vector<Scalar> resnorms;
         auto convreport = this->getDomainConvergence(domain, timer, 0, logger, resnorms);
+        local_report.update_time += detailTimer.stop();
         if (convreport.converged()) {
             // TODO: set more info, timing etc.
-            report.converged = true;
-            return { report, convreport };
+            local_report.converged = true;
+            return convreport;
         }
 
         // We have already assembled for the first iteration,
@@ -471,8 +495,8 @@ private:
                                            modelSimulator.model().linearizer().jacobian(),
                                            modelSimulator.model().linearizer().residual());
         const double tt1 = detailTimer.stop();
-        report.assemble_time += tt1;
-        report.assemble_time_well += tt1;
+        local_report.assemble_time += tt1;
+        local_report.assemble_time_well += tt1;
 
         // Local Newton loop.
         const int max_iter = model_.param().max_local_solve_iterations_;
@@ -493,15 +517,15 @@ private:
             if (damping_factor != 1.0) {
                 x *= damping_factor;
             }
-            report.linear_solve_time += detailTimer.stop();
-            report.linear_solve_setup_time += model_.linearSolveSetupTime();
-            report.total_linear_iterations = model_.linearIterationsLastSolve();
+            local_report.linear_solve_time += detailTimer.stop();
+            local_report.linear_solve_setup_time += model_.linearSolveSetupTime();
+            local_report.total_linear_iterations = model_.linearIterationsLastSolve();
 
             // Update local solution. // TODO: x is still full size, should we optimize it?
             detailTimer.reset();
             detailTimer.start();
             this->updateDomainSolution(domain, x);
-            report.update_time += detailTimer.stop();
+            local_report.update_time += detailTimer.stop();
 
             // Assemble well and reservoir.
             detailTimer.reset();
@@ -514,8 +538,13 @@ private:
             wellModel_.assemble(modelSimulator.model().newtonMethod().numIterations(),
                                 modelSimulator.timeStepSize(),
                                 domain);
-            report += this->assembleReservoirDomain(domain);
-            report.assemble_time += detailTimer.stop();
+            const double tt3 = detailTimer.stop();
+            local_report.assemble_time += tt3;
+            local_report.assemble_time_well += tt3;
+            detailTimer.reset();
+            detailTimer.start();
+            this->assembleReservoirDomain(domain);
+            local_report.assemble_time += detailTimer.stop();
 
             // Check for local convergence.
             detailTimer.reset();
@@ -523,6 +552,7 @@ private:
             resnorms.clear();
             convreport = this->getDomainConvergence(domain, timer, iter, logger, resnorms);
             convergence_history.push_back(resnorms);
+            local_report.update_time += detailTimer.stop();
 
             // apply the Schur complement of the well model to the
             // reservoir linearized equations
@@ -532,8 +562,8 @@ private:
                                                modelSimulator.model().linearizer().jacobian(),
                                                modelSimulator.model().linearizer().residual());
             const double tt2 = detailTimer.stop();
-            report.assemble_time += tt2;
-            report.assemble_time_well += tt2;
+            local_report.assemble_time += tt2;
+            local_report.assemble_time_well += tt2;
 
             // Check if we should dampen. Only do so if wells are converged.
             if (!convreport.converged() && !convreport.wellFailed()) {
@@ -551,20 +581,19 @@ private:
 
         modelSimulator.problem().endIteration();
 
-        report.converged = convreport.converged();
-        report.total_newton_iterations = iter;
-        report.total_linearizations = iter;
-        report.total_time = solveTimer.stop();
+        local_report.converged = convreport.converged();
+        local_report.total_newton_iterations = iter;
+        local_report.total_linearizations += iter;
         // TODO: set more info, timing etc.
-        return { report, convreport };
+        return convreport;
     }
 
     /// Assemble the residual and Jacobian of the nonlinear system.
-    SimulatorReportSingle assembleReservoirDomain(const Domain& domain)
+    void assembleReservoirDomain(const Domain& domain)
     {
+        OPM_TIMEBLOCK(assembleReservoirDomain);
         // -------- Mass balance equations --------
         model_.simulator().model().linearizer().linearizeDomain(domain);
-        return model_.wellModel().lastReport();
     }
 
     //! \brief Solve the linearized system for a domain.
@@ -603,6 +632,7 @@ private:
     /// Apply an update to the primary variables.
     void updateDomainSolution(const Domain& domain, const BVector& dx)
     {
+        OPM_TIMEBLOCK(updateDomainSolution);
         auto& simulator = model_.simulator();
         auto& newtonMethod = simulator.model().newtonMethod();
         SolutionVector& solution = simulator.model().solution(/*timeIdx=*/0);
@@ -794,6 +824,7 @@ private:
                                            DeferredLogger& logger,
                                            std::vector<Scalar>& residual_norms)
     {
+        OPM_TIMEBLOCK(getDomainConvergence);
         std::vector<Scalar> B_avg(numEq, 0.0);
         auto report = this->getDomainReservoirConvergence(timer.simulationTimeElapsed(),
                                                           timer.currentStepLength(),
@@ -883,8 +914,7 @@ private:
     {
         auto initial_local_well_primary_vars = wellModel_.getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, logger, iteration, false);
-        local_report = res.first;
+        auto convrep = solveDomain(domain, timer, local_report, logger, iteration, false);
         if (local_report.converged) {
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
@@ -908,12 +938,10 @@ private:
     {
         auto initial_local_well_primary_vars = wellModel_.getPrimaryVarsDomain(domain.index);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, logger, iteration, true);
-        local_report = res.first;
+        auto convrep = solveDomain(domain, timer, local_report, logger, iteration, true);
         if (!local_report.converged) {
             // We look at the detailed convergence report to evaluate
             // if we should accept the unconverged solution.
-            const auto& convrep = res.second;
             // We do not accept a solution if the wells are unconverged.
             if (!convrep.wellFailed()) {
                 // Calculare the sums of the mb and cnv failures.
@@ -931,6 +959,7 @@ private:
                 const Scalar acceptable_local_cnv_sum = 1.0;
                 if (mb_sum < acceptable_local_mb_sum && cnv_sum < acceptable_local_cnv_sum) {
                     local_report.converged = true;
+                    local_report.accepted_unconverged_domains += 1;
                     logger.debug(fmt::format("Accepting solution in unconverged domain {} on rank {}.", domain.index, rank_));
                     logger.debug(fmt::format("Value of mb_sum: {}  cnv_sum: {}", mb_sum, cnv_sum));
                 } else {
@@ -944,9 +973,11 @@ private:
             }
         }
         if (local_report.converged) {
+            local_report.converged_domains += 1;
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
         } else {
+            local_report.unconverged_domains += 1;
             wellModel_.setPrimaryVarsDomain(domain.index, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
             model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
@@ -1033,40 +1064,14 @@ private:
                                      param.local_domains_partition_well_neighbor_levels_);
     }
 
-    std::vector<int> reconstitutePartitionVector() const
-    {
-        const auto& grid = this->model_.simulator().vanguard().grid();
-
-        auto numD = std::vector<int>(grid.comm().size() + 1, 0);
-        numD[grid.comm().rank() + 1] = static_cast<int>(this->domains_.size());
-        grid.comm().sum(numD.data(), numD.size());
-        std::partial_sum(numD.begin(), numD.end(), numD.begin());
-
-        auto p = std::vector<int>(grid.size(0));
-        auto maxCellIdx = std::numeric_limits<int>::min();
-
-        auto d = numD[grid.comm().rank()];
-        for (const auto& domain : this->domains_) {
-            for (const auto& cell : domain.cells) {
-                p[cell] = d;
-                if (cell > maxCellIdx) {
-                    maxCellIdx = cell;
-                }
-            }
-
-            ++d;
-        }
-
-        p.erase(p.begin() + maxCellIdx + 1, p.end());
-        return p;
-    }
-
     BlackoilModel<TypeTag>& model_; //!< Reference to model
     BlackoilWellModelNldd<TypeTag> wellModel_; //!< NLDD well model adapter
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
-    SimulatorReportSingle local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers
+    SimulatorReport local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers per rank
+    // mutable because we need to update the number of wells for each domain in getDomainAccumulatedReports()
+    mutable std::vector<SimulatorReport> domain_reports_accumulated_; //!< Accumulated convergence reports per domain
     int rank_ = 0; //!< MPI rank of this process
 };
 
