@@ -774,9 +774,9 @@ doAllocBuffers(const unsigned bufferSize,
     auto getName = [](std::string_view kw, EntryPhaseType type, int phase)
     {
         constexpr auto phaseName = std::array{
-            "GAS",
             "WAT",
-            "OIL"
+            "OIL",
+            "GAS",
         };
         switch (type) {
         case EntryPhaseType::None:
@@ -784,7 +784,7 @@ doAllocBuffers(const unsigned bufferSize,
 
         case EntryPhaseType::NGWO:
         case EntryPhaseType::GWO:
-            return std::string(kw) + std::string_view{"GWO"}[phase];
+            return std::string(kw) + std::string_view{"WOG"}[phase];
 
         case EntryPhaseType::NGasWatOil:
             return std::string(1,kw[0]) + phaseName[phase];
@@ -828,9 +828,9 @@ doAllocBuffers(const unsigned bufferSize,
                                     [&entry, &handleScalarEntry, &getName, &rstKeywords](PhaseArray* v)
                                     {
                                        constexpr auto phases = std::array{
-                                          gasPhaseIdx,
                                           waterPhaseIdx,
-                                          oilPhaseIdx
+                                          oilPhaseIdx,
+                                          gasPhaseIdx,
                                        };
 
                                        bool required = entry.required;
