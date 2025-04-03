@@ -924,6 +924,11 @@ public:
                                            this->pvtRegionIndex(elemIdx));
     }
 
+    bool drsdtconIsActive(unsigned elemIdx, int episodeIdx) const
+    {
+        return this->mixControls_.drsdtConvective(episodeIdx, this->pvtRegionIndex(elemIdx));
+    }
+
     /*!
      * \copydoc FvBaseProblem::boundary
      *
