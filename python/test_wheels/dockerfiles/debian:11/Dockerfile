@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM debian:11
 
 # Set build-time and runtime environment
 # Avoid user-interaction prompts when installing packages.
