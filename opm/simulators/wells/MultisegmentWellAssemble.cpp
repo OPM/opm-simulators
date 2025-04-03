@@ -39,6 +39,7 @@
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+int counter = 0;
 namespace Opm {
 
 //! \brief Class administering assembler access to equation system.
@@ -93,6 +94,19 @@ public:
 private:
     MultisegmentWellEquations<Scalar,numWellEq,numEq>& eqns_; //!< Reference to equation system
 };
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
+increment()
+{
+    counter++;
+};
+
+template<class FluidSystem, class Indices>
+int MultisegmentWellAssemble<FluidSystem,Indices>::
+get_counter()
+{
+    return counter;
+};
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellAssemble<FluidSystem,Indices>::
@@ -112,6 +126,10 @@ assembleControlEq(const WellState<Scalar>& well_state,
         This function assembles the control equation, similar as for StandardWells.
         It does *not* need communication.
     */
+    //if (counter >= 11) // looks fine!
+    //    return;
+    std::cout << counter << ": assembleControlEq" << std::endl;
+
     static constexpr int Gas = BlackoilPhases::Vapour;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -233,6 +251,9 @@ assembleAccelerationTerm(const int seg_target,
         This method is called in MultisegmentWellEval::assembleAccelerationPressureLoss.
         It does *not* need communication.
     */
+    if (counter >= 11) // not called
+        return;
+    std::cout << counter << ": assembleAccelerationTerm" << std::endl;
 
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg_target][SPres] -= accelerationTerm.value();
@@ -258,6 +279,10 @@ assembleHydroPressureLoss(const int seg,
         It does *not* need communication.
     */
 
+    //if (counter >= 11) // looks fine!
+    //    return;
+    std::cout << counter << ": assembleHydroPressureLoss" << std::endl;
+
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][SPres] -= hydro_pressure_drop_seg.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -276,6 +301,10 @@ assemblePressureEqExtraDerivatives(const int seg,
     /*
         This method does *not* need communication.
     */
+    if (counter >= 11) // not called
+        return;
+    std::cout << counter << ": assemblePressureEqExtraDerivatives" << std::endl;
+
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     // disregard residual
     // Frac - derivatives are zero (they belong to upwind^2)
@@ -296,6 +325,10 @@ assemblePressureEq(const int seg,
     /*
         This method does *not* need communication.
     */
+    if (counter >= 11) //problematic
+        return;
+    std::cout << counter << ": assemblePressureEq" << std::endl;
+
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][SPres] += pressure_equation.value();
     eqns.D()[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
@@ -327,6 +360,10 @@ assembleTrivialEq(const int seg,
         and assembleICDPressureEq is responsible for the remaining segments.
         This method does *not* need communication.
     */
+    if (counter >= 11) //not called
+        return;
+    std::cout << counter << ": assembleTrivialEq" << std::endl;
+
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][SPres] = value;
     eqns.D()[seg][seg][SPres][WQTotal] = 1.;
@@ -343,6 +380,10 @@ assembleAccumulationTerm(const int seg,
         This method is called from MultisegmentWell::assembleWellEqWithoutIteration.
         It only assembles on the diagonal of D and it does *not* need communication.
     */
+    if (counter >= 11) //problematic
+        return;
+    std::cout << counter << ": assembleAccumulationTerm" << std::endl;
+
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] += accumulation_term.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -362,6 +403,10 @@ assembleOutflowTerm(const int seg,
         This method is called from MultisegmentWell::assembleWellEqWithoutIteration.
         It does *not* need communication.
     */
+    if (counter >= 11) //problematic
+        return;
+    std::cout << counter << ": assembleOutflowTerm" << std::endl;
+
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] -= segment_rate.value();
     eqns.D()[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
@@ -387,6 +432,9 @@ assembleInflowTerm(const int seg,
         This method is called from MultisegmentWell::assembleWellEqWithoutIteration.
         It does *not* need communication.
     */
+    if (counter >= 11) //problematic
+        return;
+    std::cout << counter << ": assembleInflowTerm" << std::endl;
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][comp_idx] += inlet_rate.value();
     eqns.D()[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
@@ -408,6 +456,9 @@ assemblePerforationEq(const int seg,
                       const EvalWell& cq_s_effective,
                       Equations& eqns1) const
 {
+    //if (counter >= 11) // looks fine!
+    //    return;
+    std::cout << counter << ": assemblePerforationEq" << std::endl;
     /*
         This method is called from MultisegmentWell::assembleWellEqWithoutIteration.
         It *does* need communication, i.e. this method only assembles the parts of the matrix this process is responsible for

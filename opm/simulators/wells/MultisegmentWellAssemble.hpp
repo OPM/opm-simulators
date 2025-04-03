@@ -135,6 +135,8 @@ public:
                                const EvalWell& cq_s_effective,
                                Equations& eqns) const;
 
+    void increment();
+    int get_counter();
 private:
     const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well
 };
