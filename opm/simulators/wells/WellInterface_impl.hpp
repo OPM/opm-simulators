@@ -1622,52 +1622,99 @@ namespace Opm
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateWellStateRates(const Simulator& simulator,
-                         WellState<Scalar>& well_state,
-                         DeferredLogger& deferred_logger) const
+    initializeWellState(const Simulator& simulator,
+                        const GroupState<Scalar>& group_state,
+                        WellState<Scalar>& well_state,
+                        DeferredLogger& deferred_logger) const
     {
         OPM_TIMEFUNCTION();
         // Check if the rates of this well only are single-phase, do nothing
         // if more than one nonzero rate.
         auto& ws = well_state.well(this->index_of_well_);
-        int nonzero_rate_index = -1;
-        const Scalar floating_point_error_epsilon = 1e-14;
-        for (int p = 0; p < this->number_of_phases_; ++p) {
-            if (std::abs(ws.surface_rates[p]) > floating_point_error_epsilon) {
-                if (nonzero_rate_index == -1) {
-                    nonzero_rate_index = p;
-                } else {
-                    // More than one nonzero rate.
-                    return;
-                }
-            }
-        }
-
+        // int nonzero_rate_index = -1;
+        // const Scalar floating_point_error_epsilon = 1e-14;
+        // for (int p = 0; p < this->number_of_phases_; ++p) {
+        //     if (std::abs(ws.surface_rates[p]) > floating_point_error_epsilon) {
+        //         if (nonzero_rate_index == -1) {
+        //             nonzero_rate_index = p;
+        //         } else {
+        //             // More than one nonzero rate.
+        //             return;
+        //         }
+        //     }
+        // }
         // Calculate the rates that follow from the current primary variables.
-        std::vector<Scalar> well_q_s = computeCurrentWellRates(simulator, deferred_logger);
+        std::vector<Scalar> well_q_s;
+        Scalar bhp_tmp = 0.0;
+        computeWellRatesWithBhp(simulator,
+                            bhp_tmp,
+                            well_q_s,
+                            deferred_logger);
+        //                     constcomputeCurrentWellRates(simulator, deferred_logger);
 
-        if (nonzero_rate_index == -1) {
+        //if (nonzero_rate_index == -1) {
             // No nonzero rates.
             // Use the computed rate directly
-            for (int p = 0; p < this->number_of_phases_; ++p) {
-               ws.surface_rates[p] = well_q_s[this->flowPhaseToModelCompIdx(p)];
-            }
-            return;
+        for (int p = 0; p < this->number_of_phases_; ++p) {
+            ws.surface_rates[p] = well_q_s[this->flowPhaseToModelCompIdx(p)];
         }
+        // set fractions
 
-        // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
-        const Scalar initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
-        const int comp_idx_nz = this->flowPhaseToModelCompIdx(nonzero_rate_index);
-        if (std::abs(well_q_s[comp_idx_nz]) > floating_point_error_epsilon) {
-            for (int p = 0; p < this->number_of_phases_; ++p) {
-                if (p != nonzero_rate_index) {
-                    const int comp_idx = this->flowPhaseToModelCompIdx(p);
-                    Scalar& rate = ws.surface_rates[p];
-                    rate = (initial_nonzero_rate / well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
-                }
-            }
-        }
+        ws.setInitializedFromReservoir(true);
+        this->updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+        
     }
+
+
+    // template <typename TypeTag>
+    // void
+    // WellInterface<TypeTag>::
+    // updateWellStateRates(const Simulator& simulator,
+    //                      WellState<Scalar>& well_state,
+    //                      DeferredLogger& deferred_logger) const
+    // {
+    //     OPM_TIMEFUNCTION();
+    //     // Check if the rates of this well only are single-phase, do nothing
+    //     // if more than one nonzero rate.
+    //     auto& ws = well_state.well(this->index_of_well_);
+    //     int nonzero_rate_index = -1;
+    //     const Scalar floating_point_error_epsilon = 1e-14;
+    //     for (int p = 0; p < this->number_of_phases_; ++p) {
+    //         if (std::abs(ws.surface_rates[p]) > floating_point_error_epsilon) {
+    //             if (nonzero_rate_index == -1) {
+    //                 nonzero_rate_index = p;
+    //             } else {
+    //                 // More than one nonzero rate.
+    //                 return;
+    //             }
+    //         }
+    //     }
+
+    //     // Calculate the rates that follow from the current primary variables.
+    //     std::vector<Scalar> well_q_s = computeCurrentWellRates(simulator, deferred_logger);
+        
+    //     if (nonzero_rate_index == -1) {
+    //         // No nonzero rates.
+    //         // Use the computed rate directly
+    //         for (int p = 0; p < this->number_of_phases_; ++p) {
+    //            ws.surface_rates[p] = well_q_s[this->flowPhaseToModelCompIdx(p)];
+    //         }
+    //         return;
+    //     }
+    //     // set fractions
+    //     // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
+    //     const Scalar initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
+    //     const int comp_idx_nz = this->flowPhaseToModelCompIdx(nonzero_rate_index);
+    //     if (std::abs(well_q_s[comp_idx_nz]) > floating_point_error_epsilon) {
+    //         for (int p = 0; p < this->number_of_phases_; ++p) {
+    //             if (p != nonzero_rate_index) {
+    //                 const int comp_idx = this->flowPhaseToModelCompIdx(p);
+    //                 Scalar& rate = ws.surface_rates[p];
+    //                 rate = (initial_nonzero_rate / well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
+    //             }
+    //         }
+    //     }
+    // }
 
     template <typename TypeTag>
     std::vector<typename WellInterface<TypeTag>::Scalar>
