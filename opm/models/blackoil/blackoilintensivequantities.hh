@@ -603,7 +603,13 @@ public:
             asImp_().saltPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         }
         if constexpr (enableConvectiveMixing) {
-            asImp_().updateSaturatedDissolutionFactor_();
+            // The ifs are here is to avoid extra calculations for
+            // cases without CO2STORE and DRSDTCON.
+            if (problem.simulator().vanguard().eclState().runspec().co2Storage()) {
+                if (problem.drsdtconIsActive(globalSpaceIdx, problem.simulator().episodeIndex())) {
+                    asImp_().updateSaturatedDissolutionFactor_();
+                }
+            }
         }
 
         // update the quantities which are required by the chosen
