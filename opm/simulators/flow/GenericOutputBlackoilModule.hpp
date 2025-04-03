@@ -121,6 +121,11 @@ public:
                          std::map<std::string, std::vector<double>>& regionData,
                          const Parallel::Communication& comm);
 
+    void outputWellspecReport(const std::vector<std::string>& changedWells,
+                              const std::size_t reportStepNum,
+                              const double elapsed,
+                              boost::posix_time::ptime currentDate) const;
+
     void outputErrorLog(const Parallel::Communication& comm) const;
 
     void addRftDataToWells(data::Wells& wellDatas,

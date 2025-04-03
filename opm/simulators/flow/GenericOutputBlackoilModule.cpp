@@ -292,6 +292,19 @@ calc_inplace(std::map<std::string, double>& miscSummaryData,
 
 template<class FluidSystem>
 void GenericOutputBlackoilModule<FluidSystem>::
+outputWellspecReport(const std::vector<std::string>& changedWells,
+                     const std::size_t               reportStepNum,
+                     const double                    elapsed,
+                     boost::posix_time::ptime        currentDate) const
+{
+    this->logOutput_.timeStamp("WELSPECS", elapsed,
+                               static_cast<int>(reportStepNum),
+                               currentDate);
+    this->logOutput_.wellSpecification(changedWells, reportStepNum);
+}
+
+template<class FluidSystem>
+void GenericOutputBlackoilModule<FluidSystem>::
 assignToSolution(data::Solution& sol)
 {
     using DataEntry =

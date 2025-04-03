@@ -389,31 +389,47 @@ public:
 
     void writeReports(const SimulatorTimer& timer)
     {
-        auto rstep = timer.reportStepNum();
-
-        if ((rstep > 0) && (this->collectOnIORank_.isIORank())) {
-            const auto& rpt = this->schedule_[rstep-1].rpt_config.get();
-            if (rpt.contains("WELLS") && rpt.at("WELLS") > 0) {
-                outputModule_->outputTimeStamp("WELLS",
-                                               timer.simulationTimeElapsed(),
-                                               rstep,
-                                               timer.currentDateTime());
-                outputModule_->outputProdLog(rstep - 1, rpt.at("WELLS") > 1);
-                outputModule_->outputInjLog(rstep - 1, rpt.at("WELLS") > 1);
-                outputModule_->outputCumLog(rstep - 1, rpt.at("WELLS") > 1);
-                outputModule_->outputMSWLog(rstep - 1);
-            }
-
-            outputModule_->outputFipAndResvLog(inplace_,
-                                               rstep,
-                                               timer.simulationTimeElapsed(),
-                                               timer.currentDateTime(),
-                                               false,
-                                               simulator_.gridView().comm());
-
-
-            OpmLog::note("");   // Blank line after all reports.
+        if (! this->collectOnIORank_.isIORank()) {
+            return;
         }
+
+        // SimulatorTimer::reportStepNum() is the simulator's zero-based
+        // "episode index".  This is generally the index value needed to
+        // look up objects in the Schedule container.  That said, function
+        // writeReports() is invoked at the *beginning* of a report
+        // step/episode which means we typically need the objects from the
+        // *previous* report step/episode.  We therefore need special case
+        // handling for reportStepNum() == 0 in base runs and
+        // reportStepNum() <= restart step in restarted runs.
+        const auto firstStep = this->initialStep();
+        const auto simStep =
+            std::max(timer.reportStepNum() - 1, firstStep);
+
+        const auto& rpt = this->schedule_[simStep].rpt_config();
+
+        if (rpt.contains("WELSPECS") && (rpt.at("WELSPECS") > 0)) {
+            // Requesting a well specification report is valid at all times,
+            // including reportStepNum() == initialStep().
+            this->writeWellspecReport(timer);
+        }
+
+        if (timer.reportStepNum() == firstStep) {
+            // No dynamic flows at the beginning of the initialStep().
+            return;
+        }
+
+        if (rpt.contains("WELLS") && rpt.at("WELLS") > 0) {
+            this->writeWellflowReport(timer, simStep, rpt.at("WELLS"));
+        }
+
+        this->outputModule_->outputFipAndResvLog(this->inplace_,
+                                                 timer.reportStepNum(),
+                                                 timer.simulationTimeElapsed(),
+                                                 timer.currentDateTime(),
+                                                 /* isSubstep = */ false,
+                                                 simulator_.gridView().comm());
+
+        OpmLog::note("");   // Blank line after all reports.
     }
 
     void writeOutput(data::Solution&& localCellData, bool isSubStep)
@@ -824,6 +840,47 @@ private:
                                    this->simulator_.vanguard().grid().comm())
 
         this->outputModule_->finalizeFluxData();
+    }
+
+    void writeWellspecReport(const SimulatorTimer& timer) const
+    {
+        const auto changedWells = this->schedule_
+            .changed_wells(timer.reportStepNum(), this->initialStep());
+
+        if (changedWells.empty()) {
+            return;
+        }
+
+        this->outputModule_->outputWellspecReport(changedWells,
+                                                  timer.reportStepNum(),
+                                                  timer.simulationTimeElapsed(),
+                                                  timer.currentDateTime());
+    }
+
+    void writeWellflowReport(const SimulatorTimer& timer,
+                             const int             simStep,
+                             const int             wellsRequest) const
+    {
+        this->outputModule_->outputTimeStamp("WELLS",
+                                             timer.simulationTimeElapsed(),
+                                             timer.reportStepNum(),
+                                             timer.currentDateTime());
+
+        const auto wantConnData = wellsRequest > 1;
+
+        this->outputModule_->outputProdLog(simStep, wantConnData);
+        this->outputModule_->outputInjLog(simStep, wantConnData);
+        this->outputModule_->outputCumLog(simStep, wantConnData);
+        this->outputModule_->outputMSWLog(simStep);
+    }
+
+    int initialStep() const
+    {
+        const auto& initConfig = this->eclState().cfg().init();
+
+        return initConfig.restartRequested()
+            ? initConfig.getRestartStep()
+            : 0;
     }
 
     Simulator& simulator_;
