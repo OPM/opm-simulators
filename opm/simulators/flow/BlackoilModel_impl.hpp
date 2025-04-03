@@ -468,7 +468,9 @@ solveJacobianSystem(BVector& x)
     auto& linSolver = simulator_.model().newtonMethod().linearSolver();
 
     const int numSolvers = linSolver.numAvailableSolvers();
+    std::cout << "solveJacobianSystem now.." << std::endl;
     if (numSolvers > 1 && (linSolver.getSolveCount() % 100 == 0)) {
+        std::cout << "version 1" << std::endl;
         if (terminal_output_) {
             OpmLog::debug("\nRunning speed test for comparing available linear solvers.");
         }
@@ -504,6 +506,7 @@ solveJacobianSystem(BVector& x)
         linSolver.setActiveSolver(fastest_solver);
     }
     else {
+        std::cout << "version 2" << std::endl;
         // set initial guess
         x = 0.0;
 
@@ -516,6 +519,9 @@ solveJacobianSystem(BVector& x)
         // account for parallelization properly. since the residual of ECFV
         // discretizations does not need to be synchronized across processes to be
         // consistent, this is not relevant for OPM-flow...
+        std::cout << "residual in solveJacobianSystem::" << std::endl;
+        std::cout << "residual.size() = " << residual.size() << std::endl;
+        //std::for_each(residual.begin(), residual.end(), [](const auto& entry) { std::cout << entry << std::endl; });
         linSolver.solve(x);
     }
 }

@@ -182,6 +182,9 @@ apply(const BVector& x, BVector& Ax) const
 
     parallelB_.mv(x, Bx);
 
+    //std::cout << "Bx:" << std::endl;
+    //std::for_each(Bx.begin(), Bx.end(), [](const auto& entry) {std::cout << entry << std::endl;});
+
     // It is ok to do this on each process instead of only on one,
     // because the other processes would remain idle while waiting for
     // the single process to complete the computation.
@@ -189,10 +192,14 @@ apply(const BVector& x, BVector& Ax) const
     const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
     // Ax.size() == 0 indicates that there are no active perforations on this process.
     // Then, Ax does not need to be updated by the following calculation.
+    //std::cout << "invDBx:" << std::endl;
+    //std::for_each(invDBx.begin(), invDBx.end(), [](const auto& entry) {std::cout << entry << std::endl;});
     if (Ax.size() > 0) {
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
     }
+    //std::cout << "Ax:" << std::endl;
+    //std::for_each(Ax.begin(), Ax.end(), [](const auto& entry) {std::cout << entry << std::endl;});
 }
 
 template<class Scalar, int numWellEq, int numEq>

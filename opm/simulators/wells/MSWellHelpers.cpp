@@ -117,15 +117,23 @@ mv (const X& x, Y& y) const
 {
     // x.size() == 0 indicates that there are no active perforations on this process.
     // Then all contributions come from the communication below.
+    //std::cout << "x:" << std::endl;
+    //std::for_each(x.begin(), x.end(), [](const auto& entry) {std::cout << entry << std::endl;});
     if (x.size() > 0) {
         B_.mv(x, y);
     }
+    //Dune::printSparseMatrix(std::cout, B_, "duneB_", "B");
+
+    //std::cout << "after mv, y:" << std::endl;
+    //std::for_each(y.begin(), y.end(), [](const auto& entry) {std::cout << entry << std::endl;});
 
     if (this->parallel_well_info_.communication().size() > 1)
     {
         // Communicate here to get the contributions from all segments
         this->parallel_well_info_.communication().sum(y.data(), y.size());
     }
+    //std::cout << "after communication, y:" << std::endl;
+    //std::for_each(y.begin(), y.end(), [](const auto& entry) {std::cout << entry << std::endl;});
 }
 
 template<class MatrixType>

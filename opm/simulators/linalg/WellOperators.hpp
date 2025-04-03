@@ -84,6 +84,7 @@ public:
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
+        std::cout << "WellModelAsLinearOperator->applySingleWell" << std::endl;
         for (const auto& well : this->wellMod_) {
             this->applySingleWell(x, y, well, well->cells());
         }
@@ -149,12 +150,22 @@ protected:
         x_local_.resize(cells.size());
         Ax_local_.resize(cells.size());
 
+        std::cout << "cells:" << std::endl;
+        std::for_each(cells.begin(), cells.end(), [](const auto& entry) {std::cout << entry << std::endl;});
+
+        std::cout << "x.size() = " << x.size() << std::endl;
+        std::cout << "y.size() = " << y.size() << std::endl;
+
         for (size_t i = 0; i < cells.size(); ++i) {
             x_local_[i] = x[cells[i]];
             Ax_local_[i] = y[cells[i]];
         }
-
+        // only here we go to the well code - with the x from the flow equations
+        std::cout << "apply single well now!" << std::endl;
+        std::for_each(x_local_.begin(), x_local_.end(), [](const auto& entry) {std::cout << entry << std::endl;});
         well->apply(x_local_, Ax_local_);
+        std::cout << "AFTER APPLY SINGLE WELL, Ax_local_ =" << std::endl;
+        std::for_each(Ax_local_.begin(), Ax_local_.end(), [](const auto& entry) {std::cout << entry << std::endl;});
 
         for (size_t i = 0; i < cells.size(); ++i) {
             // only need to update Ax
@@ -186,6 +197,7 @@ public:
     {
         OPM_TIMEBLOCK(apply);
         std::size_t well_index = 0;
+        std::cout << "DomainWellModelAsLinearOperator->applySingleWell" << std::endl;
         for (const auto& well : this->wellMod_) {
             if (this->wellMod_.well_domain().at(well->name()) == domainIndex_) {
                 this->applySingleWell(x, y, well,
@@ -243,11 +255,28 @@ public:
 
     void apply( const X& x, Y& y ) const override
     {
+      std::cout << "WellModelMatrixAdapter: before applying A_.mv(x, y)" << std::endl;
+      std::cout << "WellModelMatrixAdapter: x.size() = " << x.size() << std::endl;
+      std::cout << "WellModelMatrixAdapter: y.size() = " << y.size() << std::endl;
+      //std::cout << "x:" << std::endl;
+      //std::for_each(x.begin(), x.end(), [](const auto& entry) {std::cout << entry << std::endl;});
+      //std::cout << "y:" << std::endl;
+      //std::for_each(y.begin(), y.end(), [](const auto& entry) {std::cout << entry << std::endl;});
+
       OPM_TIMEBLOCK(apply);
       A_.mv(x, y);
 
+      std::cout << "WellModelMatrixAdapter: after applying A_.mv(x, y)" << std::endl;
+      std::cout << "WellModelMatrixAdapter: y.size() = " << y.size() << std::endl;
+      //std::cout << "y:" << std::endl;
+      //std::for_each(y.begin(), y.end(), [](const auto& entry) {std::cout << entry << std::endl;});
+
       // add well model modification to y
       wellOper_.apply(x, y);
+      std::cout << "WellModelMatrixAdapter: after adding well model modification to y" << std::endl;
+      std::cout << "WellModelMatrixAdapter: y.size() = " << y.size() << std::endl;
+      //std::cout << "y:" << std::endl;
+      //std::for_each(y.begin(), y.end(), [](const auto& entry) {std::cout << entry << std::endl;});
     }
 
     // y += \alpha * A * x
@@ -325,6 +354,14 @@ public:
     void apply(const X& x, Y& y) const override
     {
         OPM_TIMEBLOCK(apply);
+        std::cout << "WellModelGhostLastMatrixAdapter: before applying A_.mv(x, y)" << std::endl;
+        std::cout << "WellModelGhostLastMatrixAdapter: x.size() = " << x.size() << std::endl;
+        std::cout << "WellModelGhostLastMatrixAdapter: y.size() = " << y.size() << std::endl;
+        //std::cout << "x:" << std::endl;
+        //std::for_each(x.begin(), x.end(), [](const auto& entry) {std::cout << entry << std::endl;});
+        //std::cout << "y:" << std::endl;
+        //std::for_each(y.begin(), y.end(), [](const auto& entry) {std::cout << entry << std::endl;});
+
         for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
         {
             y[row.index()]=0;
@@ -332,10 +369,19 @@ public:
             for (auto col = (*row).begin(); col != endc; ++col)
                 (*col).umv(x[col.index()], y[row.index()]);
         }
+        std::cout << "WellModelGhostLastMatrixAdapter: after applying A_.mv(x, y)" << std::endl;
+        std::cout << "WellModelGhostLastMatrixAdapter: y.size() = " << y.size() << std::endl;
+        //std::cout << "y:" << std::endl;
+        //std::for_each(y.begin(), y.end(), [](const auto& entry) {std::cout << entry << std::endl;});
 
         // add well model modification to y
         wellOper_.apply(x, y);
+        std::cout << "WellModelGhostLastMatrixAdapter: after adding well model modification to y" << std::endl;
+        std::cout << "WellModelGhostLastMatrixAdapter: y.size() = " << y.size() << std::endl;
+        //std::cout << "y:" << std::endl;
+        //std::for_each(y.begin(), y.end(), [](const auto& entry) {std::cout << entry << std::endl;});
 
+        //possilby check this:
         ghostLastProject(y);
     }
 
