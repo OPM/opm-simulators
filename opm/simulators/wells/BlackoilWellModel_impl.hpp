@@ -328,7 +328,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    beginTimeStep(bool failed)
+    beginTimeStep(bool lastStepFailed)
     {
         OPM_TIMEBLOCK(beginTimeStep);
 
@@ -366,21 +366,37 @@ namespace Opm {
 
         this->resetWGState();
 
-        if (failed) {
-            if (this->schedule_[reportStepIdx].has_gpmaint()) {
-                const double dt = simulator_.timeStepSize();
-                WellGroupHelpers<Scalar>::updateGpMaintTargetForGroups(fieldGroup,
-                                                                       this->schedule_,
-                                                                       regionalAveragePressureCalculator_,
-                                                                       reportStepIdx,
-                                                                       dt,
-                                                                       this->wellState(),
-                                                                       this->groupState());
+        if (lastStepFailed) {
+            // if wells are recently shut we need to do the
+            // full beginTimeStep()
+            bool any_closed_wells_this_step = false;
+            const int nw = this->numLocalWells();
+            int w = 0;
+            while (!any_closed_wells_this_step && w < nw) {
+                const Well& well_ecl = this->wells_ecl_[w];
+                const std::string& well_name = well_ecl.name();
+                if (this->wellTestState().well_is_closed(well_name)) {
+                    const bool closed_this_step = (this->wellTestState().lastTestTime(well_name) == simulator_.time());
+                    any_closed_wells_this_step = closed_this_step;
+                }
+                w += 1;
             }
-            return;
+            if (!any_closed_wells_this_step) {
+                if (this->schedule_[reportStepIdx].has_gpmaint()) {
+                    const double dt = simulator_.timeStepSize();
+                    WellGroupHelpers<Scalar>::updateGpMaintTargetForGroups(fieldGroup,
+                                                                        this->schedule_,
+                                                                        regionalAveragePressureCalculator_,
+                                                                        reportStepIdx,
+                                                                        dt,
+                                                                        this->wellState(),
+                                                                        this->groupState());
+                }
+                return;
+            }
         }
 
-        this->updateAverageFormationFactor();   
+        this->updateAverageFormationFactor();
 
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             simulator_.model().newtonMethod().numIterations(),

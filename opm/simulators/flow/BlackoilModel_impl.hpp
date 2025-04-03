@@ -114,11 +114,13 @@ prepareStep(const SimulatorTimerInterface& timer)
     simulator_.setTimeStepSize(timer.currentStepLength());
     simulator_.model().newtonMethod().setIterationIndex(0);
 
-    // we skip the presolving of wells,
+    // if we a redoing the wells due to non-convergent
+    // non-linear solves, we want to skip the presolving of wells,
     // the optimization of gaslift and rebalancing of network
-    //if (!lastStepFailed) {
-        simulator_.problem().beginTimeStep(lastStepFailed);
-    //}
+    // and instead use the solution prior to the first iterations
+    // from the failed step.
+    simulator_.problem().beginTimeStep(lastStepFailed);
+
     unsigned numDof = simulator_.model().numGridDof();
     wasSwitched_.resize(numDof);
     std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
