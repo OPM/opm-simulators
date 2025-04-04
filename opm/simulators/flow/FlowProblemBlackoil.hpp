@@ -619,9 +619,9 @@ public:
                 rate[Indices::polymerConcentrationIdx] += source.rate(ijk, SourceComponent::POLYMER) / this->model().dofTotalVolume(globalDofIdx);
             }
             if constexpr (enableMICP) {
-                rate[Indices::microbialConcentrationIdx] += source.rate({ijk, SourceComponent::MICR}) / this->model().dofTotalVolume(globalDofIdx);
-                rate[Indices::oxygenConcentrationIdx] += source.rate({ijk, SourceComponent::OXYG}) / this->model().dofTotalVolume(globalDofIdx);
-                rate[Indices::ureaConcentrationIdx] += source.rate({ijk, SourceComponent::UREA}) / (this->model().dofTotalVolume(globalDofIdx));
+                rate[Indices::microbialConcentrationIdx] += source.rate(ijk, SourceComponent::MICR) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::oxygenConcentrationIdx] += source.rate(ijk, SourceComponent::OXYG) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::ureaConcentrationIdx] += source.rate(ijk, SourceComponent::UREA) / (this->model().dofTotalVolume(globalDofIdx));
             }
             if constexpr (enableEnergy) {
                 for (unsigned i = 0; i < phidx_map.size(); ++i) {
