@@ -48,6 +48,10 @@ public:
                       const int index_of_well,
                       const std::vector<CompConnectionData>& well_connection_data);
 
+    virtual ~CompWellInterface() = default;
+
+    virtual void init();
+
     const std::string& name() const;
 
     virtual void calculateExplicitQuantities(const Simulator& simulator,
@@ -93,7 +97,6 @@ protected:
     std::vector<int> saturation_table_number_;
 
     // std::string name_;
-    virtual void init();
 
 };
 

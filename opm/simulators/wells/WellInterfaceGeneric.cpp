@@ -474,7 +474,7 @@ void WellInterfaceGeneric<Scalar>::setRepRadiusPerfLength()
 
     const WellConnections& connections = well_ecl_.getConnections();
     const std::size_t num_conns = connections.size();
-    int num_active_connections = 0;
+    [[maybe_unused]] int num_active_connections = 0;
     auto my_next_perf = perf_data_->begin();
     for (std::size_t c = 0; c < num_conns; ++c) {
         if (my_next_perf == perf_data_->end())
