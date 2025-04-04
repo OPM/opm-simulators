@@ -697,7 +697,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                        resv_coeff_inj,
                                                                        deferred_logger);
                 if (is_changed) {
-                    switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(Group::InjectionCMode::FLD);
+                    switched_inj_groups_[group.name()][static_cast<std::underlying_type_t<Phase>>(phase)].push_back(currentControl);
                     BlackoilWellModelConstraints(*this).
                         actionOnBrokenConstraints(group, Group::InjectionCMode::FLD,
                                                   phase, this->groupState(),
@@ -784,7 +784,7 @@ checkGroupHigherConstraints(const Group& group,
                                                   deferred_logger);
 
                 if (changed) {
-                    switched_prod_groups_[group.name()].push_back(Group::ProductionCMode::FLD);
+                    switched_prod_groups_[group.name()].push_back(currentControl);
                     WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(scaling_factor,
                                                                                   group,
                                                                                   schedule(),
@@ -2028,21 +2028,21 @@ void BlackoilWellModelGeneric<Scalar>::
 reportGroupSwitching(DeferredLogger& local_deferredLogger) const
 {
     for (const auto& [name, ctrls] : this->switched_prod_groups_) {
-        const Group::ProductionCMode& oldControl =
-            this->prevWGState().group_state.production_control(name);
-        if (ctrls.back() != oldControl) {
+        const Group::ProductionCMode& newControl =
+            this->groupState().production_control(name);
+        if (ctrls[0] != newControl) {
             const std::string msg =
                 fmt::format("    Production Group {} control model changed from {} to {}",
                             name,
-                            Group::ProductionCMode2String(oldControl),
-                            Group::ProductionCMode2String(ctrls.back()));
+                            Group::ProductionCMode2String(ctrls[0]),
+                            Group::ProductionCMode2String(newControl));
             local_deferredLogger.info(msg);
         }
     }
     for (const auto& [grname, grdata] : this->switched_inj_groups_) {
         const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
         for (Phase phase : all) {
-            if (!this->prevWGState().group_state.has_injection_control(grname, phase)) {
+            if (!this->groupState().has_injection_control(grname, phase)) {
                 continue;
             }
             const auto& ctrls = grdata[static_cast<std::underlying_type_t<Phase>>(phase)];
@@ -2050,14 +2050,14 @@ reportGroupSwitching(DeferredLogger& local_deferredLogger) const
                 continue;
             }
 
-            const Group::InjectionCMode& oldControl =
-                this->prevWGState().group_state.injection_control(grname, phase);
-            if (ctrls.back() != oldControl) {
+            const Group::InjectionCMode& newControl =
+                this->groupState().injection_control(grname, phase);
+            if (ctrls[0] != newControl) {
                 const std::string msg =
                     fmt::format("    Injection Group {} control model changed from {} to {}",
                                 grname,
-                                Group::InjectionCMode2String(oldControl),
-                                Group::InjectionCMode2String(ctrls.back()));
+                                Group::InjectionCMode2String(ctrls[0]),
+                                Group::InjectionCMode2String(newControl));
                 local_deferredLogger.info(msg);
             }
         }
