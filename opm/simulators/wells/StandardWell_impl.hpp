@@ -634,6 +634,14 @@ namespace Opm
 
         // Store the perforation pressure for later usage.
         perf_data.pressure[perf] = ws.bhp + this->connections_.pressure_diff(perf);
+
+        // Store the perforation gass mass rate.
+        const auto& pu = well_state.phaseUsage();
+        if (pu.has_co2_or_h2store) {
+            const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            const Scalar rho = FluidSystem::referenceDensity( FluidSystem::gasPhaseIdx, Base::pvtRegionIdx() );
+            perf_data.gas_mass_rates[perf] = cq_s[gas_comp_idx].value() * rho;
+        }
     }
 
 

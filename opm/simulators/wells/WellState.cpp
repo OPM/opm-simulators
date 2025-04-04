@@ -1137,6 +1137,12 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
             connections[i].rates.set(rt::urea, perf_data.urea_rates[i]);
         }
     }
+    
+    if (pu.has_co2_or_h2store) {
+        for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
+            connections[i].rates.set(rt::mass_gas, perf_data.gas_mass_rates[i]);
+        }
+    }
 }
 
 template <class Scalar>
