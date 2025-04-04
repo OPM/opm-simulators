@@ -91,7 +91,7 @@ public:
     void init() override;
 
     void calculateExplicitQuantities(const Simulator& simulator,
-                                     const SingleCompWellState<Scalar>& well_state);
+                                     const SingleCompWellState<Scalar>& well_state) override;
 
     void updatePrimaryVariables(const Simulator& simulator,
                                 const SingleCompWellState<Scalar>& well_state) override;
@@ -105,18 +105,18 @@ public:
 
     bool iterateWellEq(const Simulator& simulator,
                        const Scalar dt,
-                       SingleCompWellState<Scalar>& well_state);
+                       SingleCompWellState<Scalar>& well_state) override;
 
     void solveEqAndUpdateWellState(SingleCompWellState<Scalar>& well_state);
 
     void apply(BVector& r) const override;
 
     void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                               SingleCompWellState<Scalar>& well_state);
+                                               SingleCompWellState<Scalar>& well_state) override;
 
     bool getConvergence() const override;
 
-    void addWellContributions(SparseMatrixAdapter&) const;
+    void addWellContributions(SparseMatrixAdapter&) const override;
 
 private:
 
