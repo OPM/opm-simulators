@@ -165,6 +165,7 @@ public:
                    Parameters::Get<Parameters::EnableEsmry>())
         , simulator_(simulator)
     {
+        
 #if HAVE_MPI
         if (this->simulator_.vanguard().grid().comm().size() > 1) {
             auto smryCfg = (this->simulator_.vanguard().grid().comm().rank() == 0)
@@ -172,7 +173,6 @@ public:
                 : SummaryConfig{};
 
             eclBroadcast(this->simulator_.vanguard().grid().comm(), smryCfg);
-
             this->outputModule_ = std::make_unique<OutputModule>
                 (simulator, smryCfg, this->collectOnIORank_);
         }
