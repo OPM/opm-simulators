@@ -600,7 +600,7 @@ public:
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
                 }
-                Scalar mass_rate = source.rate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
+                Scalar mass_rate = source.rate(ijk, sourceComp) / this->model().dofTotalVolume(globalDofIdx);
                 if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
                     mass_rate /= FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
                 }
@@ -608,7 +608,7 @@ public:
             }
 
             if constexpr (enableSolvent) {
-                Scalar mass_rate = source.rate({ijk, SourceComponent::SOLVENT}) / this->model().dofTotalVolume(globalDofIdx);
+                Scalar mass_rate = source.rate(ijk, SourceComponent::SOLVENT) / this->model().dofTotalVolume(globalDofIdx);
                 if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
                     const auto& solventPvt = SolventModule::solventPvt();
                     mass_rate /= solventPvt.referenceDensity(pvtRegionIdx);
@@ -616,12 +616,12 @@ public:
                 rate[Indices::contiSolventEqIdx] += mass_rate;
             }
             if constexpr (enablePolymer) {
-                rate[Indices::polymerConcentrationIdx] += source.rate({ijk, SourceComponent::POLYMER}) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::polymerConcentrationIdx] += source.rate(ijk, SourceComponent::POLYMER) / this->model().dofTotalVolume(globalDofIdx);
             }
             if constexpr (enableMICP) {
-                rate[Indices::microbialConcentrationIdx] += source.rate({ijk, SourceComponent::MICR}) / this->model().dofTotalVolume(globalDofIdx);
-                rate[Indices::oxygenConcentrationIdx] += source.rate({ijk, SourceComponent::OXYG}) / this->model().dofTotalVolume(globalDofIdx);
-                rate[Indices::ureaConcentrationIdx] += source.rate({ijk, SourceComponent::UREA}) / (this->model().dofTotalVolume(globalDofIdx));
+                rate[Indices::microbialConcentrationIdx] += source.rate(ijk, SourceComponent::MICR) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::oxygenConcentrationIdx] += source.rate(ijk, SourceComponent::OXYG) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::ureaConcentrationIdx] += source.rate(ijk, SourceComponent::UREA) / (this->model().dofTotalVolume(globalDofIdx));
             }
             if constexpr (enableEnergy) {
                 for (unsigned i = 0; i < phidx_map.size(); ++i) {
@@ -630,18 +630,20 @@ public:
                         continue;
                     }
                     const auto sourceComp = sc_map[i];
-                    if (source.hasHrate({ijk, sourceComp})) {
-                        rate[Indices::contiEnergyEqIdx] += source.hrate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
+                    const auto source_hrate = source.hrate(ijk, sourceComp);
+                    if (source_hrate) {
+                        rate[Indices::contiEnergyEqIdx] += source_hrate.value() / this->model().dofTotalVolume(globalDofIdx);
                     } else {
                         const auto& intQuants = this->simulator().model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0);
                         auto fs = intQuants.fluidState();
                         // if temperature is not set, use cell temperature as default
-                        if (source.hasTemperature({ijk, sourceComp})) {
-                            Scalar temperature = source.temperature({ijk, sourceComp});
+                        const auto source_temp = source.temperature(ijk, sourceComp);
+                        if (source_temp) {
+                            Scalar temperature = source_temp.value();
                             fs.setTemperature(temperature);
                         }
                         const auto& h = FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx);
-                        Scalar mass_rate = source.rate({ijk, sourceComp})/ this->model().dofTotalVolume(globalDofIdx);
+                        Scalar mass_rate = source.rate(ijk, sourceComp)/ this->model().dofTotalVolume(globalDofIdx);
                         Scalar energy_rate = getValue(h)*mass_rate;
                         rate[Indices::contiEnergyEqIdx] += energy_rate;
                     }
