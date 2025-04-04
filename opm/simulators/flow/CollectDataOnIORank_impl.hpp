@@ -107,6 +107,7 @@ public:
     , ranks_(ranks)
     {
         std::size_t size = globalIndex.size();
+        std::cout<< "globalIndex size: " << size << " from DistribuIndexMapping constrc " << std::endl;
         // create mapping globalIndex --> localIndex
         if ( isIORank ) // ioRank
             for (std::size_t index = 0; index < size; ++index)
@@ -120,10 +121,12 @@ public:
             IndexMapType& indexMap = indexMaps_.back();
             std::size_t localSize = localIndexMap_.size();
             indexMap.resize(localSize);
+            std::cout<< "localIndex size: " << localSize << std::endl;
             for (std::size_t i = 0; i < localSize; ++i)
             {
                 int id = distributedGlobalIndex_[localIndexMap_[i]];
                 indexMap[i] = id;
+                 std::cout<< "id: " << id << " for localIndexMap_: " <<  localIndexMap_[i] << std::endl;
             }
         }
     }
@@ -145,6 +148,7 @@ public:
 
                 for (auto&& entry: indexMap)
                 {
+                    std::cout<< " entry: " << entry <<std::endl;
                     auto candidate = globalPosition_.find(entry);
                     assert(candidate != globalPosition_.end());
                     entry = candidate->second;
@@ -852,7 +856,7 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
     , globalInterRegFlows_(InterRegFlowMap::createMapFromNames(toVector(fipRegionsInterregFlow)))
 {
     // index maps only have to be build when reordering is needed
-    if (!needsReordering && !isParallel())
+    if ((!needsReordering && !isParallel()) || (isParallel() && (grid.maxLevel()>0)))
         return;
 
     const CollectiveCommunication& comm = grid.comm();
@@ -876,13 +880,19 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
         localIdxToGlobalIdx_.resize(localGridView.size(0), -1);
 
         // the I/O rank receives from all other ranks
-        if (isIORank()) {
+        if (isIORank() /*&& (grid.maxLevel() == 0)*/) {
             // We need a mapping from local to global grid, here we
             // use equilGrid which represents a view on the global grid
             // reserve memory
+
+            /** add lgrs in equilGrid "in serial" so that equilGrid.leafgridview is a global view
+             - WITH DIFFERENT IDS THAT MUST BE SYNCHRONIZED - of localgrid.leafGRidview*/
+            
             const std::size_t globalSize = equilGrid->leafGridView().size(0);
             globalCartesianIndex_.resize(globalSize, -1);
             const EquilGridView equilGridView = equilGrid->leafGridView();
+
+            std::cout<< "globalSize equilGridLeafView: " << globalSize << " vs grid size " << grid.size(0) << std::endl;
 
             using EquilElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView>;
             EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
@@ -896,17 +906,22 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
             // loop over all elements (global grid) and store Cartesian index
             for (const auto& elem : elements(equilGrid->leafGridView())) {
                 int elemIdx = equilElemMapper.index(elem);
-                int cartElemIdx = equilCartMapper->cartesianIndex(elemIdx);
+                int cartElemIdx = equilCartMapper->cartesianIndex(elemIdx); /** NOT UNIQUE ALL CHILDREN SAME CARTESIAN INDEX */
                 globalCartesianIndex_[elemIdx] = cartElemIdx;
             }
 
             for (int i = 0; i < comm.size(); ++i) {
                 if (i != ioRank)
                     recv.insert(i);
-            }
+            } 
         }
         else
         {
+            /*if (grid.maxLevel()) {
+                const_cast<Grid&>(grid).syncDistributedGlobalCellIds();
+            }
+            else
+            {*/
             // all other simply send to the I/O rank
             send.insert(ioRank);
 
@@ -917,6 +932,7 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
               ElementIndexScatterHandle<ElementMapper, ElementMapper> handle(elemMapper, elemMapper, localIdxToGlobalIdx_);
               grid.scatterData(handle);
             }
+            //  }
         }
 
         // Sync the global element indices

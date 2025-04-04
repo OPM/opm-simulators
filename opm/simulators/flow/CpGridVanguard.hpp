@@ -261,6 +261,16 @@ public:
         }
     }
 
+
+    /*!
+     * \brief Synchronize cell ids, if LGRs were added before/after loadBalance.
+     */
+    void synchronizeCellIds()
+    {
+        this->grid_->syncDistributedGlobalCellIds();
+    }
+    
+
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const {
         return elemIndex;
     }
