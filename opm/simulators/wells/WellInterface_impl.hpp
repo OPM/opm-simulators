@@ -213,7 +213,7 @@ namespace Opm
         const int episodeIdx = simulator.episodeIndex();
         const int iterationIdx = simulator.model().newtonMethod().numIterations();
         const int nupcol = schedule[episodeIdx].nupcol();
-        if (oscillating && iterationIdx > nupcol) {
+        if (oscillating && iterationIdx >= nupcol) {
             // only output frist time
             bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
             if (output) {
@@ -288,8 +288,10 @@ namespace Opm
             from = WellProducerCMode2String(ws.production_cmode);
         }
         const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
-
-        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        const int iterationIdx = simulator.model().newtonMethod().numIterations();
+        const int episodeIdx = simulator.episodeIndex();
+        const int nupcol = schedule[episodeIdx].nupcol();
+        if ( (oscillating && iterationIdx >= nupcol)|| this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -325,6 +327,7 @@ namespace Opm
                             ws.thp = this->getTHPConstraint(summary_state);
                         }
                         updatePrimaryVariables(simulator, well_state, deferred_logger);
+                        this->well_control_log_.push_back(from);
                     }
                 }
                 return changed;
