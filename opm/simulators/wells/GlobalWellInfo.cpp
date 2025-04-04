@@ -84,7 +84,11 @@ update_injector(std::size_t well_index,
         this->m_is_open[this->local_map[well_index]] = 1;
         if (injection_cmode == Well::InjectorCMode::GRUP) {
             this->m_in_injecting_group[this->local_map[well_index]] = 1;
+        } else {
+            this->m_in_injecting_group[this->local_map[well_index]] = 0;
         }
+    } else {
+        this->m_is_open[this->local_map[well_index]] = 0;
     }
 }
 
@@ -98,7 +102,11 @@ update_producer(std::size_t well_index,
         this->m_is_open[this->local_map[well_index]] = 1;
         if (production_cmode == Well::ProducerCMode::GRUP) {
             this->m_in_producing_group[this->local_map[well_index]] = 1;
+        } else {
+            this->m_in_producing_group[this->local_map[well_index]] = 0;
         }
+    } else {
+        this->m_is_open[this->local_map[well_index]] = 0;
     }
 }
 
