@@ -311,12 +311,13 @@ namespace Opm
 
                     if (this->param_.check_group_constraints_inner_well_iterations_) {
                         if (!isGroupControl && hasGroupControl) {
-                            changed = changed || this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
+                            changed = this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
                         }
-                        changed = changed || this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                        const bool changed_ind = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                        changed = changed || changed_ind;
                     } else {
                         if (!isGroupControl)
-                            changed = changed || this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                            changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
 
                     if (changed) {
