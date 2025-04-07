@@ -307,7 +307,7 @@ namespace Opm
                     
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
-                    bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
+                    const bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
 
                     if (this->param_.check_group_constraints_inner_well_iterations_) {
                         if (!isGroupControl && hasGroupControl) {
@@ -331,15 +331,15 @@ namespace Opm
                         updatePrimaryVariables(simulator, well_state, deferred_logger);
                     }
 
-                    bool isNowGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
+                    const bool isNowGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
                     if (isGroupControl != isNowGroupControl) {
                         // We need to update the globalIsGRUP vector and the group target reduction.
                         // But we can not communicate it to the other ranks during the local iterations.
                         // The globalIsGrup vector is thus only communicated after the local iterations are done.
                         // This may give some discrepencies in non-linear behaviour between MPI runs,
                         // but the solution should convergece to the same solution.
-                        well_state.updateGlobalIsGrup();
-                        int reportStepIdx = simulator.episodeIndex();
+                        well_state.updateGlobalIsGrup(this->index_of_well_);
+                        const int reportStepIdx = simulator.episodeIndex();
                         const Group& fieldGroup = schedule.getGroup("FIELD", reportStepIdx);
                         std::vector<Scalar> groupTargetReduction(well_state.numPhases(), 0.0);
                         WellGroupHelpers<Scalar>::updateGroupTargetReduction(fieldGroup,
@@ -1159,10 +1159,10 @@ namespace Opm
         assert(this->param_.local_well_solver_control_switching_);
         this->operability_status_.resetOperability();
         WellState<Scalar> well_state_copy = well_state;
-        auto group_state = simulator.problem().wellModel().groupState();
+        auto group_state_copy = simulator.problem().wellModel().groupState();
         const double dt = simulator.timeStepSize();
         // equations should be converged at this stage, so only one it is needed
-        bool converged = iterateWellEquations(simulator, dt, well_state_copy, group_state, deferred_logger);
+        bool converged = iterateWellEquations(simulator, dt, well_state_copy, group_state_copy, deferred_logger);
         return converged;
     }
 
