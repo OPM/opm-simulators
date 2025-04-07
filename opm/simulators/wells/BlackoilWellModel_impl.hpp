@@ -368,7 +368,9 @@ namespace Opm {
 
         if (lastStepFailed) {
             // if wells are recently shut we need to do the
-            // full beginTimeStep()
+            // full beginTimeStep() if not we skip and
+            // use the well solution from before the first
+            // newton iteration
             bool any_closed_wells_this_step = false;
             const int nw = this->numLocalWells();
             int w = 0;
@@ -381,6 +383,8 @@ namespace Opm {
                 }
                 w += 1;
             }
+            const auto& comm = simulator_.vanguard().grid().comm();
+            any_closed_wells_this_step = comm.sum(static_cast<int>(any_closed_wells_this_step));
             if (!any_closed_wells_this_step) {
                 if (this->schedule_[reportStepIdx].has_gpmaint()) {
                     const double dt = simulator_.timeStepSize();
