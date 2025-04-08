@@ -99,6 +99,8 @@ class Simulator
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
     using Communication = Dune::Communication<MPIComm>;
 
+    static constexpr double eps = std::max(std::numeric_limits<Scalar>::epsilon(), 1.e-9);
+
 public:
     // do not allow to copy simulators around
     Simulator(const Simulator& ) = delete;
@@ -479,9 +481,6 @@ public:
     bool finished() const
     {
         assert(timeStepSize_ >= 0.0);
-        Scalar eps =
-            std::max(Scalar(std::abs(this->time())), timeStepSize())
-            *std::numeric_limits<Scalar>::epsilon()*1e3;
         return finished_ || (this->time()*(1.0 + eps) >= endTime());
     }
 
@@ -491,8 +490,6 @@ public:
      */
     bool willBeFinished() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-
         return finished_ || (this->time() + timeStepSize_)*(1.0 + eps) >= endTime();
     }
 
@@ -580,8 +577,6 @@ public:
      */
     bool episodeStarts() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-
         return this->time() <= (episodeStartTime_ - startTime())*(1 + eps);
     }
 
@@ -591,8 +586,6 @@ public:
      */
     bool episodeIsOver() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-
         return this->time() >= (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
     }
 
@@ -602,8 +595,6 @@ public:
      */
     bool episodeWillBeOver() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-
         return this->time() + timeStepSize()
             >=  (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
     }
