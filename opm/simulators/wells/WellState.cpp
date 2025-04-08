@@ -764,8 +764,8 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             assert(perf_data.size() == perf_press.size());
             assert(perf_data.size() * np == perf_rates.size());
             for (size_t perf = 0; perf < perf_data.size(); ++perf) {
-                if (active_perf_index_local_to_global.count(perf) > 0) {
-                    const int global_active_perf_index = active_perf_index_local_to_global.at(perf);
+                if (auto candidate = active_perf_index_local_to_global.find(perf); candidate != active_perf_index_local_to_global.end()) {
+                    const int global_active_perf_index = candidate->second;
                     perforation_pressures[global_active_perf_index] = perf_press[perf];
                     for (int i = 0; i < np; i++) {
                         perforation_rates[global_active_perf_index * np + i] = perf_rates[perf * np + i];
