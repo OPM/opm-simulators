@@ -602,7 +602,7 @@ public:
      */
     bool episodeWillBeOver() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
+        static const Scalar eps = std::numeric_limits<float>::epsilon();
 
         return this->time() + timeStepSize()
             >=  (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
