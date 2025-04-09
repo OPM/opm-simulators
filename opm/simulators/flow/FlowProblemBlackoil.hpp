@@ -688,23 +688,20 @@ public:
     LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
         OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier);
-        if (!enableSaltPrecipitation && !enableMICP)
-            return 1.0;
-
-        const auto& fs = intQuants.fluidState();
-        unsigned tableIdx = this->simulator().problem().satnumRegionIndex(elementIdx);
-        
-        LhsEval porosityFactor = decay<LhsEval>(1. - fs.saltSaturation());
-        porosityFactor = min(porosityFactor, 1.0);
         if constexpr (enableSaltPrecipitation) {
+            const auto& fs = intQuants.fluidState();
+            unsigned tableIdx = this->simulator().problem().satnumRegionIndex(elementIdx);
+            LhsEval porosityFactor = decay<LhsEval>(1. - fs.saltSaturation());
+            porosityFactor = min(porosityFactor, 1.0);
             const auto& permfactTable = BrineModule::permfactTable(tableIdx);
             return permfactTable.eval(porosityFactor, /*extrapolation=*/true);
         }
-        if constexpr (enableMICP){
-            const auto& permfactTable = MICPModule::permfactTable(tableIdx);
-            return permfactTable.eval(porosityFactor, /*extrapolation=*/true);
+        else if constexpr (enableMICP) {
+            return intQuants.permFactor().value();
         }
-        return 1.0;
+        else {
+            return 1.0;
+        }
     }
 
     // temporary solution to facilitate output of initial state from flow
