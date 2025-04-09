@@ -105,6 +105,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellFractureSeeds.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellMICPProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
@@ -329,6 +330,7 @@ TEST_FOR_TYPE(WellBrineProperties)
 TEST_FOR_TYPE(WellConnections)
 TEST_FOR_TYPE(WellEconProductionLimits)
 TEST_FOR_TYPE(WellFoamProperties)
+TEST_FOR_TYPE(WellFractureSeeds)
 TEST_FOR_TYPE_NAMED(Well::WellGuideRate, WellGuideRate)
 TEST_FOR_TYPE_NAMED(Well::WellInjectionProperties, WellInjectionProperties)
 TEST_FOR_TYPE(WellPolymerProperties)
@@ -342,12 +344,14 @@ TEST_FOR_TYPE(WellType)
 TEST_FOR_TYPE(WListManager)
 TEST_FOR_TYPE(WriteRestartFileEvents)
 
+namespace {
 
 bool init_unit_test_func()
 {
     return true;
 }
 
+} // Anonymous namespace
 
 int main(int argc, char** argv)
 {
