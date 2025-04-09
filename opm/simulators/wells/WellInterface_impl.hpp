@@ -314,6 +314,10 @@ namespace Opm
                     if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
                         changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
+                    if(changed) {
+                        updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+                        updatePrimaryVariables(simulator, well_state, deferred_logger);
+                    }
                     const auto well_state_orig = well_state; // Ugly - take a copy for now...
                     // Check for group controls if present and switch not disabled, but only if we did not already change to individual
                     if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
@@ -360,7 +364,11 @@ namespace Opm
                             if (!thp_controlled){
                             // don't call for thp since this might trigger additional local solve
                                 updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-                            } else if (isGroupControl) { // we switched from group
+                            } else {
+                                updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+                                updatePrimaryVariables(simulator, well_state, deferred_logger);
+                            }
+                            if (isGroupControl) { // we switched from group
                                 well_state.updateGlobalIsGrup(this->index_of_well_);
                                 int reportStepIdx = simulator.episodeIndex();
                                 const Group& fieldGroup = schedule.getGroup("FIELD", reportStepIdx);
@@ -375,10 +383,9 @@ namespace Opm
                                                                                     summary_state,
                                                                                     group_state,
                                                                                     groupTargetReduction);
-                            } else {
-                                ws.thp = this->getTHPConstraint(summary_state);
+                                //updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+                                //updatePrimaryVariables(simulator, well_state, deferred_logger);
                             }
-                            updatePrimaryVariables(simulator, well_state, deferred_logger);
                         }
                     }
                 }
