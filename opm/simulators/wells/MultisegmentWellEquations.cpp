@@ -109,7 +109,7 @@ init(const int numPerfs,
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int local_perf_index = pw_info_.globalToLocal(perf);
+            const int local_perf_index = pw_info_.activeToLocal(perf);
             if (local_perf_index < 0) // then the perforation is not on this process
                 continue;
             row.insert(local_perf_index);
@@ -121,7 +121,7 @@ init(const int numPerfs,
               end = duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int local_perf_index = pw_info_.globalToLocal(perf);
+            const int local_perf_index = pw_info_.activeToLocal(perf);
             if (local_perf_index < 0) // then the perforation is not on this process
                 continue;
             row.insert(local_perf_index);
@@ -157,22 +157,29 @@ apply(const BVector& x, BVector& Ax) const
     // the single process to complete the computation.
     // invDBx = duneD^-1 * Bx_
     const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
-
-    // Ax = Ax - duneC_^T * invDBx
-    duneC_.mmtv(invDBx,Ax);
+    // Ax.size() == 0 indicates that there are no active perforations on this process.
+    // Then, Ax does not need to be updated by the following calculation.
+    if (Ax.size() > 0) {
+        // Ax = Ax - duneC_^T * invDBx
+        duneC_.mmtv(invDBx,Ax);
+    }
 }
 
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 apply(BVector& r) const
 {
-    // It is ok to do this on each process instead of only on one,
-    // because the other processes would remain idle while waiting for
-    // the single process to complete the computation.
-    // invDrw_ = duneD^-1 * resWell_
-    const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
-    // r = r - duneC_^T * invDrw
-    duneC_.mmtv(invDrw, r);
+    // r.size() == 0 indicates that there are no active perforations on this process.
+    // Then, r does not need to be updated by the following calculation.
+    if (r.size() > 0) {
+        // It is ok to do this on each process instead of only on one,
+        // because the other processes would remain idle while waiting for
+        // the single process to complete the computation.
+        // invDrw_ = duneD^-1 * resWell_
+        const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
+        // r = r - duneC_^T * invDrw
+        duneC_.mmtv(invDrw, r);
+    }
 }
 
 template<class Scalar, int numWellEq, int numEq>

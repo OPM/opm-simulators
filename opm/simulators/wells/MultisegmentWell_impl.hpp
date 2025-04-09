@@ -143,7 +143,7 @@ namespace Opm
             // This variable loops over the number_of_local_perforations_ of *this* process, hence it is *local*.
             const int cell_idx = this->well_cells_[local_perf_index];
             // Here we need to access the perf_depth_ at the global perforation index though!
-            this->cell_perforation_depth_diffs_[local_perf_index] = depth_arg[cell_idx] - this->perf_depth_[this->pw_info_.localToGlobal(local_perf_index)];
+            this->cell_perforation_depth_diffs_[local_perf_index] = depth_arg[cell_idx] - this->perf_depth_[this->pw_info_.localToActive(local_perf_index)];
         }
     }
 
@@ -351,7 +351,7 @@ namespace Opm
         const auto& segment_pressure = segments_copy.pressure;
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 const int cell_idx = this->well_cells_[local_perf_index];
@@ -844,6 +844,10 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
+        if (this->number_of_local_perforations_ == 0) {
+            // If there are no open perforations on this process, there are no contributions to the jacobian.
+            return;
+        }
         this->linSys_.extract(jacobian);
     }
 
@@ -857,6 +861,10 @@ namespace Opm
                              const bool use_well_weights,
                              const WellState<Scalar>& well_state) const
     {
+        if (this->number_of_local_perforations_ == 0) {
+            // If there are no open perforations on this process, there are no contributions the cpr pressure matrix.
+            return;
+        }
         // Add the pressure contribution to the cpr system for the well
         this->linSys_.extractCPRPressureMatrix(jacobian,
                                                weights,
@@ -888,7 +896,7 @@ namespace Opm
                     PerforationRates<Scalar>& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
-        const int local_perf_index = this->pw_info_.globalToLocal(perf);
+        const int local_perf_index = this->pw_info_.activeToLocal(perf);
         if (local_perf_index < 0) // then the perforation is not on this process
             return;
 
@@ -1106,25 +1114,33 @@ namespace Opm
         // perforated cell
         // TODO: later to investigate how to handle the pvt region
         int pvt_region_index;
-        {
-            // using the first perforated cell, so we look for global index 0
+
+        Scalar fsTemperature;
+        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
+        SaltConcType fsSaltConcentration;
+
+        if (this->well_cells_.size() > 0) {
+            // this->well_cells_ is empty if this process does not contain active perforations
+            // using the pvt region of first perforated cell, so we look for global index 0
+            // TODO: it should be a member of the WellInterface, initialized properly
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            // The following broadcast calls are neccessary to ensure that processes that do *not* contain
-            // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-            auto fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-            fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
-            temperature.setValue(fsTemperature);
-
-            auto fsSaltConcentration = fs.saltConcentration();
-            fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
-            saltConcentration = this->extendEval(fsSaltConcentration);
-
+            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsSaltConcentration = fs.saltConcentration();
             pvt_region_index = fs.pvtRegionIndex();
-            pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
         }
+
+        // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+        fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
+        temperature.setValue(fsTemperature);
+
+        fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
+        saltConcentration = this->extendEval(fsSaltConcentration);
+
+        pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
 
         this->segments_.computeFluidProperties(temperature,
                                                saltConcentration,
@@ -1268,7 +1284,7 @@ namespace Opm
                                                  seg_dp);
             seg_dp[seg] = dp;
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 std::vector<Scalar> mob(this->num_components_, 0.0);
@@ -1779,7 +1795,7 @@ namespace Opm
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 const int cell_idx = this->well_cells_[local_perf_index];
@@ -1929,7 +1945,7 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             const EvalWell segment_pressure = this->primary_variables_.getSegmentPressure(seg);
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 
@@ -1990,26 +2006,33 @@ namespace Opm
         EvalWell temperature;
         EvalWell saltConcentration;
         int pvt_region_index;
-        {
+
+        Scalar fsTemperature;
+        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
+        SaltConcType fsSaltConcentration;
+
+        if (this->well_cells_.size() > 0) {
+            // this->well_cells_ is empty if this process does not contain active perforations
             // using the pvt region of first perforated cell, so we look for global index 0
             // TODO: it should be a member of the WellInterface, initialized properly
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            // The following broadcast calls are neccessary to ensure that processes that do *not* contain
-            // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-            auto fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-            fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
-            temperature.setValue(fsTemperature);
-
-            auto fsSaltConcentration = fs.saltConcentration();
-            fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
-            saltConcentration = this->extendEval(fsSaltConcentration);
-
+            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsSaltConcentration = fs.saltConcentration();
             pvt_region_index = fs.pvtRegionIndex();
-            pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
         }
+
+        // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+        fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
+        temperature.setValue(fsTemperature);
+
+        fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
+        saltConcentration = this->extendEval(fsSaltConcentration);
+
+        pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
 
         return this->segments_.getSurfaceVolume(temperature,
                                                 saltConcentration,
@@ -2156,7 +2179,7 @@ namespace Opm
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 
@@ -2188,7 +2211,7 @@ namespace Opm
             // calculating the perforation rate for each perforation that belongs to this segment
             const Scalar seg_pressure = getValue(this->primary_variables_.getSegmentPressure(seg));
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 
