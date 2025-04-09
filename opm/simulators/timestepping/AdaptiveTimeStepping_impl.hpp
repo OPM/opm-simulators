@@ -507,7 +507,7 @@ run()
  * Private class SubStepper private methods
  ************************************************/
 
-
+#ifdef RESERVOIR_COUPLING_ENABLED
 template<class TypeTag>
 template<class Solver>
 bool
@@ -525,6 +525,7 @@ isReservoirCouplingSlave_() const
 {
     return this->adaptive_time_stepping_.reservoir_coupling_slave_ != nullptr;
 }
+#endif
 
 template<class TypeTag>
 template<class Solver>
