@@ -616,12 +616,24 @@ add_test_compareECLFiles(CASENAME group_udq
                          DIR udq_actionx
                          TEST_ARGS --solver-max-time-step-in-days=0.25)
 
-add_test_compareECLFiles(CASENAME udq_undefined_2
-                         FILENAME UDQ-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
+set(_actionx_tests
+  ACTIONX_GCONINJE
+  ACTIONX_GCONPROD
+  ACTIONX_UDQ
+  ACTIONX_WCONHIST
+  ACTIONX_WCONINJH
+  ACTIONX_WEFAC
+  UDQ-01
+)
+
+add_multiple_tests(
+  _actionx_tests
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR actionx
+)
 
 add_multiple_test_range(
   1
@@ -878,49 +890,6 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR parallel_fieldprops)
-
-
-add_test_compareECLFiles(CASENAME actionx_gconinje
-                         FILENAME ACTIONX_GCONINJE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
-add_test_compareECLFiles(CASENAME actionx_gconprod
-                         FILENAME ACTIONX_GCONPROD
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
-add_test_compareECLFiles(CASENAME actionx_wconhist
-                         FILENAME ACTIONX_WCONHIST
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
-add_test_compareECLFiles(CASENAME actionx_wconinjh
-                         FILENAME ACTIONX_WCONINJH
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
-add_test_compareECLFiles(CASENAME actionx_wefac
-                         FILENAME ACTIONX_WEFAC
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
-add_test_compareECLFiles(CASENAME actionx_udq
-                         FILENAME ACTIONX_UDQ
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
 
 add_test_compareECLFiles(CASENAME micp
                          FILENAME MICP
