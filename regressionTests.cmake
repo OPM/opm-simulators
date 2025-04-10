@@ -133,37 +133,42 @@ add_test_compareECLFiles(CASENAME gasoil_precsalt
                          DIR spe1_precsalt
                          TEST_ARGS --solver-max-time-step-in-days=0.05)
 
-add_test_compareECLFiles(CASENAME network_balance_01
-		                 FILENAME NETWORK-01
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true)
+set(_network_tuning_tests
+  NETWORK-01
+  NETWORK-01_STANDARD
+)
 
-add_test_compareECLFiles(CASENAME network_standard
-		                 FILENAME NETWORK-01_STANDARD
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true)
+add_multiple_tests(
+  _network_tuning_tests
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR network
+  TEST_ARGS --enable-tuning=true
+)
 
-add_test_compareECLFiles(CASENAME network_01_reroute
-		                 FILENAME NETWORK-01-REROUTE
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+set(_network_tuning_local_switch_tests
+  NETWORK-01-REROUTE
+  NETWORK-01-REROUTE_STD
+)
 
-add_test_compareECLFiles(CASENAME network_01_reroute_std
-		                 FILENAME NETWORK-01-REROUTE_STD
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+add_multiple_tests(
+  _network_tuning_local_switch_tests
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR network
+  TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true
+)
+
+add_test_compareECLFiles(CASENAME network_01_wtest
+                         FILENAME NETWORK-01-WTEST
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR network)
 
 add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          FILENAME SPE1CASE1_METRIC_VFP1
@@ -1094,12 +1099,6 @@ add_test_compareECLFiles(CASENAME gsatprod
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR satellite)
-add_test_compareECLFiles(CASENAME network_01_wtest
-                         FILENAME NETWORK-01-WTEST
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR network)
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
                            FILENAME SPE1CASE2
