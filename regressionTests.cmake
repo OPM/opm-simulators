@@ -97,19 +97,41 @@ add_multiple_tests(
   DIR spe1
 )
 
-add_test_compareECLFiles(CASENAME spe1_brine
-                         FILENAME SPE1CASE1_BRINE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_brine)
+set(_spe1_brine_tests
+  SPE1CASE1_BRINE
+  SPE1CASE2_BRINE_GASWATER
+)
 
-add_test_compareECLFiles(CASENAME spe1_precsalt
-                         FILENAME SPE1CASE1_PRECSALT
+add_multiple_tests(
+  _spe1_brine_tests
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR spe1_brine
+)
+
+set(_spe1_precsalt_tests
+  GASWATER_VAPWAT_PRECSALT
+  SPE1CASE1_PRECSALT
+)
+
+add_multiple_tests(
+  _spe1_precsalt_tests
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR spe1_precsalt
+)
+
+add_test_compareECLFiles(CASENAME gasoil_precsalt
+                         FILENAME GASCONDENSATE_VAPWAT_PRECSALT_REGRESSION
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR spe1_precsalt)
+                         DIR spe1_precsalt
+                         TEST_ARGS --solver-max-time-step-in-days=0.05)
 
 add_test_compareECLFiles(CASENAME network_balance_01
 		                 FILENAME NETWORK-01
@@ -142,28 +164,6 @@ add_test_compareECLFiles(CASENAME network_01_reroute_std
 		                 REL_TOL ${rel_tol}
 		                 DIR network
 		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
-
-add_test_compareECLFiles(CASENAME gas_precsalt
-                         FILENAME GASWATER_VAPWAT_PRECSALT
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_precsalt)
-
-add_test_compareECLFiles(CASENAME gasoil_precsalt
-                         FILENAME GASCONDENSATE_VAPWAT_PRECSALT_REGRESSION
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_precsalt
-                         TEST_ARGS --solver-max-time-step-in-days=0.05)
-
-add_test_compareECLFiles(CASENAME spe1_brine_gaswater
-                         FILENAME SPE1CASE2_BRINE_GASWATER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR spe1_brine)
 
 add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          FILENAME SPE1CASE1_METRIC_VFP1
