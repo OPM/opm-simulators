@@ -958,29 +958,17 @@ add_test_compareECLFiles(CASENAME base_wt_tracer
                          DIR tracer
                          RESTART_STEP 1,3,7)
 
-add_test_compareECLFiles(CASENAME min_bhp_1
-                         FILENAME MIN_BHP_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/bhp_min
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME min_bhp_2
-                         FILENAME MIN_BHP_2
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/bhp_min
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME min_bhp_3
-                         FILENAME MIN_BHP_3
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/bhp_min
-                         TEST_ARGS --enable-tuning=true)
+add_multiple_test_range(
+  1
+  3
+  MIN_BHP_
+  min_bhp
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR wtest/bhp_min
+  TEST_ARGS --enable-tuning=true
+)
 
 add_test_compareECLFiles(CASENAME min_thp_1
                          FILENAME MIN_THP_1
