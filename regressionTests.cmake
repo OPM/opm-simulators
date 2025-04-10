@@ -241,13 +241,6 @@ add_test_compareECLFiles(CASENAME jfunc_01
                          DIR jfunc
                          TEST_ARGS --enable-tuning=true)
 
-add_test_compareECLFiles(CASENAME pinch_nopinch_1x1x10
-                         FILENAME PINCH10_NOPINCH
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
@@ -511,34 +504,6 @@ add_test_compareECLFiles(CASENAME actionx_m1
                          DIR udq_actionx
                          TEST_ARGS --solver-max-time-step-in-days=0.2)
 
-add_test_compareECLFiles(CASENAME pinch_multz_all
-                         FILENAME PINCH_MULTZ_ALL
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
-add_test_compareECLFiles(CASENAME pinch_multzm_all
-                         FILENAME PINCH_MULTZ-_ALL
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
-add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
-                         FILENAME PINCH_MULTZ_ALL_BARRIER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
-add_test_compareECLFiles(CASENAME pinch_multzm_all_barrier
-                         FILENAME PINCH_MULTZ-_ALL_BARRIER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR pinch)
-
 add_test_compareECLFiles(CASENAME waghyst1
                          FILENAME WAGHYSTR-01
                          SIMULATOR flow
@@ -577,6 +542,11 @@ add_multiple_tests(
 )
 
 set(_pinch_cases
+  PINCH_MULTZ_ALL
+  PINCH_MULTZ-_ALL
+  PINCH_MULTZ_ALL_BARRIER
+  PINCH_MULTZ-_ALL_BARRIER
+  PINCH10_NOPINCH
   T1A_GAP T1A_NOGAP T1A_NOPINCH
   T1A1_NOGAP
   T2A1_GAP
