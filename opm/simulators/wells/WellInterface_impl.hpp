@@ -308,15 +308,32 @@ namespace Opm
                     
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
-                    const bool isGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
+                    const bool wasGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
+
+                    int reportStepIdx = simulator.episodeIndex();
+                    const Group& fieldGroup = schedule.getGroup("FIELD", reportStepIdx);
 
                     // We first check for individual controls (unless on group control and switch disabled)
-                    if (! (isGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
+                    if (! (wasGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
                         changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
                     if(changed) {
                         updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
                         updatePrimaryVariables(simulator, well_state, deferred_logger);
+                        if (wasGroupControl) {
+                            well_state.updateGlobalIsGrup(this->index_of_well_);
+                            std::vector<Scalar> groupTargetReduction(well_state.numPhases(), 0.0);
+                            WellGroupHelpers<Scalar>::updateGroupTargetReduction(fieldGroup,
+                                                                                schedule,
+                                                                                reportStepIdx,
+                                                                                this->isInjector(),
+                                                                                well_state.phaseUsage(),
+                                                                                *this->guideRate(),
+                                                                                well_state,
+                                                                                summary_state,
+                                                                                group_state,
+                                                                                groupTargetReduction);
+                        }
                     }
                     const auto well_state_orig = well_state; // Ugly - take a copy for now...
                     // Check for group controls if present and switch not disabled, but only if we did not already change to individual
@@ -337,8 +354,6 @@ namespace Opm
                             // This may give some discrepencies in non-linear behaviour between MPI runs,
                             // but the solution should convergece to the same solution.
                             well_state.updateGlobalIsGrup(this->index_of_well_);
-                            int reportStepIdx = simulator.episodeIndex();
-                            const Group& fieldGroup = schedule.getGroup("FIELD", reportStepIdx);
                             std::vector<Scalar> groupTargetReduction(well_state.numPhases(), 0.0);
                             WellGroupHelpers<Scalar>::updateGroupTargetReduction(fieldGroup,
                                                                                 schedule,
@@ -357,35 +372,6 @@ namespace Opm
                             // New group target violates an individual constraint - reset
                             well_state = well_state_orig;
                             changed = false;
-                        }
-                    } else { // We did not switch to group, update individual target if present
-                        if (changed) {
-                            const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP : ws.production_cmode == Well::ProducerCMode::THP;
-                            if (!thp_controlled){
-                            // don't call for thp since this might trigger additional local solve
-                                updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-                            } else {
-                                updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-                                updatePrimaryVariables(simulator, well_state, deferred_logger);
-                            }
-                            if (isGroupControl) { // we switched from group
-                                well_state.updateGlobalIsGrup(this->index_of_well_);
-                                int reportStepIdx = simulator.episodeIndex();
-                                const Group& fieldGroup = schedule.getGroup("FIELD", reportStepIdx);
-                                std::vector<Scalar> groupTargetReduction(well_state.numPhases(), 0.0);
-                                WellGroupHelpers<Scalar>::updateGroupTargetReduction(fieldGroup,
-                                                                                    schedule,
-                                                                                    reportStepIdx,
-                                                                                    this->isInjector(),
-                                                                                    well_state.phaseUsage(),
-                                                                                    *this->guideRate(),
-                                                                                    well_state,
-                                                                                    summary_state,
-                                                                                    group_state,
-                                                                                    groupTargetReduction);
-                                //updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-                                //updatePrimaryVariables(simulator, well_state, deferred_logger);
-                            }
                         }
                     }
                 }
