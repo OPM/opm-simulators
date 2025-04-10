@@ -1972,10 +1972,6 @@ namespace Opm {
             }
         }
 
-        const Opm::Parallel::Communication comm = grid().comm();
-        DeferredLogger global_deferredLogger =
-            gatherDeferredLogger(local_deferredLogger, comm);
-
         for (const auto& [group_name, to] : this->closed_offending_wells_) {
             if (this->hasOpenLocalWell(to.second) &&
                 !this->wasDynamicallyShutThisTimeStep(to.second))
@@ -1991,9 +1987,13 @@ namespace Opm {
                                 group_name,
                                 to.second,
                                 "shut");
-                global_deferredLogger.info(msg);
+                local_deferredLogger.info(msg);
             }
         }
+
+        const Opm::Parallel::Communication comm = grid().comm();
+        DeferredLogger global_deferredLogger =
+            gatherDeferredLogger(local_deferredLogger, comm);
 
         if (this->terminal_output_) {
             global_deferredLogger.logMessages();
