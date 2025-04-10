@@ -1436,60 +1436,28 @@ add_test_compareECLFiles(CASENAME 01_vappars
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR vappars)
-add_test_compareECLFiles(CASENAME 01_multflt
-                         FILENAME MULTFLT-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 02_multflt
-                         FILENAME MULTFLT-02
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 03_multflt
-                         FILENAME MULTFLT-03
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 01_multregt
-                         FILENAME MULTREGT-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 05_multxyz
-                         FILENAME MULTXYZ05
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 06_multxyz
-                         FILENAME MULTXYZ06
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 07_multxyz
-                         FILENAME MULTXYZ07
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 08_multxyz
-                         FILENAME MULTXYZ08
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
-add_test_compareECLFiles(CASENAME 11_multxyz
-                         FILENAME MULTXYZ11
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR mult)
+
+set(_mult_cases
+  MULTFLT-01
+  MULTFLT-02
+  MULTFLT-03
+  MULTREGT-01
+  MULTXYZ05
+  MULTXYZ06
+  MULTXYZ07
+  MULTXYZ08
+  MULTXYZ11
+)
+
+add_multiple_tests(
+  _mult_cases
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR mult
+)
+
 add_test_compareECLFiles(CASENAME gsatprod
                          FILENAME GSATPROD2
                          SIMULATOR flow
