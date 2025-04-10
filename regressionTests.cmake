@@ -82,26 +82,20 @@ add_multiple_tests(
   DIR spe1
 )
 
-add_test_compareECLFiles(CASENAME spe1_oilgas
-                         FILENAME SPE1CASE2_OILGAS
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         DIR spe1)
+set(_spe1_coarse_tests
+  SPE1CASE2_GASWATER
+  SPE1CASE2_GASWATER_MSW
+  SPE1CASE2_OILGAS
+)
 
-add_test_compareECLFiles(CASENAME spe1_gaswater
-                         FILENAME SPE1CASE2_GASWATER
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         DIR spe1)
-
-add_test_compareECLFiles(CASENAME spe1_gaswater_msw
-                         FILENAME SPE1CASE2_GASWATER_MSW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         DIR spe1)
+add_multiple_tests(
+  _spe1_coarse_tests
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${coarse_rel_tol}
+  DIR spe1
+)
 
 add_test_compareECLFiles(CASENAME spe1_brine
                          FILENAME SPE1CASE1_BRINE
