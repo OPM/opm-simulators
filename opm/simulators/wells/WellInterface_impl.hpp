@@ -1600,12 +1600,10 @@ namespace Opm
             const Scalar well_tw_fraction = this->well_index_[perf] / total_tw;
             Scalar total_mobility = 0.0;
             for (int p = 0; p < np; ++p) {
-                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
-                total_mobility += fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value();
+                total_mobility += fs.invB(p).value() * intQuants.mobility(p).value();
             }
             for (int p = 0; p < np; ++p) {
-                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
-                scaling_factor[p] += well_tw_fraction * fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value() / total_mobility;
+                scaling_factor[p] += well_tw_fraction * fs.invB(p).value() * intQuants.mobility(p).value() / total_mobility;
             }
         }
         return scaling_factor;
@@ -1974,7 +1972,7 @@ namespace Opm
             // the reciprocal FVF.
             const auto connMob =
                 mobility[this->flowPhaseToModelCompIdx(p)]
-                    * fs.invB(this->flowPhaseToModelPhaseIdx(p)).value();
+                    * fs.invB(p).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -2026,7 +2024,7 @@ namespace Opm
         }
 
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), 0.0);
-        connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToModelPhaseIdx(phase_pos)).value());
+        connII[phase_pos] = connIICalc(mt * fs.invB(phase_pos).value());
     }
 
     template<typename TypeTag>
