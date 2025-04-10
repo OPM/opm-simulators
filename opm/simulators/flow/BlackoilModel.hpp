@@ -259,16 +259,19 @@ public:
     const SimulatorReportSingle& failureReport() const
     { return failureReport_; }
 
-    /// return the statistics if the nonlinearIteration() method failed
-    SimulatorReportSingle localAccumulatedReports() const;
+    /// return the statistics of local solves accumulated for this rank
+    const SimulatorReport& localAccumulatedReports() const;
+
+    /// return the statistics of local solves accumulated for each domain on this rank
+    const std::vector<SimulatorReport>& domainAccumulatedReports() const;
+
+    /// Write the number of nonlinear iterations per cell to a file in ResInsight compatible format
+    void writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const;
 
     const std::vector<StepReport>& stepReports() const
     { return convergence_reports_; }
 
     void writePartitions(const std::filesystem::path& odir) const;
-
-    const std::vector<std::vector<int>>& getConvCells() const
-    { return rst_conv_.getData(); }
 
     /// return the StandardWells object
     BlackoilWellModel<TypeTag>&
@@ -304,6 +307,10 @@ public:
     const ComponentName& compNames() const
     { return compNames_; }
 
+    //! \brief Returns true if an NLDD solver exists
+    bool hasNlddSolver() const 
+    { return nlddSolver_ != nullptr; }
+
 protected:
     // ---------  Data members  ---------
     Simulator& simulator_;
@@ -323,8 +330,6 @@ protected:
 
     // Well Model
     BlackoilWellModel<TypeTag>& well_model_;
-
-    RSTConv rst_conv_; //!< Helper class for RPTRST CONV
 
     /// \brief Whether we print something to std::cout
     bool terminal_output_;

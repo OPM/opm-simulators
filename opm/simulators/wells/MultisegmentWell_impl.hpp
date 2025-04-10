@@ -98,6 +98,10 @@ namespace Opm
             OPM_THROW(std::runtime_error, "water evaporation is not supported by multisegment well yet");
         }
 
+        if constexpr (Base::has_micp) {
+            OPM_THROW(std::runtime_error, "MICP is not supported by multisegment well yet");
+        }
+
         if(this->rsRvInj() > 0) {
             OPM_THROW(std::runtime_error,
                       "dissolved gas/ vapporized oil in injected oil/gas not supported by multisegment well yet."
@@ -135,24 +139,12 @@ namespace Opm
         this->initMatrixAndVectors();
 
         // calculate the depth difference between the perforations and the perforated grid block
-        for (int local_perf_index = 0; local_perf_index < this->number_of_perforations_; ++local_perf_index) {
-            // This variable loops over the number_of_perforations_ of *this* process, hence it is *local*.
+        for (int local_perf_index = 0; local_perf_index < this->number_of_local_perforations_; ++local_perf_index) {
+            // This variable loops over the number_of_local_perforations_ of *this* process, hence it is *local*.
             const int cell_idx = this->well_cells_[local_perf_index];
             // Here we need to access the perf_depth_ at the global perforation index though!
-            this->cell_perforation_depth_diffs_[local_perf_index] = depth_arg[cell_idx] - this->perf_depth_[this->pw_info_.localToGlobal(local_perf_index)];
+            this->cell_perforation_depth_diffs_[local_perf_index] = depth_arg[cell_idx] - this->perf_depth_[this->pw_info_.localToActive(local_perf_index)];
         }
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    initPrimaryVariablesEvaluation()
-    {
-        this->primary_variables_.init();
     }
 
 
@@ -362,7 +354,7 @@ namespace Opm
         const auto& segment_pressure = segments_copy.pressure;
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 const int cell_idx = this->well_cells_[local_perf_index];
@@ -620,12 +612,15 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computePerfCellPressDiffs(const Simulator& simulator)
     {
-        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        // We call this function on every process for the number_of_local_perforations_ on that process
+        // Each process updates the pressure for his perforations
+        for (int local_perf_index = 0; local_perf_index < this->number_of_local_perforations_; ++local_perf_index) {
+            // This variable loops over the number_of_local_perforations_ of *this* process, hence it is *local*.
 
             std::vector<Scalar> kr(this->number_of_phases_, 0.0);
             std::vector<Scalar> density(this->number_of_phases_, 0.0);
 
-            const int cell_idx = this->well_cells_[perf];
+            const int cell_idx = this->well_cells_[local_perf_index];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             const auto& fs = intQuants.fluidState();
 
@@ -662,7 +657,7 @@ namespace Opm
             }
             average_density /= sum_kr;
 
-            this->cell_perforation_pressure_diffs_[perf] = this->gravity_ * average_density * this->cell_perforation_depth_diffs_[perf];
+            this->cell_perforation_pressure_diffs_[local_perf_index] = this->gravity_ * average_density * this->cell_perforation_depth_diffs_[local_perf_index];
         }
     }
 
@@ -735,7 +730,6 @@ namespace Opm
                                 DeferredLogger& deferred_logger)
     {
         updatePrimaryVariables(simulator, well_state, deferred_logger);
-        initPrimaryVariablesEvaluation();
         computePerfCellPressDiffs(simulator);
         computeInitialSegmentFluids(simulator);
     }
@@ -752,9 +746,9 @@ namespace Opm
                             WellState<Scalar>& well_state,
                             DeferredLogger& deferred_logger) const
     {
-        auto fluidState = [&simulator, this](const int perf)
+        auto fluidState = [&simulator, this](const int local_perf_index)
         {
-            const auto cell_idx = this->well_cells_[perf];
+            const auto cell_idx = this->well_cells_[local_perf_index];
             return simulator.model()
                .intensiveQuantities(cell_idx, /*timeIdx=*/ 0).fluidState();
         };
@@ -792,7 +786,7 @@ namespace Opm
             // The subsetPerfID loops over 0 .. this->perf_data_->size().
             // *(this->perf_data_) contains info about the local processes only,
             // hence subsetPerfID is a local perf id and we can call getMobility
-            // directly with that.
+            // as well as fluidState directly with that.
             getMobility(simulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
@@ -818,7 +812,7 @@ namespace Opm
             comm.sum(wellPI, np);
         }
 
-        assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
+        assert (static_cast<int>(subsetPerfID) == this->number_of_local_perforations_ &&
                 "Internal logic error in processing connections for PI/II");
     }
 
@@ -853,6 +847,10 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
+        if (this->number_of_local_perforations_ == 0) {
+            // If there are no open perforations on this process, there are no contributions to the jacobian.
+            return;
+        }
         this->linSys_.extract(jacobian);
     }
 
@@ -866,6 +864,10 @@ namespace Opm
                              const bool use_well_weights,
                              const WellState<Scalar>& well_state) const
     {
+        if (this->number_of_local_perforations_ == 0) {
+            // If there are no open perforations on this process, there are no contributions the cpr pressure matrix.
+            return;
+        }
         // Add the pressure contribution to the cpr system for the well
         this->linSys_.extractCPRPressureMatrix(jacobian,
                                                weights,
@@ -897,18 +899,18 @@ namespace Opm
                     PerforationRates<Scalar>& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
-        const int local_perf_index = this->pw_info_.globalToLocal(perf);
+        const int local_perf_index = this->pw_info_.activeToLocal(perf);
         if (local_perf_index < 0) // then the perforation is not on this process
             return;
 
         // pressure difference between the segment and the perforation
         const Value perf_seg_press_diff = this->gravity() * segment_density *
-                                          this->segments_.perforation_depth_diff(perf);
+                                          this->segments_.local_perforation_depth_diff(local_perf_index);
         // pressure difference between the perforation and the grid cell
         const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
 
         // perforation pressure is the wellbore pressure corrected to perforation depth
-        // (positive sign due to convention in segments_.perforation_depth_diff() )
+        // (positive sign due to convention in segments_.local_perforation_depth_diff() )
         perf_press = segment_pressure + perf_seg_press_diff;
 
         // cell pressure corrected to perforation depth
@@ -1115,15 +1117,33 @@ namespace Opm
         // perforated cell
         // TODO: later to investigate how to handle the pvt region
         int pvt_region_index;
-        {
-            // using the first perforated cell
+
+        Scalar fsTemperature;
+        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
+        SaltConcType fsSaltConcentration;
+
+        if (this->well_cells_.size() > 0) {
+            // this->well_cells_ is empty if this process does not contain active perforations
+            // using the pvt region of first perforated cell, so we look for global index 0
+            // TODO: it should be a member of the WellInterface, initialized properly
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
-            temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
-            saltConcentration = this->extendEval(fs.saltConcentration());
+
+            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsSaltConcentration = fs.saltConcentration();
             pvt_region_index = fs.pvtRegionIndex();
         }
+
+        // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+        fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
+        temperature.setValue(fsTemperature);
+
+        fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
+        saltConcentration = this->extendEval(fsSaltConcentration);
+
+        pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
 
         this->segments_.computeFluidProperties(temperature,
                                                saltConcentration,
@@ -1162,7 +1182,7 @@ namespace Opm
             // we can change this depending on what we want
             const Scalar segment_pres = this->primary_variables_.getSegmentPressure(seg).value();
             const Scalar perf_seg_press_diff = this->gravity() * this->segments_.density(seg).value()
-                                                               * this->segments_.perforation_depth_diff(local_perf_index);
+                                                               * this->segments_.local_perforation_depth_diff(local_perf_index);
             const Scalar perf_press = segment_pres + perf_seg_press_diff;
             const Scalar multiplier = this->getInjMult(local_perf_index, segment_pres, perf_press, deferred_logger);
             for (std::size_t i = 0; i < mob.size(); ++i) {
@@ -1267,7 +1287,7 @@ namespace Opm
                                                  seg_dp);
             seg_dp[seg] = dp;
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 std::vector<Scalar> mob(this->num_components_, 0.0);
@@ -1279,7 +1299,7 @@ namespace Opm
                 const auto& int_quantities = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 const auto& fs = int_quantities.fluidState();
                 // pressure difference between the segment and the perforation
-                const Scalar perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
+                const Scalar perf_seg_press_diff = this->segments_.getPressureDiffSegLocalPerf(seg, local_perf_index);
                 // pressure difference between the perforation and the grid cell
                 const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
                 const Scalar pressure_cell = this->getPerfCellPressure(fs).value();
@@ -1494,9 +1514,7 @@ namespace Opm
         int it = 0;
         // relaxation factor
         Scalar relaxation_factor = 1.;
-        const Scalar min_relaxation_factor = 0.6;
         bool converged = false;
-        int stagnate_count = 0;
         bool relax_convergence = false;
         this->regularize_ = false;
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
@@ -1540,52 +1558,21 @@ namespace Opm
                                                                     this->param_.tolerance_pressure_ms_wells_,
                                                                     deferred_logger) );
             }
-
-
-            bool is_oscillate = false;
-            bool is_stagnate = false;
-
-            this->detectOscillations(measure_history, is_oscillate, is_stagnate);
-            // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
-            // for example, to recover it to be bigger
-
-            if (is_oscillate || is_stagnate) {
-                // HACK!
-                std::ostringstream sstr;
-                if (relaxation_factor == min_relaxation_factor) {
-                    // Still stagnating, terminate iterations if 5 iterations pass.
-                    ++stagnate_count;
-                    if (stagnate_count == 6) {
-                        sstr << " well " << this->name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
-                        const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, true);
-                        if (reportStag.converged()) {
-                            converged = true;
-                            sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
-                            deferred_logger.debug(sstr.str());
-                            return converged;
-                        }
-                    }
+            bool min_relaxation_reached = this->update_relaxation_factor(measure_history, relaxation_factor, this->regularize_, deferred_logger);
+            if (min_relaxation_reached || this->repeatedStagnation(measure_history, this->regularize_, deferred_logger)) {
+                // try last attempt with relaxed tolerances
+                const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, true);
+                if (reportStag.converged()) {
+                    converged = true;
+                    std::string message = fmt::format("Well stagnates/oscillates but {} manages to get converged with relaxed tolerances in {} inner iterations."
+                            ,this->name(), it);
+                    deferred_logger.debug(message);
+                } else {
+                    converged = false;
                 }
-
-                // a factor value to reduce the relaxation_factor
-                const Scalar reduction_mutliplier = 0.9;
-                relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
-
-                // debug output
-                if (is_stagnate) {
-                    sstr << " well " << this->name() << " observes stagnation in inner iteration " << it << "\n";
-
-                }
-                if (is_oscillate) {
-                    sstr << " well " << this->name() << " observes oscillation in inner iteration " << it << "\n";
-                }
-                sstr << " relaxation_factor is " << relaxation_factor << " now\n";
-
-                this->regularize_ = true;
-                deferred_logger.debug(sstr.str());
+                break;
             }
             updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
-            initPrimaryVariablesEvaluation();
         }
 
         // TODO: we should decide whether to keep the updated well_state, or recover to use the old well_state
@@ -1645,9 +1632,7 @@ namespace Opm
         int it = 0;
         // relaxation factor
         Scalar relaxation_factor = 1.;
-        const Scalar min_relaxation_factor = 0.6;
         bool converged = false;
-        [[maybe_unused]] int stagnate_count = 0;
         bool relax_convergence = false;
         this->regularize_ = false;
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -1732,52 +1717,13 @@ namespace Opm
                                                                         this->param_.tolerance_wells_,
                                                                         this->param_.tolerance_pressure_ms_wells_,
                                                                         deferred_logger));
-
-                bool is_oscillate = false;
-                bool is_stagnate = false;
-
-                this->detectOscillations(measure_history, is_oscillate, is_stagnate);
-                // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
-                // for example, to recover it to be bigger
-
-                if (is_oscillate || is_stagnate) {
-                    // HACK!
-                    std::string message;
-                    if (relaxation_factor == min_relaxation_factor) {
-                        ++stagnate_count;
-                        if (false) { // this disables the usage of the relaxed tolerance
-                            fmt::format_to(std::back_inserter(message), " Well {} observes severe stagnation and/or oscillation."
-                                                                        " We relax the tolerance and check for convergence. \n", this->name());
-                            const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_,
-                                                                       deferred_logger, true);
-                            if (reportStag.converged()) {
-                                converged = true;
-                                fmt::format_to(std::back_inserter(message), " Well {}  manages to get converged with relaxed tolerances in {} inner iterations", this->name(), it);
-                                deferred_logger.debug(message);
-                                return converged;
-                            }
-                        }
-                    }
-
-                    // a factor value to reduce the relaxation_factor
-                    constexpr Scalar reduction_mutliplier = 0.9;
-                    relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
-
-                    // debug output
-                    if (is_stagnate) {
-                        fmt::format_to(std::back_inserter(message), " well {} observes stagnation in inner iteration {}\n", this->name(), it);
-                    }
-                    if (is_oscillate) {
-                        fmt::format_to(std::back_inserter(message), " well {} observes oscillation in inner iteration {}\n", this->name(), it);
-                    }
-                    fmt::format_to(std::back_inserter(message), " relaxation_factor is {} now\n", relaxation_factor);
-
-                    this->regularize_ = true;
-                    deferred_logger.debug(message);
+                bool min_relaxation_reached = this->update_relaxation_factor(measure_history, relaxation_factor, this->regularize_, deferred_logger);
+                if (min_relaxation_reached || this->repeatedStagnation(measure_history, this->regularize_, deferred_logger)) {
+                    converged = false;
+                    break;
                 }
             }
             updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
-            initPrimaryVariablesEvaluation();
         }
 
         if (converged) {
@@ -1852,7 +1798,7 @@ namespace Opm
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
                 const int cell_idx = this->well_cells_[local_perf_index];
@@ -2002,7 +1948,7 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             const EvalWell segment_pressure = this->primary_variables_.getSegmentPressure(seg);
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 
@@ -2011,7 +1957,7 @@ namespace Opm
                 const auto& fs = intQuants.fluidState();
 
                 // pressure difference between the segment and the perforation
-                const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
+                const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegLocalPerf(seg, local_perf_index);
                 // pressure difference between the perforation and the grid cell
                 const Scalar cell_perf_press_diff = this->cell_perforation_pressure_diffs_[local_perf_index];
 
@@ -2063,16 +2009,33 @@ namespace Opm
         EvalWell temperature;
         EvalWell saltConcentration;
         int pvt_region_index;
-        {
-            // using the pvt region of first perforated cell
+
+        Scalar fsTemperature;
+        using SaltConcType = typename std::decay<decltype(std::declval<decltype(simulator.model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type;
+        SaltConcType fsSaltConcentration;
+
+        if (this->well_cells_.size() > 0) {
+            // this->well_cells_ is empty if this process does not contain active perforations
+            // using the pvt region of first perforated cell, so we look for global index 0
             // TODO: it should be a member of the WellInterface, initialized properly
             const int cell_idx = this->well_cells_[0];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
-            temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
-            saltConcentration = this->extendEval(fs.saltConcentration());
+
+            fsTemperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
+            fsSaltConcentration = fs.saltConcentration();
             pvt_region_index = fs.pvtRegionIndex();
         }
+
+        // The following broadcast calls are neccessary to ensure that processes that do *not* contain
+        // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+        fsTemperature = this->pw_info_.broadcastFirstPerforationValue(fsTemperature);
+        temperature.setValue(fsTemperature);
+
+        fsSaltConcentration = this->pw_info_.broadcastFirstPerforationValue(fsSaltConcentration);
+        saltConcentration = this->extendEval(fsSaltConcentration);
+
+        pvt_region_index = this->pw_info_.broadcastFirstPerforationValue(pvt_region_index);
 
         return this->segments_.getSurfaceVolume(temperature,
                                                 saltConcentration,
@@ -2219,7 +2182,7 @@ namespace Opm
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 
@@ -2251,7 +2214,7 @@ namespace Opm
             // calculating the perforation rate for each perforation that belongs to this segment
             const Scalar seg_pressure = getValue(this->primary_variables_.getSegmentPressure(seg));
             for (const int perf : this->segments_.perforations()[seg]) {
-                const int local_perf_index = this->pw_info_.globalToLocal(perf);
+                const int local_perf_index = this->pw_info_.activeToLocal(perf);
                 if (local_perf_index < 0) // then the perforation is not on this process
                     continue;
 

@@ -75,6 +75,11 @@
 
 namespace Opm {
 
+    template <typename T>
+    static constexpr T constexpr_max(T a, T b) {
+        return (a > b) ? a : b;
+    }
+
 /*!
  * \ingroup Common
  *
@@ -98,6 +103,9 @@ class Simulator
 
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
     using Communication = Dune::Communication<MPIComm>;
+
+    // \Note: too small eps can not rule out confusion from the rounding errors, as we use 1.e-9 as a minimum.
+    static constexpr Scalar eps =  constexpr_max(std::numeric_limits<Scalar>::epsilon(), static_cast<Scalar>(1.0e-9));
 
 public:
     // do not allow to copy simulators around
@@ -172,6 +180,18 @@ public:
         checkParallelException("Allocating the simulation vanguard failed: ",
                                exceptionThrown, what);
 
+        // Only relevant for CpGrid
+        if (verbose_)
+            std::cout << "Adding LGRs, if any\n" << std::flush;
+
+        try
+        { vanguard_->addLgrs(); }
+        catch (const std::exception& e) {
+            catchAction(e, verbose_);
+        }
+        checkParallelException("Adding LGRs to the simulation vanguard failed: ",
+                               exceptionThrown, what);
+
         if (verbose_)
             std::cout << "Distributing the vanguard's data\n" << std::flush;
 
@@ -182,6 +202,7 @@ public:
         }
         checkParallelException("Could not distribute the vanguard data: ",
                                exceptionThrown, what);
+        
 
         if (verbose_)
             std::cout << "Allocating the model\n" << std::flush;
@@ -466,9 +487,6 @@ public:
     bool finished() const
     {
         assert(timeStepSize_ >= 0.0);
-        Scalar eps =
-            std::max(Scalar(std::abs(this->time())), timeStepSize())
-            *std::numeric_limits<Scalar>::epsilon()*1e3;
         return finished_ || (this->time()*(1.0 + eps) >= endTime());
     }
 
@@ -478,8 +496,6 @@ public:
      */
     bool willBeFinished() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-
         return finished_ || (this->time() + timeStepSize_)*(1.0 + eps) >= endTime();
     }
 
@@ -567,8 +583,6 @@ public:
      */
     bool episodeStarts() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-
         return this->time() <= (episodeStartTime_ - startTime())*(1 + eps);
     }
 
@@ -578,8 +592,6 @@ public:
      */
     bool episodeIsOver() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-
         return this->time() >= (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
     }
 
@@ -589,8 +601,6 @@ public:
      */
     bool episodeWillBeOver() const
     {
-        static const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-
         return this->time() + timeStepSize()
             >=  (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
     }

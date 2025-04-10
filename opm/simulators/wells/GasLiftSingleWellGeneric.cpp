@@ -1110,7 +1110,7 @@ logSuccess_(Scalar alq, const int iteration_idx)
                                             ((alq > this->orig_alq_) ? "increased" : "decreased"),
                                             this->orig_alq_,
                                             alq);
-    this->deferred_logger_.info(message);
+    this->deferred_logger_.debug(message);
 }
 
 template<class Scalar>

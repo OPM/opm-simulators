@@ -47,6 +47,9 @@ public:
          this->master_slave_comm_.push_back(comm);
     }
     void addSlaveName(const std::string &name) { this->slave_names_.push_back(name); }
+    void addSlaveNextReportTimeOffset(double offset) {
+         this->slave_next_report_time_offsets_.push_back(offset);
+    }
     void addSlaveStartDate(std::time_t date) { this->slave_start_dates_.push_back(date); }
     double getActivationDate() const { return this->activation_date_; }
     int getArgc() const { return this->argc_; }
@@ -64,6 +67,11 @@ public:
     void resizeSlaveStartDates(int size) { this->slave_start_dates_.resize(size); }
     void resizeNextReportDates(int size) { this->slave_next_report_time_offsets_.resize(size); }
     void sendNextTimeStepToSlaves(double next_time_step);
+    // These are currently only used for unit testing
+    void setSlaveStartDate(int index, std::time_t date) { this->slave_start_dates_[index] = date; }
+    void setSlaveNextReportTimeOffset(int index, double offset) {
+         this->slave_next_report_time_offsets_[index] = offset;
+    }
 
 private:
     double getMasterActivationDate_() const;

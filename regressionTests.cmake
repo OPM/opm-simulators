@@ -6,12 +6,50 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
+# Adds several tests cases with similar parameters
+# cases Variable name of list with test cases
+# prefix Prefix to use
+# argn Parameters for cases
+macro(add_multiple_tests cases prefix)
+  foreach(case ${${cases}})
+    string(TOLOWER ${case} test)
+    add_test_compareECLFiles(
+        CASENAME ${prefix}_${test}
+        FILENAME ${case}
+        ${ARGN}
+    )
+  endforeach()
+endmacro()
+
+# Adds several tests cases in a numerical range with similar parameters
+# start Start of range
+# end End fof range
+# ftemplate File name template to use
+# prefix Prefix to use
+# argn Parameters for cases
+macro(add_multiple_test_range start end ftemplate prefix)
+    foreach(case RANGE ${start} ${end})
+      add_test_compareECLFiles(
+          CASENAME ${prefix}_${case}
+          FILENAME ${ftemplate}${case}
+          ${ARGN}
+      )
+    endforeach()
+endmacro()
+
 add_test_compareECLFiles(CASENAME spe1flowexp
                          FILENAME SPE1CASE2
                          SIMULATOR flowexp_blackoil
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1)
+
+add_test_compareECLFiles(CASENAME 1dcompositional
+                         FILENAME 1D_COMP
+                         SIMULATOR flowexp_comp
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR compositional)
 
 add_test_compareECLFiles(CASENAME spe12
                          FILENAME SPE1CASE2
@@ -522,6 +560,22 @@ add_test_compareECLFiles(CASENAME gpmaint11
                          REL_TOL ${rel_tol}
                          DIR gpmaint)
 
+set(_gconprod_cases
+  T1L
+  T1W
+  T2G
+  T2O
+)
+
+add_multiple_tests(
+  _gconprod_cases
+  gconprod
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR gconprod
+)
+
 set(_pinch_cases
   T1A_GAP T1A_NOGAP T1A_NOPINCH
   T1A1_NOGAP
@@ -542,64 +596,65 @@ set(_pinch_cases
   T1D_NOPINCH
   T1D1_GAP T1D1_NOGAP)
 
-foreach(pinch_case ${_pinch_cases})
-  string(TOLOWER ${pinch_case} pinch_test)
-  add_test_compareECLFiles(CASENAME pinch_${pinch_test}
-    FILENAME ${pinch_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol}
-    REL_TOL ${rel_tol}
-    DIR pinch)
-endforeach()
-
-set(_udt_cases
-  1D-01B
-  1D-01
-  1D-02
-  1D-03
+add_multiple_tests(
+  _pinch_cases
+  pinch
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR pinch
 )
 
-foreach(udt_case ${_udt_cases})
-  string(TOLOWER ${udt_case} udt_test)
-  add_test_compareECLFiles(CASENAME udt_${udt_test}
-    FILENAME UDT-${udt_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol}
-    REL_TOL ${rel_tol}
-    TEST_ARGS --enable-tuning=true
-    DIR udt)
-endforeach()
+set(_udt_cases
+  UDT-1D-01B
+  UDT-1D-01
+  UDT-1D-02
+  UDT-1D-03
+)
 
-foreach(eqreg_case RANGE 1 6)
-  add_test_compareECLFiles(CASENAME equalreg_multy_0${eqreg_case}
-    FILENAME EQUALREG-0${eqreg_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol}
-    REL_TOL ${rel_tol}
-    DIR mult
-  )
-endforeach()
+add_multiple_tests(
+  _udt_cases
+  udt
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  TEST_ARGS --enable-tuning=true
+  DIR udt
+)
 
-foreach(templ_case RANGE 1 6)
-  add_test_compareECLFiles(CASENAME actionx_well_templ_0${templ_case}
-    FILENAME ACTIONX_WELL_TEMPL-0${templ_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol}
-    REL_TOL ${rel_tol}
-    DIR actionx
-  )
-endforeach()
+add_multiple_test_range(
+  1
+  6
+  EQUALREG-0
+  equalreg_multy
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR mult
+)
 
-foreach(wcycle_case RANGE 0 8)
-  add_test_compareECLFiles(CASENAME WCYCLE-${wcycle_case}
-    FILENAME WCYCLE-${wcycle_case}
-    SIMULATOR flow
-    ABS_TOL ${abs_tol}
-    REL_TOL ${rel_tol}
-    DIR wcycle
-    TEST_ARGS --enable-tuning=true
-  )
-endforeach()
+add_multiple_test_range(
+  1
+  6
+  ACTIONX_WELL_TEMPL-0
+  actionx_well_templ
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR actionx
+)
+
+add_multiple_test_range(
+  0
+  8
+  WCYCLE-
+  WCYCLE
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR wcycle
+  TEST_ARGS --enable-tuning=true
+)
 
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
@@ -1099,7 +1154,8 @@ add_test_compareECLFiles(CASENAME nnc
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR editnnc)
+                         DIR editnnc
+                         TEST_ARGS --enable-opm-rst-file=1)
 
 add_test_compareECLFiles(CASENAME nonnc
                          FILENAME NONNC
@@ -1159,6 +1215,13 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          DIR parallel_fieldprops)
 
 
+add_test_compareECLFiles(CASENAME actionx_gconinje
+                         FILENAME ACTIONX_GCONINJE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
+
 add_test_compareECLFiles(CASENAME actionx_gconprod
                          FILENAME ACTIONX_GCONPROD
                          SIMULATOR flow
@@ -1166,6 +1229,19 @@ add_test_compareECLFiles(CASENAME actionx_gconprod
                          REL_TOL ${rel_tol}
                          DIR actionx)
 
+add_test_compareECLFiles(CASENAME actionx_wconhist
+                         FILENAME ACTIONX_WCONHIST
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
+
+add_test_compareECLFiles(CASENAME actionx_wconinjh
+                         FILENAME ACTIONX_WCONINJH
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
 
 add_test_compareECLFiles(CASENAME actionx_wefac
                          FILENAME ACTIONX_WEFAC
@@ -1186,8 +1262,7 @@ add_test_compareECLFiles(CASENAME micp
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR micp
-                         TEST_ARGS --linear-solver=ilu0)
+                         DIR micp)
 
 add_test_compareECLFiles(CASENAME 0_base_model6
                          FILENAME 0_BASE_MODEL6
@@ -1216,8 +1291,7 @@ add_test_compareECLFiles(CASENAME base_wt_tracer
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR tracer
-			 RESTART_STEP 1,3,7)
-
+                         RESTART_STEP 1,3,7)
 
 add_test_compareECLFiles(CASENAME min_bhp_1
                          FILENAME MIN_BHP_1
@@ -1546,7 +1620,18 @@ add_test_compareECLFiles(CASENAME 11_multxyz
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR mult)
-
+add_test_compareECLFiles(CASENAME gsatprod
+                         FILENAME GSATPROD2
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR satellite)
+add_test_compareECLFiles(CASENAME network_01_wtest
+                         FILENAME NETWORK-01-WTEST
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR network)
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
                            FILENAME SPE1CASE2

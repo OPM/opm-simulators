@@ -116,8 +116,7 @@ void printFlowTrailer(int nprocs,
                       int nthreads,
                       const double total_setup_time,
                       const double deck_read_time,
-                      const SimulatorReport& report,
-                      const SimulatorReportSingle& localsolves_report)
+                      const SimulatorReport& report)
 {
     std::ostringstream ss;
     ss << "\n\n================    End of simulation     ===============\n\n";
@@ -126,12 +125,6 @@ void printFlowTrailer(int nprocs,
     ss << fmt::format("Setup time:                 {:9.2f} s\n", total_setup_time);
     ss << fmt::format("  Deck input:               {:9.2f} s\n", deck_read_time);
     report.reportFullyImplicit(ss);
-
-    if (localsolves_report.total_linearizations > 0) {
-        ss << "======  Accumulated local solve data  ======\n";
-        localsolves_report.reportFullyImplicit(ss);
-    }
-
     OpmLog::info(ss.str());
 }
 

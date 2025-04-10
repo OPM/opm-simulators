@@ -372,26 +372,29 @@ protected:
                 nextValue[pvIdx] = std::clamp(nextValue[pvIdx], bparams_.pressMin_, bparams_.pressMax_);
             }
 
-
-            // Limit the variables to [0, cmax] values to improve the convergence.
-            // For the microorganisms we set this value equal to the biomass density value.
-            // For the oxygen and urea we set this value to the maximum injected
-            // concentration (the urea concentration has been scaled by 10). For
-            // the biofilm and calcite, we set this value equal to the porosity minus the clogging tolerance.
-            if (enableMICP && pvIdx == Indices::microbialConcentrationIdx) {
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::densityBiofilm());
-            }
-            if (enableMICP && pvIdx == Indices::oxygenConcentrationIdx) {
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::maximumOxygenConcentration());
-            }
-            if (enableMICP && pvIdx == Indices::ureaConcentrationIdx) {
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::maximumUreaConcentration());
-            }
-            if (enableMICP && pvIdx == Indices::biofilmConcentrationIdx) {
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::phi()[globalDofIdx] - MICPModule::toleranceBeforeClogging());
-            }
-            if (enableMICP && pvIdx == Indices::calciteConcentrationIdx) {
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0}, MICPModule::phi()[globalDofIdx] - MICPModule::toleranceBeforeClogging());
+            // keep the values above 0
+            // for the biofilm and calcite, we set an upper limit equal to the initial porosity
+            // minus 1e-8. This prevents singularities (e.g., one of the calcite source term is 
+            // evaluated at 1/(iniPoro - calcite)). The value 1e-8 is taken from the salt precipitation
+            // clapping above. 
+            if constexpr (enableMICP) {
+                if (pvIdx == Indices::microbialConcentrationIdx) {
+                    nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
+                }
+                if (pvIdx == Indices::oxygenConcentrationIdx) {
+                    nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
+                }
+                if (pvIdx == Indices::ureaConcentrationIdx) {
+                    nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
+                }
+                if (pvIdx == Indices::biofilmConcentrationIdx) {
+                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
+                                                                    this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
+                }
+                if (pvIdx == Indices::calciteConcentrationIdx) {
+                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
+                                                                    this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
+                }
             }
         }
 

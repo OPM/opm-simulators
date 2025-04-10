@@ -45,9 +45,6 @@ public:
         : wellModel_(wellModel)
     {}
 
-    /// Return true if any well has a THP constraint.
-    bool hasTHPConstraints() const;
-
     //! \brief Check the constraints of a well group.
     bool checkGroupConstraints(const Group& group,
                                const int reportStepIdx,

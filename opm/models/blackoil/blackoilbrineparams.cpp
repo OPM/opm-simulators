@@ -87,7 +87,8 @@ initFromState(const EclipseState& eclState)
 
     if constexpr (enableSaltPrecipitation) {
         const TableContainer& permfactTables = tableManager.getPermfactTables();
-        permfactTable_.resize(numPvtRegions);
+        unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+        permfactTable_.resize(numSatRegions);
         for (std::size_t i = 0; i < permfactTables.size(); ++i) {
             const PermfactTable& permfactTable = permfactTables.getTable<PermfactTable>(i);
             permfactTable_[i].setXYContainers(permfactTable.getPorosityChangeColumn(), permfactTable.getPermeabilityMultiplierColumn());
@@ -107,7 +108,6 @@ initFromState(const EclipseState& eclState)
 
         const TableContainer& pcfactTables = tableManager.getPcfactTables();
         if (!pcfactTables.empty()) {
-            unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
             pcfactTable_.resize(numSatRegions);
             for (std::size_t i = 0; i < pcfactTables.size(); ++i) {
                 const PcfactTable& pcfactTable = pcfactTables.getTable<PcfactTable>(i);

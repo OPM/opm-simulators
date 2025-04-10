@@ -46,12 +46,10 @@ namespace Opm {
 ReservoirCouplingSpawnSlaves::
 ReservoirCouplingSpawnSlaves(
     ReservoirCouplingMaster &master,
-    const ReservoirCoupling::CouplingInfo &rescoup,
-    const int report_step
+    const ReservoirCoupling::CouplingInfo &rescoup
 ) :
     master_{master},
     rescoup_{rescoup},
-    report_step_{report_step},
     comm_{master.getComm()}
 {
 }

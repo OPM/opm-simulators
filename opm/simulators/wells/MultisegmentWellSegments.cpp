@@ -60,10 +60,10 @@ namespace Opm
 template<class FluidSystem, class Indices>
 MultisegmentWellSegments<FluidSystem,Indices>::
 MultisegmentWellSegments(const int numSegments,
-                         const int num_perfs_whole_mswell,
+                         const ParallelWellInfo<Scalar>& parallel_well_info,
                          WellInterfaceGeneric<Scalar>& well)
     : perforations_(numSegments)
-    , perforation_depth_diffs_(num_perfs_whole_mswell, 0.0)
+    , local_perforation_depth_diffs_(well.numPerfs(), 0.0)
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
     , densities_(numSegments, 0.0)
@@ -87,6 +87,7 @@ MultisegmentWellSegments(const int numSegments,
     // side
     int i_perf_wells = 0;
     // The perfDepth vector will contain the depths of all perforations across all processes of this well!
+    int num_perfs_whole_mswell = parallel_well_info.communication().sum(well.numPerfs());
     well.perfDepth().resize(num_perfs_whole_mswell, 0.0);
     const auto& segment_set = well_.wellEcl().getSegments();
     for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
@@ -103,7 +104,9 @@ MultisegmentWellSegments(const int numSegments,
             perforations_[segment_index].push_back(i_perf_wells);
             well.perfDepth()[i_perf_wells] = connection.depth();
             const Scalar segment_depth = segment_set[segment_index].depth();
-            perforation_depth_diffs_[i_perf_wells] = well_.perfDepth()[i_perf_wells] - segment_depth;
+            int local_perf_index = parallel_well_info.activeToLocal(i_perf_wells);
+            if (local_perf_index > -1) // If local_perf_index == -1, then the perforation is not on this process
+                local_perforation_depth_diffs_[local_perf_index] = well_.perfDepth()[i_perf_wells] - segment_depth;
             i_perf_wells++;
         }
     }
@@ -344,10 +347,10 @@ getHydroPressureLoss(const int seg,
 template<class FluidSystem, class Indices>
 typename MultisegmentWellSegments<FluidSystem,Indices>::Scalar
 MultisegmentWellSegments<FluidSystem,Indices>::
-getPressureDiffSegPerf(const int seg,
-                       const int perf) const
+getPressureDiffSegLocalPerf(const int seg,
+                            const int local_perf_index) const
 {
-    return well_.gravity() * densities_[seg].value() * perforation_depth_diffs_[perf];
+    return well_.gravity() * densities_[seg].value() * local_perforation_depth_diffs_[local_perf_index];
 }
 
 template<class FluidSystem, class Indices>

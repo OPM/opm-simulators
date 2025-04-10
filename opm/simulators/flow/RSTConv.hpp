@@ -21,24 +21,27 @@
 #define OPM_RST_CONV_HEADER_INCLUDED
 
 #include <array>
+#include <functional>
 #include <vector>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 namespace Opm {
 
+namespace data { class Solution; }
 class RSTConfig;
 
 //! \brief Class computing RPTRST CONV output.
 class RSTConv
 {
 public:
+    using LocalToGlobalCellFunc = std::function<int(const int)>;
     //! \brief Constructor.
     //! \param globalCell Mapping from local to global cell indices
     //! \param comm Parallel communicator
-    RSTConv(const std::vector<int>& globalCell,
+    RSTConv(LocalToGlobalCellFunc globalCell,
             Parallel::Communication comm)
-        : globalCell_(globalCell)
+        : globalCell_(std::move(globalCell))
         , comm_(comm)
     {}
 
@@ -49,6 +52,9 @@ public:
     void init(const std::size_t numCells,
               const RSTConfig& rst_config,
               const std::array<int,6>& compIdx);
+
+    //! \brief Inserts the CONV output into the restart output container.
+    void outputRestart(data::Solution& sol);
 
     //! \brief Adds the CONV output for given residual vector.
     template<class ResidualVector>
@@ -68,10 +74,10 @@ private:
     void gatherAndAccumulate(const std::vector<int>& lIdx,
                              const ResidualVector& resid, int comp);
 
-    const std::vector<int>& globalCell_; //!< Global cell indices
+    LocalToGlobalCellFunc globalCell_; //!< Global cell indices
     Parallel::Communication comm_; //!< Communicator
-    std::vector<std::vector<int>> cnv_X_; //!< Counts of worst cells for RPTRST CONV
-    std::array<int,6> compIdx_; //!< Component indices
+    std::vector<std::vector<int>> cnv_X_{}; //!< Counts of worst cells for RPTRST CONV
+    std::array<int,6> compIdx_{}; //!< Component indices
     int N_ = 0; //!< Number of cells to consider
 };
 

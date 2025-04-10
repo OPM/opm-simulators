@@ -272,13 +272,13 @@ public:
                                                   unsigned scvIdx,
                                                   unsigned timeIdx)
     {
-        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
-        return params_.permfactTable_[pvtnumRegionIdx];
+        unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
+        return params_.permfactTable_[satnumRegionIdx];
     }
 
-    static const TabulatedFunction& permfactTable(unsigned pvtnumRegionIdx)
+    static const TabulatedFunction& permfactTable(unsigned satnumRegionIdx)
     {
-        return params_.permfactTable_[pvtnumRegionIdx];
+        return params_.permfactTable_[satnumRegionIdx];
     }
 
     static const Scalar saltsolTable(const ElementContext& elemCtx,
@@ -486,6 +486,6 @@ public:
 
 };
 
-} // namespace Ewoms
+} // namespace Opm
 
 #endif

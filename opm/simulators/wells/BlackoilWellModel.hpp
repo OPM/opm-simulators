@@ -74,6 +74,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace Opm {
@@ -213,10 +214,10 @@ template<class Scalar> class WellContributions;
                     const auto& mswTracerRates = simulator_.problem()
                         .tracerModel().getMswTracerRates();
 
-                    this->assignWellTracerRates(wsrpt, tracerRates);
-                    this->assignWellTracerRates(wsrpt, freeTracerRates);
-                    this->assignWellTracerRates(wsrpt, solTracerRates);
-                    this->assignMswTracerRates(wsrpt, mswTracerRates);
+                    this->assignWellTracerRates(wsrpt, tracerRates, this->reportStepIndex());
+                    this->assignWellTracerRates(wsrpt, freeTracerRates, this->reportStepIndex());
+                    this->assignWellTracerRates(wsrpt, solTracerRates, this->reportStepIndex());
+                    this->assignMswTracerRates(wsrpt, mswTracerRates, this->reportStepIndex());
                 }
 
                 BlackoilWellModelGuideRates(*this)
@@ -224,10 +225,10 @@ template<class Scalar> class WellContributions;
 
                 this->assignWellTargets(wsrpt);
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
-                // only used to compute gas injection mass rates for CO2STORE runs
+                // only used to compute gas injection mass rates for CO2STORE/H2STORE runs
                 // The gas reference density is thus the same for all pvt regions
                 // We therefore for simplicity use 0 here 
-                if (eclState().runspec().co2Storage()) {
+                if (eclState().runspec().co2Storage() || eclState().runspec().h2Storage()) {
                     this->assignMassGasRate(wsrpt, FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, 0));
                 }
                 return wsrpt;
@@ -257,8 +258,8 @@ template<class Scalar> class WellContributions;
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
-            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
-            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
+            // it should be able to go to prepareTimeStep(), however, the updateWellControls()
+            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above function
             // twice at the beginning of the time step
             /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
             /// at the beginning of the time step and no derivatives are included in these quantities
@@ -266,9 +267,8 @@ template<class Scalar> class WellContributions;
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
-            void initPrimaryVariablesEvaluation() const;
 
-            std::pair<bool, bool>
+            std::tuple<bool, bool, Scalar>
             updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
 
             void updateAndCommunicate(const int reportStepIdx,
@@ -417,16 +417,16 @@ template<class Scalar> class WellContributions;
             // the function handles one iteration of updating well controls and network pressures.
             // it is possible to decouple the update of well controls and network pressures further.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
-            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
+            std::tuple<bool, bool, Scalar> updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
                                                                         const bool relax_network_tolerance,
+                                                                        const bool optimize_gas_lift,
                                                                         const double dt,
                                                                         DeferredLogger& local_deferredLogger);
 
             bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
                                               const double dt,
                                               DeferredLogger& local_deferredLogger);
-            
-            double computeWellGroupTarget(DeferredLogger& local_deferredLogger);
+
             bool computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
 
             /// Update rank's notion of intersecting wells and their

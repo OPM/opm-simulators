@@ -313,7 +313,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-    for (const auto& chunk : ElementChunks(gridView_, num_threads)) {
+    for (const auto& chunk : ElementChunks(gridView_, Dune::Partitions::all, num_threads)) {
         for (const auto& elem : chunk) {
             FaceInfo inside;
             FaceInfo outside;
@@ -687,7 +687,7 @@ extractPorosity_()
         }
     }
     else {
-        throw std::logic_error("Can't read the porosityfrom the ecl state. "
+        throw std::logic_error("Can't read the porosity from the ecl state. "
                                "(The PORO keywords are missing)");
     }
 }

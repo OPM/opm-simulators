@@ -129,7 +129,7 @@ public:
 
     int numPhases() const { return number_of_phases_; }
 
-    int numPerfs() const { return number_of_perforations_; }
+    int numPerfs() const { return number_of_local_perforations_; }
 
     Scalar refDepth() const { return ref_depth_; }
 
@@ -161,7 +161,7 @@ public:
 
     // Note:: for multisegment wells, bhp is actually segment pressure in practice based on observation
     // it might change in the future
-    Scalar getInjMult(const int perf, const Scalar bhp, const Scalar perf_pres, DeferredLogger& dlogger) const;
+    Scalar getInjMult(const int local_perf_index, const Scalar bhp, const Scalar perf_pres, DeferredLogger& dlogger) const;
 
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
@@ -328,7 +328,7 @@ protected:
     std::vector<Scalar> well_index_;
 
     // number of the perforations for this well on this process
-    int number_of_perforations_;
+    int number_of_local_perforations_;
 
     // depth for each perforation
     std::vector<Scalar> perf_depth_;

@@ -91,8 +91,6 @@ public:
         , wellModel_(model)
     {}
 
-    void initPrimaryVariablesEvaluation(const Domain& domain) const;
-
     void addWellPressureEquations(PressureMatrix& jacobian,
                                   const BVector& weights,
                                   const bool use_well_weights,
@@ -118,6 +116,18 @@ public:
     // xw to update Well State
     void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                const int domainIdx);
+
+    // Get number of wells on this rank
+    int numLocalWells() const 
+    {
+        return wellModel_.numLocalWells(); 
+    }
+
+    // Get number of wells on this rank
+    int numLocalWellsEnd() const 
+    {
+        return wellModel_.numLocalWellsEnd(); 
+    }
 
 private:
     BlackoilWellModel<TypeTag>& wellModel_;

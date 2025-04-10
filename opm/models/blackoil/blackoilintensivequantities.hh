@@ -38,6 +38,7 @@
 #include "blackoildiffusionmodule.hh"
 #include "blackoildispersionmodule.hh"
 #include "blackoilmicpmodules.hh"
+#include "blackoilconvectivemixingmodule.hh"
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -77,6 +78,7 @@ class BlackOilIntensiveQuantities
     , public BlackOilBrineIntensiveQuantities<TypeTag>
     , public BlackOilEnergyIntensiveQuantities<TypeTag>
     , public BlackOilMICPIntensiveQuantities<TypeTag>
+    , public BlackOilConvectiveMixingIntensiveQuantities<TypeTag>
 {
     using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
@@ -104,6 +106,7 @@ class BlackOilIntensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
+    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -129,6 +132,8 @@ class BlackOilIntensiveQuantities
 
     using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
+    using BrineIntQua = BlackOilBrineIntensiveQuantities<TypeTag, enableSaltPrecipitation>;
+    using MICPIntQua = BlackOilMICPIntensiveQuantities<TypeTag, enableMICP>;
 
 
 public:
@@ -506,11 +511,12 @@ public:
         // deal with water induced rock compaction
         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
-        // the MICP processes change the porosity
+        // deal with MICP
         if constexpr (enableMICP){
-          Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
-          Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
-          porosity_ += - biofilm_ - calcite_;
+            Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
+            Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
+            // minimum porosity of 1e-8 to prevent numerical issues 
+            porosity_ -= min(biofilm_ + calcite_, referencePorosity_ - 1e-8);
         }
 
         // deal with salt-precipitation
@@ -598,6 +604,15 @@ public:
         }
         if constexpr (enableBrine) {
             asImp_().saltPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
+        }
+        if constexpr (enableConvectiveMixing) {
+            // The ifs are here is to avoid extra calculations for
+            // cases without CO2STORE and DRSDTCON.
+            if (problem.simulator().vanguard().eclState().runspec().co2Storage()) {
+                if (problem.drsdtconIsActive(globalSpaceIdx, problem.simulator().episodeIndex())) {
+                    asImp_().updateSaturatedDissolutionFactor_();
+                }
+            }
         }
 
         // update the quantities which are required by the chosen
@@ -691,6 +706,19 @@ public:
      */
     Scalar referencePorosity() const
     { return referencePorosity_; }
+
+    const Evaluation& permFactor() const
+    {
+        if constexpr (enableMICP) {
+            return MICPIntQua::permFactor();
+        }
+        else if constexpr (enableSaltPrecipitation) {
+            return BrineIntQua::permFactor();
+        }
+        else {
+            throw std::logic_error("permFactor() called but salt precipitation or MICP are disabled");
+        }
+    }
 
 private:
     friend BlackOilSolventIntensiveQuantities<TypeTag>;

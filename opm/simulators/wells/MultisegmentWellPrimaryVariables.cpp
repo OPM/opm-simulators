@@ -54,7 +54,7 @@ resize(const int numSegments)
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
-init()
+setEvaluationsFromValues()
 {
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
@@ -152,7 +152,7 @@ update(const WellState<Scalar>& well_state,
             }
         }
     }
-    init();
+    setEvaluationsFromValues();
 }
 
 template<class FluidSystem, class Indices>
@@ -209,7 +209,7 @@ updateNewton(const BVectorWell& dwells,
     if (stop_or_zero_rate_target) {
         value_[0][WQTotal] = 0.;
     }
-    init();
+    setEvaluationsFromValues();
 }
 
 template<class FluidSystem, class Indices>

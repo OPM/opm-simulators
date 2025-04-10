@@ -38,19 +38,6 @@
 namespace Opm {
 
 template<class Scalar>
-bool BlackoilWellModelConstraints<Scalar>::
-hasTHPConstraints() const
-{
-    int local_result = false;
-    for (const auto& well : wellModel_.genericWells()) {
-        if (well->wellHasTHPConstraints(wellModel_.summaryState())) {
-            local_result = true;
-        }
-    }
-    return wellModel_.comm().max(local_result);
-}
-
-template<class Scalar>
 std::pair<Group::InjectionCMode, Scalar>
 BlackoilWellModelConstraints<Scalar>::
 checkGroupInjectionConstraints(const Group& group,
@@ -476,10 +463,25 @@ actionOnBrokenConstraints(const Group& group,
                           DeferredLogger& deferred_logger) const
 {
 
-    bool changed = false;
     const Group::ProductionCMode oldControl =
         wellModel_.groupState().production_control(group.name());
 
+    // We switch to higher groups independently of the given group limit action in GCONPROD item 7
+    if (newControl == Group::ProductionCMode::FLD && oldControl != Group::ProductionCMode::FLD) {
+        // If newControl is FLD, the group should be subject to higher order controls
+        assert(group.productionGroupControlAvailable());
+        group_state.production_control(group.name(), newControl);
+        if (wellModel_.comm().rank() == 0) {
+            const std::string message = fmt::format("Switching production control mode for group {} from {} to {}",
+            group.name(),
+            Group::ProductionCMode2String(oldControl),
+            Group::ProductionCMode2String(newControl));
+            deferred_logger.debug(message);
+        }
+        return true;
+    }
+
+    bool changed = false;
     std::string ss;
     switch (group_limit_action.allRates) {
     case Group::ExceedAction::NONE: {

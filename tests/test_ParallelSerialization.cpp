@@ -144,7 +144,10 @@
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/data/Aquifer.hpp>
+#include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
+#include <opm/simulators/wells/ConnFracStatistics.hpp>
+#include <opm/simulators/wells/RunningStatistics.hpp>
 #include <opm/simulators/utils/MPISerializer.hpp>
 
 template<class T>
@@ -195,12 +198,17 @@ TEST_FOR_TYPE(BCConfig)
 TEST_FOR_TYPE(BrineDensityTable)
 TEST_FOR_TYPE(ColumnSchema)
 TEST_FOR_TYPE(Connection)
+TEST_FOR_TYPE_NAMED(ConnFracStatistics<double>, ConnFracStatisticsDouble)
+TEST_FOR_TYPE_NAMED(ConnFracStatistics<float>, ConnFracStatisticsFloat)
 TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_CarterTracy, serializationTestObjectC)
 TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_Fetkovich, serializationTestObjectF)
 TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_Numeric, serializationTestObjectN)
 TEST_FOR_TYPE_NAMED(data::CarterTracyData, CarterTracyData)
 TEST_FOR_TYPE_NAMED(data::CellData, CellData)
 TEST_FOR_TYPE_NAMED(data::Connection, dataConnection)
+TEST_FOR_TYPE_NAMED(data::ConnectionFiltrate, dataConnectionFiltrate)
+TEST_FOR_TYPE_NAMED(data::ConnectionFracturing::Statistics, dataConnectionFracturingStatistics)
+TEST_FOR_TYPE_NAMED(data::ConnectionFracturing, dataConnectionFracturing)
 TEST_FOR_TYPE_NAMED(data::CurrentControl, CurrentControl)
 TEST_FOR_TYPE_NAMED(data::FetkovichData, FetkovichData)
 TEST_FOR_TYPE_NAMED(data::GroupAndNetworkValues, GroupAndNetworkValues)
@@ -275,6 +283,8 @@ TEST_FOR_TYPE(RockTable)
 TEST_FOR_TYPE(RocktabTable)
 TEST_FOR_TYPE(Rock2dtrTable)
 TEST_FOR_TYPE(Rock2dTable)
+TEST_FOR_TYPE_NAMED(RunningStatistics<double>, RunningStatisticsDouble)
+TEST_FOR_TYPE_NAMED(RunningStatistics<float>, RunningStatisticsFloat)
 TEST_FOR_TYPE(Runspec)
 TEST_FOR_TYPE(Schedule)
 TEST_FOR_TYPE(ScheduleDeck)

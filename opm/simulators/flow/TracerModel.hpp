@@ -29,10 +29,14 @@
 #define OPM_TRACER_MODEL_HPP
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/TimingMacros.hpp>
+
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/GenericTracerModel.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <array>
@@ -86,6 +90,7 @@ class TracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties::G
 
     using TracerMatrix = typename BaseType::TracerMatrix;
     using TracerVector = typename BaseType::TracerVector;
+    using TracerVectorSingle = typename BaseType::TracerVectorSingle;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
@@ -137,50 +142,61 @@ public:
         for (std::size_t tracerIdx = 0; tracerIdx < this->tracerPhaseIdx_.size(); ++tracerIdx) {
             if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::waterPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
-                    throw std::runtime_error("Water tracer specified for non-water fluid system:" + this->name(tracerIdx));
+                    throw std::runtime_error("Water tracer specified for non-water fluid system: " +
+                                             this->name(tracerIdx));
                 }
 
                 wat_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
             else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::oilPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
-                    throw std::runtime_error("Oil tracer specified for non-oil fluid system:" + this->name(tracerIdx));
+                    throw std::runtime_error("Oil tracer specified for non-oil fluid system: " +
+                                             this->name(tracerIdx));
                 }
 
                 oil_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
             else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::gasPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
-                    throw std::runtime_error("Gas tracer specified for non-gas fluid system:" + this->name(tracerIdx));
+                    throw std::runtime_error("Gas tracer specified for non-gas fluid system: " +
+                                             this->name(tracerIdx));
                 }
 
                 gas_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
 
             // resize free and solution volume storages
-            fVol1_[this->tracerPhaseIdx_[tracerIdx]].resize(this->freeTracerConcentration_[tracerIdx].size());
-            sVol1_[this->tracerPhaseIdx_[tracerIdx]].resize(this->solTracerConcentration_[tracerIdx].size());
-            dsVol_[this->tracerPhaseIdx_[tracerIdx]].resize(this->solTracerConcentration_[tracerIdx].size());
-            dfVol_[this->tracerPhaseIdx_[tracerIdx]].resize(this->solTracerConcentration_[tracerIdx].size());
+            vol1_[0][this->tracerPhaseIdx_[tracerIdx]].
+                resize(this->freeTracerConcentration_[tracerIdx].size());
+            vol1_[1][this->tracerPhaseIdx_[tracerIdx]].
+                resize(this->freeTracerConcentration_[tracerIdx].size());
+            dVol_[0][this->tracerPhaseIdx_[tracerIdx]].
+                resize(this->solTracerConcentration_[tracerIdx].size());
+            dVol_[1][this->tracerPhaseIdx_[tracerIdx]].
+                resize(this->solTracerConcentration_[tracerIdx].size());
         }
 
         // will be valid after we move out of tracerMatrix_
         TracerMatrix* base = this->tracerMatrix_.get();
         for (auto& tr : this->tbatch) {
             if (tr.numTracer() != 0) {
-                if (this->tracerMatrix_)
+                if (this->tracerMatrix_) {
                     tr.mat = std::move(this->tracerMatrix_);
-                else
+                }
+                else {
                     tr.mat = std::make_unique<TracerMatrix>(*base);
+                }
             }
         }
     }
 
     void beginTimeStep()
     {
-        if (this->numTracers() == 0)
+        if (this->numTracers() == 0) {
             return;
+        }
 
+        OPM_TIMEBLOCK(tracerUpdateCache);
         updateStorageCache();
     }
 
@@ -189,9 +205,11 @@ public:
      */
     void endTimeStep()
     {
-        if (this->numTracers() == 0)
+        if (this->numTracers() == 0) {
             return;
+        }
 
+        OPM_TIMEBLOCK(tracerAdvance);
         advanceTracerFields();
     }
 
@@ -221,142 +239,114 @@ public:
     }
 
 protected:
+    using TracerTypeIdx = typename BaseType::TracerTypeIdx;
+    using BaseType::Free;
+    using BaseType::Solution;
 
-    // compute volume associated with free concentration
-    Scalar computeFreeVolume_(const int tracerPhaseIdx,
-                              unsigned globalDofIdx,
-                              unsigned timeIdx)
+    // compute volume associated with free/solution concentration
+    template<TracerTypeIdx Index>
+    Scalar computeVolume_(const int tracerPhaseIdx,
+                          const unsigned globalDofIdx,
+                          const unsigned timeIdx) const
     {
         const auto& intQuants = simulator_.model().intensiveQuantities(globalDofIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
+        constexpr Scalar min_volume = 1e-10;
 
-        Scalar phaseVolume =
-            decay<Scalar>(fs.saturation(tracerPhaseIdx))
-            *decay<Scalar>(fs.invB(tracerPhaseIdx))
-            *decay<Scalar>(intQuants.porosity());
+        if constexpr (Index == Free) {
+            return std::max(decay<Scalar>(fs.saturation(tracerPhaseIdx)) *
+                            decay<Scalar>(fs.invB(tracerPhaseIdx)) *
+                            decay<Scalar>(intQuants.porosity()),
+                            min_volume);
+        } else {
+            // vaporized oil
+            if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                return std::max(decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx)) *
+                                decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
+                                decay<Scalar>(fs.Rv()) *
+                                decay<Scalar>(intQuants.porosity()),
+                                min_volume);
+            }
 
-        return max(phaseVolume, 1e-10);
+            // dissolved gas
+            else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                return std::max(decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx)) *
+                                decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
+                                decay<Scalar>(fs.Rs()) *
+                                decay<Scalar>(intQuants.porosity()),
+                                min_volume);
+            }
+
+            return min_volume;
+        }
     }
 
-    // compute volume associated with solution concentration
-    Scalar computeSolutionVolume_(const int tracerPhaseIdx,
-                                  unsigned globalDofIdx,
-                                  unsigned timeIdx)
-    {
-        const auto& intQuants = simulator_.model().intensiveQuantities(globalDofIdx, timeIdx);
-        const auto& fs = intQuants.fluidState();
-
-        Scalar phaseVolume;
-
-        // vaporized oil
-        if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
-            phaseVolume =
-                decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx))
-                * decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx))
-                * decay<Scalar>(fs.Rv())
-                * decay<Scalar>(intQuants.porosity());
-        }
-
-        // dissolved gas
-        else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
-            phaseVolume =
-                decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx))
-                * decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx))
-                * decay<Scalar>(fs.Rs())
-                * decay<Scalar>(intQuants.porosity());
-        }
-        else {
-            phaseVolume = 0.0;
-        }
-
-        return max(phaseVolume, 1e-10);
-
-    }
-
-    void computeFreeFlux_(TracerEvaluation & freeFlux,
-                          bool & isUp,
-                          const int tracerPhaseIdx,
-                          const ElementContext& elemCtx,
-                          unsigned scvfIdx,
-                          unsigned timeIdx)
+    template<TracerTypeIdx Index>
+    std::pair<TracerEvaluation, bool>
+    computeFlux_(const int tracerPhaseIdx,
+                 const ElementContext& elemCtx,
+                 const unsigned scvfIdx,
+                 const unsigned timeIdx) const
     {
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
 
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        unsigned inIdx = extQuants.interiorIndex();
-
-        unsigned upIdx = extQuants.upstreamIndex(tracerPhaseIdx);
-
-        const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
-        const auto& fs = intQuants.fluidState();
-
-        Scalar v = 
-                decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx)) 
-                * decay<Scalar>(fs.invB(tracerPhaseIdx));
-
-        Scalar A = scvf.area();
-        if (inIdx == upIdx) {
-            freeFlux = A*v*variable<TracerEvaluation>(1.0, 0);
-            isUp = true;
-        }
-        else {
-            freeFlux = A*v;
-            isUp = false;
-        }
-    }
-
-    void computeSolFlux_(TracerEvaluation & solFlux,
-                         bool & isUp,
-                         const int tracerPhaseIdx,
-                         const ElementContext& elemCtx,
-                         unsigned scvfIdx,
-                         unsigned timeIdx)
-    {
-        const auto& stencil = elemCtx.stencil(timeIdx);
-        const auto& scvf = stencil.interiorFace(scvfIdx);
-
-        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        unsigned inIdx = extQuants.interiorIndex();
+        const unsigned inIdx = extQuants.interiorIndex();
 
         Scalar v;
         unsigned upIdx;
 
-        // vaporized oil
-        if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
-            upIdx = extQuants.upstreamIndex(FluidSystem::gasPhaseIdx);
-
+        if constexpr (Index == Free) {
+            upIdx = extQuants.upstreamIndex(tracerPhaseIdx);
             const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
             const auto& fs = intQuants.fluidState();
-            v =
-                decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx))
-                * decay<Scalar>(extQuants.volumeFlux(FluidSystem::gasPhaseIdx))
-                * decay<Scalar>(fs.Rv());
-        }
-        // dissolved gas
-        else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
-            upIdx = extQuants.upstreamIndex(FluidSystem::oilPhaseIdx);
+            v = decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx)) *
+                decay<Scalar>(fs.invB(tracerPhaseIdx));
+        } else {
+            if (tracerPhaseIdx == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                upIdx = extQuants.upstreamIndex(FluidSystem::gasPhaseIdx);
 
-            const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
-            const auto& fs = intQuants.fluidState();
-            v =
-                decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx))
-                * decay<Scalar>(extQuants.volumeFlux(FluidSystem::oilPhaseIdx))
-                * decay<Scalar>(fs.Rs());
-        }
-        else {
-            upIdx = 0;
-            v = 0.0;
+                const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
+                const auto& fs = intQuants.fluidState();
+                v = decay<Scalar>(fs.invB(FluidSystem::gasPhaseIdx)) *
+                    decay<Scalar>(extQuants.volumeFlux(FluidSystem::gasPhaseIdx)) *
+                    decay<Scalar>(fs.Rv());
+            }
+            // dissolved gas
+            else if (tracerPhaseIdx == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                upIdx = extQuants.upstreamIndex(FluidSystem::oilPhaseIdx);
+
+                const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
+                const auto& fs = intQuants.fluidState();
+                v = decay<Scalar>(fs.invB(FluidSystem::oilPhaseIdx)) *
+                    decay<Scalar>(extQuants.volumeFlux(FluidSystem::oilPhaseIdx)) *
+                    decay<Scalar>(fs.Rs());
+            }
+            else {
+                upIdx = 0;
+                v = 0.0;
+            }
         }
 
-        Scalar A = scvf.area();
-        if (inIdx == upIdx) {
-            solFlux = A*v*variable<TracerEvaluation>(1.0, 0);
-            isUp = true;
-        }
-        else {
-            solFlux = A*v;
-            isUp = false;
+        const Scalar A = scvf.area();
+        return inIdx == upIdx
+            ? std::pair{A * v * variable<TracerEvaluation>(1.0, 0), true}
+            : std::pair{A * v, false};
+    }
+
+    template<TracerTypeIdx Index, class TrRe>
+    Scalar storage1_(const TrRe& tr,
+                     const unsigned tIdx,
+                     const unsigned I,
+                     const unsigned I1,
+                     const bool cache)
+    {
+        if (cache) {
+            return tr.storageOfTimeIndex1_[tIdx][I][Index];
+        } else {
+            return computeVolume_<Index>(tr.phaseIdx_, I1, 1) *
+                   tr.concentration_[tIdx][I1][Index];
         }
     }
 
@@ -369,48 +359,31 @@ protected:
                                       unsigned I1)
 
     {
-        if (tr.numTracer() == 0)
+        if (tr.numTracer() == 0) {
             return;
-        
-        // Storage terms at previous time step (timeIdx = 1)
-        std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
-        std::vector<Scalar> fStorageOfTimeIndex1(tr.numTracer());
-        std::vector<Scalar> sStorageOfTimeIndex1(tr.numTracer());
-        if (elemCtx.enableStorageCache()) {
-            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                fStorageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I][0];
-                sStorageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I][1];
-            }
-        }
-        else {
-            Scalar fVolume1 = computeFreeVolume_(tr.phaseIdx_, I1, 1);
-            Scalar sVolume1 = computeSolutionVolume_(tr.phaseIdx_, I1, 1);
-            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                fStorageOfTimeIndex1[tIdx] = fVolume1 * tr.concentration_[tIdx][I1][0];
-                sStorageOfTimeIndex1[tIdx] = sVolume1 * tr.concentration_[tIdx][I1][1];
-            }
         }
 
-        TracerEvaluation fVol = computeFreeVolume_(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
-        TracerEvaluation sVol = computeSolutionVolume_(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
-        dsVol_[tr.phaseIdx_][I] += sVol.value() * scvVolume - sVol1_[tr.phaseIdx_][I];
-        dfVol_[tr.phaseIdx_][I] += fVol.value() * scvVolume - fVol1_[tr.phaseIdx_][I];
+        const TracerEvaluation fVol = computeVolume_<Free>(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
+        const TracerEvaluation sVol = computeVolume_<Solution>(tr.phaseIdx_, I, 0) * variable<TracerEvaluation>(1.0, 0);
+        dVol_[Solution][tr.phaseIdx_][I] += sVol.value() * scvVolume - vol1_[1][tr.phaseIdx_][I];
+        dVol_[Free][tr.phaseIdx_][I] += fVol.value() * scvVolume - vol1_[0][tr.phaseIdx_][I];
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
             // Free part
-            Scalar fStorageOfTimeIndex0 = fVol.value() * tr.concentration_[tIdx][I][0];
-            Scalar fLocalStorage = (fStorageOfTimeIndex0 - fStorageOfTimeIndex1[tIdx]) * scvVolume/dt;
-            tr.residual_[tIdx][I][0] += fLocalStorage; //residual + flux
+            const Scalar fStorageOfTimeIndex0 = fVol.value() * tr.concentration_[tIdx][I][Free];
+            const Scalar fLocalStorage = (fStorageOfTimeIndex0 - storage1_<Free>(tr, tIdx, I, I1,
+                                                                                 elemCtx.enableStorageCache())) * scvVolume / dt;
+            tr.residual_[tIdx][I][Free] += fLocalStorage; // residual + flux
 
             // Solution part
-            Scalar sStorageOfTimeIndex0 = sVol.value() * tr.concentration_[tIdx][I][1];
-            Scalar sLocalStorage = (sStorageOfTimeIndex0 - sStorageOfTimeIndex1[tIdx]) * scvVolume/dt;
-            tr.residual_[tIdx][I][1] += sLocalStorage; //residual + flux
+            const Scalar sStorageOfTimeIndex0 = sVol.value() * tr.concentration_[tIdx][I][Solution];
+            const Scalar sLocalStorage = (sStorageOfTimeIndex0 - storage1_<Solution>(tr, tIdx, I, I1,
+                                                                                     elemCtx.enableStorageCache())) * scvVolume / dt;
+            tr.residual_[tIdx][I][Solution] += sLocalStorage; // residual + flux
         }
 
         // Derivative matrix
-        (*tr.mat)[I][I][0][0] += fVol.derivative(0) * scvVolume/dt;
-        (*tr.mat)[I][I][1][1] += sVol.derivative(0) * scvVolume/dt;
-
+        (*tr.mat)[I][I][Free][Free] += fVol.derivative(0) * scvVolume/dt;
+        (*tr.mat)[I][I][Solution][Solution] += sVol.derivative(0) * scvVolume/dt;
     }
 
     template<class TrRe>
@@ -421,33 +394,30 @@ protected:
                                     unsigned J,
                                     const Scalar dt)
     {
-        if (tr.numTracer() == 0)
+        if (tr.numTracer() == 0) {
             return;
+        }
 
-        TracerEvaluation fFlux;
-        TracerEvaluation sFlux;
-        bool isUpF;
-        bool isUpS;
-        computeFreeFlux_(fFlux, isUpF, tr.phaseIdx_, elemCtx, scvfIdx, 0);
-        computeSolFlux_(sFlux, isUpS, tr.phaseIdx_, elemCtx, scvfIdx, 0);
-        dsVol_[tr.phaseIdx_][I] += sFlux.value() * dt;
-        dfVol_[tr.phaseIdx_][I] += fFlux.value() * dt;
-        int fGlobalUpIdx = isUpF ? I : J;
-        int sGlobalUpIdx = isUpS ? I : J;
-        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
+        const auto& [fFlux, isUpF] = computeFlux_<Free>(tr.phaseIdx_, elemCtx, scvfIdx, 0);
+        const auto& [sFlux, isUpS] = computeFlux_<Solution>(tr.phaseIdx_, elemCtx, scvfIdx, 0);
+        dVol_[Solution][tr.phaseIdx_][I] += sFlux.value() * dt;
+        dVol_[Free][tr.phaseIdx_][I] += fFlux.value() * dt;
+        const int fGlobalUpIdx = isUpF ? I : J;
+        const int sGlobalUpIdx = isUpS ? I : J;
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
             // Free and solution fluxes
-            tr.residual_[tIdx][I][0] += fFlux.value()*tr.concentration_[tIdx][fGlobalUpIdx][0]; //residual + flux
-            tr.residual_[tIdx][I][1] += sFlux.value()*tr.concentration_[tIdx][sGlobalUpIdx][1]; //residual + flux
+            tr.residual_[tIdx][I][Free] += fFlux.value()*tr.concentration_[tIdx][fGlobalUpIdx][Free]; // residual + flux
+            tr.residual_[tIdx][I][Solution] += sFlux.value()*tr.concentration_[tIdx][sGlobalUpIdx][Solution]; // residual + flux
         }
 
         // Derivative matrix
         if (isUpF){
-            (*tr.mat)[J][I][0][0] = -fFlux.derivative(0);
-            (*tr.mat)[I][I][0][0] += fFlux.derivative(0);
+            (*tr.mat)[J][I][Free][Free] = -fFlux.derivative(0);
+            (*tr.mat)[I][I][Free][Free] += fFlux.derivative(0);
         }
         if (isUpS) {
-            (*tr.mat)[J][I][1][1] = -sFlux.derivative(0);
-            (*tr.mat)[I][I][1][1] += sFlux.derivative(0);
+            (*tr.mat)[J][I][Solution][Solution] = -sFlux.derivative(0);
+            (*tr.mat)[I][I][Solution][Solution] += sFlux.derivative(0);
         }
     }
 
@@ -455,21 +425,34 @@ protected:
     void assembleTracerEquationWell(TrRe& tr,
                                     const Well& well)
     {
-        if (tr.numTracer() == 0)
+        if (tr.numTracer() == 0) {
             return;
+        }
 
         const auto& eclWell = well.wellEcl();
 
         // Init. well output to zero
+        auto& tracerRate = this->wellTracerRate_[eclWell.seqIndex()];
+        tracerRate.reserve(tr.numTracer());
+        auto& solTracerRate = this->wellTracerRate_[eclWell.seqIndex()];
+        solTracerRate.reserve(tr.numTracer());
+        auto& freeTracerRate = this->wellFreeTracerRate_[eclWell.seqIndex()];
+        freeTracerRate.reserve(tr.numTracer());
+        auto* mswTracerRate = eclWell.isMultiSegment()
+            ? &this->mSwTracerRate_[eclWell.seqIndex()]
+            : nullptr;
+        if (mswTracerRate) {
+            mswTracerRate->reserve(tr.numTracer());
+        }
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-            this->wellTracerRate_[std::make_pair(eclWell.name(), this->name(tr.idx_[tIdx]))] = 0.0;
-            this->wellFreeTracerRate_[std::make_pair(eclWell.name(), this->wellfname(tr.idx_[tIdx]))] = 0.0;
-            this->wellSolTracerRate_[std::make_pair(eclWell.name(), this->wellsname(tr.idx_[tIdx]))] = 0.0;
+            tracerRate.emplace_back(this->name(tr.idx_[tIdx]), 0.0);
+            freeTracerRate.emplace_back(this->wellfname(tr.idx_[tIdx]), 0.0);
+            solTracerRate.emplace_back(this->wellsname(tr.idx_[tIdx]), 0.0);
             if (eclWell.isMultiSegment()) {
+                auto& wtr = mswTracerRate->emplace_back(this->name(tr.idx_[tIdx]));
+                wtr.rate.reserve(eclWell.getConnections().size());
                 for (std::size_t i = 0; i < eclWell.getConnections().size(); ++i) {
-                    this->mSwTracerRate_[std::make_tuple(eclWell.name(), 
-                                         this->name(tr.idx_[tIdx]), 
-                                         eclWell.getConnections().get(i).segment())] = 0.0;
+                    wtr.rate.emplace(eclWell.getConnections().get(i).segment(), 0.0);
                 }
             }
         }
@@ -479,12 +462,11 @@ protected:
             wtracer[tIdx] = this->currentConcentration_(eclWell, this->name(tr.idx_[tIdx]));
         }
 
-        Scalar dt = simulator_.timeStepSize();
-        std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
-        const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
+        const Scalar dt = simulator_.timeStepSize();
+        const auto& ws = simulator_.problem().wellModel().wellState().well(well.name());
         for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
             const auto I = ws.perf_data.cell_index[i];
-            Scalar rate = well.volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+            const Scalar rate = well.volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
             Scalar rate_s;
             if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
                 rate_s = ws.perf_data.phase_mixing_rates[i][ws.vaporized_oil];
@@ -496,178 +478,218 @@ protected:
                 rate_s = 0.0;
             }
 
-            Scalar rate_f = rate - rate_s;
+            const Scalar rate_f = rate - rate_s;
             if (rate_f > 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    const Scalar delta = rate_f * wtracer[tIdx];
                     // Injection of free tracer only
-                    tr.residual_[tIdx][I][0] -= rate_f*wtracer[tIdx];
+                    tr.residual_[tIdx][I][Free] -= delta;
 
-                    // Store _injector_ tracer rate for reporting (can be done here since WTRACER is constant)
-                    this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
-                    this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
+                    // Store _injector_ tracer rate for reporting
+                    // (can be done here since WTRACER is constant)
+                    tracerRate[tIdx].rate += delta;
+                    freeTracerRate[tIdx].rate += delta;
                     if (eclWell.isMultiSegment()) {
-                        this->mSwTracerRate_[std::make_tuple(eclWell.name(), 
-                                             this->name(tr.idx_[tIdx]), 
-                                             eclWell.getConnections().get(i).segment())] += rate_f*wtracer[tIdx];
+                        (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
                     }
                 }
-                dfVol_[tr.phaseIdx_][I] -= rate_f * dt;
+                dVol_[Free][tr.phaseIdx_][I] -= rate_f * dt;
             }
             else if (rate_f < 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                    // Store _injector_ tracer rate for cross-flowing well connections (can be done here since WTRACER is constant)
-                    this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
-                    this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
+                    const Scalar delta = rate_f * wtracer[tIdx];
+                    // Store _injector_ tracer rate for cross-flowing well connections
+                    // (can be done here since WTRACER is constant)
+                    tracerRate[tIdx].rate += delta;
+                    freeTracerRate[tIdx].rate += delta;
 
                     // Production of free tracer
-                    tr.residual_[tIdx][I][0] -= rate_f * tr.concentration_[tIdx][I][0];
-
+                    tr.residual_[tIdx][I][Free] -= rate_f * tr.concentration_[tIdx][I][Free];
                 }
-                dfVol_[tr.phaseIdx_][I] -= rate_f * dt;
-                
+                dVol_[Free][tr.phaseIdx_][I] -= rate_f * dt;
+
                 // Derivative matrix for free tracer producer
-                (*tr.mat)[I][I][0][0] -= rate_f * variable<TracerEvaluation>(1.0, 0).derivative(0);
+                (*tr.mat)[I][I][Free][Free] -= rate_f * variable<TracerEvaluation>(1.0, 0).derivative(0);
             }
             if (rate_s < 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                     // Production of solution tracer
-                    tr.residual_[tIdx][I][1] -= rate_s * tr.concentration_[tIdx][I][1];
+                    tr.residual_[tIdx][I][Solution] -= rate_s * tr.concentration_[tIdx][I][Solution];
                 }
-                dsVol_[tr.phaseIdx_][I] -= rate_s * dt;
+                dVol_[Solution][tr.phaseIdx_][I] -= rate_s * dt;
 
                 // Derivative matrix for solution tracer producer
-                (*tr.mat)[I][I][1][1] -= rate_s * variable<TracerEvaluation>(1.0, 0).derivative(0);
+                (*tr.mat)[I][I][Solution][Solution] -= rate_s * variable<TracerEvaluation>(1.0, 0).derivative(0);
             }
         }
     }
-    
+
     template<class TrRe>
     void assembleTracerEquationSource(TrRe& tr,
                                       const Scalar dt,
                                       unsigned I)
     {
-        if (tr.numTracer() == 0)
+        if (tr.numTracer() == 0) {
             return;
-        
+        }
+
         // Skip if solution tracers do not exist
         if (tr.phaseIdx_ ==  FluidSystem::waterPhaseIdx ||
             (tr.phaseIdx_ ==  FluidSystem::gasPhaseIdx && !FluidSystem::enableDissolvedGas()) ||
-            (tr.phaseIdx_ ==  FluidSystem::oilPhaseIdx && !FluidSystem::enableVaporizedOil())) {
+            (tr.phaseIdx_ ==  FluidSystem::oilPhaseIdx && !FluidSystem::enableVaporizedOil()))
+        {
             return;
         }
-        
-        const Scalar& dsVol = dsVol_[tr.phaseIdx_][I];
-        const Scalar& dfVol = dfVol_[tr.phaseIdx_][I];
+
+        const Scalar& dsVol = dVol_[Solution][tr.phaseIdx_][I];
+        const Scalar& dfVol = dVol_[Free][tr.phaseIdx_][I];
 
         // Source term determined by sign of dsVol: if dsVol > 0 then ms -> mf, else mf -> ms
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
             if (dsVol >= 0) {
-                tr.residual_[tIdx][I][0] -= (dfVol / dt) * tr.concentration_[tIdx][I][0];
-                tr.residual_[tIdx][I][1] += (dfVol / dt) * tr.concentration_[tIdx][I][0];
+                const auto delta = (dfVol / dt) * tr.concentration_[tIdx][I][Free];
+                tr.residual_[tIdx][I][Free] -= delta;
+                tr.residual_[tIdx][I][Solution] += delta;
             }
             else {
-                tr.residual_[tIdx][I][0] += (dsVol / dt) * tr.concentration_[tIdx][I][1];
-                tr.residual_[tIdx][I][1] -= (dsVol / dt) * tr.concentration_[tIdx][I][1];
+                const auto delta = (dsVol / dt) * tr.concentration_[tIdx][I][Solution];
+                tr.residual_[tIdx][I][Free] += delta;
+                tr.residual_[tIdx][I][Solution] -= delta;
             }
         }
 
         // Derivative matrix
         if (dsVol >= 0) {
-            (*tr.mat)[I][I][0][0] -= (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
-            (*tr.mat)[I][I][1][0] += (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            const auto delta = (dfVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            (*tr.mat)[I][I][Free][Free] -= delta;
+            (*tr.mat)[I][I][Solution][Free] += delta;
         }
         else {
-            (*tr.mat)[I][I][0][1] += (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
-            (*tr.mat)[I][I][1][1] -= (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);   
+            const auto delta = (dsVol / dt) * variable<TracerEvaluation>(1.0, 0).derivative(0);
+            (*tr.mat)[I][I][Free][Solution] += delta;
+            (*tr.mat)[I][I][Solution][Solution] -= delta;
         }
-    }                                      
+    }
 
     void assembleTracerEquations_()
     {
         // Note that we formulate the equations in terms of a concentration update
         // (compared to previous time step) and not absolute concentration.
         // This implies that current concentration (tr.concentration_[][]) contributes
-        // to the rhs both through storrage and flux terms.
+        // to the rhs both through storage and flux terms.
         // Compare also advanceTracerFields(...) below.
 
-        for (auto& tr : tbatch) {
-            if (tr.numTracer() != 0) {
-                (*tr.mat) = 0.0;
-                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                    tr.residual_[tIdx] = 0.0;
-                }
-            }
-        }
-
-        // Well terms
-        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
-        for (const auto& wellPtr : wellPtrs) {
+        DeferredLogger local_deferredLogger{};
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
+        {
+            OPM_TIMEBLOCK(tracerAssemble);
             for (auto& tr : tbatch) {
-                this->assembleTracerEquationWell(tr, *wellPtr);
-            }
-        }
-
-        ElementContext elemCtx(simulator_);
-        for (const auto& elem : elements(simulator_.gridView())) {
-            elemCtx.updateStencil(elem);
-
-            std::size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
-
-            if (elem.partitionType() != Dune::InteriorEntity)
-            {
-                // Dirichlet boundary conditions needed for the parallel matrix
-                for (const auto& tr : tbatch) {
-                    if (tr.numTracer() != 0) {
-                        (*tr.mat)[I][I][0][0] = 1.;
-                        (*tr.mat)[I][I][1][1] = 1.;
+                if (tr.numTracer() != 0) {
+                    (*tr.mat) = 0.0;
+                    for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                        tr.residual_[tIdx] = 0.0;
                     }
                 }
-                continue;
-            }
-            elemCtx.updateAllIntensiveQuantities();
-            elemCtx.updateAllExtensiveQuantities();
-
-            Scalar extrusionFactor =
-                    elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
-            Valgrind::CheckDefined(extrusionFactor);
-            assert(isfinite(extrusionFactor));
-            assert(extrusionFactor > 0.0);
-            Scalar scvVolume =
-                    elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume()
-                    * extrusionFactor;
-            Scalar dt = elemCtx.simulator().timeStepSize();
-
-            std::size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/1);
-
-            for (auto& tr : tbatch) {
-                this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
             }
 
-            std::size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
-            for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
-                const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
-                unsigned j = face.exteriorIndex();
-                unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
+            this->wellTracerRate_.clear();
+            this->wellFreeTracerRate_.clear();
+            this->wellSolTracerRate_.clear();
+
+             // educated guess for new container size
+            const auto num_msw = this->mSwTracerRate_.size();
+            this->mSwTracerRate_.clear();
+
+            // Well terms
+            const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+            this->wellTracerRate_.reserve(wellPtrs.size());
+            this->wellFreeTracerRate_.reserve(wellPtrs.size());
+            this->wellSolTracerRate_.reserve(wellPtrs.size());
+            this->mSwTracerRate_.reserve(num_msw);
+            for (const auto& wellPtr : wellPtrs) {
                 for (auto& tr : tbatch) {
-                    this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J, dt);
+                    this->assembleTracerEquationWell(tr, *wellPtr);
                 }
             }
-            
-            // Source terms (mass transfer between free and solution tracer)
-            for (auto& tr : tbatch) {
-                this->assembleTracerEquationSource(tr, dt, I);
-            }
 
+            ElementContext elemCtx(simulator_);
+            const Scalar dt = elemCtx.simulator().timeStepSize();
+            for (const auto& elem : elements(simulator_.gridView())) {
+                elemCtx.updateStencil(elem);
+
+                const std::size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
+
+                if (elem.partitionType() != Dune::InteriorEntity) {
+                    // Dirichlet boundary conditions needed for the parallel matrix
+                    for (const auto& tr : tbatch) {
+                        if (tr.numTracer() != 0) {
+                            (*tr.mat)[I][I][0][0] = 1.;
+                            (*tr.mat)[I][I][1][1] = 1.;
+                        }
+                    }
+                    continue;
+                }
+                elemCtx.updateAllIntensiveQuantities();
+                elemCtx.updateAllExtensiveQuantities();
+
+                const Scalar extrusionFactor =
+                        elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
+                Valgrind::CheckDefined(extrusionFactor);
+                assert(isfinite(extrusionFactor));
+                assert(extrusionFactor > 0.0);
+                const Scalar scvVolume =
+                        elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume()
+                        * extrusionFactor;
+
+                const std::size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/1);
+
+                for (auto& tr : tbatch) {
+                    this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
+                }
+
+                const std::size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
+                for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
+                    const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
+                    const unsigned j = face.exteriorIndex();
+                    const unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
+                    for (auto& tr : tbatch) {
+                        this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J, dt);
+                    }
+                }
+
+                // Source terms (mass transfer between free and solution tracer)
+                for (auto& tr : tbatch) {
+                    this->assembleTracerEquationSource(tr, dt, I);
+                }
+            }
         }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                       "assembleTracerEquations() failed: ",
+                                       true, simulator_.gridView().comm())
 
         // Communicate overlap using grid Communication
         for (auto& tr : tbatch) {
-            if (tr.numTracer() == 0)
+            if (tr.numTracer() == 0) {
                 continue;
+            }
             auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(tr.residual_,
                                                                                       simulator_.gridView());
             simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,
                                               Dune::ForwardCommunication);
+        }
+    }
+
+    template<TracerTypeIdx Index, class TrRe>
+    void updateElem(TrRe& tr,
+                    const Scalar scvVolume,
+                    const unsigned globalDofIdx)
+    {
+        const Scalar vol1 = computeVolume_<Index>(tr.phaseIdx_, globalDofIdx, 0);
+        vol1_[Index][tr.phaseIdx_][globalDofIdx] = vol1 * scvVolume;
+        dVol_[Index][tr.phaseIdx_][globalDofIdx] = 0.0;
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+            tr.storageOfTimeIndex1_[tIdx][globalDofIdx][Index] =
+                vol1 * tr.concentrationInitial_[tIdx][globalDofIdx][Index];
         }
     }
 
@@ -683,22 +705,53 @@ protected:
         for (const auto& elem : elements(simulator_.gridView())) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-            Scalar extrusionFactor = elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
-            Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume() * extrusionFactor;
-            int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timeIdx=*/0);
+            const Scalar extrusionFactor = elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
+            const Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume() * extrusionFactor;
+            const unsigned globalDofIdx = elemCtx.globalSpaceIndex(0, /*timeIdx=*/0);
             for (auto& tr : tbatch) {
-                if (tr.numTracer() == 0)
+                if (tr.numTracer() == 0) {
                     continue;
-                
-                Scalar fVol1 = computeFreeVolume_(tr.phaseIdx_, globalDofIdx, 0);
-                Scalar sVol1 = computeSolutionVolume_(tr.phaseIdx_, globalDofIdx, 0);
-                fVol1_[tr.phaseIdx_][globalDofIdx] = fVol1 * scvVolume;
-                sVol1_[tr.phaseIdx_][globalDofIdx] = sVol1 * scvVolume;
-                dsVol_[tr.phaseIdx_][globalDofIdx] = 0.0;
-                dfVol_[tr.phaseIdx_][globalDofIdx] = 0.0;
-                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                    tr.storageOfTimeIndex1_[tIdx][globalDofIdx][0] = fVol1 * tr.concentrationInitial_[tIdx][globalDofIdx][0];
-                    tr.storageOfTimeIndex1_[tIdx][globalDofIdx][1] = sVol1 * tr.concentrationInitial_[tIdx][globalDofIdx][1];
+                }
+                updateElem<Free>(tr, scvVolume, globalDofIdx);
+                updateElem<Solution>(tr, scvVolume, globalDofIdx);
+            }
+        }
+    }
+
+    template<TracerTypeIdx Index, class TrRe>
+    void copyForOutput(TrRe& tr,
+                       const std::vector<TracerVector>& dx,
+                       const Scalar S,
+                       const unsigned tIdx,
+                       const unsigned globalDofIdx,
+                       std::vector<TracerVectorSingle>& sc)
+    {
+        constexpr Scalar tol_gas_sat = 1e-6;
+        tr.concentration_[tIdx][globalDofIdx][Index] -= dx[tIdx][globalDofIdx][Index];
+        if (tr.concentration_[tIdx][globalDofIdx][Index] < 0.0 || S < tol_gas_sat) {
+            tr.concentration_[tIdx][globalDofIdx][Index] = 0.0;
+        }
+        sc[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][Index];
+    }
+
+    template<TracerTypeIdx Index, class TrRe>
+    void assignRates(const TrRe& tr,
+                     const Well& eclWell,
+                     const std::size_t i,
+                     const std::size_t I,
+                     const Scalar rate,
+                     std::vector<WellTracerRate<Scalar>>& tracerRate,
+                     std::vector<MSWellTracerRate<Scalar>>* mswTracerRate,
+                     std::vector<WellTracerRate<Scalar>>& splitRate)
+    {
+        if (rate < 0) {
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                // Store _producer_ free tracer rate for reporting
+                const Scalar delta = rate * tr.concentration_[tIdx][I][Index];
+                tracerRate[tIdx].rate += delta;
+                splitRate[tIdx].rate += delta;
+                if (eclWell.isMultiSegment()) {
+                    (*mswTracerRate)[tIdx].rate[eclWell.getConnections().get(i).segment()] += delta;
                 }
             }
         }
@@ -709,8 +762,9 @@ protected:
         assembleTracerEquations_();
 
         for (auto& tr : tbatch) {
-            if (tr.numTracer() == 0)
+            if (tr.numTracer() == 0) {
                 continue;
+            }
 
             // Note that we solve for a concentration update (compared to previous time step)
             // Confer also assembleTracerEquations_(...) above.
@@ -719,10 +773,12 @@ protected:
                 dx[tIdx] = 0.0;
             }
 
-            bool converged = this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
+            const bool converged = this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
             if (!converged) {
                 OpmLog::warning("### Tracer model: Linear solver did not converge. ###");
             }
+
+            OPM_TIMEBLOCK(tracerPost);
 
             for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                 for (std::size_t globalDofIdx = 0; globalDofIdx < tr.concentration_[tIdx].size(); ++globalDofIdx) {
@@ -730,28 +786,18 @@ protected:
                     // present are set to zero
                     const auto& intQuants = simulator_.model().intensiveQuantities(globalDofIdx, 0);
                     const auto& fs = intQuants.fluidState();
-                    Scalar Sf = decay<Scalar>(fs.saturation(tr.phaseIdx_));
+                    const Scalar Sf = decay<Scalar>(fs.saturation(tr.phaseIdx_));
                     Scalar Ss = 0.0;
-                    if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas())
+
+                    if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
                         Ss = decay<Scalar>(fs.saturation(FluidSystem::oilPhaseIdx));
-                    else if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil())
+                    }
+                    else if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
                         Ss = decay<Scalar>(fs.saturation(FluidSystem::gasPhaseIdx));
+                    }
 
-                    const Scalar tol_gas_sat = 1e-6;
-                    if ((tr.concentration_[tIdx][globalDofIdx][0] - dx[tIdx][globalDofIdx][0] < 0.0) 
-                        || Sf < tol_gas_sat)
-                        tr.concentration_[tIdx][globalDofIdx][0] = 0.0;
-                    else
-                        tr.concentration_[tIdx][globalDofIdx][0] -= dx[tIdx][globalDofIdx][0];
-                    if (tr.concentration_[tIdx][globalDofIdx][1] - dx[tIdx][globalDofIdx][1] < 0.0
-                        || Ss < tol_gas_sat)
-                        tr.concentration_[tIdx][globalDofIdx][1] = 0.0;
-                    else
-                        tr.concentration_[tIdx][globalDofIdx][1] -= dx[tIdx][globalDofIdx][1];
-
-                    // Partition concentration into free and solution tracers for output
-                    this->freeTracerConcentration_[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][0];
-                    this->solTracerConcentration_[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][1];
+                    copyForOutput<Free>(tr, dx, Sf, tIdx, globalDofIdx, this->freeTracerConcentration_);
+                    copyForOutput<Solution>(tr, dx, Ss, tIdx, globalDofIdx, this->solTracerConcentration_);
                 }
             }
 
@@ -761,16 +807,22 @@ protected:
                 const auto& eclWell = wellPtr->wellEcl();
 
                 // Injection rates already reported during assembly
-                if (!eclWell.isProducer())
+                if (!eclWell.isProducer()) {
                     continue;
+                }
 
                 Scalar rateWellPos = 0.0;
                 Scalar rateWellNeg = 0.0;
-                std::size_t well_index = simulator_.problem().wellModel().wellState().index(eclWell.name()).value();
+                const std::size_t well_index = simulator_.problem().wellModel().wellState().index(eclWell.name()).value();
                 const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
+                auto& tracerRate = this->wellTracerRate_[eclWell.seqIndex()];
+                auto& freeTracerRate = this->wellFreeTracerRate_[eclWell.seqIndex()];
+                auto& solTracerRate = this->wellSolTracerRate_[eclWell.seqIndex()];
+                auto* mswTracerRate = eclWell.isMultiSegment() ? &this->mSwTracerRate_[eclWell.seqIndex()] : nullptr;
+
                 for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
                     const auto I = ws.perf_data.cell_index[i];
-                    Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+                    const Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
 
                     Scalar rate_s;
                     if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
@@ -783,37 +835,11 @@ protected:
                         rate_s = 0.0;
                     }
 
-                    Scalar rate_f = rate - rate_s;
-                    if (rate_f < 0) {
-                        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                            // Store _producer_ free tracer rate for reporting
-                            this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += 
-                                rate_f * tr.concentration_[tIdx][I][0];
-                            this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) +=
-                                rate_f * tr.concentration_[tIdx][I][0];
-                            if (eclWell.isMultiSegment()) {
-                                this->mSwTracerRate_[std::make_tuple(eclWell.name(), 
-                                                     this->name(tr.idx_[tIdx]), 
-                                                     eclWell.getConnections().get(i).segment())] += 
-                                    rate_f * tr.concentration_[tIdx][I][0];
-                            }
-                        }
-                    }
-                    if (rate_s < 0) {
-                        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                            // Store _producer_ solution tracer rate for reporting
-                            this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += 
-                                rate_s * tr.concentration_[tIdx][I][1];
-                            this->wellSolTracerRate_.at(std::make_pair(eclWell.name(),this->wellsname(tr.idx_[tIdx]))) +=
-                                rate_s * tr.concentration_[tIdx][I][1];
-                            if (eclWell.isMultiSegment()) {
-                                this->mSwTracerRate_[std::make_tuple(eclWell.name(), 
-                                                     this->name(tr.idx_[tIdx]), 
-                                                     eclWell.getConnections().get(i).segment())] += 
-                                    rate_s * tr.concentration_[tIdx][I][1];
-                            }
-                        }
-                    }
+                    const Scalar rate_f = rate - rate_s;
+                    assignRates<Free>(tr, eclWell, i, I, rate_f,
+                                      tracerRate, mswTracerRate, freeTracerRate);
+                    assignRates<Solution>(tr, eclWell, i, I, rate_s,
+                                          tracerRate, mswTracerRate, solTracerRate);
 
                     if (rate < 0) {
                         rateWellNeg += rate;
@@ -823,27 +849,26 @@ protected:
                     }
                 }
 
-                Scalar rateWellTotal = rateWellNeg + rateWellPos;
+                // TODO: Some inconsistencies here that perhaps should be clarified.
+                // The "offical" rate as reported below is occasionally significant
+                // different from the sum over connections (as calculated above). Only observed
+                // for small values, neglible for the rate itself, but matters when used to
+                // calculate tracer concentrations.
+                const Scalar official_well_rate_total =
+                    simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
 
-                // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
-                //  occasionally significant different from the sum over connections (as calculated above). Only observed
-                //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
-                Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
-
-                rateWellTotal = official_well_rate_total;
+                const Scalar rateWellTotal = official_well_rate_total;
 
                 if (rateWellTotal > rateWellNeg) { // Cross flow
-                    const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
-                    const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
+                    constexpr Scalar bucketPrDay = 10.0 / (1000. * 3600. * 24.); // ... keeps (some) trouble away
+                    const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal / rateWellNeg : 0.0;
                     for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                        this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) *= factor;
+                        tracerRate[tIdx].rate *= factor;
                     }
                 }
             }
         }
     }
-
-    
 
     Simulator& simulator_;
 
@@ -856,7 +881,8 @@ protected:
     // scenarios by supplying an extended vector type.
 
     template <typename TV>
-    struct TracerBatch {
+    struct TracerBatch
+    {
         std::vector<int> idx_;
         const int phaseIdx_;
         std::vector<TV> concentrationInitial_;
@@ -865,54 +891,53 @@ protected:
         std::vector<TV> residual_;
         std::unique_ptr<TracerMatrix> mat;
 
-      bool operator==(const TracerBatch& rhs) const
-      {
+        bool operator==(const TracerBatch& rhs) const
+        {
             return this->concentrationInitial_ == rhs.concentrationInitial_ &&
                    this->concentration_ == rhs.concentration_;
-      }
+        }
 
-      static TracerBatch serializationTestObject()
-      {
-          TracerBatch<TV> result(4);
-          result.idx_ = {1,2,3};
-          result.concentrationInitial_ = {5.0, 6.0};
-          result.concentration_ = {7.0, 8.0};
-          result.storageOfTimeIndex1_ = {9.0, 10.0, 11.0};
-          result.residual_ = {12.0, 13.0};
+        static TracerBatch serializationTestObject()
+        {
+            TracerBatch<TV> result(4);
+            result.idx_ = {1,2,3};
+            result.concentrationInitial_ = {5.0, 6.0};
+            result.concentration_ = {7.0, 8.0};
+            result.storageOfTimeIndex1_ = {9.0, 10.0, 11.0};
+            result.residual_ = {12.0, 13.0};
 
-          return result;
-      }
+            return result;
+        }
 
-      template<class Serializer>
-      void serializeOp(Serializer& serializer)
-      {
-          serializer(concentrationInitial_);
-          serializer(concentration_);
-      }
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(concentrationInitial_);
+            serializer(concentration_);
+        }
 
-      TracerBatch(int phaseIdx = 0) : phaseIdx_(phaseIdx) {}
+        TracerBatch(int phaseIdx = 0) : phaseIdx_(phaseIdx) {}
 
-      int numTracer() const { return idx_.size(); }
+        int numTracer() const
+        { return idx_.size(); }
 
-      void addTracer(const int idx, const TV & concentration)
-      {
-            int numGridDof = concentration.size();
+        void addTracer(const int idx, const TV& concentration)
+        {
+            const int numGridDof = concentration.size();
             idx_.emplace_back(idx);
             concentrationInitial_.emplace_back(concentration);
             concentration_.emplace_back(concentration);
             residual_.emplace_back(numGridDof);
             storageOfTimeIndex1_.emplace_back(numGridDof);
-      }
+        }
     };
 
-    std::array<TracerBatch<TracerVector>,3> tbatch;
+    std::array<TracerBatch<TracerVector>,numPhases> tbatch;
     TracerBatch<TracerVector>& wat_;
     TracerBatch<TracerVector>& oil_;
     TracerBatch<TracerVector>& gas_;
-    std::array<std::vector<Scalar>, 3> fVol1_;
-    std::array<std::vector<Scalar>, 3> sVol1_;
-    std::array<std::vector<Scalar>, 3> dsVol_;
-    std::array<std::vector<Scalar>, 3> dfVol_;
+    std::array<std::array<std::vector<Scalar>,numPhases>,2> vol1_;
+    std::array<std::array<std::vector<Scalar>,numPhases>,2> dVol_;
 };
 
 } // namespace Opm

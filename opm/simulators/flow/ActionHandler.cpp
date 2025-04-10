@@ -199,14 +199,15 @@ applyActions(const int reportStep,
     const auto now = TimeStampUTC{ schedule_.getStartTime() } + std::chrono::duration<double>(sim_time);
     const auto ts  = formatActionDate(now, reportStep);
 
-    bool commit_wellstate = false;
+
+    SimulatorUpdate sim_update;
     for (const auto& pyaction : actions.pending_python(actionState_)) {
         // The std::unordered_map<std::string, Scalar> wellpi contains the well production indices from the last
         // timestep. This map is needed for the keyword WELPI. For a PyAction, we do not know which wells are
         // affected by the PyAction, thus we get the production indices for all wells.
         const std::vector<std::string> wellpi_wells = schedule_[reportStep].well_order().names();
         const auto wellpi = fetchWellPI<Scalar>(this->wellModel_, wellpi_wells, this->comm_);
-        auto sim_update = schedule_.runPyAction(reportStep, *pyaction, actionState_,
+        auto sim_update_current = schedule_.runPyAction(reportStep, *pyaction, actionState_,
                                                 ecl_state_, summaryState_, wellpi);
 
         if (const auto pyRes = this->actionState_.python_result(pyaction->name());
@@ -219,7 +220,7 @@ applyActions(const int reportStep,
             logActivePyAction(pyaction->name(), ts);
         }
 
-        this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
+        sim_update.append(sim_update_current);
     }
 
     auto non_triggered = 0;
@@ -242,10 +243,10 @@ applyActions(const int reportStep,
         const std::vector<std::string> wellpi_wells = action->wellpi_wells(schedule_.wellMatcher(reportStep), matches);
         const auto wellpi = fetchWellPI<Scalar>(this->wellModel_, wellpi_wells, this->comm_);
 
-        const auto sim_update = this->schedule_
+        const auto sim_update_current = this->schedule_
             .applyAction(reportStep, *action, matches, wellpi);
 
-        this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
+        sim_update.append(sim_update_current);
         this->actionState_.add_run(*action, simTime, actionResult);
     }
 
@@ -253,6 +254,8 @@ applyActions(const int reportStep,
         logInactiveActions(non_triggered, ts);
     }
 
+    bool commit_wellstate = false;
+    this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
     // The well state has been stored in a previous object when the time
     // step has completed successfully, the action process might have
     // modified the well state, and to be certain that is not overwritten

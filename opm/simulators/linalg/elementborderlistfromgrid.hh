@@ -78,11 +78,7 @@ class ElementBorderListFromGrid
         bool contains(int, int codim) const
         { return codim == 0; }
 
-#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
-        bool fixedsize(int, int) const
-#else
         bool fixedSize(int, int) const
-#endif
         { return true; }
 
         template <class EntityType>
@@ -172,11 +168,7 @@ class ElementBorderListFromGrid
         bool contains(int, int codim) const
         { return codim == 0; }
 
-#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
-        bool fixedsize(int, int) const
-#else
         bool fixedSize(int, int) const
-#endif
         { return true; }
 
         template <class EntityType>

@@ -44,8 +44,7 @@ void printFlowTrailer(int nprocs,
                       int nthreads,
                       const double total_setup_time,
                       const double deck_read_time,
-                      const SimulatorReport& report,
-                      const SimulatorReportSingle& localsolves_report);
+                      const SimulatorReport& report);
 
 } // namespace Opm
 

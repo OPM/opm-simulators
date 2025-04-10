@@ -59,8 +59,6 @@ BlackoilModel(Simulator& simulator,
     , phaseUsage_(phaseUsageFromDeck(eclState()))
     , param_( param )
     , well_model_ (well_model)
-    , rst_conv_(simulator_.problem().eclWriter()->collectOnIORank().localIdxToGlobalIdxMapping(),
-                grid_.comm())
     , terminal_output_ (terminal_output)
     , current_relaxation_(1.0)
     , dx_old_(simulator_.model().numGridDof())
@@ -127,7 +125,7 @@ prepareStep(const SimulatorTimerInterface& timer)
         //updateEquationsScaling();
     }
 
-    if (nlddSolver_) {
+    if (hasNlddSolver()) {
         nlddSolver_->prepareStep();
     }
 
@@ -143,14 +141,15 @@ prepareStep(const SimulatorTimerInterface& timer)
         return -1;
     };
     const auto& schedule = simulator_.vanguard().schedule();
-    rst_conv_.init(simulator_.vanguard().globalNumCells(),
-                   schedule[timer.reportStepNum()].rst_config(),
-                   {getIdx(FluidSystem::oilPhaseIdx),
-                    getIdx(FluidSystem::gasPhaseIdx),
-                    getIdx(FluidSystem::waterPhaseIdx),
-                    contiPolymerEqIdx,
-                    contiBrineEqIdx,
-                    contiSolventEqIdx});
+    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
+    rst_conv.init(simulator_.vanguard().globalNumCells(),
+                  schedule[timer.reportStepNum()].rst_config(),
+                  {getIdx(FluidSystem::oilPhaseIdx),
+                   getIdx(FluidSystem::gasPhaseIdx),
+                   getIdx(FluidSystem::waterPhaseIdx),
+                   contiPolymerEqIdx,
+                   contiBrineEqIdx,
+                   contiSolventEqIdx});
 
     return report;
 }
@@ -246,7 +245,8 @@ nonlinearIteration(const int iteration,
                                                            nonlinear_solver);
     }
 
-    rst_conv_.update(simulator_.model().linearizer().residual());
+    auto& rst_conv = simulator_.problem().eclWriter().mutableOutputModule().getConv();
+    rst_conv.update(simulator_.model().linearizer().residual());
 
     return result;
 }
@@ -353,7 +353,6 @@ afterStep(const SimulatorTimerInterface&)
     Dune::Timer perfTimer;
     perfTimer.start();
     simulator_.problem().endTimeStep();
-    simulator_.problem().setConvData(rst_conv_.getData());
     report.pre_post_time += perfTimer.stop();
     return report;
 }
@@ -978,12 +977,34 @@ computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
 }
 
 template <class TypeTag>
-SimulatorReportSingle
+const SimulatorReport&
 BlackoilModel<TypeTag>::
 localAccumulatedReports() const
 {
-    return nlddSolver_ ? nlddSolver_->localAccumulatedReports()
-                       : SimulatorReportSingle{};
+    if (!hasNlddSolver()) {
+        OPM_THROW(std::runtime_error, "Cannot get local reports from a model without NLDD solver");
+    }
+    return nlddSolver_->localAccumulatedReports();
+}
+
+template <class TypeTag>
+const std::vector<SimulatorReport>&
+BlackoilModel<TypeTag>::
+domainAccumulatedReports() const
+{
+    if (!nlddSolver_)
+        OPM_THROW(std::runtime_error, "Cannot get domain reports from a model without NLDD solver");
+    return nlddSolver_->domainAccumulatedReports();
+}
+
+template <class TypeTag>
+void
+BlackoilModel<TypeTag>::
+writeNonlinearIterationsPerCell(const std::filesystem::path& odir) const
+{
+    if (hasNlddSolver()) {
+        nlddSolver_->writeNonlinearIterationsPerCell(odir);
+    }
 }
 
 template <class TypeTag>
@@ -991,8 +1012,8 @@ void
 BlackoilModel<TypeTag>::
 writePartitions(const std::filesystem::path& odir) const
 {
-    if (this->nlddSolver_ != nullptr) {
-        this->nlddSolver_->writePartitions(odir);
+    if (hasNlddSolver()) {
+        nlddSolver_->writePartitions(odir);
         return;
     }
 

@@ -417,6 +417,12 @@ public:
         return thresholdPressures_;
     }
 
+    const EclWriterType& eclWriter() const
+    { return *eclWriter_; }
+
+    EclWriterType& eclWriter()
+    { return *eclWriter_; }
+
     // TODO: do we need this one?
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -599,6 +605,21 @@ private:
     void handlePolymerBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("polymer is disabled for compositional modeling and you're trying to add polymer to BC");
+    }
+
+    void handleMicrBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
+    {
+        throw std::logic_error("MICP is disabled for compositional modeling and you're trying to add microbes to BC");
+    }
+
+    void handleOxygBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
+    {
+        throw std::logic_error("MICP is disabled for compositional modeling and you're trying to add oxygen to BC");
+    }
+
+    void handleUreaBC(const BCProp::BCFace& /* bc */, RateVector& /* rate */) const override
+    {
+        throw std::logic_error("MICP is disabled for compositional modeling and you're trying to add urea to BC");
     }
 
     FlowThresholdPressure<TypeTag> thresholdPressures_;

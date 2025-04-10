@@ -116,6 +116,7 @@ public:
                          SparseMatrixAdapter& jacobian,
                          GlobalEqVector& res)
     {
+        OPM_TIMEBLOCK(wellLinearizeDomain);
         // Note: no point in trying to do a parallel gathering
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.

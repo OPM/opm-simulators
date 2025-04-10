@@ -755,12 +755,13 @@ updateNetworkLeafNodeProductionRates(const Schedule& schedule,
     if (network.active()) {
         const int np = wellState.numPhases();
         for (const auto& group_name : network.leaf_nodes()) {
-            assert(schedule[reportStepIdx].groups.has(group_name));
-            const auto& group = schedule[reportStepIdx].groups.get(group_name);
             std::vector<Scalar> network_rates(np, 0.0);
-            if (group.numWells() > 0) {
-                for (int phase = 0; phase < np; ++phase) {
-                    network_rates[phase] = sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false, /*network*/ true);
+            if (schedule[reportStepIdx].groups.has(group_name)) { // Allow empty leaf nodes that are not groups
+                const auto& group = schedule[reportStepIdx].groups.get(group_name);
+                if (group.numWells() > 0) {
+                    for (int phase = 0; phase < np; ++phase) {
+                        network_rates[phase] = sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false, /*network*/ true);
+                    }
                 }
             }
             group_state.update_network_leaf_node_production_rates(group_name, network_rates);
@@ -1328,11 +1329,14 @@ control_group(const Group& group,
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
 
     if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
-        const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
-        return control_group(parent,
-                             group_state,
-                             reportStepIdx,
-                             schedule);
+        const auto& parent_name = group.control_group();
+        if (parent_name) {
+            const auto& parent = schedule.getGroup(parent_name.value(), reportStepIdx);
+            return control_group(parent,
+                                group_state,
+                                reportStepIdx,
+                                schedule);
+        }
     }
 
     return group.name();

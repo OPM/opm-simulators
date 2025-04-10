@@ -21,6 +21,7 @@
 #define OPM_PERFDATA_HEADER_INCLUDED
 
 #include <opm/simulators/wells/ConnFiltrateData.hpp>
+#include <opm/simulators/wells/ConnFracStatistics.hpp>
 
 #include <cstddef>
 #include <vector>
@@ -47,6 +48,11 @@ public:
     bool empty() const;
     bool try_assign(const PerfData& other);
 
+    /// \brief Make containers valid for injectors
+    ///
+    /// Needed if a producer is switched to an injector,
+    void prepareInjectorContainers();
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -60,7 +66,9 @@ public:
         serializer(polymer_rates);
         serializer(brine_rates);
         serializer(prod_index);
-        serializer(micp_rates);
+        serializer(microbial_rates);
+        serializer(oxygen_rates);
+        serializer(urea_rates);
         serializer(cell_index);
         serializer(connection_transmissibility_factor);
         serializer(connection_d_factor);
@@ -71,6 +79,8 @@ public:
         serializer(skin_pressure);
         serializer(water_velocity);
         serializer(filtrate_data);
+        serializer(connFracStatistics);
+        serializer(gas_mass_rates);
     }
 
     bool operator==(const PerfData&) const;
@@ -90,13 +100,16 @@ public:
     std::vector<Scalar> polymer_rates{};
     std::vector<Scalar> brine_rates{};
     std::vector<Scalar> prod_index{};
-    std::vector<Scalar> micp_rates{};
+    std::vector<Scalar> microbial_rates{};
+    std::vector<Scalar> oxygen_rates{};
+    std::vector<Scalar> urea_rates{};
     std::vector<std::size_t> cell_index{};
     std::vector<Scalar> connection_transmissibility_factor{};
     std::vector<Scalar> connection_d_factor{};
     std::vector<Scalar> connection_compaction_tmult{};
     std::vector<int> satnum_id{};
     std::vector<std::size_t> ecl_index{};
+    std::vector<Scalar> gas_mass_rates{};
 
     // The water_throughput, skin_pressure and water_velocity variables are
     // only used for injectors to check the injectivity.
@@ -105,6 +118,7 @@ public:
     std::vector<Scalar> water_velocity{};
 
     ConnFiltrateData<Scalar> filtrate_data{};
+    std::vector<ConnFracStatistics<Scalar>> connFracStatistics{};
 };
 
 } // namespace Opm

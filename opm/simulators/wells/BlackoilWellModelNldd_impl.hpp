@@ -40,6 +40,7 @@ assemble(const int /*iterationIdx*/,
          const double dt,
          const Domain& domain)
 {
+    OPM_TIMEBLOCK(assemble);
     // We assume that calculateExplicitQuantities() and
     // prepareTimeStep() have been called already for the entire
     // well model, so we do not need to do it here (when
@@ -47,7 +48,6 @@ assemble(const int /*iterationIdx*/,
 
     DeferredLogger local_deferredLogger;
     this->updateWellControls(local_deferredLogger, domain);
-    this->initPrimaryVariablesEvaluation(domain);
     this->assembleWellEq(dt, domain, local_deferredLogger);
 }
 
@@ -58,6 +58,7 @@ assembleWellEq(const double dt,
                const Domain& domain,
                DeferredLogger& deferred_logger)
 {
+    OPM_TIMEBLOCK(assembleWellEq);
     for (const auto& well : wellModel_.localNonshutWells()) {
         if (this->well_domain().at(well->name()) == domain.index) {
             well->assembleWellEq(wellModel_.simulator(),
@@ -126,18 +127,6 @@ recoverWellSolutionAndUpdateWellState(const BVector& x,
 }
 
 template<typename TypeTag>
-void
-BlackoilWellModelNldd<TypeTag>::
-initPrimaryVariablesEvaluation(const Domain& domain) const
-{
-    for (auto& well : wellModel_.localNonshutWells()) {
-        if (this->well_domain().at(well->name()) == domain.index) {
-            well->initPrimaryVariablesEvaluation();
-        }
-    }
-}
-
-template<typename TypeTag>
 ConvergenceReport
 BlackoilWellModelNldd<TypeTag>::
 getWellConvergence(const Domain& domain,
@@ -189,6 +178,7 @@ BlackoilWellModelNldd<TypeTag>::
 updateWellControls(DeferredLogger& deferred_logger,
                    const Domain& domain)
 {
+    OPM_TIMEBLOCK(updateWellControls);
     if (!wellModel_.wellsActive()) {
         return;
     }

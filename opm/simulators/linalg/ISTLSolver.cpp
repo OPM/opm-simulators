@@ -145,7 +145,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
             this->op_ = std::move(sop);
             this->solver_ = std::move(sol);
         } else {
-            using SeqOperatorType = WellModelMatrixAdapter<Matrix, Vector, Vector, false>;
+            using SeqOperatorType = WellModelMatrixAdapter<Matrix, Vector, Vector>;
             auto sop = std::make_unique<SeqOperatorType>(matrix, *wellOperator_);
             using FlexibleSolverType = Dune::FlexibleSolver<SeqOperatorType>;
             auto sol = std::make_unique<FlexibleSolverType>(*sop, prm,

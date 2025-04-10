@@ -37,6 +37,7 @@
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/NewTranFluxModule.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
+#include <opm/simulators/flow/BlackoilModel.hpp>
 
 
 #include <tuple>
@@ -57,6 +58,11 @@ struct FlowBaseProblemBlackoil {
 }
 
 // Set the problem property
+template<class TypeTag>
+struct NonlinearSystem<TypeTag, TTag::FlowBaseProblemBlackoil>
+{ using type = BlackoilModel<TypeTag>; };
+
+
 template<class TypeTag>
 struct Problem<TypeTag, TTag::FlowBaseProblemBlackoil>
 { using type = FlowProblemBlackoil<TypeTag>; };

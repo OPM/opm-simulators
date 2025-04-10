@@ -136,6 +136,9 @@ void registerAdaptiveParameters()
     Parameters::Register<Parameters::MinTimeStepBasedOnNewtonIterations>
         ("The minimum time step size (in days for field and metric unit and hours for lab unit) "
          "can be reduced to based on newton iteration counts");
+    Parameters::Register<Parameters::TimeStepControlSafetyFactor>
+        ("Value to be multiplied with the time step control tolerance to ensure that the target "
+         "relative change is lower than the tolerance");
 }
 
 std::tuple<TimeStepControlType, std::unique_ptr<TimeStepControlInterface>, bool>
@@ -212,6 +215,16 @@ createController(const UnitSystem& unitSystem)
                  true
              };
          }},
+        {"general3rdorder",
+         [tol]() {
+             const double safetyFactor = Parameters::Get<Parameters::TimeStepControlSafetyFactor>(); // 0.8
+             return RetVal{
+                 TimeStepControlType::General3rdOrder,
+                 std::make_unique<General3rdOrderController>(tol,
+                                                             safetyFactor),
+                 false
+             };
+        }},
         {"hardcoded",
          []() {
              const std::string filename = Parameters::Get<Parameters::TimeStepControlFileName>(); // "timesteps"

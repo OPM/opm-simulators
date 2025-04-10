@@ -137,8 +137,19 @@ PhaseUsage phaseUsage(const Phases& phases)
 PhaseUsage phaseUsageFromDeck(const EclipseState& eclipseState)
 {
     const auto& phases = eclipseState.runspec().phases();
-
-    return phaseUsage(phases);
+    if (eclipseState.runspec().co2Storage() || eclipseState.runspec().h2Storage()) {
+        PhaseUsage pu = phaseUsage(phases);
+        pu.has_co2_or_h2store = true;
+        return pu;
+    }
+    else if (eclipseState.runspec().micp()) {
+        PhaseUsage pu = phaseUsage(phases);
+        pu.has_micp = true;
+        return pu;
+    }
+    else {
+        return phaseUsage(phases);
+    }
 }
 
 /// Looks at presence of WATER, OIL and GAS keywords in deck

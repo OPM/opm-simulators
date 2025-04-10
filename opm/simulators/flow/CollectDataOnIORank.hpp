@@ -55,7 +55,7 @@ template <class Grid, class EquilGrid, class GridView>
 class CollectDataOnIORank
 {
 public:
-    using CollectiveCommunication = typename Grid::CollectiveCommunication;
+    using CollectiveCommunication = typename Grid::Communication;
     using P2PCommunicatorType = Dune::Point2PointCommunicator<Dune::SimpleMessageBuffer>;
     using IndexMapType = std::vector<int>;
     using IndexMapStorageType = std::vector<IndexMapType>;
@@ -77,6 +77,7 @@ public:
     // gather solution to rank 0 for EclipseWriter
     void collect(const data::Solution&                                localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
+                 std::map<std::pair<std::string, int>, double>&       localExtraBlockData,
                  const data::Wells&                                   localWellData,
                  const data::WellBlockAveragePressures&               localWBPData,
                  const data::GroupAndNetworkValues&                   localGroupAndNetworkData,

@@ -108,6 +108,7 @@ class TpfaLinearizer
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
     static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     static const bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static const bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
 
     // copying the linearizer is not a good idea
     TpfaLinearizer(const TpfaLinearizer&) = delete;
@@ -539,14 +540,15 @@ private:
         // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
         // For now, do the same also if any block flows are requested (TODO: only save requested cells...)
         // If DISPERC is in the deck, we initialize the sparse table here as well.
-        const bool anyFlows = simulator_().problem().eclWriter()->outputModule().anyFlows();
-        const bool anyFlores = simulator_().problem().eclWriter()->outputModule().anyFlores();
+        const bool anyFlows = simulator_().problem().eclWriter().outputModule().getFlows().anyFlows() ||
+                              simulator_().problem().eclWriter().outputModule().getFlows().hasBlockFlows();
+        const bool anyFlores = simulator_().problem().eclWriter().outputModule().getFlows().anyFlores();
         const bool enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
-        if (((!anyFlows || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && !enableDispersion) {
+        if (((!anyFlows || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && (!enableDispersion && !enableMICP)) {
             return;
         }
         const auto& model = model_();
-        const auto& nncOutput = simulator_().problem().eclWriter()->getOutputNnc();
+        const auto& nncOutput = simulator_().problem().eclWriter().getOutputNnc();
         Stencil stencil(gridView_(), model_().dofMapper());
         unsigned numCells = model.numTotalDof();
         std::unordered_multimap<int, std::pair<int, int>> nncIndices;
@@ -568,7 +570,7 @@ private:
         if (anyFlores) {
             floresInfo_.reserve(numCells, 6 * numCells);
         }
-        if (enableDispersion) {
+        if (enableDispersion || enableMICP) {
             velocityInfo_.reserve(numCells, 6 * numCells);
         }
 
@@ -615,7 +617,7 @@ private:
                 if (anyFlores) {
                     floresInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
                 }
-                if (enableDispersion) {
+                if (enableDispersion || enableMICP) {
                     velocityInfo_.appendRow(loc_vlinfo.begin(), loc_vlinfo.end());
                 }
             }
@@ -641,9 +643,9 @@ public:
 
     void updateFlowsInfo() {
         OPM_TIMEBLOCK(updateFlows);
-        const bool& enableFlows = simulator_().problem().eclWriter()->outputModule().hasFlows() ||
-                                    simulator_().problem().eclWriter()->outputModule().hasBlockFlows();
-        const bool& enableFlores = simulator_().problem().eclWriter()->outputModule().hasFlores();
+        const bool enableFlows = simulator_().problem().eclWriter().outputModule().getFlows().hasFlows() ||
+                                 simulator_().problem().eclWriter().outputModule().getFlows().hasBlockFlows();
+        const bool enableFlores = simulator_().problem().eclWriter().outputModule().getFlows().hasFlores();
         if (!enableFlows && !enableFlores) {
             return;
         }
@@ -724,7 +726,7 @@ private:
         // We do not call resetSystem_() here, since that will set
         // the full system to zero, not just our part.
         // Instead, that must be called before starting the linearization.
-        const bool& enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
+        const bool enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         const unsigned int numCells = domain.cells.size();
         const bool on_full_domain = (numCells == model_().numTotalDof());
 
@@ -756,7 +758,7 @@ private:
                 const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
                 LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo,  problem_().moduleParams());
                 adres *= nbInfo.res_nbinfo.faceArea;
-                if (enableDispersion) {
+                if (enableDispersion || enableMICP) {
                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
                         velocityInfo_[globI][loc].velocity[phaseIdx] = darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
                     }
@@ -830,9 +832,9 @@ private:
             bMat = 0.0;
             adres = 0.0;
             if (separateSparseSourceTerms_) {
-                LocalResidual::computeSourceDense(adres, problem_(), globI, 0);
+                LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
             } else {
-                LocalResidual::computeSource(adres, problem_(), globI, 0);
+                LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
             }
             adres *= -volume;
             setResAndJacobi(res, bMat, adres);

@@ -333,7 +333,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             nperf += 1;
         }
     }
-    cell_weights /= nperf;
+    if (nperf != 0)
+        cell_weights /= nperf;
+    else {
+        // duneC_.size==0, which can happen e.g. if a well has no active perforations on this rank.
+        // Add positive weight to diagonal to regularize Jacobian (other row entries are 0).
+        // Row's variable has no observable effect, since there are no perforations.
+        cell_weights = 1.;
+    }
 
     BVectorWell  bweights(1);
     std::size_t blockSz = duneD_[0][0].N();
@@ -369,13 +376,21 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             bweights[0][blockSz-1] = 1.0;
             diagElem = 1.0; // better scaling could have used the calculation below if weights were calculated
         } else {
-            for (std::size_t i = 0; i < cell_weights.size(); ++i) {
+            // The first (blockSz - 1) block weights will scale the
+            // conservation well equations, and is therefore set equal
+            // to the cell weights. The last one will scale the control
+            // equation, we set that to zero.
+            for (std::size_t i = 0; i < blockSz - 1; ++i) {
                 bweights[0][i] = cell_weights[i];
             }
             bweights[0][blockSz-1] = 0.0;
             diagElem = 0.0;
             const auto& locmat = duneD_[0][0];
-            for (std::size_t i = 0; i < cell_weights.size(); ++i) {
+            // For some models such as MICP, cell_weights.size() is larger than
+            // (blockSz - 1) since the model has more conserved quantities than
+            // the well model treats. We assume that the first (blockSz - 1)
+            // conserved quantities correspond to those treated in the well model.
+            for (std::size_t i = 0; i < blockSz - 1; ++i) {
                 diagElem += locmat[i][bhp_var_index] * cell_weights[i];
             }
 

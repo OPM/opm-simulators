@@ -69,7 +69,7 @@ public:
         serializer(surface_rates);
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
-        serializer(trivial_target);
+        serializer(trivial_group_target);
         serializer(segments);
         serializer(events);
         serializer(injection_cmode);
@@ -110,7 +110,7 @@ public:
     std::vector<Scalar> reservoir_rates;
     std::vector<Scalar> prev_surface_rates;
     PerfData<Scalar> perf_data;
-    bool trivial_target;
+    bool trivial_group_target;
     SegmentState<Scalar> segments;
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
@@ -126,7 +126,12 @@ public:
     void reset_connection_factors(const std::vector<PerforationData<Scalar>>& new_perf_data);
     void update_producer_targets(const Well& ecl_well, const SummaryState& st);
     void update_injector_targets(const Well& ecl_well, const SummaryState& st);
-    void update_targets(const Well& ecl_well, const SummaryState& st);
+    /// \brief update the type of the well and the targets.
+    ///
+    /// This called after ACTIONX is executed to update well rates. The new status is
+    /// in ecl_well and st.
+    /// \return whether well was switched to a producer
+    bool update_type_and_targets(const Well& ecl_well, const SummaryState& st);
     void updateStatus(WellStatus status);
     void init_timestep(const SingleWellState& other);
     void shut();
@@ -139,6 +144,9 @@ public:
     Scalar sum_solvent_rates() const;
     Scalar sum_polymer_rates() const;
     Scalar sum_brine_rates() const;
+    Scalar sum_microbial_rates() const;
+    Scalar sum_oxygen_rates() const;
+    Scalar sum_urea_rates() const;
 
     Scalar sum_filtrate_rate() const;
     Scalar sum_filtrate_total() const;

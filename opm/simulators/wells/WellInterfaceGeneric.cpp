@@ -94,14 +94,14 @@ WellInterfaceGeneric(const Well& well,
 
     // We do not want to count SHUT perforations here, so
     // it would be wrong to use wells.getConnections().size().
-    // This is the number_of_perforations_ on this process only!
-    number_of_perforations_ = perf_data.size();
+    // This is the number_of_local_perforations_ on this process only!
+    number_of_local_perforations_ = perf_data.size();
 
     // perforations related
     {
-        well_cells_.resize(number_of_perforations_);
-        well_index_.resize(number_of_perforations_);
-        saturation_table_number_.resize(number_of_perforations_);
+        well_cells_.resize(number_of_local_perforations_);
+        well_index_.resize(number_of_local_perforations_);
+        saturation_table_number_.resize(number_of_local_perforations_);
         int perf = 0;
         for (const auto& pd : perf_data) {
             well_cells_[perf] = pd.cell_index;
@@ -253,7 +253,7 @@ updateInjMult(std::vector<Scalar>& inj_multipliers,
 
 template<class Scalar>
 Scalar WellInterfaceGeneric<Scalar>::
-getInjMult(const int perf,
+getInjMult(const int local_perf_index,
            const Scalar bhp,
            const Scalar perf_pres,
            DeferredLogger& dlogger) const
@@ -262,7 +262,7 @@ getInjMult(const int perf,
 
     Scalar multiplier = 1.;
 
-    const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+    const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
     const bool is_wrev = this->well_ecl_.getInjMultMode() == Well::InjMultMode::WREV;
 
     const bool active_injmult = (is_wrev && this->well_ecl_.aciveWellInjMult()) ||
@@ -462,7 +462,7 @@ setWellEfficiencyFactor(const Scalar efficiency_factor)
 template<class Scalar>
 void WellInterfaceGeneric<Scalar>::setRepRadiusPerfLength()
 {
-    const int nperf = number_of_perforations_;
+    const int nperf = number_of_local_perforations_;
 
     perf_rep_radius_.clear();
     perf_length_.clear();
@@ -474,7 +474,7 @@ void WellInterfaceGeneric<Scalar>::setRepRadiusPerfLength()
 
     const WellConnections& connections = well_ecl_.getConnections();
     const std::size_t num_conns = connections.size();
-    int num_active_connections = 0;
+    [[maybe_unused]] int num_active_connections = 0;
     auto my_next_perf = perf_data_->begin();
     for (std::size_t c = 0; c < num_conns; ++c) {
         if (my_next_perf == perf_data_->end())
@@ -535,7 +535,7 @@ template<class Scalar>
 void WellInterfaceGeneric<Scalar>::
 updatePerforatedCell(std::vector<bool>& is_cell_perforated)
 {
-    for (int perf_idx = 0; perf_idx < number_of_perforations_; ++perf_idx) {
+    for (int perf_idx = 0; perf_idx < number_of_local_perforations_; ++perf_idx) {
         is_cell_perforated[well_cells_[perf_idx]] = true;
     }
 }
@@ -707,7 +707,7 @@ void WellInterfaceGeneric<Scalar>::addPerforations(const std::vector<RuntimePerf
             this->saturation_table_number_
                 .push_back(this->saturation_table_number_.front());
 
-            ++this->number_of_perforations_;
+            ++this->number_of_local_perforations_;
         }
     }
 }
@@ -792,7 +792,7 @@ Scalar WellInterfaceGeneric<Scalar>::wurea_() const
 
     if (injectorType == InjectorType::WATER) {
         WellMICPProperties urea = this->well_ecl_.getMICPProperties();
-        const Scalar urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
+        const Scalar urea_injection_concentration = urea.m_ureaConcentration;
         return urea_injection_concentration;
     } else {
         // Not a water injection well => no urea.

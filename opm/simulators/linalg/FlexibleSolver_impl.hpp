@@ -277,7 +277,7 @@ using OBM = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, N, N>>;
 template<class Scalar, int N>
 using SeqOpM = Dune::MatrixAdapter<OBM<Scalar,N>, BV<Scalar,N>, BV<Scalar,N>>;
 template<class Scalar, int N>
-using SeqOpW = Opm::WellModelMatrixAdapter<OBM<Scalar,N>, BV<Scalar,N>, BV<Scalar,N>, false>;
+using SeqOpW = Opm::WellModelMatrixAdapter<OBM<Scalar,N>, BV<Scalar,N>, BV<Scalar,N>>;
 
 #if HAVE_MPI
 

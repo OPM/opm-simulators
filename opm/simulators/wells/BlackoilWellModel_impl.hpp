@@ -196,7 +196,7 @@ namespace Opm {
         DeferredLogger local_deferredLogger{};
 
         this->report_step_starts_ = true;
-
+        this->report_step_start_events_ = this->schedule()[timeStepIdx].wellgroup_events();
 
         this->rateConverter_ = std::make_unique<RateConverterType>
             (this->phase_usage_, std::vector<int>(this->local_num_cells_, 0));
@@ -565,6 +565,18 @@ namespace Opm {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
 
+            const auto& network = this->schedule()[timeStepIdx].network();
+            if (network.active() && !this->node_pressures_.empty()) {
+                if (well->isProducer()) {
+                    const auto it = this->node_pressures_.find(well->wellEcl().groupName());
+                    if (it != this->node_pressures_.end()) {
+                        // The well belongs to a group which has a network nodal pressure,
+                        // set the dynamic THP constraint based on the network nodal pressure
+                        const Scalar nodal_pressure = it->second;
+                        well->setDynamicThpLimit(nodal_pressure);
+                    }
+                }
+            }
             try {
                 using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
                 GLiftEclWells ecl_well_map;
@@ -790,12 +802,13 @@ namespace Opm {
         if (nw > 0) {
             well_container_.reserve(nw);
 
-            const auto& wg_events = this->schedule()[report_step].wellgroup_events();
+            const auto& wmatcher = this->schedule().wellMatcher(report_step);
+            const auto& wcycle = this->schedule()[report_step].wcycle.get();
 
             // First loop and check for status changes. This is necessary
             // as wcycle needs the updated open/close times.
             std::for_each(this->wells_ecl_.begin(), this->wells_ecl_.end(),
-                          [this, &wg_events](const auto& well_ecl)
+                          [this, &wg_events = this->report_step_start_events_](const auto& well_ecl)
                           {
                               if (!well_ecl.hasConnections()) {
                                   // No connections in this well.  Nothing to do.
@@ -819,9 +832,6 @@ namespace Opm {
                                   }
                               }
                           });
-
-            const auto& wmatcher = this->schedule().wellMatcher(report_step);
-            const auto& wcycle = this->schedule()[report_step].wcycle.get();
 
             // Grab wcycle states. This needs to run before the schedule gets processed
             const auto cycle_states = wcycle.wellStatus(this->simulator_.time(),
@@ -947,10 +957,11 @@ namespace Opm {
             }
 
             if (!wcycle.empty()) {
-                auto schedule_open = [&wg_events](const std::string& name)
-                {
-                    return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
-                };
+                const auto schedule_open =
+                    [&wg_events = this->report_step_start_events_](const std::string& name)
+                    {
+                        return wg_events.hasEvent(name, ScheduleEvents::REQUEST_OPEN_WELL);
+                    };
                 for (const auto& [wname, wscale] : wcycle.efficiencyScale(this->simulator_.time(),
                                                                           this->simulator_.timeStepSize(),
                                                                           wmatcher,
@@ -1085,34 +1096,21 @@ namespace Opm {
         const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
-        const std::size_t max_iter = param_.network_max_iterations_;
-        bool converged = false;
-        std::size_t iter = 0;
-        bool changed_well_group = false;
-        do {
-            changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
-            assembleWellEqWithoutIteration(dt, deferred_logger);
-            converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
-            if (converged) {
-                break;
-            }
-            ++iter;
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
-            for (auto& well : this->well_container_) {
-                well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
-            }
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
-                                       this->simulator_.vanguard().grid().comm());
-            this->initPrimaryVariablesEvaluation();
-        } while (iter < max_iter);
+
+        const bool changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
+        assembleWellEqWithoutIteration(dt, deferred_logger);
+        const bool converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (auto& well : this->well_container_) {
+            well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
+        }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
+                                    this->simulator_.vanguard().grid().comm());
 
         if (!converged) {
-            const std::string msg = fmt::format("Initial (pre-step) network balance did not get converged with {} iterations, "
-                                                "unconverged network balance result will be used", max_iter);
+            const std::string msg = fmt::format("Initial (pre-step) network balance did not converge.");
             deferred_logger.warning(msg);
-        } else {
-            const std::string msg = fmt::format("Initial (pre-step) network balance converged with {} iterations", iter);
-            deferred_logger.debug(msg);
         }
     }
 
@@ -1194,27 +1192,41 @@ namespace Opm {
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
+        Scalar network_imbalance = 0.0;
         // after certain number of the iterations, we use relaxed tolerance for the network update
-        const std::size_t iteration_to_relax = param_.network_max_strict_iterations_;
+        const std::size_t iteration_to_relax = param_.network_max_strict_outer_iterations_;
         // after certain number of the iterations, we terminate
-        const std::size_t max_iteration = param_.network_max_iterations_;
+        const std::size_t max_iteration = param_.network_max_outer_iterations_;
         std::size_t network_update_iteration = 0;
         while (do_network_update) {
-            if (this->terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
-                local_deferredLogger.info(" we begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
-            }
-            const bool relax_network_balance = network_update_iteration >= iteration_to_relax;
-            std::tie(do_network_update, well_group_control_changed) =
-                    updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, dt,local_deferredLogger);
-            ++network_update_iteration;
-
             if (network_update_iteration >= max_iteration ) {
-                if (this->terminal_output_) {
-                    local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now. "
-                                              "The simulation will continue with unconverged network results");
+                // only output to terminal if we at the last newton iterations where we try to balance the network.
+                const int episodeIdx = simulator_.episodeIndex();
+                const int iterationIdx = simulator_.model().newtonMethod().numIterations();
+                if (this->shouldBalanceNetwork(episodeIdx, iterationIdx + 1)) {
+                    const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update, \n"
+                        "and try again after the next Newton iteration (imbalance = {:.2e} bar, ctrl_change = {})",
+                        max_iteration, network_imbalance*1.0e-5, well_group_control_changed);
+                    local_deferredLogger.debug(msg);
+                } else {
+                    if (this->terminal_output_) {
+                        const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update. \n"
+                            "The simulator will continue with unconverged network results (imbalance = {:.2e} bar, ctrl_change = {})",
+                            max_iteration, network_imbalance*1.0e-5, well_group_control_changed);
+                        local_deferredLogger.info(msg);
+                    }
                 }
                 break;
             }
+            if (this->terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
+                local_deferredLogger.debug("We begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
+            }
+            const bool relax_network_balance = network_update_iteration >= iteration_to_relax;
+            // Never optimize gas lift in last iteration, to allow network convergence (unless max_iter < 2)
+            const bool optimize_gas_lift = ( (network_update_iteration + 1) < std::max(max_iteration, static_cast<std::size_t>(2)) );
+            std::tie(well_group_control_changed, do_network_update, network_imbalance) =
+                    updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, optimize_gas_lift, dt,local_deferredLogger);
+            ++network_update_iteration;
         }
         return well_group_control_changed;
     }
@@ -1223,15 +1235,16 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::pair<bool, bool>
+    std::tuple<bool, bool, typename BlackoilWellModel<TypeTag>::Scalar>
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
                                           const bool relax_network_tolerance,
+                                          const bool optimize_gas_lift,
                                           const double dt,
                                           DeferredLogger& local_deferredLogger)
     {
         OPM_TIMEFUNCTION();
-        auto [well_group_control_changed, more_network_update] =
+        auto [well_group_control_changed, more_inner_network_update, network_imbalance] =
                 updateWellControls(mandatory_network_balance,
                                    local_deferredLogger,
                                    relax_network_tolerance);
@@ -1239,10 +1252,7 @@ namespace Opm {
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            // Set the well primary variables based on the value of well solutions
-            initPrimaryVariablesEvaluation();
-
-            alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
+            if (optimize_gas_lift) alq_updated = gaslift_.maybeDoGasLiftOptimize(simulator_,
                                                           well_container_,
                                                           this->wellState(),
                                                           this->groupState(),
@@ -1276,8 +1286,12 @@ namespace Opm {
                                                        pot,
                                                        local_deferredLogger);
         }
-
-        return {more_network_update, well_group_control_changed};
+        // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
+        // the inner iterations are did not converge
+        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
+        const bool more_network_update = this->shouldBalanceNetwork(reportStepIdx, iterationIdx) &&
+                    (more_inner_network_update || well_group_control_changed || alq_updated);
+        return {well_group_control_changed, more_network_update, network_imbalance};
     }
 
     // This function is to be used for well groups in an extended network that act as a subsea manifold
@@ -1441,8 +1455,17 @@ namespace Opm {
 
                 for (auto& well : this->well_container_) {
                     std::string well_name = well->name();
+
+                    if (well->isInjector() || !well->wellEcl().predictionMode())
+                        continue;
+
                     if (group.hasWell(well_name)) {
                         well->setDynamicThpLimit(well_group_thp);
+                    }
+                    const auto& ws = this->wellState().well(well->indexOfWell());
+                    const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
+                    if (thp_is_limit) {
+                        well->prepareWellBeforeAssembling(this->simulator_, dt, this->wellState(), this->groupState(), local_deferredLogger);
                     }
                 }
 
@@ -1662,17 +1685,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    initPrimaryVariablesEvaluation() const
-    {
-        for (auto& well : well_container_) {
-            well->initPrimaryVariablesEvaluation();
-        }
-    }
-
-
-    template<typename TypeTag>
     ConvergenceReport
     BlackoilWellModel<TypeTag>::
     getWellConvergence(const std::vector<Scalar>& B_avg, bool checkWellGroupControls) const
@@ -1739,7 +1751,7 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::pair<bool, bool>
+    std::tuple<bool, bool, typename BlackoilWellModel<TypeTag>::Scalar>
     BlackoilWellModel<TypeTag>::
     updateWellControls(const bool mandatory_network_balance,
                        DeferredLogger& deferred_logger,
@@ -1749,7 +1761,7 @@ namespace Opm {
         const int episodeIdx = simulator_.episodeIndex();
         const auto& network = this->schedule()[episodeIdx].network();
         if (!this->wellsActive() && !network.active()) {
-            return {false, false};
+            return {false, false, 0.0};
         }
 
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
@@ -1757,6 +1769,7 @@ namespace Opm {
         this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, deferred_logger);
 
         // network related
+        Scalar network_imbalance = 0.0;
         bool more_network_update = false;
         if (this->shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
             OPM_TIMEBLOCK(BalanceNetowork);
@@ -1769,13 +1782,28 @@ namespace Opm {
             bool more_network_sub_update = false;
             for (int i = 0; i < max_number_of_sub_iterations; i++) {
                 const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx, network_pressure_update_damping_factor, network_max_pressure_update);
-                const Scalar network_imbalance = comm.max(local_network_imbalance);
+                network_imbalance = comm.max(local_network_imbalance);
                 const auto& balance = this->schedule()[episodeIdx].network_balance();
                 constexpr Scalar relaxation_factor = 10.0;
                 const Scalar tolerance = relax_network_tolerance ? relaxation_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
                 more_network_sub_update = this->networkActive() && network_imbalance > tolerance;
                 if (!more_network_sub_update)
                     break;
+
+                for (const auto& well : well_container_) {
+                    if (well->isInjector() || !well->wellEcl().predictionMode())
+                         continue;
+
+                    const auto it = this->node_pressures_.find(well->wellEcl().groupName());
+                    if (it != this->node_pressures_.end()) {
+                        const auto& ws = this->wellState().well(well->indexOfWell());
+                        const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
+                        if (thp_is_limit) {
+                            well->prepareWellBeforeAssembling(this->simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+                        }
+                    }
+                }
+                this->updateAndCommunicateGroupData(episodeIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, deferred_logger);
             }
             more_network_update = more_network_sub_update || well_group_thp_updated;
         }
@@ -1835,7 +1863,7 @@ namespace Opm {
         // update wsolvent fraction for REIN wells
         this->updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
-        return { changed_well_group, more_network_update };
+        return { changed_well_group, more_network_update, network_imbalance };
     }
 
     template<typename TypeTag>
@@ -1884,7 +1912,7 @@ namespace Opm {
         bool changed = false;
         // restrict the number of group switches but only after nupcol iterations.
         const int nupcol = this->schedule()[reportStepIdx].nupcol();
-        const int max_number_of_group_switches = iterationIdx <= nupcol ? 9999 : param_.max_number_of_group_switches_;
+        const int max_number_of_group_switches = iterationIdx < nupcol ? 9999 : param_.max_number_of_group_switches_;
         bool changed_hc = this->checkGroupHigherConstraints( group, deferred_logger, reportStepIdx, max_number_of_group_switches);
         if (changed_hc) {
             changed = true;
@@ -1944,10 +1972,6 @@ namespace Opm {
             }
         }
 
-        const Opm::Parallel::Communication comm = grid().comm();
-        DeferredLogger global_deferredLogger =
-            gatherDeferredLogger(local_deferredLogger, comm);
-
         for (const auto& [group_name, to] : this->closed_offending_wells_) {
             if (this->hasOpenLocalWell(to.second) &&
                 !this->wasDynamicallyShutThisTimeStep(to.second))
@@ -1963,9 +1987,13 @@ namespace Opm {
                                 group_name,
                                 to.second,
                                 "shut");
-                global_deferredLogger.info(msg);
+                local_deferredLogger.info(msg);
             }
         }
+
+        const Opm::Parallel::Communication comm = grid().comm();
+        DeferredLogger global_deferredLogger =
+            gatherDeferredLogger(local_deferredLogger, comm);
 
         if (this->terminal_output_) {
             global_deferredLogger.logMessages();
@@ -2077,14 +2105,13 @@ namespace Opm {
 
         // Rebalance the network initially if any wells in the network have status changes
         // (Need to check this before clearing events)
-        const bool do_prestep_network_rebalance = this->needPreStepNetworkRebalance(episodeIdx);
+        const bool do_prestep_network_rebalance = param_.pre_solve_network_ && this->needPreStepNetworkRebalance(episodeIdx);
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState<Scalar>::event_mask)) {
                 well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger, /*initialize*/ true);
                 well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
-                well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
                 events.clearEvent(WellState<Scalar>::event_mask);

@@ -21,12 +21,47 @@
 #define OPM_SETUP_PARTITIONING_PARAMS_HPP
 
 #include <map>
+#include <optional>
 #include <string>
 
 namespace Opm {
 
-std::map<std::string,std::string> setupZoltanParams(const std::string& conf);
-std::map<std::string,std::string> setupMetisParams(const std::string& conf);
+/// Form collection of Zoltan partitioning parameters from named configuration
+///
+/// \param[in] conf Named Zoltan configuration. Must either be the name of a
+/// JSON configuration file with the filename extension ".json", or one of
+/// the known configuration names
+///
+///   -* graph Generates configuration parameters for the "GRAPH"
+///            load-balancing method, using the "PHG" graph package.
+///
+///   -* hypergraph Generates configuration parameters for the "HYPERGRAPH"
+///            load-balancing method.
+///
+///   -* scotch Generates configuration parameters for the "GRAPH"
+///            load-balancing method, using the "Scotch" graph package.
+///
+/// \param[in] edgeSizeThreshold Low-level Zoltan partitioning control
+/// parameter for when to omit a hyperedge in a hypergraph.  Fraction in the
+/// range [0,1] representing a threshold above which to omit discard
+/// hyperedges.  Used for conf="graph" and conf="hypergraph".  Nullopt to
+/// use the built-in default value.
+///
+/// \return Collection of Zoltan partitioning parameters.
+std::map<std::string, std::string>
+setupZoltanParams(const std::string&           conf,
+                  const std::optional<double>& edgeSizeThreshold = {});
+
+/// Form collection of METIS partitioning parameters from named configuration
+///
+/// \param[in] conf Named METIS configuration. Must either be the name of a
+/// JSON configuration file with the filename extension ".json", or the
+/// known configuration name "default" which uses the built-in default
+/// partitioning parameters.
+///
+/// \return Collection of METIS partitioning parameters.
+std::map<std::string, std::string>
+setupMetisParams(const std::string& conf);
 
 } // namespace Opm
 

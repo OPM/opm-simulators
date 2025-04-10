@@ -161,9 +161,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
-        enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
         enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
-        constexpr static bool isIncompatibleWithCprw = enableMICP || enablePolymerMolarWeight;
+        constexpr static bool isIncompatibleWithCprw = enablePolymerMolarWeight;
 
 #if HAVE_MPI
         using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
@@ -218,16 +217,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             OPM_TIMEBLOCK(IstlSolver);
 
             if (isIncompatibleWithCprw) {
-                // Some model variants are incompatible with the CPRW linear solver.
+                // Polymer injectivity is incompatible with the CPRW linear solver.
                 if (parameters_[0].linsolver_ == "cprw" || parameters_[0].linsolver_ == "hybrid") {
-                    std::string incompatible_model = "Unknown";
-                    if (enableMICP) {
-                        incompatible_model = "MICP";
-                    } else if (enablePolymerMolarWeight) {
-                        incompatible_model = "Polymer injectivity";
-                    }
                     OPM_THROW(std::runtime_error,
-                              incompatible_model + " model is incompatible with the CPRW linear solver.\n"
+                              "The polymer injectivity model is incompatible with the CPRW linear solver.\n"
                               "Choose a different option, for example --linear-solver=ilu0");
                 }
             }
@@ -312,7 +305,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // Print parameters to PRT/DBG logs.
             if (on_io_rank && parameters_[activeSolverNum_].linear_solver_print_json_definition_) {
                 std::ostringstream os;
-                os << "Property tree for linear solvers:\n";
+                os << "\nProperty tree for linear solvers:\n";
                 for (std::size_t i = 0; i<prm_.size(); i++) {
                     prm_[i].write_json(os, true);
                 }

@@ -50,7 +50,7 @@ SingleWellState(const std::string& name_,
     , reservoir_rates(pu_.num_phases)
     , prev_surface_rates(pu_.num_phases)
     , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
-    , trivial_target(false)
+    , trivial_group_target(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
         this->perf_data.cell_index[perf] = perf_input[perf].cell_index;
@@ -194,6 +194,24 @@ Scalar SingleWellState<Scalar>::sum_solvent_rates() const
 }
 
 template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_microbial_rates() const
+{
+    return this->sum_connection_rates(this->perf_data.microbial_rates);
+}
+
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_oxygen_rates() const
+{
+    return this->sum_connection_rates(this->perf_data.oxygen_rates);
+}
+
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_urea_rates() const
+{
+    return this->sum_connection_rates(this->perf_data.urea_rates);
+}
+
+template<class Scalar>
 Scalar SingleWellState<Scalar>::sum_filtrate_rate() const
 {
     if (this->producer) return 0.;
@@ -323,13 +341,36 @@ update_injector_targets(const Well& ecl_well, const SummaryState& st)
 }
 
 template<class Scalar>
-void SingleWellState<Scalar>::
-update_targets(const Well& ecl_well, const SummaryState& st)
+bool SingleWellState<Scalar>::
+update_type_and_targets(const Well& ecl_well, const SummaryState& st)
 {
+    bool switchedToProducer = false;
+    if (this->producer != ecl_well.isProducer()) {
+        // type has changed due to ACTIONX
+        // Make sure that we are consistent with the ecl_well
+        switchedToProducer = this->producer = ecl_well.isProducer();
+        if (switchedToProducer) {
+            this->production_cmode = ecl_well.productionControls(st).cmode;
+            // clear injection rates (those are positive)
+            std::transform(this->surface_rates.begin(), this->surface_rates.end(),
+                           this->surface_rates.begin(),
+                           [](const Scalar& val){ return std::min(Scalar(), val);});
+        } else {
+            perf_data.prepareInjectorContainers();
+            this->injection_cmode = ecl_well.injectionControls(st).cmode;
+            // clear production rates (those are negative)
+            std::transform(this->surface_rates.begin(), this->surface_rates.end(),
+                           this->surface_rates.begin(),
+                           [](const Scalar& val){ return std::max(Scalar(), val);});
+        }
+    }
+
     if (this->producer)
         this->update_producer_targets(ecl_well, st);
     else
         this->update_injector_targets(ecl_well, st);
+
+    return switchedToProducer;
 }
 
 template<class Scalar>
@@ -351,7 +392,7 @@ bool SingleWellState<Scalar>::operator==(const SingleWellState& rhs) const
            this->prev_surface_rates == rhs.prev_surface_rates &&
            this->perf_data == rhs.perf_data &&
            this->filtrate_conc == rhs.filtrate_conc &&
-           this->trivial_target == rhs.trivial_target &&
+           this->trivial_group_target == rhs.trivial_group_target &&
            this->segments == rhs.segments &&
            this->events == rhs.events &&
            this->injection_cmode == rhs.injection_cmode &&

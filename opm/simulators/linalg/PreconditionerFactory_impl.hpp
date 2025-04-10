@@ -577,7 +577,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             }
 #endif
         }
-        if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
+        if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V>>) {
             F::addCreator(
                 "cprw",
                 [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
@@ -829,8 +829,7 @@ using OpBSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim
 template<class Scalar, int Dim, bool overlap>
 using OpW = WellModelMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
                                    Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
-                                   overlap>;
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
 
 template<class Scalar, int Dim, bool overlap>
 using OpWG = WellModelGhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,

@@ -191,7 +191,7 @@ public:
             }
 
             // add cell data to perforations for Rft output
-            this->damarisOutputModule_->addRftDataToWells(localWellData, reportStepNum);
+            this->damarisOutputModule_->addRftDataToWells(localWellData, reportStepNum, cc);
             
             // On first call and if the mesh and variable size change then set damarisUpdate_ to true
             if (damarisUpdate_ == true) {
@@ -273,7 +273,7 @@ public:
             
             dam_err_ =  DamarisOutput::endIteration();
             */
-            if (this->damarisOutputModule_->getPRESSURE_ptr() != nullptr) 
+            if (!this->damarisOutputModule_->getFluidPressure().empty())
             {
                 dam_err_ =  DamarisOutput::endIteration();
             }
@@ -448,20 +448,14 @@ private:
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
         OPM_TIMEBLOCK(prepareCellBasedData);
+        damarisOutputModule_->setupExtractors(isSubStep, reportStepNum);
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             damarisOutputModule_->processElement(elemCtx);
         }
-        }
-        if(!simulator_.model().linearizer().getFlowsInfo().empty()){
-            OPM_TIMEBLOCK(prepareFlowsData);
-            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                damarisOutputModule_->processElementFlows(elemCtx);
-            }
+        damarisOutputModule_->clearExtractors();
         }
         {
         OPM_TIMEBLOCK(prepareBlockData);
