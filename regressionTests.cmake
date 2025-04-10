@@ -14,7 +14,7 @@ macro(add_multiple_tests cases prefix)
   foreach(case ${${cases}})
     string(TOLOWER ${case} test)
     add_test_compareECLFiles(
-        CASENAME ${prefix}_${test}
+        CASENAME ${prefix}${test}
         FILENAME ${case}
         ${ARGN}
     )
@@ -534,7 +534,7 @@ set(_gconprod_cases
 
 add_multiple_tests(
   _gconprod_cases
-  gconprod
+  gconprod_
   SIMULATOR flow
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
@@ -568,7 +568,7 @@ set(_pinch_cases
 
 add_multiple_tests(
   _pinch_cases
-  pinch
+  pinch_
   SIMULATOR flow
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
@@ -584,7 +584,7 @@ set(_udt_cases
 
 add_multiple_tests(
   _udt_cases
-  udt
+  ""
   SIMULATOR flow
   ABS_TOL ${abs_tol}
   REL_TOL ${rel_tol}
@@ -684,33 +684,24 @@ add_multiple_test_range(
   DIR cskin
 )
 
-add_test_compareECLFiles(CASENAME co2store
-                         FILENAME CO2STORE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
+set(_co2store_cases
+  CO2STORE
+  CO2STORE_DIFFUSIVE
+  CO2STORE_DRSDTCON
+  CO2STORE_ENERGY
+  CO2STORE_GASWAT
+  CO2STORE_GW
+  CO2STORE_GW_DIRICHLET
+)
 
-add_test_compareECLFiles(CASENAME co2store_gw
-                         FILENAME CO2STORE_GW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_gw_dirichlet
-                         FILENAME CO2STORE_GW_DIRICHLET
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_gaswat
-                         FILENAME CO2STORE_GASWAT
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
+add_multiple_tests(
+  _co2store_cases
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR co2store
+)
 
 add_test_compareECLFiles(CASENAME ppcwmax
                          FILENAME PPCWMAX-01
@@ -718,27 +709,6 @@ add_test_compareECLFiles(CASENAME ppcwmax
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR ppcwmax)
-
-add_test_compareECLFiles(CASENAME co2store_diffusive
-                         FILENAME CO2STORE_DIFFUSIVE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_drsdtcon
-                         FILENAME CO2STORE_DRSDTCON
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
-
-add_test_compareECLFiles(CASENAME co2store_energy
-                         FILENAME CO2STORE_ENERGY
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR co2store)
 
 add_test_compareECLFiles(CASENAME h2store
                          FILENAME H2STORE
