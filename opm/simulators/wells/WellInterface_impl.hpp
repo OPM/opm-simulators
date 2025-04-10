@@ -302,10 +302,9 @@ namespace Opm
                 bool changed = false;
                 bool switched_to_group = false;
                 if (!fixed_control) {
-                    // Changing to group controls here may lead to inconsistencies in the group handling which in turn 
-                    // may result in excessive back and forth switching. However, we currently allow this by default.
-                    // The switch check_group_constraints_inner_well_iterations_ is a temporary solution.
-                    
+                    // Changing to group controls here may lead to inconsistencies in the group handling for MPI runs 
+                    // which in turn may result in excessive back and forth switching.
+                    // The switch check_group_constraints_inner_well_iterations_ can be used to disable the switching
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
                     const bool wasGroupControl = ws.production_cmode == Well::ProducerCMode::GRUP || ws.injection_cmode == Well::InjectorCMode::GRUP;
@@ -317,7 +316,7 @@ namespace Opm
                     if (! (wasGroupControl && !this->param_.check_group_constraints_inner_well_iterations_)) {
                         changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
                     }
-                    if(changed) {
+                    if (changed) {
                         updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
                         updatePrimaryVariables(simulator, well_state, deferred_logger);
                         if (wasGroupControl) {
@@ -334,25 +333,16 @@ namespace Opm
                                                                                 group_state,
                                                                                 groupTargetReduction);
                         }
-                    }
-                    const auto well_state_orig = well_state; // Ugly - take a copy for now...
-                    // Check for group controls if present and switch not disabled, but only if we did not already change to individual
-                    if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
-                        switched_to_group = this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
-                        changed = changed || switched_to_group;
-                    }
-                    // Need to update well_state with group target rates and check for violation of the individual rates
-                    if (switched_to_group) {
-                        updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-                        updatePrimaryVariables(simulator, well_state, deferred_logger);
-
-                        const bool changed_individual = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                        if (! changed_individual) {
-                            // We need to update the globalIsGRUP vector and the group target reduction.
-                            // But we can not communicate it to the other ranks during the local iterations.
-                            // The globalIsGrup vector is thus only communicated after the local iterations are done.
-                            // This may give some discrepencies in non-linear behaviour between MPI runs,
-                            // but the solution should convergece to the same solution.
+                    } else if (!wasGroupControl) {
+                        // Check for group controls if present and switch not disabled, but only if we did not already change to individual
+                        if (hasGroupControl && this->param_.check_group_constraints_inner_well_iterations_) {
+                            switched_to_group = this->checkGroupConstraints(well_state, group_state, schedule, summary_state, deferred_logger);
+                            changed = changed || switched_to_group;
+                        }
+                        // Need to update well_state with group target rates and check for violation of the individual rates
+                        if (switched_to_group) {
+                            updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+                            updatePrimaryVariables(simulator, well_state, deferred_logger);
                             well_state.updateGlobalIsGrup(this->index_of_well_);
                             std::vector<Scalar> groupTargetReduction(well_state.numPhases(), 0.0);
                             WellGroupHelpers<Scalar>::updateGroupTargetReduction(fieldGroup,
@@ -365,13 +355,25 @@ namespace Opm
                                                                                 summary_state,
                                                                                 group_state,
                                                                                 groupTargetReduction);
-                            // No need to update target again here?
-                            // updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-                            // updatePrimaryVariables(simulator, well_state, deferred_logger);
-                        } else {
-                            // New group target violates an individual constraint - reset
-                            well_state = well_state_orig;
-                            changed = false;
+
+                            const bool changed_individual = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                            if (changed_individual) {
+                                // New group target violates an individual constraint - reset
+                                updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+                                updatePrimaryVariables(simulator, well_state, deferred_logger);
+                                well_state.updateGlobalIsGrup(this->index_of_well_);
+                                WellGroupHelpers<Scalar>::updateGroupTargetReduction(fieldGroup,
+                                                                                    schedule,
+                                                                                    reportStepIdx,
+                                                                                    this->isInjector(),
+                                                                                    well_state.phaseUsage(),
+                                                                                    *this->guideRate(),
+                                                                                    well_state,
+                                                                                    summary_state,
+                                                                                    group_state,
+                                                                                    groupTargetReduction);
+                                changed = false;
+                            }
                         }
                     }
                 }
