@@ -673,40 +673,16 @@ add_test_compareECLFiles(CASENAME udq_undefined_2
                          REL_TOL ${rel_tol}
                          DIR actionx)
 
-add_test_compareECLFiles(CASENAME cskin-01
-                         FILENAME CSKIN-01
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
-add_test_compareECLFiles(CASENAME cskin-02
-                         FILENAME CSKIN-02
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
-add_test_compareECLFiles(CASENAME cskin-03
-                         FILENAME CSKIN-03
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
-add_test_compareECLFiles(CASENAME cskin-04
-                         FILENAME CSKIN-04
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
-
-add_test_compareECLFiles(CASENAME cskin-05
-                         FILENAME CSKIN-05
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR cskin)
+add_multiple_test_range(
+  1
+  5
+  CSKIN-0
+  cskin
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR cskin
+)
 
 add_test_compareECLFiles(CASENAME co2store
                          FILENAME CO2STORE
