@@ -1086,47 +1086,23 @@ add_test_compareECLFiles(CASENAME spe1case2_krnum
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
-add_test_compareECLFiles(CASENAME krnum_02x
-                         FILENAME KRNUM-02X
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
+set(_krnum_tests
+  KRNUM-02X
+  KRNUM-02Y
+  KRNUM-02Z
+  KRNUM-03X
+  KRNUM-03Y
+  KRNUM-03Z
+)
 
-add_test_compareECLFiles(CASENAME krnum_02y
-                         FILENAME KRNUM-02Y
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_02z
-                         FILENAME KRNUM-02Z
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03x
-                         FILENAME KRNUM-03X
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03y
-                         FILENAME KRNUM-03Y
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03z
-                         FILENAME KRNUM-03Z
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
+add_multiple_tests(
+  _krnum_tests
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR krnum
+)
 
 set(_gridunit_tests
   M_FIELD_GRID_CM
