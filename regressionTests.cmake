@@ -703,52 +703,30 @@ add_multiple_tests(
   DIR co2store
 )
 
+set(_h2store_cases
+  H2STORE
+  H2STORE_DIFFUSIVE
+  H2STORE_ENERGY
+  H2STORE_GASWAT
+  H2STORE_GW
+)
+
+add_multiple_tests(
+  _h2store_cases
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR h2store
+  TEST_ARGS --tolerance-cnv-relaxed=0.01
+)
+
 add_test_compareECLFiles(CASENAME ppcwmax
                          FILENAME PPCWMAX-01
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR ppcwmax)
-
-add_test_compareECLFiles(CASENAME h2store
-                         FILENAME H2STORE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR h2store
-                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
-
-add_test_compareECLFiles(CASENAME h2store_gw
-                         FILENAME H2STORE_GW
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR h2store
-                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
-
-add_test_compareECLFiles(CASENAME h2store_gaswat
-                         FILENAME H2STORE_GASWAT
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR h2store
-                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
-
-add_test_compareECLFiles(CASENAME h2store_diffusive
-                         FILENAME H2STORE_DIFFUSIVE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR h2store
-                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
-
-add_test_compareECLFiles(CASENAME h2store_energy
-                         FILENAME H2STORE_ENERGY
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR h2store
-                         TEST_ARGS --tolerance-cnv-relaxed=0.01)
 
 if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
