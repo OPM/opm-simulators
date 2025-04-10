@@ -1002,37 +1002,17 @@ add_test_compareECLFiles(CASENAME min_qoil_1
                          DIR wtest/wecon_qo_min
                          TEST_ARGS --enable-tuning=true)
 
-add_test_compareECLFiles(CASENAME max_watercut_1
-                         FILENAME MAX_WATERCUT_1
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME max_watercut_2
-                         FILENAME MAX_WATERCUT_2
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME max_watercut_3
-                         FILENAME MAX_WATERCUT_3
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
-                         TEST_ARGS --enable-tuning=true)
-
-add_test_compareECLFiles(CASENAME max_watercut_4
-                         FILENAME MAX_WATERCUT_4
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
-                         TEST_ARGS --enable-tuning=true)
+add_multiple_test_range(
+  1
+  4
+  MAX_WATERCUT_
+  max_watercut
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR wtest/wecon_wct_max
+  TEST_ARGS --enable-tuning=true
+)
 
 add_test_compareECLFiles(CASENAME max_wgr_1
                          FILENAME MAX_WGR_1
