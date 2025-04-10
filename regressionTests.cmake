@@ -1369,47 +1369,23 @@ add_test_compareECLFiles(CASENAME krnum_03z
                          REL_TOL ${rel_tol}
                          DIR krnum)
 
-add_test_compareECLFiles(CASENAME model_field_gridunit_cm
-                         FILENAME M_FIELD_GRID_CM
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
+set(_gridunit_tests
+  M_FIELD_GRID_CM
+  M_FIELD_GRID_FEET
+  M_FIELD_GRID_METRES
+  M_METRIC_GRID_CM
+  M_METRIC_GRID_FEET
+  M_METRIC_GRID_METRES
+)
 
-add_test_compareECLFiles(CASENAME model_field_gridunit_feet
-                         FILENAME M_FIELD_GRID_FEET
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_field_gridunit_metres
-                         FILENAME M_FIELD_GRID_METRES
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_metric_gridunit_cm
-                         FILENAME M_METRIC_GRID_CM
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_metric_gridunit_feet
-                         FILENAME M_METRIC_GRID_FEET
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
-
-add_test_compareECLFiles(CASENAME model_metric_gridunit_metres
-                         FILENAME M_METRIC_GRID_METRES
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR gridunit)
+add_multiple_tests(
+  _gridunit_tests
+  ""
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR gridunit
+)
 
 add_test_compareECLFiles(CASENAME 01_wgrupcon
                          FILENAME 01-WGRUPCON
