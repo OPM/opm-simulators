@@ -225,23 +225,6 @@ checkConstraints(WellState<Scalar>& well_state,
 }
 
 template<typename FluidSystem>
-int
-WellInterfaceFluidSystem<FluidSystem>::
-flowPhaseToModelPhaseIdx(const int phaseIdx) const
-{
-    const auto& pu = this->phaseUsage();
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
-        return FluidSystem::waterPhaseIdx;
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
-        return FluidSystem::oilPhaseIdx;
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
-        return FluidSystem::gasPhaseIdx;
-
-    // for other phases return the index
-    return phaseIdx;
-}
-
-template<typename FluidSystem>
 std::optional<typename WellInterfaceFluidSystem<FluidSystem>::Scalar>
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupInjectionTargetRate(const Group& group,

@@ -42,6 +42,7 @@ public:
 
     int flowPhaseToModelCompIdx(const int phaseIdx) const;
     int modelCompIdxToFlowCompIdx(const int compIdx) const;
+    int flowPhaseToModelPhaseIdx(const int phaseIdx) const;
     Scalar scalingFactor(const int phaseIdx) const;
 
     template <class EvalWell>
