@@ -269,12 +269,6 @@ public:
                                          WellState<Scalar>& well_state,
                                          DeferredLogger& deferred_logger) const = 0;
 
-    /// \brief Wether the Jacobian will also have well contributions in it.
-    virtual bool jacobianContainsWellContributions() const
-    {
-        return false;
-    }
-
     // Add well contributions to matrix
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
 
@@ -303,12 +297,6 @@ public:
     void checkWellOperability(const Simulator& simulator,
                               const WellState<Scalar>& well_state,
                               DeferredLogger& deferred_logger);
-
-    bool gliftBeginTimeStepWellTestIterateWellEquations(const Simulator& ebos_simulator,
-                                                        const double dt,
-                                                        WellState<Scalar>& well_state,
-                                                        const GroupState<Scalar>& group_state,
-                                                        DeferredLogger& deferred_logger);
 
     void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& simulator,
                                              WellState<Scalar>& well_state,
@@ -372,7 +360,7 @@ public:
                                             WellState<Scalar>& well_state,
                                             const GroupState<Scalar>& group_state,
                                             DeferredLogger& deferred_logger, 
-                                            const bool fixed_control = false, 
+                                            const bool fixed_control = false,
                                             const bool fixed_status = false) = 0;
 protected:
     // simulation parameters
@@ -389,9 +377,6 @@ protected:
     Scalar wurea() const;
 
     virtual Scalar getRefDensity() const = 0;
-
-    // Component fractions for each phase for the well
-    const std::vector<Scalar>& compFrac() const;
 
     std::vector<Scalar>
     initialWellRateFractions(const Simulator& ebosSimulator,

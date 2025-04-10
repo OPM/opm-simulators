@@ -187,6 +187,8 @@ namespace Opm
                         deferred_logger);
     }
 
+
+
     template<typename TypeTag>
     template<class Value>
     void
@@ -1092,42 +1094,6 @@ namespace Opm
 
         return all_drawdown_wrong_direction;
     }
-
-
-
-
-    template<typename TypeTag>
-    bool
-    StandardWell<TypeTag>::
-    canProduceInjectWithCurrentBhp(const Simulator& simulator,
-                                   const WellState<Scalar>& well_state,
-                                   DeferredLogger& deferred_logger)
-    {
-        const Scalar bhp = well_state.well(this->index_of_well_).bhp;
-        std::vector<Scalar> well_rates;
-        computeWellRatesWithBhp(simulator, bhp, well_rates, deferred_logger);
-
-        const Scalar sign = (this->isProducer()) ? -1. : 1.;
-        const Scalar threshold = sign * std::numeric_limits<Scalar>::min();
-
-        bool can_produce_inject = false;
-        for (const auto value : well_rates) {
-            if (this->isProducer() && value < threshold) {
-                can_produce_inject = true;
-                break;
-            } else if (this->isInjector() && value > threshold) {
-                can_produce_inject = true;
-                break;
-            }
-        }
-
-        if (!can_produce_inject) {
-            deferred_logger.debug(" well " + name() + " CANNOT produce or inejct ");
-        }
-
-        return can_produce_inject;
-    }
-
 
 
 
