@@ -5,6 +5,17 @@ set -e
 VERSION=${1:-"master"}
 BUILD_JOBS=${2:-16}
 VERSION_TAG=${3:-""}
+LIBTYPE=${4:-"static"}
+
+if [ "$LIBTYPE" == "static" ]; then
+    shared=0
+    static=1
+    libext="a"
+else
+    shared=1
+    static=0
+    libext="so"
+fi
 
 export CMAKE_GENERATOR=Ninja
 
@@ -43,8 +54,8 @@ do
       rm -rf $tag
     fi
     mkdir $tag && pushd $tag
-    cmake -DPYTHON_EXECUTABLE=${python_versions[$tag]} -DWITH_NATIVE=0 -DBoost_USE_STATIC_LIBS=1 \
-    -DOPM_ENABLE_PYTHON=ON -DOPM_PYTHON_PACKAGE_VERSION_TAG=${VERSION_TAG} -DBLA_STATIC=1 -DBLAS_LIBRARIES=/usr/lib64/libblas.a -DSUITESPARSE_USE_STATIC=1 -DCMAKE_DISABLE_FIND_PACKAGE_QuadMath=1 ..
+    cmake -DPYTHON_EXECUTABLE=${python_versions[$tag]} -DWITH_NATIVE=0 -DBoost_USE_STATIC_LIBS=$static \
+    -DOPM_ENABLE_PYTHON=ON -DOPM_PYTHON_PACKAGE_VERSION_TAG=${VERSION_TAG} -DBLA_STATIC=$static -DBLAS_LIBRARIES=/usr/lib64/libblas.$libext -DSUITESPARSE_USE_STATIC=$static -DCMAKE_DISABLE_FIND_PACKAGE_QuadMath=1 -DBUILD_SHARED_LIBS=$shared ..
 
     cmake --build . --target opmcommon_python simulators --parallel ${BUILD_JOBS}
 
