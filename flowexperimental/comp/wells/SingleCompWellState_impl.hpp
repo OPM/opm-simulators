@@ -28,7 +28,7 @@ CompConnectionData(std::size_t num_connection,
   , surface_phase_rates(num_connection * num_phases)
   , reservoir_phase_rates(num_connection * num_phases)
   , total_molar_fractions(num_connection * num_components)
-  , tranmissibility_factor(num_connection)
+  , transmissibility_factor(num_connection)
   , satnum_id(num_connection)
   , ecl_index(num_connection)
 {
@@ -43,7 +43,7 @@ CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
   : CompConnectionData(connections.size(), phase_usage.num_phases, comp_config.numComps())
 {
     for (std::size_t con = 0; con < connections.size(); ++con) {
-        this->tranmissibility_factor[con] = connections[con].connection_transmissibility_factor;
+        this->transmissibility_factor[con] = connections[con].connection_transmissibility_factor;
         this->satnum_id[con] = connections[con].satnum_id;
         this->ecl_index[con] = connections[con].cell_index;
     }
@@ -79,8 +79,8 @@ update_injector_targets(const Well& well,
     assert(!cmode_is_undefined && "control types should be specified");
     const auto& injection_properties = well.getInjectionProperties();
     {
-        const auto inection_type = injection_properties.injectorType;
-        const bool is_gas_injecting = (inection_type == InjectorType::GAS);
+        const auto injection_type = injection_properties.injectorType;
+        const bool is_gas_injecting = (injection_type == InjectorType::GAS);
         assert(is_gas_injecting && "Only gas injection is supported for now");
     }
     this->bhp = inj_controls.bhp_limit;
