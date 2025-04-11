@@ -1501,6 +1501,14 @@ namespace Opm {
         for (auto& well : well_container_) {
             well->prepareWellBeforeAssembling(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
+        const int reportStepIdx = simulator_.episodeIndex();
+        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
+        // PrepareWellBeforeAssembling may change the well controls and we need to
+        // update and communicate this to the other ranks.
+        this->updateAndCommunicateGroupData(reportStepIdx,
+                                            iterationIdx,
+                                            param_.nupcol_group_rate_tolerance_,
+                                            deferred_logger);
     }
 
 
