@@ -102,6 +102,24 @@ namespace Opm
         this->gravity_ = gravity_arg;
         B_avg_ = B_avg;
         this->changed_to_open_this_step_ = changed_to_open_this_step;
+        constexpr int num_phases = 2; // FluidSystem::numPhases;
+        // testing the conversion function
+//        int flowPhaseToModelCompIdx(const int phaseIdx) const;
+//        int modelCompIdxToFlowCompIdx(const int compIdx) const;
+//        int flowPhaseToModelPhaseIdx(const int phaseIdx) const;
+//        std::cout << " testing flowPhaseToModelCompIdx: " << std::endl;
+//        for (int i = 0; i < num_phases; ++i) {
+//            std::cout << " i " << i << " flowPhaseToModelCompIdx " << this->flowPhaseToModelCompIdx(i) << std::endl;
+//        }
+//        std::cout << " testing modelCompIdxToFlowCompIdx: " << std::endl;
+//        for (int i = 0; i < num_phases; ++i) {
+//            std::cout << " i " << i << " modelCompIdxToFlowCompIdx " << this->modelCompIdxToFlowCompIdx(i) << std::endl;
+//        }
+//        std::cout << " testing flowPhaseToModelPhaseIdx: " << std::endl;
+//        for (int i = 0; i < num_phases; ++i) {
+//            std::cout << " i " << i << " flowPhaseToModelPhaseIdx " << this->flowPhaseToModelPhaseIdx(i) << std::endl;
+//        }
+//        std::cout << " testing finished " << std::endl;
     }
 
 
@@ -1880,13 +1898,16 @@ namespace Opm
         const int satid = this->saturation_table_number_[perf] - 1;
         const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
         if (satid == satid_elem) { // the same saturation number is used. i.e. just use the mobilty from the cell
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
+            const auto num_phases = this->phase_usage_->num_phases;
+            for (int phaseIdx = 0; phaseIdx < num_phases; ++phaseIdx) {
+            //    for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+//                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+//                    continue;
+//                }
 
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = extendEval(intQuants.mobility(phaseIdx));
+                // const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const unsigned modelPhaseIdx = this->flowPhaseToModelPhaseIdx(phaseIdx);
+                mob[phaseIdx] = extendEval(intQuants.mobility(modelPhaseIdx));
             }
             if constexpr (has_solvent) {
                 mob[Indices::contiSolventEqIdx] = extendEval(intQuants.solventMobility());
