@@ -59,8 +59,6 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using ModelParameters = typename WellInterfaceGeneric<Scalar>::ModelParameters;
 
-    int flowPhaseToModelPhaseIdx(const int phaseIdx) const;
-
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
