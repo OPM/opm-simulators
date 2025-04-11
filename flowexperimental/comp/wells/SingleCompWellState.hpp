@@ -47,8 +47,8 @@ public:
     std::vector<Scalar> reservoir_phase_rates {}; // phase rates
     std::vector<Scalar> total_molar_fractions {};
 
-    // connection_tranmissibility_factor
-    std::vector<Scalar> tranmissibility_factor {};
+    // connection_transmissibility_factor
+    std::vector<Scalar> transmissibility_factor {};
     std::vector<int> satnum_id {};
     std::vector<std::size_t> ecl_index {};
 };
