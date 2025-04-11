@@ -1972,7 +1972,7 @@ namespace Opm
             // the reciprocal FVF.
             const auto connMob =
                 mobility[this->flowPhaseToModelCompIdx(p)]
-                    * fs.invB(p).value();
+                    * fs.invB(this->flowPhaseToModelPhaseIdx(p)).value();
 
             connPI[p] = connPICalc(connMob);
         }
