@@ -39,7 +39,7 @@ beginReportStep(unsigned report_step)
 
 template <typename TypeTag>
 void CompositionalWellModel<TypeTag>::
-beginTimeStep()
+beginTimeStep(bool /*lastStepFailed*/)
 {
     createWellContainer();
     initWellContainer();
