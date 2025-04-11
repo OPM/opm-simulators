@@ -68,6 +68,7 @@ namespace Opm {
         using typename MSWEval::BVectorWell;
         using MSWEval::SPres;
         using typename Base::PressureMatrix;
+        using FSInfo = std::tuple<Scalar,typename std::decay<decltype(std::declval<decltype(std::declval<const Simulator&>().model().intensiveQuantities(0, 0).fluidState())>().saltConcentration())>::type,int>;
 
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo<Scalar>& pw_info,
@@ -321,6 +322,8 @@ namespace Opm {
         // updating the inflow based on the current reservoir condition
         void updateIPR(const Simulator& ebos_simulator,
                        DeferredLogger& deferred_logger) const override;
+
+        FSInfo getFirstPerforationFluidStateInfo(const Simulator& simulator) const;
     };
 
 }
