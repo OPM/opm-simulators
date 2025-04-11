@@ -429,7 +429,7 @@ computeDensitiesForStoppedProducer(const DensityPropertyFunctions& prop_func)
         auto phIx = std::vector<int>(np);
 
         for (auto p = 0*np; p < np; ++p) {
-            phIx[p] = this->well_.flowPhaseToModelPhaseIdx(p);
+            phIx[p] = p;
         }
 
         return phIx;
