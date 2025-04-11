@@ -43,12 +43,12 @@ public:
     //! \param data Class to broadcast
     //! \param root Process to broadcast from
     template<class T>
-    void broadcast(T& data, int root = 0)
+    void broadcast(T& data, unsigned root = 0)
     {
         if (m_comm.size() == 1)
             return;
 
-        if (m_comm.rank() == root) {
+        if (m_comm.rank() == int(root)) {
             try {
                 this->pack(data);
                 m_comm.broadcast(&m_packSize, 1, root);
