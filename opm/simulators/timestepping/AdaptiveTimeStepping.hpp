@@ -81,6 +81,8 @@ class AdaptiveTimeStepping
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+
     template <class Solver>
     class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
     {
@@ -132,6 +134,7 @@ private:
         Solver& solver_;
         const bool is_event_;
         const std::function<bool(double elapsed, double dt, int sub_step_number)>& tuning_updater_;
+        Simulator& simulator_;
     };
 
     template <class Solver>
@@ -208,10 +211,6 @@ public:
     bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs);
 
     static void registerParameters();
-#ifdef RESERVOIR_COUPLING_ENABLED
-    void setReservoirCouplingMaster(ReservoirCouplingMaster *reservoir_coupling_master);
-    void setReservoirCouplingSlave(ReservoirCouplingSlave *reservoir_coupling_slave);
-#endif
     void setSuggestedNextStep(const double x);
     double suggestedNextStep() const;
 
@@ -272,10 +271,6 @@ protected:
 
     //! < shut problematic wells when time step size in days are less than this
     double min_time_step_before_shutting_problematic_wells_;
-#ifdef RESERVOIR_COUPLING_ENABLED
-    ReservoirCouplingMaster *reservoir_coupling_master_ = nullptr;
-    ReservoirCouplingSlave *reservoir_coupling_slave_ = nullptr;
-#endif
     // We store a copy of the full simulator run report for output purposes,
     // so it can be updated and passed to the summary writing code every
     // substep (not just every report step).
