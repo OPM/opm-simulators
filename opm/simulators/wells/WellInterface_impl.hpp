@@ -209,11 +209,17 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
+        // Only keep first and last control until iterationIdx >= nupcol (These are used for output)
+        // After iteration >= nupcol we log all switches to check if the well controls oscillates
         const int episodeIdx = simulator.episodeIndex();
         const int iterationIdx = simulator.model().newtonMethod().numIterations();
         const int nupcol = schedule[episodeIdx].nupcol();
-        if (oscillating && iterationIdx >= nupcol) {
+        if (iterationIdx < nupcol && this->well_control_log_.size() > 2) {
+            this->well_control_log_.erase (this->well_control_log_.begin()+1,this->well_control_log_.end()-1);
+        }
+
+        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
+        if (oscillating) {
             // only output frist time
             bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
             if (output) {
@@ -222,7 +228,7 @@ namespace Opm
                    << " is oscillating\n"
                    << "    We don't allow for more than "
                    << this->param_.max_number_of_well_switches_
-                   << " switches. The control is kept at " << from;
+                   << " switches after NUPCOL. The control is kept at " << from;
                 deferred_logger.info(ss.str());
                 // add one more to avoid outputting the same info again
                 this->well_control_log_.push_back(from);
@@ -287,11 +293,16 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
-        const int iterationIdx = simulator.model().newtonMethod().numIterations();
+        // Only keep first and last control until iterationIdx >= nupcol (These are used for output)
+        // After iteration >= nupcol we log all switches to check if the well controls oscillates
         const int episodeIdx = simulator.episodeIndex();
+        const int iterationIdx = simulator.model().newtonMethod().numIterations();
         const int nupcol = schedule[episodeIdx].nupcol();
-        if ( (oscillating && iterationIdx >= nupcol)|| this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        if (iterationIdx < nupcol && this->well_control_log_.size() > 2) {
+            this->well_control_log_.erase (this->well_control_log_.begin()+1,this->well_control_log_.end()-1);
+        }
+        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
+        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
