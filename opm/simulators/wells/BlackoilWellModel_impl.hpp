@@ -1209,6 +1209,15 @@ namespace Opm {
                         max_iteration, network_imbalance*1.0e-5, well_group_control_changed);
                     local_deferredLogger.debug(msg);
                 } else {
+                    const Scalar maximum_imbalance = param_.network_max_pressure_imbalance_in_bars_ * Opm::unit::barsa;
+                    if (network_imbalance > maximum_imbalance) {
+                        const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update. \n"
+                            "The imbalance is larger than the maximum allowed tolerance and the simulator will re-try with smaller time step. \n"
+                            "The maximum tolerance is {:.2e} bar and can be adjusted with --max-network-imbalance="
+                            "(imbalance = {:.2e} bar, ctrl_change = {})",
+                            max_iteration, maximum_imbalance*1.0e-5, network_imbalance*1.0e-5, well_group_control_changed);
+                        OPM_THROW_PROBLEM(NumericalProblem, msg);
+                    }
                     if (this->terminal_output_) {
                         const std::string msg = fmt::format("Maximum of {:d} network iterations has been used and we stop the update. \n"
                             "The simulator will continue with unconverged network results (imbalance = {:.2e} bar, ctrl_change = {})",
