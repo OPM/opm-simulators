@@ -1504,6 +1504,7 @@ fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
         {Inplace::Phase::CO2InGasPhaseMobKrg,       M::moles},
         {Inplace::Phase::WaterInWaterPhase,         M::liquid_surface_volume},
         {Inplace::Phase::WaterInGasPhase,           M::liquid_surface_volume},
+        {Inplace::Phase::WaterMass,                 M::mass},
         {Inplace::Phase::CO2Mass,                   M::mass},
         {Inplace::Phase::CO2MassInWaterPhase,       M::mass},
         {Inplace::Phase::CO2MassInGasPhase,         M::mass},

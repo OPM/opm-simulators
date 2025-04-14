@@ -106,6 +106,11 @@ public:
     void assignCalciteMass(const unsigned globalDofIdx,
                            const Scalar   calciteMass);
 
+    bool hasWaterMass() const;
+    void assignWaterMass(const unsigned globalDofIdx,
+                         const std::array<Scalar, numPhases>& fip,
+                         const Scalar   rhoW);
+
     void assignGasWater(const unsigned  globalDofIdx,
                         const std::array<Scalar, numPhases>& fip,
                         const Scalar    gasInPlaceWater,
