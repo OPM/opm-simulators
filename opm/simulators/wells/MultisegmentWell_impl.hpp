@@ -597,6 +597,7 @@ namespace Opm
             // this is the process with rank zero)
             deferred_logger.problem("In MultisegmentWell::solveEqAndUpdateWellState for well "
                                     + this->name() +": "+exp.what());
+            this->regularize_ = true;
             throw;
         }
     }
@@ -1505,6 +1506,7 @@ namespace Opm
                 // this is the process with rank zero)
                 deferred_logger.problem("In MultisegmentWell::iterateWellEqWithControl for well "
                                         + this->name() +": "+exp.what());
+                this->regularize_ = true;
                 throw;
             }
 
@@ -1653,7 +1655,18 @@ namespace Opm
             assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
                                            well_state, group_state, deferred_logger);
 
-            const BVectorWell dx_well = this->linSys_.solve();
+            BVectorWell dx_well;
+            try {
+                dx_well = this->linSys_.solve();
+            } catch(const NumericalProblem& exp) {
+                // Add information about the well and log to deferred logger
+                // (Logging done inside of solve() method will only be seen if
+                // this is the process with rank zero)
+                deferred_logger.problem("In MultisegmentWell::iterateWellEqWithSwitching for well "
+                + this->name() +": "+exp.what());
+                this->regularize_ = true;
+                throw;
+            }
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
