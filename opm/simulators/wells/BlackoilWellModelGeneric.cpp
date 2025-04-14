@@ -1838,7 +1838,6 @@ assignMassGasRate(data::Wells& wsrpt,
     }
 }
 
-
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 assignWellTracerRates(data::Wells& wsrpt,
