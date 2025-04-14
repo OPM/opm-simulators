@@ -85,7 +85,7 @@ template <class T>
 void eclBroadcast(Parallel::Communication comm, T& data)
 {
     ::Opm::Parallel::MpiSerializer ser(comm);
-    ser.broadcast(data);
+    ser.broadcast(0, data);
 }
 
 template void eclBroadcast(Parallel::Communication, TransMult&);

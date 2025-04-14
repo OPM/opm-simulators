@@ -36,39 +36,6 @@ public:
         , m_comm(comm)
     {}
 
-    //! \brief Serialize and broadcast on root process, de-serialize on
-    //! others.
-    //!
-    //! \tparam T Type of class to broadcast
-    //! \param data Class to broadcast
-    //! \param root Process to broadcast from
-    template<class T>
-    void broadcast(T& data, int root = 0)
-    {
-        if (m_comm.size() == 1)
-            return;
-
-        if (m_comm.rank() == root) {
-            try {
-                this->pack(data);
-                m_comm.broadcast(&m_packSize, 1, root);
-                broadcast_chunked(root);
-            } catch (...) {
-                m_packSize = std::numeric_limits<size_t>::max();
-                m_comm.broadcast(&m_packSize, 1, root);
-                throw;
-            }
-        } else {
-            m_comm.broadcast(&m_packSize, 1, root);
-            if (m_packSize == std::numeric_limits<size_t>::max()) {
-                throw std::runtime_error("Error detected in parallel serialization");
-            }
-            m_buffer.resize(m_packSize);
-            broadcast_chunked(root);
-            this->unpack(data);
-        }
-    }
-
     template<typename... Args>
     void broadcast(int root, Args&&... args)
     {
@@ -96,6 +63,7 @@ public:
         }
     }
 
+
     //! \brief Serialize and broadcast on root process, de-serialize and append on
     //! others.
     //!
@@ -110,7 +78,7 @@ public:
 
         T tmp;
         T& bcast = m_comm.rank() == root ? data : tmp;
-        broadcast(bcast, root);
+        broadcast(root, bcast);
 
         if (m_comm.rank() != root)
             data.append(tmp);

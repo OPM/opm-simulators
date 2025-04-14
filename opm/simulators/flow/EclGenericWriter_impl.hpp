@@ -277,7 +277,7 @@ extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map)
     if (collectOnIORank_.isParallel()) {
         const auto& comm = grid_.comm();
         Opm::Parallel::MpiSerializer ser(comm);
-        ser.broadcast(outputNnc_);
+        ser.broadcast(0, outputNnc_);
     }
 #endif
 }
