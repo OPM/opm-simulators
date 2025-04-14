@@ -351,7 +351,8 @@ protected:
 
     Scalar updateNetworkPressures(const int reportStepIdx,
                                   const Scalar damping_factor,
-                                  const Scalar update_upper_bound);
+                                  const Scalar update_upper_bound,
+                                  std::vector<std::string>& updated_wells);
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,

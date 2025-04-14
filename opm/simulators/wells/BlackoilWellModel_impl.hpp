@@ -1781,7 +1781,8 @@ namespace Opm {
             const Scalar network_max_pressure_update = param_.network_max_pressure_update_in_bars_ * unit::barsa;
             bool more_network_sub_update = false;
             for (int i = 0; i < max_number_of_sub_iterations; i++) {
-                const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx, network_pressure_update_damping_factor, network_max_pressure_update);
+                std::vector<std::string> updated_wells_sub;
+                const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx, network_pressure_update_damping_factor, network_max_pressure_update, updated_wells_sub);
                 network_imbalance = comm.max(local_network_imbalance);
                 const auto& balance = this->schedule()[episodeIdx].network_balance();
                 constexpr Scalar relaxation_factor = 10.0;
@@ -1793,6 +1794,9 @@ namespace Opm {
                 for (const auto& well : well_container_) {
                     if (well->isInjector() || !well->wellEcl().predictionMode())
                          continue;
+
+                    if(std::find(updated_wells_sub.begin(), updated_wells_sub.end(), well->name()) == updated_wells_sub.end())
+                        continue;
 
                     const auto it = this->node_pressures_.find(well->wellEcl().groupName());
                     if (it != this->node_pressures_.end()) {
