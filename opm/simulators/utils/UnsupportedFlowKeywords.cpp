@@ -555,7 +555,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"SEPVALS", {true, std::nullopt}},
         {"SFOAM", {true, std::nullopt}},
         {"SGF32D", {true, std::nullopt}},
-        {"SHRATE", {true, std::string{"See the PLYSHEAR keyword instead"}}},
         {"SIGMA", {true, std::nullopt}},
         {"SIGMAGD", {true, std::nullopt}},
         {"SIGMAGDV", {true, std::nullopt}},
