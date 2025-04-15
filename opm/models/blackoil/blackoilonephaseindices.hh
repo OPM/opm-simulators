@@ -51,8 +51,8 @@ template<unsigned numSolventsV,
 struct BlackOilOnePhaseIndices
 {
     //! Is phase enabled or not
-    static constexpr bool oilEnabled = canonicalCompIdx == 0;
-    static constexpr bool waterEnabled = canonicalCompIdx == 1;
+    static constexpr bool oilEnabled = canonicalCompIdx == 1;
+    static constexpr bool waterEnabled = canonicalCompIdx == 0;
     static constexpr bool gasEnabled = canonicalCompIdx == 2;
 
     //! Are solvents involved?
@@ -188,17 +188,17 @@ struct BlackOilOnePhaseIndices
 
     static constexpr int activeToCanonicalComponentIndex([[maybe_unused]] const int compIdx)
     {
-        // assumes canonical oil = 0, water = 1, gas = 2;
+        // assumes canonical water = 0, oil = 1, gas = 2;
         constexpr_assert(compIdx == 0);
         if (gasEnabled) {
             return 2;
         } else if (waterEnabled) {
-            return 1;
+            return 0;
         } else {
             assert(oilEnabled);
         }
 
-        return 0;
+        return 1;
     }
 
     //! Index of the continuity equation of the first (and only) phase

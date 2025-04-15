@@ -51,8 +51,8 @@ template<unsigned numSolventsV,
 struct BlackOilTwoPhaseIndices
 {
     //! Is phase enabled or not
-    static constexpr bool oilEnabled = disabledCanonicalCompIdx != 0;
-    static constexpr bool waterEnabled = disabledCanonicalCompIdx != 1;
+    static constexpr bool oilEnabled = disabledCanonicalCompIdx != 1;
+    static constexpr bool waterEnabled = disabledCanonicalCompIdx != 0;
     static constexpr bool gasEnabled = disabledCanonicalCompIdx != 2;
 
     //! Are solvents involved?
@@ -183,40 +183,40 @@ struct BlackOilTwoPhaseIndices
     //! \brief returns the index of "active" component
     static constexpr int canonicalToActiveComponentIndex(const int compIdx)
     {
-        // assumes canonical oil = 0, water = 1, gas = 2;
+        // assumes canonical water = 0, oil = 1, gas = 2;
         if (!gasEnabled) {
             constexpr_assert(compIdx != 2);
-            // oil = 0, water = 1
+            // water = 0, oil = 1
             return compIdx;
         } else if (!waterEnabled) {
-            constexpr_assert(compIdx != 1);
+            constexpr_assert(compIdx != 0);
             // oil = 0, gas = 1
-            return compIdx / 2;
+            return compIdx - 1;
         } else {
             constexpr_assert(!oilEnabled);
-            constexpr_assert(compIdx != 0);
+            constexpr_assert(compIdx != 1);
         }
 
         // water = 0, gas = 1;
-        return compIdx - 1;
+        return compIdx / 2;
     }
 
     static constexpr int activeToCanonicalComponentIndex(const int compIdx)
     {
-        // assumes canonical oil = 0, water = 1, gas = 2;
+        // assumes canonical water = 0, oil = 1, gas = 2;
         constexpr_assert(compIdx < 2);
         if (!gasEnabled) {
-            // oil = 0, water = 1
+            // water = 0, oil = 1
             return compIdx;
         } else if (!waterEnabled) {
             // oil = 0, gas = 1
-            return compIdx * 2;
+            return compIdx + 1;
         } else {
             constexpr_assert(!oilEnabled);
         }
 
         // water = 0, gas = 1;
-        return compIdx + 1;
+        return compIdx * 2;
     }
 
     //! Index of the continuity equation of the first phase
