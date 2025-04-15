@@ -1387,7 +1387,11 @@ protected:
         const auto& eclState = vanguard.eclState();
 
         std::size_t numDof = this->model().numGridDof();
+        std::cout<< "numdof " << numDof << std::endl;
+        std::cout<< " equilGrid " << simulator.vanguard().equilGrid().size(0) << std::endl;
+        std::cout<< " grid " << simulator.vanguard().grid().size(0) << std::endl;
 
+        
         this->referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
         const auto& fp = eclState.fieldProps();

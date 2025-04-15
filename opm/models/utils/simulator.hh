@@ -182,15 +182,15 @@ public:
 
         // Only relevant for CpGrid
         if (verbose_)
-            std::cout << "Adding LGRs, if any\n" << std::flush;
+            std::cout << "Adding LGRs in SERIAL, if any\n" << std::flush;
 
         try
-        { vanguard_->addLgrs(); }
+        {  if (comm.size()==1) vanguard_->addLgrs(); }
         catch (const std::exception& e) {
             catchAction(e, verbose_);
         }
         checkParallelException("Adding LGRs to the simulation vanguard failed: ",
-                               exceptionThrown, what);
+        exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Distributing the vanguard's data, adding LGRs - if any - on distributed view.\n" << std::flush;
@@ -199,8 +199,10 @@ public:
         {
             vanguard_->loadBalance();
             if (comm.size()>1) {
+                 vanguard_->addLgrsInGlobalView();
                 vanguard_->addLgrs();
                 vanguard_->synchronizeCellIds();}
+            
         }
         catch (const std::exception& e) {
             catchAction(e, verbose_);

@@ -261,6 +261,24 @@ public:
         }
     }
 
+    /*!
+     * \brief Add LGRs and update Leaf Grid View in the simulation grid.
+     */
+    void addLgrsInGlobalView()
+    {
+#if HAVE_MPI
+        this->grid_->switchToGlobalView();
+        // Check if input file contains Lgrs.
+        //
+        // If there are lgrs, create the grid with them, and update the leaf grid view.
+        if (const auto& lgrs = this->eclState().getLgrs(); lgrs.size() > 0) {
+            OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
+            this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
+        }
+        this->grid_->switchToDistributedView();
+#endif
+    }
+
 
     /*!
      * \brief Synchronize cell ids, if LGRs were added before/after loadBalance.

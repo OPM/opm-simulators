@@ -122,6 +122,17 @@ public:
     }
 
     /*!
+     * \brief Add LGRs to the grid, if any. Only supported for CpGrid - for now.
+     */
+    void addLgrsInGlobalView()
+    {
+        if(&asImp_() != this) { // this check prevents an infinite-recursion warning
+            asImp_().addLgrsInGlobalView();
+            updateGridView_();
+        }
+    }
+
+    /*!
      * \brief Synchronize cell ids, if LGRs were added before/after loadBalance. Only supported for CpGrid - for now.
      */
     void synchronizeCellIds()
