@@ -37,6 +37,8 @@
 #include <opm/simulators/flow/GenericCpGridVanguard.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 
+#include <opm/common/utility/DemangledType.hpp>
+
 #include <array>
 #include <functional>
 #include <memory>
@@ -103,6 +105,7 @@ public:
     using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     static constexpr int dimensionworld = Grid::dimensionworld;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     static constexpr bool waterEnabled = Indices::waterEnabled;
     static constexpr bool gasEnabled = Indices::gasEnabled;
     static constexpr bool oilEnabled = Indices::oilEnabled;
