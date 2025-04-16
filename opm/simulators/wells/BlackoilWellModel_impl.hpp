@@ -260,7 +260,8 @@ namespace Opm {
         // scope a bit.
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         {
-            this->initializeWellPerfData();
+            this->generate_lgr_map(this->simulator_.vanguard().grid());
+            this->initializeWellPerfData(this->simulator_.vanguard().grid());
             this->initializeWellState(reportStepIdx);
             this->wbp_.initializeWBPCalculationService();
 
