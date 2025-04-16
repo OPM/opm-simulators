@@ -52,6 +52,10 @@
 #include <unordered_set>
 #include <vector>
 
+namespace Dune {
+    class CpGrid;
+}
+
 namespace Opm {
     class DeferredLogger;
     class EclipseState;
@@ -346,6 +350,8 @@ protected:
 
     void initializeWellProdIndCalculators();
     void initializeWellPerfData();
+    void initializeWellPerfData(Dune::CpGrid& grid);
+    void generate_lgr_map(Dune::CpGrid& grid);
 
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 

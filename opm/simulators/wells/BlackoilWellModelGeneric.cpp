@@ -26,7 +26,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
-
+#include <opm/grid/CpGrid.hpp>
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Wells.hpp>
@@ -337,6 +337,18 @@ initializeWellProdIndCalculators()
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
+generate_lgr_map(Dune::CpGrid& grid)
+{
+    auto map = grid.mapLocalCartesianIndexSetsToLeafIndexSet();
+    // auto lgr_tag = grid.getLgrNameToLevel().at(lgr_name);
+    auto index = 1;
+    // This function is not used in the current implementation.
+    // It is a placeholder for future use.
+}
+
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
 initializeWellPerfData()
 {
     well_perf_data_.resize(wells_ecl_.size());
@@ -345,6 +357,7 @@ initializeWellPerfData()
     this->conn_idx_map_.reserve(wells_ecl_.size());
 
     int well_index = 0;
+
     for (const auto& well : wells_ecl_) {
         int connection_index = 0;
 
@@ -367,9 +380,115 @@ initializeWellPerfData()
         auto& parallelWellInfo = this->local_parallel_well_info_[well_index].get();
         parallelWellInfo.beginReset();
 
+
         for (const auto& connection : well.getConnections()) {
-            const auto active_index =
-                this->compressedIndexForInterior(connection.global_index());
+    
+            const int active_index = this->compressedIndexForInterior(connection.global_index());
+       
+            const auto connIsOpen =
+                connection.state() == Connection::State::OPEN;
+
+            if (active_index >= 0) {
+                connIdxMap.addActiveConnection(connection_index, connIsOpen);
+            }
+
+            if ((connIsOpen && (active_index >= 0)) || !connIsOpen) {
+                checker.connectionFound(connection_index);
+            }
+
+            if (connIsOpen) {
+                if (active_index >= 0) {
+                    if (firstOpenConnection) {
+                        hasFirstConnection = true;
+                    }
+
+                    auto& pd = well_perf_data_[well_index].emplace_back();
+
+                    pd.cell_index = active_index;
+                    pd.connection_transmissibility_factor = connection.CF();
+                    pd.satnum_id = connection.satTableId();
+                    pd.ecl_index = connection_index;
+
+                    parallelWellInfo.pushBackEclIndex(connection_index_above,
+                                                      connection_index);
+                }
+
+                firstOpenConnection = false;
+
+                // Next time this index is the one above as each open
+                // connection is stored somewhere.
+                connection_index_above = connection_index;
+            }
+            else if (connection.state() != Connection::State::SHUT) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Connection state '{}' not handled",
+                                      Connection::State2String(connection.state())));
+            }
+
+            // Note: we rely on the connections being filtered!  I.e., there
+            // are only connections to active cells in the global grid.
+            ++connection_index;
+        }
+
+        parallelWellInfo.endReset();
+
+        checker.checkAllConnectionsFound();
+
+        parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
+
+        ++well_index;
+    }
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+initializeWellPerfData(Dune::CpGrid& grid)
+{
+    well_perf_data_.resize(wells_ecl_.size());
+
+    this->conn_idx_map_.clear();
+    this->conn_idx_map_.reserve(wells_ecl_.size());
+
+    int well_index = 0;
+
+    // auto generate_lgr_map = [](const std::string& lgr_tag, int i, int j, int k){return 1;};  
+    // auto lgr_map = generate_lgr_map("art",1,2,3);
+    auto lgr_completion = [&grid](const std::string& lgr_tag, const Connection& conn){
+        const std::array<int,3> lgr_ijk = {conn.getI(), conn.getJ(), conn.getK()};
+        const auto& lgr_level = grid.getLgrNameToLevel().at(lgr_tag);
+        const auto& lgr_dim = grid.currentData()[lgr_level]->logicalCartesianSize();
+        const auto lgr_cartesian_index = (lgr_ijk[2]*lgr_dim[0]*lgr_dim[1]) + (lgr_ijk[1]*lgr_dim[0]) + (lgr_ijk[0]);
+        return grid.mapLocalCartesianIndexSetsToLeafIndexSet()[lgr_level][lgr_cartesian_index];
+    };
+    for (const auto& well : wells_ecl_) {
+        int connection_index = 0;
+
+        // INVALID_ECL_INDEX marks no above perf available
+        int connection_index_above = ParallelWellInfo<Scalar>::INVALID_ECL_INDEX;
+
+        well_perf_data_[well_index].clear();
+        well_perf_data_[well_index].reserve(well.getConnections().size());
+
+        auto& connIdxMap = this->conn_idx_map_
+            .emplace_back(well.getConnections().size());
+
+        CheckDistributedWellConnections checker {
+            well, this->local_parallel_well_info_[well_index].get()
+        };
+
+        bool hasFirstConnection = false;
+        bool firstOpenConnection = true;
+
+        auto& parallelWellInfo = this->local_parallel_well_info_[well_index].get();
+        parallelWellInfo.beginReset();
+
+
+        for (const auto& connection : well.getConnections()) {
+    
+            const int active_index = well.is_lgr_well()
+                ? lgr_completion(well.get_lgr_well_tag().value(), connection)
+                : this->compressedIndexForInterior(connection.global_index());
+       
 
             const auto connIsOpen =
                 connection.state() == Connection::State::OPEN;
