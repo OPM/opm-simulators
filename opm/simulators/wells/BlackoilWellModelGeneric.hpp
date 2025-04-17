@@ -105,7 +105,11 @@ public:
                              const Parallel::Communication& comm);
 
     virtual ~BlackoilWellModelGeneric() = default;
+<<<<<<< HEAD
     virtual int compressedIndexForInteriorLGR([[maybe_unused]] const std::string& lgr_tag,
+=======
+    virtual int compressedIndexForInteriorLGR([[maybe_unused]] std::string lgr_tag,
+>>>>>>> e8834af25 (first lgr well working version)
                                               [[maybe_unused]] const Connection& conn) const
     {
       throw std::runtime_error("Fallback for compressedIndexForInteriorLGR not implemented");
