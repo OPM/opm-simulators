@@ -259,7 +259,50 @@ public:
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
         }
+
+        if(this->grid_->comm().rank()==0 ) std::cout<< (this->equilGrid_->maxLevel()) << " max EQUILlevel " <<
+                                               (this->equilGrid_->leafGridView().size(0))<<std::endl;
+
+        this->updateGridView_();
+        this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
+
+#if HAVE_MPI
+        this->distributeFieldProps_(this->eclState());
+#endif
     }
+
+    /*!
+     * \brief Add LGRs and update Leaf Grid View in the global view of simulation grid.
+     */
+    void addLgrsInGlobalView()
+    {
+        this->grid_->switchToGlobalView();
+
+        this->addLgrs();
+      
+        this->grid_->switchToDistributedView();
+    }
+
+
+    /*!
+     * \brief Synchronize cell ids, if LGRs were added before/after loadBalance.
+     */
+    void synchronizeCellIds()
+    {
+        this->grid_->syncDistributedGlobalCellIds();
+        
+        this->updateGridView_();
+        this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
+
+#if HAVE_MPI
+        this->distributeFieldProps_(this->eclState());
+#endif
+    }
+    
 
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const {
         return elemIndex;
