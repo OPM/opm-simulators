@@ -267,6 +267,10 @@ public:
         this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
         this->updateCellThickness_();
+
+#if HAVE_MPI
+        this->distributeFieldProps_(this->eclState());
+#endif
     }
 
     /*!
@@ -279,11 +283,6 @@ public:
         this->addLgrs();
       
         this->grid_->switchToDistributedView();
-
-        this->updateGridView_();
-        this->updateCartesianToCompressedMapping_();
-        this->updateCellDepths_();
-        this->updateCellThickness_();
     }
 
 
@@ -293,6 +292,15 @@ public:
     void synchronizeCellIds()
     {
         this->grid_->syncDistributedGlobalCellIds();
+        
+        this->updateGridView_();
+        this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
+
+#if HAVE_MPI
+        this->distributeFieldProps_(this->eclState());
+#endif
     }
     
 
