@@ -204,6 +204,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/BlackoilWellModelRestart.cpp
   opm/simulators/wells/BlackoilWellModelWBP.cpp
   opm/simulators/wells/ConnFiltrateData.cpp
+  opm/simulators/wells/GuideRateHandler.cpp
   opm/simulators/wells/FractionCalculator.cpp
   opm/simulators/wells/GasLiftCommon.cpp
   opm/simulators/wells/GasLiftGroupInfo.cpp
@@ -1067,6 +1068,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/GlobalWellInfo.hpp
   opm/simulators/wells/GroupEconomicLimitsChecker.hpp
   opm/simulators/wells/GroupState.hpp
+  opm/simulators/wells/GuideRateHandler.hpp
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/MultisegmentWell.hpp
   opm/simulators/wells/MultisegmentWell_impl.hpp
@@ -1269,7 +1271,7 @@ if(MPI_FOUND)
     opm/simulators/flow/ReservoirCouplingMaster.hpp
     opm/simulators/flow/ReservoirCouplingSlave.hpp
     opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp
-  )
+    )
   list (APPEND TEST_SOURCE_FILES
     tests/rescoup/test_chopstep.cpp
   )
