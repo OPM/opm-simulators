@@ -259,6 +259,8 @@ public:
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
         }
+
+            if(this->grid_->comm().rank()==0 ) std::cout<< (this->equilGrid_->maxLevel()) << " max euql level from AADDD all " <<std::endl;
     }
 
     /*!
@@ -266,8 +268,8 @@ public:
      */
     void addLgrsInGlobalView()
     {
-#if HAVE_MPI
         this->grid_->switchToGlobalView();
+         
         // Check if input file contains Lgrs.
         //
         // If there are lgrs, create the grid with them, and update the leaf grid view.
@@ -275,7 +277,14 @@ public:
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
         }
+
+        if(this->grid_->comm().rank()==0 ) std::cout<< (this->equilGrid_->maxLevel()) << " max euql level frpm global call " <<std::endl;
+       
+#if HAVE_MPI
+        if(this->grid_->comm().size() > 1)
+        {
         this->grid_->switchToDistributedView();
+        }
 #endif
     }
 

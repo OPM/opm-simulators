@@ -1388,7 +1388,8 @@ protected:
 
         std::size_t numDof = this->model().numGridDof();
         std::cout<< "numdof " << numDof << std::endl;
-        std::cout<< " equilGrid " << simulator.vanguard().equilGrid().size(0) << std::endl;
+        if(simulator.vanguard().grid().comm().rank() == 0){  std::cout<< " equilGrid " << simulator.vanguard().equilGrid().size(0) << " equilgrid max level " << simulator.vanguard().equilGrid().maxLevel() << std::endl;
+        }
         std::cout<< " grid " << simulator.vanguard().grid().size(0) << std::endl;
 
         
@@ -1396,6 +1397,7 @@ protected:
 
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV");
+         std::cout<< " porvData size " << porvData.size() << std::endl;
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(dofIdx);
             Scalar poreVolume = porvData[dofIdx];

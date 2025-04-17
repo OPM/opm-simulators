@@ -128,7 +128,7 @@ public:
     {
         if(&asImp_() != this) { // this check prevents an infinite-recursion warning
             asImp_().addLgrsInGlobalView();
-            updateGridView_();
+            // updateGridView_();
         }
     }
 
