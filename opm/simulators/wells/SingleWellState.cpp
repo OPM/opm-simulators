@@ -212,6 +212,12 @@ Scalar SingleWellState<Scalar>::sum_urea_rates() const
 }
 
 template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_wat_mass_rates() const
+{
+    return this->sum_connection_rates(this->perf_data.wat_mass_rates);
+}
+
+template<class Scalar>
 Scalar SingleWellState<Scalar>::sum_filtrate_rate() const
 {
     if (this->producer) return 0.;
