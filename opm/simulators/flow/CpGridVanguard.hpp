@@ -260,32 +260,30 @@ public:
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
         }
 
-            if(this->grid_->comm().rank()==0 ) std::cout<< (this->equilGrid_->maxLevel()) << " max euql level from AADDD all " <<std::endl;
+        if(this->grid_->comm().rank()==0 ) std::cout<< (this->equilGrid_->maxLevel()) << " max EQUILlevel " <<
+                                               (this->equilGrid_->leafGridView().size(0))<<std::endl;
+
+        this->updateGridView_();
+        this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
     }
 
     /*!
-     * \brief Add LGRs and update Leaf Grid View in the simulation grid.
+     * \brief Add LGRs and update Leaf Grid View in the global view of simulation grid.
      */
     void addLgrsInGlobalView()
     {
         this->grid_->switchToGlobalView();
-         
-        // Check if input file contains Lgrs.
-        //
-        // If there are lgrs, create the grid with them, and update the leaf grid view.
-        if (const auto& lgrs = this->eclState().getLgrs(); lgrs.size() > 0) {
-            OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
-            this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
-        }
 
-        if(this->grid_->comm().rank()==0 ) std::cout<< (this->equilGrid_->maxLevel()) << " max euql level frpm global call " <<std::endl;
-       
-#if HAVE_MPI
-        if(this->grid_->comm().size() > 1)
-        {
+        this->addLgrs();
+      
         this->grid_->switchToDistributedView();
-        }
-#endif
+
+        this->updateGridView_();
+        this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
     }
 
 

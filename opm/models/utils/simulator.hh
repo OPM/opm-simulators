@@ -180,20 +180,6 @@ public:
         checkParallelException("Allocating the simulation vanguard failed: ",
                                exceptionThrown, what);
 
-
-        if (verbose_)
-            std::cout << "Adding LGRs - if any - in BEFORE LOADBALNCE view\n" << std::flush;
-
-        try
-        {
-             vanguard_->addLgrs();
-        }
-        catch (const std::exception& e) {
-            catchAction(e, verbose_);
-        }
-        checkParallelException(" Could not add LGRs BEFORE LOAD BALANCE to the vanguard data: ",
-                               exceptionThrown, what);
-
         /*// Only relevant for CpGrid
         if (verbose_)
             std::cout << "Adding LGRs in SERIAL, if any\n" << std::flush;
@@ -228,14 +214,10 @@ public:
         if (verbose_)
             std::cout << "Distributing the vanguard's data\n" << std::flush;
 
+        bool loadBalanceSucceeded = false;
         try
         {
             vanguard_->loadBalance();
-            if (comm.size()>1) {
-                // vanguard_->addLgrsInGlobalView();
-                vanguard_->addLgrs();
-                vanguard_->synchronizeCellIds();}
-            
         }
         catch (const std::exception& e) {
             catchAction(e, verbose_);
@@ -243,12 +225,15 @@ public:
         checkParallelException(" Could not distribute the vanguard data: ",
                                exceptionThrown, what);
 
-        /* if (verbose_)
+
+         if (verbose_)
             std::cout << "Adding LGRs - if any - in GLOBAL view\n" << std::flush;
 
         try
         {
-             vanguard_->addLgrsInGlobalView();
+            if (comm.size()==1) { // serial run
+            vanguard_->addLgrs();
+            }
         }
         catch (const std::exception& e) {
             catchAction(e, verbose_);
@@ -257,22 +242,24 @@ public:
                                exceptionThrown, what);
 
         if (verbose_)
-            std::cout << "Adding LGRs - if any - in DISTRIBUTED view\n" << std::flush;
+            std::cout << "Adding LGRs - if any - in distributed view\n" << std::flush;
 
         try
         {
-            if (comm.size()>1) {
+            if (comm.size()>1) { // parallel run
+                vanguard_->addLgrsInGlobalView();
                 vanguard_->addLgrs();
-                vanguard_->synchronizeCellIds();}
+                vanguard_->synchronizeCellIds();
+            }
         }
         catch (const std::exception& e) {
             catchAction(e, verbose_);
         }
-        checkParallelException(" Could not add LGRs to the distributed view of the vanguard data: ",
-        exceptionThrown, what);*/
+        checkParallelException(" Could not add LGRs in distributed view to the vanguard data: ",
+                               exceptionThrown, what);
 
         
-
+        
         if (verbose_)
             std::cout << "Allocating the model\n" << std::flush;
         try {
