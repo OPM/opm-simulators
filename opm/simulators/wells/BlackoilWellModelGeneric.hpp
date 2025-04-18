@@ -52,7 +52,12 @@
 #include <unordered_set>
 #include <vector>
 
+namespace Dune {
+    class CpGrid;
+}
+
 namespace Opm {
+    class Connection;  
     class DeferredLogger;
     class EclipseState;
     template<class Scalar> class BlackoilWellModelGasLiftGeneric;
@@ -99,6 +104,12 @@ public:
                              const Parallel::Communication& comm);
 
     virtual ~BlackoilWellModelGeneric() = default;
+    virtual int compressedIndexForInteriorLGR([[maybe_unused]] std::string lgr_tag,
+                                              [[maybe_unused]] const Connection& conn) const
+    {
+      throw std::runtime_error("Fallback for compressedIndexForInteriorLGR not implemented");
+      return -1;
+    };
 
     int numLocalWells() const;
     int numLocalWellsEnd() const;
@@ -461,11 +472,13 @@ protected:
                            const Scalar& gasDensity) const;
 
     Schedule& schedule_;
+    
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
     BlackoilWellModelGasLiftGeneric<Scalar>& gen_gaslift_;
     BlackoilWellModelWBP<Scalar> wbp_;
+
 
     PhaseUsage phase_usage_;
     bool terminal_output_{false};
