@@ -214,11 +214,7 @@ AdaptiveTimeStepping<TypeTag>::
 step(const SimulatorTimer& simulator_timer,
      Solver& solver,
      const bool is_event,
-     const std::function<bool(const double /*current_time*/,
-                              const double /*dt*/,
-                              const int    /*substep_number*/
-                             )> tuning_updater
-)
+     const TuningUpdateCallback tuning_updater)
 {
     SubStepper<Solver> sub_stepper{
         *this, simulator_timer, solver, is_event, tuning_updater,
@@ -464,10 +460,7 @@ SubStepper(AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
            const SimulatorTimer& simulator_timer,
            Solver& solver,
            const bool is_event,
-           const std::function<bool(const double /*current_time*/,
-                                    const double /*dt*/,
-                                    const int    /*substep_number*/
-                                   )>& tuning_updater)
+           const TuningUpdateCallback& tuning_updater)
     : adaptive_time_stepping_{adaptive_time_stepping}
     , simulator_timer_{simulator_timer}
     , solver_{solver}

@@ -72,6 +72,9 @@ namespace detail {
 template<class TypeTag>
 class AdaptiveTimeStepping
 {
+public:
+    using TuningUpdateCallback = std::function<bool(const double, const double, const int)>;
+
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     template <class Solver>
@@ -97,7 +100,7 @@ private:
                    const SimulatorTimer& simulator_timer,
                    Solver& solver,
                    const bool is_event,
-                   const std::function<bool(const double, const double, const int)>& tuning_updater);
+                   const TuningUpdateCallback& tuning_updater);
 
         AdaptiveTimeStepping<TypeTag>& getAdaptiveTimerStepper();
         SimulatorReport run();
@@ -122,7 +125,7 @@ private:
         const SimulatorTimer& simulator_timer_;
         Solver& solver_;
         const bool is_event_;
-        const std::function<bool(double elapsed, double dt, int sub_step_number)>& tuning_updater_;
+        const TuningUpdateCallback& tuning_updater_;
     };
 
     template <class Solver>
@@ -207,8 +210,7 @@ public:
     SimulatorReport step(const SimulatorTimer& simulator_timer,
                          Solver& solver,
                          const bool is_event,
-                         const std::function<bool(const double, const double, const int)>
-                            tuning_updater);
+                         const TuningUpdateCallback tuning_updater);
 
     void updateTUNING(double max_next_tstep, const Tuning& tuning);
     void updateNEXTSTEP(double max_next_tstep);
