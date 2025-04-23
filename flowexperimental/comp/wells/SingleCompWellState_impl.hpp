@@ -135,15 +135,16 @@ update_producer_targets(const Well& well,
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
     // TODO: we should use our own phase index system
     // TODO: the following must be changed
+    const auto& pu = this->phase_usage;
     if (prod_controls.cmode == Well::ProducerCMode::BHP) {
-        if (this->phase_usage.phase_used[BlackoilPhases::Liquid]) {
-            this->surface_phase_rates[BlackoilPhases::Liquid] = production_rate;
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            this->surface_phase_rates[pu.phase_pos[BlackoilPhases::Liquid]] = production_rate;
         }
-        if (this->phase_usage.phase_used[BlackoilPhases::Aqua]) {
-            this->surface_phase_rates[BlackoilPhases::Aqua] = production_rate;
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            this->surface_phase_rates[pu.phase_pos[BlackoilPhases::Aqua]] = production_rate;
         }
-        if (this->phase_usage.phase_used[BlackoilPhases::Vapour]) {
-            this->surface_phase_rates[BlackoilPhases::Vapour] = 100. * production_rate;
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            this->surface_phase_rates[pu.phase_pos[BlackoilPhases::Vapour]] = 100. * production_rate;
         }
     }
 }
