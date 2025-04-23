@@ -3,13 +3,6 @@
 #ifndef OPM_ADAPTIVE_TIME_STEPPING_HPP
 #define OPM_ADAPTIVE_TIME_STEPPING_HPP
 
-#include <dune/common/version.hh>
-#include <dune/istl/istlexception.hh>
-
-#include <opm/common/OpmLog/OpmLog.hpp>
-
-#include <opm/input/eclipse/Schedule/Tuning.hpp>
-
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
@@ -31,11 +24,8 @@
 #include <functional>
 #include <memory>
 #include <set>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 namespace Opm::Parameters {
@@ -63,6 +53,7 @@ struct TimeStepControlSafetyFactor { static constexpr double value = 0.8; };
 
 namespace Opm {
 
+struct Tuning;
 class UnitSystem;
 struct StepReport;
 
@@ -287,4 +278,5 @@ protected:
 } // namespace Opm
 
 #include <opm/simulators/timestepping/AdaptiveTimeStepping_impl.hpp>
+
 #endif // OPM_ADAPTIVE_TIME_STEPPING_HPP

@@ -27,10 +27,15 @@
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #endif
 
+#include <dune/istl/istlexception.hh>
+
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/grid/utility/StopWatch.hpp>
+
+#include <opm/input/eclipse/Schedule/Tuning.hpp>
 
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
