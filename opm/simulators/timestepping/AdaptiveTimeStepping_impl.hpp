@@ -1253,7 +1253,8 @@ template <class TypeTag>
 template <class Solver>
 double
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-timeStepControlComputeEstimate_(const double dt, const int iterations, AdaptiveSimulatorTimer& substepTimer) const
+timeStepControlComputeEstimate_(const double dt, const int iterations,
+                                const AdaptiveSimulatorTimer& substepTimer) const
 {
     // create object to compute the time error, simply forwards the call to the model
     SolutionTimeErrorSolverWrapper<Solver> relative_change{solver_()};

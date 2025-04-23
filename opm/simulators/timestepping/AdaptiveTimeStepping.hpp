@@ -173,8 +173,9 @@ private:
         bool solverVerbose_() const;
         const SimulatorTimer& simulatorTimer_() const;
         boost::posix_time::ptime startDateTime_() const;
-        double timeStepControlComputeEstimate_(
-            const double dt, const int iterations, AdaptiveSimulatorTimer& substepTimer) const;
+        double timeStepControlComputeEstimate_(const double dt,
+                                               const int iterations,
+                                               const AdaptiveSimulatorTimer& substepTimer) const;
         bool timeStepVerbose_() const;
         void updateSuggestedNextStep_();
         bool useNewtonIteration_() const;
