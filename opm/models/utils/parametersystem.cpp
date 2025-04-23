@@ -213,7 +213,7 @@ void printParamList(std::ostream& os,
 void printParamUsage(std::ostream& os,
                      const ParamInfo& paramInfo)
 {
-    std::string paramMessage, paramType, paramDescription;
+    std::string paramMessage;
 
     int ttyWidth = Opm::getTtyWidth();
 
@@ -669,8 +669,6 @@ std::string parseCommandLineOptions(int argc,
                                             argc, argv, i, numPositionalParams);
 
             if (numHandled < 1) {
-                std::ostringstream oss;
-
                 if (!helpPreamble.empty()) {
                     printUsage(helpPreamble, std::cerr, errorMsg);
                 }
