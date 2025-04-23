@@ -41,6 +41,7 @@
 #include <opm/material/common/quad.hpp>
 #endif
 
+#include <algorithm>
 #include <charconv>
 #include <fstream>
 #include <memory>
@@ -794,14 +795,14 @@ bool printUnused(std::ostream& os)
     std::vector<std::string> unknownKeyList;
 
     getFlattenedKeyList(runTimeAllKeyList, MetaData::tree());
-    for (const auto& key : runTimeAllKeyList) {
-        if (MetaData::registry().find(key) == MetaData::registry().end()) {
-            // key was not registered by the program!
-            unknownKeyList.push_back(key);
-        }
-    }
+    std::copy_if(runTimeAllKeyList.begin(), runTimeAllKeyList.end(),
+                 std::back_inserter(unknownKeyList),
+                 [](const auto& key)
+                 {
+                    return MetaData::registry().find(key) == MetaData::registry().end();
+                 });
 
-    if (unknownKeyList.size() > 0) {
+    if (!unknownKeyList.empty()) {
         os << "# [unused run-time specified parameters]\n";
         for (const auto& unused : unknownKeyList) {
             os << unused << "=\""
