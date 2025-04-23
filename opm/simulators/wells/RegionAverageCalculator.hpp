@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <numeric>
 #include <unordered_map>
 
 /**
@@ -82,12 +83,13 @@ namespace Opm {
             template <typename ElementContext, class Simulator>
             void defineState(const Simulator& simulator)
             {
-                int numRegions = 0;
                 const auto& gridView = simulator.gridView();
                 const auto& comm = gridView.comm();
-                for (const auto& reg : rmap_.activeRegions()) {
-                    numRegions = std::max(numRegions, reg);
-                }
+                int numRegions =
+                    std::accumulate(rmap_.activeRegions().begin(),
+                                    rmap_.activeRegions().end(), 0,
+                                    [](const auto acc, const auto& reg)
+                                    { return std::max(acc, reg); });
                 numRegions = comm.max(numRegions);
                 // reg = 0 is used for field
                 for (int reg = 0; reg <= numRegions ; ++ reg) {
