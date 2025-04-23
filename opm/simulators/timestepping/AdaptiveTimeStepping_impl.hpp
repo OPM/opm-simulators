@@ -214,7 +214,7 @@ AdaptiveTimeStepping<TypeTag>::
 step(const SimulatorTimer& simulator_timer,
      Solver& solver,
      const bool is_event,
-     const TuningUpdateCallback tuning_updater)
+     const TuningUpdateCallback& tuning_updater)
 {
     SubStepper<Solver> sub_stepper{
         *this, simulator_timer, solver, is_event, tuning_updater,

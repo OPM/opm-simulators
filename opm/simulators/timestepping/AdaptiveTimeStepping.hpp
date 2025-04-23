@@ -210,7 +210,7 @@ public:
     SimulatorReport step(const SimulatorTimer& simulator_timer,
                          Solver& solver,
                          const bool is_event,
-                         const TuningUpdateCallback tuning_updater);
+                         const TuningUpdateCallback& tuning_updater);
 
     void updateTUNING(double max_next_tstep, const Tuning& tuning);
     void updateNEXTSTEP(double max_next_tstep);
