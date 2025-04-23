@@ -49,7 +49,7 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 calculateExplicitQuantities(const Simulator& simulator,
-                            const SingleCompWellState<Scalar>& well_state)
+                            const SingleWellState& well_state)
 {
     updatePrimaryVariables(simulator, well_state);
     {
@@ -82,7 +82,7 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 updatePrimaryVariables(const Simulator& /* simulator */,
-                       const SingleCompWellState<Scalar>& well_state)
+                       const SingleWellState& well_state)
 {
     this->primary_variables_.update(well_state);
 }
@@ -227,7 +227,7 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 assembleWellEq(const Simulator& simulator,
-               const SingleCompWellState<Scalar>& well_state,
+               const SingleWellState& well_state,
                const double dt)
 {
     this->well_equations_.clear();
@@ -273,7 +273,7 @@ assembleWellEq(const Simulator& simulator,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-assembleControlEq(const SingleCompWellState<Scalar>& well_state,
+assembleControlEq(const SingleWellState& well_state,
                   const SummaryState& summary_state)
 {
     EvalWell control_eq;
@@ -294,7 +294,7 @@ assembleControlEq(const SingleCompWellState<Scalar>& well_state,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-assembleControlEqProd(const SingleCompWellState<Scalar>& well_state,
+assembleControlEqProd(const SingleWellState& well_state,
                       const Well::ProductionControls& prod_controls,
                       EvalWell& control_eq) const
 {
@@ -331,7 +331,7 @@ assembleControlEqProd(const SingleCompWellState<Scalar>& well_state,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-assembleControlEqInj(const SingleCompWellState<Scalar>& well_state,
+assembleControlEqInj(const SingleWellState& well_state,
                       const Well::InjectionControls& inj_controls,
                       EvalWell& control_eq) const
 {
@@ -385,7 +385,7 @@ bool
 CompWell<TypeTag>::
 iterateWellEq(const Simulator& simulator,
               const Scalar dt,
-              SingleCompWellState<Scalar>& well_state)
+              SingleWellState& well_state)
 {
     constexpr int max_iter = 200;
 
@@ -414,7 +414,7 @@ iterateWellEq(const Simulator& simulator,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-solveEqAndUpdateWellState(SingleCompWellState<Scalar>& well_state)
+solveEqAndUpdateWellState(SingleWellState& well_state)
 {
    BVectorWell dx_well(1);
 
@@ -435,7 +435,7 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                      SingleCompWellState<Scalar>& well_state)
+                                      SingleWellState& well_state)
 {
     BVectorWell xw(1);
 
@@ -456,7 +456,7 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 updateWellState(const CompWell::BVectorWell& xw,
-                SingleCompWellState<Scalar>& well_state)
+                SingleWellState& well_state)
 {
     updatePrimaryVariablesNewton(xw);
     updateWellStateFromPrimaryVariables(well_state);
@@ -465,7 +465,7 @@ updateWellState(const CompWell::BVectorWell& xw,
 template <typename TypeTag>
 void
 CompWell<TypeTag>::
-updateWellStateFromPrimaryVariables(SingleCompWellState<Scalar>& well_state) const
+updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
 {
     well_state.bhp = this->primary_variables_.getBhp().value();
 
@@ -511,7 +511,7 @@ template <typename TypeTag>
 void
 CompWell<TypeTag>::
 updateWellControl(const SummaryState& summary_state,
-                  SingleCompWellState<Scalar>& well_state) const
+                  SingleWellState& well_state) const
 {
     std::string from;
     if (this->well_ecl_.isInjector()) {

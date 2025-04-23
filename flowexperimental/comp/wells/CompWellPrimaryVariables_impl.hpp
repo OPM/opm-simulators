@@ -27,7 +27,7 @@ namespace Opm {
 template <typename FluidSystem, typename Indices>
 void
 CompWellPrimaryVariables<FluidSystem, Indices>::
-update(const SingleCompWellState<Scalar>& well_state)
+update(const SingleWellState& well_state)
 {
     value_[QTotal] = well_state.get_total_surface_rate();
     // the mole fractions of the first n-1 component

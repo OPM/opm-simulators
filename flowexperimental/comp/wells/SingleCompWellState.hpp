@@ -53,7 +53,7 @@ public:
     std::vector<std::size_t> ecl_index {};
 };
 
-template <typename Scalar>
+template <typename FluidSystem, typename Scalar>
 class SingleCompWellState
 {
 public:

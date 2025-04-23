@@ -147,7 +147,7 @@ private:
      const CompositionalConfig& comp_config_;
 
      // we will need two to handle the changes between time stepping
-     CompWellState<Scalar> comp_well_states_;
+     CompWellState<FluidSystem, Scalar> comp_well_states_;
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;

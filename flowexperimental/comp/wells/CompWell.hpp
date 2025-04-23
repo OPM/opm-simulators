@@ -51,6 +51,8 @@ public:
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
 
+    using SingleWellState = typename Base::SingleWellState;
+
     using CompConnectionData = PerforationData<Scalar>;
 
     template <typename T>
@@ -91,28 +93,28 @@ public:
     void init() override;
 
     void calculateExplicitQuantities(const Simulator& simulator,
-                                     const SingleCompWellState<Scalar>& well_state) override;
+                                     const SingleWellState& well_state) override;
 
     void updatePrimaryVariables(const Simulator& simulator,
-                                const SingleCompWellState<Scalar>& well_state) override;
+                                const SingleWellState& well_state) override;
 
     void updateSecondaryQuantities(const Simulator& simulator);
 
     // TODO: control should be passed in later
     void assembleWellEq(const Simulator& simulator,
-                        const SingleCompWellState<Scalar>& well_state,
+                        const SingleWellState& well_state,
                         const double dt);
 
     bool iterateWellEq(const Simulator& simulator,
                        const Scalar dt,
-                       SingleCompWellState<Scalar>& well_state) override;
+                       SingleWellState& well_state) override;
 
-    void solveEqAndUpdateWellState(SingleCompWellState<Scalar>& well_state);
+    void solveEqAndUpdateWellState(SingleWellState& well_state);
 
     void apply(BVector& r) const override;
 
     void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                               SingleCompWellState<Scalar>& well_state) override;
+                                               SingleWellState& well_state) override;
 
     bool getConvergence() const override;
 
@@ -155,27 +157,27 @@ private:
     // TODO: the following assembling functions will be moved to a separate assmeble class
     void assembleSourceTerm(const Scalar dt);
 
-    void assembleControlEq(const SingleCompWellState<Scalar>& well_state,
+    void assembleControlEq(const SingleWellState& well_state,
                            const SummaryState& summary_state);
 
-    void assembleControlEqProd(const SingleCompWellState<Scalar>& well_state,
+    void assembleControlEqProd(const SingleWellState& well_state,
                                const Well::ProductionControls& prod_controls,
                                EvalWell& control_eq) const;
 
-    void assembleControlEqInj(const SingleCompWellState<Scalar>& well_state,
+    void assembleControlEqInj(const SingleWellState& well_state,
                               const Well::InjectionControls& inj_controls,
                               EvalWell& control_eq) const;
 
     void updatePrimaryVariablesNewton(const BVectorWell& dwells);
 
     // with passing in the SurfaceCondition, we should be able to do this in the primary variable class
-    void updateWellStateFromPrimaryVariables(SingleCompWellState<Scalar>& well_state) const;
+    void updateWellStateFromPrimaryVariables(SingleWellState& well_state) const;
 
     void updateWellState(const BVectorWell& dwells,
-                         SingleCompWellState<Scalar>& well_state);
+                         SingleWellState& well_state);
 
     void updateWellControl(const SummaryState& summary_state,
-                           SingleCompWellState<Scalar>& well_state) const;
+                           SingleWellState& well_state) const;
 
     template <typename T>
     void

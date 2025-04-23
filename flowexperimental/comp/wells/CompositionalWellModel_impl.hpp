@@ -146,10 +146,10 @@ initWellState()
     // TODO: not sure the following is correct
     const auto pressIx = [this]()
     {
-        if (phase_usage_.phase_used[FluidSystem::oilPhaseIdx]) {
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
             return FluidSystem::oilPhaseIdx;
         }
-        if (phase_usage_.phase_used[FluidSystem::gasPhaseIdx]) {
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
             return FluidSystem::gasPhaseIdx;
         }
         assert(false && "the usage of oil and gas phase is not correct");

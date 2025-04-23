@@ -28,7 +28,7 @@
 
 namespace Opm {
 
-template <typename Scalar>
+template <typename FluidSystem, typename Scalar>
 class SingleCompWellState;
 
 template <typename FluidSystem, typename Indices>
@@ -56,6 +56,7 @@ public:
     using Eval = DenseAd::Evaluation<Scalar, numResEq>;
 
     using BVectorWell = typename CompWellEquations<Scalar, numWellEq, numResEq>::BVectorWell;
+    using SingleWellState = SingleCompWellState<FluidSystem, Scalar>;
 
     template <typename T>
     using FluidState = CompositionalFluidState<T, FluidSystem>;
@@ -63,7 +64,7 @@ public:
     template <typename T>
     FluidState<T> toFluidState() const;
 
-    void update(const SingleCompWellState<Scalar>& well_state);
+    void update(const SingleWellState& well_state);
 
     void updateEvaluation();
 
