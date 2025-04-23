@@ -1,4 +1,32 @@
+/*
+  Copyright 2024 SINTEF Digital
 
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef OPM_COMPOSITIONAL_WELL_MODEL_IMPL_HPP
+#define OPM_COMPOSITIONAL_WELL_MODEL_IMPL_HPP
+
+// Improve IDE experience
+#ifndef OPM_COMPOSITIONAL_WELL_MODEL_HPP
+#include <config.h>
+#include <flowexperimental/comp/wells/CompositionalWellModel.hpp>
+#endif
+
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
@@ -234,7 +262,7 @@ CompositionalWellModel<TypeTag>::
 calculateExplicitQuantities()
 {
     for (auto& well : well_container_) {
-        auto& well_state = comp_well_states_[well->name()];
+        const auto& well_state = comp_well_states_[well->name()];
         well->calculateExplicitQuantities(simulator_, well_state);
     }
 }
@@ -289,3 +317,5 @@ wellData() const
 }
 
 } // end of namespace Opm
+
+#endif
