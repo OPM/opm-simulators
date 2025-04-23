@@ -20,7 +20,6 @@
 #include <opm/simulators/utils/compressPartition.hpp>
 
 #include <algorithm>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -51,11 +50,13 @@ namespace {
             }
         }
 
-        for (auto& domain : partition) {
-            if (domain >= 0) {
-                domain = compressed[domain - low];
-            }
-        }
+        std::for_each(partition.begin(), partition.end(),
+                      [Low = low, &compressed](auto& domain)
+                      {
+                         if (domain >= 0) {
+                             domain = compressed[domain - Low];
+                         }
+                      });
     }
 } // Anonymous namespace
 
