@@ -228,7 +228,7 @@ gasLiftOptimizationStage1(const Simulator& simulator,
             }
 #if HAVE_MPI
             Parallel::MpiSerializer ser(comm);
-            ser.broadcast(i, group_indexes, group_oil_rates,
+            ser.broadcast(Parallel::RootRank{i}, group_indexes, group_oil_rates,
                           group_gas_rates, group_water_rates, group_alq_rates);
 #endif
             if (comm.rank() != i) {

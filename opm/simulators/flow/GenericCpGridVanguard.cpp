@@ -498,7 +498,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         if (eclState.aquifer().hasNumericalAquifer()) {
             auto nnc_input = eclState.getInputNNC();
             Parallel::MpiSerializer ser(this->grid_->comm());
-            ser.broadcast(0, nnc_input);
+            ser.broadcast(Parallel::RootRank{0}, nnc_input);
 
             if (! isRoot) {
                 eclState.setInputNNC(nnc_input);
@@ -511,7 +511,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         if (hasPinchNnc) {
             auto pinch_nnc = eclState.getPinchNNC();
             Parallel::MpiSerializer ser(this->grid_->comm());
-            ser.broadcast(0, pinch_nnc);
+            ser.broadcast(Parallel::RootRank{0}, pinch_nnc);
 
             if (! isRoot) {
                 eclState.setPinchNNC(std::move(pinch_nnc));

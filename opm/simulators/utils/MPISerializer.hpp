@@ -27,6 +27,13 @@
 
 namespace Opm::Parallel {
 
+//! \brief Avoid mistakes in calls to broadcast() by wrapping the root
+//! argument in an explicit type.
+struct RootRank
+{
+    int value;
+};
+
 //! \brief Class for serializing and broadcasting data using MPI.
 class MpiSerializer : public Serializer<Mpi::Packer> {
 public:
@@ -37,11 +44,12 @@ public:
     {}
 
     template<typename... Args>
-    void broadcast(int root, Args&&... args)
+    void broadcast(RootRank rootrank, Args&&... args)
     {
         if (m_comm.size() == 1)
             return;
 
+        const int root = rootrank.value;
         if (m_comm.rank() == root) {
             try {
                 this->pack(std::forward<Args>(args)...);
@@ -78,7 +86,7 @@ public:
 
         T tmp;
         T& bcast = m_comm.rank() == root ? data : tmp;
-        broadcast(root, bcast);
+        broadcast(RootRank{root}, bcast);
 
         if (m_comm.rank() != root)
             data.append(tmp);
