@@ -262,7 +262,7 @@ CompositionalWellModel<TypeTag>::
 calculateExplicitQuantities()
 {
     for (auto& well : well_container_) {
-        auto& well_state = comp_well_states_[well->name()];
+        const auto& well_state = comp_well_states_[well->name()];
         well->calculateExplicitQuantities(simulator_, well_state);
     }
 }
