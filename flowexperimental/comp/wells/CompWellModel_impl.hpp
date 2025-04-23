@@ -33,8 +33,7 @@
 namespace Opm {
 
 template <typename TypeTag>
-CompositionalWellModel<TypeTag>::
-CompositionalWellModel(Simulator& simulator)
+CompWellModel<TypeTag>::CompWellModel(Simulator& simulator)
     : WellConnectionModule(*this, simulator.gridView().comm())
     , simulator_(simulator)
     , schedule_(simulator.vanguard().schedule())
@@ -53,7 +52,7 @@ CompositionalWellModel(Simulator& simulator)
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 beginReportStep(unsigned report_step)
 {
     // TODO: not considering the parallel running yet
@@ -63,7 +62,8 @@ beginReportStep(unsigned report_step)
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 beginTimeStep()
 {
     createWellContainer();
@@ -72,14 +72,15 @@ beginTimeStep()
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 init()
 {
     simulator_.model().addAuxiliaryModule(this);
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 createWellContainer()
 {
     // const auto& schedule = simulator_.vanguard().schedule();
@@ -91,7 +92,8 @@ createWellContainer()
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 initWellContainer()
 {
     for (auto& well : well_container_) {
@@ -100,7 +102,8 @@ initWellContainer()
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 initWellConnectionData()
 {
     // TODO: we need to consider the parallel running
@@ -137,7 +140,8 @@ initWellConnectionData()
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 initWellState()
 {
     // TODO: not sure the following is correct
@@ -190,7 +194,7 @@ initWellState()
 
 template <typename TypeTag>
 std::size_t
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 compressedIndexForInterior(std::size_t cartesian_cell_idx) const
 {
     return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
@@ -198,7 +202,7 @@ compressedIndexForInterior(std::size_t cartesian_cell_idx) const
 
 template <typename TypeTag>
 std::vector<int>
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 getCellsForConnections(const Well& well) const
 {
     std::vector<int> wellCells;
@@ -220,7 +224,7 @@ getCellsForConnections(const Well& well) const
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 beginIteration()
 {
     // do we need to do every iteration here?
@@ -237,7 +241,7 @@ beginIteration()
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 assemble(const int iterationIdx,
          const double dt)
 {
@@ -255,7 +259,7 @@ assemble(const int iterationIdx,
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 calculateExplicitQuantities()
 {
     for (auto& well : well_container_) {
@@ -266,7 +270,7 @@ calculateExplicitQuantities()
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 computeTotalRatesForDof(RateVector& rate,
                         unsigned globalIdx) const {
     for (const auto& well: well_container_) {
@@ -276,7 +280,7 @@ computeTotalRatesForDof(RateVector& rate,
 
 template<typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 recoverWellSolutionAndUpdateWellState(const BVector& x)
 {
     {
@@ -295,7 +299,7 @@ recoverWellSolutionAndUpdateWellState(const BVector& x)
 
 template <typename TypeTag>
 bool
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 getWellConvergence() const
 {
     bool converged = true;
@@ -307,7 +311,7 @@ getWellConvergence() const
 
 template <typename TypeTag>
 data::Wells
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 wellData() const
 {
     return this->comp_well_states_.report();

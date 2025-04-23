@@ -59,8 +59,8 @@ list (APPEND MAIN_SOURCE_FILES
   flowexperimental/BlackOilIntensiveQuantitiesGlobalIndex.hpp
   flowexperimental/comp/EmptyModel.hpp
   flowexperimental/comp/flowexp_comp.hpp
-  flowexperimental/comp/wells/CompositionalWellModel.hpp
-  flowexperimental/comp/wells/CompositionalWellModel_impl.hpp
+  flowexperimental/comp/wells/CompWellModel.hpp
+  flowexperimental/comp/wells/CompWellModel_impl.hpp
   flowexperimental/comp/wells/CompWellEquations.hpp
   flowexperimental/comp/wells/CompWellEquations_impl.hpp
   flowexperimental/comp/wells/CompWell.hpp

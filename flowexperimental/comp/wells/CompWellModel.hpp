@@ -43,7 +43,7 @@ namespace Opm {
 class Schedule;
 
 template<typename TypeTag>
-class CompositionalWellModel : WellConnectionAuxiliaryModule<TypeTag, CompositionalWellModel<TypeTag>>
+class CompWellModel : WellConnectionAuxiliaryModule<TypeTag, CompWellModel<TypeTag>>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -59,7 +59,7 @@ class CompositionalWellModel : WellConnectionAuxiliaryModule<TypeTag, Compositio
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    using WellConnectionModule = WellConnectionAuxiliaryModule<TypeTag, CompositionalWellModel<TypeTag>>;
+    using WellConnectionModule = WellConnectionAuxiliaryModule<TypeTag, CompWellModel<TypeTag>>;
 
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static const int numEq = Indices::numEq;
@@ -69,7 +69,7 @@ public:
 
     // TODO: Scalar will probably to be TypeTag later
     using CompWellPtr = std::shared_ptr<CompWell<TypeTag> >;
-    explicit CompositionalWellModel(Simulator& /*simulator*/);
+    explicit CompWellModel(Simulator& /*simulator*/);
 
     // No extra dofs are inserted for wells. (we use a Schur complement.)
     [[nodiscard]] unsigned numDofs() const override
@@ -169,6 +169,6 @@ private:
 
 } // end of namespace Opm
 
-#include "CompositionalWellModel_impl.hpp"
+#include "CompWellModel_impl.hpp"
 
 #endif // OPM_COMPOSITIONAL_WELL_MODEL_HPP

@@ -104,7 +104,7 @@ update_injector_targets(const Well& well,
             this->surface_phase_rates[FluidSystem::gasPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::OIL:
-            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));;
+            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
             this->surface_phase_rates[FluidSystem::oilPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::MULTI:
