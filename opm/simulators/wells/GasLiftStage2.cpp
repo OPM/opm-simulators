@@ -18,8 +18,9 @@
 */
 
 #include <config.h>
-#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
+
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -32,11 +33,12 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 
-#include <fmt/format.h>
-
+#include <algorithm>
 #include <cstddef>
 #include <optional>
 #include <string>
+
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -791,15 +793,17 @@ updateGradVector_(const std::string& name,
                   std::vector<GradPair>& grads,
                   Scalar grad)
 {
-    for (auto itr = grads.begin(); itr != grads.end(); itr++) {
-        if (itr->first == name) {
-            itr->second = grad;
-            return;
-        }
+    auto it = std::find_if(grads.begin(), grads.end(),
+                           [&name](const auto& itr)
+                           { return itr.first == name; });
+    if (it != grads.end()) {
+        it->second = grad;
     }
-    grads.push_back({name, grad});
-    // NOTE: the gradient vector is no longer sorted, but sorting will be done
-    //   later in getEcoGradients()
+    else {
+        grads.push_back({name, grad});
+        // NOTE: the gradient vector is no longer sorted, but sorting will be done
+        //   later in getEcoGradients()
+    }
 }
 
 
