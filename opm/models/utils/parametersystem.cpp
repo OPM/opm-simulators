@@ -598,14 +598,14 @@ bool parseParameterFile(const std::string& fileName, bool overwrite)
         // deal with the equals sign
         removeLeadingSpace(curLine);
         if (curLine.empty() || curLine[0] != '=') {
-            std::runtime_error(errorPrefix+"Syntax error, expecting 'key=value'");
+            throw std::runtime_error(errorPrefix+"Syntax error, expecting 'key=value'");
         }
 
         curLine = curLine.substr(1);
         removeLeadingSpace(curLine);
 
         if (curLine.empty() || curLine[0] == '#' || curLine[0] == ';') {
-            std::runtime_error(errorPrefix+"Syntax error, expecting 'key=value'");
+            throw std::runtime_error(errorPrefix+"Syntax error, expecting 'key=value'");
         }
 
         // get the value
@@ -620,7 +620,7 @@ bool parseParameterFile(const std::string& fileName, bool overwrite)
         // ignore trailing comments
         removeLeadingSpace(curLine);
         if (!curLine.empty() && curLine[0] != '#' && curLine[0] != ';') {
-            std::runtime_error(errorPrefix + "Syntax error, expecting 'key=value'");
+            throw std::runtime_error(errorPrefix + "Syntax error, expecting 'key=value'");
         }
 
         // all went well, add the parameter to the database object
