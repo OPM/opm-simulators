@@ -82,9 +82,8 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         if (omega == 1.) {
             return;
         }
-        for (auto& d : dx) {
-            d *= omega;
-        }
+        std::transform(dx.begin(), dx.end(), dx.begin(),
+                       [omega](const auto d) { return d*omega; });
         return;
     }
     case NonlinearRelaxType::SOR: {

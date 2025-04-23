@@ -1920,9 +1920,9 @@ namespace Opm
             const auto& connections = this->well_ecl_.getConnections();
             const auto& connection = connections[perf_ecl_index];
             if (connection.filterCakeActive()) {
-                for (auto& val : mob) {
-                    val *= this->inj_fc_multiplier_[perf];
-                }
+                std::transform(mob.begin(), mob.end(), mob.begin(),
+                               [mult = this->inj_fc_multiplier_[perf] ](const auto val)
+                               { return val * mult; });
             }
         }
     }

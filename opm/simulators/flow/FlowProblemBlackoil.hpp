@@ -346,9 +346,8 @@ public:
                                   {
                                       std::array<int,dim> coords;
                                       simulator.vanguard().cartesianCoordinate(idx, coords);
-                                      for (auto& c : coords) {
-                                          ++c;
-                                      }
+                                      std::transform(coords.begin(), coords.end(), coords.begin(),
+                                                     [](const auto c) { return c + 1; });
                                       return coords;
                                   });
 

@@ -687,9 +687,9 @@ initializeWell2GroupMapRecursive_(const Group& group,
 {
     Scalar gfac = group.getGroupEfficiencyFactor();
     cur_efficiency = gfac * cur_efficiency;
-    for (auto &item : group_efficiency) {
-        item *= gfac;
-    }
+    std::transform(group_efficiency.begin(), group_efficiency.end(),
+                   group_efficiency.begin(),
+                   [gfac](const auto& item) { return item * gfac; });
     if (this->group_rate_map_.count(group.name()) == 1) {
         // extract the subset of groups that has limits or targets that can affect
         //   gas lift optimization.

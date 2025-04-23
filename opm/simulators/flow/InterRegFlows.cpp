@@ -190,9 +190,11 @@ Opm::InterRegFlowMap::getInterRegFlows() const
     auto maps = std::vector<data::InterRegFlowMap>{};
     maps.reserve(this->regionMaps_.size());
 
-    for (const auto& regionMap : this->regionMaps_) {
-        maps.push_back(regionMap.getInterRegFlows());
-    }
+    std::transform(this->regionMaps_.begin(),
+                   this->regionMaps_.end(),
+                   std::back_inserter(maps),
+                   [](const auto& regionMap)
+                   { return regionMap.getInterRegFlows(); });
 
     return maps;
 }
@@ -203,9 +205,11 @@ Opm::InterRegFlowMap::getLocalMaxRegionID() const
     auto maxLocalRegionID = std::vector<std::size_t>{};
     maxLocalRegionID.reserve(this->regionMaps_.size());
 
-    for (const auto& regionMap : this->regionMaps_) {
-        maxLocalRegionID.push_back(regionMap.getLocalMaxRegionID());
-    }
+    std::transform(this->regionMaps_.begin(),
+                   this->regionMaps_.end(),
+                   std::back_inserter(maxLocalRegionID),
+                   [](const auto& regionMap)
+                   { return regionMap.getLocalMaxRegionID(); });
 
     return maxLocalRegionID;
 }

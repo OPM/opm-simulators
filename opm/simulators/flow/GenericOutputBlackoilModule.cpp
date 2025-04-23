@@ -76,12 +76,13 @@ namespace {
     defineInterRegionFlowArrays(const Opm::EclipseState&  eclState,
                                 const Opm::SummaryConfig& summaryConfig)
     {
-        auto regions = std::vector<Opm::InterRegFlowMap::SingleRegion>{};
-
-        const auto& fprops = eclState.fieldProps();
-        for (const auto& arrayName : summaryConfig.fip_regions_interreg_flow()) {
-            regions.push_back({ arrayName, std::cref(fprops.get_int(arrayName)) });
-        }
+        using SRegion = Opm::InterRegFlowMap::SingleRegion;
+        auto regions = std::vector<SRegion>{};
+        const auto fip_regions = summaryConfig.fip_regions_interreg_flow();
+        std::transform(fip_regions.begin(), fip_regions.end(),
+                       std::back_inserter(regions),
+                       [&fprops = eclState.fieldProps()](const auto& arrayName)
+                       { return SRegion{arrayName, std::cref(fprops.get_int(arrayName))}; });
 
         return regions;
     }
