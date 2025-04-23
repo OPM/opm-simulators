@@ -155,13 +155,13 @@ public:
 
         // That the collect function mutates the vector v is an artifact for
         // testing.
-        auto collect = [&data, &pos](auto& v) {
+        auto doCollect = [&data, &pos](auto& v) {
             for (auto& x : v) {
                 data[pos++] = x;
                 x = -1;
             }
         };
-        forAllGroupData(collect);
+        forAllGroupData(doCollect);
         for (const auto& x : this->inj_vrep_rate) {
             data[pos++] = x.second;
         }
@@ -173,11 +173,11 @@ public:
 
         // Distribute the summed vector to the data items.
         pos = 0;
-        auto distribute = [&data, &pos](auto& v) {
+        auto doDistribute = [&data, &pos](auto& v) {
             std::copy_n(data.begin() + pos, v.size(), v.begin());
             pos += v.size();
         };
-        forAllGroupData(distribute);
+        forAllGroupData(doDistribute);
         for (auto& x : this->inj_vrep_rate) {
             x.second = data[pos++];
         }
