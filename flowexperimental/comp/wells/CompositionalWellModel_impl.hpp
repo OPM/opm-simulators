@@ -26,6 +26,7 @@
 #include <flowexperimental/comp/wells/CompositionalWellModel.hpp>
 #endif
 
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
