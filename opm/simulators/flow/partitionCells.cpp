@@ -251,11 +251,10 @@ void ZoltanPartitioner::connectNeighbors(std::vector<int>& cells,
 
         // Expand current frontier using precomputed neighbor map
         for (const int cell : frontier) {
-            for (const int neighbor : neighbor_map_.at(cell)) {
-                if (visited.insert(neighbor).second) {  // New discovery
-                    new_frontier.push_back(neighbor);
-                }
-            }
+            const auto& nmap = neighbor_map_.at(cell);
+            std::copy_if(nmap.begin(), nmap.end(), std::back_inserter(new_frontier),
+                         [&visited](const auto& neighbor)
+                         { return visited.insert(neighbor).second; });
         }
 
         frontier.swap(new_frontier);  // Prepare next level

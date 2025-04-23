@@ -174,9 +174,8 @@ public:
         // Distribute the summed vector to the data items.
         pos = 0;
         auto distribute = [&data, &pos](auto& v) {
-            for (auto& x : v) {
-                x = data[pos++];
-            }
+            std::copy_n(data.begin() + pos, v.size(), v.begin());
+            pos += v.size();
         };
         forAllGroupData(distribute);
         for (auto& x : this->inj_vrep_rate) {
