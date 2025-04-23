@@ -23,6 +23,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -44,13 +45,10 @@ SimMeshDataAccessor<GridView,partitions>::
 template <class GridView, unsigned int partitions>
 bool SimMeshDataAccessor<GridView,partitions>::polyhedralCellPresent() const
 {
-    for (const auto& cit : elements(gridView_, dunePartition_)) {
-        auto corner_geom = cit.geometry();
-        if (Dune::VTK::geometryType(corner_geom.type()) == Dune::VTK::polyhedron) {
-            return true;
-        }
-    }
-    return false;
+    const auto& elems = elements(gridView_, dunePartition_);
+    return std::any_of(elems.begin(), elems.end(),
+                       [](const auto& cit)
+                       { return Dune::VTK::geometryType(cit.geometry().type()) == Dune::VTK::polyhedron; });
 }
 
 template <class GridView, unsigned int partitions>

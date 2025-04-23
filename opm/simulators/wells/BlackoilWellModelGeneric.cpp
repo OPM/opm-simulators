@@ -192,12 +192,8 @@ template<class Scalar>
 bool BlackoilWellModelGeneric<Scalar>::
 anyMSWellOpenLocal() const
 {
-    for (const auto& well : wells_ecl_) {
-        if (well.isMultiSegment()) {
-            return true;
-        }
-    }
-    return false;
+    return std::any_of(wells_ecl_.begin(), wells_ecl_.end(),
+                       [](const auto& well) { return well.isMultiSegment(); });
 }
 
 template<class Scalar>

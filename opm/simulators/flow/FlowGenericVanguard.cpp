@@ -93,6 +93,7 @@
 #include <mpi.h>
 #endif // HAVE_MPI
 
+#include <algorithm>
 #include <filesystem>
 #include <stdexcept>
 
@@ -343,10 +344,8 @@ void FlowGenericVanguard::init()
             if (comm.rank() == 0)
             {
                 const auto& wells = this->schedule().getWellsatEnd();
-                for (const auto& well : wells)
-                {
-                    hasMsWell = hasMsWell || well.isMultiSegment();
-                }
+                hasMsWell = std::any_of(wells.begin(), wells.end(),
+                                        [](const auto& well) { return well.isMultiSegment(); });
             }
         }
 
@@ -368,14 +367,12 @@ void FlowGenericVanguard::init()
 
 bool FlowGenericVanguard::drsdtconEnabled() const
 {
-  for (const auto& schIt : this->schedule()) {
-      const auto& oilVaporizationControl = schIt.oilvap();
-      if (oilVaporizationControl.getType() == OilVaporizationProperties::OilVaporization::DRSDTCON) {
-          return true;
-      }
-  }
-
-  return false;
+    return std::any_of(this->schedule().begin(), this->schedule().end(),
+                       [](const auto& schIt)
+                       {
+                           return schIt.oilvap().getType() ==
+                              OilVaporizationProperties::OilVaporization::DRSDTCON;
+                       });
 }
 
 std::unordered_map<size_t, const NumericalAquiferCell*>
