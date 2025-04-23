@@ -17,6 +17,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_COMPOSITIONAL_WELL_MODEL_IMPL_HPP
+#define OPM_COMPOSITIONAL_WELL_MODEL_IMPL_HPP
+
+// Improve IDE experience
+#ifndef OPM_COMPOSITIONAL_WELL_MODEL_HPP
+#include <config.h>
+#include <flowexperimental/comp/wells/CompositionalWellModel.hpp>
+#endif
+
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
@@ -307,3 +316,5 @@ wellData() const
 }
 
 } // end of namespace Opm
+
+#endif
