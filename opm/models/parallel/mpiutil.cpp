@@ -103,12 +103,9 @@ struct Packer<std::vector<T>>
 {
     static int size(const std::string& content)
     {
-        int sz = 0;
-        sz += packSize<unsigned int>();
-        for (const T& elem : content) {
-            sz += Packer<T>::size(elem);
-        }
-        return sz;
+        return std::accumulate(content.begin(), content.end(), packSize<unsigned int>(),
+                               [](const auto acc, const auto elem)
+                               { return acc + Packer<T>::size(elem); });
     }
 
     static void pack(const std::vector<T>& content, std::vector<char>& buf, int& offset)
