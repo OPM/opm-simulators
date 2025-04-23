@@ -42,8 +42,7 @@ public:
     using CompConnectionData = PerforationData<Scalar>;
     using SingleWellState = SingleCompWellState<FluidSystem, Scalar>;
 
-    CompWellState(const PhaseUsage& phase_usage,
-                  const CompositionalConfig& comp_config);
+    explicit CompWellState(const CompositionalConfig& comp_config);
 
     void init(const std::vector<Well>& wells_ecl,
               const std::vector<Scalar>& cell_pressures,
@@ -61,8 +60,6 @@ public:
 
 private:
     WellContainer<SingleWellState> wells_;
-
-    const PhaseUsage& phase_usage_;
 
     const CompositionalConfig& comp_config_;
 

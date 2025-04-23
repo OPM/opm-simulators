@@ -30,8 +30,6 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
-#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
-
 namespace Opm {
 
 template <typename TypeTag>
@@ -43,9 +41,8 @@ CompositionalWellModel(Simulator& simulator)
     , summary_state_(simulator.vanguard().summaryState())
     , ecl_state_(simulator.vanguard().eclState())
     , comm_(simulator.gridView().comm())
-    , phase_usage_(phaseUsageFromDeck(ecl_state_))
     , comp_config_(ecl_state_.compositionalConfig())
-    , comp_well_states_(phase_usage_, comp_config_)
+    , comp_well_states_(comp_config_)
 {
     local_num_cells_ = simulator.gridView().size(0);
 

@@ -21,10 +21,8 @@ namespace Opm {
 
 template <typename FluidSystem, typename Scalar>
 CompWellState<FluidSystem, Scalar>::
-CompWellState(const PhaseUsage& phase_usage,
-              const CompositionalConfig& comp_config)
-    : phase_usage_(phase_usage)
-    , comp_config_(comp_config)
+CompWellState(const CompositionalConfig& comp_config)
+    : comp_config_(comp_config)
 {
 }
 
@@ -94,7 +92,6 @@ initSingleInjector(const Well& well,
     auto& ws = this->wells_.add(well.name(),
                                 SingleWellState(well.name(),
                                     this->comp_config_,
-                                    this->phase_usage_,
                                     temperature,
                                     conn_data,
                                     false) );
@@ -113,7 +110,6 @@ initSingleProducer(const Well& well,
     auto& ws = this->wells_.add(well.name(),
                                 SingleWellState(well.name(),
                                     this->comp_config_,
-                                    this->phase_usage_,
                                     temperature,
                                     conn_data,
                                     true) );
@@ -145,7 +141,6 @@ report() const
         return {};
     }
     using rt = data::Rates::opt;
-    const auto& pu = this->phase_usage_;
 
     data::Wells res;
     for (std::size_t w = 0; w < this->wells_.size(); ++w) {
@@ -157,14 +152,14 @@ report() const
         well.bhp = ws.bhp;
         well.temperature = ws.temperature;
         const auto& surface_rates = ws.surface_phase_rates;
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
-            well.rates.set(rt::wat, surface_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            well.rates.set(rt::wat, surface_rates[FluidSystem::waterPhaseIdx]);
         }
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
-            well.rates.set(rt::oil, surface_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            well.rates.set(rt::oil, surface_rates[FluidSystem::oilPhaseIdx]);
         }
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
-            well.rates.set(rt::gas, surface_rates[pu.phase_pos[BlackoilPhases::Vapour]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            well.rates.set(rt::gas, surface_rates[FluidSystem::gasPhaseIdx]);
         }
     }
     return res;

@@ -139,10 +139,6 @@ private:
      const EclipseState& ecl_state_;
      const Parallel::Communication& comm_;
 
-     // TODO: this is a blackoil phase usage, we need to evaluate whether we
-     // continue to use it
-     const PhaseUsage phase_usage_;
-
      // we might need something lighter
      const CompositionalConfig& comp_config_;
 

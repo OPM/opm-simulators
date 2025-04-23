@@ -39,7 +39,7 @@ public:
                        std::size_t num_components);
 
     CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
-                       const PhaseUsage& phase_usage,
+                       const std::size_t num_phases,
                        const CompositionalConfig& comp_config);
 
     std::vector<Scalar> pressure {};
@@ -59,13 +59,11 @@ class SingleCompWellState
 public:
     SingleCompWellState(const std::string& name,
                         const CompositionalConfig& comp_config,
-                        const PhaseUsage& phase_usage_input,
                         const Scalar temperature,
                         const std::vector<PerforationData<Scalar>>& connections,
                         bool is_producer);
 
     std::string name;
-    const PhaseUsage&  phase_usage;
     bool producer;
 
     WellStatus status{WellStatus::OPEN};

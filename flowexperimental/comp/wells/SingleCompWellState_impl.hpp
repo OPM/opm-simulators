@@ -38,9 +38,9 @@ CompConnectionData(std::size_t num_connection,
 template <class Scalar>
 CompConnectionData<Scalar>::
 CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
-                   const PhaseUsage& phase_usage,
+                   const std::size_t num_phases,
                    const CompositionalConfig& comp_config)
-  : CompConnectionData(connections.size(), phase_usage.num_phases, comp_config.numComps())
+  : CompConnectionData(connections.size(), num_phases, comp_config.numComps())
 {
     for (std::size_t con = 0; con < connections.size(); ++con) {
         this->transmissibility_factor[con] = connections[con].connection_transmissibility_factor;
@@ -53,19 +53,17 @@ template <typename FluidSystem, class Scalar>
 SingleCompWellState<FluidSystem, Scalar>::
 SingleCompWellState(const std::string& well_name,
                     const CompositionalConfig& comp_config,
-                    const PhaseUsage& phase_usage_input,
                     const Scalar temperature_arg,
                     const std::vector<PerforationData<Scalar>>& connections,
                     bool is_producer)
    : name(well_name)
-   , phase_usage(phase_usage_input)
    , producer(is_producer)
    , temperature(temperature_arg)
-   , surface_phase_rates(phase_usage.num_phases)
-   , phase_fractions(phase_usage.num_phases)
-   , reservoir_phase_rates(phase_usage.num_phases)
+   , surface_phase_rates(FluidSystem::numPhases)
+   , phase_fractions(FluidSystem::numPhases)
+   , reservoir_phase_rates(FluidSystem::numPhases)
    , total_molar_fractions(comp_config.numComps())
-   , connection_data(connections, phase_usage, comp_config)
+   , connection_data(connections, FluidSystem::numPhases, comp_config)
 {
 }
 
@@ -98,16 +96,16 @@ update_injector_targets(const Well& well,
 
     switch (inj_controls.injector_type) {
         case InjectorType::WATER:
-            assert(phase_usage.phase_used[BlackoilPhases::Aqua]);
-            this->surface_phase_rates[phase_usage.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::GAS:
-            assert(phase_usage.phase_used[BlackoilPhases::Vapour]);
-            this->surface_phase_rates[phase_usage.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+            this->surface_phase_rates[FluidSystem::gasPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::OIL:
-            assert(phase_usage.phase_used[BlackoilPhases::Liquid]);
-            this->surface_phase_rates[phase_usage.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));;
+            this->surface_phase_rates[FluidSystem::oilPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::MULTI:
             // Not currently handled, keep zero init.
@@ -131,20 +129,19 @@ update_producer_targets(const Well& well,
     this->bhp = prod_controls.bhp_limit;
     this->production_cmode = prod_controls.cmode;
 
-    // we give a random rates for BHP controlled wells
+    // we give a set of random rates for BHP-controlled wells
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
     // TODO: we should use our own phase index system
     // TODO: the following must be changed
-    const auto& pu = this->phase_usage;
     if (prod_controls.cmode == Well::ProducerCMode::BHP) {
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
-            this->surface_phase_rates[pu.phase_pos[BlackoilPhases::Liquid]] = production_rate;
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            this->surface_phase_rates[FluidSystem::oilPhaseIdx] = production_rate;
         }
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
-            this->surface_phase_rates[pu.phase_pos[BlackoilPhases::Aqua]] = production_rate;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = production_rate;
         }
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
-            this->surface_phase_rates[pu.phase_pos[BlackoilPhases::Vapour]] = 100. * production_rate;
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            this->surface_phase_rates[FluidSystem::gasPhaseIdx] = 100. * production_rate;
         }
     }
 }
