@@ -100,9 +100,9 @@ private:
     struct Storage_
     {
         Storage_()
+            : tree(std::make_unique<Dune::ParameterTree>())
+            , registrationOpen(true)
         {
-            tree = std::make_unique<Dune::ParameterTree>();
-            registrationOpen = true;
         }
 
         std::unique_ptr<Dune::ParameterTree> tree;
