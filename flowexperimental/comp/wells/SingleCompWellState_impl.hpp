@@ -129,10 +129,8 @@ update_producer_targets(const Well& well,
     this->bhp = prod_controls.bhp_limit;
     this->production_cmode = prod_controls.cmode;
 
-    // we give a set of random rates for BHP-controlled wells
+    // we give a set of rates for BHP-controlled wells for initialization
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
-    // TODO: we should use our own phase index system
-    // TODO: the following must be changed
     if (prod_controls.cmode == Well::ProducerCMode::BHP) {
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             this->surface_phase_rates[FluidSystem::oilPhaseIdx] = production_rate;

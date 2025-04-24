@@ -144,7 +144,7 @@ void
 CompWellModel<TypeTag>::
 initWellState()
 {
-    // TODO: not sure the following is correct
+    // TODO: the following might need to be adjusted based on understanding
     const auto pressIx = [this]()
     {
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
