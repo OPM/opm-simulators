@@ -77,7 +77,7 @@ public:
 
         if (m_comm.rank() == root) {
             try {
-                this->pack(std::forward<Args>(args)...);
+                this->pack(args...);
                 m_comm.broadcast(&m_packSize, 1, root);
                 broadcast_chunked(root);
             } catch (...) {
@@ -92,7 +92,7 @@ public:
             }
             m_buffer.resize(m_packSize);
             broadcast_chunked(root);
-            this->unpack(std::forward<Args>(args)...);
+            this->unpack(args...);
         }
     }
 
