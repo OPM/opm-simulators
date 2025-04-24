@@ -67,6 +67,22 @@ void printDistributionSummary(const DomainInfo& info)
     OpmLog::info(ss.str());
 }
 
+void writeNlddFile(const std::string& fname,
+                   std::string_view header,
+                   const std::vector<int>& data)
+{
+    std::ofstream resInsightFile { fname };
+
+    // Write header
+    resInsightFile << header << '\n';
+
+    // Write all data
+    for (const auto& val : data) {
+        resInsightFile << val << '\n';
+    }
+    resInsightFile << "/" << '\n';
+}
+
 } // namespace details
 
 

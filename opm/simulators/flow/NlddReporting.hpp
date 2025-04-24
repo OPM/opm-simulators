@@ -32,6 +32,7 @@
 #include <fstream>
 #include <limits>
 #include <numeric>
+#include <string_view>
 #include <vector>
 
 #include <fmt/format.h>
@@ -63,6 +64,16 @@ struct DomainInfo
  * @param info Struct holding info about the domains
  */
 void printDistributionSummary(const DomainInfo& info);
+
+/**
+ * Write NLDD information to a text file
+ * @param file File to write to
+ * @param header Header in file
+ * @param data Data to write to file
+ */
+void writeNlddFile(const std::string& file,
+                   std::string_view header,
+                   const std::vector<int>& data);
 
 } // namespace details
 
@@ -135,16 +146,8 @@ void writeNonlinearIterationsPerCell(
 
     // Only rank 0 writes the file
     if (rank == 0) {
-        auto fname = odir / "ResInsight_nonlinear_iterations.txt";
-        std::ofstream resInsightFile { fname };
-        // Write header
-        resInsightFile << "NLDD_ITER" << '\n';
-
-        // Write all cells, including inactive ones
-        for (const auto& val : full_iterations) {
-            resInsightFile << val << '\n';
-        }
-        resInsightFile << "/" << '\n';
+        details::writeNlddFile(odir / "ResInsight_nonlinear_iterations.txt",
+                               "NLDD_ITER", full_iterations);
     }
 }
 
@@ -186,17 +189,8 @@ void writePartitions(
 
     // Only rank 0 writes the file
     if (rank == 0) {
-        auto fname = odir / "ResInsight_compatible_partition.txt";
-        std::ofstream resInsightFile { fname };
-
-        // Write header
-        resInsightFile << "NLDD_DOM" << '\n';
-
-        // Write all cells, including inactive ones
-        for (const auto& val : full_partition) {
-            resInsightFile << val << '\n';
-        }
-        resInsightFile << "/" << '\n';
+        details::writeNlddFile(odir / "ResInsight_compatible_partition.txt",
+                               "NLDD_DOM", full_partition);
     }
 
     const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
