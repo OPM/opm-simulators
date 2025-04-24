@@ -226,8 +226,8 @@ public:
     /// If the well does not have any open connections the member rankWithFirstPerf
     /// is not initialized, and no broadcast is performed. In this case the argument
     /// is returned unmodified.
-    template<class T>
-    T broadcastFirstPerforationValue(const T& t) const;
+    template<typename... Args>
+    void broadcastFirstPerforationValue(Args&... args) const;
 
     /// \brief Creates an array of values for the perforation above.
     /// \param first_value Value to use for above of the first perforation

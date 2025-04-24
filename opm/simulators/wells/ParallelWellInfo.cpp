@@ -625,10 +625,9 @@ void ParallelWellInfo<Scalar>::clear()
 }
 
 template<class Scalar>
-template<class T>
-T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
+template<typename... Args>
+void ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(Args&... args) const
 {
-    T res = t;
 #if HAVE_MPI
     if (rankWithFirstPerf_ >= 0) {
 #ifndef NDEBUG
@@ -639,15 +638,12 @@ T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
 #endif
 
         Parallel::MpiSerializer ser(*comm_);
-        ser.broadcast(rankWithFirstPerf_, res);
+        ser.broadcast(rankWithFirstPerf_, args...);
 #ifndef NDEBUG
         comm_->barrier();
 #endif
     }
-    return res;
-#else // !HAVE_MPI
-    return t;
-#endif
+#endif // !HAVE_MPI
 }
 
 template<class Scalar>
@@ -812,11 +808,9 @@ template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;
 template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterator;
 
 #define INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, DIM)                 \
-    template std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int>                \
-        Opm::ParallelWellInfo<T>::broadcastFirstPerforationValue                    \
-        <std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int>>                   \
-        (std::tuple<T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int> const&)            \
-        const;
+    template void Opm::ParallelWellInfo<T>::broadcastFirstPerforationValue          \
+        <T, Opm::DenseAd::Evaluation<T, DIM, 0u>,int>                               \
+        (T&, Opm::DenseAd::Evaluation<T, DIM, 0u>&,int&) const;
 
 #define INSTANTIATE_TYPE(T)                                                         \
     template class CheckDistributedWellConnections<T>;                              \
@@ -827,10 +821,10 @@ template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterat
         ParallelWellInfo<T>::sumPerfValues<cdIter<T>>(cdIter<T>,cdIter<T>) const;   \
     template typename dIter<T>::value_type                                          \
         ParallelWellInfo<T>::sumPerfValues<dIter<T>>(dIter<T>,dIter<T>) const;      \
-    template int ParallelWellInfo<T>::                                              \
-        broadcastFirstPerforationValue<int>(const int&) const;                      \
-    template T ParallelWellInfo<T>::                                                \
-        broadcastFirstPerforationValue<T>(const T&) const;                          \
+    template void ParallelWellInfo<T>::                                             \
+        broadcastFirstPerforationValue<int>(int&) const;                            \
+    template void ParallelWellInfo<T>::                                             \
+        broadcastFirstPerforationValue<T>(T&) const;                                \
     INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 1)                       \
     INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 2)                       \
     INSTANTIATE_BROADCAST_FIRST_PERF_DENSEAD_EVALUATION(T, 3)                       \

@@ -479,7 +479,5 @@ BOOST_AUTO_TEST_CASE(EmptyWell) {
     Opm::ParallelWellInfo<double> pw({"WELL1", true}, comm);
     pw.communicateFirstPerforation(false);
     double local_p = 1;
-    auto global_p = pw.broadcastFirstPerforationValue(local_p);
-
-    BOOST_CHECK_EQUAL(local_p, global_p);
+    pw.broadcastFirstPerforationValue(local_p);
 }

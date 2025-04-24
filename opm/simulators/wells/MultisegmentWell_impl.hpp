@@ -2250,11 +2250,12 @@ namespace Opm
             pvt_region_index = fs.pvtRegionIndex();
         }
 
-        auto info = std::make_tuple(fsTemperature, fsSaltConcentration, pvt_region_index);
-
         // The following broadcast call is neccessary to ensure that processes that do *not* contain
         // the first perforation get the correct temperature, saltConcentration and pvt_region_index
-        return this->parallel_well_info_.communication().size() == 1 ? info : this->pw_info_.broadcastFirstPerforationValue(info);
+        if (this->parallel_well_info_.communication().size() == 1)
+            this->pw_info_.broadcastFirstPerforationValue(fsTemperature, fsSaltConcentration, pvt_region_index);
+
+        return std::make_tuple(fsTemperature, fsSaltConcentration, pvt_region_index);
     }
 
 } // namespace Opm

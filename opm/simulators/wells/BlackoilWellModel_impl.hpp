@@ -1040,18 +1040,18 @@ namespace Opm {
         const auto& perf_data = this->well_perf_data_[wellID];
 
         // Cater for case where local part might have no perforations.
-        const auto pvtreg = perf_data.empty()
+        auto pvtreg = perf_data.empty()
             ? 0 : this->pvt_region_idx_[perf_data.front().cell_index];
 
         const auto& parallel_well_info = this->local_parallel_well_info_[wellID].get();
-        const auto global_pvtreg = parallel_well_info.broadcastFirstPerforationValue(pvtreg);
+        parallel_well_info.broadcastFirstPerforationValue(pvtreg);
 
         return std::make_unique<WellType>(this->wells_ecl_[wellID],
                                           parallel_well_info,
                                           time_step,
                                           this->param_,
                                           *this->rateConverter_,
-                                          global_pvtreg,
+                                          pvtreg,
                                           this->numComponents(),
                                           this->numPhases(),
                                           wellID,
