@@ -30,22 +30,18 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
-#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
-
 namespace Opm {
 
 template <typename TypeTag>
-CompositionalWellModel<TypeTag>::
-CompositionalWellModel(Simulator& simulator)
+CompWellModel<TypeTag>::CompWellModel(Simulator& simulator)
     : WellConnectionModule(*this, simulator.gridView().comm())
     , simulator_(simulator)
     , schedule_(simulator.vanguard().schedule())
     , summary_state_(simulator.vanguard().summaryState())
     , ecl_state_(simulator.vanguard().eclState())
     , comm_(simulator.gridView().comm())
-    , phase_usage_(phaseUsageFromDeck(ecl_state_))
     , comp_config_(ecl_state_.compositionalConfig())
-    , comp_well_states_(phase_usage_, comp_config_)
+    , comp_well_states_(comp_config_)
 {
     local_num_cells_ = simulator.gridView().size(0);
 
@@ -56,7 +52,7 @@ CompositionalWellModel(Simulator& simulator)
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 beginReportStep(unsigned report_step)
 {
     // TODO: not considering the parallel running yet
@@ -66,7 +62,8 @@ beginReportStep(unsigned report_step)
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 beginTimeStep()
 {
     createWellContainer();
@@ -75,14 +72,15 @@ beginTimeStep()
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 init()
 {
     simulator_.model().addAuxiliaryModule(this);
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 createWellContainer()
 {
     // const auto& schedule = simulator_.vanguard().schedule();
@@ -94,7 +92,8 @@ createWellContainer()
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 initWellContainer()
 {
     for (auto& well : well_container_) {
@@ -103,7 +102,8 @@ initWellContainer()
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 initWellConnectionData()
 {
     // TODO: we need to consider the parallel running
@@ -140,16 +140,17 @@ initWellConnectionData()
 }
 
 template <typename TypeTag>
-void CompositionalWellModel<TypeTag>::
+void
+CompWellModel<TypeTag>::
 initWellState()
 {
-    // TODO: not sure the following is correct
+    // TODO: the following might need to be adjusted based on understanding
     const auto pressIx = [this]()
     {
-        if (phase_usage_.phase_used[FluidSystem::oilPhaseIdx]) {
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
             return FluidSystem::oilPhaseIdx;
         }
-        if (phase_usage_.phase_used[FluidSystem::gasPhaseIdx]) {
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
             return FluidSystem::gasPhaseIdx;
         }
         assert(false && "the usage of oil and gas phase is not correct");
@@ -193,7 +194,7 @@ initWellState()
 
 template <typename TypeTag>
 std::size_t
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 compressedIndexForInterior(std::size_t cartesian_cell_idx) const
 {
     return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
@@ -201,7 +202,7 @@ compressedIndexForInterior(std::size_t cartesian_cell_idx) const
 
 template <typename TypeTag>
 std::vector<int>
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 getCellsForConnections(const Well& well) const
 {
     std::vector<int> wellCells;
@@ -223,7 +224,7 @@ getCellsForConnections(const Well& well) const
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 beginIteration()
 {
     // do we need to do every iteration here?
@@ -240,7 +241,7 @@ beginIteration()
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 assemble(const int iterationIdx,
          const double dt)
 {
@@ -258,7 +259,7 @@ assemble(const int iterationIdx,
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 calculateExplicitQuantities()
 {
     for (auto& well : well_container_) {
@@ -269,7 +270,7 @@ calculateExplicitQuantities()
 
 template <typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 computeTotalRatesForDof(RateVector& rate,
                         unsigned globalIdx) const {
     for (const auto& well: well_container_) {
@@ -279,7 +280,7 @@ computeTotalRatesForDof(RateVector& rate,
 
 template<typename TypeTag>
 void
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 recoverWellSolutionAndUpdateWellState(const BVector& x)
 {
     {
@@ -298,7 +299,7 @@ recoverWellSolutionAndUpdateWellState(const BVector& x)
 
 template <typename TypeTag>
 bool
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 getWellConvergence() const
 {
     bool converged = true;
@@ -310,7 +311,7 @@ getWellConvergence() const
 
 template <typename TypeTag>
 data::Wells
-CompositionalWellModel<TypeTag>::
+CompWellModel<TypeTag>::
 wellData() const
 {
     return this->comp_well_states_.report();

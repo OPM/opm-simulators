@@ -19,18 +19,16 @@
 
 namespace Opm {
 
-template <typename Scalar>
-CompWellState<Scalar>::
-CompWellState(const PhaseUsage& phase_usage,
-              const CompositionalConfig& comp_config)
-    : phase_usage_(phase_usage)
-    , comp_config_(comp_config)
+template <typename FluidSystem, typename Scalar>
+CompWellState<FluidSystem, Scalar>::
+CompWellState(const CompositionalConfig& comp_config)
+    : comp_config_(comp_config)
 {
 }
 
 
-template <typename Scalar>
-void CompWellState<Scalar>::
+template <typename FluidSystem, typename Scalar>
+void CompWellState<FluidSystem, Scalar>::
 init(const std::vector<Well>& wells_ecl,
      const std::vector<Scalar>& cell_pressures,
      const Scalar temperature,
@@ -45,8 +43,8 @@ init(const std::vector<Well>& wells_ecl,
     // let us see how we gonna use it though
 }
 
-template <typename Scalar>
-void CompWellState<Scalar>::
+template <typename FluidSystem, typename Scalar>
+void CompWellState<FluidSystem, Scalar>::
 base_init(const std::vector<Well>& wells_ecl,
           const std::vector<Scalar>& cell_pressures,
           const Scalar temperature,
@@ -66,8 +64,8 @@ base_init(const std::vector<Well>& wells_ecl,
 
 }
 
-template <typename Scalar>
-void CompWellState<Scalar>::
+template <typename FluidSystem, typename Scalar>
+void CompWellState<FluidSystem, Scalar>::
 initSingleWell(const Well& well,
                const std::vector<Scalar>& cell_pressures,
                const Scalar tempearture,
@@ -83,8 +81,8 @@ initSingleWell(const Well& well,
 
 }
 
-template <typename Scalar>
-void CompWellState<Scalar>::
+template <typename FluidSystem, typename Scalar>
+void CompWellState<FluidSystem, Scalar>::
 initSingleInjector(const Well& well,
                    const std::vector<Scalar>& /* cell_pressures */,
                    const Scalar temperature,
@@ -92,17 +90,16 @@ initSingleInjector(const Well& well,
                    const SummaryState& summary_state)
 {
     auto& ws = this->wells_.add(well.name(),
-                                SingleCompWellState<Scalar>(well.name(),
+                                SingleWellState(well.name(),
                                     this->comp_config_,
-                                    this->phase_usage_,
                                     temperature,
                                     conn_data,
                                     false) );
     ws.update_injector_targets(well, summary_state);
 }
 
-template <typename Scalar>
-void CompWellState<Scalar>::
+template <typename FluidSystem, typename Scalar>
+void CompWellState<FluidSystem, Scalar>::
 initSingleProducer(const Well& well,
                    const std::vector<Scalar>& /* cell_pressures */,
                    const Scalar temperature,
@@ -111,41 +108,39 @@ initSingleProducer(const Well& well,
                    const SummaryState& summary_state)
 {
     auto& ws = this->wells_.add(well.name(),
-                                SingleCompWellState<Scalar>(well.name(),
+                                SingleWellState(well.name(),
                                     this->comp_config_,
-                                    this->phase_usage_,
                                     temperature,
                                     conn_data,
                                     true) );
     ws.update_producer_targets(well, cell_mole_fractions, summary_state);
 }
 
-template <typename Scalar>
-const SingleCompWellState<Scalar>&
-CompWellState<Scalar>::
+template <typename FluidSystem, typename Scalar>
+const typename CompWellState<FluidSystem, Scalar>::SingleWellState&
+CompWellState<FluidSystem, Scalar>::
 operator[](const std::string& well_name) const
 {
     return this->wells_[well_name];
 }
 
-template <typename Scalar>
-SingleCompWellState<Scalar>&
-CompWellState<Scalar>::
+template <typename FluidSystem, typename Scalar>
+typename CompWellState<FluidSystem, Scalar>::SingleWellState&
+CompWellState<FluidSystem, Scalar>::
 operator[](const std::string& well_name)
 {
     return this->wells_[well_name];
 }
 
-template <typename Scalar>
+template <typename FluidSystem, typename Scalar>
 data::Wells
-CompWellState<Scalar>::
+CompWellState<FluidSystem, Scalar>::
 report() const
 {
     if (this->wells_.empty()) {
         return {};
     }
     using rt = data::Rates::opt;
-    const auto& pu = this->phase_usage_;
 
     data::Wells res;
     for (std::size_t w = 0; w < this->wells_.size(); ++w) {
@@ -157,14 +152,14 @@ report() const
         well.bhp = ws.bhp;
         well.temperature = ws.temperature;
         const auto& surface_rates = ws.surface_phase_rates;
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
-            well.rates.set(rt::wat, surface_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            well.rates.set(rt::wat, surface_rates[FluidSystem::waterPhaseIdx]);
         }
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
-            well.rates.set(rt::oil, surface_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            well.rates.set(rt::oil, surface_rates[FluidSystem::oilPhaseIdx]);
         }
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
-            well.rates.set(rt::gas, surface_rates[pu.phase_pos[BlackoilPhases::Vapour]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            well.rates.set(rt::gas, surface_rates[FluidSystem::gasPhaseIdx]);
         }
     }
     return res;

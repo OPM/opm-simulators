@@ -38,9 +38,9 @@ CompConnectionData(std::size_t num_connection,
 template <class Scalar>
 CompConnectionData<Scalar>::
 CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
-                   const PhaseUsage& phase_usage,
+                   const std::size_t num_phases,
                    const CompositionalConfig& comp_config)
-  : CompConnectionData(connections.size(), phase_usage.num_phases, comp_config.numComps())
+  : CompConnectionData(connections.size(), num_phases, comp_config.numComps())
 {
     for (std::size_t con = 0; con < connections.size(); ++con) {
         this->transmissibility_factor[con] = connections[con].connection_transmissibility_factor;
@@ -49,28 +49,26 @@ CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
     }
 }
 
-template <class Scalar>
-SingleCompWellState<Scalar>::
+template <typename FluidSystem, class Scalar>
+SingleCompWellState<FluidSystem, Scalar>::
 SingleCompWellState(const std::string& well_name,
                     const CompositionalConfig& comp_config,
-                    const PhaseUsage& phase_usage_input,
                     const Scalar temperature_arg,
                     const std::vector<PerforationData<Scalar>>& connections,
                     bool is_producer)
    : name(well_name)
-   , phase_usage(phase_usage_input)
    , producer(is_producer)
    , temperature(temperature_arg)
-   , surface_phase_rates(phase_usage.num_phases)
-   , phase_fractions(phase_usage.num_phases)
-   , reservoir_phase_rates(phase_usage.num_phases)
+   , surface_phase_rates(FluidSystem::numPhases)
+   , phase_fractions(FluidSystem::numPhases)
+   , reservoir_phase_rates(FluidSystem::numPhases)
    , total_molar_fractions(comp_config.numComps())
-   , connection_data(connections, phase_usage, comp_config)
+   , connection_data(connections, FluidSystem::numPhases, comp_config)
 {
 }
 
-template <typename Scalar>
-void SingleCompWellState<Scalar>::
+template <typename FluidSystem, class Scalar>
+void SingleCompWellState<FluidSystem, Scalar>::
 update_injector_targets(const Well& well,
                         const SummaryState& st)
 {
@@ -98,16 +96,16 @@ update_injector_targets(const Well& well,
 
     switch (inj_controls.injector_type) {
         case InjectorType::WATER:
-            assert(phase_usage.phase_used[BlackoilPhases::Aqua]);
-            this->surface_phase_rates[phase_usage.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::GAS:
-            assert(phase_usage.phase_used[BlackoilPhases::Vapour]);
-            this->surface_phase_rates[phase_usage.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+            this->surface_phase_rates[FluidSystem::gasPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::OIL:
-            assert(phase_usage.phase_used[BlackoilPhases::Liquid]);
-            this->surface_phase_rates[phase_usage.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+            this->surface_phase_rates[FluidSystem::oilPhaseIdx] = inj_surf_rate;
             break;
         case InjectorType::MULTI:
             // Not currently handled, keep zero init.
@@ -115,8 +113,8 @@ update_injector_targets(const Well& well,
     }
 }
 
-template <typename Scalar>
-void SingleCompWellState<Scalar>::
+template <typename FluidSystem, class Scalar>
+void SingleCompWellState<FluidSystem, Scalar>::
 update_producer_targets(const Well& well,
                         const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const SummaryState& st)
@@ -131,26 +129,24 @@ update_producer_targets(const Well& well,
     this->bhp = prod_controls.bhp_limit;
     this->production_cmode = prod_controls.cmode;
 
-    // we give a random rates for BHP controlled wells
+    // we give a set of rates for BHP-controlled wells for initialization
     const Scalar production_rate = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
-    // TODO: we should use our own phase index system
-    // TODO: the following must be changed
     if (prod_controls.cmode == Well::ProducerCMode::BHP) {
-        if (this->phase_usage.phase_used[BlackoilPhases::Liquid]) {
-            this->surface_phase_rates[BlackoilPhases::Liquid] = production_rate;
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            this->surface_phase_rates[FluidSystem::oilPhaseIdx] = production_rate;
         }
-        if (this->phase_usage.phase_used[BlackoilPhases::Aqua]) {
-            this->surface_phase_rates[BlackoilPhases::Aqua] = production_rate;
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            this->surface_phase_rates[FluidSystem::waterPhaseIdx] = production_rate;
         }
-        if (this->phase_usage.phase_used[BlackoilPhases::Vapour]) {
-            this->surface_phase_rates[BlackoilPhases::Vapour] = 100. * production_rate;
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            this->surface_phase_rates[FluidSystem::gasPhaseIdx] = 100. * production_rate;
         }
     }
 }
 
-template <typename Scalar>
+template <typename FluidSystem, class Scalar>
 Scalar
-SingleCompWellState<Scalar>::
+SingleCompWellState<FluidSystem, Scalar>::
 get_total_surface_rate() const
 {
     return std::accumulate(surface_phase_rates.begin(), surface_phase_rates.end(), Scalar(0));

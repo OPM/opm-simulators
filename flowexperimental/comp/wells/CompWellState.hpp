@@ -35,14 +35,14 @@
 
 namespace Opm {
 
-template <typename Scalar>
+template <typename FluidSystem, typename Scalar>
 class CompWellState
 {
 public:
     using CompConnectionData = PerforationData<Scalar>;
+    using SingleWellState = SingleCompWellState<FluidSystem, Scalar>;
 
-    CompWellState(const PhaseUsage& phase_usage,
-                  const CompositionalConfig& comp_config);
+    explicit CompWellState(const CompositionalConfig& comp_config);
 
     void init(const std::vector<Well>& wells_ecl,
               const std::vector<Scalar>& cell_pressures,
@@ -52,16 +52,14 @@ public:
               const SummaryState& sumary_state,
               const CompWellState* prev_well_state = nullptr);
 
-    const SingleCompWellState<Scalar>& operator[](const std::string& well_name) const;
+    const SingleWellState& operator[](const std::string& well_name) const;
 
-    SingleCompWellState<Scalar>& operator[](const std::string& well_name);
+    SingleWellState& operator[](const std::string& well_name);
 
     data::Wells report() const;
 
 private:
-    WellContainer<SingleCompWellState<Scalar>> wells_;
-
-    const PhaseUsage& phase_usage_;
+    WellContainer<SingleWellState> wells_;
 
     const CompositionalConfig& comp_config_;
 

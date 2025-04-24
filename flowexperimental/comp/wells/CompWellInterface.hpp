@@ -43,6 +43,7 @@ public:
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
     using CompConnectionData = PerforationData<Scalar>;
+    using SingleWellState = SingleCompWellState<FluidSystem, Scalar>;
 
     CompWellInterface(const Well& well,
                       const int index_of_well,
@@ -55,14 +56,14 @@ public:
     const std::string& name() const;
 
     virtual void calculateExplicitQuantities(const Simulator& simulator,
-                                             const SingleCompWellState<Scalar>& well_state) = 0;
+                                             const SingleWellState& well_state) = 0;
 
     virtual void updatePrimaryVariables(const Simulator& simulator,
-                                        const SingleCompWellState<Scalar>& well_state) = 0;
+                                        const SingleWellState& well_state) = 0;
 
     virtual bool iterateWellEq(const Simulator& simulator,
                                const Scalar dt,
-                               SingleCompWellState<Scalar>& well_state) = 0;
+                               SingleWellState& well_state) = 0;
 
     void addCellRates(RateVector& rates, unsigned cellIdx) const;
 
@@ -73,7 +74,7 @@ public:
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
     virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                       SingleCompWellState<Scalar>& well_state) = 0;
+                                                       SingleWellState& well_state) = 0;
     virtual bool getConvergence() const = 0;
 
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
