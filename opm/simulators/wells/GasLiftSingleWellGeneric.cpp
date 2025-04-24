@@ -1023,7 +1023,7 @@ getWellStateRates_() const
                                             water_rate);
         displayDebugMessage_(msg);
     }
-    return BasicRates {oil_rate, water_rate, gas_rate, /*bhp_is_limited=*/false};
+    return BasicRates {oil_rate, gas_rate, water_rate, /*bhp_is_limited=*/false};
 }
 
 template<class Scalar>
