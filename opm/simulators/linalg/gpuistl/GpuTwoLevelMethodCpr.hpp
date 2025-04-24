@@ -157,7 +157,8 @@ private:
  */
 template<class FO, class CSP, class S>
 class GpuTwoLevelMethodCpr :
-    public Preconditioner<typename FO::domain_type, typename FO::range_type>
+    public Preconditioner<typename S::domain_type, typename S::range_type>
+    // Note we are using the smoother type instead of fine operator type to access the GPU type
 {
 public:
   /** @brief The type of the policy for constructing the coarse level solver. */
@@ -194,7 +195,17 @@ public:
    * @brief The type of the fine level smoother.
    */
   typedef S SmootherType;
-  
+
+  /**
+   * @brief The type of GPU vector for the domain
+   */
+  typedef typename S::domain_type GpuDomainType;
+
+  /**
+   * @brief The type of GPU vector for the range
+   */
+  typedef typename S::range_type GpuRangeType;
+
   /**
    * @brief Constructs a two level method.
    *
@@ -260,13 +271,14 @@ public:
     }
   }
 
-  void pre(FineDomainType& x, FineRangeType& b)
+  void pre(GpuDomainType& x, GpuRangeType& b)
   {
     smoother_->pre(x,b);
   }
 
-  void post([[maybe_unused]] FineDomainType& x)
+  void post(GpuDomainType& x)
   {
+    smoother_->post(x);
   }
 
   bool hasPerfectUpdate() const
@@ -275,30 +287,30 @@ public:
     return smoother_->hasPerfectUpdate() && coarseSolver_->hasPerfectUpdate();
   }
 
-  void apply(FineDomainType& v, const FineRangeType& d)
+  void apply(GpuDomainType& v, const GpuRangeType& d)
   {
-    FineDomainType u(v);
-    FineRangeType rhs(d);
-    LevelContext context;
-    SequentialInformation info;
-    context.pinfo=&info;
-    context.lhs=&u;
-    context.update=&v;
-    context.smoother=smoother_;
-    context.rhs=&rhs;
-    context.matrix=operator_;
+    //FineDomainType u(v);
+    //FineRangeType rhs(d);
+    //LevelContext context;
+    //SequentialInformation info;
+    //context.pinfo=&info;
+    //context.lhs=&u;
+    //context.update=&v;
+    //context.smoother=smoother_;
+    //context.rhs=&rhs;
+    //context.matrix=operator_;
     // Presmoothing
-    presmooth(context, preSteps_);
+    smoother_->apply(v, d);
+    //presmooth(context, preSteps_);
     //Coarse grid correction
-    policy_->moveToCoarseLevel(*context.rhs);
-    InverseOperatorResult res;
-    coarseSolver_->apply(policy_->getCoarseLevelLhs(), policy_->getCoarseLevelRhs(), res);
-    *context.lhs=0;
-    policy_->moveToFineLevel(*context.lhs);
-    *context.update += *context.lhs;
+    //policy_->moveToCoarseLevel(*context.rhs);
+    //InverseOperatorResult res;
+    //coarseSolver_->apply(policy_->getCoarseLevelLhs(), policy_->getCoarseLevelRhs(), res);
+    //*context.lhs=0;
+    //policy_->moveToFineLevel(*context.lhs);
+    //*context.update += *context.lhs;
     // Postsmoothing
-    postsmooth(context, postSteps_);
-
+    //postsmooth(context, postSteps_);
   }
 //   //! Category of the preconditioner (see SolverCategory::Category)
     virtual SolverCategory::Category category() const

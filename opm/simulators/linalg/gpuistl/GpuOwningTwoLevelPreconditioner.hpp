@@ -66,7 +66,7 @@ public:
     using PrecFactory = Opm::PreconditionerFactory<OperatorType, Communication>;
     using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, GpuVectorType, GpuVectorType>;
     using ScalarType = typename GpuVectorType::field_type;
-    using CPUVectorType = typename OperatorType::domain_type; // The CPU vector type matching the operator
+    using CpuVectorType = typename OperatorType::domain_type;
 
     GpuOwningTwoLevelPreconditioner(const OperatorType& linearoperator, const Opm::PropertyTree& prm,
                                  const std::function<WeightsVectorType()> weightsCalculator,
@@ -74,10 +74,10 @@ public:
         : linear_operator_(linearoperator)
         , weightsCalculator_(weightsCalculator)
         , cpu_weights_(weightsCalculator_())
-        , finesmoother_(PrecFactory::create(linearoperator,
+        , finesmoother_(PrecFactory::template createGpu<GpuVectorType>(linearoperator,
                                            prm.get_child_optional("finesmoother") ?
                                            prm.get_child("finesmoother") : Opm::PropertyTree(),
-                                           std::function<CPUVectorType()>(), pressureIndex))
+                                           std::function<CpuVectorType()>(), pressureIndex))
         , levelTransferPolicy_(dummy_comm_, cpu_weights_, prm, pressureIndex)
         , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
@@ -88,10 +88,6 @@ public:
                            prm.get<int>("post_smooth", 1))
         , prm_(prm)
     {
-        const std::size_t num_blocks = cpu_weights_.dim() / CPUVectorType::block_type::dimension;
-        cpu_x_buffer_.reset(new CPUVectorType(num_blocks));
-        cpu_b_buffer_.reset(new CPUVectorType(num_blocks));
-
         if (prm.get<int>("verbosity", 0) > 10) {
             std::string filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
             std::ofstream outfile(filename);
@@ -105,31 +101,17 @@ public:
 
     virtual void pre(GpuVectorType& x, GpuVectorType& b) override
     {
-        x.copyToHost(*cpu_x_buffer_);
-        b.copyToHost(*cpu_b_buffer_);
-
-        twolevel_method_.pre(*cpu_x_buffer_, *cpu_b_buffer_);
-
-        x.copyFromHost(*cpu_x_buffer_);
+        twolevel_method_.pre(x, b);
     }
 
     virtual void apply(GpuVectorType& v, const GpuVectorType& d) override
     {
-        v.copyToHost(*cpu_x_buffer_);
-        d.copyToHost(*cpu_b_buffer_);
-
-        twolevel_method_.apply(*cpu_x_buffer_, *cpu_b_buffer_);
-
-        v.copyFromHost(*cpu_x_buffer_);
+        twolevel_method_.apply(v, d);
     }
 
     virtual void post(GpuVectorType& x) override
     {
-        x.copyToHost(*cpu_x_buffer_);
-
-        twolevel_method_.post(*cpu_x_buffer_);
-
-        x.copyFromHost(*cpu_x_buffer_);
+        twolevel_method_.post(x);
     }
 
     virtual void update() override
@@ -160,7 +142,7 @@ private:
                                                                LevelTransferPolicy>;
 
     using TwoLevelMethod
-        = Dune::Amg::GpuTwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::PreconditionerWithUpdate<CPUVectorType, CPUVectorType>>;
+        = Dune::Amg::GpuTwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::PreconditionerWithUpdate<GpuVectorType, GpuVectorType>>;
 
     void updateImpl()
     {
@@ -170,16 +152,13 @@ private:
     const OperatorType& linear_operator_;
     std::function<WeightsVectorType()> weightsCalculator_;
     WeightsVectorType cpu_weights_;
-    std::shared_ptr<PreconditionerWithUpdate<CPUVectorType, CPUVectorType>> finesmoother_;
+    std::shared_ptr<PreconditionerWithUpdate<GpuVectorType, GpuVectorType>> finesmoother_;
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
     TwoLevelMethod twolevel_method_;
     Opm::PropertyTree prm_;
     Communication dummy_comm_;
 
-    // CPU buffers for vectors
-    std::unique_ptr<CPUVectorType> cpu_x_buffer_;
-    std::unique_ptr<CPUVectorType> cpu_b_buffer_;
 };
 
 } // namespace Dune
