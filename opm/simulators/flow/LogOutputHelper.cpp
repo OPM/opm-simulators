@@ -557,11 +557,9 @@ production(const std::size_t reportStepNum,
 
         if (values[Ix::WaterRate] == 0.0) {
             values[Ix::WatGasRatio] = 0;
-        } else {
+        } else if (values[Ix::GasRate] != 0.0) {
             values[Ix::WatGasRatio] = values[Ix::WaterRate] / values[Ix::GasRate];
-        }
-
-        if (std::isnan(values[Ix::WatGasRatio])) {
+        } else {
             values[Ix::WatGasRatio] = 0.0;
         }
 
@@ -600,11 +598,9 @@ production(const std::size_t reportStepNum,
         {
             if (v[Ix::WaterRate] == 0.0) {
                 v[Ix::WatGasRatio] = 0.0;
-            } else {
+            } else if (v[Ix::GasRate] != 0.0) {
                 v[Ix::WatGasRatio] = v[Ix::WaterRate] / v[Ix::GasRate];
-            }
-
-            if (std::isnan(v[Ix::WatGasRatio])) {
+            } else {
                 v[Ix::WatGasRatio] = 0.0;
             }
         };

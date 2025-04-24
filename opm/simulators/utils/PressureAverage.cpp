@@ -35,7 +35,7 @@ pressureAverage(const Scalar pressurePvHydrocarbon,
     if (hydrocarbon && (pvHydrocarbon > 1e-10))
         return pressurePvHydrocarbon / pvHydrocarbon;
 
-    return pressurePv / pv;
+    return (pressurePv == 0) ? 0 : pressurePv / pv;
 }
 
 template<class Scalar>
