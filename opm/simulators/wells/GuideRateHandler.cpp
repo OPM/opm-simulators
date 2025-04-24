@@ -495,11 +495,9 @@ GuideRateHandler<Scalar>::UpdateGuideRates::
 updateGuideRatesForInjectionGroups_(const Group& group)
 {
     OPM_TIMEFUNCTION();
-    if (group.isProductionGroup() && !group.isInjectionGroup()) {
-        // This is a pure production group which will be handled by
-        // updateGuideRatesForProductionGroups_()
-        return;
-    }
+    // NOTE: Even if this is a pure production group, we still need to compute the
+    // group potentials since they may be used by an injection group at a higher
+    // level in the group hierarchy.
     for (const std::string& group_name : group.groups()) {
         const Group& group_tmp = this->schedule().getGroup(group_name, this->report_step_idx_);
         // compute guide rates for sub groups first recursively
@@ -571,11 +569,9 @@ GuideRateHandler<Scalar>::UpdateGuideRates::
 updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& pot)
 {
     OPM_TIMEFUNCTION();
-    if (group.isInjectionGroup() && !group.isProductionGroup()) {
-        // This is a pure injection group which will be handled by
-        // updateGuideRatesForInjectionGroups_()
-        return;
-    }
+    // NOTE: Even if this is a pure injection group, we still need to compute the
+    // group potentials since they may be used by a production group at a higher
+    // level in the group hierarchy. See MOD4_UDQ_ACTIONX.DATA for an example.
 #ifdef RESERVOIR_COUPLING_ENABLED
     if (this->isMasterGroup_(group)) {
         // This is a master group, so we do not need to compute potentials
@@ -699,6 +695,7 @@ updateProductionGroupPotentialFromSubGroups(const Group& group, std::vector<Scal
         const auto& well_tmp = this->schedule().getWell(well_name, this->report_step_idx_);
         const auto wefac = well_tmp.getEfficiencyFactor();
 
+        // Only include producers in group potentials for production groups
         if (well_tmp.isInjector())
             continue;
 
