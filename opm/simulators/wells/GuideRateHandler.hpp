@@ -42,7 +42,9 @@ namespace Opm {
 template<class Scalar>
 class GuideRateHandler {
 public:
+#ifdef RESERVOIR_COUPLING_ENABLED
     using Potentials = ReservoirCoupling::Potentials;
+#endif
 
     class GuideRateDumper {
     public:
@@ -90,14 +92,16 @@ public:
             const int num_phases
         );
 
-        const Parallel::Communication &comm() const { return this->parent_.comm_; }
+#ifdef RESERVOIR_COUPLING_ENABLED
+        bool isReservoirCouplingMaster() const { return this->parent_.isReservoirCouplingMaster(); }
+        ReservoirCouplingMaster& reservoirCouplingMaster() {
+            return this->parent_.reservoirCouplingMaster();
+        }
+#endif
+       const Parallel::Communication &comm() const { return this->parent_.comm_; }
         DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
         GuideRate &guideRate() { return this->parent_.guide_rate_; }
-        bool isReservoirCouplingMaster() const { return this->parent_.isReservoirCouplingMaster(); }
         const PhaseUsage &phaseUsage() const { return this->parent_.phase_usage_; }
-        ReservoirCouplingMaster& reservoirCouplingMaster() {
-             return this->parent_.reservoirCouplingMaster();
-        }
         const SummaryState &summaryState() const { return this->parent_.summary_state_; }
         const Schedule &schedule() const { return this->parent_.schedule_; }
         void update();

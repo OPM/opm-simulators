@@ -18,6 +18,7 @@
 */
 #include <config.h>
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
