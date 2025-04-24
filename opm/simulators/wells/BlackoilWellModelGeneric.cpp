@@ -2074,6 +2074,7 @@ operator==(const BlackoilWellModelGeneric& rhs) const
         && this->local_shut_wells_ == rhs.local_shut_wells_
         && this->closed_this_step_ == rhs.closed_this_step_
         && this->node_pressures_ == rhs.node_pressures_
+        && this->last_valid_node_pressures_ == rhs.last_valid_node_pressures_
         && this->prev_inj_multipliers_ == rhs.prev_inj_multipliers_
         && this->active_wgstate_ == rhs.active_wgstate_
         && this->last_valid_wgstate_ == rhs.last_valid_wgstate_
