@@ -17,10 +17,16 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+#include <opm/output/data/GuideRateValue.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/GuideRateHandler.hpp>
 #include <opm/common/TimingMacros.hpp>
+
+#include <utility>
+
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -29,18 +35,19 @@ namespace Opm {
 // ---------------------------------------------
 template <class Scalar>
 GuideRateHandler<Scalar>::GuideRateHandler(
+    BlackoilWellModelGeneric<Scalar>& well_model,
     const Schedule& schedule,
-    const PhaseUsage& phase_usage,
     const SummaryState& summary_state,
-    const Parallel::Communication& comm,
-    GuideRate& guide_rate
+    const Parallel::Communication& comm
 ) :
-          schedule_{schedule}
-        , phase_usage_{phase_usage}
+          well_model_{well_model}
+        , schedule_{schedule}
         , summary_state_{summary_state}
         , comm_{comm}
-        , guide_rate_{guide_rate}
-{ }
+        , phase_usage_{well_model_.phaseUsage()}
+        , guide_rate_{well_model_.guideRate()}
+{
+}
 
 
 // ----------------------------------------------------------
@@ -55,6 +62,31 @@ deferredLogger()
     assert(this->deferred_logger_ != nullptr);
     return *this->deferred_logger_;
 }
+
+// This is an alternative to plotting the summary keywords:
+// - GOPGR (group oil production guide rate),
+// - WOPGR (well oil production guide rate),
+// - GWPGR (group water production guide rate),
+// - WWPGR (well water production guide rate),
+// - GGPGR (group gas production guide rate),
+// - WGPGR (well gas production guide rate),
+// - GGIGR (group gas injection guide rate),
+// - WGIGR (well gas injection guide rate),
+// - GWIGR (group water injection guide rate),
+// - WWIGR (well water injection guide rate),
+// - GVPGR (group reservoir volume production guide rate),
+// - WVPGR (well reservoir volume production guide rate),
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::
+debugDumpGuideRates(const int report_step_idx, const double sim_time)
+{
+    if (this->comm_.rank() == 0) {
+        GuideRateDumper dumper{*this, report_step_idx, sim_time};
+        dumper.dumpGuideRates();
+    }
+}
+
 
 #ifdef RESERVOIR_COUPLING_ENABLED
 template <class Scalar>
@@ -135,6 +167,266 @@ updateGuideRates(
     };
     updater.update();
 
+}
+
+// ------------------------------------------
+// Inner class GuideRateDumper constructor
+// ------------------------------------------
+
+template <class Scalar>
+GuideRateHandler<Scalar>::GuideRateDumper::
+GuideRateDumper(
+    GuideRateHandler<Scalar> &parent, const int report_step_idx, const double sim_time
+) : parent_{parent}
+  , report_step_idx_{report_step_idx}
+  , sim_time_{sim_time}
+  , well_model_{parent.wellModel()}
+  , schedule_{parent.schedule()}
+  , comm_{parent.getComm()}
+{
+}
+
+// ---------------------------------------------------------------------
+// Public methods for inner class GuideRateDumper sorted alphabetically
+// ---------------------------------------------------------------------
+
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::GuideRateDumper::
+dumpGuideRates()
+{
+    if (this->comm_.rank() == 0) {
+        auto calcGR = BlackoilWellModelGuideRates{this->well_model_};
+        this->well_guide_rates_ = calcGR.calculateWellGuideRates(this->report_step_idx_);
+        this->group_guide_rates_ = calcGR.calculateAllGroupGuideRates(this->report_step_idx_);
+        const auto& group = this->schedule_.getGroup("FIELD", this->report_step_idx_);
+        printHeader_();
+        int level = 0;  // 0 is the root level
+        this->dumpGuideRatesRecursive_(group, level);
+        printTrailer_();
+    }
+}
+
+// ----------------------------------------------------------
+// Private methods for GuideRateHandler sorted alphabetically
+// -----------------------------------------------------------
+
+
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::GuideRateDumper::
+dumpGuideRatesRecursive_(const Group& group, int level)
+{
+    if (group.name() != "FIELD") {
+        this->printGroupGuideRates_(group, level);
+    }
+    for (const std::string& group_name : group.groups()) {
+        const Group& group_tmp = this->schedule_.getGroup(group_name, this->report_step_idx_);
+        this->dumpGuideRatesRecursive_(group_tmp, level+1);
+    }
+    for (const std::string& well_name : group.wells()) {
+        const auto& well_tmp = this->schedule_.getWell(well_name, this->report_step_idx_);
+        printWellGuideRates_(well_tmp, level+1);
+    }
+}
+
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::GuideRateDumper::
+getGroupGuideRatesInjection_(
+    const Group& group,
+    const data::GroupGuideRates& group_guide_rate,
+    std::vector<std::string>& msg_items
+) const
+{
+    // NOTE: See comment in getGroupGuideRatesProduction_() for a discussion of the
+    // different types of group guiderate enums.
+    const auto& wm_guide_rate = this->well_model_.guideRate();
+    const auto& name = group.name();
+    using Value = data::GuideRateValue::Item;
+    constexpr std::pair<Phase, Value> phase_value_pairs[] = {
+        {Phase::OIL, Value::Oil},
+        {Phase::GAS, Value::Gas},
+        {Phase::WATER, Value::Water}
+    };
+    const auto& guide_rate_value = group_guide_rate.production;
+    for (const auto& [phase, value] : phase_value_pairs) {
+        if (wm_guide_rate.has(name, phase)) {
+            if (guide_rate_value.has(value)) {
+                msg_items.push_back(
+                    fmt::format(
+                        "{}(Group Inj, {}): {}",
+                        guide_rate_value.itemName(value),
+                        guide_rate_value.get(value)
+                    )
+                );
+            }
+        }
+    }
+}
+
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::GuideRateDumper::
+getGroupGuideRatesProduction_(
+    const Group& group,
+    const data::GroupGuideRates& group_guide_rate,
+    std::vector<std::string>& msg_items
+) const
+{
+    // NOTE: There are many different types of group guide rate phase target enums that are
+    //       used in different contexts:
+    //  - Group.hpp defines Group::GuideRateProdTarget and Group::GuideRateInjTarget
+    //    - Production: OIL, WAT, GAS, LIQ, RES, COMB, WGA, CVAL, INJV, POTN, FORM
+    //      - These are defined by item 9 of GCONPROD and used if item 10 of GCONPROD is not
+    //        set to FORM.
+    //    - Injection: RATE, VOID, NETV, RESV
+    //  - GuideRateModel.hpp defines GuideRateModel::Target
+    //    - OIL, LIQ, GAS, WAT, RES, COMB, NONE
+    //    - These are defined by item 2 of GUIDERAT.
+    //    - These are used if item 10 of GCONPROD is set to FORM, then the guide rate set in
+    //      item 9 of GCONPROD is ignored.
+    //  - Phase.hpp defines the Phase enum which is used by BlackoilWellModelGuideRates.cpp and
+    //    GuideRate.cpp
+    //    - OIL, GAS, WATER, SOLVENT, POLYMER, ENERGY, POLYMW, FOAM, BRINE
+    //    - Only OIL, GAS, WATER are used in the context of guide rates and only for
+    //      injection groups. And only GAS and WATER are checked for in
+    //      getGuideRateInjectionGroupValues() in BlackoilWellModelGuideRates.cpp.
+    //  - GuideRateValue.hpp defines GuideRateValue::Item which is used by
+    //    BlackoilWellModelGuideRates.cpp to assign guide rates. The values are:
+    //    - Oil, Gas, Water, ResV
+    //    - However, ResV is not implemented, see getGuideRateValues() in
+    //      BlackoilWellModelGuideRates.cpp. This, despite the summary keywords GVPGR and WVPGR
+    //      are using it, see Summary.cpp. TODO: Check if this is a bug.
+    const auto& wm_guide_rate = this->well_model_.guideRate();
+    const auto& name = group.name();
+    if (wm_guide_rate.has(name)) {  // Check if group has production guiderates
+        constexpr data::GuideRateValue::Item value_types[] = {
+            data::GuideRateValue::Item::Oil,
+            data::GuideRateValue::Item::Gas,
+            data::GuideRateValue::Item::Water,
+            data::GuideRateValue::Item::ResV
+        };
+        const auto& guide_rate_value = group_guide_rate.production;
+        for (const auto& value_type : value_types) {
+            if (guide_rate_value.has(value_type)) {
+                msg_items.push_back(
+                    fmt::format(
+                        "{}(Group Prod, {}): {}",
+                        name,
+                        guide_rate_value.itemName(value_type),
+                        guide_rate_value.get(value_type)
+                    )
+                );
+            }
+        }
+    }
+}
+
+
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::GuideRateDumper::
+printGroupGuideRates_(const Group& group, int level)
+{
+    const auto& name = group.name();
+    assert( level >= 1 );
+    std::string indent(level - 1, ' ');
+    auto gr_itr = this->group_guide_rates_.find(name);
+    if (gr_itr == this->group_guide_rates_.end()) {
+        this->deferredLogger().debug(
+            fmt::format("{}{}: <NO GUIDERATE>", indent, name)
+        );
+        return;
+    }
+    const auto& group_guide_rate = gr_itr->second;
+    std::vector<std::string> msg_items;
+    getGroupGuideRatesProduction_(group, group_guide_rate, msg_items);
+    getGroupGuideRatesInjection_(group, group_guide_rate, msg_items);
+    if (msg_items.empty()) {
+        this->deferredLogger().debug(
+            fmt::format("{}{}(Group): <NO GUIDERATES FOUND>", indent, name)
+        );
+        return;
+    }
+    this->deferredLogger().debug(
+        fmt::format("{}{}", indent, fmt::join(msg_items, ", "))
+    );
+}
+
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::GuideRateDumper::
+printHeader_()
+{
+    this->deferredLogger().debug(
+        fmt::format(
+            "\n---- GUIDE RATE REPORT: step {}, simtime {} ----",
+            this->report_step_idx_,
+            this->sim_time_
+        )
+    );
+}
+
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::GuideRateDumper::
+printTrailer_()
+{
+    this->deferredLogger().debug(
+        fmt::format(
+            "---- END GUIDE RATE REPORT: step {}, simtime {} ----\n",
+            this->report_step_idx_,
+            this->sim_time_
+        )
+    );
+}
+
+template <class Scalar>
+void
+GuideRateHandler<Scalar>::GuideRateDumper::
+printWellGuideRates_(const Well& well, int level)
+{
+    const auto& name = well.name();
+    assert( level >= 1 );
+    std::string indent(level - 1, ' ');
+    auto gr_itr = this->well_guide_rates_.find(name);
+    if (gr_itr == this->well_guide_rates_.end()) {
+        this->deferredLogger().debug(
+            fmt::format("{}{}: <NO GUIDERATE>", indent, name)
+        );
+        return;
+    }
+    const auto& guide_rate_value = gr_itr->second;
+    std::vector<std::string> msg_items;
+    constexpr data::GuideRateValue::Item value_types[] = {
+        data::GuideRateValue::Item::Oil,
+        data::GuideRateValue::Item::Gas,
+        data::GuideRateValue::Item::Water
+    };
+    const std::string well_type = well.isInjector() ? "Inj" : "Prod";
+    for (const auto& value_type : value_types) {
+        if (guide_rate_value.has(value_type)) {
+            msg_items.push_back(
+                fmt::format(
+                    "{}(Well {}, {}): {}",
+                    name,
+                    well_type,
+                    guide_rate_value.itemName(value_type),
+                    guide_rate_value.get(value_type)
+                )
+            );
+        }
+    }
+    if (msg_items.empty()) {
+        this->deferredLogger().debug(
+            fmt::format("{}{}(Well {}): <NO GUIDERATES FOUND>", indent, name, well_type)
+        );
+        return;
+    }
+    this->deferredLogger().debug(
+        fmt::format("{}{}", indent, fmt::join(msg_items, ", "))
+    );
 }
 
 // ------------------------------------------

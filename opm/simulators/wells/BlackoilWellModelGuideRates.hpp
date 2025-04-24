@@ -50,6 +50,10 @@ public:
         : wellModel_(wellModel)
     {}
 
+    //! \brief Calculate guide rate values for all wells.
+    std::unordered_map<std::string, data::GuideRateValue>
+    calculateWellGuideRates(const int reportStepIdx) const;
+
     //! \brief Assign well guide rates.
     void assignWellGuideRates(data::Wells& wsrpt,
                               const int    reportStepIdx) const;

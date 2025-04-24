@@ -29,8 +29,12 @@
 #include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
 #endif
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/output/data/Groups.hpp>
+#include <opm/output/data/GuideRateValue.hpp>
 #include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 namespace Opm {
@@ -39,6 +43,41 @@ template<class Scalar>
 class GuideRateHandler {
 public:
     using Potentials = ReservoirCoupling::Potentials;
+
+    class GuideRateDumper {
+    public:
+        GuideRateDumper(
+            GuideRateHandler<Scalar> &parent, const int report_step_idx, const double sim_time
+        );
+
+        DeferredLogger &deferredLogger() { return this->parent_.deferredLogger(); }
+        void dumpGuideRates();
+    private:
+        void dumpGuideRatesRecursive_(const Group& group, int level);
+        void getGroupGuideRatesInjection_(
+            const Group& group,
+            const data::GroupGuideRates& group_guide_rate,
+            std::vector<std::string>& msg_items
+        ) const;
+        void getGroupGuideRatesProduction_(
+            const Group& group,
+            const data::GroupGuideRates& group_guide_rate,
+            std::vector<std::string>& msg_items
+        ) const;
+        void printGroupGuideRates_(const Group& group, int level);
+        void printHeader_();
+        void printTrailer_();
+        void printWellGuideRates_(const Well& well, int level);
+
+        GuideRateHandler<Scalar> &parent_;
+        const int report_step_idx_;
+        const double sim_time_;
+        const BlackoilWellModelGeneric<Scalar>& well_model_;
+        const Schedule& schedule_;
+        const Parallel::Communication& comm_;
+        std::unordered_map<std::string, data::GuideRateValue> well_guide_rates_;
+        std::unordered_map<std::string, data::GroupGuideRates> group_guide_rates_;
+    };
 
     class UpdateGuideRates {
     public:
@@ -87,11 +126,10 @@ public:
     };
 
     GuideRateHandler(
+        BlackoilWellModelGeneric<Scalar>& well_model,
         const Schedule& schedule,
-        const PhaseUsage& phase_usage,
         const SummaryState& summary_state,
-        const Parallel::Communication& comm,
-        GuideRate& guide_rate
+        const Parallel::Communication& comm
     );
 
 #ifdef RESERVOIR_COUPLING_ENABLED
@@ -113,18 +151,24 @@ public:
     }
 #endif
     DeferredLogger& deferredLogger();
+    void debugDumpGuideRates(const int report_step_idx, const double sim_time);
+    const Parallel::Communication& getComm() const { return comm_; }
     void setLogger(DeferredLogger *deferred_logger);
+    const Schedule& schedule() const { return schedule_; }
     void updateGuideRates(
         const int report_step_idx,
         const double sim_time,
         WellState<Scalar> &well_state,
         GroupState<Scalar> &group_state
     );
+    const BlackoilWellModelGeneric<Scalar>& wellModel() const { return well_model_; }
 private:
+    void debugDumpGuideRatesRecursive_(const Group& group) const;
+    BlackoilWellModelGeneric<Scalar>& well_model_;
     const Schedule& schedule_;
-    const PhaseUsage& phase_usage_;
     const SummaryState& summary_state_;
     const Parallel::Communication& comm_;
+    const PhaseUsage& phase_usage_;
     GuideRate& guide_rate_;
     DeferredLogger *deferred_logger_ = nullptr;
 #ifdef RESERVOIR_COUPLING_ENABLED

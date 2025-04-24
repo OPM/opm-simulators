@@ -79,16 +79,11 @@ namespace Opm {
                                            phase_usage,
                                            simulator.gridView().comm())
         , simulator_(simulator)
-        , guide_rate_handler_{simulator.vanguard().schedule(),
-            // NOTE: The reference phase_usage passed to this constructor should be copied
-            //   as it will be destroyed by the caller. This is also what is done in
-            //   the parent class BlackoilWellModelGeneric and why we below use a reference
-            //   to that copy (this->phase_usage_) instead of the the constructor parameter
-            //   phase_usage
-            this->phase_usage_,
+        , guide_rate_handler_{
+            *this,
+            simulator.vanguard().schedule(),
             simulator.vanguard().summaryState(),
-            simulator.vanguard().grid().comm(),
-            this->guideRate_
+            simulator.vanguard().grid().comm()
         }
         , gaslift_(this->terminal_output_, this->phase_usage_)
     {
@@ -1295,7 +1290,6 @@ namespace Opm {
             this->guide_rate_handler_.updateGuideRates(
                 reportStepIdx, simulationTime, this->wellState(), this->groupState()
             );
-    
         }
         // we need to re-iterate the network when the well group controls changed or gaslift/alq is changed or
         // the inner iterations are did not converge
