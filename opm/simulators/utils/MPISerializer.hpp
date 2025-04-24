@@ -70,8 +70,9 @@ public:
     }
 
     template<typename... Args>
-    void broadcast(int root, Args&&... args)
+    void broadcast(int root, Args&... args)
     {
+        std::cout << "MpiSerializer::broadcast(Args&): root = " << root << " sizeof...(args)" << sizeof...(args) << std::endl;
         if (m_comm.size() == 1)
             return;
 
@@ -93,6 +94,34 @@ public:
             m_buffer.resize(m_packSize);
             broadcast_chunked(root);
             this->unpack(args...);
+        }
+    }
+
+    template<typename... Args>
+    void broadcast(int root, Args&&... args)
+    {
+        std::cout << "MpiSerializer::broadcast(Args&&): root = " << root << " sizeof...(args)" << sizeof...(args) << std::endl;
+        if (m_comm.size() == 1)
+            return;
+
+        if (m_comm.rank() == root) {
+            try {
+                this->pack(std::forward<Args>(args)...);
+                m_comm.broadcast(&m_packSize, 1, root);
+                broadcast_chunked(root);
+            } catch (...) {
+                m_packSize = std::numeric_limits<size_t>::max();
+                m_comm.broadcast(&m_packSize, 1, root);
+                throw;
+            }
+        } else {
+            m_comm.broadcast(&m_packSize, 1, root);
+            if (m_packSize == std::numeric_limits<size_t>::max()) {
+                throw std::runtime_error("Error detected in parallel serialization");
+            }
+            m_buffer.resize(m_packSize);
+            broadcast_chunked(root);
+            this->unpack(std::forward<Args>(args)...);
         }
     }
 

@@ -628,6 +628,7 @@ template<class Scalar>
 template<typename... Args>
 void ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(Args&... args) const
 {
+    std::cout << "ParallelWellInfo: sizeof...(args)" << sizeof...(args) << std::endl;
 #if HAVE_MPI
     if (rankWithFirstPerf_ >= 0) {
 #ifndef NDEBUG

@@ -2252,6 +2252,7 @@ namespace Opm
 
         // The following broadcast call is neccessary to ensure that processes that do *not* contain
         // the first perforation get the correct temperature, saltConcentration and pvt_region_index
+        std::cout << "NOW: will now broadcastFirstPerforationValue" << std::endl;
         if (this->parallel_well_info_.communication().size() == 1)
             this->pw_info_.broadcastFirstPerforationValue(fsTemperature, fsSaltConcentration, pvt_region_index);
 
