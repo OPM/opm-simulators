@@ -23,13 +23,8 @@
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/partitionset.hh>
 
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-
-#include <fmt/format.h>
 
 #include <algorithm>
 #include <cmath>
@@ -37,10 +32,39 @@
 #include <fstream>
 #include <limits>
 #include <numeric>
-#include <sstream>
 #include <vector>
 
+#include <fmt/format.h>
+
 namespace Opm {
+
+namespace details {
+
+/**
+  * Struct holding information about domains used for printing a summary.
+*/
+struct DomainInfo
+{
+    std::vector<int> all_owned; //!< All owned cells
+    std::vector<int> all_overlap; //!< All overlap cells
+    std::vector<int> all_wells; //!< All wells
+    std::vector<int> all_domains; //!< All domains
+
+    explicit DomainInfo(std::size_t size)
+        : all_owned(size)
+        , all_overlap(size)
+        , all_wells(size)
+        , all_domains(size)
+    {}
+};
+
+/**
+ * Print a summary of domain distribution to the log
+ * @param info Struct holding info about the domains
+ */
+void printDistributionSummary(const DomainInfo& info);
+
+} // namespace details
 
 /**
  * Reports NLDD statistics after simulation.
@@ -233,50 +257,15 @@ void printDomainDistributionSummary(
     }
 
     // Gather data from all ranks
-    std::vector<int> all_owned(comm.size());
-    std::vector<int> all_overlap(comm.size());
-    std::vector<int> all_wells(comm.size());
-    std::vector<int> all_domains(comm.size());
+    details::DomainInfo info(comm.size());
 
-    comm.gather(&owned_cells, all_owned.data(), 1, 0);
-    comm.gather(&overlap_cells, all_overlap.data(), 1, 0);
-    comm.gather(&num_wells, all_wells.data(), 1, 0);
-    comm.gather(&num_domains, all_domains.data(), 1, 0);
+    comm.gather(&owned_cells, info.all_owned.data(), 1, 0);
+    comm.gather(&overlap_cells, info.all_overlap.data(), 1, 0);
+    comm.gather(&num_wells, info.all_wells.data(), 1, 0);
+    comm.gather(&num_domains, info.all_domains.data(), 1, 0);
 
     if (rank == 0) {
-        std::ostringstream ss;
-        ss << "\nNLDD domain distribution summary:\n"
-        << "  rank   owned cells   overlap cells   total cells   wells   domains\n"
-        << "--------------------------------------------------------------------\n";
-
-        int total_owned = 0;
-        int total_overlap = 0;
-        int total_wells = 0;
-        int total_domains = 0;
-
-        for (int r = 0; r < comm.size(); ++r) {
-            ss << std::setw(6) << r
-            << std::setw(13) << all_owned[r]
-            << std::setw(15) << all_overlap[r]
-            << std::setw(14) << (all_owned[r] + all_overlap[r])
-            << std::setw(8) << all_wells[r]
-            << std::setw(9) << all_domains[r] << '\n';
-
-            total_owned += all_owned[r];
-            total_overlap += all_overlap[r];
-            total_wells += all_wells[r];
-            total_domains += all_domains[r];
-        }
-
-        ss << "--------------------------------------------------------------------\n"
-        << "   sum"
-        << std::setw(13) << total_owned
-        << std::setw(15) << total_overlap
-        << std::setw(14) << (total_owned + total_overlap)
-        << std::setw(8) << total_wells
-        << std::setw(9) << total_domains << '\n';
-
-        OpmLog::info(ss.str());
+        details::printDistributionSummary(info);
     }
 }
 
