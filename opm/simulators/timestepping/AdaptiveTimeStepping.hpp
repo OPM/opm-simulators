@@ -60,7 +60,9 @@ struct StepReport;
 namespace detail {
     void logTimer(const AdaptiveSimulatorTimer& substep_timer);
 
-    std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr, bool requireRepeatedFailures);
+    std::set<std::string>
+    consistentlyFailingWells(const std::vector<StepReport>& sr,
+                             bool requireRepeatedFailures);
     void registerAdaptiveParameters();
 
     std::tuple<TimeStepControlType, std::unique_ptr<TimeStepControlInterface>, bool>
@@ -91,13 +93,11 @@ private:
     template <class Solver>
     class SubStepper {
     public:
-        SubStepper(
-            AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
-            const SimulatorTimer& simulator_timer,
-            Solver& solver,
-            const bool is_event,
-            const std::function<bool(const double, const double, const int)>& tuning_updater
-        );
+        SubStepper(AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
+                   const SimulatorTimer& simulator_timer,
+                   Solver& solver,
+                   const bool is_event,
+                   const std::function<bool(const double, const double, const int)>& tuning_updater);
 
         AdaptiveTimeStepping<TypeTag>& getAdaptiveTimerStepper();
         SimulatorReport run();
@@ -128,12 +128,10 @@ private:
     template <class Solver>
     class SubStepIteration {
     public:
-        SubStepIteration(
-            SubStepper<Solver>& substepper,
-            AdaptiveSimulatorTimer& substep_timer,
-            const double original_time_step,
-            const bool final_step
-        );
+        SubStepIteration(SubStepper<Solver>& substepper,
+                         AdaptiveSimulatorTimer& substep_timer,
+                         const double original_time_step,
+                         const bool final_step);
 
         SimulatorReport run();
 
@@ -144,12 +142,13 @@ private:
         void chopTimeStep_(const double new_time_step);
         bool chopTimeStepOrCloseFailingWells_(const double new_time_step);
         boost::posix_time::ptime currentDateTime_() const;
-        int getNumIterations_(const SimulatorReportSingle &substep_report) const;
+        int getNumIterations_(const SimulatorReportSingle& substep_report) const;
         double growthFactor_() const;
         bool ignoreConvergenceFailure_() const;
         void maybeReportSubStep_(SimulatorReportSingle substep_report) const;
-        double maybeRestrictTimeStepGrowth_(
-                                 const double dt, double dt_estimate, const int restarts) const;
+        double maybeRestrictTimeStepGrowth_(const double dt,
+                                            double dt_estimate,
+                                            const int restarts) const;
         void maybeUpdateTuningAndTimeStep_();
         double maxGrowth_() const;
         double minTimeStepBeforeClosingWells_() const;
@@ -183,20 +182,17 @@ private:
 public:
     AdaptiveTimeStepping() = default;
 
-    AdaptiveTimeStepping(
-        const UnitSystem& unitSystem,
-        const SimulatorReport& full_report,
-        const double max_next_tstep = -1.0,
-        const bool terminalOutput = true
-    );
+    AdaptiveTimeStepping(const UnitSystem& unitSystem,
+                         const SimulatorReport& full_report,
+                         const double max_next_tstep = -1.0,
+                         const bool terminalOutput = true);
 
-    AdaptiveTimeStepping(
-        double max_next_tstep,
-        const Tuning& tuning,
-        const UnitSystem& unitSystem,
-        const SimulatorReport& full_report,
-        const bool terminalOutput = true
-    );
+    AdaptiveTimeStepping(double max_next_tstep,
+                         const Tuning& tuning,
+                         const UnitSystem& unitSystem,
+                         const SimulatorReport& full_report,
+                         const bool terminalOutput = true);
+
     bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs);
 
     static void registerParameters();

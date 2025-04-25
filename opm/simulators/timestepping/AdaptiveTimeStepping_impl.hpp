@@ -62,11 +62,11 @@ namespace Opm {
 
 //! \brief contructor taking parameter object
 template<class TypeTag>
-AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(
-                                 const UnitSystem& unit_system,
-                                 const SimulatorReport& report,
-                                 const double max_next_tstep,
-                                 const bool terminal_output
+AdaptiveTimeStepping<TypeTag>::
+AdaptiveTimeStepping(const UnitSystem& unit_system,
+                     const SimulatorReport& report,
+                     const double max_next_tstep,
+                     const bool terminal_output
 )
     : time_step_control_{}
     , restart_factor_{Parameters::Get<Parameters::SolverRestartFactor<Scalar>>()} // 0.33
@@ -99,11 +99,12 @@ AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(
 //! \brief contructor
 //! \param tuning Pointer to ecl TUNING keyword
 template<class TypeTag>
-AdaptiveTimeStepping<TypeTag>::AdaptiveTimeStepping(double max_next_tstep,
-                                                 const Tuning& tuning,
-                                                 const UnitSystem& unit_system,
-                                                 const SimulatorReport& report,
-                                                 const bool terminal_output
+AdaptiveTimeStepping<TypeTag>::
+AdaptiveTimeStepping(double max_next_tstep,
+                     const Tuning& tuning,
+                     const UnitSystem& unit_system,
+                     const SimulatorReport& report,
+                     const bool terminal_output
 )
     : time_step_control_{}
     , restart_factor_{tuning.TSFCNV}
@@ -459,17 +460,14 @@ init_(const UnitSystem& unitSystem)
 template<class TypeTag>
 template<class Solver>
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
-SubStepper(
-    AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
-    const SimulatorTimer& simulator_timer,
-    Solver& solver,
-    const bool is_event,
-    const std::function<bool(const double /*current_time*/,
-                             const double /*dt*/,
-                             const int    /*substep_number*/
-                            )>& tuning_updater
-
-)
+SubStepper(AdaptiveTimeStepping<TypeTag>& adaptive_time_stepping,
+           const SimulatorTimer& simulator_timer,
+           Solver& solver,
+           const bool is_event,
+           const std::function<bool(const double /*current_time*/,
+                                    const double /*dt*/,
+                                    const int    /*substep_number*/
+                                   )>& tuning_updater)
     : adaptive_time_stepping_{adaptive_time_stepping}
     , simulator_timer_{simulator_timer}
     , solver_{solver}
@@ -750,12 +748,10 @@ suggestedNextTimestep_() const
 template<class TypeTag>
 template<class Solver>
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
-SubStepIteration(
-    SubStepper<Solver>& substepper,
-    AdaptiveSimulatorTimer& substep_timer,
-    const double original_time_step,
-    bool final_step
-)
+SubStepIteration(SubStepper<Solver>& substepper,
+                 AdaptiveSimulatorTimer& substep_timer,
+                 const double original_time_step,
+                 bool final_step)
     : substepper_{substepper}
     , substep_timer_{substep_timer}
     , original_time_step_{original_time_step}
@@ -1328,9 +1324,9 @@ writeOutput_() const
 
 template<class TypeTag>
 template<class Solver>
-AdaptiveTimeStepping<TypeTag>::SolutionTimeErrorSolverWrapper<Solver>::SolutionTimeErrorSolverWrapper(
-    const Solver& solver
-)
+AdaptiveTimeStepping<TypeTag>::
+SolutionTimeErrorSolverWrapper<Solver>::
+SolutionTimeErrorSolverWrapper(const Solver& solver)
     : solver_{solver}
 {}
 
