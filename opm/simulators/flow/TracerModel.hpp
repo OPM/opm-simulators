@@ -434,7 +434,7 @@ protected:
         // Init. well output to zero
         auto& tracerRate = this->wellTracerRate_[eclWell.seqIndex()];
         tracerRate.reserve(tr.numTracer());
-        auto& solTracerRate = this->wellTracerRate_[eclWell.seqIndex()];
+        auto& solTracerRate = this->wellSolTracerRate_[eclWell.seqIndex()];
         solTracerRate.reserve(tr.numTracer());
         auto& freeTracerRate = this->wellFreeTracerRate_[eclWell.seqIndex()];
         freeTracerRate.reserve(tr.numTracer());
