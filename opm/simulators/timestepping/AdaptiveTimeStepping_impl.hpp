@@ -561,9 +561,9 @@ SimulatorReport
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 runStepOriginal_()
 {
-    auto elapsed = this->simulator_timer_.simulationTimeElapsed();
-    auto original_time_step = this->simulator_timer_.currentStepLength();
-    auto report_step = this->simulator_timer_.reportStepNum();
+    const auto elapsed = this->simulator_timer_.simulationTimeElapsed();
+    const auto original_time_step = this->simulator_timer_.currentStepLength();
+    const auto report_step = this->simulator_timer_.reportStepNum();
     maybeUpdateTuning_(elapsed, original_time_step, report_step);
     maybeModifySuggestedTimeStepAtBeginningOfReportStep_(original_time_step);
 
@@ -663,11 +663,11 @@ runStepReservoirCouplingMaster_()
             /*reportStep=*/this->simulator_timer_.reportStepNum(),
             maxTimeStep_()
         };
-        bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
+        const bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + current_step_length, step_end_time
         );
         SubStepIteration<Solver> substepIteration{*this, substep_timer, current_step_length, final_step};
-        auto sub_steps_report = substepIteration.run();
+        const auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
         current_time += current_step_length;
         if (final_step) {
@@ -693,7 +693,7 @@ runStepReservoirCouplingSlave_()
     SimulatorReport report;
     while (true) {
         reservoirCouplingSlave_().sendNextReportDateToMasterProcess();
-        auto timestep = reservoirCouplingSlave_().receiveNextTimeStepFromMaster();
+        const auto timestep = reservoirCouplingSlave_().receiveNextTimeStepFromMaster();
         if (iteration == 0) {
             maybeUpdateTuning_(current_time, original_time_step, /*substep=*/0);
             maybeModifySuggestedTimeStepAtBeginningOfReportStep_(timestep);
@@ -706,11 +706,11 @@ runStepReservoirCouplingSlave_()
             this->simulator_timer_.reportStepNum(),
             maxTimeStep_()
         };
-        bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
+        const bool final_step = ReservoirCoupling::Seconds::compare_gt_or_eq(
             current_time + timestep, step_end_time
         );
         SubStepIteration<Solver> substepIteration{*this, substep_timer, timestep, final_step};
-        auto sub_steps_report = substepIteration.run();
+        const auto sub_steps_report = substepIteration.run();
         report += sub_steps_report;
         current_time += timestep;
         if (final_step) {
@@ -777,7 +777,7 @@ run()
             detail::logTimer(this->substep_timer_);
         }
 
-        auto substep_report = runSubStep_();
+        const auto substep_report = runSubStep_();
 
         //Pass substep to eclwriter for summary output
         problem.setSubStepReport(substep_report);
@@ -850,7 +850,7 @@ bool
 AdaptiveTimeStepping<TypeTag>::SubStepIteration<Solver>::
 checkContinueOnUnconvergedSolution_(double dt) const
 {
-    bool continue_on_uncoverged_solution = ignoreConvergenceFailure_() && dt <= minTimeStep_();
+    const bool continue_on_uncoverged_solution = ignoreConvergenceFailure_() && dt <= minTimeStep_();
     if (continue_on_uncoverged_solution && solverVerbose_()) {
         // NOTE: This method is only called if the solver failed to converge.
         const auto msg = fmt::format(
@@ -933,8 +933,10 @@ chopTimeStepOrCloseFailingWells_(const double new_time_step)
     // If we already have chopped the timestep two times that is
     // new_time_step < minTimeStepBeforeClosingWells_()*restartFactor_()*restartFactor_()
     // We also shut wells that fails only on this step.
-    bool requireRepeatedFailures = new_time_step > ( minTimeStepBeforeClosingWells_()*restartFactor_()*restartFactor_());
-    std::set<std::string> failing_wells = detail::consistentlyFailingWells(solver_().model().stepReports(), requireRepeatedFailures);
+    const bool requireRepeatedFailures =
+        new_time_step > (minTimeStepBeforeClosingWells_() * restartFactor_() * restartFactor_());
+    const std::set<std::string> failing_wells =
+        detail::consistentlyFailingWells(solver_().model().stepReports(), requireRepeatedFailures);
 
     if (failing_wells.empty()) {
         // Found no wells to close, chop the timestep
@@ -943,8 +945,10 @@ chopTimeStepOrCloseFailingWells_(const double new_time_step)
         // Close all consistently failing wells that are not under group control
         std::vector<std::string> shut_wells;
         for (const auto& well : failing_wells) {
-            bool was_shut = solver_().model().wellModel().forceShutWellByName(
-                        well, this->substep_timer_.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ true);
+            const bool was_shut =
+                solver_().model().wellModel().forceShutWellByName(well,
+                                                                  this->substep_timer_.simulationTimeElapsed(),
+                                                                  /*dont_shut_grup_wells =*/ true);
             if (was_shut) {
                 shut_wells.push_back(well);
             }
@@ -952,8 +956,10 @@ chopTimeStepOrCloseFailingWells_(const double new_time_step)
         // If no wells are closed we also try to shut wells under group control
         if (shut_wells.empty()) {
             for (const auto& well : failing_wells) {
-                bool was_shut = solver_().model().wellModel().forceShutWellByName(
-                        well, this->substep_timer_.simulationTimeElapsed(), /*dont_shut_grup_wells =*/ false);
+                const bool was_shut =
+                    solver_().model().wellModel().forceShutWellByName(well,
+                                                                      this->substep_timer_.simulationTimeElapsed(),
+                                                                      /*dont_shut_grup_wells =*/ false);
                 if (was_shut) {
                     shut_wells.push_back(well);
                 }
@@ -1071,10 +1077,10 @@ maybeUpdateTuningAndTimeStep_()
     // the current definition of the maybeUpdateTuning_() callback is actually calling
     // adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning) which is updating the tuning
     // see SimulatorFullyImplicitBlackoil::runStep() for more details.
-    auto old_value = suggestedNextTimestep_();
+    const auto old_value = suggestedNextTimestep_();
     if (this->substepper_.maybeUpdateTuning_(this->substep_timer_.simulationTimeElapsed(),
-                                                this->substep_timer_.currentStepLength(),
-                                                this->substep_timer_.currentStepNum()))
+                                             this->substep_timer_.currentStepLength(),
+                                             this->substep_timer_.currentStepNum()))
     {
         // Either NEXTSTEP and WCYCLE wants to change the current time step, but they cannot
         // change the current time step directly. Instead, they change the suggested next time step
@@ -1127,10 +1133,7 @@ runSubStep_()
         substep_report = solver_().failureReport();
         this->cause_of_failure_ = failure_reason;
         if (log_exception && solverVerbose_()) {
-            std::string message;
-            message = "Caught Exception: ";
-            message += e.what();
-            OpmLog::debug(message);
+            OpmLog::debug(std::string("Caught Exception: ") + e.what());
         }
     };
 
@@ -1248,7 +1251,7 @@ timeStepControlComputeEstimate_(const double dt, const int iterations,
                                 const AdaptiveSimulatorTimer& substepTimer) const
 {
     // create object to compute the time error, simply forwards the call to the model
-    SolutionTimeErrorSolverWrapper<Solver> relative_change{solver_()};
+    const SolutionTimeErrorSolverWrapper<Solver> relative_change{solver_()};
     return this->adaptive_time_stepping_.time_step_control_->computeTimeStepSize(
         dt, iterations, relative_change, substepTimer);
 }
