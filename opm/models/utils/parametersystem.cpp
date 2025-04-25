@@ -41,6 +41,7 @@
 #include <opm/material/common/quad.hpp>
 #endif
 
+#include <algorithm>
 #include <charconv>
 #include <fstream>
 #include <memory>
@@ -99,9 +100,9 @@ private:
     struct Storage_
     {
         Storage_()
+            : tree(std::make_unique<Dune::ParameterTree>())
+            , registrationOpen(true)
         {
-            tree = std::make_unique<Dune::ParameterTree>();
-            registrationOpen = true;
         }
 
         std::unique_ptr<Dune::ParameterTree> tree;
@@ -212,7 +213,7 @@ void printParamList(std::ostream& os,
 void printParamUsage(std::ostream& os,
                      const ParamInfo& paramInfo)
 {
-    std::string paramMessage, paramType, paramDescription;
+    std::string paramMessage;
 
     int ttyWidth = Opm::getTtyWidth();
 
@@ -668,8 +669,6 @@ std::string parseCommandLineOptions(int argc,
                                             argc, argv, i, numPositionalParams);
 
             if (numHandled < 1) {
-                std::ostringstream oss;
-
                 if (!helpPreamble.empty()) {
                     printUsage(helpPreamble, std::cerr, errorMsg);
                 }
@@ -794,14 +793,14 @@ bool printUnused(std::ostream& os)
     std::vector<std::string> unknownKeyList;
 
     getFlattenedKeyList(runTimeAllKeyList, MetaData::tree());
-    for (const auto& key : runTimeAllKeyList) {
-        if (MetaData::registry().find(key) == MetaData::registry().end()) {
-            // key was not registered by the program!
-            unknownKeyList.push_back(key);
-        }
-    }
+    std::copy_if(runTimeAllKeyList.begin(), runTimeAllKeyList.end(),
+                 std::back_inserter(unknownKeyList),
+                 [](const auto& key)
+                 {
+                    return MetaData::registry().find(key) == MetaData::registry().end();
+                 });
 
-    if (unknownKeyList.size() > 0) {
+    if (!unknownKeyList.empty()) {
         os << "# [unused run-time specified parameters]\n";
         for (const auto& unused : unknownKeyList) {
             os << unused << "=\""

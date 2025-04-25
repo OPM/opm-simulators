@@ -192,12 +192,8 @@ template<class Scalar>
 bool BlackoilWellModelGeneric<Scalar>::
 anyMSWellOpenLocal() const
 {
-    for (const auto& well : wells_ecl_) {
-        if (well.isMultiSegment()) {
-            return true;
-        }
-    }
-    return false;
+    return std::any_of(wells_ecl_.begin(), wells_ecl_.end(),
+                       [](const auto& well) { return well.isMultiSegment(); });
 }
 
 template<class Scalar>
@@ -1455,25 +1451,33 @@ forceShutWellByName(const std::string& wellname,
     // Only add the well to the closed list on the
     // process that owns it.
     int well_was_shut = 0;
-    for (const auto& well : well_container_generic_) {
-        if (well->name() == wellname) {
-            // if one well on individuel control (typical thp/bhp) in a group strugles to converge
-            // it may lead to problems for the other wells in the group
-            // we dont want to shut all the wells in a group only the one creating the problems.
-            const auto& ws = this->wellState().well(well->indexOfWell());
-            if (dont_shut_grup_wells) {
-                if (well->isInjector()) {
-                    if (ws.injection_cmode == Well::InjectorCMode::GRUP)
-                        continue;
-                } else {
-                    if (ws.production_cmode == Well::ProducerCMode::GRUP)
-                        continue;
-                }
-            }
-            wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
-            well_was_shut = 1;
-            break;
-        }
+    const auto it = std::find_if(well_container_generic_.begin(),
+                                 well_container_generic_.end(),
+                                 [&wellname, &wState = this->wellState(), dont_shut_grup_wells](const auto& well)
+                                 {
+                                     if (well->name() == wellname) {
+                                         // if one well on individual control (typical thp/bhp)
+                                         // in a group struggles to converge
+                                         // it may lead to problems for the other wells in the group
+                                         // we dont want to shut all the wells in a group only the one
+                                         // creating the problems.
+                                          if (dont_shut_grup_wells) {
+                                             const auto& ws = wState.well(well->indexOfWell());
+                                             if (well->isInjector()) {
+                                                 return ws.injection_cmode != Well::InjectorCMode::GRUP;
+                                             } else {
+                                                 return ws.production_cmode != Well::ProducerCMode::GRUP;
+                                             }
+                                         }
+                                         return true;
+                                     }
+                                     else {
+                                         return false;
+                                     }
+                                 });
+    if (it != well_container_generic_.end()) {
+        wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+        well_was_shut = 1;
     }
 
     // Communicate across processes if a well was shut.

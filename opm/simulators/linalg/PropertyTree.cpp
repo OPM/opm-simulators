@@ -108,9 +108,10 @@ PropertyTree::get_child_items_as_vector(const std::string& child) const
     }
 
     items.emplace();
-    for (const auto& childItem : *subTree) {
-        items->push_back(childItem.second.template get_value<T>());
-    }
+    std::transform(subTree->begin(), subTree->end(),
+                   std::back_inserter(*items),
+                   [](const auto& childItem)
+                   { return childItem.second.template get_value<T>(); });
 
     return items;
 }

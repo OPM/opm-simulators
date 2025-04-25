@@ -31,9 +31,6 @@
 #endif
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <sstream>
-#include <iostream>
-
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/input/eclipse/Parser/InputErrorAction.hpp>
@@ -47,6 +44,7 @@
 
 #include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
 
+#include <algorithm>
 
 using namespace Opm;
 
@@ -107,15 +105,13 @@ void verify_norne_oil_pvt_region1(const Opm::EclipseState& eclState, const Opm::
                                       0.77691738473};
 
     {
-        std::vector<int> tableIndex(P.size() , 0);
-
         // convert the pressures to SI units (bar to Pascal)
-        for (auto& value : P)
-            value *= Metric::Pressure;
+        std::transform(P.begin(), P.end(), P.begin(),
+                       [](const auto value) { return value * Metric::Pressure; });
 
         // convert the gas dissolution factors to SI units
-        for (auto& value : rs)
-            value *=  Metric::GasDissolutionFactor;
+        std::transform(rs.begin(), rs.end(), rs.begin(),
+                       [](const auto value) { return value * Metric::GasDissolutionFactor; });
 
         for (unsigned i = 0; i < P.size(); ++i) {
             double mu;
@@ -255,12 +251,12 @@ void verify_norne_oil_pvt_region2(const Opm::EclipseState& eclState, const Opm::
                                       0.55474601877,   0.55809201119,   0.54526832277};
 
     // convert the pressures to SI units (bar to Pascal)
-    for (auto& value : P)
-        value *= Metric::Pressure;
+    std::transform(P.begin(), P.end(), P.begin(),
+                   [](const auto value) { return value * Metric::Pressure; });
 
     // convert the gas dissolution factors to SI units
-    for (auto& value : rs)
-        value *=  Metric::GasDissolutionFactor;
+    std::transform(rs.begin(), rs.end(), rs.begin(),
+                   [](const auto value) { return value * Metric::GasDissolutionFactor; });
 
     for (unsigned i = 0; i < P.size(); ++i) {
         double mu;

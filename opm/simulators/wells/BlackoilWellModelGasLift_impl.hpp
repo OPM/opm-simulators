@@ -118,9 +118,10 @@ maybeDoGasLiftOptimize(const Simulator& simulator,
         if constexpr (glift_debug) {
             std::vector<WellInterfaceGeneric<Scalar>*> wc;
             wc.reserve(well_container.size());
-            for (const auto& w : well_container) {
-                wc.push_back(static_cast<WellInterfaceGeneric<Scalar>*>(w.get()));
-            }
+            std::transform(well_container.begin(), well_container.end(),
+                           std::back_inserter(wc),
+                           [](const auto& w)
+                           { return static_cast<WellInterfaceGeneric<Scalar>*>(w.get()); });
             this->gliftDebugShowALQ(wc,
                                     wellState,
                                     deferred_logger);

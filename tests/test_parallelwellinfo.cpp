@@ -118,10 +118,11 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
         pairs = {{"Test1", false},{"Test2", true}, {"Test1", true} };
 
     std::vector<Opm::ParallelWellInfo<double>> well_info;
-    
-    for (const auto& wellinfo : pairs) {                   
-        well_info.emplace_back(wellinfo, Opm::Parallel::Communication());
-    }
+
+    std::transform(pairs.begin(), pairs.end(),
+                   std::back_inserter(well_info),
+                   [](const auto& wellinfo) -> Opm::ParallelWellInfo<double>
+                   { return {wellinfo, Opm::Parallel::Communication()}; });
 
     //well_info.assign(pairs.begin(), pairs.end());
 

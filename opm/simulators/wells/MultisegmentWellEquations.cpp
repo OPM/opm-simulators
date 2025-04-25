@@ -42,6 +42,7 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <cstddef>
+#include <numeric>
 #include <stdexcept>
 
 namespace Opm {
@@ -73,10 +74,10 @@ init(const int numPerfs,
     // calculating the NNZ for duneD_
     // NNZ = number_of_segments + 2 * (number_of_inlets / number_of_outlets)
     {
-        int nnz_d = well_.numberOfSegments();
-        for (const std::vector<int>& inlets : segment_inlets) {
-            nnz_d += 2 * inlets.size();
-        }
+        const int nnz_d = std::accumulate(segment_inlets.begin(), segment_inlets.end(),
+                                          well_.numberOfSegments(),
+                                          [](const auto acc, const auto& inlets)
+                                          { return acc + 2 * inlets.size(); });
         duneD_.setSize(well_.numberOfSegments(), well_.numberOfSegments(), nnz_d);
     }
     duneB_.setSize(well_.numberOfSegments(), numPerfs, numPerfs);

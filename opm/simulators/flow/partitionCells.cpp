@@ -251,11 +251,10 @@ void ZoltanPartitioner::connectNeighbors(std::vector<int>& cells,
 
         // Expand current frontier using precomputed neighbor map
         for (const int cell : frontier) {
-            for (const int neighbor : neighbor_map_.at(cell)) {
-                if (visited.insert(neighbor).second) {  // New discovery
-                    new_frontier.push_back(neighbor);
-                }
-            }
+            const auto& nmap = neighbor_map_.at(cell);
+            std::copy_if(nmap.begin(), nmap.end(), std::back_inserter(new_frontier),
+                         [&visited](const auto& neighbor)
+                         { return visited.insert(neighbor).second; });
         }
 
         frontier.swap(new_frontier);  // Prepare next level
@@ -507,9 +506,8 @@ namespace {
         comm.broadcast(startPtr.data(), comm.size() + 1, 0);
 
         // We're scattering two ints per cell
-        for (auto& startIx : startPtr) {
-            startIx *= 2;
-        }
+        std::transform(startPtr.begin(), startPtr.end(), startPtr.begin(),
+                       [](const auto startIx) { return startIx * 2; });
 
         auto sendLength = std::vector<int>(comm.size());
         std::adjacent_difference(startPtr.begin() + 1,

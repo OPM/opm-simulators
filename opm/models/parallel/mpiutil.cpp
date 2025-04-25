@@ -76,22 +76,23 @@ struct Packer<std::string>
 
     static void pack(const std::string& content, std::vector<char>& buf, int& offset)
     {
-        unsigned int size = content.size();
-        Packer<unsigned int>::pack(size, buf, offset);
-        if (size > 0) {
-            MPI_Pack(const_cast<char*>(content.c_str()), size, MPI_CHAR, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
+        unsigned int sz = content.size();
+        Packer<unsigned int>::pack(sz, buf, offset);
+        if (sz > 0) {
+            MPI_Pack(const_cast<char*>(content.c_str()), sz, MPI_CHAR,
+                     buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
         }
     }
 
     static std::string unpack(const std::vector<char>& recv_buffer, int& offset)
     {
-        unsigned int size = Packer<unsigned int>::unpack(recv_buffer, offset);
+        unsigned int sz = Packer<unsigned int>::unpack(recv_buffer, offset);
         std::string text;
-        if (size > 0) {
+        if (sz > 0) {
             auto* data = const_cast<char*>(recv_buffer.data());
-            std::vector<char> chars(size);
-            MPI_Unpack(data, recv_buffer.size(), &offset, chars.data(), size, MPI_CHAR, MPI_COMM_WORLD);
-            text = std::string(chars.data(), size);
+            std::vector<char> chars(sz);
+            MPI_Unpack(data, recv_buffer.size(), &offset, chars.data(), sz, MPI_CHAR, MPI_COMM_WORLD);
+            text = std::string(chars.data(), sz);
         }
         return text;
     }
@@ -103,18 +104,15 @@ struct Packer<std::vector<T>>
 {
     static int size(const std::string& content)
     {
-        int sz = 0;
-        sz += packSize<unsigned int>();
-        for (const T& elem : content) {
-            sz += Packer<T>::size(elem);
-        }
-        return sz;
+        return std::accumulate(content.begin(), content.end(), packSize<unsigned int>(),
+                               [](const auto acc, const auto elem)
+                               { return acc + Packer<T>::size(elem); });
     }
 
     static void pack(const std::vector<T>& content, std::vector<char>& buf, int& offset)
     {
-        unsigned int size = content.size();
-        Packer<unsigned int>::pack(size, buf, offset);
+        unsigned int sz = content.size();
+        Packer<unsigned int>::pack(sz, buf, offset);
         for (const T& elem : content) {
             Packer<T>::pack(elem);
         }
@@ -122,10 +120,10 @@ struct Packer<std::vector<T>>
 
     static std::vector<T> unpack(const std::vector<char>& recv_buffer, int& offset)
     {
-        unsigned int size = Packer<T>::unpack(recv_buffer, offset);
+        unsigned int sz = Packer<T>::unpack(recv_buffer, offset);
         std::vector<T> content;
-        content.reserve(size);
-        for (unsigned int i = 0; i < size; ++i) {
+        content.reserve(sz);
+        for (unsigned int i = 0; i < sz; ++i) {
             content.push_back(Packer<T>::unpack(recv_buffer, offset));
         }
         return content;

@@ -46,6 +46,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/common/TimingMacros.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1009,7 +1010,8 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     // convention that production rates are negative, so we must
                     // take a copy and flip signs.
                     auto rates = node_inflows[node];
-                    for (auto& r : rates) { r *= -1.0; }
+                    std::transform(rates.begin(), rates.end(), rates.begin(),
+                                   [](const auto r) { return -r; });
                     assert(rates.size() == 3);
                     // NB! ALQ in extended network is never implicitly the gas lift rate (GRAT), i.e., the
                     //     gas lift rates only enters the network pressure calculations through the rates

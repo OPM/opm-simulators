@@ -62,6 +62,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <memory>
+#include <numeric>
 #include <set>
 #include <sstream>
 #include <string>
@@ -856,10 +857,10 @@ private:
             case DomainOrderingMeasure::AveragePressure: {
                 // Use average pressures to order domains.
                 for (const auto& domain : domains_) {
-                    Scalar press_sum = 0.0;
-                    for (const int c : domain.cells) {
-                        press_sum += solution[c][Indices::pressureSwitchIdx];
-                    }
+                    const Scalar press_sum =
+                        std::accumulate(domain.cells.begin(), domain.cells.end(), Scalar{0},
+                                        [&solution](const auto acc, const auto c)
+                                        { return acc + solution[c][Indices::pressureSwitchIdx]; });
                     const Scalar avgpress = press_sum / domain.cells.size();
                     measure_per_domain[domain.index] = avgpress;
                 }
@@ -868,11 +869,10 @@ private:
             case DomainOrderingMeasure::MaxPressure: {
                 // Use max pressures to order domains.
                 for (const auto& domain : domains_) {
-                    Scalar maxpress = 0.0;
-                    for (const int c : domain.cells) {
-                        maxpress = std::max(maxpress, solution[c][Indices::pressureSwitchIdx]);
-                    }
-                    measure_per_domain[domain.index] = maxpress;
+                    measure_per_domain[domain.index] =
+                        std::accumulate(domain.cells.begin(), domain.cells.end(), Scalar{0},
+                                        [&solution](const auto acc, const auto c)
+                                        { return std::max(acc, solution[c][Indices::pressureSwitchIdx]); });
                 }
                 break;
             }

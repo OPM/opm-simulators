@@ -156,9 +156,9 @@ struct SupportedKeywords {
     public:
         allow_values(const std::initializer_list<T>& allowed_values)
         {
-            for (auto item : allowed_values) {
-                m_allowed_values.push_back(item);
-            }
+            std::copy(allowed_values.begin(),
+                      allowed_values.end(),
+                      std::back_inserter(m_allowed_values));
         }
 
         bool operator()(const T& value) const

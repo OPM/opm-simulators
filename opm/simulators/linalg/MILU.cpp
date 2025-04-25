@@ -20,17 +20,19 @@
 
 #include <config.h>
 #include <opm/simulators/linalg/MILU.hpp>
-#include <opm/common/TimingMacros.hpp>
+
 #include <dune/common/version.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/ilu.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
 #include <array>
+#include <algorithm>
 
 template <typename T>
 T Opm::detail::identityFunctor(const T& t){return t;};
@@ -216,10 +218,8 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
     {
         auto& newRow = ILU[ordering[iter.index()]];
         // reset stored generation
-        for ( auto& col: newRow)
-        {
-            col = 0;
-        }
+        std::fill(newRow.begin(), newRow.end(), 0);
+
         // copy row.
         for(auto col = iter->begin(), cend = iter->end(); col != cend; ++col)
         {
