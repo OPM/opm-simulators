@@ -977,40 +977,7 @@ namespace Opm
         }
     }
 
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    gliftBeginTimeStepWellTestIterateWellEquations(const Simulator& simulator,
-                                                   const double dt,
-                                                   WellState<Scalar>& well_state,
-                                                   const GroupState<Scalar>& group_state,
-                                                   DeferredLogger& deferred_logger)
-    {
-        OPM_TIMEFUNCTION();
-        const auto& well_name = this->name();
-        assert(this->wellHasTHPConstraints(simulator.vanguard().summaryState()));
-        const auto& schedule = simulator.vanguard().schedule();
-        auto report_step_idx = simulator.episodeIndex();
-        const auto& glo = schedule.glo(report_step_idx);
-        if(glo.active() && glo.has_well(well_name)) {
-            const auto increment = glo.gaslift_increment();
-            auto alq = well_state.getALQ(well_name);
-            bool converged;
-            while (alq > 0) {
-                well_state.setALQ(well_name, alq);
-                if ((converged =
-                      iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger)))
-                {
-                    return converged;
-                }
-                alq -= increment;
-            }
-            return false;
-        }
-        else {
-            return iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
-        }
-    }
+
 
     template<typename TypeTag>
     void

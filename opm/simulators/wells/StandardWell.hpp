@@ -89,7 +89,6 @@ namespace Opm
 
         using PolymerModule =  BlackOilPolymerModule<TypeTag>;
         using FoamModule = BlackOilFoamModule<TypeTag>;
-        using BrineModule = BlackOilBrineModule<TypeTag>;
         using typename Base::PressureMatrix;
 
         // number of the conservation equations
@@ -209,12 +208,6 @@ namespace Opm
                                         DeferredLogger& deferred_logger, 
                                         const bool fixed_control = false,
                                         const bool fixed_status = false) override;
-
-        /// \brief Wether the Jacobian will also have well contributions in it.
-        bool jacobianContainsWellContributions() const override
-        {
-            return this->param_.matrix_add_well_contributions_;
-        }
 
         /* returns BHP */
         Scalar computeWellRatesAndBhpWithThpAlqProd(const Simulator& ebos_simulator,
@@ -391,11 +384,6 @@ namespace Opm
         // for a well, when all drawdown are in the wrong direction, then this well will not
         // be able to produce/inject .
         bool allDrawDownWrongDirection(const Simulator& simulator) const;
-
-        // whether the well can produce / inject based on the current well state (bhp)
-        bool canProduceInjectWithCurrentBhp(const Simulator& simulator,
-                                            const WellState<Scalar>& well_state,
-                                            DeferredLogger& deferred_logger);
 
         // turn on crossflow to avoid singular well equations
         // when the well is banned from cross-flow and the BHP is not properly initialized,
