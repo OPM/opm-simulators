@@ -192,6 +192,7 @@ public:
     void commitWGState()
     {
         this->last_valid_wgstate_ = this->active_wgstate_;
+        this->last_valid_node_pressures_ = this->node_pressures_;
     }
 
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
@@ -250,6 +251,7 @@ public:
         serializer(closed_this_step_);
         serializer(guideRate_);
         serializer(node_pressures_);
+        serializer(last_valid_node_pressures_);
         serializer(prev_inj_multipliers_);
         serializer(active_wgstate_);
         serializer(last_valid_wgstate_);
@@ -325,6 +327,7 @@ protected:
     void resetWGState()
     {
         this->active_wgstate_ = this->last_valid_wgstate_;
+        this->node_pressures_ = this->last_valid_node_pressures_;
     }
 
     /*
@@ -504,7 +507,11 @@ protected:
 
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties<Scalar>> vfp_properties_{};
-    std::map<std::string, Scalar> node_pressures_; // Storing network pressures for output.
+
+    // Network pressures for output and initialization
+    std::map<std::string, Scalar> node_pressures_;
+    // Valid network pressures for output and initialization for safe restart after failed iterations
+    std::map<std::string, Scalar> last_valid_node_pressures_;
 
     // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
     std::unordered_map<std::string, std::vector<Scalar>> prev_inj_multipliers_;
