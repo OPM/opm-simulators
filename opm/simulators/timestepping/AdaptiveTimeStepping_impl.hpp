@@ -647,14 +647,13 @@ SimulatorReport
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 runStepReservoirCouplingMaster_()
 {
-    bool substep_done = false;
     int iteration = 0;
     const double original_time_step = this->simulator_timer_.currentStepLength();
     double current_time{this->simulator_timer_.simulationTimeElapsed()};
     double step_end_time = current_time + original_time_step;
     auto current_step_length = original_time_step;
     SimulatorReport report;
-    while(!substep_done) {
+    while (true) {
         reservoirCouplingMaster_().receiveNextReportDateFromSlaves();
         if (iteration == 0) {
             maybeUpdateTuning_(current_time, current_step_length, /*substep=*/0);
@@ -696,13 +695,12 @@ SimulatorReport
 AdaptiveTimeStepping<TypeTag>::SubStepper<Solver>::
 runStepReservoirCouplingSlave_()
 {
-    bool substep_done = false;
     int iteration = 0;
     const double original_time_step = this->simulator_timer_.currentStepLength();
     double current_time{this->simulator_timer_.simulationTimeElapsed()};
     double step_end_time = current_time + original_time_step;
     SimulatorReport report;
-    while(!substep_done) {
+    while (true) {
         reservoirCouplingSlave_().sendNextReportDateToMasterProcess();
         auto timestep = reservoirCouplingSlave_().receiveNextTimeStepFromMaster();
         if (iteration == 0) {
@@ -725,7 +723,6 @@ runStepReservoirCouplingSlave_()
         report += sub_steps_report;
         current_time += timestep;
         if (final_step) {
-            substep_done = true;
             break;
         }
         iteration++;
