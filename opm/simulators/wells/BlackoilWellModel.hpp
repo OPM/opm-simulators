@@ -268,8 +268,12 @@ template<class Scalar> class WellContributions;
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
 
-            std::tuple<bool, bool, Scalar>
-            updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
+            bool
+            updateWellControls(DeferredLogger& deferred_logger);
+
+            std::tuple<bool, Scalar>
+            updateNetworks(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
+
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
