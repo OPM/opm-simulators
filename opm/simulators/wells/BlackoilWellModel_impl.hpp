@@ -465,10 +465,8 @@ namespace Opm {
         }
         this->guide_rate_handler_.setLogger(&local_deferredLogger);
 #ifdef RESERVOIR_COUPLING_ENABLED
-        if (this->isReservoirCouplingSlave() || this->isReservoirCouplingMaster()) {
-            if (this->isReservoirCouplingMaster()) {
-                this->guide_rate_handler_.receiveMasterGroupPotentialsFromSlaves();
-            }
+        if (this->isReservoirCouplingMaster()) {
+            this->guide_rate_handler_.receiveMasterGroupPotentialsFromSlaves();
         }
 #endif
         //update guide rates
