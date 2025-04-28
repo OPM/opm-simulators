@@ -628,8 +628,8 @@ template<class Scalar>
 template<class T>
 T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
 {
-    T res = t;
 #if HAVE_MPI
+    T res = t;
     if (rankWithFirstPerf_ >= 0) {
 #ifndef NDEBUG
         assert(rankWithFirstPerf_ < comm_->size());
@@ -639,7 +639,7 @@ T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
 #endif
 
         Parallel::MpiSerializer ser(*comm_);
-        ser.broadcast(rankWithFirstPerf_, res);
+        ser.broadcast(Parallel::RootRank{rankWithFirstPerf_}, res);
 #ifndef NDEBUG
         comm_->barrier();
 #endif

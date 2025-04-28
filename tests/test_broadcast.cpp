@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(BroadCast)
     size_t i1 = cc.rank() == 1 ? 8 : 0;
 
     Opm::Parallel::MpiSerializer ser(cc);
-    ser.broadcast(1, d, i, d1, i1);
+    ser.broadcast(Opm::Parallel::RootRank{1}, d, i, d1, i1);
 
     for (size_t c = 0; c < 3; ++c) {
         BOOST_CHECK_EQUAL(d[c], 1.0+c);

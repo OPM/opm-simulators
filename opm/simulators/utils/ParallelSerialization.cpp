@@ -77,15 +77,15 @@ void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Sch
                        Action::State& actionState,
                        WellTestState&  wtestState)
 {
-    Opm::Parallel::MpiSerializer ser(comm);
-    ser.broadcast(0, eclState, schedule, summaryConfig, udqState, actionState, wtestState);
+    Parallel::MpiSerializer ser(comm);
+    ser.broadcast(Parallel::RootRank{0}, eclState, schedule, summaryConfig, udqState, actionState, wtestState);
 }
 
 template <class T>
 void eclBroadcast(Parallel::Communication comm, T& data)
 {
-    ::Opm::Parallel::MpiSerializer ser(comm);
-    ser.broadcast(data);
+    Parallel::MpiSerializer ser(comm);
+    ser.broadcast(Parallel::RootRank{0}, data);
 }
 
 template void eclBroadcast(Parallel::Communication, TransMult&);

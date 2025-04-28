@@ -27,6 +27,13 @@
 
 namespace Opm::Parallel {
 
+//! \brief Avoid mistakes in calls to broadcast() by wrapping the root
+//! argument in an explicit type.
+struct RootRank
+{
+    int value;
+};
+
 //! \brief Class for serializing and broadcasting data using MPI.
 class MpiSerializer : public Serializer<Mpi::Packer> {
 public:
@@ -36,45 +43,13 @@ public:
         , m_comm(comm)
     {}
 
-    //! \brief Serialize and broadcast on root process, de-serialize on
-    //! others.
-    //!
-    //! \tparam T Type of class to broadcast
-    //! \param data Class to broadcast
-    //! \param root Process to broadcast from
-    template<class T>
-    void broadcast(T& data, int root = 0)
-    {
-        if (m_comm.size() == 1)
-            return;
-
-        if (m_comm.rank() == root) {
-            try {
-                this->pack(data);
-                m_comm.broadcast(&m_packSize, 1, root);
-                broadcast_chunked(root);
-            } catch (...) {
-                m_packSize = std::numeric_limits<size_t>::max();
-                m_comm.broadcast(&m_packSize, 1, root);
-                throw;
-            }
-        } else {
-            m_comm.broadcast(&m_packSize, 1, root);
-            if (m_packSize == std::numeric_limits<size_t>::max()) {
-                throw std::runtime_error("Error detected in parallel serialization");
-            }
-            m_buffer.resize(m_packSize);
-            broadcast_chunked(root);
-            this->unpack(data);
-        }
-    }
-
     template<typename... Args>
-    void broadcast(int root, Args&&... args)
+    void broadcast(RootRank rootrank, Args&&... args)
     {
         if (m_comm.size() == 1)
             return;
 
+        const int root = rootrank.value;
         if (m_comm.rank() == root) {
             try {
                 this->pack(std::forward<Args>(args)...);
@@ -96,6 +71,7 @@ public:
         }
     }
 
+
     //! \brief Serialize and broadcast on root process, de-serialize and append on
     //! others.
     //!
@@ -110,7 +86,7 @@ public:
 
         T tmp;
         T& bcast = m_comm.rank() == root ? data : tmp;
-        broadcast(bcast, root);
+        broadcast(RootRank{root}, bcast);
 
         if (m_comm.rank() != root)
             data.append(tmp);

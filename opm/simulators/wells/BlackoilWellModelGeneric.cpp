@@ -1907,7 +1907,7 @@ getMaxWellConnections() const
 #if HAVE_MPI
     // Communicate Map to other processes, since it is only available on rank 0
     Parallel::MpiSerializer ser(comm_);
-    ser.broadcast(possibleFutureConnections);
+    ser.broadcast(Parallel::RootRank{0}, possibleFutureConnections);
 #endif
     // initialize the additional cell connections introduced by wells.
     for (const auto& well : schedule_wells)

@@ -75,7 +75,7 @@ public:
         }
 
         Parallel::MpiSerializer ser(comm);
-        ser.broadcast(*this);
+        ser.broadcast(Parallel::RootRank{0}, *this);
 
         m_no_data = m_intKeys.size() + m_doubleKeys.size();
 

@@ -357,7 +357,7 @@ void ZoltanPartitioner::connectWells(const Comm                                 
 
     // Communicate Map to other processes, since it is only available on rank 0
     Opm::Parallel::MpiSerializer ser(comm);
-    ser.broadcast(possibleFutureConnections);
+    ser.broadcast(Opm::Parallel::RootRank{0}, possibleFutureConnections);
 
     for (const auto& well : wells) {
         auto cellIx = std::vector<int>{};

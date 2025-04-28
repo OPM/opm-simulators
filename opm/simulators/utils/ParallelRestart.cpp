@@ -51,7 +51,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
     }
 
     Parallel::MpiSerializer ser(comm);
-    ser.broadcast(0, restartValues, summaryState);
+    ser.broadcast(Parallel::RootRank{0}, restartValues, summaryState);
     return restartValues;
 #else
     return eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
@@ -73,7 +73,7 @@ data::Solution loadParallelRestartSolution(const EclipseIO* eclIO,
     }
 
     Parallel::MpiSerializer ser(comm);
-    ser.broadcast(0, sol);
+    ser.broadcast(Parallel::RootRank{0}, sol);
     return sol;
 #else
     return eclIO->loadRestartSolution(solutionKeys, step);
