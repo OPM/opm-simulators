@@ -166,7 +166,7 @@ checkGrupSlavGroupNames_()
                               + slave_group_name);
                 }
                 else {
-                    auto master_group_name = map_iter->second;
+                    const auto& master_group_name = map_iter->second;
                     if (grup_slav.masterGroupName() != master_group_name) {
                         OPM_THROW(std::runtime_error,
                                   "Reservoir coupling: Inconsistent master group name for slave group: "
