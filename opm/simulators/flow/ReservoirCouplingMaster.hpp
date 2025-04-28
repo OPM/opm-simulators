@@ -90,7 +90,6 @@ public:
         const std::string& slave_name, const std::map<std::string, std::size_t>& master_group_map);
 
 private:
-    std::vector<Potentials> deserializePotentials_(const std::vector<double>& data) const;
     double getMasterActivationDate_() const;
 
     const Parallel::Communication &comm_;
