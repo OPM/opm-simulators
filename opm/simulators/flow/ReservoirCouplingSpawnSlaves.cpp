@@ -89,7 +89,7 @@ createMasterGroupNameOrder_()
     // that the slaves will send the potentials in the order of lexicographically sorted
     // slave group names
     auto num_slaves = this->master_.numSlavesStarted();
-    auto master_groups = this->rescoup_.masterGroups();
+    const auto& master_groups = this->rescoup_.masterGroups();
     for (unsigned int i = 0; i < num_slaves; i++) {
         auto slave_name = this->master_.getSlaveName(i);
         std::vector<std::pair<std::string, std::string>> slave_group_names;
@@ -122,8 +122,8 @@ createMasterGroupToSlaveNameMap_()
     // When the slaves send master/slave group potentials to us, we need to know
     // which master group corresponds to which potentials. The potentials are associated
     // with a slave name. So we make lookup table: master_group_name -> slave_name.
-    auto master_groups = this->rescoup_.masterGroups();
-    auto &master_group_slave_names = this->master_.getMasterGroupToSlaveNameMap();
+    const auto& master_groups = this->rescoup_.masterGroups();
+    auto& master_group_slave_names = this->master_.getMasterGroupToSlaveNameMap();
     for (const auto& [master_group_name, master_group] : master_groups) {
         master_group_slave_names[master_group_name] = master_group.slaveName();
     }
