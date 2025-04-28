@@ -58,6 +58,11 @@ public:
     char *getArgv(int index) const { return this->argv_[index]; }
     char **getArgv() const { return this->argv_; }
     const Parallel::Communication &getComm() const { return this->comm_; }
+    /// @brief Get the index of the master group potential for a given slave name and master group name.
+    /// The index is used to map the slave group potentials to the master group potentials.
+    /// @param slave_name The name of the slave reservoir.
+    /// @param master_group_name The name of the master group.
+    /// @return The index of the master group potential for the given slave name and master group name.
     std::size_t getMasterGroupPotIdx(
         const std::string &slave_name, const std::string &master_group_name) const;
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
