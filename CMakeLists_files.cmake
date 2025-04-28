@@ -1268,6 +1268,7 @@ if(MPI_FOUND)
   )
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/flow/ReservoirCoupling.hpp
+    opm/simulators/flow/ReservoirCouplingMpiTraits.hpp
     opm/simulators/flow/ReservoirCouplingMaster.hpp
     opm/simulators/flow/ReservoirCouplingSlave.hpp
     opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp

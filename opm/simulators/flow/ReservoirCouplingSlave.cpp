@@ -19,6 +19,7 @@
 
 #include <config.h>
 #include <opm/simulators/flow/ReservoirCoupling.hpp>
+#include <opm/simulators/flow/ReservoirCouplingMpiTraits.hpp>
 #include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
@@ -125,13 +126,11 @@ sendPotentialsToMaster(const std::vector<Potentials> &potentials) const
     //   so we do not need to send the slave group names also.
     if (this->comm_.rank() == 0) {
         //auto num_groups = potentials.size();
-        auto pot_vec = this->serializePotentials_(potentials);
-        // NOTE: The parent already nows the number of slave groups, so we do not need
-        //   to send the size of the potentials vector first.
+        auto MPI_POTENTIALS_TYPE = Dune::MPITraits<Potentials>::getType();
         MPI_Send(
-            pot_vec.data(),
-            /*count=*/pot_vec.size(),
-            /*datatype=*/MPI_DOUBLE,
+            potentials.data(),
+            /*count=*/potentials.size(),
+            /*datatype=*/MPI_POTENTIALS_TYPE,
             /*dest_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::Potentials),
             this->slave_master_comm_
@@ -342,22 +341,6 @@ sendSimulationStartDateToMasterProcess_() const
         );
         OpmLog::info("Sent simulation start date to master process from rank 0");
    }
-}
-
-std::vector<double>
-ReservoirCouplingSlave::
-serializePotentials_(const std::vector<Potentials>& potentials) const
-{
-    std::vector<double> pot_vec;
-    // IMPORTANT: The potentials must be in the order of lexicographically sorted slave
-    //   group names. This is obtained by iterating the slave-to-master-group-name-map
-    //   in the well model handler, see WellModelReservoirCouplingHandler::sendSlavePotentialsToMaster()
-    for (const auto& pot : potentials) {
-        pot_vec.push_back(pot.oil_rate);
-        pot_vec.push_back(pot.gas_rate);
-        pot_vec.push_back(pot.water_rate);
-    }
-    return pot_vec;
 }
 
 } // namespace Opm
