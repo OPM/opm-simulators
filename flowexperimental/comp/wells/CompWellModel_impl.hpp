@@ -23,7 +23,7 @@
 // Improve IDE experience
 #ifndef OPM_COMPOSITIONAL_WELL_MODEL_HPP
 #include <config.h>
-#include <flowexperimental/comp/wells/CompositionalWellModel.hpp>
+#include <flowexperimental/comp/wells/CompWellModel.hpp>
 #endif
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -145,7 +145,7 @@ CompWellModel<TypeTag>::
 initWellState()
 {
     // TODO: the following might need to be adjusted based on understanding
-    const auto pressIx = [this]()
+    const auto pressIx = []()
     {
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
             return FluidSystem::oilPhaseIdx;
