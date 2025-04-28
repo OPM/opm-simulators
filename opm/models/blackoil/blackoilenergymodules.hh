@@ -28,16 +28,15 @@
 #ifndef EWOMS_BLACK_OIL_ENERGY_MODULE_HH
 #define EWOMS_BLACK_OIL_ENERGY_MODULE_HH
 
-#include "blackoilproperties.hh"
-#include <opm/models/io/vtkblackoilenergymodule.hpp>
-#include <opm/models/common/quantitycallbacks.hh>
-#include <opm/models/discretization/common/linearizationtype.hh>
+#include <dune/common/fvector.hh>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
-
 #include <opm/material/common/Valgrind.hpp>
 
-#include <dune/common/fvector.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/common/quantitycallbacks.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
+#include <opm/models/io/vtkblackoilenergymodule.hpp>
 
 #include <string>
 

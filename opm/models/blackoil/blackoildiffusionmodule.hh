@@ -28,12 +28,12 @@
 #ifndef OPM_BLACKOIL_DIFFUSION_MODULE_HH
 #define OPM_BLACKOIL_DIFFUSION_MODULE_HH
 
+#include <dune/common/fvector.hh>
+
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
 
 #include <stdexcept>
 

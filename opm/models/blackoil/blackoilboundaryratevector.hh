@@ -31,8 +31,7 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-#include "blackoilintensivequantities.hh"
-#include "blackoilenergymodules.hh"
+#include <opm/models/blackoil/blackoilenergymodules.hh>
 
 namespace Opm {
 
@@ -72,8 +71,7 @@ public:
     /*!
      * \brief Default constructor
      */
-    BlackOilBoundaryRateVector() : ParentType()
-    {}
+    BlackOilBoundaryRateVector() = default;
 
     /*!
      * \copydoc ImmiscibleBoundaryRateVector::ImmiscibleBoundaryRateVector(Scalar)

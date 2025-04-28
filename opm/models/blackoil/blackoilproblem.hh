@@ -28,8 +28,6 @@
 #ifndef EWOMS_BLACKOIL_PROBLEM_HH
 #define EWOMS_BLACKOIL_PROBLEM_HH
 
-#include "blackoilproperties.hh"
-
 #include <opm/models/common/multiphasebaseproblem.hh>
 
 namespace Opm {
