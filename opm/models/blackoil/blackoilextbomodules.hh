@@ -32,6 +32,8 @@
 #ifndef EWOMS_BLACK_OIL_EXTBO_MODULE_HH
 #define EWOMS_BLACK_OIL_EXTBO_MODULE_HH
 
+#include <dune/common/fvector.hh>
+
 #include <opm/models/blackoil/blackoilextboparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -40,8 +42,6 @@
 #include <opm/models/utils/basicproperties.hh>
 
 //#include <opm/models/io/vtkBlackOilExtboModule.hh> //TODO: Missing ...
-
-#include <dune/common/fvector.hh>
 
 #include <cmath>
 #include <stdexcept>

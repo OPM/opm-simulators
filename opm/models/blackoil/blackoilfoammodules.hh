@@ -40,12 +40,6 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#if HAVE_ECL_INPUT
-#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/FoamadsTable.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/FoammobTable.hpp>
-#endif
-
 #include <string>
 
 namespace Opm {

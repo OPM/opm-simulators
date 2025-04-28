@@ -44,6 +44,11 @@
 
 #include <dune/common/fvector.hh>
 
+#include <array>
+#include <cmath>
+#include <istream>
+#include <ostream>
+#include <stdexcept>
 #include <string>
 
 namespace Opm {

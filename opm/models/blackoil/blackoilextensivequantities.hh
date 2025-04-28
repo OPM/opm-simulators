@@ -28,12 +28,11 @@
 #ifndef EWOMS_BLACK_OIL_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_BLACK_OIL_EXTENSIVE_QUANTITIES_HH
 
-#include "blackoilproperties.hh"
-#include "blackoilsolventmodules.hh"
-#include "blackoilpolymermodules.hh"
-#include "blackoilenergymodules.hh"
-#include "blackoildiffusionmodule.hh"
-#include "blackoilmicpmodules.hh"
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
+#include <opm/models/blackoil/blackoilpolymermodules.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/blackoilmicpmodules.hh>
 #include <opm/models/common/multiphasebaseextensivequantities.hh>
 
 namespace Opm {
@@ -66,7 +65,6 @@ class BlackOilExtensiveQuantities
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     using DiffusionExtensiveQuantities = BlackOilDiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
-
 
 public:
     /*!

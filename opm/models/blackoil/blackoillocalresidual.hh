@@ -28,17 +28,18 @@
 #ifndef EWOMS_BLACK_OIL_LOCAL_RESIDUAL_HH
 #define EWOMS_BLACK_OIL_LOCAL_RESIDUAL_HH
 
-#include "blackoilproperties.hh"
-#include "blackoilsolventmodules.hh"
-#include "blackoilextbomodules.hh"
-#include "blackoilpolymermodules.hh"
-#include "blackoilenergymodules.hh"
-#include "blackoilfoammodules.hh"
-#include "blackoilbrinemodules.hh"
-#include "blackoildiffusionmodule.hh"
-#include "blackoilmicpmodules.hh"
-#include "blackoilconvectivemixingmodule.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
+
+#include <opm/models/blackoil/blackoilbrinemodules.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
+#include <opm/models/blackoil/blackoilextbomodules.hh>
+#include <opm/models/blackoil/blackoilfoammodules.hh>
+#include <opm/models/blackoil/blackoilmicpmodules.hh>
+#include <opm/models/blackoil/blackoilpolymermodules.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 namespace Opm {
 /*!

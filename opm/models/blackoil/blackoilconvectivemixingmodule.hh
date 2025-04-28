@@ -28,12 +28,12 @@
 #ifndef EWOMS_CONVECTIVEMIXING_MODULE_HH
 #define EWOMS_CONVECTIVEMIXING_MODULE_HH
 
-#include "opm/material/common/MathToolbox.hpp"
 #include <dune/common/fvector.hh>
 
 #include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>

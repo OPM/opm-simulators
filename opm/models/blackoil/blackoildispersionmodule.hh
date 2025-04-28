@@ -30,6 +30,7 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 

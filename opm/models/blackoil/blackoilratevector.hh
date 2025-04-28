@@ -33,7 +33,15 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-#include "blackoilintensivequantities.hh"
+#include <opm/models/blackoil/blackoilbrinemodules.hh>
+#include <opm/models/blackoil/blackoilfoammodules.hh>
+#include <opm/models/blackoil/blackoilmicpmodules.hh>
+#include <opm/models/blackoil/blackoilpolymermodules.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <stdexcept>
 
 namespace Opm {
 
