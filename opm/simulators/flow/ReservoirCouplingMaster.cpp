@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/ReservoirCouplingMpiTraits.hpp>
 #include <opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
@@ -224,15 +225,14 @@ receivePotentialsFromSlaves()
     for (unsigned int i = 0; i < num_slaves; i++) {
         auto num_slave_groups = this->numSlaveGroups(i);
         assert( num_slave_groups > 0 );
-        unsigned int num_phases = Potentials::num_fields;
-        unsigned int size = num_phases * num_slave_groups;
-        std::vector<double> data(size);
+        std::vector<Potentials> potentials(num_slave_groups);
         if (this->comm_.rank() == 0) {
             // NOTE: See comment about error handling at the top of this file.
+            auto MPI_POTENTIALS_TYPE = Dune::MPITraits<Potentials>::getType();
             MPI_Recv(
-                data.data(),
-                /*count=*/size,
-                /*datatype=*/MPI_DOUBLE,
+                potentials.data(),
+                /*count=*/num_slave_groups,
+                /*datatype=*/MPI_POTENTIALS_TYPE,
                 /*source_rank=*/0,
                 /*tag=*/static_cast<int>(MessageTag::Potentials),
                 this->getSlaveComm(i),
@@ -245,8 +245,11 @@ receivePotentialsFromSlaves()
                 )
             );
         }
-        this->comm_.broadcast(data.data(), /*count=*/size, /*emitter_rank=*/0);
-        std::vector<Potentials> potentials = this->deserializePotentials_(data);
+        // NOTE: The dune broadcast() below will do something like:
+        //    MPI_Bcast(inout,len,MPITraits<Potentials>::getType(),root,communicator)
+        //  so it should use the custom Potentials MPI type that we defined in
+        //  ReservoirCouplingMpiTraits.hpp
+        this->comm_.broadcast(potentials.data(), /*count=*/num_slave_groups, /*emitter_rank=*/0);
         this->slave_group_potentials_[this->slave_names_[i]] = potentials;
     }
 }
@@ -277,24 +280,6 @@ updateMasterGroupNameOrderMap(
 // ------------------
 // Private methods
 // ------------------
-
-std::vector<ReservoirCoupling::Potentials>
-ReservoirCouplingMaster::
-deserializePotentials_(const std::vector<double>& data) const
-{
-    std::vector<Potentials> potentials;
-    unsigned int num_phases = Potentials::num_fields;
-    assert(data.size() % num_phases == 0);
-    unsigned int num_slave_groups = data.size() / num_phases;
-    for (unsigned int j = 0; j < num_slave_groups; j++) {
-        Potentials pot;
-        pot.oil_rate = data[j*num_phases + Potentials::OIL_IDX];
-        pot.gas_rate = data[j*num_phases + Potentials::GAS_IDX];
-        pot.water_rate = data[j*num_phases + Potentials::WATER_IDX];
-        potentials.push_back(pot);
-    }
-    return potentials;
-}
 
 double
 ReservoirCouplingMaster::

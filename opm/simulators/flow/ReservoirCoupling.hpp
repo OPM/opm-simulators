@@ -21,6 +21,8 @@
 #define OPM_RESERVOIR_COUPLING_HPP
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
+#include <dune/common/parallel/mpitraits.hh>
+
 #include <mpi.h>
 #include <cmath>
 #include <iostream>
@@ -81,6 +83,7 @@ struct Potentials {
     double gas_rate;
     double water_rate;
 };
+
 
 // Helper functions
 void custom_error_handler_(MPI_Comm* comm, int* err, const std::string &msg);

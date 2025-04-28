@@ -62,7 +62,6 @@ private:
     void saveMasterGroupNamesAsMap_(const std::vector<char>& group_names);
     void sendActivationDateToMasterProcess_() const;
     void sendSimulationStartDateToMasterProcess_() const;
-    std::vector<double> serializePotentials_(const std::vector<Potentials>& potentials) const;
 
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
