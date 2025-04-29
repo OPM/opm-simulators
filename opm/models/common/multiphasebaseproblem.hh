@@ -123,9 +123,11 @@ public:
 
         // entry-wise harmonic mean. this is almost certainly wrong if
         // you have off-main diagonal entries in your permeabilities!
-        for (unsigned i = 0; i < dimWorld; ++i)
-            for (unsigned j = 0; j < dimWorld; ++j)
+        for (unsigned i = 0; i < dimWorld; ++i) {
+            for (unsigned j = 0; j < dimWorld; ++j) {
                 result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
+            }
+        }
     }
 
     /*!
@@ -384,8 +386,9 @@ protected:
     DimMatrix toDimMatrix_(Scalar val) const
     {
         DimMatrix ret(0.0);
-        for (unsigned i = 0; i < DimMatrix::rows; ++i)
+        for (unsigned i = 0; i < DimMatrix::rows; ++i) {
             ret[i][i] = val;
+        }
         return ret;
     }
 
