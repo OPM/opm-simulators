@@ -488,7 +488,7 @@ protected:
         // Obtaining the upstreamed quantities
         const auto& mobility = this->mobility_[phaseIdx];
         const auto& density = density_[phaseIdx];
-        const auto& mobilityPassabilityRatio = mobilityPassabilityRatio_[phaseIdx];
+        const auto& mobPassabilityRatio = mobilityPassabilityRatio_[phaseIdx];
 
         // optain the quantites for the integration point
         const auto& pGrad = this->potentialGrad_[phaseIdx];
@@ -526,7 +526,7 @@ protected:
         else {
             absVel = Toolbox::sqrt(absVel);
         }
-        const auto& alpha = density*mobilityPassabilityRatio*ergunCoefficient_*absVel;
+        const auto& alpha = density*mobPassabilityRatio*ergunCoefficient_*absVel;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             residual[dimIdx] += sqrtK_[dimIdx]*alpha*velocity[dimIdx];
         }
