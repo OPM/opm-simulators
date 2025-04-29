@@ -38,6 +38,7 @@
 #include <utility>
 
 namespace Opm {
+
 /*!
  * \ingroup Discretization
  *
@@ -53,7 +54,7 @@ class TemperatureCallback
     using ResultRawType = decltype(std::declval<IQFluidState>().temperature(0));
 
 public:
-    using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
+    using ResultType = std::remove_const_t<std::remove_reference_t<ResultRawType>>;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     explicit TemperatureCallback(const ElementContext& elemCtx)
@@ -89,7 +90,7 @@ class PressureCallback
     using ResultRawType = decltype(std::declval<IQFluidState>().pressure(0));
 
 public:
-    using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
+    using ResultType = std::remove_const_t<std::remove_reference_t<ResultRawType>>;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     explicit PressureCallback(const ElementContext& elemCtx)
@@ -136,7 +137,7 @@ class BoundaryPressureCallback
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
     using IQRawFluidState = decltype(std::declval<IntensiveQuantities>().fluidState());
-    using IQFluidState = typename std::remove_const<typename std::remove_reference<IQRawFluidState>::type>::type;
+    using IQFluidState = std::remove_const_t<std::remove_reference_t<IQRawFluidState>>;
     using IQScalar = typename IQFluidState::Scalar;
     using Toolbox = MathToolbox<IQScalar>;
 
@@ -200,7 +201,7 @@ class DensityCallback
     using ResultRawType = decltype(std::declval<IQFluidState>().density(0));
 
 public:
-    using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
+    using ResultType = std::remove_const_t<std::remove_reference_t<ResultRawType>>;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     explicit DensityCallback(const ElementContext& elemCtx)
@@ -297,7 +298,7 @@ class ViscosityCallback
     using ResultRawType = decltype(std::declval<IQFluidState>().viscosity(0));
 
 public:
-    using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
+    using ResultType = std::remove_const_t<std::remove_reference_t<ResultRawType>>;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     explicit ViscosityCallback(const ElementContext& elemCtx)
@@ -348,7 +349,7 @@ class VelocityCallback
     enum { dim = GridView::dimensionworld };
 
 public:
-    using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
+    using ResultType = std::remove_const_t<std::remove_reference_t<ResultRawType>>;
     using ResultFieldType = typename ResultType::field_type;
     using ResultFieldValueType = typename MathToolbox<ResultFieldType>::ValueType;
 
@@ -381,7 +382,7 @@ class VelocityComponentCallback
     using ResultRawType = decltype(IntensiveQuantities().velocityCenter()[0]);
 
 public:
-    using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
+    using ResultType = std::remove_const_t<std::remove_reference_t<ResultRawType>>;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     explicit VelocityComponentCallback(const ElementContext& elemCtx)
@@ -430,7 +431,7 @@ class MoleFractionCallback
     using ResultRawType = decltype(std::declval<IQFluidState>().moleFraction(0, 0));
 
 public:
-    using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
+    using ResultType = std::remove_const_t<std::remove_reference_t<ResultRawType>>;
     using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     explicit MoleFractionCallback(const ElementContext& elemCtx)
