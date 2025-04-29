@@ -125,7 +125,7 @@ public:
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-            vanguard_.reset(new Vanguard(*this));
+            vanguard_ = std::make_unique<Vanguard>(*this);
             OPM_END_PARALLEL_TRY_CATCH("Allocating the simulation vanguard failed: ", comm);
         }
 
@@ -156,7 +156,7 @@ public:
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-            model_.reset(new Model(*this));
+            model_ = std::make_unique<Model>(*this);
             OPM_END_PARALLEL_TRY_CATCH("Could not allocate model: ", comm);
         }
 
@@ -166,7 +166,7 @@ public:
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-            problem_.reset(new Problem(*this));
+            problem_ = std::make_unique<Problem>(*this);
             OPM_END_PARALLEL_TRY_CATCH("Could not allocate the problem: ", comm);
         }
 
