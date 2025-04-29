@@ -30,8 +30,8 @@
 #ifndef EWOMS_DARCY_FLUX_MODULE_HH
 #define EWOMS_DARCY_FLUX_MODULE_HH
 
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <opm/common/Exceptions.hpp>
 
@@ -40,6 +40,11 @@
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
+
+#include <cassert>
+#include <cmath>
+#include <string>
+#include <type_traits>
 
 namespace Opm {
 
