@@ -52,6 +52,17 @@
 #include <fmt/format.h>
 
 namespace {
+
+    template <typename Scalar>
+    void normalizeMixture(std::vector<Scalar>& mixture) {
+        const Scalar sum = std::accumulate(mixture.begin(), mixture.end(), Scalar{0.0});
+        if (sum > Scalar{0.}) {
+            for (auto& value : mixture) {
+                value /= sum;
+            }
+        }
+    }
+
     // Component and phase rates/mixtures at surface conditions are linked as
     //
     // [ componentMixture[oilpos]   ]   [ 1     Rv     0  ] [ phaseMixture[oilpos]  ]
@@ -85,7 +96,7 @@ namespace {
         }
 
         const Scalar denom = Scalar{1} - rs*rv;
-        if (! (denom > Scalar{0})) {
+        if (! (denom > Scalar{1.e-10})) {
             const auto msg = fmt::format(R"(Problematic denominator value {} for well {}.
     Connection density calculation with (Rs, Rv) = ({}, {}).
     Proceeding as if no dissolution or vaporisation for this connection)",
@@ -105,6 +116,8 @@ namespace {
                 phaseMixture[oilpos] =
                     (componentMixture[oilpos] - componentMixture[gaspos]*rv) / denom;
             }
+
+            normalizeMixture(phaseMixture);
         }
     }
 
@@ -131,7 +144,7 @@ namespace {
         }
 
         const Scalar d = Scalar{1} - rsw*rvw;
-        if (! (d > Scalar{0})) {
+        if (! (d > Scalar{1.e-10})) {
             const auto msg = fmt::format(R"(Problematic denominator value {} for well {}.
     Connection density calculation with (Rsw, Rvw) = ({}, {}).
     Proceeding as if no dissolution or vaporisation for this connection)",
@@ -152,6 +165,8 @@ namespace {
                     (componentMixture[waterpos] - componentMixture[gaspos]*rvw) / d;
             }
         }
+
+        normalizeMixture(phaseMixture);
     }
 
 } // Anonymous namespace
@@ -417,6 +432,7 @@ initialiseConnectionMixture(const int                  num_comp,
             }
         }
     }
+    normalizeMixture(componentMixture);
 }
 
 template <class FluidSystem, class Indices>
