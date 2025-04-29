@@ -161,12 +161,13 @@ protected:
         const auto& problem = elemCtx.problem();
         ergunCoefficient_ = problem.ergunCoefficient(elemCtx, dofIdx, timeIdx);
 
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             mobilityPassabilityRatio_[phaseIdx] =
                 problem.mobilityPassabilityRatio(elemCtx,
                                                  dofIdx,
                                                  timeIdx,
                                                  phaseIdx);
+        }
     }
 
 private:
@@ -268,8 +269,9 @@ protected:
         // calculate the square root of the intrinsic permeability
         assert(isDiagonal_(this->K_));
         sqrtK_ = 0.0;
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             sqrtK_[dimIdx] = std::sqrt(this->K_[dimIdx][dimIdx]);
+        }
 
         // obtain the Ergun coefficient. Lacking better ideas, we use its the arithmetic mean.
         if (focusDofIdx == i) {
@@ -277,19 +279,22 @@ protected:
                 (intQuantsIn.ergunCoefficient() +
                  getValue(intQuantsEx.ergunCoefficient()))/2;
         }
-        else if (focusDofIdx == j)
+        else if (focusDofIdx == j) {
             ergunCoefficient_ =
                 (getValue(intQuantsIn.ergunCoefficient()) +
                  intQuantsEx.ergunCoefficient())/2;
-        else
+        }
+        else {
             ergunCoefficient_ =
                 (getValue(intQuantsIn.ergunCoefficient()) +
                  getValue(intQuantsEx.ergunCoefficient()))/2;
+        }
 
         // obtain the mobility to passability ratio for each phase.
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             unsigned upIdx = static_cast<unsigned>(this->upstreamIndex_(phaseIdx));
             const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
@@ -326,20 +331,24 @@ protected:
 
         // obtain the Ergun coefficient. Because we are on the boundary here, we will
         // take the Ergun coefficient of the interior
-        if (focusDofIdx == i)
+        if (focusDofIdx == i) {
             ergunCoefficient_ = intQuantsIn.ergunCoefficient();
-        else
+        }
+        else {
             ergunCoefficient_ = getValue(intQuantsIn.ergunCoefficient());
+        }
 
         // calculate the square root of the intrinsic permeability
         assert(isDiagonal_(this->K_));
         sqrtK_ = 0.0;
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             sqrtK_[dimIdx] = std::sqrt(this->K_[dimIdx][dimIdx]);
+        }
 
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             if (focusDofIdx == i) {
                 density_[phaseIdx] = intQuantsIn.fluidState().density(phaseIdx);
@@ -374,18 +383,21 @@ protected:
 
         // obtain the Ergun coefficient from the intensive quantity object. Until a
         // better method comes along, we use arithmetic averaging.
-        if (focusDofIdx == i)
+        if (focusDofIdx == i) {
             ergunCoefficient_ =
                 (intQuantsI.ergunCoefficient() +
                  getValue(intQuantsJ.ergunCoefficient())) / 2;
-        else if (focusDofIdx == j)
+        }
+        else if (focusDofIdx == j) {
             ergunCoefficient_ =
                 (getValue(intQuantsI.ergunCoefficient()) +
                  intQuantsJ.ergunCoefficient()) / 2;
-        else
+        }
+        else {
             ergunCoefficient_ =
                 (getValue(intQuantsI.ergunCoefficient()) +
                  getValue(intQuantsJ.ergunCoefficient())) / 2;
+        }
 
         ///////////////
         // calculate the weights of the upstream and the downstream control volumes
@@ -400,9 +412,10 @@ protected:
             calculateForchheimerFlux_(phaseIdx);
 
             this->volumeFlux_[phaseIdx] = 0.0;
-            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++ dimIdx)
+            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++ dimIdx) {
                 this->volumeFlux_[phaseIdx] +=
                     this->filterVelocity_[phaseIdx][dimIdx]*normal[dimIdx];
+            }
         }
     }
 
@@ -429,9 +442,10 @@ protected:
             calculateForchheimerFlux_(phaseIdx);
 
             this->volumeFlux_[phaseIdx] = 0.0;
-            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                 this->volumeFlux_[phaseIdx] +=
                     this->filterVelocity_[phaseIdx][dimIdx]*normal[dimIdx];
+            }
         }
     }
 
@@ -452,9 +466,10 @@ protected:
         // search by means of the Newton method for a root of Forchheimer equation
         unsigned newtonIter = 0;
         while (deltaV.one_norm() > 1e-11) {
-            if (newtonIter >= 50)
+            if (newtonIter >= 50) {
                 throw NumericalProblem("Could not determine Forchheimer velocity within "
                                        + std::to_string(newtonIter)+" iterations");
+            }
             ++newtonIter;
 
             // calculate the residual and its Jacobian matrix
@@ -484,8 +499,9 @@ protected:
         // residual += mobility_\alpha K(\grad p_\alpha - \rho_\alpha g)
         // -> this->K_.usmv(mobility, pGrad, residual);
         assert(isDiagonal_(this->K_));
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++ dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++ dimIdx) {
             residual[dimIdx] += mobility*pGrad[dimIdx]*this->K_[dimIdx][dimIdx];
+        }
 
         // Forchheimer turbulence correction:
         //
@@ -499,17 +515,21 @@ protected:
         //                velocity,
         //                residual);
         Evaluation absVel = 0.0;
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             absVel += velocity[dimIdx]*velocity[dimIdx];
+        }
         // the derivatives of the square root of 0 are undefined, so we must guard
         // against this case
-        if (absVel <= 0.0)
+        if (absVel <= 0.0) {
             absVel = 0.0;
-        else
+        }
+        else {
             absVel = Toolbox::sqrt(absVel);
+        }
         const auto& alpha = density*mobilityPassabilityRatio*ergunCoefficient_*absVel;
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             residual[dimIdx] += sqrtK_[dimIdx]*alpha*velocity[dimIdx];
+        }
         Valgrind::CheckDefined(residual);
     }
 
@@ -545,11 +565,13 @@ protected:
     {
         for (unsigned i = 0; i < dimWorld; i++) {
             for (unsigned j = 0; j < dimWorld; j++) {
-                if (i == j)
+                if (i == j) {
                     continue;
+                }
 
-                if (std::abs(K[i][j]) > 1e-25)
+                if (std::abs(K[i][j]) > 1e-25) {
                     return false;
+                }
             }
         }
         return true;
