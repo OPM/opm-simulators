@@ -99,7 +99,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/models/io/vtktemperatureparams.cpp
   opm/models/io/restart.cpp
   opm/models/nonlinear/newtonmethodparams.cpp
-  opm/models/parallel/mpiutil.cpp
   opm/models/parallel/tasklets.cpp
   opm/models/parallel/threadmanager.cpp
   opm/models/utils/parametersystem.cpp
@@ -799,7 +798,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/nonlinear/nullconvergencewriter.hh
   opm/models/parallel/gridcommhandles.hh
   opm/models/parallel/mpibuffer.hh
-  opm/models/parallel/mpiutil.hpp
   opm/models/parallel/tasklets.hpp
   opm/models/parallel/threadedentityiterator.hh
   opm/models/parallel/threadmanager.hpp

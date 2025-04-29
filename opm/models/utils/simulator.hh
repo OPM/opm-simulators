@@ -34,14 +34,14 @@
 
 #include <opm/models/io/restart.hpp>
 
-#include <opm/models/parallel/mpiutil.hpp>
-
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/simulatorutils.hpp>
 #include <opm/models/utils/timer.hpp>
 #include <opm/models/utils/timerguard.hh>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <iostream>
 #include <memory>
@@ -145,109 +145,66 @@ public:
         if (verbose_)
             std::cout << "Allocating the simulation vanguard\n" << std::flush;
 
-        int exceptionThrown = 0;
-        std::string what;
-
-        auto catchAction =
-            [&exceptionThrown, &what, comm](const std::exception& e,
-                                            bool doPrint) {
-            exceptionThrown = 1;
-            what = e.what();
-            if (comm.size() > 1) {
-                what += " (on rank " + std::to_string(comm.rank()) + ")";
-            }
-            if (doPrint)
-                std::cerr << "Rank " << comm.rank() << " threw an exception: " << e.what() << std::endl;
-        };
-
-        auto checkParallelException =
-            [comm](const std::string& prefix,
-                   int exceptionThrown_,
-                   const std::string& what_)
         {
-            if (comm.max(exceptionThrown_)) {
-                auto all_what = gatherStrings(what_);
-                assert(!all_what.empty());
-                throw std::runtime_error(prefix + all_what.front());
-            }
-        };
-
-        try
-        { vanguard_.reset(new Vanguard(*this)); }
-        catch (const std::exception& e) {
-            catchAction(e, verbose_);
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            vanguard_.reset(new Vanguard(*this));
+            OPM_END_PARALLEL_TRY_CATCH("Allocating the simulation vanguard failed: ", comm);
         }
-        checkParallelException("Allocating the simulation vanguard failed: ",
-                               exceptionThrown, what);
 
         // Only relevant for CpGrid
         if (verbose_)
             std::cout << "Adding LGRs, if any\n" << std::flush;
 
-        try
-        { vanguard_->addLgrs(); }
-        catch (const std::exception& e) {
-            catchAction(e, verbose_);
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            vanguard_->addLgrs();
+            OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation vanguard failed: ", comm);
         }
-        checkParallelException("Adding LGRs to the simulation vanguard failed: ",
-                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Distributing the vanguard's data\n" << std::flush;
 
-        try
-        { vanguard_->loadBalance(); }
-        catch (const std::exception& e) {
-            catchAction(e, verbose_);
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            vanguard_->loadBalance();
+            OPM_END_PARALLEL_TRY_CATCH("Could not distribute the vanguard data: ", comm);
         }
-        checkParallelException("Could not distribute the vanguard data: ",
-                               exceptionThrown, what);
-        
 
         if (verbose_)
             std::cout << "Allocating the model\n" << std::flush;
-        try {
+
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
             model_.reset(new Model(*this));
+            OPM_END_PARALLEL_TRY_CATCH("Could not allocate model: ", comm);
         }
-        catch (const std::exception& e) {
-            catchAction(e, verbose_);
-        }
-        checkParallelException("Could not allocate model: ",
-                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Allocating the problem\n" << std::flush;
 
-        try {
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
             problem_.reset(new Problem(*this));
+            OPM_END_PARALLEL_TRY_CATCH("Could not allocate the problem: ", comm);
         }
-        catch (const std::exception& e) {
-            catchAction(e, verbose_);
-        }
-        checkParallelException("Could not allocate the problem: ",
-                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Initializing the model\n" << std::flush;
 
-        try
-        { model_->finishInit(); }
-        catch (const std::exception& e) {
-            catchAction(e, verbose_);
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            model_->finishInit();
+            OPM_END_PARALLEL_TRY_CATCH("Could not initialize the model: ", comm);
         }
-        checkParallelException("Could not initialize the  model: ",
-                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Initializing the problem\n" << std::flush;
 
-        try
-        { problem_->finishInit(); }
-        catch (const std::exception& e) {
-            catchAction(e, verbose_);
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            problem_->finishInit();
+            OPM_END_PARALLEL_TRY_CATCH("Could not initialize the problem: ", comm);
         }
-        checkParallelException("Could not initialize the problem: ",
-                               exceptionThrown, what);
 
         setupTimer_.stop();
 
