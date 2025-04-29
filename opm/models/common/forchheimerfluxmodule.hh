@@ -30,18 +30,21 @@
 #ifndef EWOMS_FORCHHEIMER_FLUX_MODULE_HH
 #define EWOMS_FORCHHEIMER_FLUX_MODULE_HH
 
-#include "darcyfluxmodule.hh"
-
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/common/darcyfluxmodule.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#include <algorithm>
+#include <cassert>
 #include <cmath>
+#include <stdexcept>
+#include <string>
 
 namespace Opm {
 template <class TypeTag>
