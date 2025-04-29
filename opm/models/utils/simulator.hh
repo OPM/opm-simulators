@@ -50,6 +50,7 @@
 
 namespace Opm {
 
+    // required as std::max is not constexpr for float128 / quads.
     template <typename T>
     static constexpr T constexpr_max(T a, T b) {
         return (a > b) ? a : b;
