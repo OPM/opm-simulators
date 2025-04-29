@@ -34,7 +34,8 @@ namespace Opm {
  * \tparam T The type of the operator to check.
  */
 template <typename T>
-struct is_gpu_operator {
+struct is_gpu_operator
+{
 #if HAVE_CUDA
     // TODO: This can be done more thoroughly by checking if range and matrix also is a gpu operator, but this
     // works for now.
