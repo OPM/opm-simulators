@@ -38,20 +38,21 @@
 namespace Opm {
 
 template <class TypeTag>
-struct DirectionalMobility
+class DirectionalMobility
 {
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
+public:
     using array_type = std::array<Evaluation,numPhases>;
+
+    DirectionalMobility() = default;
 
     DirectionalMobility(const array_type& mX,
                         const array_type& mY,
                         const array_type& mZ)
         : mobility_{mX, mY, mZ}
     {}
-
-    DirectionalMobility() = default;
 
     const array_type& getArray(unsigned index) const
     {
@@ -67,6 +68,7 @@ struct DirectionalMobility
         return const_cast<array_type&>(std::as_const(*this).getArray(index));
     }
 
+private:
     std::array<array_type,3> mobility_{};
 };
 
