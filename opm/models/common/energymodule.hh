@@ -425,7 +425,7 @@ public:
             }
 
             // intensive quantities of the upstream and the downstream DOFs
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const IntensiveQuantities& up = context.intensiveQuantities(upIdx, timeIdx);
 
             flux[energyEqIdx] +=
@@ -460,7 +460,7 @@ public:
             }
 
             // intensive quantities of the upstream and the downstream DOFs
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const IntensiveQuantities& up = context.intensiveQuantities(upIdx, timeIdx);
 
             flux[energyEqIdx] +=
@@ -581,7 +581,7 @@ protected:
                                     unsigned spaceIdx,
                                     unsigned timeIdx)
     {
-        Scalar T = context.problem().temperature(context, spaceIdx, timeIdx);
+        const Scalar T = context.problem().temperature(context, spaceIdx, timeIdx);
         fluidState.setTemperature(Toolbox::createConstant(T));
     }
 
@@ -807,7 +807,7 @@ protected:
         const auto& face = stencil.boundaryFace(bfIdx);
 
         const auto& elemCtx = context.elementContext();
-        unsigned insideScvIdx = face.interiorIndex();
+        const unsigned insideScvIdx = face.interiorIndex();
         const auto& insideScv = elemCtx.stencil(timeIdx).subControlVolume(insideScvIdx);
 
         const auto& intQuantsInside = elemCtx.intensiveQuantities(insideScvIdx, timeIdx);
