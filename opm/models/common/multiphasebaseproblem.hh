@@ -28,8 +28,8 @@
 #ifndef EWOMS_MULTI_PHASE_BASE_PROBLEM_HH
 #define EWOMS_MULTI_PHASE_BASE_PROBLEM_HH
 
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <dune/grid/common/partitionset.hh>
 
@@ -46,7 +46,12 @@
 
 #include <opm/utility/CopyablePtr.hpp>
 
+#include <algorithm>
+#include <array>
+#include <stdexcept>
+
 namespace Opm {
+
 /*!
  * \ingroup Discretization
  *
@@ -119,9 +124,11 @@ public:
 
         // entry-wise harmonic mean. this is almost certainly wrong if
         // you have off-main diagonal entries in your permeabilities!
-        for (unsigned i = 0; i < dimWorld; ++i)
-            for (unsigned j = 0; j < dimWorld; ++j)
+        for (unsigned i = 0; i < dimWorld; ++i) {
+            for (unsigned j = 0; j < dimWorld; ++j) {
                 result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
+            }
+        }
     }
 
     /*!
@@ -332,9 +339,8 @@ public:
                 Scalar minSat = 1e100 ;
                 Scalar maxSat = -1e100;
                 size_t nDofs = elemCtx.numDof(/*timeIdx=*/0);
-                for (unsigned dofIdx = 0; dofIdx < nDofs; ++dofIdx)
-                {
-                    const auto& intQuant = elemCtx.intensiveQuantities( dofIdx, /*timeIdx=*/0 );
+                for (unsigned dofIdx = 0; dofIdx < nDofs; ++dofIdx) {
+                    const auto& intQuant = elemCtx.intensiveQuantities( dofIdx, /*timeIdx=*/0);
                     minSat = std::min(minSat,
                                       Toolbox::value(intQuant.fluidState().saturation(phaseIdx)));
                     maxSat = std::max(maxSat,
@@ -342,26 +348,23 @@ public:
                 }
 
                 const Scalar indicator =
-                    (maxSat - minSat)/(std::max<Scalar>(0.01, maxSat+minSat)/2);
-                if( indicator > 0.2 && element.level() < 2 ) {
-                    grid.mark( 1, element );
-                    ++ numMarked;
+                    (maxSat - minSat) / (std::max<Scalar>(0.01, maxSat + minSat) / 2);
+                if (indicator > 0.2 && element.level() < 2) {
+                    grid.mark(1, element);
+                    ++numMarked;
                 }
-                else if ( indicator < 0.025 ) {
-                    grid.mark( -1, element );
-                    ++ numMarked;
+                else if (indicator < 0.025) {
+                    grid.mark(-1, element);
+                    ++numMarked;
                 }
-                else
-                {
-                    grid.mark( 0, element );
+                else {
+                    grid.mark(0, element);
                 }
             }
         }
 
         // get global sum so that every proc is on the same page
-        numMarked = this->simulator().vanguard().grid().comm().sum( numMarked );
-
-        return numMarked;
+        return this->simulator().vanguard().grid().comm().sum(numMarked);
     }
 
     // \}
@@ -380,8 +383,9 @@ protected:
     DimMatrix toDimMatrix_(Scalar val) const
     {
         DimMatrix ret(0.0);
-        for (unsigned i = 0; i < DimMatrix::rows; ++i)
+        for (unsigned i = 0; i < DimMatrix::rows; ++i) {
             ret[i][i] = val;
+        }
         return ret;
     }
 
@@ -391,6 +395,7 @@ private:
     //! Returns the implementation of the problem (i.e. static polymorphism)
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
+
     //! \copydoc asImp_()
     const Implementation& asImp_() const
     { return *static_cast<const Implementation *>(this); }

@@ -28,15 +28,16 @@
 #ifndef EWOMS_MULTI_PHASE_BASE_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_MULTI_PHASE_BASE_EXTENSIVE_QUANTITIES_HH
 
-#include "multiphasebaseproperties.hh"
+#include <dune/common/fvector.hh>
 
+#include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 #include <opm/models/discretization/common/fvbaseextensivequantities.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
-#include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
+#include <array>
 
 namespace Opm {
 /*!
@@ -167,8 +168,8 @@ public:
     { return 1.0 - upstreamWeight(phaseIdx); }
 
 private:
-    short upstreamScvIdx_[numPhases]{};
-    short downstreamScvIdx_[numPhases]{};
+    std::array<short, numPhases> upstreamScvIdx_{};
+    std::array<short, numPhases> downstreamScvIdx_{};
 };
 
 } // namespace Opm

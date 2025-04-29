@@ -37,36 +37,47 @@ namespace Opm::Properties {
 //! The splice to be used for the spatial discretization
 template<class TypeTag, class MyTypeTag>
 struct SpatialDiscretizationSplice { using type = UndefinedProperty; };
+
 //! Number of fluid phases in the system
 template<class TypeTag, class MyTypeTag>
 struct NumPhases { using type = UndefinedProperty; };
+
 //! Number of chemical species in the system
 template<class TypeTag, class MyTypeTag>
 struct NumComponents { using type = UndefinedProperty; };
+
 //! Enumerations used by the model
 template<class TypeTag, class MyTypeTag>
 struct Indices { using type = UndefinedProperty; };
+
 //! The material law which ought to be used (extracted from the spatial parameters)
 template<class TypeTag, class MyTypeTag>
 struct MaterialLaw { using type = UndefinedProperty; };
+
 //! The context material law (extracted from the spatial parameters)
 template<class TypeTag, class MyTypeTag>
 struct MaterialLawParams { using type = UndefinedProperty; };
+
 //! The material law for the energy stored in the solid matrix
 template<class TypeTag, class MyTypeTag>
 struct SolidEnergyLaw { using type = UndefinedProperty; };
+
 //! The parameters of the material law for energy storage of the solid
 template<class TypeTag, class MyTypeTag>
 struct SolidEnergyLawParams { using type = UndefinedProperty; };
+
 //! The material law for thermal conduction
 template<class TypeTag, class MyTypeTag>
 struct ThermalConductionLaw { using type = UndefinedProperty; };
+
 //! The parameters of the material law for thermal conduction
 template<class TypeTag, class MyTypeTag>
 struct ThermalConductionLawParams { using type = UndefinedProperty; };
+
 //!The fluid systems including the information about the phases
 template<class TypeTag, class MyTypeTag>
 struct FluidSystem { using type = UndefinedProperty; };
+
 //! Specifies the relation used for velocity
 template<class TypeTag, class MyTypeTag>
 struct FluxModule { using type = UndefinedProperty; };
@@ -74,15 +85,20 @@ struct FluxModule { using type = UndefinedProperty; };
 //! Specify whether energy should be considered as a conservation quantity or not
 template<class TypeTag, class MyTypeTag>
 struct EnableEnergy { using type = UndefinedProperty; };
+
 //! Enable diffusive fluxes?
 template<class TypeTag, class MyTypeTag>
 struct EnableDiffusion { using type = UndefinedProperty; };
+
 //! Enable dispersive fluxes?
 template<class TypeTag, class MyTypeTag>
 struct EnableDispersion { using type = UndefinedProperty; };
+
 //! Enable convective mixing?
 template<class TypeTag, class MyTypeTag>
 struct EnableConvectiveMixing { using type = UndefinedProperty; };
+
+//! Enable water?
 template <class TypeTag, class MyTypeTag>
 struct EnableWater { using type = UndefinedProperty; };
 
