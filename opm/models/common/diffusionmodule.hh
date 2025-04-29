@@ -36,6 +36,7 @@
 #include <opm/models/common/quantitycallbacks.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <array>
 #include <stdexcept>
 
 namespace Opm {
@@ -275,8 +276,8 @@ protected:
     }
 
 private:
-    Evaluation tortuosity_[numPhases];
-    Evaluation diffusionCoefficient_[numPhases][numComponents];
+    std::array<Evaluation, numPhases> tortuosity_;
+    std::array<std::array<Evaluation, numComponents>, numPhases> diffusionCoefficient_;
 };
 
 /*!
@@ -483,8 +484,8 @@ public:
     { return effectiveDiffusionCoefficient_[phaseIdx][compIdx]; }
 
 private:
-    Evaluation moleFractionGradientNormal_[numPhases][numComponents];
-    Evaluation effectiveDiffusionCoefficient_[numPhases][numComponents];
+    std::array<std::array<Evaluation, numComponents>, numPhases> moleFractionGradientNormal_;
+    std::array<std::array<Evaluation, numComponents>, numPhases> effectiveDiffusionCoefficient_;
 };
 
 } // namespace Opm
