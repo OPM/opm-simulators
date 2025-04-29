@@ -123,12 +123,13 @@ public:
             rhoMolar += Toolbox::value(fluidStateJ.molarDensity(phaseIdx));
             rhoMolar /= 2;
 
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 // mass flux due to molecular diffusion
                 flux[conti0EqIdx + compIdx] +=
                     -rhoMolar
                     * extQuants.moleFractionGradientNormal(phaseIdx, compIdx)
                     * extQuants.effectiveDiffusionCoefficient(phaseIdx, compIdx);
+            }
         }
     }
 };
@@ -250,8 +251,9 @@ protected:
 
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             // TODO: let the problem do this (this is a constitutive
             // relation of which the model should be free of from the
@@ -381,8 +383,9 @@ protected:
         const auto& intQuantsOutside = elemCtx.intensiveQuantities(extQuants.exteriorIndex(), timeIdx);
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             moleFractionCallback.setPhaseIndex(phaseIdx);
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
@@ -395,9 +398,10 @@ protected:
                                            moleFractionCallback);
 
                 moleFractionGradientNormal_[phaseIdx][compIdx] = 0.0;
-                for (unsigned i = 0; i < normal.size(); ++i)
+                for (unsigned i = 0; i < normal.size(); ++i) {
                     moleFractionGradientNormal_[phaseIdx][compIdx] +=
                         normal[i]*moleFractionGradient[i];
+                }
                 Opm::Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
 
                 // use the arithmetic average for the effective
@@ -440,8 +444,9 @@ protected:
         assert(dist > 0);
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 // calculate mole fraction gradient using two-point
