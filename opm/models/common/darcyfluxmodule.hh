@@ -195,11 +195,11 @@ protected:
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(faceIdx);
         const auto& faceNormal = scvf.normal();
 
-        unsigned i = scvf.interiorIndex();
-        unsigned j = scvf.exteriorIndex();
+        const unsigned i = scvf.interiorIndex();
+        const unsigned j = scvf.exteriorIndex();
         interiorDofIdx_ = static_cast<short>(i);
         exteriorDofIdx_ = static_cast<short>(j);
-        unsigned focusDofIdx = elemCtx.focusDofIndex();
+        const unsigned focusDofIdx = elemCtx.focusDofIndex();
 
         // calculate the "raw" pressure gradient
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -238,7 +238,7 @@ protected:
             distVecIn -= posFace;
             distVecEx -= posFace;
             distVecTotal -= posIn;
-            Scalar absDistTotalSquared = distVecTotal.two_norm2();
+            const Scalar absDistTotalSquared = distVecTotal.two_norm2();
             for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
                 if (!elemCtx.model().phaseIsConsidered(phaseIdx))
                     continue;
@@ -253,7 +253,7 @@ protected:
                     pStatIn = - rhoIn*(gIn*distVecIn);
                 }
                 else {
-                    Scalar rhoIn = Toolbox::value(intQuantsIn.fluidState().density(phaseIdx));
+                    const Scalar rhoIn = Toolbox::value(intQuantsIn.fluidState().density(phaseIdx));
                     pStatIn = - rhoIn*(gIn*distVecIn);
                 }
 
@@ -268,7 +268,7 @@ protected:
                     pStatEx = - rhoEx*(gEx*distVecEx);
                 }
                 else {
-                    Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
+                    const Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
                     pStatEx = - rhoEx*(gEx*distVecEx);
                 }
 
@@ -357,7 +357,7 @@ protected:
         }
 
         const auto& scvf = elemCtx.stencil(timeIdx).boundaryFace(boundaryFaceIdx);
-        auto i = scvf.interiorIndex();
+        const auto i = scvf.interiorIndex();
         interiorDofIdx_ = static_cast<short>(i);
         exteriorDofIdx_ = -1;
         int focusDofIdx = elemCtx.focusDofIndex();
@@ -377,16 +377,16 @@ protected:
             // the distance between the face center and the center of the control volume
             DimVector distVecIn(posIn);
             distVecIn -= posFace;
-            Scalar absDistSquared = distVecIn.two_norm2();
-            Scalar gTimesDist = gIn*distVecIn;
+            const Scalar absDistSquared = distVecIn.two_norm2();
+            const Scalar gTimesDist = gIn*distVecIn;
 
             for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
                 if (!elemCtx.model().phaseIsConsidered(phaseIdx))
                     continue;
 
                 // calculate the hydrostatic pressure at the integration point of the face
-                Evaluation rhoIn = intQuantsIn.fluidState().density(phaseIdx);
-                Evaluation pStatIn = - gTimesDist*rhoIn;
+                const Evaluation rhoIn = intQuantsIn.fluidState().density(phaseIdx);
+                const Evaluation pStatIn = - gTimesDist*rhoIn;
 
                 Valgrind::CheckDefined(pStatIn);
                 // compute the hydrostatic gradient between the control volume and face integration
