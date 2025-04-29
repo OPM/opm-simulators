@@ -43,6 +43,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <string>
