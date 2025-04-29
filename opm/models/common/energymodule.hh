@@ -629,20 +629,18 @@ protected:
                                     unsigned timeIdx)
     {
         const auto& priVars = context.primaryVars(spaceIdx, timeIdx);
-        Evaluation val;
-        if (std::is_same<Evaluation, Scalar>::value) { // finite differences
-            val = Toolbox::createConstant(priVars[temperatureIdx]);
+        if constexpr (std::is_same_v<Evaluation, Scalar>) { // finite differences
+            fluidState.setTemperature(Toolbox::createConstant(priVars[temperatureIdx]));
         }
         else {
             // automatic differentiation
             if (timeIdx == 0) {
-                val = Toolbox::createVariable(priVars[temperatureIdx], temperatureIdx);
+                fluidState.setTemperature(Toolbox::createVariable(priVars[temperatureIdx], temperatureIdx));
             }
             else {
-                val = Toolbox::createConstant(priVars[temperatureIdx]);
+                fluidState.setTemperature(Toolbox::createConstant(priVars[temperatureIdx]));
             }
         }
-        fluidState.setTemperature(val);
     }
 
     /*!
