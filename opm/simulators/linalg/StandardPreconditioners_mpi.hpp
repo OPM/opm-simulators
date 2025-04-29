@@ -120,7 +120,8 @@ AMGHelper<Operator, Comm, Matrix, Vector>::makeAmgPreconditioner(const Operator&
 }
 
 template <class Operator, class Comm, typename = void> // Note: Last argument is to allow partial specialization for GPU
-struct StandardPreconditioners {
+struct StandardPreconditioners 
+{
     static void add()
     {
         using namespace Dune;
@@ -394,6 +395,6 @@ struct StandardPreconditioners {
 };
 
 
-}
+} // namespace Opm
 
-#endif
+#endif // OPM_STANDARDPRECONDITIONERS_MPI_HEADER

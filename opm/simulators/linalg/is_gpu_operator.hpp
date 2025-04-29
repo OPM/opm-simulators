@@ -23,8 +23,7 @@
 #if HAVE_CUDA
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #endif
-namespace Opm
-{
+namespace Opm {
 
 /**
  * \brief Check if a given operator is a GPU operator.
@@ -52,4 +51,4 @@ static constexpr bool is_gpu_operator_v = is_gpu_operator<T>::value;
 
 } // namespace Opm
 
-#endif
+#endif // OPM_IS_GPU_OPERATOR_HEADER

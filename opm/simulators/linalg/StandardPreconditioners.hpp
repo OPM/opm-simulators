@@ -30,6 +30,6 @@
 #if HAVE_CUDA
 #include <opm/simulators/linalg/StandardPreconditioners_gpu_mpi.hpp>
 #include <opm/simulators/linalg/StandardPreconditioners_gpu_serial.hpp>
-#endif
+#endif // HAVE_CUDA
 
-#endif
+#endif // OPM_STANDARDPRECONDITIONERS_HEADER

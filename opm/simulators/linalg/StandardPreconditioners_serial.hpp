@@ -26,7 +26,8 @@ namespace Opm {
 
 
 template <class Operator>
-struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typename std::enable_if_t<!Opm::is_gpu_operator_v<Operator>>> {
+struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typename std::enable_if_t<!Opm::is_gpu_operator_v<Operator>>> 
+{
     static void add()
     {
         using namespace Dune;
