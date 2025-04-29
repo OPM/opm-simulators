@@ -38,7 +38,11 @@
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <cassert>
+#include <cmath>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 
 namespace Opm {
 /*!
