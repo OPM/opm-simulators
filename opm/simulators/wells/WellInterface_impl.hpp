@@ -1650,25 +1650,40 @@ namespace Opm
         }
 
         if (nonzero_rate_index == -1) {
-            // No nonzero rates.
+            // No nonzero rates on input.
             // Use the computed rate directly, or scaled by a factor
             // 0.5 (to avoid too high values) if it was evaluated at 1 bar.
-            const double factor = rates_evaluated_at_1bar ? 0.5 : 1.0;
+            const Scalar factor = rates_evaluated_at_1bar ? 0.5 : 1.0;
             for (int p = 0; p < this->number_of_phases_; ++p) {
                ws.surface_rates[p] = factor * well_q_s[p];
             }
             return;
         }
 
-        // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
+        // If we are here, we had a single nonzero rate for the well,
+        // typically from a rate constraint. We must make sure it is
+        // respected, so if it was lower than the calculated rate for
+        // the same phase we scale all rates to match.
         const Scalar initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
-        if (std::abs(well_q_s[nonzero_rate_index]) > floating_point_error_epsilon) {
+        const Scalar computed_rate = well_q_s[nonzero_rate_index];
+        if (std::abs(initial_nonzero_rate) < std::abs(computed_rate)) {
+            // Note that both rates below are negative. The factor should be < 1.0.
+            const Scalar factor = initial_nonzero_rate / computed_rate;
+            assert(factor < 1.0);
             for (int p = 0; p < this->number_of_phases_; ++p) {
+                // We skip the nonzero_rate_index, as that should remain as it was.
                 if (p != nonzero_rate_index) {
-                    Scalar& rate = ws.surface_rates[p];
-                    rate = (initial_nonzero_rate / well_q_s[nonzero_rate_index]) * (well_q_s[p]);
+                    ws.surface_rates[p] = factor * well_q_s[p];
                 }
             }
+            return;
+        }
+
+        // If we are here, we had a single nonzero rate, but it was
+        // higher than the one calculated from the bhp limit, so we
+        // use the calculated rates.
+        for (int p = 0; p < this->number_of_phases_; ++p) {
+            ws.surface_rates[p] = well_q_s[p];
         }
     }
 
