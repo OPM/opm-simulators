@@ -260,9 +260,9 @@ protected:
     {
         DarcyExtQuants::calculateGradients_(elemCtx, faceIdx, timeIdx);
 
-        auto focusDofIdx = elemCtx.focusDofIndex();
-        unsigned i = static_cast<unsigned>(this->interiorDofIdx_);
-        unsigned j = static_cast<unsigned>(this->exteriorDofIdx_);
+        const auto focusDofIdx = elemCtx.focusDofIndex();
+        const unsigned i = static_cast<unsigned>(this->interiorDofIdx_);
+        const unsigned j = static_cast<unsigned>(this->exteriorDofIdx_);
         const auto& intQuantsIn = elemCtx.intensiveQuantities(i, timeIdx);
         const auto& intQuantsEx = elemCtx.intensiveQuantities(j, timeIdx);
 
@@ -296,7 +296,7 @@ protected:
                 continue;
             }
 
-            unsigned upIdx = static_cast<unsigned>(this->upstreamIndex_(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(this->upstreamIndex_(phaseIdx));
             const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
             if (focusDofIdx == upIdx) {
@@ -325,8 +325,8 @@ protected:
                                                     timeIdx,
                                                     fluidState);
 
-        auto focusDofIdx = elemCtx.focusDofIndex();
-        unsigned i = static_cast<unsigned>(this->interiorDofIdx_);
+        const auto focusDofIdx = elemCtx.focusDofIndex();
+        const unsigned i = static_cast<unsigned>(this->interiorDofIdx_);
         const auto& intQuantsIn = elemCtx.intensiveQuantities(i, timeIdx);
 
         // obtain the Ergun coefficient. Because we are on the boundary here, we will
@@ -371,9 +371,9 @@ protected:
      */
     void calculateFluxes_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
-        auto focusDofIdx = elemCtx.focusDofIndex();
-        auto i = asImp_().interiorIndex();
-        auto j = asImp_().exteriorIndex();
+        const auto focusDofIdx = elemCtx.focusDofIndex();
+        const auto i = asImp_().interiorIndex();
+        const auto j = asImp_().exteriorIndex();
         const auto& intQuantsI = elemCtx.intensiveQuantities(i, timeIdx);
         const auto& intQuantsJ = elemCtx.intensiveQuantities(j, timeIdx);
 
@@ -541,10 +541,10 @@ protected:
         DimEvalVector& velocity = this->filterVelocity_[phaseIdx];
         forchheimerResid_(residual, phaseIdx);
 
-        Scalar eps = 1e-11;
+        constexpr Scalar eps = 1e-11;
         DimEvalVector tmp;
         for (unsigned i = 0; i < dimWorld; ++i) {
-            Scalar coordEps = std::max(eps, Toolbox::scalarValue(velocity[i]) * (1 + eps));
+            const Scalar coordEps = std::max(eps, Toolbox::scalarValue(velocity[i]) * (1 + eps));
             velocity[i] += coordEps;
             forchheimerResid_(tmp, phaseIdx);
             tmp -= residual;
