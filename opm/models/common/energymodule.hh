@@ -259,8 +259,9 @@ public:
      */
     static std::string primaryVarName(unsigned pvIdx)
     {
-        if (pvIdx == temperatureIdx)
+        if (pvIdx == temperatureIdx) {
             return "temperature";
+        }
         return "";
     }
 
@@ -271,8 +272,9 @@ public:
      */
     static std::string eqName(unsigned eqIdx)
     {
-        if (eqIdx == energyEqIdx)
+        if (eqIdx == energyEqIdx) {
             return "energy";
+        }
         return "";
     }
 
@@ -282,8 +284,9 @@ public:
      */
     static Scalar primaryVarWeight(const Model& model, unsigned globalDofIdx, unsigned pvIdx)
     {
-        if (pvIdx != temperatureIdx)
+        if (pvIdx != temperatureIdx) {
             return -1;
+        }
 
         // make the weight of the temperature primary variable inversly proportional to its value
         return std::max(1.0/1000, 1.0/model.solution(/*timeIdx=*/0)[globalDofIdx][temperatureIdx]);
@@ -296,8 +299,9 @@ public:
                            unsigned,
                            unsigned eqIdx)
     {
-        if (eqIdx != energyEqIdx)
+        if (eqIdx != energyEqIdx) {
             return -1;
+        }
 
         // approximate change of internal energy of 1kg of liquid water for a temperature
         // change of 30K
@@ -415,8 +419,9 @@ public:
 
         // advective energy flux in all phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!context.model().phaseIsConsidered(phaseIdx))
+            if (!context.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             // intensive quantities of the upstream and the downstream DOFs
             unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
@@ -450,8 +455,9 @@ public:
 
         // advective energy flux in all phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!context.model().phaseIsConsidered(phaseIdx))
+            if (!context.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             // intensive quantities of the upstream and the downstream DOFs
             unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
@@ -626,14 +632,17 @@ protected:
     {
         const auto& priVars = context.primaryVars(spaceIdx, timeIdx);
         Evaluation val;
-        if (std::is_same<Evaluation, Scalar>::value) // finite differences
+        if (std::is_same<Evaluation, Scalar>::value) { // finite differences
             val = Toolbox::createConstant(priVars[temperatureIdx]);
+        }
         else {
             // automatic differentiation
-            if (timeIdx == 0)
+            if (timeIdx == 0) {
                 val = Toolbox::createVariable(priVars[temperatureIdx], temperatureIdx);
-            else
+            }
+            else {
                 val = Toolbox::createConstant(priVars[temperatureIdx]);
+            }
         }
         fluidState.setTemperature(val);
     }
@@ -651,8 +660,9 @@ protected:
     {
         // set the specific enthalpies of the fluids
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             fs.setEnthalpy(phaseIdx,
                            FluidSystem::enthalpy(fs, paramCache, phaseIdx));
@@ -780,8 +790,9 @@ protected:
         const auto& face = elemCtx.stencil(/*timeIdx=*/0).interiorFace(faceIdx);
 
         temperatureGradNormal_ = 0;
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             temperatureGradNormal_ += (face.normal()[dimIdx]*temperatureGrad[dimIdx]);
+        }
 
         const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, timeIdx);
         const auto& intQuantsInside = elemCtx.intensiveQuantities(extQuants.interiorIndex(), timeIdx);
@@ -811,8 +822,9 @@ protected:
         distVec -= insideScv.geometry().center();
 
         Scalar tmp = 0;
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             tmp += distVec[dimIdx] * face.normal()[dimIdx];
+        }
         Scalar dist = tmp;
 
         // if the following assertation triggers, the center of the
