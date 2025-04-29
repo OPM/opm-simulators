@@ -38,7 +38,11 @@
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <cassert>
+#include <cmath>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 
 namespace Opm {
 /*!
@@ -255,8 +259,9 @@ public:
      */
     static std::string primaryVarName(unsigned pvIdx)
     {
-        if (pvIdx == temperatureIdx)
+        if (pvIdx == temperatureIdx) {
             return "temperature";
+        }
         return "";
     }
 
@@ -267,8 +272,9 @@ public:
      */
     static std::string eqName(unsigned eqIdx)
     {
-        if (eqIdx == energyEqIdx)
+        if (eqIdx == energyEqIdx) {
             return "energy";
+        }
         return "";
     }
 
@@ -278,11 +284,13 @@ public:
      */
     static Scalar primaryVarWeight(const Model& model, unsigned globalDofIdx, unsigned pvIdx)
     {
-        if (pvIdx != temperatureIdx)
+        if (pvIdx != temperatureIdx) {
             return -1;
+        }
 
         // make the weight of the temperature primary variable inversly proportional to its value
-        return std::max(1.0/1000, 1.0/model.solution(/*timeIdx=*/0)[globalDofIdx][temperatureIdx]);
+        return std::max(1.0 / 1000,
+                        1.0 / model.solution(/*timeIdx=*/0)[globalDofIdx][temperatureIdx]);
     }
 
     /*!
@@ -292,8 +300,9 @@ public:
                            unsigned,
                            unsigned eqIdx)
     {
-        if (eqIdx != energyEqIdx)
+        if (eqIdx != energyEqIdx) {
             return -1;
+        }
 
         // approximate change of internal energy of 1kg of liquid water for a temperature
         // change of 30K
@@ -329,9 +338,9 @@ public:
                                 const Evaluation& volume)
     {
         rateVec[energyEqIdx] =
-            volume
-            * fluidState.density(phaseIdx)
-            * fluidState.enthalpy(phaseIdx);
+            volume *
+            fluidState.density(phaseIdx) *
+            fluidState.enthalpy(phaseIdx);
     }
 
     /*!
@@ -361,10 +370,10 @@ public:
     {
         const auto& fs = intQuants.fluidState();
         storage[energyEqIdx] +=
-            Toolbox::template decay<LhsEval>(fs.density(phaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.internalEnergy(phaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
-            * Toolbox::template decay<LhsEval>(intQuants.porosity());
+            Toolbox::template decay<LhsEval>(fs.density(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(fs.internalEnergy(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(intQuants.porosity());
     }
 
     /*!
@@ -379,11 +388,11 @@ public:
     {
         const auto& fs = intQuants.fractureFluidState();
         storage[energyEqIdx] +=
-            Toolbox::template decay<LhsEval>(fs.density(phaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.internalEnergy(phaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
-            * Toolbox::template decay<LhsEval>(intQuants.fracturePorosity())
-            * Toolbox::template decay<LhsEval>(intQuants.fractureVolume())/scv.volume();
+            Toolbox::template decay<LhsEval>(fs.density(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(fs.internalEnergy(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(intQuants.fracturePorosity()) *
+            Toolbox::template decay<LhsEval>(intQuants.fractureVolume()) / scv.volume();
     }
 
     /*!
@@ -411,17 +420,18 @@ public:
 
         // advective energy flux in all phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!context.model().phaseIsConsidered(phaseIdx))
+            if (!context.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             // intensive quantities of the upstream and the downstream DOFs
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const IntensiveQuantities& up = context.intensiveQuantities(upIdx, timeIdx);
 
             flux[energyEqIdx] +=
-                extQuants.volumeFlux(phaseIdx)
-                * up.fluidState().enthalpy(phaseIdx)
-                * up.fluidState().density(phaseIdx);
+                extQuants.volumeFlux(phaseIdx) *
+                up.fluidState().enthalpy(phaseIdx) *
+                up.fluidState().density(phaseIdx);
         }
     }
 
@@ -441,22 +451,22 @@ public:
 
         // reduce the energy flux in the matrix by the half the width occupied by the
         // fracture
-        flux[energyEqIdx] *=
-            1 - extQuants.fractureWidth()/(2*scvf.area());
+        flux[energyEqIdx] *= 1 - extQuants.fractureWidth() / (2 * scvf.area());
 
         // advective energy flux in all phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!context.model().phaseIsConsidered(phaseIdx))
+            if (!context.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             // intensive quantities of the upstream and the downstream DOFs
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const IntensiveQuantities& up = context.intensiveQuantities(upIdx, timeIdx);
 
             flux[energyEqIdx] +=
-                extQuants.fractureVolumeFlux(phaseIdx)
-                * up.fluidState().enthalpy(phaseIdx)
-                * up.fluidState().density(phaseIdx);
+                extQuants.fractureVolumeFlux(phaseIdx) *
+                up.fluidState().enthalpy(phaseIdx) *
+                up.fluidState().density(phaseIdx);
         }
     }
 
@@ -475,9 +485,7 @@ public:
         const auto& extQuants = context.extensiveQuantities(spaceIdx, timeIdx);
 
         // diffusive energy flux
-        flux[energyEqIdx] +=
-            - extQuants.temperatureGradNormal()
-            * extQuants.thermalConductivity();
+        flux[energyEqIdx] += -extQuants.temperatureGradNormal() * extQuants.thermalConductivity();
     }
 };
 
@@ -573,7 +581,7 @@ protected:
                                     unsigned spaceIdx,
                                     unsigned timeIdx)
     {
-        Scalar T = context.problem().temperature(context, spaceIdx, timeIdx);
+        const Scalar T = context.problem().temperature(context, spaceIdx, timeIdx);
         fluidState.setTemperature(Toolbox::createConstant(T));
     }
 
@@ -587,7 +595,7 @@ protected:
                  const ElementContext&,
                  unsigned,
                  unsigned)
-    { }
+    {}
 };
 
 /*!
@@ -621,17 +629,18 @@ protected:
                                     unsigned timeIdx)
     {
         const auto& priVars = context.primaryVars(spaceIdx, timeIdx);
-        Evaluation val;
-        if (std::is_same<Evaluation, Scalar>::value) // finite differences
-            val = Toolbox::createConstant(priVars[temperatureIdx]);
+        if constexpr (std::is_same_v<Evaluation, Scalar>) { // finite differences
+            fluidState.setTemperature(Toolbox::createConstant(priVars[temperatureIdx]));
+        }
         else {
             // automatic differentiation
-            if (timeIdx == 0)
-                val = Toolbox::createVariable(priVars[temperatureIdx], temperatureIdx);
-            else
-                val = Toolbox::createConstant(priVars[temperatureIdx]);
+            if (timeIdx == 0) {
+                fluidState.setTemperature(Toolbox::createVariable(priVars[temperatureIdx], temperatureIdx));
+            }
+            else {
+                fluidState.setTemperature(Toolbox::createConstant(priVars[temperatureIdx]));
+            }
         }
-        fluidState.setTemperature(val);
     }
 
     /*!
@@ -647,8 +656,9 @@ protected:
     {
         // set the specific enthalpies of the fluids
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             fs.setEnthalpy(phaseIdx,
                            FluidSystem::enthalpy(fs, paramCache, phaseIdx));
@@ -764,7 +774,7 @@ protected:
     void update_(const ElementContext& elemCtx, unsigned faceIdx, unsigned timeIdx)
     {
         const auto& gradCalc = elemCtx.gradientCalculator();
-        Opm::TemperatureCallback<TypeTag> temperatureCallback(elemCtx);
+        TemperatureCallback<TypeTag> temperatureCallback(elemCtx);
 
         EvalDimVector temperatureGrad;
         gradCalc.calculateGradient(temperatureGrad,
@@ -776,16 +786,17 @@ protected:
         const auto& face = elemCtx.stencil(/*timeIdx=*/0).interiorFace(faceIdx);
 
         temperatureGradNormal_ = 0;
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             temperatureGradNormal_ += (face.normal()[dimIdx]*temperatureGrad[dimIdx]);
+        }
 
         const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, timeIdx);
         const auto& intQuantsInside = elemCtx.intensiveQuantities(extQuants.interiorIndex(), timeIdx);
         const auto& intQuantsOutside = elemCtx.intensiveQuantities(extQuants.exteriorIndex(), timeIdx);
 
         // arithmetic mean
-        thermalConductivity_ =
-            0.5 * (intQuantsInside.thermalConductivity() + intQuantsOutside.thermalConductivity());
+        thermalConductivity_ = 0.5 * (intQuantsInside.thermalConductivity() +
+                                      intQuantsOutside.thermalConductivity());
         Opm::Valgrind::CheckDefined(thermalConductivity_);
     }
 
@@ -796,7 +807,7 @@ protected:
         const auto& face = stencil.boundaryFace(bfIdx);
 
         const auto& elemCtx = context.elementContext();
-        unsigned insideScvIdx = face.interiorIndex();
+        const unsigned insideScvIdx = face.interiorIndex();
         const auto& insideScv = elemCtx.stencil(timeIdx).subControlVolume(insideScvIdx);
 
         const auto& intQuantsInside = elemCtx.intensiveQuantities(insideScvIdx, timeIdx);
@@ -806,10 +817,10 @@ protected:
         DimVector distVec = face.integrationPos();
         distVec -= insideScv.geometry().center();
 
-        Scalar tmp = 0;
-        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
-            tmp += distVec[dimIdx] * face.normal()[dimIdx];
-        Scalar dist = tmp;
+        Scalar dist = 0;
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
+            dist += distVec[dimIdx] * face.normal()[dimIdx];
+        }
 
         // if the following assertation triggers, the center of the
         // center of the interior SCV was not inside the element!
