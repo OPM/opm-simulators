@@ -68,11 +68,12 @@ struct TransFluxModule
     using FluxIntensiveQuantities = TransIntensiveQuantities<TypeTag>;
     using FluxExtensiveQuantities = TransExtensiveQuantities<TypeTag>;
     using FluxBaseProblem = TransBaseProblem<TypeTag>;
+
     /*!
      * \brief Register all run-time parameters for the flux module.
      */
     static void registerParameters()
-    { }
+    {}
 };
 
 /*!
@@ -81,7 +82,7 @@ struct TransFluxModule
  */
 template <class TypeTag>
 class TransBaseProblem
-{ };
+{};
 
 /*!
  * \brief Provides the intensive quantities for the transmissibility based flux module
@@ -90,9 +91,10 @@ template <class TypeTag>
 class TransIntensiveQuantities
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+
 protected:
     void update_(const ElementContext&, unsigned, unsigned)
-    { }
+    {}
 };
 
 /*!
@@ -125,7 +127,8 @@ public:
      */
     const DimMatrix& intrinsicPermeability() const
     {
-        throw std::logic_error("The ECL transmissibility module does not provide an explicit intrinsic permeability");
+        throw std::logic_error("The ECL transmissibility module does not "
+                               "provide an explicit intrinsic permeability");
     }
 
     /*!
@@ -136,7 +139,8 @@ public:
      */
     const EvalDimVector& potentialGrad(unsigned) const
     {
-        throw std::logic_error("The ECL transmissibility module does not provide explicit potential gradients");
+        throw std::logic_error("The ECL transmissibility module does not "
+                               "provide explicit potential gradients");
     }
 
     /*!
@@ -156,7 +160,8 @@ public:
      */
     const EvalDimVector& filterVelocity(unsigned) const
     {
-        throw std::logic_error("The ECL transmissibility module does not provide explicit filter velocities");
+        throw std::logic_error("The ECL transmissibility module does not "
+                               "provide explicit filter velocities");
     }
 
     /*!
@@ -242,7 +247,7 @@ protected:
         // exterior DOF)
         const Scalar distZ = zIn - zEx;
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
@@ -263,12 +268,12 @@ protected:
             // external at the depth of the internal one
             const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
             const Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
-            const Evaluation rhoAvg = (rhoIn + rhoEx)/2;
+            const Evaluation rhoAvg = (rhoIn + rhoEx) / 2;
 
             const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
             Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
 
-            pressureExterior += rhoAvg*(distZ*g);
+            pressureExterior += rhoAvg * (distZ * g);
 
             pressureDifference_[phaseIdx] = pressureExterior - pressureInterior;
 
@@ -320,11 +325,11 @@ protected:
 
             if (upstreamIdx == interiorDofIdx_) {
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans);
+                    pressureDifference_[phaseIdx] * up.mobility(phaseIdx) * (-trans);
             }
             else {
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans));
+                    pressureDifference_[phaseIdx] * (Toolbox::value(up.mobility(phaseIdx)) * (-trans));
             }
         }
     }
@@ -364,7 +369,7 @@ protected:
         // exterior DOF)
         const Scalar distZ = zIn - zEx;
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
@@ -373,11 +378,11 @@ protected:
             // integration position
             const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
             const auto& rhoEx = exFluidState.density(phaseIdx);
-            const Evaluation rhoAvg = (rhoIn + rhoEx)/2;
+            const Evaluation rhoAvg = (rhoIn + rhoEx) / 2;
 
             const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
             Evaluation pressureExterior = exFluidState.pressure(phaseIdx);
-            pressureExterior += rhoAvg*(distZ*g);
+            pressureExterior += rhoAvg * (distZ * g);
 
             pressureDifference_[phaseIdx] = pressureExterior - pressureInterior;
 
@@ -396,15 +401,13 @@ protected:
 
             const short upstreamIdx = upstreamIndex_(phaseIdx);
             if (upstreamIdx == interiorDofIdx_) {
-
                 // this is slightly hacky because in the automatic differentiation case, it
                 // only works for the element centered finite volume method. for ebos this
                 // does not matter, though.
                 const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
 
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans);
-
+                    pressureDifference_[phaseIdx] * up.mobility(phaseIdx) * (-trans);
             }
             else {
                 // compute the phase mobility using the material law parameters of the
@@ -416,10 +419,9 @@ protected:
                 std::array<typename FluidState::Scalar,numPhases> kr;
                 MaterialLaw::relativePermeabilities(kr, matParams, exFluidState);
 
-                const auto& mob = kr[phaseIdx]/exFluidState.viscosity(phaseIdx);
+                const auto& mob = kr[phaseIdx] / exFluidState.viscosity(phaseIdx);
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*mob*(-trans);
-
+                    pressureDifference_[phaseIdx] * mob * (-trans);
             }
         }
     }
@@ -428,13 +430,12 @@ protected:
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
      */
     void calculateFluxes_(const ElementContext&, unsigned, unsigned)
-    { }
+    {}
 
     void calculateBoundaryFluxes_(const ElementContext&, unsigned, unsigned)
     {}
 
 private:
-
     Scalar transmissibility_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx) const
     {
         const auto& stencil = elemCtx.stencil(timeIdx);
@@ -450,12 +451,13 @@ private:
         const Scalar distSquaredExt = distVec1 * distVec1;
         const auto& K0mat = elemCtx.problem().intrinsicPermeability(elemCtx, face.interiorIndex(), timeIdx);
         const auto& K1mat = elemCtx.problem().intrinsicPermeability(elemCtx, face.exteriorIndex(), timeIdx);
+
         // the permeability per definition aligns with the grid
         // we only support diagonal permeability tensor
         // and can therefore neglect off-diagonal values
         int idx = 0;
         Scalar val = 0.0;
-        for (unsigned i = 0; i < dimWorld; ++ i){
+        for (unsigned i = 0; i < dimWorld; ++i) {
             if (std::abs(face.normal()[i]) > val) {
                 val = std::abs(face.normal()[i]);
                 idx = i;
@@ -476,12 +478,13 @@ private:
         const Scalar ndotDistIn = face.normal() * distVec0;
         const Scalar distSquaredIn = distVec0 * distVec0;
         const auto& K0mat = elemCtx.problem().intrinsicPermeability(elemCtx, face.interiorIndex(), timeIdx);
+
         // the permeability per definition aligns with the grid
         // we only support diagonal permeability tensor
         // and can therefore neglect off-diagonal values
         int idx = 0;
         Scalar val = 0.0;
-        for (unsigned i = 0; i < dimWorld; ++ i){
+        for (unsigned i = 0; i < dimWorld; ++i) {
             if (std::abs(face.normal()[i]) > val) {
                 val = std::abs(face.normal()[i]);
                 idx = i;
