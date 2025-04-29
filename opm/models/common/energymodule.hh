@@ -289,7 +289,8 @@ public:
         }
 
         // make the weight of the temperature primary variable inversly proportional to its value
-        return std::max(1.0/1000, 1.0/model.solution(/*timeIdx=*/0)[globalDofIdx][temperatureIdx]);
+        return std::max(1.0 / 1000,
+                        1.0 / model.solution(/*timeIdx=*/0)[globalDofIdx][temperatureIdx]);
     }
 
     /*!
@@ -337,9 +338,9 @@ public:
                                 const Evaluation& volume)
     {
         rateVec[energyEqIdx] =
-            volume
-            * fluidState.density(phaseIdx)
-            * fluidState.enthalpy(phaseIdx);
+            volume *
+            fluidState.density(phaseIdx) *
+            fluidState.enthalpy(phaseIdx);
     }
 
     /*!
@@ -369,10 +370,10 @@ public:
     {
         const auto& fs = intQuants.fluidState();
         storage[energyEqIdx] +=
-            Toolbox::template decay<LhsEval>(fs.density(phaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.internalEnergy(phaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
-            * Toolbox::template decay<LhsEval>(intQuants.porosity());
+            Toolbox::template decay<LhsEval>(fs.density(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(fs.internalEnergy(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(intQuants.porosity());
     }
 
     /*!
@@ -387,11 +388,11 @@ public:
     {
         const auto& fs = intQuants.fractureFluidState();
         storage[energyEqIdx] +=
-            Toolbox::template decay<LhsEval>(fs.density(phaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.internalEnergy(phaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
-            * Toolbox::template decay<LhsEval>(intQuants.fracturePorosity())
-            * Toolbox::template decay<LhsEval>(intQuants.fractureVolume())/scv.volume();
+            Toolbox::template decay<LhsEval>(fs.density(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(fs.internalEnergy(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx)) *
+            Toolbox::template decay<LhsEval>(intQuants.fracturePorosity()) *
+            Toolbox::template decay<LhsEval>(intQuants.fractureVolume()) / scv.volume();
     }
 
     /*!
@@ -428,9 +429,9 @@ public:
             const IntensiveQuantities& up = context.intensiveQuantities(upIdx, timeIdx);
 
             flux[energyEqIdx] +=
-                extQuants.volumeFlux(phaseIdx)
-                * up.fluidState().enthalpy(phaseIdx)
-                * up.fluidState().density(phaseIdx);
+                extQuants.volumeFlux(phaseIdx) *
+                up.fluidState().enthalpy(phaseIdx) *
+                up.fluidState().density(phaseIdx);
         }
     }
 
@@ -450,8 +451,7 @@ public:
 
         // reduce the energy flux in the matrix by the half the width occupied by the
         // fracture
-        flux[energyEqIdx] *=
-            1 - extQuants.fractureWidth()/(2*scvf.area());
+        flux[energyEqIdx] *= 1 - extQuants.fractureWidth() / (2 * scvf.area());
 
         // advective energy flux in all phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -464,9 +464,9 @@ public:
             const IntensiveQuantities& up = context.intensiveQuantities(upIdx, timeIdx);
 
             flux[energyEqIdx] +=
-                extQuants.fractureVolumeFlux(phaseIdx)
-                * up.fluidState().enthalpy(phaseIdx)
-                * up.fluidState().density(phaseIdx);
+                extQuants.fractureVolumeFlux(phaseIdx) *
+                up.fluidState().enthalpy(phaseIdx) *
+                up.fluidState().density(phaseIdx);
         }
     }
 
@@ -485,9 +485,7 @@ public:
         const auto& extQuants = context.extensiveQuantities(spaceIdx, timeIdx);
 
         // diffusive energy flux
-        flux[energyEqIdx] +=
-            - extQuants.temperatureGradNormal()
-            * extQuants.thermalConductivity();
+        flux[energyEqIdx] += -extQuants.temperatureGradNormal() * extQuants.thermalConductivity();
     }
 };
 
@@ -597,7 +595,7 @@ protected:
                  const ElementContext&,
                  unsigned,
                  unsigned)
-    { }
+    {}
 };
 
 /*!
@@ -778,7 +776,7 @@ protected:
     void update_(const ElementContext& elemCtx, unsigned faceIdx, unsigned timeIdx)
     {
         const auto& gradCalc = elemCtx.gradientCalculator();
-        Opm::TemperatureCallback<TypeTag> temperatureCallback(elemCtx);
+        TemperatureCallback<TypeTag> temperatureCallback(elemCtx);
 
         EvalDimVector temperatureGrad;
         gradCalc.calculateGradient(temperatureGrad,
@@ -799,8 +797,8 @@ protected:
         const auto& intQuantsOutside = elemCtx.intensiveQuantities(extQuants.exteriorIndex(), timeIdx);
 
         // arithmetic mean
-        thermalConductivity_ =
-            0.5 * (intQuantsInside.thermalConductivity() + intQuantsOutside.thermalConductivity());
+        thermalConductivity_ = 0.5 * (intQuantsInside.thermalConductivity() +
+                                      intQuantsOutside.thermalConductivity());
         Opm::Valgrind::CheckDefined(thermalConductivity_);
     }
 
