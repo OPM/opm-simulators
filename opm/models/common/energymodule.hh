@@ -817,11 +817,10 @@ protected:
         DimVector distVec = face.integrationPos();
         distVec -= insideScv.geometry().center();
 
-        Scalar tmp = 0;
+        Scalar dist = 0;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-            tmp += distVec[dimIdx] * face.normal()[dimIdx];
+            dist += distVec[dimIdx] * face.normal()[dimIdx];
         }
-        Scalar dist = tmp;
 
         // if the following assertation triggers, the center of the
         // center of the interior SCV was not inside the element!
