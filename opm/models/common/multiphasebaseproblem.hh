@@ -28,8 +28,8 @@
 #ifndef EWOMS_MULTI_PHASE_BASE_PROBLEM_HH
 #define EWOMS_MULTI_PHASE_BASE_PROBLEM_HH
 
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <dune/grid/common/partitionset.hh>
 
@@ -45,6 +45,10 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/utility/CopyablePtr.hpp>
+
+#include <algorithm>
+#include <array>
+#include <stdexcept>
 
 namespace Opm {
 /*!
