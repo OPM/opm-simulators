@@ -73,7 +73,7 @@ struct DarcyFluxModule
      * \brief Register all run-time parameters for the flux module.
      */
     static void registerParameters()
-    { }
+    {}
 };
 
 /*!
@@ -83,7 +83,7 @@ struct DarcyFluxModule
  */
 template <class TypeTag>
 class DarcyBaseProblem
-{ };
+{};
 
 /*!
  * \ingroup FluxModules
@@ -93,11 +93,12 @@ template <class TypeTag>
 class DarcyIntensiveQuantities
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+
 protected:
     void update_(const ElementContext&,
                  unsigned,
                  unsigned)
-    { }
+    {}
 };
 
 /*!
@@ -240,7 +241,7 @@ protected:
             distVecEx -= posFace;
             distVecTotal -= posIn;
             const Scalar absDistTotalSquared = distVecTotal.two_norm2();
-            for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!elemCtx.model().phaseIsConsidered(phaseIdx))
                     continue;
 
@@ -251,11 +252,11 @@ protected:
                     interiorDofIdx_ == static_cast<int>(focusDofIdx))
                 {
                     const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
-                    pStatIn = - rhoIn*(gIn*distVecIn);
+                    pStatIn = -rhoIn * (gIn * distVecIn);
                 }
                 else {
                     const Scalar rhoIn = Toolbox::value(intQuantsIn.fluidState().density(phaseIdx));
-                    pStatIn = - rhoIn*(gIn*distVecIn);
+                    pStatIn = -rhoIn * (gIn * distVecIn);
                 }
 
                 // the quantities on the exterior side of the face do not influence the
@@ -266,11 +267,11 @@ protected:
                     exteriorDofIdx_ == static_cast<int>(focusDofIdx))
                 {
                     const Evaluation& rhoEx = intQuantsEx.fluidState().density(phaseIdx);
-                    pStatEx = - rhoEx*(gEx*distVecEx);
+                    pStatEx = -rhoEx * (gEx * distVecEx);
                 }
                 else {
                     const Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
-                    pStatEx = - rhoEx*(gEx*distVecEx);
+                    pStatEx = -rhoEx * (gEx * distVecEx);
                 }
 
                 // compute the hydrostatic gradient between the two control volumes (this
@@ -278,7 +279,7 @@ protected:
                 // control volume centers and the length (pStaticExterior -
                 // pStaticInterior)/distanceInteriorToExterior
                 Dune::FieldVector<Evaluation, dimWorld> f(distVecTotal);
-                f *= (pStatEx - pStatIn)/absDistTotalSquared;
+                f *= (pStatEx - pStatIn) / absDistTotalSquared;
 
                 // calculate the final potential gradient
                 for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
@@ -287,7 +288,7 @@ protected:
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
                     if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
                         throw NumericalProblem("Non-finite potential gradient for phase '"
-                                               + std::string(FluidSystem::phaseName(phaseIdx))+"'");
+                                               + std::string(FluidSystem::phaseName(phaseIdx)) + "'");
                     }
                 }
             }
@@ -379,15 +380,15 @@ protected:
             DimVector distVecIn(posIn);
             distVecIn -= posFace;
             const Scalar absDistSquared = distVecIn.two_norm2();
-            const Scalar gTimesDist = gIn*distVecIn;
+            const Scalar gTimesDist = gIn * distVecIn;
 
-            for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!elemCtx.model().phaseIsConsidered(phaseIdx))
                     continue;
 
                 // calculate the hydrostatic pressure at the integration point of the face
                 const Evaluation rhoIn = intQuantsIn.fluidState().density(phaseIdx);
-                const Evaluation pStatIn = - gTimesDist*rhoIn;
+                const Evaluation pStatIn = -gTimesDist * rhoIn;
 
                 Valgrind::CheckDefined(pStatIn);
                 // compute the hydrostatic gradient between the control volume and face integration
@@ -406,7 +407,7 @@ protected:
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
                     if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
                         throw NumericalProblem("Non-finite potential gradient for phase '"
-                                               + std::string(FluidSystem::phaseName(phaseIdx))+"'");
+                                               + std::string(FluidSystem::phaseName(phaseIdx)) + "'");
                     }
                 }
             }
@@ -421,13 +422,13 @@ protected:
         MaterialLaw::relativePermeabilities(kr, matParams, fluidState);
         Valgrind::CheckDefined(kr);
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx))
                 continue;
 
             Evaluation tmp = 0.0;
             for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx)
-                tmp += potentialGrad_[phaseIdx][dimIdx]*faceNormal[dimIdx];
+                tmp += potentialGrad_[phaseIdx][dimIdx] * faceNormal[dimIdx];
 
             if (tmp > 0) {
                 upstreamDofIdx_[phaseIdx] = exteriorDofIdx_;
@@ -441,12 +442,10 @@ protected:
             // take the phase mobility from the DOF in upstream direction
             if (upstreamDofIdx_[phaseIdx] < 0) {
                 if (interiorDofIdx_ == focusDofIdx)
-                    mobility_[phaseIdx] =
-                        kr[phaseIdx] / fluidState.viscosity(phaseIdx);
+                    mobility_[phaseIdx] = kr[phaseIdx] / fluidState.viscosity(phaseIdx);
                 else
-                    mobility_[phaseIdx] =
-                        Toolbox::value(kr[phaseIdx])
-                        / Toolbox::value(fluidState.viscosity(phaseIdx));
+                    mobility_[phaseIdx] = Toolbox::value(kr[phaseIdx]) /
+                                          Toolbox::value(fluidState.viscosity(phaseIdx));
             }
             else if (upstreamDofIdx_[phaseIdx] != focusDofIdx)
                 mobility_[phaseIdx] = Toolbox::value(intQuantsIn.mobility(phaseIdx));
@@ -468,7 +467,7 @@ protected:
         const DimVector& normal = scvf.normal();
         Valgrind::CheckDefined(normal);
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             filterVelocity_[phaseIdx] = 0.0;
             volumeFlux_[phaseIdx] = 0.0;
             if (!elemCtx.model().phaseIsConsidered(phaseIdx))
@@ -497,7 +496,7 @@ protected:
         const DimVector& normal = scvf.normal();
         Valgrind::CheckDefined(normal);
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 filterVelocity_[phaseIdx] = 0.0;
                 volumeFlux_[phaseIdx] = 0.0;
@@ -516,8 +515,8 @@ protected:
     {
 #ifndef NDEBUG
         assert(isfinite(mobility_[phaseIdx]));
-        for (unsigned i = 0; i < K_.M(); ++ i)
-            for (unsigned j = 0; j < K_.N(); ++ j)
+        for (unsigned i = 0; i < K_.M(); ++i)
+            for (unsigned j = 0; j < K_.N(); ++j)
                 assert(std::isfinite(K_[i][j]));
 #endif
 
@@ -525,7 +524,7 @@ protected:
         filterVelocity_[phaseIdx] *= - mobility_[phaseIdx];
 
 #ifndef NDEBUG
-        for (unsigned i = 0; i < filterVelocity_[phaseIdx].size(); ++ i)
+        for (unsigned i = 0; i < filterVelocity_[phaseIdx].size(); ++i)
             assert(isfinite(filterVelocity_[phaseIdx][i]));
 #endif
     }
