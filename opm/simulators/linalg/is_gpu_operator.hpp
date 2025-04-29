@@ -19,8 +19,8 @@
 
 #include <type_traits>
 
-#include <opm/common/utility/gpuDecorators.hpp>
-#if HAVE_CUDA
+#if HAVE_CUDA // Avoid including GpuVector.hpp if CUDA 
+              // is not enabled to avoid linking errors.
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #endif
 namespace Opm {
