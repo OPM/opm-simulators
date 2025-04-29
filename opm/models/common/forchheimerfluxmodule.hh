@@ -277,21 +277,21 @@ protected:
         if (focusDofIdx == i) {
             ergunCoefficient_ =
                 (intQuantsIn.ergunCoefficient() +
-                 getValue(intQuantsEx.ergunCoefficient()))/2;
+                 getValue(intQuantsEx.ergunCoefficient())) / 2;
         }
         else if (focusDofIdx == j) {
             ergunCoefficient_ =
                 (getValue(intQuantsIn.ergunCoefficient()) +
-                 intQuantsEx.ergunCoefficient())/2;
+                 intQuantsEx.ergunCoefficient()) / 2;
         }
         else {
             ergunCoefficient_ =
                 (getValue(intQuantsIn.ergunCoefficient()) +
-                 getValue(intQuantsEx.ergunCoefficient()))/2;
+                 getValue(intQuantsEx.ergunCoefficient())) / 2;
         }
 
         // obtain the mobility to passability ratio for each phase.
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
             }
@@ -300,16 +300,12 @@ protected:
             const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
             if (focusDofIdx == upIdx) {
-                density_[phaseIdx] =
-                    up.fluidState().density(phaseIdx);
-                mobilityPassabilityRatio_[phaseIdx] =
-                    up.mobilityPassabilityRatio(phaseIdx);
+                density_[phaseIdx] = up.fluidState().density(phaseIdx);
+                mobilityPassabilityRatio_[phaseIdx] = up.mobilityPassabilityRatio(phaseIdx);
             }
             else {
-                density_[phaseIdx] =
-                    getValue(up.fluidState().density(phaseIdx));
-                mobilityPassabilityRatio_[phaseIdx] =
-                    getValue(up.mobilityPassabilityRatio(phaseIdx));
+                density_[phaseIdx] = getValue(up.fluidState().density(phaseIdx));
+                mobilityPassabilityRatio_[phaseIdx] = getValue(up.mobilityPassabilityRatio(phaseIdx));
             }
         }
     }
@@ -345,7 +341,7 @@ protected:
             sqrtK_[dimIdx] = std::sqrt(this->K_[dimIdx][dimIdx]);
         }
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
             }
@@ -355,8 +351,7 @@ protected:
                 mobilityPassabilityRatio_[phaseIdx] = intQuantsIn.mobilityPassabilityRatio(phaseIdx);
             }
             else {
-                density_[phaseIdx] =
-                    getValue(intQuantsIn.fluidState().density(phaseIdx));
+                density_[phaseIdx] = getValue(intQuantsIn.fluidState().density(phaseIdx));
                 mobilityPassabilityRatio_[phaseIdx] =
                     getValue(intQuantsIn.mobilityPassabilityRatio(phaseIdx));
             }
@@ -384,25 +379,22 @@ protected:
         // obtain the Ergun coefficient from the intensive quantity object. Until a
         // better method comes along, we use arithmetic averaging.
         if (focusDofIdx == i) {
-            ergunCoefficient_ =
-                (intQuantsI.ergunCoefficient() +
-                 getValue(intQuantsJ.ergunCoefficient())) / 2;
+            ergunCoefficient_ = (intQuantsI.ergunCoefficient() +
+                                 getValue(intQuantsJ.ergunCoefficient())) / 2;
         }
         else if (focusDofIdx == j) {
-            ergunCoefficient_ =
-                (getValue(intQuantsI.ergunCoefficient()) +
-                 intQuantsJ.ergunCoefficient()) / 2;
+            ergunCoefficient_ = (getValue(intQuantsI.ergunCoefficient()) +
+                                 intQuantsJ.ergunCoefficient()) / 2;
         }
         else {
-            ergunCoefficient_ =
-                (getValue(intQuantsI.ergunCoefficient()) +
-                 getValue(intQuantsJ.ergunCoefficient())) / 2;
+            ergunCoefficient_ = (getValue(intQuantsI.ergunCoefficient()) +
+                                 getValue(intQuantsJ.ergunCoefficient())) / 2;
         }
 
         ///////////////
         // calculate the weights of the upstream and the downstream control volumes
         ///////////////
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 this->filterVelocity_[phaseIdx] = 0.0;
                 this->volumeFlux_[phaseIdx] = 0.0;
@@ -412,7 +404,7 @@ protected:
             calculateForchheimerFlux_(phaseIdx);
 
             this->volumeFlux_[phaseIdx] = 0.0;
-            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++ dimIdx) {
+            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                 this->volumeFlux_[phaseIdx] +=
                     this->filterVelocity_[phaseIdx][dimIdx]*normal[dimIdx];
             }
@@ -432,7 +424,7 @@ protected:
         ///////////////
         // calculate the weights of the upstream and the downstream degrees of freedom
         ///////////////
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 this->filterVelocity_[phaseIdx] = 0.0;
                 this->volumeFlux_[phaseIdx] = 0.0;
@@ -468,7 +460,7 @@ protected:
         while (deltaV.one_norm() > 1e-11) {
             if (newtonIter >= 50) {
                 throw NumericalProblem("Could not determine Forchheimer velocity within "
-                                       + std::to_string(newtonIter)+" iterations");
+                                       + std::to_string(newtonIter) + " iterations");
             }
             ++newtonIter;
 
@@ -526,9 +518,9 @@ protected:
         else {
             absVel = Toolbox::sqrt(absVel);
         }
-        const auto& alpha = density*mobPassabilityRatio*ergunCoefficient_*absVel;
+        const auto& alpha = density * mobPassabilityRatio * ergunCoefficient_ * absVel;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-            residual[dimIdx] += sqrtK_[dimIdx]*alpha*velocity[dimIdx];
+            residual[dimIdx] += sqrtK_[dimIdx] * alpha * velocity[dimIdx];
         }
         Valgrind::CheckDefined(residual);
     }
