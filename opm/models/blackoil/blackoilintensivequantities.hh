@@ -647,16 +647,16 @@ public:
     {
         using Dir = FaceDir::DirEnum;
         if (dirMob_) {
-            switch(facedir) {
+            switch (facedir) {
                 case Dir::XMinus:
                 case Dir::XPlus:
-                    return dirMob_->mobilityX_[phaseIdx];
+                    return dirMob_->getArray(0)[phaseIdx];
                 case Dir::YMinus:
                 case Dir::YPlus:
-                    return dirMob_->mobilityY_[phaseIdx];
+                    return dirMob_->getArray(1)[phaseIdx];
                 case Dir::ZMinus:
                 case Dir::ZPlus:
-                    return dirMob_->mobilityZ_[phaseIdx];
+                    return dirMob_->getArray(2)[phaseIdx];
                 default:
                     throw std::runtime_error("Unexpected face direction");
             }

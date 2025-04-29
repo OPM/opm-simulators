@@ -32,6 +32,8 @@
 
 #include <array>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 namespace Opm {
 
@@ -46,30 +48,26 @@ struct DirectionalMobility
     DirectionalMobility(const array_type& mX,
                         const array_type& mY,
                         const array_type& mZ)
-        : mobilityX_{mX}
-        , mobilityY_{mY}
-        , mobilityZ_{mZ}
+        : mobility_{mX, mY, mZ}
     {}
 
     DirectionalMobility() = default;
 
-    array_type& getArray(int index)
+    const array_type& getArray(unsigned index) const
     {
-        switch (index) {
-        case 0:
-            return mobilityX_;
-        case 1:
-            return mobilityY_;
-        case 2:
-            return mobilityZ_;
-        default:
-            throw std::runtime_error("Unexpected mobility array index");
+        if (index > 2) {
+            throw std::runtime_error("Unexpected mobility array index " + std::to_string(index));
         }
+
+        return mobility_[index];
     }
 
-    array_type mobilityX_{};
-    array_type mobilityY_{};
-    array_type mobilityZ_{};
+    array_type& getArray(unsigned index)
+    {
+        return const_cast<array_type&>(std::as_const(*this).getArray(index));
+    }
+
+    std::array<array_type,3> mobility_{};
 };
 
 } // namespace Opm
