@@ -70,32 +70,42 @@ struct MultiPhaseBaseModel {};
 template<class TypeTag>
 struct Splices<TypeTag, TTag::MultiPhaseBaseModel>
 {
-    using type = std::tuple<GetSplicePropType<TypeTag, TTag::MultiPhaseBaseModel, Properties::SpatialDiscretizationSplice>>;
+    using type = std::tuple<GetSplicePropType<TypeTag,
+                                              TTag::MultiPhaseBaseModel,
+                                              Properties::SpatialDiscretizationSplice>>;
 };
 
 //! Set the default spatial discretization
 //!
 //! We use a vertex centered finite volume method by default
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::MultiPhaseBaseModel> { using type = TTag::VcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = TTag::VcfvDiscretization; };
 
 //! set the number of equations to the number of phases
 template<class TypeTag>
-struct NumEq<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr int value = GetPropType<TypeTag, Properties::Indices>::numEq; };
+struct NumEq<TypeTag, TTag::MultiPhaseBaseModel>
+{ static constexpr int value = GetPropType<TypeTag, Properties::Indices>::numEq; };
+
 //! The number of phases is determined by the fluid system
 template<class TypeTag>
-struct NumPhases<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr int value = GetPropType<TypeTag, Properties::FluidSystem>::numPhases; };
+struct NumPhases<TypeTag, TTag::MultiPhaseBaseModel>
+{ static constexpr int value = GetPropType<TypeTag, Properties::FluidSystem>::numPhases; };
+
 //! Number of chemical species in the system
 template<class TypeTag>
-struct NumComponents<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr int value = GetPropType<TypeTag, Properties::FluidSystem>::numComponents; };
+struct NumComponents<TypeTag, TTag::MultiPhaseBaseModel>
+{ static constexpr int value = GetPropType<TypeTag, Properties::FluidSystem>::numComponents; };
 
 //! The type of the base base class for actual problems
 template<class TypeTag>
-struct BaseProblem<TypeTag, TTag::MultiPhaseBaseModel> { using type = MultiPhaseBaseProblem<TypeTag>; };
+struct BaseProblem<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = MultiPhaseBaseProblem<TypeTag>; };
 
 //! By default, use the Darcy relation to determine the phase velocity
 template<class TypeTag>
-struct FluxModule<TypeTag, TTag::MultiPhaseBaseModel> { using type = DarcyFluxModule<TypeTag>; };
+struct FluxModule<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = DarcyFluxModule<TypeTag>; };
 
 /*!
  * \brief Set the material law to the null law by default.
@@ -175,7 +185,7 @@ class MultiPhaseBaseModel : public GetPropType<TypeTag, Properties::Discretizati
 public:
     explicit MultiPhaseBaseModel(Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {}
 
     /*!
      * \brief Register all run-time parameters for the immiscible model.
@@ -243,7 +253,7 @@ public:
                                                                   dofIdx,
                                                                   /*timeIdx=*/0,
                                                                   phaseIdx);
-                    tmp *= scv.volume()*intQuants.extrusionFactor();
+                    tmp *= scv.volume() * intQuants.extrusionFactor();
 
                     mutex.lock();
                     storage += tmp;
@@ -266,8 +276,9 @@ public:
 
 private:
     const Implementation& asImp_() const
-    { return *static_cast<const Implementation *>(this); }
+    { return *static_cast<const Implementation*>(this); }
 };
+
 } // namespace Opm
 
 #endif
