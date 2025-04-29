@@ -41,6 +41,7 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <string>
@@ -416,7 +417,7 @@ protected:
 
         const auto& matParams = elemCtx.problem().materialLawParams(elemCtx, i, timeIdx);
 
-        Scalar kr[numPhases];
+        std::array<Scalar, numPhases> kr;
         MaterialLaw::relativePermeabilities(kr, matParams, fluidState);
         Valgrind::CheckDefined(kr);
 
@@ -541,21 +542,21 @@ protected:
     DimMatrix K_;
 
     // mobilities of all fluid phases [1 / (Pa s)]
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation, numPhases> mobility_;
 
     // filter velocities of all phases [m/s]
-    EvalDimVector filterVelocity_[numPhases];
+    std::array<EvalDimVector, numPhases> filterVelocity_;
 
     // the volumetric flux of all fluid phases over the control
     // volume's face [m^3/s / m^2]
-    Evaluation volumeFlux_[numPhases];
+    std::array<Evaluation, numPhases> volumeFlux_;
 
     // pressure potential gradients of all phases [Pa / m]
-    EvalDimVector potentialGrad_[numPhases];
+    std::array<EvalDimVector, numPhases> potentialGrad_;
 
     // upstream, downstream, interior and exterior DOFs
-    short upstreamDofIdx_[numPhases];
-    short downstreamDofIdx_[numPhases];
+    std::array<short, numPhases> upstreamDofIdx_;
+    std::array<short, numPhases> downstreamDofIdx_;
     short interiorDofIdx_;
     short exteriorDofIdx_;
 };
