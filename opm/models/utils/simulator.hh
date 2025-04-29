@@ -86,10 +86,10 @@ class Simulator
 
 public:
     // do not allow to copy simulators around
-    Simulator(const Simulator& ) = delete;
+    Simulator(const Simulator&) = delete;
 
     explicit Simulator(bool verbose = true)
-        :Simulator(Communication(), verbose)   
+        : Simulator(Communication(), verbose)
     {  
     }
 
@@ -429,7 +429,7 @@ public:
     bool finished() const
     {
         assert(timeStepSize_ >= 0.0);
-        return finished_ || (this->time()*(1.0 + eps) >= endTime());
+        return finished_ || (this->time() * (1.0 + eps) >= endTime());
     }
 
     /*!
@@ -438,7 +438,7 @@ public:
      */
     bool willBeFinished() const
     {
-        return finished_ || (this->time() + timeStepSize_)*(1.0 + eps) >= endTime();
+        return finished_ || (this->time() + timeStepSize_) * (1.0 + eps) >= endTime();
     }
 
     /*!
@@ -526,7 +526,7 @@ public:
      */
     bool episodeStarts() const
     {
-        return this->time() <= (episodeStartTime_ - startTime())*(1 + eps);
+        return this->time() <= (episodeStartTime_ - startTime()) * (1 + eps);
     }
 
     /*!
@@ -535,7 +535,7 @@ public:
      */
     bool episodeIsOver() const
     {
-        return this->time() >= (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
+        return this->time() >= (episodeStartTime_ - startTime() + episodeLength()) * (1 - eps);
     }
 
     /*!
@@ -545,7 +545,7 @@ public:
     bool episodeWillBeOver() const
     {
         return this->time() + timeStepSize()
-            >=  (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
+            >=  (episodeStartTime_ - startTime() + episodeLength()) * (1 - eps);
     }
 
     /*!
