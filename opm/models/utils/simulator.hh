@@ -621,8 +621,8 @@ public:
                           << "\" problem\n" << std::flush;
             }
 
-            Scalar oldTimeStepSize = timeStepSize_;
-            int oldTimeStepIdx = timeStepIdx_;
+            const Scalar oldTimeStepSize = timeStepSize_;
+            const int oldTimeStepIdx = timeStepIdx_;
             timeStepSize_ = 0.0;
             timeStepIdx_ = -1;
 
@@ -747,7 +747,7 @@ public:
             writeTimer_.stop();
 
             // do the next time integration
-            Scalar oldDt = timeStepSize();
+            const Scalar oldDt = timeStepSize();
             {
                 OPM_BEGIN_PARALLEL_TRY_CATCH();
                 problem_->advanceTimeLevel();
