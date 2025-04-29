@@ -228,7 +228,7 @@ public:
         {
             // Attention: the variables below are thread specific and thus cannot be
             // moved in front of the #pragma!
-            unsigned threadId = ThreadManager::threadId();
+            const unsigned threadId = ThreadManager::threadId();
             ElementContext elemCtx(this->simulator_);
             ElementIterator elemIt = threadedElemIt.beginParallel();
             EqVector tmp;
