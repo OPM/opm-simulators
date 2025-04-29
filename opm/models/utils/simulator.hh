@@ -711,20 +711,20 @@ public:
             catch (...) {
                 // exceptions in the time integration might be recoverable. clean up in
                 // case they are
-                const auto& model = problem_->model();
-                prePostProcessTimer_ += model.prePostProcessTimer();
-                linearizeTimer_ += model.linearizeTimer();
-                solveTimer_ += model.solveTimer();
-                updateTimer_ += model.updateTimer();
+                const auto& pmodel = problem_->model();
+                prePostProcessTimer_ += pmodel.prePostProcessTimer();
+                linearizeTimer_ += pmodel.linearizeTimer();
+                solveTimer_ += pmodel.solveTimer();
+                updateTimer_ += pmodel.updateTimer();
 
                 throw;
             }
 
-            const auto& model = problem_->model();
-            prePostProcessTimer_ += model.prePostProcessTimer();
-            linearizeTimer_ += model.linearizeTimer();
-            solveTimer_ += model.solveTimer();
-            updateTimer_ += model.updateTimer();
+            const auto& pmodel = problem_->model();
+            prePostProcessTimer_ += pmodel.prePostProcessTimer();
+            linearizeTimer_ += pmodel.linearizeTimer();
+            solveTimer_ += pmodel.solveTimer();
+            updateTimer_ += pmodel.updateTimer();
 
             // post-process the current solution
             prePostProcessTimer_.start();
