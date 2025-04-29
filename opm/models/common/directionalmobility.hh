@@ -28,14 +28,15 @@
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/material/densead/Evaluation.hpp>
 
 #include <array>
 #include <stdexcept>
 
 namespace Opm {
+
 template <class TypeTag, class Evaluation>
-struct DirectionalMobility {
+struct DirectionalMobility
+{
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     // TODO: This (line below) did not work. I get error: ‘Evaluation’ is not a member of ‘Opm::Properties’
     //  when compiling the tracer model (eclgenerictracermodel.cc). 
@@ -43,26 +44,36 @@ struct DirectionalMobility {
     //using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
     using array_type = std::array<Evaluation,numPhases>;
-    DirectionalMobility(const DirectionalMobility& other)
-        : mobilityX_{other.mobilityX_}, mobilityY_{other.mobilityY_}, mobilityZ_{other.mobilityZ_} {}
-    DirectionalMobility(const array_type& mX, const array_type& mY, const array_type& mZ)
-        : mobilityX_{mX}, mobilityY_{mY}, mobilityZ_{mZ} {}
-    DirectionalMobility() : mobilityX_{}, mobilityY_{}, mobilityZ_{} {}
-    array_type& getArray(int index) {
-        switch(index) {
-            case 0:
-                return mobilityX_;
-            case 1:
-                return mobilityY_;
-            case 2:
-                return mobilityZ_;
-            default:
-                throw std::runtime_error("Unexpected mobility array index");
+
+    DirectionalMobility(const array_type& mX,
+                        const array_type& mY,
+                        const array_type& mZ)
+        : mobilityX_{mX}
+        , mobilityY_{mY}
+        , mobilityZ_{mZ}
+    {}
+
+    DirectionalMobility() = default;
+
+    array_type& getArray(int index)
+    {
+        switch (index) {
+        case 0:
+            return mobilityX_;
+        case 1:
+            return mobilityY_;
+        case 2:
+            return mobilityZ_;
+        default:
+            throw std::runtime_error("Unexpected mobility array index");
         }
     }
-    array_type mobilityX_;
-    array_type mobilityY_;
-    array_type mobilityZ_;
+
+    array_type mobilityX_{};
+    array_type mobilityY_{};
+    array_type mobilityZ_{};
 };
+
 } // namespace Opm
+
 #endif
