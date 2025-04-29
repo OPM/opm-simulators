@@ -36,6 +36,8 @@
 #include <opm/models/common/quantitycallbacks.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <stdexcept>
+
 namespace Opm {
 
 /*!
