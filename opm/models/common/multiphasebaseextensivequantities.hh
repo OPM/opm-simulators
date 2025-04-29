@@ -37,6 +37,8 @@
 #include <opm/models/discretization/common/fvbaseextensivequantities.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
+#include <array>
+
 namespace Opm {
 /*!
  * \ingroup Discretization
@@ -166,8 +168,8 @@ public:
     { return 1.0 - upstreamWeight(phaseIdx); }
 
 private:
-    short upstreamScvIdx_[numPhases]{};
-    short downstreamScvIdx_[numPhases]{};
+    std::array<short, numPhases> upstreamScvIdx_{};
+    std::array<short, numPhases> downstreamScvIdx_{};
 };
 
 } // namespace Opm
