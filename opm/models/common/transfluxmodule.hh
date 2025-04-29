@@ -243,8 +243,9 @@ protected:
         Scalar distZ = zIn - zEx;
 
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
+            }
 
             // check shortcut: if the mobility of the phase is zero in the interior as
             // well as the exterior DOF, we can skip looking at the phase.
@@ -317,12 +318,14 @@ protected:
             unsigned upstreamIdx = upstreamIndex_(phaseIdx);
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
 
-            if (upstreamIdx == interiorDofIdx_)
+            if (upstreamIdx == interiorDofIdx_) {
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans);
-            else
+            }
+            else {
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans));
+            }
         }
     }
 
@@ -362,8 +365,9 @@ protected:
         Scalar distZ = zIn - zEx;
 
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
+            }
 
             // do the gravity correction: compute the hydrostatic pressure for the
             // integration position
