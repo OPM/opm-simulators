@@ -242,8 +242,9 @@ protected:
             distVecTotal -= posIn;
             const Scalar absDistTotalSquared = distVecTotal.two_norm2();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+                if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                     continue;
+                }
 
                 // calculate the hydrostatic pressure at the integration point of the face
                 Evaluation pStatIn;
@@ -282,8 +283,9 @@ protected:
                 f *= (pStatEx - pStatIn) / absDistTotalSquared;
 
                 // calculate the final potential gradient
-                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                     potentialGrad_[phaseIdx][dimIdx] += f[dimIdx];
+                }
 
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
                     if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
@@ -306,8 +308,9 @@ protected:
 
             // determine the upstream and downstream DOFs
             Evaluation tmp = 0.0;
-            for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx)
+            for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx) {
                 tmp += potentialGrad_[phaseIdx][dimIdx]*faceNormal[dimIdx];
+            }
 
             if (tmp > 0) {
                 upstreamDofIdx_[phaseIdx] = exteriorDofIdx_;
@@ -321,10 +324,12 @@ protected:
             // we only carry the derivatives along if the upstream DOF is the one which
             // we currently focus on
             const auto& up = elemCtx.intensiveQuantities(upstreamDofIdx_[phaseIdx], timeIdx);
-            if (upstreamDofIdx_[phaseIdx] == static_cast<int>(focusDofIdx))
+            if (upstreamDofIdx_[phaseIdx] == static_cast<int>(focusDofIdx)) {
                 mobility_[phaseIdx] = up.mobility(phaseIdx);
-            else
+            }
+            else {
                 mobility_[phaseIdx] = Toolbox::value(up.mobility(phaseIdx));
+            }
         }
     }
 
@@ -383,8 +388,9 @@ protected:
             const Scalar gTimesDist = gIn * distVecIn;
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+                if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                     continue;
+                }
 
                 // calculate the hydrostatic pressure at the integration point of the face
                 const Evaluation rhoIn = intQuantsIn.fluidState().density(phaseIdx);
@@ -400,8 +406,9 @@ protected:
                 f *= pStatIn / absDistSquared;
 
                 // calculate the final potential gradient
-                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                     potentialGrad_[phaseIdx][dimIdx] += f[dimIdx];
+                }
 
                 Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
@@ -423,12 +430,14 @@ protected:
         Valgrind::CheckDefined(kr);
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             Evaluation tmp = 0.0;
-            for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx)
+            for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx) {
                 tmp += potentialGrad_[phaseIdx][dimIdx] * faceNormal[dimIdx];
+            }
 
             if (tmp > 0) {
                 upstreamDofIdx_[phaseIdx] = exteriorDofIdx_;
@@ -441,16 +450,20 @@ protected:
 
             // take the phase mobility from the DOF in upstream direction
             if (upstreamDofIdx_[phaseIdx] < 0) {
-                if (interiorDofIdx_ == focusDofIdx)
+                if (interiorDofIdx_ == focusDofIdx) {
                     mobility_[phaseIdx] = kr[phaseIdx] / fluidState.viscosity(phaseIdx);
-                else
+                }
+                else {
                     mobility_[phaseIdx] = Toolbox::value(kr[phaseIdx]) /
                                           Toolbox::value(fluidState.viscosity(phaseIdx));
+                }
             }
-            else if (upstreamDofIdx_[phaseIdx] != focusDofIdx)
+            else if (upstreamDofIdx_[phaseIdx] != focusDofIdx) {
                 mobility_[phaseIdx] = Toolbox::value(intQuantsIn.mobility(phaseIdx));
-            else
+            }
+            else {
                 mobility_[phaseIdx] = intQuantsIn.mobility(phaseIdx);
+            }
             Valgrind::CheckDefined(mobility_[phaseIdx]);
         }
     }
@@ -470,15 +483,17 @@ protected:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             filterVelocity_[phaseIdx] = 0.0;
             volumeFlux_[phaseIdx] = 0.0;
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             asImp_().calculateFilterVelocity_(phaseIdx);
             Valgrind::CheckDefined(filterVelocity_[phaseIdx]);
 
             volumeFlux_[phaseIdx] = 0.0;
-            for (unsigned i = 0; i < normal.size(); ++i)
+            for (unsigned i = 0; i < normal.size(); ++i) {
                 volumeFlux_[phaseIdx] += filterVelocity_[phaseIdx][i] * normal[i];
+            }
         }
     }
 
@@ -506,8 +521,9 @@ protected:
             asImp_().calculateFilterVelocity_(phaseIdx);
             Valgrind::CheckDefined(filterVelocity_[phaseIdx]);
             volumeFlux_[phaseIdx] = 0.0;
-            for (unsigned i = 0; i < normal.size(); ++i)
+            for (unsigned i = 0; i < normal.size(); ++i) {
                 volumeFlux_[phaseIdx] += filterVelocity_[phaseIdx][i] * normal[i];
+            }
         }
     }
 
@@ -515,17 +531,20 @@ protected:
     {
 #ifndef NDEBUG
         assert(isfinite(mobility_[phaseIdx]));
-        for (unsigned i = 0; i < K_.M(); ++i)
-            for (unsigned j = 0; j < K_.N(); ++j)
+        for (unsigned i = 0; i < K_.M(); ++i) {
+            for (unsigned j = 0; j < K_.N(); ++j) {
                 assert(std::isfinite(K_[i][j]));
+            }
+        }
 #endif
 
         K_.mv(potentialGrad_[phaseIdx], filterVelocity_[phaseIdx]);
         filterVelocity_[phaseIdx] *= - mobility_[phaseIdx];
 
 #ifndef NDEBUG
-        for (unsigned i = 0; i < filterVelocity_[phaseIdx].size(); ++i)
+        for (unsigned i = 0; i < filterVelocity_[phaseIdx].size(); ++i) {
             assert(isfinite(filterVelocity_[phaseIdx][i]));
+        }
 #endif
     }
 
