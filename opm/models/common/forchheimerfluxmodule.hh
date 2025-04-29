@@ -41,6 +41,7 @@
 #include <dune/common/fmatrix.hh>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
@@ -170,7 +171,7 @@ protected:
 
 private:
     Evaluation ergunCoefficient_;
-    Evaluation mobilityPassabilityRatio_[numPhases];
+    std::array<Evaluation, numPhases> mobilityPassabilityRatio_;
 };
 
 /*!
@@ -569,10 +570,10 @@ protected:
     Evaluation ergunCoefficient_;
 
     // Passability of all phases at the integration point
-    Evaluation mobilityPassabilityRatio_[numPhases];
+    std::array<Evaluation, numPhases> mobilityPassabilityRatio_;
 
     // Density of all phases at the integration point
-    Evaluation density_[numPhases];
+    std::array<Evaluation, numPhases> density_;
 };
 
 } // namespace Opm
