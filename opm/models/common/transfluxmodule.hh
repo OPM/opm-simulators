@@ -213,10 +213,8 @@ protected:
     {
         Valgrind::SetUndefined(*this);
 
-        // only valied for element center finite volume discretization
-        static const bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
-
-        static_assert(isEcfv);
+        // only valid for element center finite volume discretization
+        static_assert(std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>);
 
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
