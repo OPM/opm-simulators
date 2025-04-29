@@ -31,11 +31,22 @@
 #ifndef EWOMS_TRANS_FLUX_MODULE_HH
 #define EWOMS_TRANS_FLUX_MODULE_HH
 
-#include "multiphasebaseproperties.hh"
-#include <opm/models/utils/signum.hh>
-#include <opm/material/common/Valgrind.hpp>
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/utils/signum.hh>
+
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm {
 
