@@ -235,8 +235,9 @@ public:
 
             for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 const Element& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity)
+                if (elem.partitionType() != Dune::InteriorEntity) {
                     continue; // ignore ghost and overlap elements
+                }
 
                 elemCtx.updateStencil(elem);
                 elemCtx.updateIntensiveQuantities(/*timeIdx=*/0);
