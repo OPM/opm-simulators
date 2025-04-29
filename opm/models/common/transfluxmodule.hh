@@ -506,17 +506,17 @@ private:
     { return *static_cast<const Implementation*>(this); }
 
     // the volumetric flux of all phases [m^3/s]
-    Evaluation volumeFlux_[numPhases];
+    std::array<Evaluation, numPhases> volumeFlux_;
 
     // the difference in effective pressure between the exterior and the interior degree
     // of freedom [Pa]
-    Evaluation pressureDifference_[numPhases];
+    std::array<Evaluation, numPhases> pressureDifference_;
 
     // the local indices of the interior and exterior degrees of freedom
     unsigned short interiorDofIdx_{};
     unsigned short exteriorDofIdx_{};
-    short upIdx_[numPhases]{};
-    short dnIdx_[numPhases]{};
+    std::array<short, numPhases> upIdx_{};
+    std::array<short, numPhases> dnIdx_{};
 };
 
 } // namespace Opm
