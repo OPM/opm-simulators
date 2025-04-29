@@ -129,7 +129,7 @@ class BlackOilIntensiveQuantitiesGlobalIndex
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
-    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
+    using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
 public:
     using FluidState = BlackOilFluidState<Evaluation,

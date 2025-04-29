@@ -131,7 +131,7 @@ class BlackOilIntensiveQuantities
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
     using DispersionIntensiveQuantities = BlackOilDispersionIntensiveQuantities<TypeTag, enableDispersion>;
 
-    using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
+    using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using BrineIntQua = BlackOilBrineIntensiveQuantities<TypeTag, enableSaltPrecipitation>;
     using MICPIntQua = BlackOilMICPIntensiveQuantities<TypeTag, enableMICP>;

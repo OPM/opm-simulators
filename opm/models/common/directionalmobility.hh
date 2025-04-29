@@ -27,6 +27,7 @@
 #define OPM_MODELS_DIRECTIONAL_MOBILITY_HH
 
 #include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <array>
@@ -34,14 +35,11 @@
 
 namespace Opm {
 
-template <class TypeTag, class Evaluation>
+template <class TypeTag>
 struct DirectionalMobility
 {
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    // TODO: This (line below) did not work. I get error: ‘Evaluation’ is not a member of ‘Opm::Properties’
-    //  when compiling the tracer model (eclgenerictracermodel.cc). 
-    //  QuickFix: I am adding Evaluation as a class template parameter..
-    //using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
     using array_type = std::array<Evaluation,numPhases>;
 
