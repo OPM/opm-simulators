@@ -32,6 +32,8 @@
 
 #include <opm/models/immiscible/immiscibleprimaryvariables.hh>
 
+#include <array>
+
 namespace Opm {
 /*!
  * \ingroup DiscreteFractureModel
@@ -105,7 +107,7 @@ private:
         // we have to find saturations for the matrix which result in
         // the same pressures as in the fracture. this can be done by
         // inverting the capillary pressure-saturation curve.
-        Scalar saturations[numPhases];
+        std::array<Scalar, numPhases> saturations;
         MaterialLaw::saturations(saturations, matParams, matrixFluidState);
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
