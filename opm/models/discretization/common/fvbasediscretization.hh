@@ -67,6 +67,7 @@
 #include <opm/simulators/linalg/nullborderlistmanager.hh>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <list>
 #include <memory>
@@ -1586,10 +1587,10 @@ public:
         size_t numGridDof = asImp_().numGridDof();
 
         // global defect of the two auxiliary equations
-        ScalarBuffer* def[numEq];
-        ScalarBuffer* delta[numEq];
-        ScalarBuffer* priVars[numEq];
-        ScalarBuffer* priVarWeight[numEq];
+        std::array<ScalarBuffer*, numEq> def;
+        std::array<ScalarBuffer*, numEq> delta;
+        std::array<ScalarBuffer*, numEq> priVars;
+        std::array<ScalarBuffer*, numEq> priVarWeight;
         ScalarBuffer* relError = writer.allocateManagedScalarBuffer(numGridDof);
         ScalarBuffer* normalizedRelError = writer.allocateManagedScalarBuffer(numGridDof);
         for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
@@ -1904,11 +1905,11 @@ protected:
 
     // cur is the current iterative solution, prev the converged
     // solution of the previous time step
-    mutable IntensiveQuantitiesVector intensiveQuantityCache_[historySize];
+    mutable std::array<IntensiveQuantitiesVector, historySize> intensiveQuantityCache_;
     // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
-    mutable std::vector<unsigned char> intensiveQuantityCacheUpToDate_[historySize];
+    mutable std::array<std::vector<unsigned char>, historySize> intensiveQuantityCacheUpToDate_;
 
-    mutable std::array< std::unique_ptr< DiscreteFunction >, historySize > solution_;
+    mutable std::array<std::unique_ptr<DiscreteFunction>, historySize> solution_;
 
     std::list<std::unique_ptr<BaseOutputModule<TypeTag>>> outputModules_;
 
@@ -1916,7 +1917,7 @@ protected:
     std::vector<Scalar> dofTotalVolume_;
     std::vector<bool> isLocalDof_;
 
-    mutable GlobalEqVector storageCache_[historySize];
+    mutable std::array<GlobalEqVector, historySize> storageCache_;
 
     bool enableGridAdaptation_;
     bool enableIntensiveQuantityCache_;
