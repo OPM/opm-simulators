@@ -35,6 +35,7 @@
 #include <array>
 
 namespace Opm {
+
 /*!
  * \ingroup DiscreteFractureModel
  *
@@ -57,16 +58,15 @@ public:
     /*!
      * \brief Default constructor
      */
-    DiscreteFracturePrimaryVariables() : ParentType()
-    {}
+    DiscreteFracturePrimaryVariables() = default;
 
     /*!
      * \brief Copy constructor
      *
      * \param value The primary variables that will be duplicated.
      */
-    DiscreteFracturePrimaryVariables(const DiscreteFracturePrimaryVariables& value) = default;
-    DiscreteFracturePrimaryVariables& operator=(const DiscreteFracturePrimaryVariables& value) = default;
+    DiscreteFracturePrimaryVariables(const DiscreteFracturePrimaryVariables&) = default;
+    DiscreteFracturePrimaryVariables& operator=(const DiscreteFracturePrimaryVariables&) = default;
 
     using ParentType::operator=; //!< Import base class assignment operators.
 
