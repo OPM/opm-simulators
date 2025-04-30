@@ -28,9 +28,9 @@
 #ifndef EWOMS_FV_BASE_BOUNDARY_CONTEXT_HH
 #define EWOMS_FV_BASE_BOUNDARY_CONTEXT_HH
 
-#include "fvbaseproperties.hh"
-
 #include <dune/common/fvector.hh>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
