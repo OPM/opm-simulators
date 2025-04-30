@@ -37,6 +37,7 @@
 #include <type_traits>
 
 namespace Opm {
+
 template<class TypeTag>
 class EcfvDiscretization;
 
@@ -59,7 +60,7 @@ class FvBaseGradientCalculator
     enum { dimWorld = GridView::dimensionworld };
 
     // maximum number of flux approximation points. to calculate this,
-    // we assume that the geometry with the most pointsq is a cube.
+    // we assume that the geometry with the most points is a cube.
     enum { maxFap = 2 << dim };
 
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
@@ -71,7 +72,7 @@ public:
      *        of the base class of the discretization.
      */
     static void registerParameters()
-    { }
+    {}
 
     /*!
      * \brief Precomputes the common values to calculate gradients and values of
@@ -82,7 +83,7 @@ public:
      */
     template <bool prepareValues = true, bool prepareGradients = true>
     void prepare(const ElementContext&, unsigned)
-    { /* noting to do */ }
+    { /* nothing to do */ }
 
     /*!
      * \brief Calculates the value of an arbitrary scalar quantity at any interior flux
@@ -116,16 +117,16 @@ public:
         // use the average weighted by distance...
         ReturnType value;
         if (i == focusDofIdx) {
-            value = quantityCallback(i)*interiorDistance;
+            value = quantityCallback(i) * interiorDistance;
         } else {
-            value = getValue(quantityCallback(i))*interiorDistance;
+            value = getValue(quantityCallback(i)) * interiorDistance;
         }
 
         if (j == focusDofIdx) {
-            value += quantityCallback(j)*exteriorDistance;
+            value += quantityCallback(j) * exteriorDistance;
         }
         else {
-            value += getValue(quantityCallback(j))*exteriorDistance;
+            value += getValue(quantityCallback(j)) * exteriorDistance;
         }
 
         value /= interiorDistance + exteriorDistance;
@@ -173,20 +174,20 @@ public:
         else {
             const auto& dofVal = getValue(quantityCallback(i));
             for (int k = 0; k < dofVal.size(); ++k) {
-                value[k] = getValue(dofVal[k])*interiorDistance;
+                value[k] = getValue(dofVal[k]) * interiorDistance;
             }
         }
 
         if (j == focusDofIdx) {
             const auto& dofVal = quantityCallback(j);
             for (int k = 0; k < dofVal.size(); ++k) {
-                value[k] += dofVal[k]*exteriorDistance;
+                value[k] += dofVal[k] * exteriorDistance;
             }
         }
         else {
             const auto& dofVal = quantityCallback(j);
             for (int k = 0; k < dofVal.size(); ++k) {
-                value[k] += getValue(dofVal[k])*exteriorDistance;
+                value[k] += getValue(dofVal[k]) * exteriorDistance;
             }
         }
 
@@ -227,25 +228,19 @@ public:
 
         Evaluation deltay;
         if (i == focusIdx) {
-            deltay =
-                getValue(quantityCallback(j))
-                - quantityCallback(i);
+            deltay = getValue(quantityCallback(j)) - quantityCallback(i);
         }
         else if (j == focusIdx) {
-            deltay =
-                quantityCallback(j)
-                - getValue(quantityCallback(i));
+            deltay = quantityCallback(j) - getValue(quantityCallback(i));
         }
         else {
-            deltay =
-                getValue(quantityCallback(j))
-                - getValue(quantityCallback(i));
+            deltay = getValue(quantityCallback(j)) - getValue(quantityCallback(i));
         }
 
         Scalar distSquared = 0.0;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             const Scalar tmp = exteriorPos[dimIdx] - interiorPos[dimIdx];
-            distSquared += tmp*tmp;
+            distSquared += tmp * tmp;
         }
 
         // divide the gradient by the squared distance between the centers of the
@@ -254,7 +249,7 @@ public:
         // distance, i.e., d/abs(d) * delta y / abs(d) = d*delta y / abs(d)^2.
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             const Scalar tmp = exteriorPos[dimIdx] - interiorPos[dimIdx];
-            quantityGrad[dimIdx] = deltay*(tmp/distSquared);
+            quantityGrad[dimIdx] = deltay *( tmp / distSquared);
         }
     }
 
@@ -307,9 +302,8 @@ public:
             deltay = quantityCallback.boundaryValue() - quantityCallback(face.interiorIndex());
         }
         else {
-            deltay =
-                getValue(quantityCallback.boundaryValue())
-                - getValue(quantityCallback(face.interiorIndex()));
+            deltay = getValue(quantityCallback.boundaryValue()) -
+                     getValue(quantityCallback(face.interiorIndex()));
         }
 
         const auto& boundaryFacePos = face.integrationPos();
@@ -318,7 +312,7 @@ public:
         Scalar distSquared = 0;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             const Scalar tmp = boundaryFacePos[dimIdx] - interiorPos[dimIdx];
-            distSquared += tmp*tmp;
+            distSquared += tmp * tmp;
         }
 
         // divide the gradient by the squared distance between the center of the
@@ -328,7 +322,7 @@ public:
         // = d*deltay / abs(d)^2.
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
             const Scalar tmp = boundaryFacePos[dimIdx] - interiorPos[dimIdx];
-            quantityGrad[dimIdx] = deltay*(tmp/distSquared);
+            quantityGrad[dimIdx] = deltay * (tmp / distSquared);
         }
     }
 
@@ -353,19 +347,15 @@ private:
         interiorDistance = 0.0;
         exteriorDistance = 0.0;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-            interiorDistance +=
-                (interiorPos[dimIdx] - integrationPos[dimIdx])
-                * normal[dimIdx];
-
-            exteriorDistance +=
-                (exteriorPos[dimIdx] - integrationPos[dimIdx])
-                * normal[dimIdx];
+            interiorDistance += (interiorPos[dimIdx] - integrationPos[dimIdx]) * normal[dimIdx];
+            exteriorDistance += (exteriorPos[dimIdx] - integrationPos[dimIdx]) * normal[dimIdx];
         }
 
         interiorDistance = std::sqrt(std::abs(interiorDistance));
         exteriorDistance = std::sqrt(std::abs(exteriorDistance));
     }
 };
+
 } // namespace Opm
 
 #endif
