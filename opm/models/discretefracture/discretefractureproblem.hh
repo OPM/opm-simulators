@@ -89,9 +89,11 @@ public:
 
         // entry-wise harmonic mean. this is almost certainly wrong if
         // you have off-main diagonal entries in your permeabilities!
-        for (unsigned i = 0; i < dimWorld; ++i)
-            for (unsigned j = 0; j < dimWorld; ++j)
+        for (unsigned i = 0; i < dimWorld; ++i) {
+            for (unsigned j = 0; j < dimWorld; ++j) {
                 result[i][j] = Opm::harmonicMean(K1[i][j], K2[i][j]);
+            }
+        }
     }
     /*!
      * \brief Returns the intrinsic permeability tensor \f$[m^2]\f$ at a given position due to a fracture
