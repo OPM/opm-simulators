@@ -171,32 +171,45 @@ private:
     {
 #if HAVE_MPI
         // set the MPI data type
-        if (std::is_same_v<DataType, char>)
+        if constexpr (std::is_same_v<DataType, char>) {
             mpiDataType_ = MPI_CHAR;
-        else if (std::is_same_v<DataType, unsigned char>)
+        }
+        else if constexpr (std::is_same_v<DataType, unsigned char>) {
             mpiDataType_ = MPI_UNSIGNED_CHAR;
-        else if (std::is_same_v<DataType, short>)
+        }
+        else if constexpr (std::is_same_v<DataType, short>) {
             mpiDataType_ = MPI_SHORT;
-        else if (std::is_same_v<DataType, unsigned short>)
+        }
+        else if constexpr (std::is_same_v<DataType, unsigned short>) {
             mpiDataType_ = MPI_UNSIGNED_SHORT;
-        else if (std::is_same_v<DataType, int>)
+        }
+        else if constexpr (std::is_same_v<DataType, int>) {
             mpiDataType_ = MPI_INT;
-        else if (std::is_same_v<DataType, unsigned>)
+        }
+        else if constexpr (std::is_same_v<DataType, unsigned>) {
             mpiDataType_ = MPI_UNSIGNED;
-        else if (std::is_same_v<DataType, long>)
+        }
+        else if constexpr (std::is_same_v<DataType, long>) {
             mpiDataType_ = MPI_LONG;
-        else if (std::is_same_v<DataType, unsigned long>)
+        }
+        else if constexpr (std::is_same_v<DataType, unsigned long>) {
             mpiDataType_ = MPI_UNSIGNED_LONG;
-        else if (std::is_same_v<DataType, long long>)
+        }
+        else if constexpr (std::is_same_v<DataType, long long>) {
             mpiDataType_ = MPI_LONG_LONG;
-        else if (std::is_same_v<DataType, unsigned long long>)
+        }
+        else if constexpr (std::is_same_v<DataType, unsigned long long>) {
             mpiDataType_ = MPI_UNSIGNED_LONG_LONG;
-        else if (std::is_same_v<DataType, float>)
+        }
+        else if constexpr (std::is_same_v<DataType, float>) {
             mpiDataType_ = MPI_FLOAT;
-        else if (std::is_same_v<DataType, double>)
+        }
+        else if constexpr (std::is_same_v<DataType, double>) {
             mpiDataType_ = MPI_DOUBLE;
-        else if (std::is_same_v<DataType, long double>)
+        }
+        else if constexpr (std::is_same_v<DataType, long double>) {
             mpiDataType_ = MPI_LONG_DOUBLE;
+        }
         else {
             mpiDataType_ = MPI_BYTE;
         }
@@ -207,8 +220,9 @@ private:
     {
 #if HAVE_MPI
         mpiDataSize_ = data_.size();
-        if (mpiDataType_ == MPI_BYTE)
+        if (mpiDataType_ == MPI_BYTE) {
             mpiDataSize_ *= sizeof(DataType);
+        }
 #endif // HAVE_MPI
     }
 

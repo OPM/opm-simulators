@@ -43,6 +43,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -50,6 +51,7 @@
 
 namespace Opm {
 
+    // required as std::max is not constexpr for float128 / quads.
     template <typename T>
     static constexpr T constexpr_max(T a, T b) {
         return (a > b) ? a : b;
@@ -84,10 +86,10 @@ class Simulator
 
 public:
     // do not allow to copy simulators around
-    Simulator(const Simulator& ) = delete;
+    Simulator(const Simulator&) = delete;
 
     explicit Simulator(bool verbose = true)
-        :Simulator(Communication(), verbose)   
+        : Simulator(Communication(), verbose)
     {  
     }
 
@@ -117,18 +119,20 @@ public:
 
         finished_ = false;
 
-        if (verbose_)
+        if (verbose_) {
             std::cout << "Allocating the simulation vanguard\n" << std::flush;
+        }
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-            vanguard_.reset(new Vanguard(*this));
+            vanguard_ = std::make_unique<Vanguard>(*this);
             OPM_END_PARALLEL_TRY_CATCH("Allocating the simulation vanguard failed: ", comm);
         }
 
         // Only relevant for CpGrid
-        if (verbose_)
+        if (verbose_) {
             std::cout << "Adding LGRs, if any\n" << std::flush;
+        }
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -136,8 +140,9 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation vanguard failed: ", comm);
         }
 
-        if (verbose_)
+        if (verbose_) {
             std::cout << "Distributing the vanguard's data\n" << std::flush;
+        }
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -145,26 +150,29 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Could not distribute the vanguard data: ", comm);
         }
 
-        if (verbose_)
+        if (verbose_) {
             std::cout << "Allocating the model\n" << std::flush;
+        }
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-            model_.reset(new Model(*this));
+            model_ = std::make_unique<Model>(*this);
             OPM_END_PARALLEL_TRY_CATCH("Could not allocate model: ", comm);
         }
 
-        if (verbose_)
+        if (verbose_) {
             std::cout << "Allocating the problem\n" << std::flush;
+        }
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-            problem_.reset(new Problem(*this));
+            problem_ = std::make_unique<Problem>(*this);
             OPM_END_PARALLEL_TRY_CATCH("Could not allocate the problem: ", comm);
         }
 
-        if (verbose_)
+        if (verbose_) {
             std::cout << "Initializing the model\n" << std::flush;
+        }
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -172,8 +180,9 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Could not initialize the model: ", comm);
         }
 
-        if (verbose_)
+        if (verbose_) {
             std::cout << "Initializing the problem\n" << std::flush;
+        }
 
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -183,8 +192,9 @@ public:
 
         setupTimer_.stop();
 
-        if (verbose_)
+        if (verbose_) {
             std::cout << "Simulator successfully set up\n" << std::flush;
+        }
     }
 
     /*!
@@ -419,7 +429,7 @@ public:
     bool finished() const
     {
         assert(timeStepSize_ >= 0.0);
-        return finished_ || (this->time()*(1.0 + eps) >= endTime());
+        return finished_ || (this->time() * (1.0 + eps) >= endTime());
     }
 
     /*!
@@ -428,7 +438,7 @@ public:
      */
     bool willBeFinished() const
     {
-        return finished_ || (this->time() + timeStepSize_)*(1.0 + eps) >= endTime();
+        return finished_ || (this->time() + timeStepSize_) * (1.0 + eps) >= endTime();
     }
 
     /*!
@@ -437,8 +447,9 @@ public:
      */
     Scalar maxTimeStepSize() const
     {
-        if (finished())
+        if (finished()) {
             return 0.0;
+        }
 
         return std::min(episodeMaxTimeStepSize(),
                         std::max<Scalar>(0.0, endTime() - this->time()));
@@ -515,7 +526,7 @@ public:
      */
     bool episodeStarts() const
     {
-        return this->time() <= (episodeStartTime_ - startTime())*(1 + eps);
+        return this->time() <= (episodeStartTime_ - startTime()) * (1 + eps);
     }
 
     /*!
@@ -524,7 +535,7 @@ public:
      */
     bool episodeIsOver() const
     {
-        return this->time() >= (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
+        return this->time() >= (episodeStartTime_ - startTime() + episodeLength()) * (1 - eps);
     }
 
     /*!
@@ -534,7 +545,7 @@ public:
     bool episodeWillBeOver() const
     {
         return this->time() + timeStepSize()
-            >=  (episodeStartTime_ - startTime() + episodeLength())*(1 - eps);
+            >=  (episodeStartTime_ - startTime() + episodeLength()) * (1 - eps);
     }
 
     /*!
@@ -547,8 +558,9 @@ public:
         // wants to give it some extra time, we will return
         // the time step size it suggested instead of trying
         // to align it to the end of the episode.
-        if (episodeIsOver())
+        if (episodeIsOver()) {
             return 0.0;
+        }
 
         // make sure that we don't exceed the end of the
         // current episode.
@@ -585,8 +597,9 @@ public:
             Restart res;
             res.deserializeBegin(*this, time_);
 
-            if (verbose_)
+            if (verbose_) {
                 std::cout << "Deserialize from file '" << res.fileName() << "'\n" << std::flush;
+            }
 
             this->deserialize(res);
             problem_->deserialize(res);
@@ -603,12 +616,13 @@ public:
         }
         else {
             // if no restart is done, apply the initial solution
-            if (verbose_)
+            if (verbose_) {
                 std::cout << "Applying the initial solution of the \"" << problem_->name()
                           << "\" problem\n" << std::flush;
+            }
 
-            Scalar oldTimeStepSize = timeStepSize_;
-            int oldTimeStepIdx = timeStepIdx_;
+            const Scalar oldTimeStepSize = timeStepSize_;
+            const int oldTimeStepIdx = timeStepIdx_;
             timeStepSize_ = 0.0;
             timeStepIdx_ = -1;
 
@@ -697,20 +711,20 @@ public:
             catch (...) {
                 // exceptions in the time integration might be recoverable. clean up in
                 // case they are
-                const auto& model = problem_->model();
-                prePostProcessTimer_ += model.prePostProcessTimer();
-                linearizeTimer_ += model.linearizeTimer();
-                solveTimer_ += model.solveTimer();
-                updateTimer_ += model.updateTimer();
+                const auto& pmodel = problem_->model();
+                prePostProcessTimer_ += pmodel.prePostProcessTimer();
+                linearizeTimer_ += pmodel.linearizeTimer();
+                solveTimer_ += pmodel.solveTimer();
+                updateTimer_ += pmodel.updateTimer();
 
                 throw;
             }
 
-            const auto& model = problem_->model();
-            prePostProcessTimer_ += model.prePostProcessTimer();
-            linearizeTimer_ += model.linearizeTimer();
-            solveTimer_ += model.solveTimer();
-            updateTimer_ += model.updateTimer();
+            const auto& pmodel = problem_->model();
+            prePostProcessTimer_ += pmodel.prePostProcessTimer();
+            linearizeTimer_ += pmodel.linearizeTimer();
+            solveTimer_ += pmodel.solveTimer();
+            updateTimer_ += pmodel.updateTimer();
 
             // post-process the current solution
             prePostProcessTimer_.start();
@@ -733,7 +747,7 @@ public:
             writeTimer_.stop();
 
             // do the next time integration
-            Scalar oldDt = timeStepSize();
+            const Scalar oldDt = timeStepSize();
             {
                 OPM_BEGIN_PARALLEL_TRY_CATCH();
                 problem_->advanceTimeLevel();
@@ -765,12 +779,14 @@ public:
             }
             else {
                 Scalar dt;
-                if (timeStepIdx_ < static_cast<int>(forcedTimeSteps_.size()))
+                if (timeStepIdx_ < static_cast<int>(forcedTimeSteps_.size())) {
                     // use the next time step size from the input file
                     dt = forcedTimeSteps_[timeStepIdx_];
-                else
+                }
+                else {
                     // ask the problem to provide the next time step size
                     dt = std::min(maxTimeStepSize(), problem_->nextTimeStepSize());
+                }
                 assert(finished() || dt > 0);
                 setTimeStepSize(dt);
             }
@@ -815,10 +831,11 @@ public:
         using Restarter = Restart;
         Restarter res;
         res.serializeBegin(*this);
-        if (gridView().comm().rank() == 0)
+        if (gridView().comm().rank() == 0) {
             std::cout << "Serialize to file '" << res.fileName() << "'"
                       << ", next time step size: " << timeStepSize()
                       << "\n" << std::flush;
+        }
 
         this->serialize(res);
         problem_->serialize(res);
