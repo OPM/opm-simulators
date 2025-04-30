@@ -28,8 +28,10 @@
 #ifndef EWOMS_FV_BASE_CONSTRAINTS_HH
 #define EWOMS_FV_BASE_CONSTRAINTS_HH
 
-#include <opm/models/utils/propertysystem.hh>
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 namespace Opm {
 
@@ -47,9 +49,7 @@ class FvBaseConstraints : public GetPropType<TypeTag, Properties::PrimaryVariabl
     using ParentType = GetPropType<TypeTag, Properties::PrimaryVariables>;
 
 public:
-    FvBaseConstraints()
-    { setActive(false); }
-
+    FvBaseConstraints() = default;
     FvBaseConstraints(const FvBaseConstraints&) = default;
 
 //! \cond SKIP
@@ -72,7 +72,7 @@ public:
     { isActive_ = yesno; }
 
 private:
-    bool isActive_;
+    bool isActive_{false};
 };
 
 } // namespace Opm
