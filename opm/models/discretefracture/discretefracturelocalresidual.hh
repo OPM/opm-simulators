@@ -75,7 +75,7 @@ public:
 
         const auto& problem = elemCtx.problem();
         const auto& fractureMapper = problem.fractureMapper();
-        unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
 
         if (!fractureMapper.isFractureVertex(globalIdx)) {
             // don't do anything in addition to the immiscible model for degrees of
@@ -118,10 +118,10 @@ public:
 
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
 
-        unsigned i = extQuants.interiorIndex();
-        unsigned j = extQuants.exteriorIndex();
-        unsigned I = elemCtx.globalSpaceIndex(i, timeIdx);
-        unsigned J = elemCtx.globalSpaceIndex(j, timeIdx);
+        const unsigned i = extQuants.interiorIndex();
+        const unsigned j = extQuants.exteriorIndex();
+        const unsigned I = elemCtx.globalSpaceIndex(i, timeIdx);
+        const unsigned J = elemCtx.globalSpaceIndex(j, timeIdx);
         const auto& fractureMapper = elemCtx.problem().fractureMapper();
         if (!fractureMapper.isFractureEdge(I, J)) {
             // do nothing if the edge from i to j is not part of a
@@ -130,7 +130,7 @@ public:
         }
 
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(scvfIdx);
-        Scalar scvfArea = scvf.area();
+        const Scalar scvfArea = scvf.area();
 
         // advective mass fluxes of all phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -146,7 +146,7 @@ public:
                 1 - extQuants.fractureWidth() / (2 * scvfArea);
 
             // intensive quantities of the upstream and the downstream DOFs
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
             flux[conti0EqIdx + phaseIdx] +=
                 extQuants.fractureVolumeFlux(phaseIdx) * up.fractureFluidState().density(phaseIdx);
