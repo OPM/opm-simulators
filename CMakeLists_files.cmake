@@ -509,6 +509,8 @@ if (HAVE_CUDA)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_resources.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_is_gpu_pointer.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_throw_macros_on_gpu.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_preconditioner_factory_gpu.cpp)
+
   if(MPI_FOUND)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuOwnerOverlapCopy.cpp)
   endif()
@@ -992,6 +994,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp
   opm/simulators/linalg/PreconditionerFactory.hpp
   opm/simulators/linalg/PreconditionerFactory_impl.hpp
+  opm/simulators/linalg/StandardPreconditioners.hpp
+  opm/simulators/linalg/StandardPreconditioners_mpi.hpp
+  opm/simulators/linalg/StandardPreconditioners_serial.hpp
+  opm/simulators/linalg/StandardPreconditioners_gpu_serial.hpp
+  opm/simulators/linalg/StandardPreconditioners_gpu_mpi.hpp
   opm/simulators/linalg/PreconditionerWithUpdate.hpp
   opm/simulators/linalg/PressureBhpTransferPolicy.hpp
   opm/simulators/linalg/PressureSolverPolicy.hpp
