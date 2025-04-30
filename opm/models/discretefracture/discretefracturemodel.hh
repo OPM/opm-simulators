@@ -39,6 +39,7 @@
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/vtkdiscretefracturemodule.hpp>
 
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -166,7 +167,7 @@ public:
     {
         ParentType::registerOutputModules_();
 
-        this->addOutputModule(new VtkDiscreteFractureModule<TypeTag>(this->simulator_));
+        this->addOutputModule(std::make_unique<VtkDiscreteFractureModule<TypeTag>>(this->simulator_));
     }
 };
 

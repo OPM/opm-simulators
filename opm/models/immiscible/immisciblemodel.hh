@@ -356,7 +356,7 @@ public:
         ParentType::registerOutputModules_();
 
         if (enableEnergy)
-            this->addOutputModule(new Opm::VtkEnergyModule<TypeTag>(this->simulator_));
+            this->addOutputModule(std::make_unique<VtkEnergyModule<TypeTag>>(this->simulator_));
     }
 
 private:

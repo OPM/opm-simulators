@@ -40,6 +40,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <cmath>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
@@ -148,7 +149,7 @@ public:
                                       Simulator& simulator)
     {
         if constexpr (enablePolymer)
-            model.addOutputModule(new VtkBlackOilPolymerModule<TypeTag>(simulator));
+            model.addOutputModule(std::make_unique<VtkBlackOilPolymerModule<TypeTag>>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)

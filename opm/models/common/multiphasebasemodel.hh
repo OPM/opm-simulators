@@ -48,6 +48,7 @@
 #include <opm/models/io/vtktemperaturemodule.hpp>
 
 #include <cassert>
+#include <memory>
 #include <mutex>
 #include <tuple>
 
@@ -271,8 +272,8 @@ public:
         ParentType::registerOutputModules_();
 
         // add the VTK output modules which make sense for all multi-phase models
-        this->addOutputModule(new VtkMultiPhaseModule<TypeTag>(this->simulator_));
-        this->addOutputModule(new VtkTemperatureModule<TypeTag>(this->simulator_));
+        this->addOutputModule(std::make_unique<VtkMultiPhaseModule<TypeTag>>(this->simulator_));
+        this->addOutputModule(std::make_unique<VtkTemperatureModule<TypeTag>>(this->simulator_));
     }
 
 private:

@@ -35,6 +35,7 @@
 
 #include <opm/models/io/vtkblackoilmicpmodule.hpp>
 
+#include <memory>
 #include <numeric>
 #include <stdexcept>
 
@@ -106,7 +107,7 @@ public:
                                       Simulator& simulator)
     {
         if constexpr (enableMICP)
-            model.addOutputModule(new VtkBlackOilMICPModule<TypeTag>(simulator));
+            model.addOutputModule(std::make_unique<VtkBlackOilMICPModule<TypeTag>>(simulator));
     }
 
     static bool eqApplies(unsigned eqIdx)

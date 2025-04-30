@@ -62,7 +62,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <set>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -182,7 +182,7 @@ public:
                          this->wellModel_,
                          simulator.vanguard().grid().comm())
     {
-        this->model().addOutputModule(new VtkTracerModule<TypeTag>(simulator));
+        this->model().addOutputModule(std::make_unique<VtkTracerModule<TypeTag>>(simulator));
 
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();

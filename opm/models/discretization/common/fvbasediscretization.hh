@@ -69,10 +69,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <list>
+#include <memory>
 #include <stdexcept>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace Opm {
@@ -396,7 +398,7 @@ public:
         , vertexMapper_(gridView_, Dune::mcmgVertexLayout())
         , newtonMethod_(simulator)
         , localLinearizer_(ThreadManager::maxThreads())
-        , linearizer_(new Linearizer())
+        , linearizer_(std::make_unique<Linearizer>())
         , enableGridAdaptation_(Parameters::Get<Parameters::EnableGridAdaptation>() )
         , enableIntensiveQuantityCache_(Parameters::Get<Parameters::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::Get<Parameters::EnableStorageCache>())
@@ -422,17 +424,6 @@ public:
 
         resizeAndResetIntensiveQuantitiesCache_();
         asImp_().registerOutputModules_();
-    }
-
-    ~FvBaseDiscretization()
-    {
-        // delete all output modules
-        auto modIt = outputModules_.begin();
-        const auto& modEndIt = outputModules_.end();
-        for (; modIt != modEndIt; ++modIt)
-            delete *modIt;
-
-        delete linearizer_;
     }
 
     /*!
@@ -1524,8 +1515,7 @@ public:
      */
     void resetLinearizer ()
     {
-        delete linearizer_;
-        linearizer_ = new Linearizer;
+        linearizer_ = std::make_unique<Linearizer>();
         linearizer_->init(simulator_);
     }
 
@@ -1571,8 +1561,8 @@ public:
     /*!
      * \brief Add an module for writing visualization output after a timestep.
      */
-    void addOutputModule(BaseOutputModule<TypeTag>* newModule)
-    { outputModules_.push_back(newModule); }
+    void addOutputModule(std::unique_ptr<BaseOutputModule<TypeTag>> newModule)
+    { outputModules_.push_back(std::move(newModule)); }
 
     /*!
      * \brief Add the vector fields for analysing the convergence of
@@ -1865,8 +1855,7 @@ protected:
     void registerOutputModules_()
     {
         // add the output modules available on all model
-        auto *mod = new VtkPrimaryVarsModule<TypeTag>(simulator_);
-        this->outputModules_.push_back(mod);
+        this->outputModules_.push_back(std::make_unique<VtkPrimaryVarsModule<TypeTag>>(simulator_));
     }
 
     /*!
@@ -1911,7 +1900,7 @@ protected:
     std::vector<LocalLinearizer> localLinearizer_;
     // Linearizes the problem at the current time step using the
     // local jacobian
-    Linearizer *linearizer_;
+    std::unique_ptr<Linearizer> linearizer_;
 
     // cur is the current iterative solution, prev the converged
     // solution of the previous time step
@@ -1921,7 +1910,7 @@ protected:
 
     mutable std::array< std::unique_ptr< DiscreteFunction >, historySize > solution_;
 
-    std::list<BaseOutputModule<TypeTag>*> outputModules_;
+    std::list<std::unique_ptr<BaseOutputModule<TypeTag>>> outputModules_;
 
     Scalar gridTotalVolume_;
     std::vector<Scalar> dofTotalVolume_;
