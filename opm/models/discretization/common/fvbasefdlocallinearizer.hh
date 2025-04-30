@@ -162,19 +162,9 @@ private:
 
     using LocalEvalBlockVector = typename LocalResidual::LocalEvalBlockVector;
 
-#if __GNUC__ == 4 && __GNUC_MINOR__ <= 6
-public:
-    // make older GCCs happy by providing a public copy constructor (this is necessary
-    // for their implementation of std::vector, although the method is never called...)
-    FvBaseFdLocalLinearizer(const FvBaseFdLocalLinearizer&)
-        : internalElemContext_(0)
-    {}
-
-#else
-    // copying local residual objects around is a very bad idea, so we explicitly prevent
-    // it...
+    // copying local residual objects around is a very bad idea
     FvBaseFdLocalLinearizer(const FvBaseFdLocalLinearizer&) = delete;
-#endif
+
 public:
     FvBaseFdLocalLinearizer()
         : internalElemContext_(0)
