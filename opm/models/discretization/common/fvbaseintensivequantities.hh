@@ -28,9 +28,9 @@
 #ifndef EWOMS_FV_BASE_INTENSIVE_QUANTITIES_HH
 #define EWOMS_FV_BASE_INTENSIVE_QUANTITIES_HH
 
-#include "fvbaseproperties.hh"
-
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
