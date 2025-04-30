@@ -59,6 +59,7 @@
 #include <vector>
 
 namespace Opm {
+
 // forward declarations
 template<class TypeTag>
 class EcfvDiscretization;
@@ -112,7 +113,7 @@ class FvBaseLinearizer
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
 
-    static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
+    static constexpr bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
 
 //! \endcond
 
@@ -126,7 +127,7 @@ public:
      * \brief Register all run-time parameters for the Jacobian linearizer.
      */
     static void registerParameters()
-    { }
+    {}
 
     /*!
      * \brief Initialize the linearizer.
@@ -202,7 +203,8 @@ public:
         if (static_cast<std::size_t>(domain.view.size(0)) == model_().numTotalDof()) {
             // We are on the full domain.
             resetSystem_();
-        } else {
+        }
+        else {
             resetSystem_(domain);
         }
 
@@ -286,13 +288,11 @@ public:
     GlobalEqVector& residual()
     { return residual_; }
 
-    void setLinearizationType(LinearizationType linearizationType){
-        linearizationType_ = linearizationType;
-    };
+    void setLinearizationType(LinearizationType linearizationType)
+    { linearizationType_ = linearizationType; }
 
-    const LinearizationType& getLinearizationType() const{
-        return linearizationType_;
-    };
+    const LinearizationType& getLinearizationType() const
+    { return linearizationType_; }
 
     void updateDiscretizationParameters()
     {
@@ -304,7 +304,8 @@ public:
         // This linearizer stores no such data.
     }
 
-    void updateFlowsInfo() {
+    void updateFlowsInfo()
+    {
         // This linearizer stores no such data.
     }
 
@@ -322,7 +323,7 @@ public:
      * (This object has been only implemented for the tpfalinearizer.)
      */
     const auto& getFlowsInfo() const
-    {return flowsInfo_;}   
+    { return flowsInfo_; }
 
     /*!
      * \brief Return constant reference to the floresInfo.
@@ -330,7 +331,7 @@ public:
      * (This object has been only implemented for the tpfalinearizer.)
      */
     const auto& getFloresInfo() const
-    {return floresInfo_;}
+    { return floresInfo_; }
 
     template <class SubDomainType>
     void resetSystem_(const SubDomainType& domain)
@@ -370,16 +371,19 @@ public:
 private:
     Simulator& simulator_()
     { return *simulatorPtr_; }
+
     const Simulator& simulator_() const
     { return *simulatorPtr_; }
 
     Problem& problem_()
     { return simulator_().problem(); }
+
     const Problem& problem_() const
     { return simulator_().problem(); }
 
     Model& model_()
     { return simulator_().model(); }
+
     const Model& model_() const
     { return simulator_().model(); }
 
@@ -485,7 +489,7 @@ private:
                 // element's freedom. if yes, add the constraint to the map.
                 for (unsigned primaryDofIdx = 0;
                      primaryDofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0);
-                     ++ primaryDofIdx)
+                     ++primaryDofIdx)
                 {
                     Constraints constraints;
                     elemCtx.problem().constraints(constraints,
@@ -546,8 +550,8 @@ private:
                     nextElemIt = threadedElemIt.increment();
                     if (!threadedElemIt.isFinished(nextElemIt)) {
                         const auto& nextElem = *nextElemIt;
-                        if (linearizeNonLocalElements
-                            || nextElem.partitionType() == Dune::InteriorEntity)
+                        if (linearizeNonLocalElements ||
+                            nextElem.partitionType() == Dune::InteriorEntity)
                         {
                             model_().prefetch(nextElem);
                             problem_().prefetch(nextElem);
@@ -581,13 +585,12 @@ private:
         // after reduction from the parallel block, exceptionPtr will point to
         // a valid exception if one occurred in one of the threads; rethrow
         // it here to let the outer handler take care of it properly
-        if(exceptionPtr) {
+        if (exceptionPtr) {
             std::rethrow_exception(exceptionPtr);
         }
 
         applyConstraintsToLinearization_();
     }
-
 
     // linearize an element in the interior of the process' grid partition
     template <class ElementType>
@@ -607,14 +610,14 @@ private:
         }
 
         size_t numPrimaryDof = elementCtx.numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx) {
+        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++primaryDofIdx) {
             unsigned globI = elementCtx.globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
 
             // update the right hand side
             residual_[globI] += localLinearizer.residual(primaryDofIdx);
 
             // update the global Jacobian matrix
-            for (unsigned dofIdx = 0; dofIdx < elementCtx.numDof(/*timeIdx=*/0); ++ dofIdx) {
+            for (unsigned dofIdx = 0; dofIdx < elementCtx.numDof(/*timeIdx=*/0); ++dofIdx) {
                 unsigned globJ = elementCtx.globalSpaceIndex(/*spaceIdx=*/dofIdx, /*timeIdx=*/0);
 
                 jacobian_->addToBlock(globJ, globI, localLinearizer.jacobian(dofIdx, primaryDofIdx));
@@ -677,7 +680,6 @@ private:
     // The constraint equations (only non-empty if the
     // EnableConstraints property is true)
     std::map<unsigned, Constraints> constraintsMap_;
-
 
     struct FlowInfo
     {
