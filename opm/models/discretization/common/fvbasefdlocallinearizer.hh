@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <limits>
 
 namespace Opm {
@@ -251,7 +252,7 @@ public:
         localResidual_.eval(residual_, elemCtx);
 
         // calculate the local jacobian matrix
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; dofIdx++) {
             for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
                 asImp_().evalPartialDerivative_(elemCtx, dofIdx, pvIdx);
@@ -351,8 +352,8 @@ protected:
      */
     void resize_(const ElementContext& elemCtx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
 
         residual_.resize(numDof);
         jacobian_.setSize(numDof, numPrimaryDof);
@@ -365,8 +366,8 @@ protected:
      */
     void reset_(const ElementContext& elemCtx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx)
             for (unsigned dof2Idx = 0; dof2Idx < numDof; ++ dof2Idx)
                 jacobian_[dof2Idx][primaryDofIdx] = 0.0;
@@ -497,7 +498,7 @@ protected:
                               unsigned focusDofIdx,
                               unsigned pvIdx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
             for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
                 // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of the
