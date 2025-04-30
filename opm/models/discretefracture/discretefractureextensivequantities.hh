@@ -77,9 +77,10 @@ public:
         unsigned globalI = elemCtx.globalSpaceIndex(insideScvIdx, timeIdx);
         unsigned globalJ = elemCtx.globalSpaceIndex(outsideScvIdx, timeIdx);
         const auto& fractureMapper = elemCtx.problem().fractureMapper();
-        if (!fractureMapper.isFractureEdge(globalI, globalJ))
+        if (!fractureMapper.isFractureEdge(globalI, globalJ)) {
             // do nothing if no fracture goes though the current edge
             return;
+        }
 
         // average the intrinsic permeability of the fracture
         elemCtx.problem().fractureFaceIntrinsicPermeability(fractureIntrinsicPermeability_,
@@ -109,10 +110,11 @@ public:
             // a fracture is always shared by two sub-control-volume
             // faces.
             fractureVolumeFlux_[phaseIdx] = 0;
-            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                 fractureVolumeFlux_[phaseIdx] +=
                     (fractureFilterVelocity_[phaseIdx][dimIdx] * distDirection[dimIdx])
                     * (fractureWidth_ / 2.0) / scvf.area();
+            }
         }
     }
 
