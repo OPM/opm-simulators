@@ -250,8 +250,9 @@ protected:
         std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
 
         residual_.resize(numDof);
-        if (jacobian_.N() != numDof || jacobian_.M() != numPrimaryDof)
+        if (jacobian_.N() != numDof || jacobian_.M() != numPrimaryDof) {
           jacobian_.setSize(numDof, numPrimaryDof);
+        }
     }
 
     /*!
@@ -272,8 +273,9 @@ protected:
     {
         const auto& resid = localResidual_.residual();
 
-        for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++)
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             residual_[focusDofIdx][eqIdx] = resid[focusDofIdx][eqIdx].value();
+        }
 
         std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
