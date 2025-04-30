@@ -28,29 +28,35 @@
 #ifndef EWOMS_FV_BASE_LINEARIZER_HH
 #define EWOMS_FV_BASE_LINEARIZER_HH
 
-#include "fvbaseproperties.hh"
-#include "linearizationtype.hh"
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#include <dune/grid/common/gridenums.hh>
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
+
 #include <opm/grid/utility/SparseTable.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/parallel/gridcommhandles.hh>
 #include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/parallel/threadedentityiterator.hh>
+
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
-
-#include <type_traits>
-#include <iostream>
-#include <vector>
-#include <thread>
-#include <set>
+#include <cstddef>
 #include <exception>   // current_exception, rethrow_exception
+#include <iostream>
+#include <map>
+#include <memory>
 #include <mutex>
+#include <set>
+#include <vector>
 
 namespace Opm {
 // forward declarations
