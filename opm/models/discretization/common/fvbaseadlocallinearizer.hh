@@ -42,6 +42,7 @@
 #include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <cstddef>
+#include <memory>
 
 namespace Opm {
 // forward declaration
@@ -113,7 +114,7 @@ private:
 
 public:
     FvBaseAdLocalLinearizer()
-        : internalElemContext_(0)
+        : internalElemContext_{}
     { }
 
     // copying local linearizer objects around is a very bad idea, so we explicitly
@@ -121,7 +122,7 @@ public:
     FvBaseAdLocalLinearizer(const FvBaseAdLocalLinearizer&) = delete;
 
     ~FvBaseAdLocalLinearizer()
-    { delete internalElemContext_; }
+    {}
 
     /*!
      * \brief Register all run-time parameters for the local jacobian.
@@ -140,8 +141,7 @@ public:
     void init(Simulator& simulator)
     {
         simulatorPtr_ = &simulator;
-        delete internalElemContext_;
-        internalElemContext_ = new ElementContext(simulator);
+        internalElemContext_ = std::make_unique<ElementContext>(simulator);
     }
 
     /*!
@@ -298,7 +298,7 @@ protected:
     Simulator *simulatorPtr_;
     Model *modelPtr_;
 
-    ElementContext *internalElemContext_;
+    std::unique_ptr<ElementContext> internalElemContext_;
 
     LocalResidual localResidual_;
 
