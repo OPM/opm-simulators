@@ -67,16 +67,13 @@ class DiscreteFractureIntensiveQuantities : public ImmiscibleIntensiveQuantities
     enum { wettingPhaseIdx = MaterialLaw::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx };
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
-    using FluidState = Opm::ImmiscibleFluidState<Scalar, FluidSystem,
-                                                 /*storeEnthalpy=*/enableEnergy>;
+    using FluidState = ImmiscibleFluidState<Scalar, FluidSystem,
+                                            /*storeEnthalpy=*/enableEnergy>;
 
 public:
-    DiscreteFractureIntensiveQuantities()
-    { }
-
-    DiscreteFractureIntensiveQuantities(const DiscreteFractureIntensiveQuantities& other) = default;
-
-    DiscreteFractureIntensiveQuantities& operator=(const DiscreteFractureIntensiveQuantities& other) = default;
+    DiscreteFractureIntensiveQuantities() = default;
+    DiscreteFractureIntensiveQuantities(const DiscreteFractureIntensiveQuantities&) = default;
+    DiscreteFractureIntensiveQuantities& operator=(const DiscreteFractureIntensiveQuantities&) = default;
 
     /*!
      * \copydoc IntensiveQuantities::update
@@ -89,11 +86,11 @@ public:
         const auto& fractureMapper = problem.fractureMapper();
         const unsigned globalVertexIdx = elemCtx.globalSpaceIndex(vertexIdx, timeIdx);
 
-        Opm::Valgrind::SetUndefined(fractureFluidState_);
-        Opm::Valgrind::SetUndefined(fractureVolume_);
-        Opm::Valgrind::SetUndefined(fracturePorosity_);
-        Opm::Valgrind::SetUndefined(fractureIntrinsicPermeability_);
-        Opm::Valgrind::SetUndefined(fractureRelativePermeabilities_);
+        Valgrind::SetUndefined(fractureFluidState_);
+        Valgrind::SetUndefined(fractureVolume_);
+        Valgrind::SetUndefined(fracturePorosity_);
+        Valgrind::SetUndefined(fractureIntrinsicPermeability_);
+        Valgrind::SetUndefined(fractureRelativePermeabilities_);
 
         // do nothing if there is no fracture within the current degree of freedom
         if (!fractureMapper.isFractureVertex(globalVertexIdx)) {
@@ -120,7 +117,7 @@ public:
         // account for this.
         fractureVolume_ = 0;
         const auto& vertexPos = elemCtx.pos(vertexIdx, timeIdx);
-        for (unsigned vertex2Idx = 0; vertex2Idx < elemCtx.numDof(/*timeIdx=*/0); ++ vertex2Idx) {
+        for (unsigned vertex2Idx = 0; vertex2Idx < elemCtx.numDof(/*timeIdx=*/0); ++vertex2Idx) {
             const unsigned globalVertex2Idx = elemCtx.globalSpaceIndex(vertex2Idx, timeIdx);
 
             if (vertexIdx == vertex2Idx ||
@@ -204,8 +201,8 @@ public:
      */
     Scalar fractureMobility(unsigned phaseIdx) const
     {
-        return fractureRelativePermeabilities_[phaseIdx]
-               / fractureFluidState_.viscosity(phaseIdx);
+        return fractureRelativePermeabilities_[phaseIdx] /
+               fractureFluidState_.viscosity(phaseIdx);
     }
 
     /*!
