@@ -108,8 +108,9 @@ private:
         Scalar saturations[numPhases];
         MaterialLaw::saturations(saturations, matParams, matrixFluidState);
 
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             matrixFluidState.setSaturation(phaseIdx, saturations[phaseIdx]);
+        }
     }
 };
 
