@@ -189,7 +189,7 @@ public:
      */
     const GlobalPosition& cvCenter(unsigned boundaryFaceIdx, unsigned timeIdx) const
     {
-        unsigned scvIdx = stencil(timeIdx).boundaryFace(boundaryFaceIdx).interiorIndex();
+        const unsigned scvIdx = stencil(timeIdx).boundaryFace(boundaryFaceIdx).interiorIndex();
         return stencil(timeIdx).subControlVolume(scvIdx).globalPos();
     }
 
@@ -229,7 +229,7 @@ public:
      */
     const IntensiveQuantities& intensiveQuantities(unsigned boundaryFaceIdx, unsigned timeIdx) const
     {
-        unsigned interiorScvIdx = this->interiorScvIndex(boundaryFaceIdx, timeIdx);
+        const unsigned interiorScvIdx = this->interiorScvIndex(boundaryFaceIdx, timeIdx);
         return elemCtx_.intensiveQuantities(interiorScvIdx, timeIdx);
     }
 
