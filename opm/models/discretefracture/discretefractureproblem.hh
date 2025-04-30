@@ -28,14 +28,14 @@
 #ifndef EWOMS_DISCRETE_FRACTURE_PROBLEM_HH
 #define EWOMS_DISCRETE_FRACTURE_PROBLEM_HH
 
-#include "discretefractureproperties.hh"
-
-#include <opm/models/common/multiphasebaseproblem.hh>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <opm/material/common/Means.hpp>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/common/multiphasebaseproblem.hh>
+
+#include <stdexcept>
 
 namespace Opm {
 
