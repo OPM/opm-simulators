@@ -399,7 +399,7 @@ public:
         , enableStorageCache_(Parameters::Get<Parameters::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::Get<Parameters::EnableThermodynamicHints>())
     {
-        bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
+        const bool isEcfv = std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>;
         if (enableGridAdaptation_ && !isEcfv) {
             throw std::invalid_argument("Grid adaptation currently only works for the "
                                         "element-centered finite volume discretization (is: "
@@ -407,7 +407,7 @@ public:
         }
 
         PrimaryVariables::init();
-        std::size_t numDof = asImp_().numGridDof();
+        const std::size_t numDof = asImp_().numGridDof();
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
             if (storeIntensiveQuantities()) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
@@ -463,7 +463,7 @@ public:
     void finishInit()
     {
         // initialize the volume of the finite volumes to zero
-        std::size_t numDof = asImp_().numGridDof();
+        const std::size_t numDof = asImp_().numGridDof();
         dofTotalVolume_.resize(numDof);
         std::fill(dofTotalVolume_.begin(), dofTotalVolume_.end(), 0.0);
 
@@ -486,9 +486,9 @@ public:
             // loop over all element vertices, i.e. sub control volumes
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); dofIdx++) {
                 // map the local degree of freedom index to the global one
-                unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
-                Scalar dofVolume = stencil.subControlVolume(dofIdx).volume();
+                const Scalar dofVolume = stencil.subControlVolume(dofIdx).volume();
                 dofTotalVolume_[globalIdx] += dofVolume;
                 gridTotalVolume_ += dofVolume;
             }
@@ -561,7 +561,7 @@ public:
             // loop over all element vertices, i.e. sub control volumes
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); dofIdx++) {
                 // map the local degree of freedom index to the global one
-                unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
                 // let the problem do the dirty work of nailing down
                 // the initial solution.
@@ -865,10 +865,9 @@ public:
     Scalar globalResidual(GlobalEqVector& dest,
                           const SolutionVector& u) const
     {
-        SolutionVector tmp(asImp_().solution(/*timeIdx=*/0));
         mutableSolution(/*timeIdx=*/0) = u;
-        Scalar res = asImp_().globalResidual(dest);
-        mutableSolution(/*timeIdx=*/0) = tmp;
+        const Scalar res = asImp_().globalResidual(dest);
+        mutableSolution(/*timeIdx=*/0) = asImp_().solution(/*timeIdx=*/0);
         return res;
     }
 
@@ -890,7 +889,7 @@ public:
         {
             // Attention: the variables below are thread specific and thus cannot be
             // moved in front of the #pragma!
-            unsigned threadId = ThreadManager::threadId();
+            const unsigned threadId = ThreadManager::threadId();
             ElementContext elemCtx(simulator_);
             ElementIterator elemIt = threadedElemIt.beginParallel();
             LocalEvalBlockVector residual, storageTerm;
@@ -906,10 +905,10 @@ public:
                 storageTerm.resize(elemCtx.numPrimaryDof(/*timeIdx=*/0));
                 asImp_().localResidual(threadId).eval(residual, elemCtx);
 
-                std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
                 mutex.lock();
                 for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
-                    unsigned globalI = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                    const unsigned globalI = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
                     for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
                         dest[globalI][eqIdx] += Toolbox::value(residual[dofIdx][eqIdx]);
                     }
@@ -929,10 +928,7 @@ public:
         // entirely correct, since the residual for the finite volumes
         // which are on the boundary are counted once for every
         // process. As often in life: shit happens (, we don't care)...
-        Scalar result2 = dest.two_norm2();
-        result2 = asImp_().gridView().comm().sum(result2);
-
-        return std::sqrt(result2);
+        return std::sqrt(asImp_().gridView().comm().sum(dest.two_norm2()));
     }
 
     /*!
@@ -953,7 +949,7 @@ public:
         {
             // Attention: the variables below are thread specific and thus cannot be
             // moved in front of the #pragma!
-            unsigned threadId = ThreadManager::threadId();
+            const unsigned threadId = ThreadManager::threadId();
             ElementContext elemCtx(simulator_);
             ElementIterator elemIt = threadedElemIt.beginParallel();
             LocalEvalBlockVector elemStorage;
@@ -971,7 +967,7 @@ public:
                 elemCtx.updateStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
 
-                std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
+                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
                 elemStorage.resize(numPrimaryDof);
 
                 localResidual(threadId).evalStorage(elemStorage, elemCtx, timeIdx);
@@ -1044,10 +1040,10 @@ public:
                                                          /*timeIdx=*/0);
                     Valgrind::CheckDefined(values);
 
-                    unsigned dofIdx = boundaryCtx.interiorScvIndex(faceIdx, /*timeIdx=*/0);
+                    const unsigned dofIdx = boundaryCtx.interiorScvIndex(faceIdx, /*timeIdx=*/0);
                     const auto& insideIntQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
 
-                    Scalar bfArea =
+                    const Scalar bfArea =
                         boundaryCtx.boundarySegmentArea(faceIdx, /*timeIdx=*/0)
                         * insideIntQuants.extrusionFactor();
 
@@ -1208,7 +1204,7 @@ public:
      */
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
-        Scalar absPv = std::abs(asImp_().solution(/*timeIdx=*/1)[globalDofIdx][pvIdx]);
+        const Scalar absPv = std::abs(asImp_().solution(/*timeIdx=*/1)[globalDofIdx][pvIdx]);
         return 1.0/std::max(absPv, 1.0);
     }
 
@@ -1236,8 +1232,8 @@ public:
     {
         Scalar result = 0.0;
         for (unsigned j = 0; j < numEq; ++j) {
-            Scalar weight = asImp_().primaryVarWeight(vertexIdx, j);
-            Scalar eqErr = std::abs((pv1[j] - pv2[j])*weight);
+            const Scalar weight = asImp_().primaryVarWeight(vertexIdx, j);
+            const Scalar eqErr = std::abs((pv1[j] - pv2[j])*weight);
             //Scalar eqErr = std::abs(pv1[j] - pv2[j]);
             //eqErr *= std::max<Scalar>(1.0, std::abs(pv1[j] + pv2[j])/2);
 
@@ -1253,7 +1249,7 @@ public:
      */
     bool update()
     {
-        TimerGuard prePostProcessGuard(prePostProcessTimer_);
+        const TimerGuard prePostProcessGuard(prePostProcessTimer_);
 
 #ifndef NDEBUG
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
@@ -1450,7 +1446,7 @@ public:
     void serializeEntity(std::ostream& outstream,
                          const DofEntity& dof)
     {
-        unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
+        const unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
 
         // write phase state
         if (!outstream.good()) {
@@ -1475,7 +1471,7 @@ public:
     void deserializeEntity(std::istream& instream,
                            const DofEntity& dof)
     {
-        unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
+        const unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
 
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             if (!instream.good()) {
@@ -1602,7 +1598,7 @@ public:
         asImp_().globalResidual(globalResid, u);
 
         // create the required scalar fields
-        std::size_t numGridDof = asImp_().numGridDof();
+        const std::size_t numGridDof = asImp_().numGridDof();
 
         // global defect of the two auxiliary equations
         std::array<ScalarBuffer*, numEq> def;
@@ -1632,7 +1628,7 @@ public:
             PrimaryVariables uNew(uOld);
             uNew -= deltaU[globalIdx];
 
-            Scalar err = asImp_().relativeDofError(globalIdx, uOld, uNew);
+            const Scalar err = asImp_().relativeDofError(globalIdx, uOld, uNew);
             (*relError)[globalIdx] = err;
             (*normalizedRelError)[globalIdx] = err;
             minRelErr = std::min(err, minRelErr);
@@ -1640,9 +1636,9 @@ public:
         }
 
         // do the normalization of the relative error
-        Scalar alpha = std::max(Scalar{1e-20},
-                                std::max(std::abs(maxRelErr),
-                                         std::abs(minRelErr)));
+        const Scalar alpha = std::max(Scalar{1e-20},
+                                      std::max(std::abs(maxRelErr),
+                                               std::abs(minRelErr)));
         for (unsigned globalIdx = 0; globalIdx < numGridDof; ++ globalIdx) {
             (*normalizedRelError)[globalIdx] /= alpha;
         }
@@ -1758,7 +1754,7 @@ public:
                                       " conjunction with dune-fem");
         }
 
-        std::size_t numDof = numTotalDof();
+        const std::size_t numDof = numTotalDof();
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
             solution(timeIdx).resize(numDof);
         }
@@ -1837,7 +1833,7 @@ protected:
     {
         // allocate the storage cache
         if (enableStorageCache()) {
-            std::size_t numDof = asImp_().numGridDof();
+            const std::size_t numDof = asImp_().numGridDof();
             for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
                 storageCache_[timeIdx].resize(numDof);
             }
@@ -1845,7 +1841,7 @@ protected:
 
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
-            std::size_t numDof = asImp_().numGridDof();
+            const std::size_t numDof = asImp_().numGridDof();
             for(unsigned timeIdx=0; timeIdx<historySize; ++timeIdx) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof);
@@ -1975,7 +1971,7 @@ public:
                                         " which currently requires the presence of the"
                                         " dune-fem module");
         }
-        std::size_t numDof = this->asImp_().numGridDof();
+        const std::size_t numDof = this->asImp_().numGridDof();
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
             this->solution_[timeIdx] = std::make_unique<DiscreteFunction>("solution", numDof);
         }
