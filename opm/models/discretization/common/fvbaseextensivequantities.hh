@@ -94,7 +94,7 @@ public:
                         unsigned timeIdx,
                         const FluidState&)
     {
-        unsigned dofIdx = context.interiorScvIndex(bfIdx, timeIdx);
+        const unsigned dofIdx = context.interiorScvIndex(bfIdx, timeIdx);
         interiorScvIdx_ = static_cast<unsigned short>(dofIdx);
         exteriorScvIdx_ = static_cast<unsigned short>(dofIdx);
 
