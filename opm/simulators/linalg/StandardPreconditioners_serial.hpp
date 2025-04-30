@@ -174,7 +174,10 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
 #endif
         }
 
-        // Add CPRW only for the well operator variant, i.e. --matrix-add-well-contributions=false
+        // Add CPRW only for the WellModelMatrixAdapter, as the method requires that the operator
+        // has the addWellPressureEquations() method (and a few more) it can not be combined with
+        // a well-less operator such as Dune::MatrixAdapter.  For OPM Flow this corresponds to
+        // requiring --matrix-add-well-contributions=false (which is the default).
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V>>) {
             F::addCreator(
                 "cprw",
