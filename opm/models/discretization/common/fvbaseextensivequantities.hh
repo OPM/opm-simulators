@@ -28,11 +28,12 @@
 #ifndef EWOMS_FV_BASE_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_FV_BASE_EXTENSIVE_QUANTITIES_HH
 
-#include "fvbaseproperties.hh"
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/material/common/Valgrind.hpp>
+#include <cassert>
 
 namespace Opm {
 /*!
