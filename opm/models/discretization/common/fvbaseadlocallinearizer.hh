@@ -296,7 +296,6 @@ protected:
     }
 
     Simulator *simulatorPtr_;
-    Model *modelPtr_;
 
     std::unique_ptr<ElementContext> internalElemContext_;
 
