@@ -28,19 +28,23 @@
 #ifndef EWOMS_FV_BASE_FD_LOCAL_LINEARIZER_HH
 #define EWOMS_FV_BASE_FD_LOCAL_LINEARIZER_HH
 
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hpp>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-
-#include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <dune/istl/bvector.hh>
 #include <dune/istl/matrix.hh>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/simulators/linalg/linalgproperties.hh>
+
+#include <algorithm>
+#include <cmath>
 #include <limits>
 
 namespace Opm {
