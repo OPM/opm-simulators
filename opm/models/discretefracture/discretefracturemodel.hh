@@ -30,18 +30,18 @@
 
 #include <opm/material/densead/Math.hpp>
 
-#include "discretefractureproperties.hh"
-#include "discretefractureprimaryvariables.hh"
-#include "discretefractureintensivequantities.hh"
-#include "discretefractureextensivequantities.hh"
-#include "discretefracturelocalresidual.hh"
-#include "discretefractureproblem.hh"
-
+#include <opm/models/discretefracture/discretefractureextensivequantities.hh>
+#include <opm/models/discretefracture/discretefractureintensivequantities.hh>
+#include <opm/models/discretefracture//discretefracturelocalresidual.hh>
+#include <opm/models/discretefracture/discretefractureprimaryvariables.hh>
+#include <opm/models/discretefracture/discretefractureproblem.hh>
+#include <opm/models/discretefracture/discretefractureproperties.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/vtkdiscretefracturemodule.hpp>
 
 #include <stdexcept>
 #include <string>
+#include <tuple>
 
 namespace Opm {
 template <class TypeTag>
