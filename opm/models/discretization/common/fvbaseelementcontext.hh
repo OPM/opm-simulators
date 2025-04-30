@@ -590,8 +590,10 @@ protected:
 
     GradientCalculator gradientCalculator_;
 
-    std::vector<DofStore_, aligned_allocator<DofStore_, alignof(DofStore_)> > dofVars_;
-    std::vector<ExtensiveQuantities, aligned_allocator<ExtensiveQuantities, alignof(ExtensiveQuantities)> > extensiveQuantities_;
+    template<class T> using AlignedVector = std::vector<T, aligned_allocator<T, alignof(T)>>;
+
+    AlignedVector<DofStore_> dofVars_;
+    AlignedVector<ExtensiveQuantities> extensiveQuantities_;
 
     const Simulator *simulatorPtr_;
     const Element *elemPtr_;
