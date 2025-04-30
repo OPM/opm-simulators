@@ -28,12 +28,15 @@
 #ifndef EWOMS_FV_BASE_DISCRETIZATION_FEMADAPT_HH
 #define EWOMS_FV_BASE_DISCRETIZATION_FEMADAPT_HH
 
-#include <opm/models/discretization/common/fvbasediscretization.hh>
-
-#include <dune/fem/space/common/adaptationmanager.hh>
-#include <dune/fem/space/common/restrictprolongtuple.hh>
 #include <dune/fem/function/blockvectorfunction.hh>
 #include <dune/fem/misc/capabilities.hh>
+#include <dune/fem/space/common/adaptationmanager.hh>
+#include <dune/fem/space/common/restrictprolongtuple.hh>
+
+#include <opm/models/discretization/common/fvbasediscretization.hh>
+
+#include <memory>
+#include <stdexcept>
 
 namespace Opm {
 
