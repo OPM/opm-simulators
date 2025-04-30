@@ -125,7 +125,9 @@ public:
 
             if (vertexIdx == vertex2Idx ||
                 !fractureMapper.isFractureEdge(globalVertexIdx, globalVertex2Idx))
+            {
                 continue;
+            }
 
             Scalar fractureWidth =
                 problem.fractureWidth(elemCtx, vertexIdx, vertex2Idx, timeIdx);
@@ -163,8 +165,9 @@ public:
         std::array<Scalar, numPhases> saturations;
         MaterialLaw::saturations(saturations, fractureMatParams,
                                  fractureFluidState_);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fractureFluidState_.setSaturation(phaseIdx, saturations[phaseIdx]);
+        }
 
         // Make sure that the wetting saturation in the fracture does
         // not get negative
