@@ -70,14 +70,14 @@ public:
     explicit FvBaseBoundaryContext(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
         , intersectionIt_(gridView().ibegin(element()))
-    { }
+    {}
 
     void increment()
     {
         const auto& iend = gridView().iend(element());
 
         if (intersectionIt_ == iend) {
-          return;
+            return;
         }
 
         ++intersectionIt_;
