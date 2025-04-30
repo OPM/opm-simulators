@@ -276,8 +276,11 @@ struct StandardPreconditioners
                               op, prm, weightsCalculator, pressureIndex, comm);
                       });
 
-        // Only add CPRW preconditioners to the factory if the operator
-        // is an actual matrix or GostLastMatrixAdapter operator.
+        // Add CPRW only for the WellModelGhostLastMatrixAdapter, as the method requires that the
+        // operator has the addWellPressureEquations() method (and a few more) it can not be combined
+        // with a well-less operator such as GhostLastMatrixAdapter or OverlappingSchwarzOperator.
+        // For OPM Flow this corresponds to requiring --matrix-add-well-contributions=false
+        // (which is the default).
         if constexpr (std::is_same_v<O, WellModelGhostLastMatrixAdapter<M, V, V, true>>) {
             F::addCreator("cprw",
                           [](const O& op,
