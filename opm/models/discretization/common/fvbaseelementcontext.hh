@@ -28,15 +28,16 @@
 #ifndef EWOMS_FV_BASE_ELEMENT_CONTEXT_HH
 #define EWOMS_FV_BASE_ELEMENT_CONTEXT_HH
 
-#include "fvbaseproperties.hh"
-
 #include <dune/common/fvector.hh>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
 
 #include <opm/models/utils/alignedallocator.hh>
 
+#include <cassert>
+#include <stdexcept>
 #include <vector>
 
 namespace Opm {
