@@ -68,7 +68,7 @@ template<class TypeTag>
 struct Evaluation<TypeTag, TTag::AutoDiffLocalLinearizer>
 {
 private:
-    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
+    static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
@@ -123,7 +123,7 @@ public:
      * \brief Register all run-time parameters for the local jacobian.
      */
     static void registerParameters()
-    { }
+    {}
 
     /*!
      * \brief Initialize the local Jacobian object.
@@ -182,7 +182,7 @@ public:
 
         // compute the local residual and its Jacobian
         const unsigned numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned focusDofIdx = 0; focusDofIdx < numPrimaryDof; focusDofIdx++) {
+        for (unsigned focusDofIdx = 0; focusDofIdx < numPrimaryDof; ++focusDofIdx) {
             elemCtx.setFocusDofIndex(focusDofIdx);
             elemCtx.updateAllExtensiveQuantities();
 
@@ -230,13 +230,16 @@ public:
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
     const Simulator& simulator_() const
     { return *simulatorPtr_; }
+
     const Problem& problem_() const
     { return simulatorPtr_->problem(); }
+
     const Model& model_() const
     { return simulatorPtr_->model(); }
 
@@ -251,7 +254,7 @@ protected:
 
         residual_.resize(numDof);
         if (jacobian_.N() != numDof || jacobian_.M() != numPrimaryDof) {
-          jacobian_.setSize(numDof, numPrimaryDof);
+            jacobian_.setSize(numDof, numPrimaryDof);
         }
     }
 
@@ -278,9 +281,9 @@ protected:
         }
 
         const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
-            for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
-                for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
+        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                     // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of
                     // the residual function 'eqIdx' for the degree of freedom 'dofIdx'
                     // with regard to the focus variable 'pvIdx' of the degree of freedom
