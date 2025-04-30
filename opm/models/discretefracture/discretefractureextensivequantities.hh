@@ -33,6 +33,7 @@
 
 #include <opm/models/immiscible/immiscibleextensivequantities.hh>
 
+#include <array>
 #include <cassert>
 
 namespace Opm {
@@ -130,8 +131,8 @@ public:
 
 private:
     DimMatrix fractureIntrinsicPermeability_;
-    DimVector fractureFilterVelocity_[numPhases];
-    Scalar fractureVolumeFlux_[numPhases];
+    std::array<DimVector, numPhases> fractureFilterVelocity_;
+    std::array<Scalar, numPhases> fractureVolumeFlux_;
     Scalar fractureWidth_;
 };
 
