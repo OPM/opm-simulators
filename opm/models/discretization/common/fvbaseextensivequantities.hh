@@ -36,10 +36,11 @@
 #include <cassert>
 
 namespace Opm {
+
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
- * \brief Provide the properties at a face which make sense indepentently
+ * \brief Provide the properties at a face which make sense independently
  *        of the conserved quantities.
  */
 template <class TypeTag>
@@ -54,7 +55,7 @@ public:
      * \brief Register all run-time parameters for the extensive quantities.
      */
     static void registerParameters()
-    { }
+    {}
 
     /*!
      * \brief Update the extensive quantities for a given sub-control-volume face.
@@ -71,12 +72,11 @@ public:
         exteriorScvIdx_ = scvf.exteriorIndex();
 
         extrusionFactor_ =
-            (elemCtx.intensiveQuantities(interiorScvIdx_, timeIdx).extrusionFactor()
-             + elemCtx.intensiveQuantities(exteriorScvIdx_, timeIdx).extrusionFactor()) / 2;
+            (elemCtx.intensiveQuantities(interiorScvIdx_, timeIdx).extrusionFactor() +
+             elemCtx.intensiveQuantities(exteriorScvIdx_, timeIdx).extrusionFactor()) / 2;
         Valgrind::CheckDefined(extrusionFactor_);
         assert(extrusionFactor_ > 0);
     }
-
 
     /*!
      * \brief Update the extensive quantities for a given boundary face.
