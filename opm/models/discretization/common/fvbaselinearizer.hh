@@ -451,7 +451,7 @@ private:
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern_);
 
         // allocate raw matrix
-        jacobian_.reset(new SparseMatrixAdapter(simulator_()));
+        jacobian_ = std::make_unique<SparseMatrixAdapter>(simulator_());
 
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern_);
