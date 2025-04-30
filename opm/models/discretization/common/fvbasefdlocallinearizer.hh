@@ -353,12 +353,15 @@ protected:
     {
         const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx)
-            for (unsigned dof2Idx = 0; dof2Idx < numDof; ++ dof2Idx)
+        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++primaryDofIdx) {
+            for (unsigned dof2Idx = 0; dof2Idx < numDof; ++dof2Idx) {
                 jacobian_[dof2Idx][primaryDofIdx] = 0.0;
+            }
+        }
 
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < numDof; ++ primaryDofIdx)
+        for (unsigned primaryDofIdx = 0; primaryDofIdx < numDof; ++ primaryDofIdx) {
             residual_[primaryDofIdx] = 0.0;
+        }
     }
 
     /*!
@@ -469,8 +472,9 @@ protected:
         elemCtx.restoreIntensiveQuantities(dofIdx);
 
 #ifndef NDEBUG
-        for (unsigned i = 0; i < derivResidual_.size(); ++i)
+        for (unsigned i = 0; i < derivResidual_.size(); ++i) {
             Valgrind::CheckDefined(derivResidual_[i]);
+        }
 #endif
     }
 
