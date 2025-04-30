@@ -99,8 +99,6 @@ public:
         // remember the simulator object
         simulatorPtr_ = &simulator;
         enableStorageCache_ = Parameters::Get<Parameters::EnableStorageCache>();
-        stashedDofIdx_ = -1;
-        focusDofIdx_ = -1;
     }
 
     static void *operator new(size_t size)
@@ -595,14 +593,14 @@ protected:
     AlignedVector<DofStore_> dofVars_;
     AlignedVector<ExtensiveQuantities> extensiveQuantities_;
 
-    const Simulator *simulatorPtr_;
-    const Element *elemPtr_;
+    const Simulator* simulatorPtr_{};
+    const Element* elemPtr_{};
     const GridView gridView_;
     Stencil stencil_;
 
-    int stashedDofIdx_;
-    int focusDofIdx_;
-    bool enableStorageCache_;
+    int stashedDofIdx_{-1};
+    int focusDofIdx_{-1};
+    bool enableStorageCache_{false};
 };
 
 } // namespace Opm
