@@ -36,6 +36,7 @@
 
 #include <opm/models/utils/alignedallocator.hh>
 
+#include <array>
 #include <cassert>
 #include <stdexcept>
 #include <vector>
@@ -62,9 +63,9 @@ class FvBaseElementContext
     enum { timeDiscHistorySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
 
     struct DofStore_ {
-        IntensiveQuantities intensiveQuantities[timeDiscHistorySize];
-        const PrimaryVariables* priVars[timeDiscHistorySize];
-        const IntensiveQuantities *thermodynamicHint[timeDiscHistorySize];
+        std::array<IntensiveQuantities, timeDiscHistorySize> intensiveQuantities;
+        std::array<const PrimaryVariables*, timeDiscHistorySize> priVars;
+        std::array<const IntensiveQuantities*, timeDiscHistorySize> thermodynamicHint;
     };
     using DofVarsVector = std::vector<DofStore_>;
     using ExtensiveQuantitiesVector = std::vector<ExtensiveQuantities>;
