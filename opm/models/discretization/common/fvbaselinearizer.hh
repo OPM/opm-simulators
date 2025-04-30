@@ -125,14 +125,6 @@ public:
         simulatorPtr_ = 0;
     }
 
-    ~FvBaseLinearizer()
-    {
-        auto it = elementCtx_.begin();
-        const auto& endIt = elementCtx_.end();
-        for (; it != endIt; ++it)
-            delete *it;
-    }
-
     /*!
      * \brief Register all run-time parameters for the Jacobian linearizer.
      */
@@ -152,12 +144,7 @@ public:
     {
         simulatorPtr_ = &simulator;
         eraseMatrix();
-        auto it = elementCtx_.begin();
-        const auto& endIt = elementCtx_.end();
-        for (; it != endIt; ++it){
-            delete *it;
-        }
-        elementCtx_.resize(0);
+        elementCtx_.clear();
         fullDomain_ = std::make_unique<FullDomain>(simulator.gridView());
     }
 
@@ -415,9 +402,10 @@ private:
         resetSystem_();
 
         // create the per-thread context objects
-        elementCtx_.resize(ThreadManager::maxThreads());
+        elementCtx_.clear();
+        elementCtx_.reserve(ThreadManager::maxThreads());
         for (unsigned threadId = 0; threadId != ThreadManager::maxThreads(); ++ threadId)
-            elementCtx_[threadId] = new ElementContext(simulator_());
+            elementCtx_.push_back(std::make_unique<ElementContext>(simulator_()));
     }
 
     // Construct the BCRS matrix for the Jacobian of the residual function
@@ -602,26 +590,26 @@ private:
     {
         unsigned threadId = ThreadManager::threadId();
 
-        ElementContext *elementCtx = elementCtx_[threadId];
+        ElementContext& elementCtx = *elementCtx_[threadId];
         auto& localLinearizer = model_().localLinearizer(threadId);
 
         // the actual work of linearization is done by the local linearizer class
-        localLinearizer.linearize(*elementCtx, elem);
+        localLinearizer.linearize(elementCtx, elem);
 
         // update the right hand side and the Jacobian matrix
         if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
             globalMatrixMutex_.lock();
 
-        size_t numPrimaryDof = elementCtx->numPrimaryDof(/*timeIdx=*/0);
+        size_t numPrimaryDof = elementCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx) {
-            unsigned globI = elementCtx->globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
+            unsigned globI = elementCtx.globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
 
             // update the right hand side
             residual_[globI] += localLinearizer.residual(primaryDofIdx);
 
             // update the global Jacobian matrix
-            for (unsigned dofIdx = 0; dofIdx < elementCtx->numDof(/*timeIdx=*/0); ++ dofIdx) {
-                unsigned globJ = elementCtx->globalSpaceIndex(/*spaceIdx=*/dofIdx, /*timeIdx=*/0);
+            for (unsigned dofIdx = 0; dofIdx < elementCtx.numDof(/*timeIdx=*/0); ++ dofIdx) {
+                unsigned globJ = elementCtx.globalSpaceIndex(/*spaceIdx=*/dofIdx, /*timeIdx=*/0);
 
                 jacobian_->addToBlock(globJ, globI, localLinearizer.jacobian(dofIdx, primaryDofIdx));
             }
@@ -675,7 +663,7 @@ private:
     { return getPropValue<TypeTag, Properties::EnableConstraints>(); }
 
     Simulator *simulatorPtr_;
-    std::vector<ElementContext*> elementCtx_;
+    std::vector<std::unique_ptr<ElementContext>> elementCtx_;
 
     // The constraint equations (only non-empty if the
     // EnableConstraints property is true)
