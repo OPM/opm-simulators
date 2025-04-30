@@ -385,13 +385,7 @@ private:
     using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
     using DiscreteFunction = GetPropType<TypeTag, Properties::DiscreteFunction>;
 
-    // copying a discretization object is not a good idea
-    FvBaseDiscretization(const FvBaseDiscretization& );
-
 public:
-    // this constructor required to be explicitly specified because
-    // we've defined a constructor above which deletes all implicitly
-    // generated constructors in C++.
     explicit FvBaseDiscretization(Simulator& simulator)
         : simulator_(simulator)
         , gridView_(simulator.gridView())
@@ -426,6 +420,9 @@ public:
         resizeAndResetIntensiveQuantitiesCache_();
         asImp_().registerOutputModules_();
     }
+
+    // copying a discretization object is not a good idea
+    FvBaseDiscretization(const FvBaseDiscretization&) = delete;
 
     /*!
      * \brief Register all run-time parameters for the model.
