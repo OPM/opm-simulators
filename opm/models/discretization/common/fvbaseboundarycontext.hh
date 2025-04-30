@@ -76,8 +76,9 @@ public:
     {
         const auto& iend = gridView().iend(element());
 
-        if(intersectionIt_ == iend)
+        if (intersectionIt_ == iend) {
           return;
+        }
 
         ++intersectionIt_;
         // iterate to the next boundary intersection
