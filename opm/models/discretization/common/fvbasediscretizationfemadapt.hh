@@ -147,10 +147,9 @@ public:
                 this->simulator_.problem().gridChanged();
 
                 // notify the modules for visualization output
-                auto outIt = this->outputModules_.begin();
-                auto outEndIt = this->outputModules_.end();
-                for (; outIt != outEndIt; ++outIt)
-                    (*outIt)->allocBuffers();
+                for (auto& module : this->outputModules_) {
+                    module->allocBuffers();
+                }
             }
         }
     }
