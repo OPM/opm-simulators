@@ -109,9 +109,9 @@ public:
         computeDistances_(interiorDistance, exteriorDistance, elemCtx, fapIdx);
 
         const auto& face = elemCtx.stencil(/*timeIdx=*/0).interiorFace(fapIdx);
-        auto i = face.interiorIndex();
-        auto j = face.exteriorIndex();
-        auto focusDofIdx = elemCtx.focusDofIndex();
+        const auto i = face.interiorIndex();
+        const auto j = face.exteriorIndex();
+        const auto focusDofIdx = elemCtx.focusDofIndex();
 
         // use the average weighted by distance...
         ReturnType value;
@@ -158,9 +158,9 @@ public:
         computeDistances_(interiorDistance, exteriorDistance, elemCtx, fapIdx);
 
         const auto& face = elemCtx.stencil(/*timeIdx=*/0).interiorFace(fapIdx);
-        auto i = face.interiorIndex();
-        auto j = face.exteriorIndex();
-        auto focusDofIdx = elemCtx.focusDofIndex();
+        const auto i = face.interiorIndex();
+        const auto j = face.exteriorIndex();
+        const auto focusDofIdx = elemCtx.focusDofIndex();
 
         // use the average weighted by distance...
         ReturnType value;
@@ -190,7 +190,7 @@ public:
             }
         }
 
-        Scalar totDistance = interiorDistance + exteriorDistance;
+        const Scalar totDistance = interiorDistance + exteriorDistance;
         for (int k = 0; k < value.size(); ++k) {
             value[k] /= totDistance;
         }
@@ -218,9 +218,9 @@ public:
         const auto& stencil = elemCtx.stencil(/*timeIdx=*/0);
         const auto& face = stencil.interiorFace(fapIdx);
 
-        auto i = face.interiorIndex();
-        auto j = face.exteriorIndex();
-        auto focusIdx = elemCtx.focusDofIndex();
+        const auto i = face.interiorIndex();
+        const auto j = face.exteriorIndex();
+        const auto focusIdx = elemCtx.focusDofIndex();
 
         const auto& interiorPos = stencil.subControlVolume(i).globalPos();
         const auto& exteriorPos = stencil.subControlVolume(j).globalPos();
@@ -244,7 +244,7 @@ public:
 
         Scalar distSquared = 0.0;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-            Scalar tmp = exteriorPos[dimIdx] - interiorPos[dimIdx];
+            const Scalar tmp = exteriorPos[dimIdx] - interiorPos[dimIdx];
             distSquared += tmp*tmp;
         }
 
@@ -253,7 +253,7 @@ public:
         // the two centers times the ratio of the difference of the values and their
         // distance, i.e., d/abs(d) * delta y / abs(d) = d*delta y / abs(d)^2.
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-            Scalar tmp = exteriorPos[dimIdx] - interiorPos[dimIdx];
+            const Scalar tmp = exteriorPos[dimIdx] - interiorPos[dimIdx];
             quantityGrad[dimIdx] = deltay*(tmp/distSquared);
         }
     }
@@ -317,7 +317,7 @@ public:
 
         Scalar distSquared = 0;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-            Scalar tmp = boundaryFacePos[dimIdx] - interiorPos[dimIdx];
+            const Scalar tmp = boundaryFacePos[dimIdx] - interiorPos[dimIdx];
             distSquared += tmp*tmp;
         }
 
@@ -327,7 +327,7 @@ public:
         // difference of the values and their distance, i.e., d/abs(d) * deltay / abs(d)
         // = d*deltay / abs(d)^2.
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-            Scalar tmp = boundaryFacePos[dimIdx] - interiorPos[dimIdx];
+            const Scalar tmp = boundaryFacePos[dimIdx] - interiorPos[dimIdx];
             quantityGrad[dimIdx] = deltay*(tmp/distSquared);
         }
     }
@@ -344,8 +344,8 @@ private:
         // calculate the distances of the position of the interior and of the exterior
         // finite volume to the position of the integration point.
         const auto& normal = face.normal();
-        auto i = face.interiorIndex();
-        auto j = face.exteriorIndex();
+        const auto i = face.interiorIndex();
+        const auto j = face.exteriorIndex();
         const auto& interiorPos = stencil.subControlVolume(i).globalPos();
         const auto& exteriorPos = stencil.subControlVolume(j).globalPos();
         const auto& integrationPos = face.integrationPos();
