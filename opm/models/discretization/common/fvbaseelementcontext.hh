@@ -183,7 +183,7 @@ public:
         if (!enableStorageCache_) {
             // if the storage cache is disabled, we need to calculate the storage term
             // from scratch, i.e. we need the intensive quantities of all of the history.
-            for (unsigned timeIdx = 0; timeIdx < timeDiscHistorySize; ++ timeIdx) {
+            for (unsigned timeIdx = 0; timeIdx < timeDiscHistorySize; ++timeIdx) {
                 asImp_().updateIntensiveQuantities(timeIdx);
             }
         }
@@ -244,7 +244,7 @@ public:
     {
         gradientCalculator_.prepare(/*context=*/asImp_(), timeIdx);
 
-        for (unsigned fluxIdx = 0; fluxIdx < numInteriorFaces(timeIdx); fluxIdx++) {
+        for (unsigned fluxIdx = 0; fluxIdx < numInteriorFaces(timeIdx); ++fluxIdx) {
             extensiveQuantities_[fluxIdx].update(/*context=*/asImp_(),
                                                  /*localIndex=*/fluxIdx,
                                                  timeIdx);
@@ -364,7 +364,6 @@ public:
     unsigned globalSpaceIndex(unsigned dofIdx, unsigned timeIdx) const
     { return stencil(timeIdx).globalSpaceIndex(dofIdx); }
 
-
     /*!
      * \brief Return the element-local volume associated with a degree of freedom
      *
@@ -434,6 +433,7 @@ public:
         assert(dofIdx < numDof(timeIdx));
         return dofVars_[dofIdx].thermodynamicHint[timeIdx];
     }
+
     /*!
      * \copydoc intensiveQuantities()
      */
@@ -553,7 +553,7 @@ protected:
         const SolutionVector& globalSol = model().solution(timeIdx);
 
         // update the non-gradient quantities
-        for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
+        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             unsigned globalIdx = globalSpaceIndex(dofIdx, timeIdx);
             const PrimaryVariables& dofSol = globalSol[globalIdx];
             dofVars_[dofIdx].priVars[timeIdx] = &dofSol;
