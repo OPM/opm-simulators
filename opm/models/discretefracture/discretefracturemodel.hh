@@ -52,26 +52,33 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
+
 //! The generic type tag for problems using the immiscible multi-phase model
-struct DiscreteFractureModel { using InheritsFrom = std::tuple<ImmiscibleTwoPhaseModel>; };
+struct DiscreteFractureModel
+{ using InheritsFrom = std::tuple<ImmiscibleTwoPhaseModel>; };
+
 } // end namespace TTag
 
 //! The class for the model
 template<class TypeTag>
-struct Model<TypeTag, TTag::DiscreteFractureModel> { using type = Opm::DiscreteFractureModel<TypeTag>; };
+struct Model<TypeTag, TTag::DiscreteFractureModel>
+{ using type = Opm::DiscreteFractureModel<TypeTag>; };
 
 //! The class for the model
 template<class TypeTag>
-struct BaseProblem<TypeTag, TTag::DiscreteFractureModel> { using type = Opm::DiscreteFractureProblem<TypeTag>; };
+struct BaseProblem<TypeTag, TTag::DiscreteFractureModel>
+{ using type = Opm::DiscreteFractureProblem<TypeTag>; };
 
 //! Use the immiscible multi-phase local jacobian operator for the immiscible multi-phase model
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::DiscreteFractureModel> { using type = Opm::DiscreteFractureLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::DiscreteFractureModel>
+{ using type = Opm::DiscreteFractureLocalResidual<TypeTag>; };
 
 // The type of the base base class for actual problems.
 // TODO!?
 // template<class TypeTag>
-// struct BaseProblem<TypeTag, TTag::DiscreteFractureModel> { using type = DiscreteFractureBaseProblem<TypeTag>; };
+// struct BaseProblem<TypeTag, TTag::DiscreteFractureModel>
+// { using type = DiscreteFractureBaseProblem<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
@@ -88,10 +95,11 @@ template<class TypeTag>
 struct ExtensiveQuantities<TypeTag, TTag::DiscreteFractureModel>
 { using type = Opm::DiscreteFractureExtensiveQuantities<TypeTag>; };
 
-//! For the discrete fracture model, we need to use two-point flux approximation or it
-//! will converge very poorly
+//! For the discrete fracture model, we need to use two-point flux
+//! approximation or it will converge very poorly
 template<class TypeTag>
-struct UseTwoPointGradients<TypeTag, TTag::DiscreteFractureModel> { static constexpr bool value = true; };
+struct UseTwoPointGradients<TypeTag, TTag::DiscreteFractureModel>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Properties
 
@@ -138,7 +146,7 @@ public:
         ParentType::registerParameters();
 
         // register runtime parameters of the VTK output modules
-        Opm::VtkDiscreteFractureModule<TypeTag>::registerParameters();
+        VtkDiscreteFractureModule<TypeTag>::registerParameters();
 
         // The intensive quantity cache cannot be used by the discrete fracture model, because
         // the intensive quantities of a control degree of freedom are not identical to the
@@ -158,9 +166,10 @@ public:
     {
         ParentType::registerOutputModules_();
 
-        this->addOutputModule(new Opm::VtkDiscreteFractureModule<TypeTag>(this->simulator_));
+        this->addOutputModule(new VtkDiscreteFractureModule<TypeTag>(this->simulator_));
     }
 };
+
 } // namespace Opm
 
 #endif
