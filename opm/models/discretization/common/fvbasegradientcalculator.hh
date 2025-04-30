@@ -115,15 +115,18 @@ public:
 
         // use the average weighted by distance...
         ReturnType value;
-        if (i == focusDofIdx)
+        if (i == focusDofIdx) {
             value = quantityCallback(i)*interiorDistance;
-        else
+        } else {
             value = getValue(quantityCallback(i))*interiorDistance;
+        }
 
-        if (j == focusDofIdx)
+        if (j == focusDofIdx) {
             value += quantityCallback(j)*exteriorDistance;
-        else
+        }
+        else {
             value += getValue(quantityCallback(j))*exteriorDistance;
+        }
 
         value /= interiorDistance + exteriorDistance;
 
@@ -163,29 +166,34 @@ public:
         ReturnType value;
         if (i == focusDofIdx) {
             value = quantityCallback(i);
-            for (int k = 0; k < value.size(); ++k)
+            for (int k = 0; k < value.size(); ++k) {
                 value[k] *= interiorDistance;
+            }
         }
         else {
             const auto& dofVal = getValue(quantityCallback(i));
-            for (int k = 0; k < dofVal.size(); ++k)
+            for (int k = 0; k < dofVal.size(); ++k) {
                 value[k] = getValue(dofVal[k])*interiorDistance;
+            }
         }
 
         if (j == focusDofIdx) {
             const auto& dofVal = quantityCallback(j);
-            for (int k = 0; k < dofVal.size(); ++k)
+            for (int k = 0; k < dofVal.size(); ++k) {
                 value[k] += dofVal[k]*exteriorDistance;
+            }
         }
         else {
             const auto& dofVal = quantityCallback(j);
-            for (int k = 0; k < dofVal.size(); ++k)
+            for (int k = 0; k < dofVal.size(); ++k) {
                 value[k] += getValue(dofVal[k])*exteriorDistance;
+            }
         }
 
         Scalar totDistance = interiorDistance + exteriorDistance;
-        for (int k = 0; k < value.size(); ++k)
+        for (int k = 0; k < value.size(); ++k) {
             value[k] /= totDistance;
+        }
 
         return value;
     }
@@ -228,10 +236,11 @@ public:
                 quantityCallback(j)
                 - getValue(quantityCallback(i));
         }
-        else
+        else {
             deltay =
                 getValue(quantityCallback(j))
                 - getValue(quantityCallback(i));
+        }
 
         Scalar distSquared = 0.0;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
@@ -294,12 +303,14 @@ public:
         const auto& face = stencil.boundaryFace(faceIdx);
 
         Evaluation deltay;
-        if (face.interiorIndex() == elemCtx.focusDofIndex())
+        if (face.interiorIndex() == elemCtx.focusDofIndex()) {
             deltay = quantityCallback.boundaryValue() - quantityCallback(face.interiorIndex());
-        else
+        }
+        else {
             deltay =
                 getValue(quantityCallback.boundaryValue())
                 - getValue(quantityCallback(face.interiorIndex()));
+        }
 
         const auto& boundaryFacePos = face.integrationPos();
         const auto& interiorPos = stencil.subControlVolume(face.interiorIndex()).center();
