@@ -347,7 +347,7 @@ public:
     protected:
         SolutionVector blockVector_;
     public:
-        BlockVectorWrapper(const std::string&, const size_t size)
+        BlockVectorWrapper(const std::string&, const std::size_t size)
             : blockVector_(size)
         {}
 
@@ -412,7 +412,7 @@ public:
                                         +Dune::className<Discretization>()+")");
 
         PrimaryVariables::init();
-        size_t numDof = asImp_().numGridDof();
+        std::size_t numDof = asImp_().numGridDof();
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
             if (storeIntensiveQuantities()) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
@@ -464,7 +464,7 @@ public:
     void finishInit()
     {
         // initialize the volume of the finite volumes to zero
-        size_t numDof = asImp_().numGridDof();
+        std::size_t numDof = asImp_().numGridDof();
         dofTotalVolume_.resize(numDof);
         std::fill(dofTotalVolume_.begin(), dofTotalVolume_.end(), 0.0);
 
@@ -896,7 +896,7 @@ public:
                 storageTerm.resize(elemCtx.numPrimaryDof(/*timeIdx=*/0));
                 asImp_().localResidual(threadId).eval(residual, elemCtx);
 
-                size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+                std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
                 mutex.lock();
                 for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
                     unsigned globalI = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
@@ -959,7 +959,7 @@ public:
                 elemCtx.updateStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
 
-                size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
+                std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
                 elemStorage.resize(numPrimaryDof);
 
                 localResidual(threadId).evalStorage(elemStorage, elemCtx, timeIdx);
@@ -1243,7 +1243,7 @@ public:
             // Make sure that the primary variables are defined. Note that because of padding
             // bytes, we can't just simply ask valgrind to check the whole solution vectors
             // for definedness...
-            for (size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i) {
+            for (std::size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i) {
                 asImp_().solution(timeIdx)[i].checkDefined();
             }
         }
@@ -1278,7 +1278,7 @@ public:
             // Make sure that the primary variables are defined. Note that because of padding
             // bytes, we can't just simply ask valgrind to check the whole solution vectors
             // for definedness...
-            for (size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i) {
+            for (std::size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i) {
                 asImp_().solution(timeIdx)[i].checkDefined();
             }
         }
@@ -1301,7 +1301,7 @@ public:
             // Make sure that the primary variables are defined. Note that because of padding
             // bytes, we can't just simply ask valgrind to check the whole solution vectors
             // for definedness...
-            for (size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i) {
+            for (std::size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i) {
                 asImp_().solution(timeIdx)[i].checkDefined();
             }
         }
@@ -1362,7 +1362,7 @@ public:
             // Make sure that the primary variables are defined. Note that because of padding
             // bytes, we can't just simply ask valgrind to check the whole solution vectors
             // for definedness...
-            for (size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i)
+            for (std::size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i)
                 asImp_().solution(timeIdx)[i].checkDefined();
         }
 #endif // NDEBUG
@@ -1468,15 +1468,15 @@ public:
     /*!
      * \brief Returns the number of degrees of freedom (DOFs) for the computational grid
      */
-    size_t numGridDof() const
+    std::size_t numGridDof() const
     { throw std::logic_error("The discretization class must implement the numGridDof() method!"); }
 
     /*!
      * \brief Returns the number of degrees of freedom (DOFs) of the auxiliary equations
      */
-    size_t numAuxiliaryDof() const
+    std::size_t numAuxiliaryDof() const
     {
-        size_t result = 0;
+        std::size_t result = 0;
         auto auxModIt = auxEqModules_.begin();
         const auto& auxModEndIt = auxEqModules_.end();
         for (; auxModIt != auxModEndIt; ++auxModIt)
@@ -1488,7 +1488,7 @@ public:
     /*!
      * \brief Returns the total number of degrees of freedom (i.e., grid plux auxiliary DOFs)
      */
-    size_t numTotalDof() const
+    std::size_t numTotalDof() const
     { return asImp_().numGridDof() + numAuxiliaryDof(); }
 
     /*!
@@ -1584,7 +1584,7 @@ public:
         asImp_().globalResidual(globalResid, u);
 
         // create the required scalar fields
-        size_t numGridDof = asImp_().numGridDof();
+        std::size_t numGridDof = asImp_().numGridDof();
 
         // global defect of the two auxiliary equations
         std::array<ScalarBuffer*, numEq> def;
@@ -1745,7 +1745,7 @@ public:
                                       " conjunction with dune-fem");
         }
 
-        size_t numDof = numTotalDof();
+        std::size_t numDof = numTotalDof();
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx)
             solution(timeIdx).resize(numDof);
 
@@ -1767,7 +1767,7 @@ public:
     /*!
      * \brief Returns the number of modules for auxiliary equations
      */
-    size_t numAuxiliaryModules() const
+    std::size_t numAuxiliaryModules() const
     { return auxEqModules_.size(); }
 
     /*!
@@ -1823,7 +1823,7 @@ protected:
     {
         // allocate the storage cache
         if (enableStorageCache()) {
-            size_t numDof = asImp_().numGridDof();
+            std::size_t numDof = asImp_().numGridDof();
             for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
                 storageCache_[timeIdx].resize(numDof);
             }
@@ -1831,7 +1831,7 @@ protected:
 
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
-            size_t numDof = asImp_().numGridDof();
+            std::size_t numDof = asImp_().numGridDof();
             for(unsigned timeIdx=0; timeIdx<historySize; ++timeIdx) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof);
@@ -1961,7 +1961,7 @@ public:
                                         " which currently requires the presence of the"
                                         " dune-fem module");
         }
-        size_t numDof = this->asImp_().numGridDof();
+        std::size_t numDof = this->asImp_().numGridDof();
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
             this->solution_[timeIdx] = std::make_unique<DiscreteFunction>("solution", numDof);
         }
