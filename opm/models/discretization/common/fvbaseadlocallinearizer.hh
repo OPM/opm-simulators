@@ -113,16 +113,11 @@ private:
     using ScalarLocalBlockMatrix = Dune::Matrix<ScalarMatrixBlock>;
 
 public:
-    FvBaseAdLocalLinearizer()
-        : internalElemContext_{}
-    { }
+    FvBaseAdLocalLinearizer() = default;
 
     // copying local linearizer objects around is a very bad idea, so we explicitly
     // prevent it...
     FvBaseAdLocalLinearizer(const FvBaseAdLocalLinearizer&) = delete;
-
-    ~FvBaseAdLocalLinearizer()
-    {}
 
     /*!
      * \brief Register all run-time parameters for the local jacobian.
@@ -295,14 +290,14 @@ protected:
         }
     }
 
-    Simulator *simulatorPtr_;
+    Simulator* simulatorPtr_{};
 
-    std::unique_ptr<ElementContext> internalElemContext_;
+    std::unique_ptr<ElementContext> internalElemContext_{};
 
-    LocalResidual localResidual_;
+    LocalResidual localResidual_{};
 
-    ScalarLocalBlockVector residual_;
-    ScalarLocalBlockMatrix jacobian_;
+    ScalarLocalBlockVector residual_{};
+    ScalarLocalBlockMatrix jacobian_{};
 };
 
 } // namespace Opm
