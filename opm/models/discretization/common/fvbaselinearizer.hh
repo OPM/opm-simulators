@@ -347,7 +347,7 @@ public:
 #pragma omp parallel
 #endif
         {
-            unsigned threadId = ThreadManager::threadId();
+            const unsigned threadId = ThreadManager::threadId();
             auto elemIt = threadedElemIt.beginParallel();
             MatrixBlock zeroBlock;
             zeroBlock = 0.0;
@@ -360,7 +360,7 @@ public:
                      primaryDofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0);
                      ++primaryDofIdx)
                 {
-                    unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
+                    const unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
                     residual_[globI] = 0.0;
                     jacobian_->clearRow(globI, 0.0);
                 }
@@ -428,10 +428,10 @@ private:
             stencil.update(elem);
 
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
-                unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
+                const unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
-                    unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
+                    const unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     sparsityPattern_[myIdx].insert(neighborIdx);
                 }
             }
@@ -439,7 +439,7 @@ private:
 
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
-        size_t numAuxMod = model.numAuxiliaryModules();
+        const size_t numAuxMod = model.numAuxiliaryModules();
         for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern_);
         }
@@ -476,7 +476,7 @@ private:
 #pragma omp parallel
 #endif
         {
-            unsigned threadId = ThreadManager::threadId();
+            const unsigned threadId = ThreadManager::threadId();
             ElementIterator elemIt = threadedElemIt.beginParallel();
             for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 // create an element context (the solution-based quantities are not
@@ -497,7 +497,7 @@ private:
                                                   primaryDofIdx,
                                                   /*timeIdx=*/0);
                     if (constraints.isActive()) {
-                        unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
+                        const unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
                         constraintsMap_[globI] = constraints;
                         continue;
                     }
@@ -596,7 +596,7 @@ private:
     template <class ElementType>
     void linearizeElement_(const ElementType& elem)
     {
-        unsigned threadId = ThreadManager::threadId();
+        const unsigned threadId = ThreadManager::threadId();
 
         ElementContext& elementCtx = *elementCtx_[threadId];
         auto& localLinearizer = model_().localLinearizer(threadId);
@@ -609,16 +609,16 @@ private:
             globalMatrixMutex_.lock();
         }
 
-        size_t numPrimaryDof = elementCtx.numPrimaryDof(/*timeIdx=*/0);
+        const size_t numPrimaryDof = elementCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++primaryDofIdx) {
-            unsigned globI = elementCtx.globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
+            const unsigned globI = elementCtx.globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
 
             // update the right hand side
             residual_[globI] += localLinearizer.residual(primaryDofIdx);
 
             // update the global Jacobian matrix
             for (unsigned dofIdx = 0; dofIdx < elementCtx.numDof(/*timeIdx=*/0); ++dofIdx) {
-                unsigned globJ = elementCtx.globalSpaceIndex(/*spaceIdx=*/dofIdx, /*timeIdx=*/0);
+                const unsigned globJ = elementCtx.globalSpaceIndex(/*spaceIdx=*/dofIdx, /*timeIdx=*/0);
 
                 jacobian_->addToBlock(globJ, globI, localLinearizer.jacobian(dofIdx, primaryDofIdx));
             }
