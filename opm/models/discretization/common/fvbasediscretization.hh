@@ -1025,14 +1025,12 @@ public:
         // calculate the rate at the boundary and the source rate
         ElementContext elemCtx(simulator_);
         elemCtx.setEnableStorageCache(false);
-        auto eIt = simulator_.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = simulator_.gridView().template end</*codim=*/0>();
-        for (; eIt != elemEndIt; ++eIt) {
-            if (eIt->partitionType() != Dune::InteriorEntity) {
+        for (const auto& elem : elements(simulator_.gridView())) {
+            if (elem.partitionType() != Dune::InteriorEntity) {
                 continue; // ignore ghost and overlap elements
             }
 
-            elemCtx.updateAll(*eIt);
+            elemCtx.updateAll(elem);
 
             // handle the boundary terms
             if (elemCtx.onBoundary()) {
