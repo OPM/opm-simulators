@@ -48,7 +48,7 @@ template<class TypeTag>
 class DiscreteFractureProblem
     : public MultiPhaseBaseProblem<TypeTag>
 {
-    using ParentType = Opm::MultiPhaseBaseProblem<TypeTag>;
+    using ParentType = MultiPhaseBaseProblem<TypeTag>;
 
     using Implementation = GetPropType<TypeTag, Properties::Problem>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -91,7 +91,7 @@ public:
         // you have off-main diagonal entries in your permeabilities!
         for (unsigned i = 0; i < dimWorld; ++i) {
             for (unsigned j = 0; j < dimWorld; ++j) {
-                result[i][j] = Opm::harmonicMean(K1[i][j], K2[i][j]);
+                result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
             }
         }
     }
@@ -131,6 +131,7 @@ private:
     //! Returns the implementation of the problem (i.e. static polymorphism)
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
+
     //! \copydoc asImp_()
     const Implementation& asImp_() const
     { return *static_cast<const Implementation *>(this); }
