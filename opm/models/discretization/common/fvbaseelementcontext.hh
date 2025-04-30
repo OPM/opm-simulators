@@ -185,14 +185,16 @@ public:
         if (!enableStorageCache_) {
             // if the storage cache is disabled, we need to calculate the storage term
             // from scratch, i.e. we need the intensive quantities of all of the history.
-            for (unsigned timeIdx = 0; timeIdx < timeDiscHistorySize; ++ timeIdx)
+            for (unsigned timeIdx = 0; timeIdx < timeDiscHistorySize; ++ timeIdx) {
                 asImp_().updateIntensiveQuantities(timeIdx);
+            }
         }
-        else
+        else {
             // if the storage cache is enabled, we only need to recalculate the storage
             // term for the most recent point of history (i.e., for the current iterative
             // solution)
             asImp_().updateIntensiveQuantities(/*timeIdx=*/0);
+        }
     }
 
     /*!
@@ -412,9 +414,10 @@ public:
 #ifndef NDEBUG
         assert(dofIdx < numDof(timeIdx));
 
-        if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage())
+        if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage()) {
             throw std::logic_error("If caching of the storage term is enabled, only the intensive quantities "
                                    "for the most-recent substep (i.e. time index 0) are available!");
+        }
 #endif
 
         return dofVars_[dofIdx].intensiveQuantities[timeIdx];
@@ -576,9 +579,10 @@ protected:
     void updateSingleIntQuants_(const PrimaryVariables& priVars, unsigned dofIdx, unsigned timeIdx)
     {
 #ifndef NDEBUG
-        if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage())
+        if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage()) {
             throw std::logic_error("If caching of the storage term is enabled, only the intensive quantities "
                                    "for the most-recent substep (i.e. time index 0) are available!");
+        }
 #endif
 
         dofVars_[dofIdx].priVars[timeIdx] = &priVars;
