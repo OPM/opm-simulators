@@ -400,10 +400,11 @@ public:
         , enableThermodynamicHints_(Parameters::Get<Parameters::EnableThermodynamicHints>())
     {
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
-        if (enableGridAdaptation_ && !isEcfv)
+        if (enableGridAdaptation_ && !isEcfv) {
             throw std::invalid_argument("Grid adaptation currently only works for the "
                                         "element-centered finite volume discretization (is: "
                                         +Dune::className<Discretization>()+")");
+        }
 
         PrimaryVariables::init();
         std::size_t numDof = asImp_().numGridDof();
@@ -413,8 +414,9 @@ public:
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof, /*value=*/false);
             }
 
-            if (enableStorageCache_)
+            if (enableStorageCache_) {
                 storageCache_[timeIdx].resize(numDof);
+            }
         }
 
         resizeAndResetIntensiveQuantitiesCache_();
@@ -473,8 +475,9 @@ public:
             const bool isInteriorElement = elem.partitionType() == Dune::InteriorEntity;
             // ignore everything which is not in the interior if the
             // current process' piece of the grid
-            if (!isInteriorElement)
+            if (!isInteriorElement) {
                 continue;
+            }
 
             // deal with the current element
             elemCtx.updateStencil(elem);
@@ -495,8 +498,9 @@ public:
         // local process grid partition: those which do not have a non-zero volume
         // before taking the peer processes into account...
         isLocalDof_.resize(numDof);
-        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx)
+        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             isLocalDof_[dofIdx] = (dofTotalVolume_[dofIdx] != 0.0);
+        }
 
         // add the volumes of the DOFs on the process boundaries
         const auto sumHandle =
@@ -510,14 +514,16 @@ public:
         gridTotalVolume_ = gridView_.comm().sum(gridTotalVolume_);
 
         linearizer_->init(simulator_);
-        for (unsigned threadId = 0; threadId < ThreadManager::maxThreads(); ++threadId)
+        for (unsigned threadId = 0; threadId < ThreadManager::maxThreads(); ++threadId) {
             localLinearizer_[threadId].init(simulator_);
+        }
 
         resizeAndResetIntensiveQuantitiesCache_();
         if (storeIntensiveQuantities()) {
             // invalidate all cached intensive quantities
-            for (unsigned timeIdx = 0; timeIdx < historySize; ++ timeIdx)
+            for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
                 invalidateIntensiveQuantitiesCache(timeIdx);
+            }
         }
 
         newtonMethod_.finishInit();
@@ -545,15 +551,15 @@ public:
         for (const auto& elem : elements(gridView_)) {
             // ignore everything which is not in the interior if the
             // current process' piece of the grid
-            if (elem.partitionType() != Dune::InteriorEntity)
+            if (elem.partitionType() != Dune::InteriorEntity) {
                 continue;
+            }
 
             // deal with the current element
             elemCtx.updateStencil(elem);
 
             // loop over all element vertices, i.e. sub control volumes
-            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); dofIdx++)
-            {
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); dofIdx++) {
                 // map the local degree of freedom index to the global one
                 unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
@@ -569,16 +575,18 @@ public:
         asImp_().syncOverlap();
 
         // also set the solutions of the "previous" time steps to the initial solution.
-        for (unsigned timeIdx = 1; timeIdx < historySize; ++timeIdx)
+        for (unsigned timeIdx = 1; timeIdx < historySize; ++timeIdx) {
             solution(timeIdx) = solution(/*timeIdx=*/0);
+        }
 
         simulator_.problem().initialSolutionApplied();
 
 #ifndef NDEBUG
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx)  {
             const auto& sol = solution(timeIdx);
-            for (unsigned dofIdx = 0; dofIdx < sol.size(); ++dofIdx)
+            for (unsigned dofIdx = 0; dofIdx < sol.size(); ++dofIdx) {
                 sol[dofIdx].checkDefined();
+            }
         }
 #endif // NDEBUG
     }
@@ -621,8 +629,9 @@ public:
      */
     const IntensiveQuantities* thermodynamicHint(unsigned globalIdx, unsigned timeIdx) const
     {
-        if (!enableThermodynamicHints_)
+        if (!enableThermodynamicHints_) {
             return 0;
+        }
 
         // the intensive quantities cache doubles as thermodynamic hint
         return cachedIntensiveQuantities(globalIdx, timeIdx);
@@ -669,8 +678,9 @@ public:
                                          unsigned globalIdx,
                                          unsigned timeIdx) const
     {
-        if (!storeIntensiveQuantities())
+        if (!storeIntensiveQuantities()) {
             return;
+        }
 
         intensiveQuantityCache_[timeIdx][globalIdx] = intQuants;
         intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = 1;
@@ -687,8 +697,9 @@ public:
                                                   unsigned timeIdx,
                                                   bool newValue) const
     {
-        if (!storeIntensiveQuantities())
+        if (!storeIntensiveQuantities()) {
             return;
+        }
 
         intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = newValue ? 1 : 0;
     }
@@ -767,8 +778,9 @@ public:
      */
     void shiftIntensiveQuantityCache(unsigned numSlots = 1)
     {
-        if (!storeIntensiveQuantities())
+        if (!storeIntensiveQuantities()) {
             return;
+        }
 
         if (enableStorageCache() && simulator_.problem().recycleFirstIterationStorage()) {
             // If the storage term is cached, the intensive quantities of the previous
@@ -885,8 +897,9 @@ public:
 
             for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 const Element& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity)
+                if (elem.partitionType() != Dune::InteriorEntity) {
                     continue;
+                }
 
                 elemCtx.updateAll(elem);
                 residual.resize(elemCtx.numDof(/*timeIdx=*/0));
@@ -897,8 +910,9 @@ public:
                 mutex.lock();
                 for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
                     unsigned globalI = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
                         dest[globalI][eqIdx] += Toolbox::value(residual[dofIdx][eqIdx]);
+                    }
                 }
                 mutex.unlock();
             }
@@ -950,8 +964,9 @@ public:
 
             for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 const Element& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity)
+                if (elem.partitionType() != Dune::InteriorEntity) {
                     continue; // ignore ghost and overlap elements
+                }
 
                 elemCtx.updateStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
@@ -962,9 +977,11 @@ public:
                 localResidual(threadId).evalStorage(elemStorage, elemCtx, timeIdx);
 
                 mutex.lock();
-                for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx)
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+                for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                         storage[eqIdx] += Toolbox::value(elemStorage[dofIdx][eqIdx]);
+                    }
+                }
                 mutex.unlock();
             }
         }
@@ -1011,8 +1028,9 @@ public:
         auto eIt = simulator_.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = simulator_.gridView().template end</*codim=*/0>();
         for (; eIt != elemEndIt; ++eIt) {
-            if (eIt->partitionType() != Dune::InteriorEntity)
+            if (eIt->partitionType() != Dune::InteriorEntity) {
                 continue; // ignore ghost and overlap elements
+            }
 
             elemCtx.updateAll(*eIt);
 
@@ -1035,12 +1053,14 @@ public:
                         boundaryCtx.boundarySegmentArea(faceIdx, /*timeIdx=*/0)
                         * insideIntQuants.extrusionFactor();
 
-                    for (unsigned i = 0; i < values.size(); ++i)
+                    for (unsigned i = 0; i < values.size(); ++i) {
                         values[i] *= bfArea;
+                    }
 
                     totalBoundaryArea += bfArea;
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                         totalRate[eqIdx] += values[eqIdx];
+                    }
                 }
             }
 
@@ -1057,8 +1077,9 @@ public:
                 Scalar dofVolume =
                     elemCtx.dofVolume(dofIdx, /*timeIdx=*/0)
                     * intQuants.extrusionFactor();
-                for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                     totalRate[eqIdx] += -dofVolume*Toolbox::value(values[eqIdx]);
+                }
                 totalVolume += dofVolume;
             }
         }
@@ -1079,8 +1100,9 @@ public:
                 std::cout << "rate based on storage terms: " << storageRate << "\n";
                 std::cout << "rate based on source and boundary terms: " << totalRate << "\n";
                 std::cout << "difference in rates: ";
-                for (unsigned eqIdx = 0; eqIdx < EqVector::dimension; ++eqIdx)
+                for (unsigned eqIdx = 0; eqIdx < EqVector::dimension; ++eqIdx) {
                     std::cout << (storageRate[eqIdx] - Toolbox::value(totalRate[eqIdx])) << " ";
+                }
                 std::cout << "\n";
             }
             for (unsigned eqIdx = 0; eqIdx < EqVector::dimension; ++eqIdx) {
@@ -1287,10 +1309,12 @@ public:
         updateTimer_ += newtonMethod_.updateTimer();
 
         prePostProcessTimer_.start();
-        if (converged)
+        if (converged) {
             asImp_().updateSuccessful();
-        else
+        }
+        else {
             asImp_().updateFailed();
+        }
         prePostProcessTimer_.stop();
 
 #ifndef NDEBUG
@@ -1359,8 +1383,9 @@ public:
             // Make sure that the primary variables are defined. Note that because of padding
             // bytes, we can't just simply ask valgrind to check the whole solution vectors
             // for definedness...
-            for (std::size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i)
+            for (std::size_t i = 0; i < asImp_().solution(/*timeIdx=*/0).size(); ++i) {
                 asImp_().solution(timeIdx)[i].checkDefined();
+            }
         }
 #endif // NDEBUG
     }
@@ -1455,9 +1480,10 @@ public:
         unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
 
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            if (!instream.good())
+            if (!instream.good()) {
                 throw std::runtime_error("Could not deserialize degree of freedom "
                                          +std::to_string(dofIdx));
+            }
             instream >> solution(/*timeIdx=*/0)[dofIdx][eqIdx];
         }
     }
@@ -1476,8 +1502,9 @@ public:
         std::size_t result = 0;
         auto auxModIt = auxEqModules_.begin();
         const auto& auxModEndIt = auxEqModules_.end();
-        for (; auxModIt != auxModEndIt; ++auxModIt)
+        for (; auxModIt != auxModEndIt; ++auxModIt) {
             result += (*auxModIt)->numDofs();
+        }
 
         return result;
     }
@@ -1622,8 +1649,9 @@ public:
         Scalar alpha = std::max(Scalar{1e-20},
                                 std::max(std::abs(maxRelErr),
                                          std::abs(minRelErr)));
-        for (unsigned globalIdx = 0; globalIdx < numGridDof; ++ globalIdx)
+        for (unsigned globalIdx = 0; globalIdx < numGridDof; ++ globalIdx) {
             (*normalizedRelError)[globalIdx] /= alpha;
+        }
 
         DiscBaseOutputModule::attachScalarDofData_(writer, *relError, "relative error");
         DiscBaseOutputModule::attachScalarDofData_(writer, *normalizedRelError, "normalized relative error");
@@ -1679,12 +1707,14 @@ public:
             ElementIterator elemIt = threadedElemIt.beginParallel();
             for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity)
+                if (elem.partitionType() != Dune::InteriorEntity) {
                     // ignore non-interior entities
                     continue;
+                }
 
-                if (needFullContextUpdate)
+                if (needFullContextUpdate) {
                     elemCtx.updateAll(elem);
+                }
                 else {
                     elemCtx.updatePrimaryStencil(elem);
                     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
@@ -1694,8 +1724,9 @@ public:
                 // be threaded and "modIt" is is the same for all threads, i.e., if a
                 // given thread modifies it, the changes affect all threads.
                 auto modIt2 = outputModules_.begin();
-                for (; modIt2 != modEndIt; ++modIt2)
+                for (; modIt2 != modEndIt; ++modIt2) {
                     (*modIt2)->processElement(elemCtx);
+                }
             }
         }
     }
@@ -1708,8 +1739,9 @@ public:
     {
         auto modIt = outputModules_.begin();
         const auto& modEndIt = outputModules_.end();
-        for (; modIt != modEndIt; ++modIt)
+        for (; modIt != modEndIt; ++modIt) {
             (*modIt)->commitBuffers(writer);
+        }
     }
 
     /*!
@@ -1743,8 +1775,9 @@ public:
         }
 
         std::size_t numDof = numTotalDof();
-        for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx)
+        for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
             solution(timeIdx).resize(numDof);
+        }
 
         auxMod->applyInitial();
     }
