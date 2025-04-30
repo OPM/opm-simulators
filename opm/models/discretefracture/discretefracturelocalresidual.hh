@@ -53,7 +53,7 @@ class DiscreteFractureLocalResidual : public ImmiscibleLocalResidual<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     /*!
@@ -75,7 +75,7 @@ public:
 
         const auto& problem = elemCtx.problem();
         const auto& fractureMapper = problem.fractureMapper();
-        unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
 
         if (!fractureMapper.isFractureVertex(globalIdx)) {
             // don't do anything in addition to the immiscible model for degrees of
@@ -88,16 +88,16 @@ public:
         const auto& scv = elemCtx.stencil(timeIdx).subControlVolume(dofIdx);
 
         // reduce the matrix storage by the fracture volume
-        phaseStorage *= 1 - intQuants.fractureVolume()/scv.volume();
+        phaseStorage *= 1 - intQuants.fractureVolume() / scv.volume();
 
         // add the storage term inside the fractures
         const auto& fsFracture = intQuants.fractureFluidState();
 
         phaseStorage[conti0EqIdx + phaseIdx] +=
-            intQuants.fracturePorosity()*
+            intQuants.fracturePorosity() *
             fsFracture.saturation(phaseIdx) *
             fsFracture.density(phaseIdx) *
-            intQuants.fractureVolume()/scv.volume();
+            intQuants.fractureVolume() / scv.volume();
 
         EnergyModule::addFracturePhaseStorage(phaseStorage, intQuants, scv,
                                               phaseIdx);
@@ -118,23 +118,25 @@ public:
 
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
 
-        unsigned i = extQuants.interiorIndex();
-        unsigned j = extQuants.exteriorIndex();
-        unsigned I = elemCtx.globalSpaceIndex(i, timeIdx);
-        unsigned J = elemCtx.globalSpaceIndex(j, timeIdx);
+        const unsigned i = extQuants.interiorIndex();
+        const unsigned j = extQuants.exteriorIndex();
+        const unsigned I = elemCtx.globalSpaceIndex(i, timeIdx);
+        const unsigned J = elemCtx.globalSpaceIndex(j, timeIdx);
         const auto& fractureMapper = elemCtx.problem().fractureMapper();
-        if (!fractureMapper.isFractureEdge(I, J))
+        if (!fractureMapper.isFractureEdge(I, J)) {
             // do nothing if the edge from i to j is not part of a
             // fracture
             return;
+        }
 
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(scvfIdx);
-        Scalar scvfArea = scvf.area();
+        const Scalar scvfArea = scvf.area();
 
         // advective mass fluxes of all phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             // reduce the matrix mass flux by the width of the scv
             // face that is occupied by the fracture. As usual, the
@@ -144,7 +146,7 @@ public:
                 1 - extQuants.fractureWidth() / (2 * scvfArea);
 
             // intensive quantities of the upstream and the downstream DOFs
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
             flux[conti0EqIdx + phaseIdx] +=
                 extQuants.fractureVolumeFlux(phaseIdx) * up.fractureFluidState().density(phaseIdx);

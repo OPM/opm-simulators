@@ -28,14 +28,14 @@
 #ifndef EWOMS_DISCRETE_FRACTURE_PROBLEM_HH
 #define EWOMS_DISCRETE_FRACTURE_PROBLEM_HH
 
-#include "discretefractureproperties.hh"
-
-#include <opm/models/common/multiphasebaseproblem.hh>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <opm/material/common/Means.hpp>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/common/multiphasebaseproblem.hh>
+
+#include <stdexcept>
 
 namespace Opm {
 
@@ -48,7 +48,7 @@ template<class TypeTag>
 class DiscreteFractureProblem
     : public MultiPhaseBaseProblem<TypeTag>
 {
-    using ParentType = Opm::MultiPhaseBaseProblem<TypeTag>;
+    using ParentType = MultiPhaseBaseProblem<TypeTag>;
 
     using Implementation = GetPropType<TypeTag, Properties::Problem>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -82,16 +82,18 @@ public:
                                            unsigned timeIdx) const
     {
         const auto& scvf = context.stencil(timeIdx).interiorFace(localFaceIdx);
-        unsigned interiorElemIdx = scvf.interiorIndex();
-        unsigned exteriorElemIdx = scvf.exteriorIndex();
+        const unsigned interiorElemIdx = scvf.interiorIndex();
+        const unsigned exteriorElemIdx = scvf.exteriorIndex();
         const DimMatrix& K1 = asImp_().fractureIntrinsicPermeability(context, interiorElemIdx, timeIdx);
         const DimMatrix& K2 = asImp_().fractureIntrinsicPermeability(context, exteriorElemIdx, timeIdx);
 
         // entry-wise harmonic mean. this is almost certainly wrong if
         // you have off-main diagonal entries in your permeabilities!
-        for (unsigned i = 0; i < dimWorld; ++i)
-            for (unsigned j = 0; j < dimWorld; ++j)
-                result[i][j] = Opm::harmonicMean(K1[i][j], K2[i][j]);
+        for (unsigned i = 0; i < dimWorld; ++i) {
+            for (unsigned j = 0; j < dimWorld; ++j) {
+                result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
+            }
+        }
     }
     /*!
      * \brief Returns the intrinsic permeability tensor \f$[m^2]\f$ at a given position due to a fracture
@@ -129,6 +131,7 @@ private:
     //! Returns the implementation of the problem (i.e. static polymorphism)
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
+
     //! \copydoc asImp_()
     const Implementation& asImp_() const
     { return *static_cast<const Implementation *>(this); }

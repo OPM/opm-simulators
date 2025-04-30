@@ -27,8 +27,6 @@
 #ifndef EWOMS_FRACTURE_MAPPER_HH
 #define EWOMS_FRACTURE_MAPPER_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 #include <algorithm>
 #include <set>
 
@@ -59,12 +57,6 @@ class FractureMapper
     };
 
 public:
-    /*!
-     * \brief Constructor
-     */
-    FractureMapper()
-    {}
-
     /*!
      * \brief Marks an edge as having a fracture.
      *

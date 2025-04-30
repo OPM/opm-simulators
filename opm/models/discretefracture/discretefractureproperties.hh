@@ -27,12 +27,10 @@
  * \brief Defines the properties required for the immiscible
  *        multi-phase model which considers discrete fractures.
  */
-#ifndef EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
-#define EWOMS_DISCRETE_FRACTIRE_PROPERTIES_HH
+#ifndef EWOMS_DISCRETE_FRACTURE_PROPERTIES_HH
+#define EWOMS_DISCRETE_FRACTURE_PROPERTIES_HH
 
-#include <opm/models/immiscible/immiscibleproperties.hh>
-
-#include <opm/models/io/vtkdiscretefracturemodule.hpp>
+#include <opm/models/utils/propertysystem.hh>
 
 namespace Opm::Properties {
 

@@ -28,10 +28,13 @@
 #ifndef EWOMS_DISCRETE_FRACTURE_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_DISCRETE_FRACTURE_EXTENSIVE_QUANTITIES_HH
 
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+
 #include <opm/models/immiscible/immiscibleextensivequantities.hh>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <array>
+#include <cassert>
 
 namespace Opm {
 
@@ -68,15 +71,16 @@ public:
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
-        unsigned insideScvIdx = scvf.interiorIndex();
-        unsigned outsideScvIdx = scvf.exteriorIndex();
+        const unsigned insideScvIdx = scvf.interiorIndex();
+        const unsigned outsideScvIdx = scvf.exteriorIndex();
 
-        unsigned globalI = elemCtx.globalSpaceIndex(insideScvIdx, timeIdx);
-        unsigned globalJ = elemCtx.globalSpaceIndex(outsideScvIdx, timeIdx);
+        const unsigned globalI = elemCtx.globalSpaceIndex(insideScvIdx, timeIdx);
+        const unsigned globalJ = elemCtx.globalSpaceIndex(outsideScvIdx, timeIdx);
         const auto& fractureMapper = elemCtx.problem().fractureMapper();
-        if (!fractureMapper.isFractureEdge(globalI, globalJ))
+        if (!fractureMapper.isFractureEdge(globalI, globalJ)) {
             // do nothing if no fracture goes though the current edge
             return;
+        }
 
         // average the intrinsic permeability of the fracture
         elemCtx.problem().fractureFaceIntrinsicPermeability(fractureIntrinsicPermeability_,
@@ -94,7 +98,7 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             const auto& pGrad = extQuants.potentialGrad(phaseIdx);
 
-            unsigned upstreamIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upstreamIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
 
             // multiply with the fracture mobility of the upstream vertex
@@ -106,10 +110,11 @@ public:
             // a fracture is always shared by two sub-control-volume
             // faces.
             fractureVolumeFlux_[phaseIdx] = 0;
-            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                 fractureVolumeFlux_[phaseIdx] +=
                     (fractureFilterVelocity_[phaseIdx][dimIdx] * distDirection[dimIdx])
                     * (fractureWidth_ / 2.0) / scvf.area();
+            }
         }
     }
 
@@ -128,8 +133,8 @@ public:
 
 private:
     DimMatrix fractureIntrinsicPermeability_;
-    DimVector fractureFilterVelocity_[numPhases];
-    Scalar fractureVolumeFlux_[numPhases];
+    std::array<DimVector, numPhases> fractureFilterVelocity_;
+    std::array<Scalar, numPhases> fractureVolumeFlux_;
     Scalar fractureWidth_;
 };
 

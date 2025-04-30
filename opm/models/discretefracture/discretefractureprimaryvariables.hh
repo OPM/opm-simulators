@@ -32,7 +32,10 @@
 
 #include <opm/models/immiscible/immiscibleprimaryvariables.hh>
 
+#include <array>
+
 namespace Opm {
+
 /*!
  * \ingroup DiscreteFractureModel
  *
@@ -55,16 +58,15 @@ public:
     /*!
      * \brief Default constructor
      */
-    DiscreteFracturePrimaryVariables() : ParentType()
-    {}
+    DiscreteFracturePrimaryVariables() = default;
 
     /*!
      * \brief Copy constructor
      *
      * \param value The primary variables that will be duplicated.
      */
-    DiscreteFracturePrimaryVariables(const DiscreteFracturePrimaryVariables& value) = default;
-    DiscreteFracturePrimaryVariables& operator=(const DiscreteFracturePrimaryVariables& value) = default;
+    DiscreteFracturePrimaryVariables(const DiscreteFracturePrimaryVariables&) = default;
+    DiscreteFracturePrimaryVariables& operator=(const DiscreteFracturePrimaryVariables&) = default;
 
     using ParentType::operator=; //!< Import base class assignment operators.
 
@@ -105,11 +107,12 @@ private:
         // we have to find saturations for the matrix which result in
         // the same pressures as in the fracture. this can be done by
         // inverting the capillary pressure-saturation curve.
-        Scalar saturations[numPhases];
+        std::array<Scalar, numPhases> saturations;
         MaterialLaw::saturations(saturations, matParams, matrixFluidState);
 
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             matrixFluidState.setSaturation(phaseIdx, saturations[phaseIdx]);
+        }
     }
 };
 

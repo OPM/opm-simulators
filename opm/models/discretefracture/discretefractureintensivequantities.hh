@@ -28,11 +28,12 @@
 #ifndef EWOMS_DISCRETE_FRACTURE_INTENSIVE_QUANTITIES_HH
 #define EWOMS_DISCRETE_FRACTURE_INTENSIVE_QUANTITIES_HH
 
-#include "discretefractureproperties.hh"
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/immiscible/immiscibleintensivequantities.hh>
 
-#include <opm/material/common/Valgrind.hpp>
+#include <algorithm>
+#include <array>
 
 namespace Opm {
 
@@ -66,16 +67,13 @@ class DiscreteFractureIntensiveQuantities : public ImmiscibleIntensiveQuantities
     enum { wettingPhaseIdx = MaterialLaw::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx };
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
-    using FluidState = Opm::ImmiscibleFluidState<Scalar, FluidSystem,
-                                                 /*storeEnthalpy=*/enableEnergy>;
+    using FluidState = ImmiscibleFluidState<Scalar, FluidSystem,
+                                            /*storeEnthalpy=*/enableEnergy>;
 
 public:
-    DiscreteFractureIntensiveQuantities()
-    { }
-
-    DiscreteFractureIntensiveQuantities(const DiscreteFractureIntensiveQuantities& other) = default;
-
-    DiscreteFractureIntensiveQuantities& operator=(const DiscreteFractureIntensiveQuantities& other) = default;
+    DiscreteFractureIntensiveQuantities() = default;
+    DiscreteFractureIntensiveQuantities(const DiscreteFractureIntensiveQuantities&) = default;
+    DiscreteFractureIntensiveQuantities& operator=(const DiscreteFractureIntensiveQuantities&) = default;
 
     /*!
      * \copydoc IntensiveQuantities::update
@@ -86,13 +84,13 @@ public:
 
         const auto& problem = elemCtx.problem();
         const auto& fractureMapper = problem.fractureMapper();
-        unsigned globalVertexIdx = elemCtx.globalSpaceIndex(vertexIdx, timeIdx);
+        const unsigned globalVertexIdx = elemCtx.globalSpaceIndex(vertexIdx, timeIdx);
 
-        Opm::Valgrind::SetUndefined(fractureFluidState_);
-        Opm::Valgrind::SetUndefined(fractureVolume_);
-        Opm::Valgrind::SetUndefined(fracturePorosity_);
-        Opm::Valgrind::SetUndefined(fractureIntrinsicPermeability_);
-        Opm::Valgrind::SetUndefined(fractureRelativePermeabilities_);
+        Valgrind::SetUndefined(fractureFluidState_);
+        Valgrind::SetUndefined(fractureVolume_);
+        Valgrind::SetUndefined(fracturePorosity_);
+        Valgrind::SetUndefined(fractureIntrinsicPermeability_);
+        Valgrind::SetUndefined(fractureRelativePermeabilities_);
 
         // do nothing if there is no fracture within the current degree of freedom
         if (!fractureMapper.isFractureVertex(globalVertexIdx)) {
@@ -102,7 +100,7 @@ public:
 
         // Make sure that the wetting saturation in the matrix fluid
         // state does not get larger than 1
-        Scalar SwMatrix =
+        const Scalar SwMatrix =
             std::min<Scalar>(1.0, this->fluidState_.saturation(wettingPhaseIdx));
         this->fluidState_.setSaturation(wettingPhaseIdx, SwMatrix);
         this->fluidState_.setSaturation(nonWettingPhaseIdx, 1 - SwMatrix);
@@ -119,20 +117,22 @@ public:
         // account for this.
         fractureVolume_ = 0;
         const auto& vertexPos = elemCtx.pos(vertexIdx, timeIdx);
-        for (unsigned vertex2Idx = 0; vertex2Idx < elemCtx.numDof(/*timeIdx=*/0); ++ vertex2Idx) {
-            unsigned globalVertex2Idx = elemCtx.globalSpaceIndex(vertex2Idx, timeIdx);
+        for (unsigned vertex2Idx = 0; vertex2Idx < elemCtx.numDof(/*timeIdx=*/0); ++vertex2Idx) {
+            const unsigned globalVertex2Idx = elemCtx.globalSpaceIndex(vertex2Idx, timeIdx);
 
             if (vertexIdx == vertex2Idx ||
                 !fractureMapper.isFractureEdge(globalVertexIdx, globalVertex2Idx))
+            {
                 continue;
+            }
 
-            Scalar fractureWidth =
+            const Scalar fractureWidth =
                 problem.fractureWidth(elemCtx, vertexIdx, vertex2Idx, timeIdx);
 
             auto distVec = elemCtx.pos(vertex2Idx, timeIdx);
             distVec -= vertexPos;
 
-            Scalar edgeLength = distVec.two_norm();
+            const Scalar edgeLength = distVec.two_norm();
 
             // the fracture is always adjacent to two sub-control
             // volumes of the control volume, so when calculating the
@@ -159,15 +159,16 @@ public:
 
         // calculate the fracture saturations which would be required
         // to be consistent with the pressures
-        Scalar saturations[numPhases];
+        std::array<Scalar, numPhases> saturations;
         MaterialLaw::saturations(saturations, fractureMatParams,
                                  fractureFluidState_);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fractureFluidState_.setSaturation(phaseIdx, saturations[phaseIdx]);
+        }
 
         // Make sure that the wetting saturation in the fracture does
         // not get negative
-        Scalar SwFracture =
+        const Scalar SwFracture =
             std::max<Scalar>(0.0, fractureFluidState_.saturation(wettingPhaseIdx));
         fractureFluidState_.setSaturation(wettingPhaseIdx, SwFracture);
         fractureFluidState_.setSaturation(nonWettingPhaseIdx, 1 - SwFracture);
@@ -200,8 +201,8 @@ public:
      */
     Scalar fractureMobility(unsigned phaseIdx) const
     {
-        return fractureRelativePermeabilities_[phaseIdx]
-               / fractureFluidState_.viscosity(phaseIdx);
+        return fractureRelativePermeabilities_[phaseIdx] /
+               fractureFluidState_.viscosity(phaseIdx);
     }
 
     /*!
@@ -236,7 +237,7 @@ protected:
     Scalar fractureVolume_;
     Scalar fracturePorosity_;
     DimMatrix fractureIntrinsicPermeability_;
-    Scalar fractureRelativePermeabilities_[numPhases];
+    std::array<Scalar, numPhases> fractureRelativePermeabilities_;
 };
 
 } // namespace Opm
