@@ -209,21 +209,20 @@ namespace Opm
         } else {
             from = WellProducerCMode2String(ws.production_cmode);
         }
-        bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
+
         const int episodeIdx = simulator.episodeIndex();
         const int iterationIdx = simulator.model().newtonMethod().numIterations();
         const int nupcol = schedule[episodeIdx].nupcol();
-        if (oscillating && iterationIdx > nupcol) {
-            // only output frist time
-            bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
+        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
+        if (oscillating) {
+            // only output first time
+            const bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == this->param_.max_number_of_well_switches_;
             if (output) {
-                std::ostringstream ss;
-                ss << "    The control mode for well " << this->name()
-                   << " is oscillating\n"
-                   << "    We don't allow for more than "
-                   << this->param_.max_number_of_well_switches_
-                   << " switches. The control is kept at " << from;
-                deferred_logger.info(ss.str());
+                const auto msg = fmt::format("    The control mode for well {} is oscillating. \n"
+                    "We don't allow for more than {} switches after NUPCOL iterations. (NUPCOL = {}) \n"
+                    "The control is kept at {}.",
+                    this->name(), this->param_.max_number_of_well_switches_, nupcol, from);
+                deferred_logger.info(msg);
                 // add one more to avoid outputting the same info again
                 this->well_control_log_.push_back(from);
             }
@@ -256,7 +255,12 @@ namespace Opm
             }
             deferred_logger.debug(ss.str());
 
-            this->well_control_log_.push_back(from);
+            // We always store the current control as it is used for output
+            // and only after iteration >= nupcol
+            // we log all switches to check if the well controls oscillates
+            if (iterationIdx >= nupcol || this->well_control_log_.empty()) {
+                this->well_control_log_.push_back(from);
+            }
             updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(simulator, well_state, deferred_logger);
         }
@@ -288,7 +292,6 @@ namespace Opm
             from = WellProducerCMode2String(ws.production_cmode);
         }
         const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= this->param_.max_number_of_well_switches_;
-
         if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
@@ -508,6 +511,9 @@ namespace Opm
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+        const auto& ws = well_state.well(this->indexOfWell());
+        const auto pmode_orig = ws.production_cmode;
+        const auto imode_orig = ws.injection_cmode;
         bool converged = false;
         try {
             // TODO: the following two functions will be refactored to be one to reduce the code duplication
@@ -526,6 +532,32 @@ namespace Opm
             deferred_logger.warning("INNER_ITERATION_FAILED", msg);
             converged = false;
         }
+        if (converged) {
+            // Add debug info for switched controls
+            if (ws.production_cmode != pmode_orig || ws.injection_cmode != imode_orig) {
+                std::string from,to;
+                if (this->isInjector()) {
+                    from = WellInjectorCMode2String(imode_orig);
+                    to = WellInjectorCMode2String(ws.injection_cmode);
+                } else {
+                    from = WellProducerCMode2String(pmode_orig);
+                    to = WellProducerCMode2String(ws.production_cmode);
+                }
+                const auto msg = fmt::format("    Well {} switched from {} to {} during local solve", this->name(), from, to);
+                deferred_logger.debug(msg);
+                const int episodeIdx = simulator.episodeIndex();
+                const int iterationIdx = simulator.model().newtonMethod().numIterations();
+                const auto& schedule = simulator.vanguard().schedule();
+                const int nupcol = schedule[episodeIdx].nupcol();
+                // We always store the current control as it is used for output
+                // and only after iteration >= nupcol
+                // we log all switches to check if the well controls oscillates
+                if (iterationIdx >= nupcol || this->well_control_log_.empty()) {
+                    this->well_control_log_.push_back(from);
+                }
+            }
+        }
+
         return converged;
     }
 
@@ -762,13 +794,17 @@ namespace Opm
                 thp_control = ws.injection_cmode == Well::InjectorCMode::THP;
                 if (thp_control) {
                     ws.injection_cmode = Well::InjectorCMode::BHP;
-                    this->well_control_log_.push_back(WellInjectorCMode2String(Well::InjectorCMode::THP));
+                    if (this->well_control_log_.empty()) { // only log the first control
+                        this->well_control_log_.push_back(WellInjectorCMode2String(Well::InjectorCMode::THP));
+                    }
                 }
             } else {
                 thp_control = ws.production_cmode == Well::ProducerCMode::THP;
                 if (thp_control) {
                     ws.production_cmode = Well::ProducerCMode::BHP;
-                    this->well_control_log_.push_back(WellProducerCMode2String(Well::ProducerCMode::THP));
+                    if (this->well_control_log_.empty()) { // only log the first control
+                        this->well_control_log_.push_back(WellProducerCMode2String(Well::ProducerCMode::THP));
+                    }
                 }
             }
             if (thp_control) {
@@ -844,9 +880,6 @@ namespace Opm
         const int iteration_idx = simulator.model().newtonMethod().numIterations();
         if (iteration_idx < this->param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
             const auto& ws = well_state.well(this->indexOfWell());
-            const auto pmode_orig = ws.production_cmode;
-            const auto imode_orig = ws.injection_cmode;
-
             const bool nonzero_rate_original =
                 std::any_of(ws.surface_rates.begin(),
                             ws.surface_rates.begin() + well_state.numPhases(),
@@ -865,19 +898,6 @@ namespace Opm
                     this->openWell();
                     deferred_logger.debug("    " + this->name() + " is re-opened after being stopped during local solve");
                 }
-                // Add debug info for switched controls
-                if (ws.production_cmode != pmode_orig || ws.injection_cmode != imode_orig) {
-                    std::string from,to;
-                    if (this->isInjector()) {
-                        from = WellInjectorCMode2String(imode_orig);
-                        to = WellInjectorCMode2String(ws.injection_cmode);
-                    } else {
-                        from = WellProducerCMode2String(pmode_orig);
-                        to = WellProducerCMode2String(ws.production_cmode);
-                    }
-                    deferred_logger.debug("    " + this->name() + " switched from " + from + " to " + to + " during local solve");
-                    }
-
             } else {
                 // unsolvable wells are treated as not operable and will not be solved for in this iteration.
                 if (this->param_.shut_unsolvable_wells_)
