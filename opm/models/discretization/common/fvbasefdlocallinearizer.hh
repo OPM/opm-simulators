@@ -163,13 +163,11 @@ private:
 
     using LocalEvalBlockVector = typename LocalResidual::LocalEvalBlockVector;
 
+public:
+    FvBaseFdLocalLinearizer() = default;
+
     // copying local residual objects around is a very bad idea
     FvBaseFdLocalLinearizer(const FvBaseFdLocalLinearizer&) = delete;
-
-public:
-    FvBaseFdLocalLinearizer()
-        : internalElemContext_{}
-    { }
 
     /*!
      * \brief Register all run-time parameters for the local jacobian.
@@ -498,15 +496,15 @@ protected:
         }
     }
 
-    Simulator *simulatorPtr_;
+    Simulator* simulatorPtr_{};
 
-    std::unique_ptr<ElementContext> internalElemContext_;
+    std::unique_ptr<ElementContext> internalElemContext_{};
 
-    LocalEvalBlockVector residual_;
-    LocalEvalBlockVector derivResidual_;
-    ScalarLocalBlockMatrix jacobian_;
+    LocalEvalBlockVector residual_{};
+    LocalEvalBlockVector derivResidual_{};
+    ScalarLocalBlockMatrix jacobian_{};
 
-    LocalResidual localResidual_;
+    LocalResidual localResidual_{};
 };
 
 } // namespace Opm
