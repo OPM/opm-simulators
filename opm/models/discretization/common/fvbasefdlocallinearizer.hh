@@ -50,6 +50,7 @@
 #include <memory>
 
 namespace Opm {
+
 // forward declaration
 template<class TypeTag>
 class FvBaseFdLocalLinearizer;
@@ -81,7 +82,8 @@ template<class TypeTag>
 struct BaseEpsilon<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = std::max<type>(0.9123e-10, std::numeric_limits<type>::epsilon()*1.23e3);
+    static constexpr type value = std::max<type>(0.9123e-10,
+                                                 std::numeric_limits<type>::epsilon() * 1.23e3);
 };
 
 } // namespace Opm::Properties
@@ -166,7 +168,7 @@ private:
 public:
     FvBaseFdLocalLinearizer() = default;
 
-    // copying local residual objects around is a very bad idea
+    // Disable copying for efficiency reasons
     FvBaseFdLocalLinearizer(const FvBaseFdLocalLinearizer&) = delete;
 
     /*!
@@ -238,8 +240,8 @@ public:
 
         // calculate the local jacobian matrix
         const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; dofIdx++) {
-            for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
+        for (auto dofIdx = 0 * numPrimaryDof; dofIdx < numPrimaryDof; ++dofIdx) {
+            for (auto pvIdx = 0 * numEq; pvIdx < numEq; ++pvIdx) {
                 asImp_().evalPartialDerivative_(elemCtx, dofIdx, pvIdx);
 
                 // incorporate the partial derivatives into the local Jacobian matrix
@@ -275,7 +277,7 @@ public:
         assert(pvWeight > 0 && std::isfinite(pvWeight));
         Valgrind::CheckDefined(pvWeight);
 
-        return baseEpsilon()/pvWeight;
+        return baseEpsilon() / pvWeight;
     }
 
     /*!
@@ -312,13 +314,16 @@ public:
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
     const Simulator& simulator_() const
     { return *simulatorPtr_; }
+
     const Problem& problem_() const
     { return simulatorPtr_->problem(); }
+
     const Model& model_() const
     { return simulatorPtr_->model(); }
 
@@ -359,7 +364,7 @@ protected:
             }
         }
 
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < numDof; ++ primaryDofIdx) {
+        for (unsigned primaryDofIdx = 0; primaryDofIdx < numDof; ++primaryDofIdx) {
             residual_[primaryDofIdx] = 0.0;
         }
     }
@@ -488,8 +493,8 @@ protected:
                               unsigned pvIdx)
     {
         const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
-            for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
+        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                 // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of the
                 // residual function 'eqIdx' for the degree of freedom 'dofIdx' with
                 // regard to the primary variable 'pvIdx' of the degree of freedom
