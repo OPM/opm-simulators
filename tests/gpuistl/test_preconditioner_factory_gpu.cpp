@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(TestMatrixAdapter)
 
     Opm::PropertyTree prm;
     prm.put(std::string("preconditioner"), std::string("DILU"));
-    auto weightsCalculator = []() { return GpuVectorType(10); };
+    auto weightsCalculator = []() { return GpuVectorType(N); };
 
     // TODO: Once the GPU preconditioners are implemented, we can remove the check throw
     // and actually test the preconditioner creation.

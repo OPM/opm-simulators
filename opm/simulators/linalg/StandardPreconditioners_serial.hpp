@@ -173,6 +173,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             }
 #endif
         }
+
+        // Add CPRW only for the well operator variant, i.e. --matrix-add-well-contributions=false
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V>>) {
             F::addCreator(
                 "cprw",
@@ -212,6 +214,11 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             });
 
 #if HAVE_CUDA
+        // Here we create the *wrapped* GPU preconditioners
+        // meaning they will act as CPU preconditioners on the outside,
+        // but copy data back and forth to the GPU as needed.
+
+        // TODO: Make this use the GPU preconditioner factory once that is up and running.
         F::addCreator("GPUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
@@ -282,7 +289,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             converted->setUnderlyingPreconditioner(adapted);
             return converted;
         });
-#endif
+#endif // HAVE_CUDA
     }
 };
 

@@ -174,7 +174,7 @@ struct StandardPreconditioners
         });
 
         // Only add AMG preconditioners to the factory if the operator
-        // is the overlapping schwarz operator. This could be extended
+        // is the overlapping schwarz operator or GhostLastMatrixAdapter. This could be extended
         // later, but at this point no other operators are compatible
         // with the AMG hierarchy construction.
         if constexpr (std::is_same_v<O, Dune::OverlappingSchwarzOperator<M, V, V, C>> ||
@@ -276,6 +276,8 @@ struct StandardPreconditioners
                               op, prm, weightsCalculator, pressureIndex, comm);
                       });
 
+        // Only add CPRW preconditioners to the factory if the operator
+        // is an actual matrix or GostLastMatrixAdapter operator.
         if constexpr (std::is_same_v<O, WellModelGhostLastMatrixAdapter<M, V, V, true>>) {
             F::addCreator("cprw",
                           [](const O& op,
@@ -296,6 +298,11 @@ struct StandardPreconditioners
         }
 
 #if HAVE_CUDA
+        // Here we create the *wrapped* GPU preconditioners
+        // meaning they will act as CPU preconditioners on the outside,
+        // but copy data back and forth to the GPU as needed.
+
+        // TODO: Make this use the GPU preconditioner factory once that is up and running.
         F::addCreator("GPUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
@@ -345,7 +352,7 @@ struct StandardPreconditioners
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
-#endif
+#endif // HAVE_CUDA
     }
 
 
