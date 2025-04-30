@@ -194,8 +194,9 @@ public:
         // we defer the initialization of the Jacobian matrix until here because the
         // auxiliary modules usually assume the problem, model and grid to be fully
         // initialized...
-        if (!jacobian_)
+        if (!jacobian_) {
             initFirstIteration_();
+        }
 
         // Called here because it is no longer called from linearize_().
         if (static_cast<std::size_t>(domain.view.size(0)) == model_().numTotalDof()) {
@@ -226,8 +227,9 @@ public:
         }
         succeeded = simulator_().gridView().comm().min(succeeded);
 
-        if (!succeeded)
+        if (!succeeded) {
             throw NumericalProblem("A process did not succeed in linearizing the system");
+        }
     }
 
     void finalize()
@@ -260,8 +262,9 @@ public:
 
             succeeded = comm.min(succeeded);
 
-            if (!succeeded)
+            if (!succeeded) {
                 throw NumericalProblem("linearization of an auxiliary equation failed");
+            }
         }
     }
 
@@ -401,8 +404,9 @@ private:
         // create the per-thread context objects
         elementCtx_.clear();
         elementCtx_.reserve(ThreadManager::maxThreads());
-        for (unsigned threadId = 0; threadId != ThreadManager::maxThreads(); ++ threadId)
+        for (unsigned threadId = 0; threadId != ThreadManager::maxThreads(); ++ threadId) {
             elementCtx_.push_back(std::make_unique<ElementContext>(simulator_()));
+        }
     }
 
     // Construct the BCRS matrix for the Jacobian of the residual function
@@ -432,8 +436,9 @@ private:
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
         size_t numAuxMod = model.numAuxiliaryModules();
-        for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx)
+        for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern_);
+        }
 
         // allocate raw matrix
         jacobian_ = std::make_unique<SparseMatrixAdapter>(simulator_());
@@ -454,9 +459,10 @@ private:
     // quite involved and is thus relatively slow.
     void updateConstraintsMap_()
     {
-        if (!enableConstraints_())
+        if (!enableConstraints_()) {
             // constraints are not explictly enabled, so we don't need to consider them!
             return;
+        }
 
         constraintsMap_.clear();
 
@@ -509,8 +515,9 @@ private:
         // before the first iteration of each time step, we need to update the
         // constraints. (i.e., we assume that constraints can be time dependent, but they
         // can't depend on the solution.)
-        if (model_().newtonMethod().numIterations() == 0)
+        if (model_().newtonMethod().numIterations() == 0) {
             updateConstraintsMap_();
+        }
 
         applyConstraintsToSolution_();
 
@@ -548,8 +555,9 @@ private:
                     }
 
                     const auto& elem = *elemIt;
-                    if (!linearizeNonLocalElements && elem.partitionType() != Dune::InteriorEntity)
+                    if (!linearizeNonLocalElements && elem.partitionType() != Dune::InteriorEntity) {
                         continue;
+                    }
 
                     linearizeElement_(elem);
                 }
@@ -594,8 +602,9 @@ private:
         localLinearizer.linearize(elementCtx, elem);
 
         // update the right hand side and the Jacobian matrix
-        if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
+        if (getPropValue<TypeTag, Properties::UseLinearizationLock>()) {
             globalMatrixMutex_.lock();
+        }
 
         size_t numPrimaryDof = elementCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx) {
@@ -612,16 +621,18 @@ private:
             }
         }
 
-        if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
+        if (getPropValue<TypeTag, Properties::UseLinearizationLock>()) {
             globalMatrixMutex_.unlock();
+        }
     }
 
     // apply the constraints to the solution. (i.e., the solution of constraint degrees
     // of freedom is set to the value of the constraint.)
     void applyConstraintsToSolution_()
     {
-        if (!enableConstraints_())
+        if (!enableConstraints_()) {
             return;
+        }
 
         // TODO: assuming a history size of 2 only works for Euler time discretizations!
         auto& sol = model_().solution(/*timeIdx=*/0);
@@ -639,8 +650,9 @@ private:
     // freedom the Jacobian matrix maps to identity and the residual is zero)
     void applyConstraintsToLinearization_()
     {
-        if (!enableConstraints_())
+        if (!enableConstraints_()) {
             return;
+        }
 
         auto it = constraintsMap_.begin();
         const auto& endIt = constraintsMap_.end();
