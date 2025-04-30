@@ -1765,6 +1765,9 @@ namespace Opm
 
         const int nseg = this->numberOfSegments();
 
+        const Scalar rhow = FluidSystem::referenceDensity( FluidSystem::waterPhaseIdx, Base::pvtRegionIdx() );
+        const unsigned watCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
             const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
@@ -1801,6 +1804,9 @@ namespace Opm
                     perf_rates[local_perf_index*this->number_of_phases_ + this->modelCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
                 }
                 perf_press_state[local_perf_index] = perf_press.value();
+
+                // mass rates, for now only water
+                perf_data.wat_mass_rates[local_perf_index] = cq_s[watCompIdx].value() * rhow;
 
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
