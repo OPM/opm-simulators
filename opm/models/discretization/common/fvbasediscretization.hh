@@ -28,9 +28,9 @@
 #ifndef EWOMS_FV_BASE_DISCRETIZATION_HH
 #define EWOMS_FV_BASE_DISCRETIZATION_HH
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 #include <dune/istl/bvector.hh>
 
 #include <opm/material/common/MathToolbox.hpp>
@@ -79,8 +79,10 @@
 #include <vector>
 
 namespace Opm {
+
 template<class TypeTag>
 class FvBaseDiscretizationNoAdapt;
+
 template<class TypeTag>
 class FvBaseDiscretization;
 
@@ -330,7 +332,9 @@ class FvBaseDiscretization
         historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>(),
     };
 
-    using IntensiveQuantitiesVector = std::vector<IntensiveQuantities, aligned_allocator<IntensiveQuantities, alignof(IntensiveQuantities)> >;
+    using IntensiveQuantitiesVector = std::vector<IntensiveQuantities,
+                                                  aligned_allocator<IntensiveQuantities,
+                                                                    alignof(IntensiveQuantities)>>;
 
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
@@ -365,6 +369,7 @@ public:
 
         SolutionVector& blockVector()
         { return blockVector_; }
+
         const SolutionVector& blockVector() const
         { return blockVector_; }
 
@@ -402,8 +407,8 @@ public:
         const bool isEcfv = std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>;
         if (enableGridAdaptation_ && !isEcfv) {
             throw std::invalid_argument("Grid adaptation currently only works for the "
-                                        "element-centered finite volume discretization (is: "
-                                        +Dune::className<Discretization>()+")");
+                                        "element-centered finite volume discretization (is: " +
+                                        Dune::className<Discretization>() + ")");
         }
 
         PrimaryVariables::init();
@@ -472,10 +477,9 @@ public:
 
         // iterate through the grid and evaluate the initial condition
         for (const auto& elem : elements(gridView_)) {
-            const bool isInteriorElement = elem.partitionType() == Dune::InteriorEntity;
             // ignore everything which is not in the interior if the
             // current process' piece of the grid
-            if (!isInteriorElement) {
+            if (elem.partitionType() != Dune::InteriorEntity) {
                 continue;
             }
 
@@ -559,7 +563,7 @@ public:
             elemCtx.updateStencil(elem);
 
             // loop over all element vertices, i.e. sub control volumes
-            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); dofIdx++) {
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
                 // map the local degree of freedom index to the global one
                 const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
@@ -794,7 +798,7 @@ public:
 
         assert(numSlots > 0);
 
-        for (unsigned timeIdx = 0; timeIdx < historySize - numSlots; ++ timeIdx) {
+        for (unsigned timeIdx = 0; timeIdx < historySize - numSlots; ++timeIdx) {
             intensiveQuantityCache_[timeIdx + numSlots] = intensiveQuantityCache_[timeIdx];
             intensiveQuantityCacheUpToDate_[timeIdx + numSlots] = intensiveQuantityCacheUpToDate_[timeIdx];
         }
@@ -993,7 +997,7 @@ public:
      * with optimizations enabled, it becomes a no-op.
      */
     void checkConservativeness([[maybe_unused]] Scalar tolerance = -1,
-                               [[maybe_unused]] bool verbose=false) const
+                               [[maybe_unused]] bool verbose = false) const
     {
 #ifndef NDEBUG
         Scalar totalBoundaryArea(0.0);
@@ -1004,9 +1008,9 @@ public:
         // given an explicit tolerance...
         if (tolerance <= 0) {
             tolerance =
-                simulator_.model().newtonMethod().tolerance()
-                * simulator_.model().gridTotalVolume()
-                * 1000;
+                simulator_.model().newtonMethod().tolerance() *
+                simulator_.model().gridTotalVolume() *
+                1000;
         }
 
         // we assume the implicit Euler time discretization for now...
@@ -1035,17 +1039,17 @@ public:
                 for (unsigned faceIdx = 0; faceIdx < boundaryCtx.numBoundaryFaces(/*timeIdx=*/0); ++faceIdx) {
                     BoundaryRateVector values;
                     simulator_.problem().boundary(values,
-                                                         boundaryCtx,
-                                                         faceIdx,
-                                                         /*timeIdx=*/0);
+                                                  boundaryCtx,
+                                                  faceIdx,
+                                                  /*timeIdx=*/0);
                     Valgrind::CheckDefined(values);
 
                     const unsigned dofIdx = boundaryCtx.interiorScvIndex(faceIdx, /*timeIdx=*/0);
                     const auto& insideIntQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
 
                     const Scalar bfArea =
-                        boundaryCtx.boundarySegmentArea(faceIdx, /*timeIdx=*/0)
-                        * insideIntQuants.extrusionFactor();
+                        boundaryCtx.boundarySegmentArea(faceIdx, /*timeIdx=*/0) *
+                        insideIntQuants.extrusionFactor();
 
                     for (unsigned i = 0; i < values.size(); ++i) {
                         values[i] *= bfArea;
@@ -1059,7 +1063,7 @@ public:
             }
 
             // deal with the source terms
-            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
                 RateVector values;
                 simulator_.problem().source(values,
                                             elemCtx,
@@ -1069,8 +1073,8 @@ public:
 
                 const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
                 Scalar dofVolume =
-                    elemCtx.dofVolume(dofIdx, /*timeIdx=*/0)
-                    * intQuants.extrusionFactor();
+                    elemCtx.dofVolume(dofIdx, /*timeIdx=*/0) *
+                    intQuants.extrusionFactor();
                 for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                     totalRate[eqIdx] += -dofVolume*Toolbox::value(values[eqIdx]);
                 }
@@ -1101,7 +1105,7 @@ public:
             }
             for (unsigned eqIdx = 0; eqIdx < EqVector::dimension; ++eqIdx) {
                 Scalar eps =
-                    (std::abs(storageRate[eqIdx]) + Toolbox::value(totalRate[eqIdx]))*tolerance;
+                    (std::abs(storageRate[eqIdx]) + Toolbox::value(totalRate[eqIdx])) * tolerance;
                 eps = std::max(tolerance, eps);
                 assert(std::abs(storageRate[eqIdx] - Toolbox::value(totalRate[eqIdx])) <= eps);
             }
@@ -1178,6 +1182,7 @@ public:
      */
     const LocalLinearizer& localLinearizer(unsigned openMpThreadId) const
     { return localLinearizer_[openMpThreadId]; }
+
     /*!
      * \copydoc localLinearizer() const
      */
@@ -1189,6 +1194,7 @@ public:
      */
     const LocalResidual& localResidual(unsigned openMpThreadId) const
     { return asImp_().localLinearizer(openMpThreadId).localResidual(); }
+
     /*!
      * \copydoc localResidual() const
      */
@@ -1205,7 +1211,7 @@ public:
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
         const Scalar absPv = std::abs(asImp_().solution(/*timeIdx=*/1)[globalDofIdx][pvIdx]);
-        return 1.0/std::max(absPv, 1.0);
+        return 1.0 / std::max(absPv, 1.0);
     }
 
     /*!
@@ -1333,7 +1339,7 @@ public:
      * By default, this method does nothing...
      */
     void syncOverlap()
-    { }
+    {}
 
     /*!
      * \brief Called by the update() method before it tries to
@@ -1341,14 +1347,14 @@ public:
      *        which the actual model can overload.
      */
     void updateBegin()
-    { }
+    {}
 
     /*!
      * \brief Called by the update() method if it was
      *        successful.
      */
     void updateSuccessful()
-    { }
+    {}
 
     /*!
      * \brief Called by the update() method when the grid should be refined.
@@ -1450,8 +1456,8 @@ public:
 
         // write phase state
         if (!outstream.good()) {
-            throw std::runtime_error("Could not serialize degree of freedom "
-                                     +std::to_string(dofIdx));
+            throw std::runtime_error("Could not serialize degree of freedom " +
+                                     std::to_string(dofIdx));
         }
 
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
@@ -1475,8 +1481,8 @@ public:
 
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             if (!instream.good()) {
-                throw std::runtime_error("Could not deserialize degree of freedom "
-                                         +std::to_string(dofIdx));
+                throw std::runtime_error("Could not deserialize degree of freedom " +
+                                         std::to_string(dofIdx));
             }
             instream >> solution(/*timeIdx=*/0)[dofIdx][eqIdx];
         }
@@ -1571,7 +1577,7 @@ public:
      * \copydetails Doxygen::ecfvElemCtxParam
      */
     void updatePVWeights(const ElementContext&) const
-    { }
+    {}
 
     /*!
      * \brief Add an module for writing visualization output after a timestep.
@@ -1639,7 +1645,7 @@ public:
         const Scalar alpha = std::max(Scalar{1e-20},
                                       std::max(std::abs(maxRelErr),
                                                std::abs(minRelErr)));
-        for (unsigned globalIdx = 0; globalIdx < numDof; ++ globalIdx) {
+        for (unsigned globalIdx = 0; globalIdx < numDof; ++globalIdx) {
             (*normalizedRelError)[globalIdx] /= alpha;
         }
 
@@ -1747,9 +1753,7 @@ public:
         auxEqModules_.push_back(auxMod);
 
         // resize the solutions
-        if (enableGridAdaptation_
-            && !std::is_same<DiscreteFunction, BlockVectorWrapper>::value)
-        {
+        if (enableGridAdaptation_ && !std::is_same_v<DiscreteFunction, BlockVectorWrapper>) {
             throw std::invalid_argument("Problems which require auxiliary modules cannot be used in"
                                       " conjunction with dune-fem");
         }
@@ -1842,19 +1846,20 @@ protected:
         // allocate the intensive quantities cache
         if (storeIntensiveQuantities()) {
             const std::size_t numDof = asImp_().numGridDof();
-            for(unsigned timeIdx=0; timeIdx<historySize; ++timeIdx) {
+            for(unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof);
                 invalidateIntensiveQuantitiesCache(timeIdx);
             }
         }
     }
+
     template <class Context>
     void supplementInitialSolution_(PrimaryVariables&,
                                     const Context&,
                                     unsigned,
                                     unsigned)
-    { }
+    {}
 
     /*!
      * \brief Register all output modules which make sense for the model.
@@ -1883,6 +1888,7 @@ protected:
 
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
@@ -1916,6 +1922,7 @@ protected:
     // cur is the current iterative solution, prev the converged
     // solution of the previous time step
     mutable std::array<IntensiveQuantitiesVector, historySize> intensiveQuantityCache_;
+
     // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
     mutable std::array<std::vector<unsigned char>, historySize> intensiveQuantityCacheUpToDate_;
 
@@ -1951,7 +1958,8 @@ class FvBaseDiscretizationNoAdapt : public FvBaseDiscretization<TypeTag>
 
 public:
     template<class Serializer>
-    struct SerializeHelper {
+    struct SerializeHelper
+    {
         template<class SolutionType>
         static void serializeOp(Serializer& serializer,
                                 SolutionType& solution)
