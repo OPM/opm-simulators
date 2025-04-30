@@ -53,7 +53,7 @@ class DiscreteFractureLocalResidual : public ImmiscibleLocalResidual<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     /*!
@@ -88,16 +88,16 @@ public:
         const auto& scv = elemCtx.stencil(timeIdx).subControlVolume(dofIdx);
 
         // reduce the matrix storage by the fracture volume
-        phaseStorage *= 1 - intQuants.fractureVolume()/scv.volume();
+        phaseStorage *= 1 - intQuants.fractureVolume() / scv.volume();
 
         // add the storage term inside the fractures
         const auto& fsFracture = intQuants.fractureFluidState();
 
         phaseStorage[conti0EqIdx + phaseIdx] +=
-            intQuants.fracturePorosity()*
+            intQuants.fracturePorosity() *
             fsFracture.saturation(phaseIdx) *
             fsFracture.density(phaseIdx) *
-            intQuants.fractureVolume()/scv.volume();
+            intQuants.fractureVolume() / scv.volume();
 
         EnergyModule::addFracturePhaseStorage(phaseStorage, intQuants, scv,
                                               phaseIdx);
