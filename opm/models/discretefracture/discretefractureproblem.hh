@@ -82,8 +82,8 @@ public:
                                            unsigned timeIdx) const
     {
         const auto& scvf = context.stencil(timeIdx).interiorFace(localFaceIdx);
-        unsigned interiorElemIdx = scvf.interiorIndex();
-        unsigned exteriorElemIdx = scvf.exteriorIndex();
+        const unsigned interiorElemIdx = scvf.interiorIndex();
+        const unsigned exteriorElemIdx = scvf.exteriorIndex();
         const DimMatrix& K1 = asImp_().fractureIntrinsicPermeability(context, interiorElemIdx, timeIdx);
         const DimMatrix& K2 = asImp_().fractureIntrinsicPermeability(context, exteriorElemIdx, timeIdx);
 
