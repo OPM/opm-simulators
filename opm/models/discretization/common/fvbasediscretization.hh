@@ -1497,14 +1497,10 @@ public:
      */
     std::size_t numAuxiliaryDof() const
     {
-        std::size_t result = 0;
-        auto auxModIt = auxEqModules_.begin();
-        const auto& auxModEndIt = auxEqModules_.end();
-        for (; auxModIt != auxModEndIt; ++auxModIt) {
-            result += (*auxModIt)->numDofs();
-        }
-
-        return result;
+        return std::accumulate(auxEqModules_.begin(), auxEqModules_.end(),
+                               std::size_t{0},
+                               [](const auto acc, const auto& mod)
+                               { return acc + mod->numDofs(); });
     }
 
     /*!
@@ -1687,13 +1683,11 @@ public:
      */
     void prepareOutputFields() const
     {
-        bool needFullContextUpdate = false;
-        auto modIt = outputModules_.begin();
-        const auto& modEndIt = outputModules_.end();
-        for (; modIt != modEndIt; ++modIt) {
-            (*modIt)->allocBuffers();
-            needFullContextUpdate = needFullContextUpdate || (*modIt)->needExtensiveQuantities();
-        }
+        const bool needFullContextUpdate =
+            std::any_of(outputModules_.begin(), outputModules_.end(),
+                        [](const auto& mod) { return mod->needExtensiveQuantities(); });
+        std::for_each(outputModules_.begin(), outputModules_.end(),
+                      [](auto& mod) { mod->allocBuffers(); });
 
         // iterate over grid
         ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView());
@@ -1718,13 +1712,8 @@ public:
                     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 }
 
-                // we cannot reuse the "modIt" variable here because the code here might
-                // be threaded and "modIt" is is the same for all threads, i.e., if a
-                // given thread modifies it, the changes affect all threads.
-                auto modIt2 = outputModules_.begin();
-                for (; modIt2 != modEndIt; ++modIt2) {
-                    (*modIt2)->processElement(elemCtx);
-                }
+                std::for_each(outputModules_.begin(), outputModules_.end(),
+                              [&elemCtx](auto& mod) { mod->processElement(elemCtx); });
             }
         }
     }
@@ -1735,11 +1724,8 @@ public:
      */
     void appendOutputFields(BaseOutputWriter& writer) const
     {
-        auto modIt = outputModules_.begin();
-        const auto& modEndIt = outputModules_.end();
-        for (; modIt != modEndIt; ++modIt) {
-            (*modIt)->commitBuffers(writer);
-        }
+        std::for_each(outputModules_.begin(), outputModules_.end(),
+                      [&writer](auto& mod) { mod->commitBuffers(writer); });
     }
 
     /*!
