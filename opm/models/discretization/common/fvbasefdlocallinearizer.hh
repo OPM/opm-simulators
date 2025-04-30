@@ -237,7 +237,7 @@ public:
         localResidual_.eval(residual_, elemCtx);
 
         // calculate the local jacobian matrix
-        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; dofIdx++) {
             for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
                 asImp_().evalPartialDerivative_(elemCtx, dofIdx, pvIdx);
@@ -270,8 +270,8 @@ public:
                           unsigned dofIdx,
                           unsigned pvIdx) const
     {
-        unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-        Scalar pvWeight = elemCtx.model().primaryVarWeight(globalIdx, pvIdx);
+        const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        const Scalar pvWeight = elemCtx.model().primaryVarWeight(globalIdx, pvIdx);
         assert(pvWeight > 0 && std::isfinite(pvWeight));
         Valgrind::CheckDefined(pvWeight);
 
@@ -337,8 +337,8 @@ protected:
      */
     void resize_(const ElementContext& elemCtx)
     {
-        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
 
         residual_.resize(numDof);
         jacobian_.setSize(numDof, numPrimaryDof);
@@ -351,8 +351,8 @@ protected:
      */
     void reset_(const ElementContext& elemCtx)
     {
-        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx)
             for (unsigned dof2Idx = 0; dof2Idx < numDof; ++ dof2Idx)
                 jacobian_[dof2Idx][primaryDofIdx] = 0.0;
@@ -412,7 +412,7 @@ protected:
         elemCtx.stashIntensiveQuantities(dofIdx);
 
         PrimaryVariables priVars(elemCtx.primaryVars(dofIdx, /*timeIdx=*/0));
-        Scalar eps = asImp_().numericEpsilon(elemCtx, dofIdx, pvIdx);
+        const Scalar eps = asImp_().numericEpsilon(elemCtx, dofIdx, pvIdx);
         Scalar delta = 0.0;
 
         if (numericDifferenceMethod_() >= 0) {
@@ -483,7 +483,7 @@ protected:
                               unsigned focusDofIdx,
                               unsigned pvIdx)
     {
-        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
             for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
                 // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of the
