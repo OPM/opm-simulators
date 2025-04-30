@@ -99,10 +99,10 @@ public:
     auto calculateScalarValue(const ElementContext& elemCtx,
                               unsigned fapIdx,
                               const QuantityCallback& quantityCallback) const
-        -> typename std::remove_reference<decltype(quantityCallback.operator()(0))>::type
+        -> std::remove_reference_t<decltype(quantityCallback.operator()(0))>
     {
         using RawReturnType = decltype(quantityCallback.operator()(0));
-        using ReturnType = typename std::remove_const<typename std::remove_reference<RawReturnType>::type>::type;
+        using ReturnType = std::remove_const_t<std::remove_reference_t<RawReturnType>>;
 
         Scalar interiorDistance;
         Scalar exteriorDistance;
@@ -145,10 +145,10 @@ public:
     auto calculateVectorValue(const ElementContext& elemCtx,
                               unsigned fapIdx,
                               const QuantityCallback& quantityCallback) const
-        -> typename std::remove_reference<decltype(quantityCallback.operator()(0))>::type
+        -> std::remove_reference_t<decltype(quantityCallback.operator()(0))>
     {
         using RawReturnType = decltype(quantityCallback.operator()(0));
-        using ReturnType = typename std::remove_const<typename std::remove_reference<RawReturnType>::type>::type;
+        using ReturnType = std::remove_const_t<std::remove_reference_t<RawReturnType>>;
 
         Scalar interiorDistance;
         Scalar exteriorDistance;
