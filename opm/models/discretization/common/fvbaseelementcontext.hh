@@ -68,7 +68,6 @@ class FvBaseElementContext
         std::array<const PrimaryVariables*, timeDiscHistorySize> priVars;
         std::array<const IntensiveQuantities*, timeDiscHistorySize> thermodynamicHint;
     };
-    using DofVarsVector = std::vector<DofStore_>;
     using ExtensiveQuantitiesVector = std::vector<ExtensiveQuantities>;
 
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -82,7 +81,6 @@ class FvBaseElementContext
     using Element = typename GridView::template Codim<0>::Entity;
 
     static const unsigned dimWorld = GridView::dimensionworld;
-    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
     using CoordScalar = typename GridView::ctype;
     using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
