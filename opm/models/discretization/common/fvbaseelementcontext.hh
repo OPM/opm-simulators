@@ -38,6 +38,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <stdexcept>
 #include <vector>
 
@@ -102,7 +103,7 @@ public:
         enableStorageCache_ = Parameters::Get<Parameters::EnableStorageCache>();
     }
 
-    static void *operator new(size_t size)
+    static void *operator new(std::size_t size)
     { return aligned_alloc(alignof(FvBaseElementContext), size); }
 
     static void operator delete(void *ptr)
@@ -309,27 +310,27 @@ public:
     /*!
      * \brief Return the number of sub-control volumes of the current element.
      */
-    size_t numDof(unsigned timeIdx) const
+    std::size_t numDof(unsigned timeIdx) const
     { return stencil(timeIdx).numDof(); }
 
     /*!
      * \brief Return the number of primary degrees of freedom of the current element.
      */
-    size_t numPrimaryDof(unsigned timeIdx) const
+    std::size_t numPrimaryDof(unsigned timeIdx) const
     { return stencil(timeIdx).numPrimaryDof(); }
 
     /*!
      * \brief Return the number of non-boundary faces which need to be
      *        considered for the flux apporixmation.
      */
-    size_t numInteriorFaces(unsigned timeIdx) const
+    std::size_t numInteriorFaces(unsigned timeIdx) const
     { return stencil(timeIdx).numInteriorFaces(); }
 
     /*!
      * \brief Return the number of boundary faces which need to be
      *        considered for the flux apporixmation.
      */
-    size_t numBoundaryFaces(unsigned timeIdx) const
+    std::size_t numBoundaryFaces(unsigned timeIdx) const
     { return stencil(timeIdx).numBoundaryFaces(); }
 
     /*!
@@ -545,7 +546,7 @@ protected:
      *
      * This method considers the intensive quantities cache.
      */
-    void updateIntensiveQuantities_(unsigned timeIdx, size_t numDof)
+    void updateIntensiveQuantities_(unsigned timeIdx, std::size_t numDof)
     {
         // update the intensive quantities for the whole history
         const SolutionVector& globalSol = model().solution(timeIdx);
