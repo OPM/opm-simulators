@@ -28,16 +28,18 @@
 #ifndef EWOMS_FV_BASE_AD_LOCAL_LINEARIZER_HH
 #define EWOMS_FV_BASE_AD_LOCAL_LINEARIZER_HH
 
-#include "fvbaseproperties.hh"
-
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <dune/istl/bvector.hh>
 #include <dune/istl/matrix.hh>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/densead/Math.hpp>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 namespace Opm {
 // forward declaration
