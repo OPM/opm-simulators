@@ -38,6 +38,10 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#if HAVE_MPI
+#include <opm/simulators/utils/MPISerializer.hpp>
+#endif
+
 #include <opm/grid/common/p2pcommunicator.hh>
 
 #include <algorithm>
@@ -620,6 +624,11 @@ WellState<Scalar>::report(const int* globalCellIdxMap,
             const auto seg_no = ws.segments.segment_number()[seg_ix];
             well.segments[seg_no] = this->reportSegmentResults(well_index, seg_ix, seg_no);
         }
+    #if HAVE_MPI
+        Parallel::MpiSerializer ser(ws.parallel_info.get().communication());
+        ser.broadcast(Parallel::RootRank{0}, well);
+    #endif
+
     }
 
     return res;
