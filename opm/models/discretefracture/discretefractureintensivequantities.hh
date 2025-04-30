@@ -87,7 +87,7 @@ public:
 
         const auto& problem = elemCtx.problem();
         const auto& fractureMapper = problem.fractureMapper();
-        unsigned globalVertexIdx = elemCtx.globalSpaceIndex(vertexIdx, timeIdx);
+        const unsigned globalVertexIdx = elemCtx.globalSpaceIndex(vertexIdx, timeIdx);
 
         Opm::Valgrind::SetUndefined(fractureFluidState_);
         Opm::Valgrind::SetUndefined(fractureVolume_);
@@ -103,7 +103,7 @@ public:
 
         // Make sure that the wetting saturation in the matrix fluid
         // state does not get larger than 1
-        Scalar SwMatrix =
+        const Scalar SwMatrix =
             std::min<Scalar>(1.0, this->fluidState_.saturation(wettingPhaseIdx));
         this->fluidState_.setSaturation(wettingPhaseIdx, SwMatrix);
         this->fluidState_.setSaturation(nonWettingPhaseIdx, 1 - SwMatrix);
@@ -121,7 +121,7 @@ public:
         fractureVolume_ = 0;
         const auto& vertexPos = elemCtx.pos(vertexIdx, timeIdx);
         for (unsigned vertex2Idx = 0; vertex2Idx < elemCtx.numDof(/*timeIdx=*/0); ++ vertex2Idx) {
-            unsigned globalVertex2Idx = elemCtx.globalSpaceIndex(vertex2Idx, timeIdx);
+            const unsigned globalVertex2Idx = elemCtx.globalSpaceIndex(vertex2Idx, timeIdx);
 
             if (vertexIdx == vertex2Idx ||
                 !fractureMapper.isFractureEdge(globalVertexIdx, globalVertex2Idx))
@@ -129,13 +129,13 @@ public:
                 continue;
             }
 
-            Scalar fractureWidth =
+            const Scalar fractureWidth =
                 problem.fractureWidth(elemCtx, vertexIdx, vertex2Idx, timeIdx);
 
             auto distVec = elemCtx.pos(vertex2Idx, timeIdx);
             distVec -= vertexPos;
 
-            Scalar edgeLength = distVec.two_norm();
+            const Scalar edgeLength = distVec.two_norm();
 
             // the fracture is always adjacent to two sub-control
             // volumes of the control volume, so when calculating the
@@ -171,7 +171,7 @@ public:
 
         // Make sure that the wetting saturation in the fracture does
         // not get negative
-        Scalar SwFracture =
+        const Scalar SwFracture =
             std::max<Scalar>(0.0, fractureFluidState_.saturation(wettingPhaseIdx));
         fractureFluidState_.setSaturation(wettingPhaseIdx, SwFracture);
         fractureFluidState_.setSaturation(nonWettingPhaseIdx, 1 - SwFracture);
