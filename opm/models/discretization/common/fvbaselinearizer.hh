@@ -114,16 +114,13 @@ class FvBaseLinearizer
 
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
 
-    // copying the linearizer is not a good idea
-    FvBaseLinearizer(const FvBaseLinearizer&);
 //! \endcond
 
 public:
-    FvBaseLinearizer()
-        : jacobian_()
-    {
-        simulatorPtr_ = 0;
-    }
+    FvBaseLinearizer() = default;
+
+    // copying the linearizer is not a good idea
+    FvBaseLinearizer(const FvBaseLinearizer&) = delete;
 
     /*!
      * \brief Register all run-time parameters for the Jacobian linearizer.
@@ -662,7 +659,7 @@ private:
     static bool enableConstraints_()
     { return getPropValue<TypeTag, Properties::EnableConstraints>(); }
 
-    Simulator *simulatorPtr_;
+    Simulator* simulatorPtr_{};
     std::vector<std::unique_ptr<ElementContext>> elementCtx_;
 
     // The constraint equations (only non-empty if the
