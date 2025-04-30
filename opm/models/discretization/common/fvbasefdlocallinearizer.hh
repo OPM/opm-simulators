@@ -47,6 +47,7 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <memory>
 
 namespace Opm {
 // forward declaration
@@ -167,11 +168,8 @@ private:
 
 public:
     FvBaseFdLocalLinearizer()
-        : internalElemContext_(0)
+        : internalElemContext_{}
     { }
-
-    ~FvBaseFdLocalLinearizer()
-    { delete internalElemContext_; }
 
     /*!
      * \brief Register all run-time parameters for the local jacobian.
@@ -194,8 +192,7 @@ public:
     void init(Simulator& simulator)
     {
         simulatorPtr_ = &simulator;
-        delete internalElemContext_;
-        internalElemContext_ = new ElementContext(simulator);
+        internalElemContext_ = std::make_unique<ElementContext>(simulator);
     }
 
     /*!
@@ -504,7 +501,7 @@ protected:
     Simulator *simulatorPtr_;
     Model *modelPtr_;
 
-    ElementContext *internalElemContext_;
+    std::unique_ptr<ElementContext> internalElemContext_;
 
     LocalEvalBlockVector residual_;
     LocalEvalBlockVector derivResidual_;
