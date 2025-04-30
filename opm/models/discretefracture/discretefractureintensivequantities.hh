@@ -33,6 +33,7 @@
 #include <opm/models/immiscible/immiscibleintensivequantities.hh>
 
 #include <algorithm>
+#include <array>
 
 namespace Opm {
 
@@ -159,7 +160,7 @@ public:
 
         // calculate the fracture saturations which would be required
         // to be consistent with the pressures
-        Scalar saturations[numPhases];
+        std::array<Scalar, numPhases> saturations;
         MaterialLaw::saturations(saturations, fractureMatParams,
                                  fractureFluidState_);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -236,7 +237,7 @@ protected:
     Scalar fractureVolume_;
     Scalar fracturePorosity_;
     DimMatrix fractureIntrinsicPermeability_;
-    Scalar fractureRelativePermeabilities_[numPhases];
+    std::array<Scalar, numPhases> fractureRelativePermeabilities_;
 };
 
 } // namespace Opm
