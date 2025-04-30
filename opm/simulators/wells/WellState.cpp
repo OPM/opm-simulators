@@ -533,8 +533,7 @@ WellState<Scalar>::report(const int* globalCellIdxMap,
         const auto& wv = ws.surface_rates;
         const auto& wname = this->name(well_index);
 
-        auto dummyWell = data::Well{};
-        auto& well = ws.parallel_info.get().isOwner() ? res[wname] : dummyWell;
+        auto& well = res[wname];
 
         well.bhp = ws.bhp;
         well.thp = ws.thp;
