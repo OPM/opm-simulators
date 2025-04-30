@@ -28,11 +28,11 @@
 #ifndef EWOMS_DISCRETE_FRACTURE_INTENSIVE_QUANTITIES_HH
 #define EWOMS_DISCRETE_FRACTURE_INTENSIVE_QUANTITIES_HH
 
-#include "discretefractureproperties.hh"
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/immiscible/immiscibleintensivequantities.hh>
 
-#include <opm/material/common/Valgrind.hpp>
+#include <algorithm>
 
 namespace Opm {
 
