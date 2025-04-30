@@ -41,6 +41,8 @@
 
 #include <opm/simulators/linalg/linalgproperties.hh>
 
+#include <cstddef>
+
 namespace Opm {
 // forward declaration
 template<class TypeTag>
@@ -249,8 +251,8 @@ protected:
      */
     void resize_(const ElementContext& elemCtx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
 
         residual_.resize(numDof);
         if (jacobian_.N() != numDof || jacobian_.M() != numPrimaryDof)
@@ -278,7 +280,7 @@ protected:
         for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++)
             residual_[focusDofIdx][eqIdx] = resid[focusDofIdx][eqIdx].value();
 
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
             for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
                 for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
