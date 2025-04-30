@@ -1598,25 +1598,25 @@ public:
         asImp_().globalResidual(globalResid, u);
 
         // create the required scalar fields
-        const std::size_t numGridDof = asImp_().numGridDof();
+        const std::size_t numDof = asImp_().numGridDof();
 
         // global defect of the two auxiliary equations
         std::array<ScalarBuffer*, numEq> def;
         std::array<ScalarBuffer*, numEq> delta;
         std::array<ScalarBuffer*, numEq> priVars;
         std::array<ScalarBuffer*, numEq> priVarWeight;
-        ScalarBuffer* relError = writer.allocateManagedScalarBuffer(numGridDof);
-        ScalarBuffer* normalizedRelError = writer.allocateManagedScalarBuffer(numGridDof);
+        ScalarBuffer* relError = writer.allocateManagedScalarBuffer(numDof);
+        ScalarBuffer* normalizedRelError = writer.allocateManagedScalarBuffer(numDof);
         for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-            priVars[pvIdx] = writer.allocateManagedScalarBuffer(numGridDof);
-            priVarWeight[pvIdx] = writer.allocateManagedScalarBuffer(numGridDof);
-            delta[pvIdx] = writer.allocateManagedScalarBuffer(numGridDof);
-            def[pvIdx] = writer.allocateManagedScalarBuffer(numGridDof);
+            priVars[pvIdx] = writer.allocateManagedScalarBuffer(numDof);
+            priVarWeight[pvIdx] = writer.allocateManagedScalarBuffer(numDof);
+            delta[pvIdx] = writer.allocateManagedScalarBuffer(numDof);
+            def[pvIdx] = writer.allocateManagedScalarBuffer(numDof);
         }
 
         Scalar minRelErr = 1e30;
         Scalar maxRelErr = -1e30;
-        for (unsigned globalIdx = 0; globalIdx < numGridDof; ++ globalIdx) {
+        for (unsigned globalIdx = 0; globalIdx < numDof; ++ globalIdx) {
             for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                 (*priVars[pvIdx])[globalIdx] = u[globalIdx][pvIdx];
                 (*priVarWeight[pvIdx])[globalIdx] = asImp_().primaryVarWeight(globalIdx, pvIdx);
@@ -1639,7 +1639,7 @@ public:
         const Scalar alpha = std::max(Scalar{1e-20},
                                       std::max(std::abs(maxRelErr),
                                                std::abs(minRelErr)));
-        for (unsigned globalIdx = 0; globalIdx < numGridDof; ++ globalIdx) {
+        for (unsigned globalIdx = 0; globalIdx < numDof; ++ globalIdx) {
             (*normalizedRelError)[globalIdx] /= alpha;
         }
 
