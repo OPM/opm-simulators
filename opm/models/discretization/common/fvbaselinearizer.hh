@@ -439,7 +439,7 @@ private:
 
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
-        const size_t numAuxMod = model.numAuxiliaryModules();
+        const std::size_t numAuxMod = model.numAuxiliaryModules();
         for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern_);
         }
@@ -609,7 +609,7 @@ private:
             globalMatrixMutex_.lock();
         }
 
-        const size_t numPrimaryDof = elementCtx.numPrimaryDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elementCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++primaryDofIdx) {
             const unsigned globI = elementCtx.globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
 
