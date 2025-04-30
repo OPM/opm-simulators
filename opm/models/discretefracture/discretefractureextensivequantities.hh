@@ -71,11 +71,11 @@ public:
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
-        unsigned insideScvIdx = scvf.interiorIndex();
-        unsigned outsideScvIdx = scvf.exteriorIndex();
+        const unsigned insideScvIdx = scvf.interiorIndex();
+        const unsigned outsideScvIdx = scvf.exteriorIndex();
 
-        unsigned globalI = elemCtx.globalSpaceIndex(insideScvIdx, timeIdx);
-        unsigned globalJ = elemCtx.globalSpaceIndex(outsideScvIdx, timeIdx);
+        const unsigned globalI = elemCtx.globalSpaceIndex(insideScvIdx, timeIdx);
+        const unsigned globalJ = elemCtx.globalSpaceIndex(outsideScvIdx, timeIdx);
         const auto& fractureMapper = elemCtx.problem().fractureMapper();
         if (!fractureMapper.isFractureEdge(globalI, globalJ)) {
             // do nothing if no fracture goes though the current edge
@@ -98,7 +98,7 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             const auto& pGrad = extQuants.potentialGrad(phaseIdx);
 
-            unsigned upstreamIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upstreamIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
 
             // multiply with the fracture mobility of the upstream vertex
