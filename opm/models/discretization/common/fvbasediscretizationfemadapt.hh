@@ -46,12 +46,12 @@ class FvBaseDiscretizationFemAdapt;
 namespace Properties {
 
 template<class TypeTag>
-struct BaseDiscretizationType<TypeTag,TTag::FvBaseDiscretization> {
-    using type = FvBaseDiscretizationFemAdapt<TypeTag>;
-};
+struct BaseDiscretizationType<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseDiscretizationFemAdapt<TypeTag>; };
 
 template<class TypeTag>
-struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization> {
+struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
+{
     using DiscreteFunctionSpace  = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
     using PrimaryVariables  = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using type = Dune::Fem::ISTLBlockVectorDiscreteFunction<DiscreteFunctionSpace, PrimaryVariables>;
@@ -93,7 +93,8 @@ class FvBaseDiscretizationFemAdapt : public FvBaseDiscretization<TypeTag>
 
 public:
     template<class Serializer>
-    struct SerializeHelper {
+    struct SerializeHelper
+    {
         template<class SolutionType>
         static void serializeOp(Serializer& serializer,
                                 SolutionType& solution)
@@ -159,9 +160,11 @@ public:
         if (!adaptationManager_) {
             // create adaptation objects here, because when doing so in constructor
             // problem is not yet intialized, aka seg fault
-            restrictProlong_ = std::make_unique<RestrictProlong>(DiscreteFunctionRestrictProlong(*(this->solution_[/*timeIdx=*/0])),
-                                                                 this->simulator_.problem().restrictProlongOperator());
-            adaptationManager_ = std::make_unique<AdaptationManager>(this->simulator_.vanguard().grid(), *restrictProlong_);
+            restrictProlong_ =
+                std::make_unique<RestrictProlong>(DiscreteFunctionRestrictProlong(*(this->solution_[/*timeIdx=*/0])),
+                                                  this->simulator_.problem().restrictProlongOperator());
+            adaptationManager_ =
+                std::make_unique<AdaptationManager>(this->simulator_.vanguard().grid(), *restrictProlong_);
         }
         return *adaptationManager_;
     }
