@@ -28,9 +28,13 @@
 #ifndef EWOMS_FV_BASE_GRADIENT_CALCULATOR_HH
 #define EWOMS_FV_BASE_GRADIENT_CALCULATOR_HH
 
-#include "fvbaseproperties.hh"
-
 #include <dune/common/fvector.hh>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/basicproperties.hh>
+
+#include <cmath>
+#include <type_traits>
 
 namespace Opm {
 template<class TypeTag>
