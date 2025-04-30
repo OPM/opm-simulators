@@ -123,18 +123,20 @@ public:
         unsigned I = elemCtx.globalSpaceIndex(i, timeIdx);
         unsigned J = elemCtx.globalSpaceIndex(j, timeIdx);
         const auto& fractureMapper = elemCtx.problem().fractureMapper();
-        if (!fractureMapper.isFractureEdge(I, J))
+        if (!fractureMapper.isFractureEdge(I, J)) {
             // do nothing if the edge from i to j is not part of a
             // fracture
             return;
+        }
 
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(scvfIdx);
         Scalar scvfArea = scvf.area();
 
         // advective mass fluxes of all phases
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             // reduce the matrix mass flux by the width of the scv
             // face that is occupied by the fracture. As usual, the
