@@ -641,11 +641,9 @@ private:
         auto& sol = model_().solution(/*timeIdx=*/0);
         auto& oldSol = model_().solution(/*timeIdx=*/1);
 
-        auto it = constraintsMap_.begin();
-        const auto& endIt = constraintsMap_.end();
-        for (; it != endIt; ++it) {
-            sol[it->first] = it->second;
-            oldSol[it->first] = it->second;
+        for (const auto& constraint : constraintsMap_) {
+            sol[constraint.first] = constraint.second;
+            oldSol[constraint.first] = constraint.second;
         }
     }
 
@@ -657,17 +655,13 @@ private:
             return;
         }
 
-        auto it = constraintsMap_.begin();
-        const auto& endIt = constraintsMap_.end();
-        for (; it != endIt; ++it) {
-            unsigned constraintDofIdx = it->first;
-
+        for (const auto& constraint : constraintsMap_) {
             // reset the column of the Jacobian matrix
             // put an identity matrix on the main diagonal of the Jacobian
-            jacobian_->clearRow(constraintDofIdx, Scalar(1.0));
+            jacobian_->clearRow(constraint.first, Scalar(1.0));
 
             // make the right-hand side of constraint DOFs zero
-            residual_[constraintDofIdx] = 0.0;
+            residual_[constraint.first] = 0.0;
         }
     }
 
