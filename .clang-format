@@ -9,7 +9,7 @@
         AlwaysBreakTemplateDeclarations: Yes,
         BinPackArguments: false,
         BinPackParameters: false,
-        BreakBeforeBraces: Linux,
+        BreakBeforeBraces: Custom,
         BreakConstructorInitializers: BeforeComma,
         ColumnLimit: 120,
         Cpp11BracedListStyle: true,
@@ -17,4 +17,9 @@
         InsertNewlineAtEOF: true,
         MaxEmptyLinesToKeep: 5,
         NamespaceIndentation: Inner,
+	BraceWrapping: {
+		       AfterStruct: true,
+		       AfterClass: true,
+		       AfterFunction: true
+	}
 }
