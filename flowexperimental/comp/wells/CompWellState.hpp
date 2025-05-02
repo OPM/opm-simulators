@@ -35,12 +35,13 @@
 
 namespace Opm {
 
-template <typename FluidSystem, typename Scalar>
+template <typename FluidSystem>
 class CompWellState
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     using CompConnectionData = PerforationData<Scalar>;
-    using SingleWellState = SingleCompWellState<FluidSystem, Scalar>;
+    using SingleWellState = SingleCompWellState<FluidSystem>;
 
     explicit CompWellState(const CompositionalConfig& comp_config);
 

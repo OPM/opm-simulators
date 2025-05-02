@@ -49,8 +49,8 @@ CompConnectionData(const std::vector<PerforationData<Scalar>>& connections,
     }
 }
 
-template <typename FluidSystem, class Scalar>
-SingleCompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+SingleCompWellState<FluidSystem>::
 SingleCompWellState(const std::string& well_name,
                     const CompositionalConfig& comp_config,
                     const Scalar temperature_arg,
@@ -67,8 +67,8 @@ SingleCompWellState(const std::string& well_name,
 {
 }
 
-template <typename FluidSystem, class Scalar>
-void SingleCompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+void SingleCompWellState<FluidSystem>::
 update_injector_targets(const Well& well,
                         const SummaryState& st)
 {
@@ -113,8 +113,8 @@ update_injector_targets(const Well& well,
     }
 }
 
-template <typename FluidSystem, class Scalar>
-void SingleCompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+void SingleCompWellState<FluidSystem>::
 update_producer_targets(const Well& well,
                         const std::vector<std::vector<Scalar>>& cell_mole_fractions,
                         const SummaryState& st)
@@ -144,9 +144,9 @@ update_producer_targets(const Well& well,
     }
 }
 
-template <typename FluidSystem, class Scalar>
-Scalar
-SingleCompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+typename SingleCompWellState<FluidSystem>::Scalar
+SingleCompWellState<FluidSystem>::
 get_total_surface_rate() const
 {
     return std::accumulate(surface_phase_rates.begin(), surface_phase_rates.end(), Scalar(0));

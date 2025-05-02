@@ -19,16 +19,16 @@
 
 namespace Opm {
 
-template <typename FluidSystem, typename Scalar>
-CompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+CompWellState<FluidSystem>::
 CompWellState(const CompositionalConfig& comp_config)
     : comp_config_(comp_config)
 {
 }
 
 
-template <typename FluidSystem, typename Scalar>
-void CompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+void CompWellState<FluidSystem>::
 init(const std::vector<Well>& wells_ecl,
      const std::vector<Scalar>& cell_pressures,
      const Scalar temperature,
@@ -43,8 +43,8 @@ init(const std::vector<Well>& wells_ecl,
     // let us see how we gonna use it though
 }
 
-template <typename FluidSystem, typename Scalar>
-void CompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+void CompWellState<FluidSystem>::
 base_init(const std::vector<Well>& wells_ecl,
           const std::vector<Scalar>& cell_pressures,
           const Scalar temperature,
@@ -64,8 +64,8 @@ base_init(const std::vector<Well>& wells_ecl,
 
 }
 
-template <typename FluidSystem, typename Scalar>
-void CompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+void CompWellState<FluidSystem>::
 initSingleWell(const Well& well,
                const std::vector<Scalar>& cell_pressures,
                const Scalar tempearture,
@@ -81,8 +81,8 @@ initSingleWell(const Well& well,
 
 }
 
-template <typename FluidSystem, typename Scalar>
-void CompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+void CompWellState<FluidSystem>::
 initSingleInjector(const Well& well,
                    const std::vector<Scalar>& /* cell_pressures */,
                    const Scalar temperature,
@@ -98,8 +98,8 @@ initSingleInjector(const Well& well,
     ws.update_injector_targets(well, summary_state);
 }
 
-template <typename FluidSystem, typename Scalar>
-void CompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+void CompWellState<FluidSystem>::
 initSingleProducer(const Well& well,
                    const std::vector<Scalar>& /* cell_pressures */,
                    const Scalar temperature,
@@ -116,25 +116,25 @@ initSingleProducer(const Well& well,
     ws.update_producer_targets(well, cell_mole_fractions, summary_state);
 }
 
-template <typename FluidSystem, typename Scalar>
-const typename CompWellState<FluidSystem, Scalar>::SingleWellState&
-CompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+const typename CompWellState<FluidSystem>::SingleWellState&
+CompWellState<FluidSystem>::
 operator[](const std::string& well_name) const
 {
     return this->wells_[well_name];
 }
 
-template <typename FluidSystem, typename Scalar>
-typename CompWellState<FluidSystem, Scalar>::SingleWellState&
-CompWellState<FluidSystem, Scalar>::
+template <typename FluidSystem>
+typename CompWellState<FluidSystem>::SingleWellState&
+CompWellState<FluidSystem>::
 operator[](const std::string& well_name)
 {
     return this->wells_[well_name];
 }
 
-template <typename FluidSystem, typename Scalar>
+template <typename FluidSystem>
 data::Wells
-CompWellState<FluidSystem, Scalar>::
+CompWellState<FluidSystem>::
 report() const
 {
     if (this->wells_.empty()) {

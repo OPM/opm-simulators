@@ -53,10 +53,12 @@ public:
     std::vector<std::size_t> ecl_index {};
 };
 
-template <typename FluidSystem, typename Scalar>
+template <typename FluidSystem>
 class SingleCompWellState
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     SingleCompWellState(const std::string& name,
                         const CompositionalConfig& comp_config,
                         const Scalar temperature,

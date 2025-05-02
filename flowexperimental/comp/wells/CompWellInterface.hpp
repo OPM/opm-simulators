@@ -43,7 +43,7 @@ public:
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
     using CompConnectionData = PerforationData<Scalar>;
-    using SingleWellState = SingleCompWellState<FluidSystem, Scalar>;
+    using SingleWellState = SingleCompWellState<FluidSystem>;
 
     CompWellInterface(const Well& well,
                       const int index_of_well,
