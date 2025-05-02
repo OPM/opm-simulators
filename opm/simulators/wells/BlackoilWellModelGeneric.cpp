@@ -1025,18 +1025,31 @@ setWsolvent(const Group& group,
     }
 }
 
+template <class Scalar>
+template <typename LoopBody>
+void BlackoilWellModelGeneric<Scalar>::
+loopOwnedWells(LoopBody&& loopBody) const
+{
+    auto wellIndex = 0 * this->wells_ecl_.size();
+
+    for (const auto& pwInfo : this->local_parallel_well_info_) {
+        if (pwInfo.get().isOwner()) {
+            loopBody(wellIndex, this->wells_ecl_[wellIndex]);
+        }
+
+        ++wellIndex;
+    }
+}
+
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 assignWellTargets(data::Wells& wsrpt) const
 {
-    auto pwInfo = this->local_parallel_well_info_.begin();
-
-    for (const auto& well : this->wells_ecl_) {
-        if (! pwInfo++->get().isOwner()) {
-            continue;
-        }
-
-        // data::Wells is a std::map<>
+    this->loopOwnedWells([this, &wsrpt]
+                         ([[maybe_unused]] const auto wellIndex,
+                          const Well&                 well)
+    {
+        // data::Wells (i.e., 'wsrpt') is a std::map<>
         auto& limits = wsrpt[well.name()].limits;
 
         if (well.isProducer()) {
@@ -1045,7 +1058,7 @@ assignWellTargets(data::Wells& wsrpt) const
         else {
             this->assignInjectionWellTargets(well, limits);
         }
-    }
+    });
 }
 
 template<class Scalar>
@@ -1095,29 +1108,52 @@ assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) co
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
+assignDynamicWellStatus(data::Wells& wsrpt,
+                        const int reportStepIndex) const
+{
+    this->loopOwnedWells([this, reportStepIndex, &wsrpt]
+                         (const auto wellID, const Well& well)
+    {
+        auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
+
+        xwel.dynamicStatus = this->schedule()[reportStepIndex]
+            .wells(well.name()).getStatus();
+
+        if ((xwel.dynamicStatus == Well::Status::OPEN) &&
+            this->wellTestState().well_is_closed(well.name()) &&
+            !this->wasDynamicallyShutThisTimeStep(wellID))
+        {
+            // Well is supposed to be flowing according to the run
+            // specification (Schedule object), but it is not operable or
+            // cannot meet its economic limits (well testing).
+            //
+            // Assign status based on the well's defined automatic shut-in
+            // procedure.
+            xwel.dynamicStatus = well.getAutomaticShutIn()
+                ? Well::Status::SHUT : Well::Status::STOP;
+        }
+    });
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
 assignShutConnections(data::Wells& wsrpt,
                       const int reportStepIndex) const
 {
-    auto wellID = 0;
+    this->loopOwnedWells([this, reportStepIndex, &wsrpt]
+                         ([[maybe_unused]] const auto wellID,
+                          const Well&                 well)
+    {
+        const auto wellIsOpen =
+            this->schedule()[reportStepIndex].wells(well.name())
+            .getStatus() == Well::Status::OPEN;
 
-    for (const auto& well : this->wells_ecl_) {
-        auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
-
-        xwel.dynamicStatus = this->schedule()
-            .getWell(well.name(), reportStepIndex).getStatus();
-
-        const auto wellIsOpen = xwel.dynamicStatus == Well::Status::OPEN;
         auto skip = [wellIsOpen](const Connection& conn)
         {
             return wellIsOpen && (conn.state() != Connection::State::SHUT);
         };
 
-        if (this->wellTestState().well_is_closed(well.name()) &&
-            !this->wasDynamicallyShutThisTimeStep(wellID))
-        {
-            xwel.dynamicStatus = well.getAutomaticShutIn()
-                ? Well::Status::SHUT : Well::Status::STOP;
-        }
+        auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
 
         auto& xcon = xwel.connections;
         for (const auto& conn : well.getConnections()) {
@@ -1133,9 +1169,7 @@ assignShutConnections(data::Wells& wsrpt,
             xc.trans_factor = conn.CF();
             xc.d_factor = conn.dFactor();
         }
-
-        ++wellID;
-    }
+    });
 }
 
 template<class Scalar>
