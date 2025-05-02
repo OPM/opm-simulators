@@ -33,7 +33,7 @@ namespace Opm {
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 template<class TypeTag> class WellInterface;
 
 template<class Scalar>
@@ -68,13 +68,13 @@ public:
 
 protected:
     void gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar>*>& well_container,
-                           const WellState<Scalar>& wellState,
+                           const WellState<FluidSystem, Indices>& wellState,
                            DeferredLogger& deferred_logger);
 
     void gasLiftOptimizationStage2(const Parallel::Communication& comm,
                                    const Schedule& schedule,
                                    const SummaryState& summaryState,
-                                   WellState<Scalar>& wellState,
+                                   WellState<FluidSystem, Indices>& wellState,
                                    GroupState<Scalar>& groupState,
                                    GLiftProdWells& prod_wells,
                                    GLiftOptWells& glift_wells,

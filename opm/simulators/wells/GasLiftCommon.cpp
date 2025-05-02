@@ -30,7 +30,7 @@ namespace Opm {
 
 template<class Scalar>
 GasLiftCommon<Scalar>::
-GasLiftCommon(WellState<Scalar>& well_state,
+GasLiftCommon(WellState<FluidSystem, Indices>& well_state,
               const GroupState<Scalar>& group_state,
               DeferredLogger& deferred_logger,
               const Parallel::Communication& comm,
