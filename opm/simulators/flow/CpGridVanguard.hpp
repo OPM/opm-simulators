@@ -258,6 +258,10 @@ public:
         if (const auto& lgrs = this->eclState().getLgrs(); lgrs.size() > 0) {
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
+
+            this->updateGridView_();
+            this->updateCellDepths_();
+            this->updateCellThickness_();
         }
     }
 
