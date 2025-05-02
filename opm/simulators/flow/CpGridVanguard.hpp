@@ -261,7 +261,7 @@ public:
         }
 
         this->updateGridView_();
-        //   this->updateCartesianToCompressedMapping_();
+        // this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
         this->updateCellThickness_();
     }
@@ -287,7 +287,7 @@ public:
         this->grid_->syncDistributedGlobalCellIds();
 
         this->updateGridView_();
-        //  this->updateCartesianToCompressedMapping_();
+        //this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
         this->updateCellThickness_();
     }
