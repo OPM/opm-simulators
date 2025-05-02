@@ -20,7 +20,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
@@ -198,39 +197,33 @@ template<class Scalar> class WellContributions;
             data::Wells wellData() const
             {
                 auto wsrpt = this->wellState()
-                    .report(simulator_.vanguard().globalCell().data(),
-                            [this](const int well_index) -> bool
+                    .report(this->simulator_.vanguard().globalCell().data(),
+                            [this](const int well_index)
                 {
                     return this->wasDynamicallyShutThisTimeStep(well_index);
                 });
 
-                {
-                    const auto& tracerRates = this->simulator_.problem()
-                        .tracerModel().getWellTracerRates();
-                    const auto& freeTracerRates = simulator_.problem()
-                        .tracerModel().getWellFreeTracerRates();
-                    const auto& solTracerRates = simulator_.problem()
-                        .tracerModel().getWellSolTracerRates();
-                    const auto& mswTracerRates = simulator_.problem()
-                        .tracerModel().getMswTracerRates();
-
-                    this->assignWellTracerRates(wsrpt, tracerRates, this->reportStepIndex());
-                    this->assignWellTracerRates(wsrpt, freeTracerRates, this->reportStepIndex());
-                    this->assignWellTracerRates(wsrpt, solTracerRates, this->reportStepIndex());
-                    this->assignMswTracerRates(wsrpt, mswTracerRates, this->reportStepIndex());
-                }
-
                 BlackoilWellModelGuideRates(*this)
                     .assignWellGuideRates(wsrpt, this->reportStepIndex());
 
-                this->assignWellTargets(wsrpt);
-                this->assignShutConnections(wsrpt, this->reportStepIndex());
-                // only used to compute gas injection mass rates for CO2STORE/H2STORE runs
-                // The gas reference density is thus the same for all pvt regions
-                // We therefore for simplicity use 0 here 
-                if (eclState().runspec().co2Storage() || eclState().runspec().h2Storage()) {
+                this->assignWellTracerRates(wsrpt);
+
+                if (const auto& rspec = eclState().runspec();
+                    rspec.co2Storage() || rspec.h2Storage())
+                {
+                    // The gas reference density (surface condition) is the
+                    // same for all PVT regions in CO2STORE/H2STORE runs so,
+                    // for simplicity, we use region zero (0) here.
+
                     this->assignMassGasRate(wsrpt, FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, 0));
                 }
+
+                this->assignWellTargets(wsrpt);
+
+                // Assigning (a subset of the) property values in shut
+                // connections should be the last step of wellData().
+                this->assignShutConnections(wsrpt, this->reportStepIndex());
+
                 return wsrpt;
             }
 
@@ -512,11 +505,12 @@ template<class Scalar> class WellContributions;
             // Their state is not relevant between function calls, so they can
             // (and must) be mutable, as the functions using them are const.
             mutable BVector x_local_;
-        };
 
+            void assignWellTracerRates(data::Wells& wsrpt) const;
+        };
 
 } // namespace Opm
 
 #include "BlackoilWellModel_impl.hpp"
 
-#endif
+#endif // OPM_BLACKOILWELLMODEL_HEADER_INCLUDED

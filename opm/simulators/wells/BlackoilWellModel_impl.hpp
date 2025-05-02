@@ -2351,6 +2351,22 @@ namespace Opm {
             }
         }
     }
+
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    assignWellTracerRates(data::Wells& wsrpt) const
+    {
+        const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
+        const auto& trMod = this->simulator_.problem().tracerModel();
+
+        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
+
+        this->assignMswTracerRates(wsrpt, trMod.getMswTracerRates(), reportStepIdx);
+    }
+
 } // namespace Opm
 
-#endif
+#endif // OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
