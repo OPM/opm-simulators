@@ -60,10 +60,12 @@ enum class WellStatus;
 
 /// The state of a set of wells, tailored for use by the fully
 /// implicit blackoil simulator.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellState
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     static const std::uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE
         | ScheduleEvents::PRODUCTION_UPDATE
         | ScheduleEvents::INJECTION_UPDATE;
