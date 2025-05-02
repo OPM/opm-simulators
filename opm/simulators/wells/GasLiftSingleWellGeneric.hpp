@@ -42,7 +42,7 @@ template<class Scalar> class GasLiftWellState;
 class Schedule;
 class SummaryState;
 template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 template<class Scalar> class GroupState;
 
 template<class Scalar>
