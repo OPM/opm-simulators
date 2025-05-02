@@ -42,6 +42,8 @@
 #include <opm/simulators/wells/WellTracerRate.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 
+#include <opm/grid/CpGrid.hpp>
+
 #include <cstddef>
 #include <functional>
 #include <map>
@@ -348,7 +350,7 @@ protected:
     createLocalParallelWellInfo(const std::vector<Well>& wells);
 
     void initializeWellProdIndCalculators();
-    void initializeWellPerfData();
+  void initializeWellPerfData(Dune::CpGrid * grid = NULL);
 
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 

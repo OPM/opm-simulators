@@ -83,6 +83,23 @@
 
 #include <fmt/format.h>
 
+// #include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractor.hpp>
+// #include <external/resinsight/ReservoirDataModel/RigWellLogExtractionTools.h>
+// #include <external/resinsight/ReservoirDataModel/RigWellPath.h>
+// #include <external/resinsight/ReservoirDataModel/cvfGeometryTools.h>
+// #include <external/resinsight/ReservoirDataModel/RigWellLogExtractor.h>
+// #include <external/resinsight/ReservoirDataModel/RigCellGeometryTools.h>
+// #include <external/resinsight/CommonCode/cvfStructGrid.h>
+// #include <external/resinsight/LibGeometry/cvfBoundingBox.h>
+// #include <opm/grid/common/CartesianIndexMapper.hpp>
+// #include <dune/geometry/referenceelements.hh>
+// #include <dune/grid/common/mcmgmapper.hh>
+// #include <dune/grid/common/gridenums.hh>
+
+#include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractorGrid.hpp>
+#include <opm/input/eclipse/Schedule/WellTraj/RigEclipseWellLogExtractorGrid_impl.hpp>//hack
+#include "BoundingBoxTree.hpp"
+
 namespace Opm {
 
 template<class Scalar>
@@ -333,7 +350,7 @@ initializeWellProdIndCalculators()
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
-initializeWellPerfData()
+initializeWellPerfData(Dune::CpGrid* cpgrid)
 {
     well_perf_data_.resize(wells_ecl_.size());
 
@@ -341,12 +358,21 @@ initializeWellPerfData()
     this->conn_idx_map_.reserve(wells_ecl_.size());
 
     int well_index = 0;
-    for (const auto& well : wells_ecl_) {
+    for (auto& well : wells_ecl_) {
         int connection_index = 0;
 
         // INVALID_ECL_INDEX marks no above perf available
         int connection_index_above = ParallelWellInfo<Scalar>::INVALID_ECL_INDEX;
-
+	bool recalculated = false;
+	auto& connections = well.getConnections();
+	if( ! (cpgrid == NULL) && connections.hasTraj()){
+	  // recalculate connections
+	  external::cvf::ref<external::cvf::BoundingBoxTree> cellSearchTree;
+	  external::buildBoundingBoxTree(cellSearchTree, *cpgrid);
+	  
+	  connections.recomputeConnections(*cpgrid,cellSearchTree);
+	  recalculated = true;
+	} 
         well_perf_data_[well_index].clear();
         well_perf_data_[well_index].reserve(well.getConnections().size());
 
@@ -364,9 +390,13 @@ initializeWellPerfData()
         parallelWellInfo.beginReset();
 
         for (const auto& connection : well.getConnections()) {
-            const auto active_index =
-                this->compressedIndexForInterior(connection.global_index());
-
+	  int active_index;
+	  if(!recalculated){
+            active_index =
+	      this->compressedIndexForInterior(connection.global_index()); // completly strang for LGR
+	  } else {
+	    active_index = connection.global_index();
+	  }
             const auto connIsOpen =
                 connection.state() == Connection::State::OPEN;
 

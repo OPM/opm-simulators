@@ -94,7 +94,7 @@ namespace Opm {
                       const bool injector,
                       const bool network)
     {
-
+        OPM_TIMEFUNCTION();
         Scalar rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const auto& groupTmp = schedule.getGroup(groupName, reportStepIdx);
