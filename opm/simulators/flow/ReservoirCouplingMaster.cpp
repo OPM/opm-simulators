@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/ReservoirCouplingMpiTraits.hpp>
 #include <opm/simulators/flow/ReservoirCouplingSpawnSlaves.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
@@ -38,6 +39,9 @@
 #include <fmt/format.h>
 
 namespace Opm {
+// NOTE: All slave-master communicators have set a custom error handler, which eventually
+//   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
+//   or MPI_Send() calls below.
 
 ReservoirCouplingMaster::
 ReservoirCouplingMaster(
@@ -57,6 +61,43 @@ ReservoirCouplingMaster(
 // Public methods
 // ------------------
 
+bool
+ReservoirCouplingMaster::
+isMasterGroup(const std::string &group_name) const
+{
+    return this->master_group_slave_names_.find(group_name) !=
+           this->master_group_slave_names_.end();
+}
+
+std::size_t
+ReservoirCouplingMaster::
+getMasterGroupPotIdx(
+    const std::string &slave_name, const std::string &master_group_name) const
+{
+    return this->master_group_name_order_.at(slave_name).at(master_group_name);
+}
+
+const ReservoirCoupling::Potentials&
+ReservoirCouplingMaster::
+getSlaveGroupPotentials(const std::string &master_group_name)
+{
+    auto it = this->master_group_slave_names_.find(master_group_name);
+    if (it != this->master_group_slave_names_.end()) {
+        auto& slave_name = it->second;
+        auto pot_idx = this->getMasterGroupPotIdx(slave_name, master_group_name);
+        return this->slave_group_potentials_[slave_name][pot_idx];
+    }
+    else {
+        OPM_THROW(
+            std::runtime_error,
+            fmt::format(
+                "Master group name {} not found in master-to-slave-group-name mapping",
+                master_group_name
+            )
+        );
+    }
+}
+
 void
 ReservoirCouplingMaster::
 maybeSpawnSlaveProcesses(int report_step)
@@ -72,7 +113,6 @@ maybeSpawnSlaveProcesses(int report_step)
         spawn_slaves.spawn();
     }
 }
-
 
 double
 ReservoirCouplingMaster::
@@ -124,6 +164,7 @@ sendNextTimeStepToSlaves(double timestep)
 {
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
+            // NOTE: See comment about error handling at the top of this file.
             MPI_Send(
                 &timestep,
                 /*count=*/1,
@@ -150,9 +191,7 @@ receiveNextReportDateFromSlaves()
     if (this->comm_.rank() == 0) {
         for (unsigned int i = 0; i < num_slaves; i++) {
             double slave_next_report_time_offset; // Elapsed time from the beginning of the simulation
-            // NOTE: All slave-master communicators have set a custom error handler, which eventually
-            //   will call MPI_Abort() so there is no need to check the return value of any MPI_Recv()
-            //   or MPI_Send() calls.
+            // NOTE: See comment about error handling at the top of this file.
             MPI_Recv(
                 &slave_next_report_time_offset,
                 /*count=*/1,
@@ -177,12 +216,65 @@ receiveNextReportDateFromSlaves()
     OpmLog::info("Broadcasted slave next report dates to all ranks");
 }
 
+void
+ReservoirCouplingMaster::
+receivePotentialsFromSlaves()
+{
+    auto num_slaves = this->numSlavesStarted();
+    this->logger_.info("Receiving potentials from slave processes");
+    for (unsigned int i = 0; i < num_slaves; i++) {
+        auto num_slave_groups = this->numSlaveGroups(i);
+        assert( num_slave_groups > 0 );
+        std::vector<Potentials> potentials(num_slave_groups);
+        if (this->comm_.rank() == 0) {
+            // NOTE: See comment about error handling at the top of this file.
+            auto MPI_POTENTIALS_TYPE = Dune::MPITraits<Potentials>::getType();
+            MPI_Recv(
+                potentials.data(),
+                /*count=*/num_slave_groups,
+                /*datatype=*/MPI_POTENTIALS_TYPE,
+                /*source_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::Potentials),
+                this->getSlaveComm(i),
+                MPI_STATUS_IGNORE
+            );
+            this->logger_.info(
+                fmt::format(
+                    "Received potentials from slave process with name: {}. "
+                    "Number of slave groups: {}", this->slave_names_[i], num_slave_groups
+                )
+            );
+        }
+        // NOTE: The dune broadcast() below will do something like:
+        //    MPI_Bcast(inout,len,MPITraits<Potentials>::getType(),root,communicator)
+        //  so it should use the custom Potentials MPI type that we defined in
+        //  ReservoirCouplingMpiTraits.hpp
+        this->comm_.broadcast(potentials.data(), /*count=*/num_slave_groups, /*emitter_rank=*/0);
+        this->slave_group_potentials_[this->slave_names_[i]] = potentials;
+    }
+}
+
+std::size_t
+ReservoirCouplingMaster::
+numSlaveGroups(unsigned int index)
+{
+    return this->master_group_name_order_[this->slave_names_[index]].size();
+}
 
 std::size_t
 ReservoirCouplingMaster::
 numSlavesStarted() const
 {
     return this->slave_names_.size();
+}
+
+void
+ReservoirCouplingMaster::
+updateMasterGroupNameOrderMap(
+    const std::string& slave_name, const std::map<std::string, std::size_t>& master_group_name_map
+)
+{
+    this->master_group_name_order_[slave_name] = master_group_name_map;
 }
 
 // ------------------
