@@ -187,8 +187,9 @@ public:
                     assert(std::isfinite(dofVolume));
                     Valgrind::CheckDefined(dofVolume);
 
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                         residual[dofIdx][eqIdx] /= dofVolume;
+                    }
                 }
             }
         }
@@ -234,8 +235,9 @@ public:
                                             dofIdx,
                                             timeIdx);
 
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                         storage[dofIdx][eqIdx] *= alpha;
+                    }
                 }
                 else {
                     Dune::FieldVector<Scalar, numEq> tmp;
@@ -244,8 +246,9 @@ public:
                                             dofIdx,
                                             timeIdx);
 
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                         storage[dofIdx][eqIdx] = tmp[eqIdx]*alpha;
+                    }
                 }
             }
         }
@@ -257,8 +260,9 @@ public:
                 for (unsigned dofIdx=0; dofIdx < numPrimaryDof; dofIdx++) {
                     unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
                     const auto& cachedStorage = elemCtx.model().cachedStorage(globalDofIdx, timeIdx);
-                    for (unsigned eqIdx=0; eqIdx < numEq; eqIdx++)
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                         storage[dofIdx][eqIdx] = cachedStorage[eqIdx];
+                    }
                 }
             }
             else {
@@ -318,8 +322,9 @@ public:
             asImp_().computeFlux(flux, /*context=*/elemCtx, scvfIdx, timeIdx);
             Valgrind::CheckDefined(flux);
 #ifndef NDEBUG
-            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                 assert(isfinite(flux[eqIdx]));
+            }
 #endif
 
             Scalar alpha = elemCtx.extensiveQuantities(scvfIdx, timeIdx).extrusionFactor();
@@ -328,8 +333,9 @@ public:
             assert(alpha > 0.0);
             assert(isfinite(alpha));
 
-            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                 flux[eqIdx] *= alpha;
+            }
 
             // The balance equation for a finite volume is given by
             //
@@ -424,13 +430,15 @@ protected:
                        const ElementContext& elemCtx,
                        unsigned timeIdx) const
     {
-        if (!elemCtx.onBoundary())
+        if (!elemCtx.onBoundary()) {
             return;
+        }
 
         BoundaryContext boundaryCtx(elemCtx);
         // move the iterator to the first boundary
-        if(boundaryCtx.intersection(0).neighbor())
+        if (boundaryCtx.intersection(0).neighbor()) {
             boundaryCtx.increment();
+        }
 
         // evaluate the boundary for all boundary faces of the current context
         std::size_t numBoundaryFaces = boundaryCtx.numBoundaryFaces(/*timeIdx=*/0);
@@ -483,8 +491,9 @@ protected:
             assert(isfinite(values[eqIdx]));
         }
 
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             residual[dofIdx][eqIdx] += values[eqIdx];
+        }
     }
 
     /*!
@@ -524,16 +533,19 @@ protected:
                 dofIdx != elemCtx.focusDofIndex())
             {
                 asImp_().computeStorage(tmp2, elemCtx, dofIdx, /*timeIdx=*/0);
-                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                     tmp[eqIdx] = tmp2[eqIdx];
+                }
             }
-            else
+            else {
                 asImp_().computeStorage(tmp, elemCtx, dofIdx, /*timeIdx=*/0);
+            }
 
 #ifndef NDEBUG
             Valgrind::CheckDefined(tmp);
-            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                 assert(isfinite(tmp[eqIdx]));
+            }
 #endif
 
             if (elemCtx.enableStorageCache()) {
@@ -558,8 +570,9 @@ protected:
                         // step is the same as the solution at the beginning of the time
                         // step. This is usually true, but some fancy preprocessing
                         // scheme might invalidate that assumption.)
-                        for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                             tmp2[eqIdx] = Toolbox::value(tmp[eqIdx]);
+                        }
                     }
 
                     Valgrind::CheckDefined(tmp2);
@@ -604,8 +617,9 @@ protected:
                 !std::is_same<Scalar, Evaluation>::value &&
                 dofIdx != elemCtx.focusDofIndex())
             {
-                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                     residual[dofIdx][eqIdx] -= scalarValue(sourceRate[eqIdx])*scvVolume;
+                }
             }
             else {
                 for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
