@@ -138,7 +138,7 @@ namespace Opm
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const Simulator& simulator,
-                                                     const WellState<Scalar>& well_state,
+                                                     const SingleWellState<Scalar>& ws,
                                                      const std::vector<Scalar>& B_avg,
                                                      DeferredLogger& deferred_logger,
                                                      const bool relax_tolerance) const override;
@@ -152,30 +152,30 @@ namespace Opm
         /// xw to update Well State
         void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                                    const BVector& x,
-                                                   WellState<Scalar>& well_state,
+                                                   SingleWellState<Scalar>& ws,
                                                    DeferredLogger& deferred_logger) override;
 
         /// computing the well potentials for group control
         void computeWellPotentials(const Simulator& simulator,
-                                   const WellState<Scalar>& well_state,
+                                   const SingleWellState<Scalar>& ws,
                                    std::vector<Scalar>& well_potentials,
                                    DeferredLogger& deferred_logger) /* const */ override;
 
         void updatePrimaryVariables(const Simulator& simulator,
-                                    const WellState<Scalar>& well_state,
+                                    const SingleWellState<Scalar>& ws,
                                     DeferredLogger& deferred_logger) override;
 
         void solveEqAndUpdateWellState(const Simulator& simulator,
-                                       WellState<Scalar>& well_state,
+                                       SingleWellState<Scalar>& ws,
                                        DeferredLogger& deferred_logger) override;
 
         void calculateExplicitQuantities(const Simulator& simulator,
-                                         const WellState<Scalar>& well_state,
+                                         const SingleWellState<Scalar>& ws,
                                          DeferredLogger& deferred_logger) override; // should be const?
 
         void updateProductivityIndex(const Simulator& simulator,
                                      const WellProdIndexCalculator<Scalar>& wellPICalc,
-                                     WellState<Scalar>& well_state,
+                                     SingleWellState<Scalar>& ws,
                                      DeferredLogger& deferred_logger) const override;
 
         Scalar connectionDensity(const int globalConnIdx,
@@ -187,14 +187,14 @@ namespace Opm
                                       const BVector& x,
                                       const int pressureVarIndex,
                                       const bool use_well_weights,
-                                      const WellState<Scalar>& well_state) const override;
+                                      const SingleWellState<Scalar>& ws) const override;
 
         // iterate well equations with the specified control until converged
         bool iterateWellEqWithControl(const Simulator& simulator,
                                       const double dt,
                                       const Well::InjectionControls& inj_controls,
                                       const Well::ProductionControls& prod_controls,
-                                      WellState<Scalar>& well_state,
+                                      SingleWellState<Scalar>& ws,
                                       const GroupState<Scalar>& group_state,
                                       DeferredLogger& deferred_logger) override;
 
@@ -203,7 +203,7 @@ namespace Opm
                                         const double dt,
                                         const Well::InjectionControls& inj_controls,
                                         const Well::ProductionControls& prod_controls,
-                                        WellState<Scalar>& well_state,
+                                        SingleWellState<Scalar>& ws,
                                         const GroupState<Scalar>& group_state,
                                         DeferredLogger& deferred_logger, 
                                         const bool fixed_control = false,
@@ -230,7 +230,7 @@ namespace Opm
                                         bool iterate_if_no_solution) const override;
 
         void updateIPRImplicit(const Simulator& simulator,
-                               WellState<Scalar>& well_state,
+                               SingleWellState<Scalar>& ws,
                                DeferredLogger& deferred_logger) override;
 
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
@@ -253,10 +253,10 @@ namespace Opm
     protected:
         bool regularize_;
 
-        // updating the well_state based on well solution dwells
+        // updating the ws based on well solution dwells
         void updateWellState(const Simulator& simulator,
                              const BVectorWell& dwells,
-                             WellState<Scalar>& well_state,
+                             SingleWellState<Scalar>& ws,
                              DeferredLogger& deferred_logger);
 
         using WellConnectionProps = typename StdWellEval::StdWellConnections::Properties;
@@ -265,15 +265,15 @@ namespace Opm
         // pressure difference between well connections.
         WellConnectionProps
         computePropertiesForWellConnectionPressures(const Simulator& simulator,
-                                                    const WellState<Scalar>& well_state) const;
+                                                    const SingleWellState<Scalar>& ws) const;
 
         void computeWellConnectionDensitesPressures(const Simulator& simulator,
-                                                    const WellState<Scalar>& well_state,
+                                                    const SingleWellState<Scalar>& ws,
                                                     const WellConnectionProps& props,
                                                     DeferredLogger& deferred_logger);
 
         void computeWellConnectionPressures(const Simulator& simulator,
-                                            const WellState<Scalar>& well_state,
+                                            const SingleWellState<Scalar>& ws,
                                             DeferredLogger& deferred_logger);
 
         template<class Value>
@@ -313,10 +313,10 @@ namespace Opm
         std::vector<Scalar>
         computeWellPotentialWithTHP(const Simulator& ebosSimulator,
                                     DeferredLogger& deferred_logger,
-                                    const WellState<Scalar>& well_state) const;
+                                    const SingleWellState<Scalar>& ws) const;
 
         bool computeWellPotentialsImplicit(const Simulator& ebos_simulator,
-                                           const WellState<Scalar>& well_state,
+                                           const SingleWellState<Scalar>& ws,
                                            std::vector<Scalar>& well_potentials,
                                            DeferredLogger& deferred_logger) const;               
 
@@ -338,7 +338,7 @@ namespace Opm
                                           const bool stop_or_zero_rate_target,
                                           DeferredLogger& deferred_logger);
 
-        void updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
+        void updateWellStateFromPrimaryVariables(SingleWellState<Scalar>& ws,
                                                  const SummaryState& summary_state,
                                                  DeferredLogger& deferred_logger) const;
 
@@ -346,7 +346,7 @@ namespace Opm
                                             const double dt,
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
-                                            WellState<Scalar>& well_state,
+                                            SingleWellState<Scalar>& ws,
                                             const GroupState<Scalar>& group_state,
                                             DeferredLogger& deferred_logger) override;
 
@@ -354,13 +354,13 @@ namespace Opm
                                                 const double dt,
                                                 const Well::InjectionControls& inj_controls,
                                                 const Well::ProductionControls& prod_controls,
-                                                WellState<Scalar>& well_state,
+                                                SingleWellState<Scalar>& ws,
                                                 const GroupState<Scalar>& group_state,
                                                 DeferredLogger& deferred_logger);
 
         void calculateSinglePerf(const Simulator& simulator,
                                  const int perf,
-                                 WellState<Scalar>& well_state,
+                                 SingleWellState<Scalar>& ws,
                                  std::vector<RateVector>& connectionRates,
                                  std::vector<EvalWell>& cq_s,
                                  EvalWell& water_flux_s,
@@ -368,13 +368,13 @@ namespace Opm
                                  DeferredLogger& deferred_logger) const;
 
         // check whether the well is operable under BHP limit with current reservoir condition
-        void checkOperabilityUnderBHPLimit(const WellState<Scalar>& well_state,
+        void checkOperabilityUnderBHPLimit(const SingleWellState<Scalar>& ws,
                                            const Simulator& simulator,
                                            DeferredLogger& deferred_logger) override;
 
         // check whether the well is operable under THP limit with current reservoir condition
         void checkOperabilityUnderTHPLimit(const Simulator& simulator,
-                                           const WellState<Scalar>& well_state,
+                                           const SingleWellState<Scalar>& ws,
                                            DeferredLogger& deferred_logger) override;
 
         // updating the inflow based on the current reservoir condition
@@ -418,13 +418,13 @@ namespace Opm
 
         // handle the extra equations for polymer injectivity study
         void handleInjectivityEquations(const Simulator& simulator,
-                                        const WellState<Scalar>& well_state,
+                                        const SingleWellState<Scalar>& ws,
                                         const int perf,
                                         const EvalWell& water_flux_s,
                                         DeferredLogger& deferred_logger);
 
         void updateWaterThroughput(const double dt,
-                                   WellState<Scalar>& well_state) const override;
+                                   SingleWellState<Scalar>& ws) const override;
 
         // checking convergence of extra equations, if there are any
         void checkConvergenceExtraEqs(const std::vector<Scalar>& res,
@@ -433,13 +433,13 @@ namespace Opm
         // updating the connectionRates_ related polymer molecular weight
         void updateConnectionRatePolyMW(const EvalWell& cq_s_poly,
                                         const IntensiveQuantities& int_quants,
-                                        const WellState<Scalar>& well_state,
+                                        const SingleWellState<Scalar>& ws,
                                         const int perf,
                                         std::vector<RateVector>& connectionRates,
                                         DeferredLogger& deferred_logger) const;
 
         std::optional<Scalar>
-        computeBhpAtThpLimitProd(const WellState<Scalar>& well_state,
+        computeBhpAtThpLimitProd(const SingleWellState<Scalar>& ws,
                                  const Simulator& simulator,
                                  const SummaryState& summary_state,
                                  DeferredLogger& deferred_logger) const;

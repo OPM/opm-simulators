@@ -26,6 +26,7 @@
 
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <array>
@@ -38,7 +39,6 @@ namespace Opm
 class DeferredLogger;
 template<class Scalar> class MultisegmentWellGeneric;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
 
 template<class FluidSystem, class Indices>
 class MultisegmentWellPrimaryVariables
@@ -82,7 +82,7 @@ public:
     void resize(const int numSegments);
 
     //! \brief Copy values from well state.
-    void update(const WellState<Scalar>& well_state,
+    void update(const SingleWellState<Scalar>& ws,
                 const bool stop_or_zero_rate_target);
 
     //! \brief Update values from newton update vector.
@@ -95,7 +95,7 @@ public:
     //! \brief Copy values to well state.
     void copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                          const Scalar rho,
-                         WellState<Scalar>& well_state,
+                         SingleWellState<Scalar>& ws,
                          const SummaryState& summary_state,
                          DeferredLogger& deferred_logger) const;
 

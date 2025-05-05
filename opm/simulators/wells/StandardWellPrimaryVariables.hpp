@@ -26,6 +26,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/simulators/wells/StandardWellEquations.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <vector>
 
@@ -34,7 +35,7 @@ namespace Opm
 
 class DeferredLogger;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 //! \brief Class holding primary variables for StandardWell.
 template<class FluidSystem, class Indices>
@@ -99,12 +100,12 @@ public:
     int numWellEq() const { return numWellEq_; }
 
     //! \brief Copy values from well state.
-    void update(const WellState<Scalar>& well_state,
+    void update(const SingleWellState<Scalar>& ws,
                 const bool stop_or_zero_rate_target,
                 DeferredLogger& deferred_logger);
 
     //! \brief Copy polymer molecular weigt values from well state.
-    void updatePolyMW(const WellState<Scalar>& well_state);
+    void updatePolyMW(const SingleWellState<Scalar>& ws);
 
     //! \brief Update values from newton update vector.
     void updateNewton(const BVectorWell& dwells,
@@ -120,11 +121,11 @@ public:
     void checkFinite(DeferredLogger& deferred_logger) const;
 
     //! \brief Copy values to well state.
-    void copyToWellState(WellState<Scalar>& well_state,
+    void copyToWellState(SingleWellState<Scalar>& ws,
                          DeferredLogger& deferred_logger) const;
 
     //! \brief Copy polymer molecular weight values to well state.
-    void copyToWellStatePolyMW(WellState<Scalar>& well_state) const;
+    void copyToWellStatePolyMW(SingleWellState<Scalar>& ws) const;
 
     //! \brief Returns scaled volume fraction for a component.
     EvalWell volumeFractionScaled(const int compIdx) const;

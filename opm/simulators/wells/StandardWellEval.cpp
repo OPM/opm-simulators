@@ -35,7 +35,7 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <cmath>
 #include <cstddef>
@@ -70,19 +70,19 @@ extendEval(const Eval& in) const
 template<class FluidSystem, class Indices>
 void
 StandardWellEval<FluidSystem,Indices>::
-updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
+updateWellStateFromPrimaryVariables(SingleWellState<Scalar>& ws,
                                     const SummaryState& summary_state,
                                     DeferredLogger& deferred_logger) const
 {
-    this->primary_variables_.copyToWellState(well_state, deferred_logger);
+    this->primary_variables_.copyToWellState(ws, deferred_logger);
 
     WellBhpThpCalculator(baseif_).
             updateThp(connections_.rho(),
-                      [this,&well_state]() { return this->baseif_.getALQ(well_state); },
+                      [this,&ws]() { return this->baseif_.getALQ(ws); },
                       {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
-                      well_state, summary_state, deferred_logger);
+                      ws, summary_state, deferred_logger);
 }
 
 template<class FluidSystem, class Indices>
@@ -98,7 +98,7 @@ computeAccumWell()
 template<class FluidSystem, class Indices>
 ConvergenceReport
 StandardWellEval<FluidSystem,Indices>::
-getWellConvergence(const WellState<Scalar>& well_state,
+getWellConvergence(const SingleWellState<Scalar>& ws,
                    const std::vector<Scalar>& B_avg,
                    const Scalar maxResidualAllowed,
                    const Scalar tol_wells,
@@ -153,7 +153,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
     }
 
     WellConvergence(baseif_).
-        checkConvergenceControlEq(well_state,
+        checkConvergenceControlEq(ws,
                                   {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
                                   std::abs(this->linSys_.residual()[0][Bhp]),
                                   well_is_stopped, 
@@ -162,7 +162,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
 
     // for stopped well, we do not enforce the following checking to avoid dealing with sign of near-zero values
     // for BHP or THP controlled wells, we need to make sure the flow direction is correct
-    if (!well_is_stopped && baseif_.isPressureControlled(well_state)) {
+    if (!well_is_stopped && baseif_.isPressureControlled(ws)) {
         // checking the flow direction
         const Scalar sign = baseif_.isProducer() ? -1. : 1.;
         const auto weight_total_flux = this->primary_variables_.value(PrimaryVariables::WQTotal) * sign;

@@ -294,7 +294,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const bool use_well_weights,
                          const WellInterfaceGeneric<Scalar>& well,
                          const int bhp_var_index,
-                         const WellState<Scalar>& well_state) const
+                         const SingleWellState<Scalar>& ws) const
 {
     // This adds pressure quation for cpr
     // For use_well_weights=true
@@ -315,7 +315,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     const int number_cells = weights.size();
     const int welldof_ind = number_cells + well.indexOfWell();
     // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
-    if (!well.isPressureControlled(well_state) || use_well_weights) {
+    if (!well.isPressureControlled(ws) || use_well_weights) {
         // make coupling for reservoir to well
         for (auto colC = duneC_[0].begin(),
                   endC = duneC_[0].end(); colC != endC; ++colC) {
@@ -372,7 +372,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         diagElem = 1.0 / abs_max;
     } else {
         // set diagonal element
-        if (well.isPressureControlled(well_state)) {
+        if (well.isPressureControlled(ws)) {
             bweights[0][blockSz-1] = 1.0;
             diagElem = 1.0; // better scaling could have used the calculation below if weights were calculated
         } else {
@@ -399,7 +399,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     //
     jacobian[welldof_ind][welldof_ind] = diagElem;
     // set the matrix elements for well reservoir coupling
-    if (!well.isPressureControlled(well_state) || use_well_weights) {
+    if (!well.isPressureControlled(ws) || use_well_weights) {
         for (auto colB = duneB_[0].begin(),
                   endB = duneB_[0].end(); colB != endB; ++colB) {
             // map the well perforated cell index to global cell index
@@ -433,7 +433,7 @@ sumDistributed(Parallel::Communication comm)
                                  const bool,                                          \
                                  const WellInterfaceGeneric<T>&,                      \
                                  const int,                                           \
-                                 const WellState<T>&) const;
+                                 const SingleWellState<T>&) const;
 
 #define INSTANTIATE_TYPE(T) \
     INSTANTIATE(T,1)        \

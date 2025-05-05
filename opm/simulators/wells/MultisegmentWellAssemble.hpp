@@ -36,7 +36,7 @@ template<class FluidSystem, class Indices> class MultisegmentWellPrimaryVariable
 class Schedule;
 class SummaryState;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 //! \brief Class handling assemble of the equation system for MultisegmentWell.
 template<class FluidSystem, class Indices>
@@ -62,7 +62,7 @@ public:
     {}
 
     //! \brief Assemble control equation.
-    void assembleControlEq(const WellState<Scalar>& well_state,
+    void assembleControlEq(const SingleWellState<Scalar>& ws,
                            const GroupState<Scalar>& group_state,
                            const Schedule& schedule,
                            const SummaryState& summaryState,

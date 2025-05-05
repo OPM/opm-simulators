@@ -31,7 +31,7 @@ namespace Opm
 class ConvergenceReport;
 class DeferredLogger;
 template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 template<class Scalar>
 class WellConvergence
@@ -50,7 +50,7 @@ public:
     };
 
     // checking the convergence of the well control equations
-    void checkConvergenceControlEq(const WellState<Scalar>& well_state,
+    void checkConvergenceControlEq(const SingleWellState<Scalar>& ws,
                                    const Tolerances& tolerances,
                                    const Scalar well_control_residual,
                                    const bool well_is_stopped, 

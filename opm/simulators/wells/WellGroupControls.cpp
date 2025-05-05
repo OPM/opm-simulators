@@ -35,7 +35,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -47,7 +47,6 @@ template<class Scalar>
 template<class EvalWell>
 void WellGroupControls<Scalar>::
 getGroupInjectionControl(const Group& group,
-                         const WellState<Scalar>& well_state,
                          const GroupState<Scalar>& group_state,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
@@ -102,7 +101,7 @@ getGroupInjectionControl(const Group& group,
             // Inject share of parents control
             const auto& parent = schedule.getGroup(group.parent(), well_.currentStep());
             efficiencyFactor *= group.getGroupEfficiencyFactor();
-            getGroupInjectionControl(parent, well_state,
+            getGroupInjectionControl(parent,
                                      group_state, schedule,
                                      summaryState, injectorType,
                                      bhp, injection_rate,
@@ -149,7 +148,6 @@ getGroupInjectionControl(const Group& group,
                                                deferred_logger);
 
     WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
                                         group_state,
                                         summaryState,
                                         well_.currentStep(),
@@ -198,7 +196,7 @@ template<class Scalar>
 std::optional<Scalar>
 WellGroupControls<Scalar>::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState<Scalar>& well_state,
+                            const SingleWellState<Scalar>& ws,
                             const GroupState<Scalar>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
@@ -247,7 +245,7 @@ getGroupInjectionTargetRate(const Group& group,
             // Inject share of parents control
             const auto& parent = schedule.getGroup( group.parent(), well_.currentStep());
             efficiencyFactor *= group.getGroupEfficiencyFactor();
-            return getGroupInjectionTargetRate(parent, well_state, group_state,
+            return getGroupInjectionTargetRate(parent, ws, group_state,
                                                schedule, summaryState, injectorType,
                                                rateConverter, efficiencyFactor, deferred_logger);
         }
@@ -283,7 +281,6 @@ getGroupInjectionTargetRate(const Group& group,
                                                deferred_logger);
 
     WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
                                         group_state,
                                         summaryState,
                                         well_.currentStep(),
@@ -331,7 +328,6 @@ template<class Scalar>
 template<class EvalWell>
 void WellGroupControls<Scalar>::
 getGroupProductionControl(const Group& group,
-                          const WellState<Scalar>& well_state,
                           const GroupState<Scalar>& group_state,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
@@ -361,7 +357,7 @@ getGroupProductionControl(const Group& group,
             // Produce share of parents control
             const auto& parent = schedule.getGroup(group.parent(), well_.currentStep());
             efficiencyFactor *= group.getGroupEfficiencyFactor();
-            getGroupProductionControl(parent, well_state, group_state,
+            getGroupProductionControl(parent, group_state,
                                       schedule, summaryState, bhp,
                                       rates, rateConverter,
                                       efficiencyFactor, control_eq, deferred_logger);
@@ -401,7 +397,6 @@ getGroupProductionControl(const Group& group,
                                       group.has_gpmaint_control(currentGroupControl));
 
     WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
                                         group_state,
                                         summaryState,
                                         well_.currentStep(),
@@ -448,7 +443,7 @@ getGroupProductionControl(const Group& group,
 template<class Scalar>
 Scalar WellGroupControls<Scalar>::
 getGroupProductionTargetRate(const Group& group,
-                             const WellState<Scalar>& well_state,
+                             const SingleWellState<Scalar>& ws,
                              const GroupState<Scalar>& group_state,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
@@ -465,7 +460,7 @@ getGroupProductionTargetRate(const Group& group,
             // Produce share of parents control
             const auto& parent = schedule.getGroup(group.parent(), well_.currentStep());
             efficiencyFactor *= group.getGroupEfficiencyFactor();
-            return getGroupProductionTargetRate(parent, well_state, group_state,
+            return getGroupProductionTargetRate(parent, ws, group_state,
                                                 schedule, summaryState,
                                                 rateConverter, efficiencyFactor,
                                                 deferred_logger);
@@ -500,7 +495,6 @@ getGroupProductionTargetRate(const Group& group,
                                       group.has_gpmaint_control(currentGroupControl));
 
     WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
                                         group_state,
                                         summaryState,
                                         well_.currentStep(),
@@ -540,7 +534,6 @@ getGroupProductionTargetRate(const Group& group,
     }
     // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
-    const auto& ws = well_state.well(well_.indexOfWell());
     const auto& rates = ws.surface_rates;
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     Scalar scale = 1.0;
@@ -557,7 +550,6 @@ template<class Scalar>
 std::pair<Scalar, Group::ProductionCMode> WellGroupControls<Scalar>::
 getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const Group& group,
-                                      const WellState<Scalar>& well_state,
                                       const GroupState<Scalar>& group_state,
                                       const Schedule& schedule,
                                       const SummaryState& summaryState,
@@ -577,7 +569,7 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
             // Produce share of parents control
             const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
             efficiencyFactor *= group.getGroupEfficiencyFactor();
-            return getAutoChokeGroupProductionTargetRate(name, parent, well_state, group_state,
+            return getAutoChokeGroupProductionTargetRate(name, parent, group_state,
                                                 schedule, summaryState,
                                                 resv_coeff, efficiencyFactor, reportStepIdx, pu,
                                                 guideRate, deferred_logger);
@@ -610,7 +602,6 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       group.has_gpmaint_control(currentGroupControl));
 
     WGHelpers::FractionCalculator fcalc(schedule,
-                                        well_state,
                                         group_state,
                                         summaryState,
                                         reportStepIdx,
@@ -657,7 +648,6 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
 #define INSTANTIATE(T,...)                                               \
     template void WellGroupControls<T>::                                 \
         getGroupInjectionControl(const Group&,                           \
-                                 const WellState<T>&,                    \
                                  const GroupState<T>&,                   \
                                  const Schedule&,                        \
                                  const SummaryState&,                    \
@@ -670,7 +660,6 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
                                  DeferredLogger& deferred_logger) const; \
     template void WellGroupControls<T>::                                 \
         getGroupProductionControl(const Group&,                          \
-                                  const WellState<T>&,                   \
                                   const GroupState<T>&,                  \
                                   const Schedule&,                       \
                                   const SummaryState&,                   \

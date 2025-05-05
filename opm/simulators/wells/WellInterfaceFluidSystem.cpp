@@ -38,7 +38,6 @@
 #include <opm/simulators/wells/WellGroupConstraints.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
-#include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm
 {
@@ -179,7 +178,7 @@ checkIndividualConstraints(SingleWellState<Scalar>& ws,
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkGroupConstraints(WellState<Scalar>& well_state,
+checkGroupConstraints(SingleWellState<Scalar>& ws,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -200,7 +199,7 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             this->rateConverter().calcInjCoeff(id, region, coeff);
     };
 
-    return WellGroupConstraints(*this).checkGroupConstraints(well_state, group_state,
+    return WellGroupConstraints(*this).checkGroupConstraints(ws, group_state,
                                                              schedule, summaryState,
                                                              rCoeff, deferred_logger);
 }
@@ -208,18 +207,18 @@ checkGroupConstraints(WellState<Scalar>& well_state,
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkConstraints(WellState<Scalar>& well_state,
+checkConstraints(SingleWellState<Scalar>& ws,
                  const GroupState<Scalar>& group_state,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
                  DeferredLogger& deferred_logger) const
 {
-    const bool ind_broken = checkIndividualConstraints(well_state.well(this->index_of_well_),
+    const bool ind_broken = checkIndividualConstraints(ws,
                                                        summaryState, deferred_logger);
     if (ind_broken) {
         return true;
     } else {
-        return checkGroupConstraints(well_state, group_state, schedule,
+        return checkGroupConstraints(ws, group_state, schedule,
                                      summaryState, deferred_logger);
     }
 }
@@ -228,7 +227,7 @@ template<typename FluidSystem>
 std::optional<typename WellInterfaceFluidSystem<FluidSystem>::Scalar>
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState<Scalar>& well_state,
+                            const SingleWellState<Scalar>& ws,
                             const GroupState<Scalar>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
@@ -248,7 +247,7 @@ getGroupInjectionTargetRate(const Group& group,
     };
 
     return WellGroupControls(*this).getGroupInjectionTargetRate(group,
-                                                                well_state,
+                                                                ws,
                                                                 group_state,
                                                                 schedule,
                                                                 summaryState,
@@ -262,7 +261,7 @@ template<typename FluidSystem>
 typename WellInterfaceFluidSystem<FluidSystem>::Scalar
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupProductionTargetRate(const Group& group,
-                             const WellState<Scalar>& well_state,
+                             const SingleWellState<Scalar>& ws,
                              const GroupState<Scalar>& group_state,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
@@ -281,7 +280,7 @@ getGroupProductionTargetRate(const Group& group,
     };
 
     return WellGroupControls(*this).getGroupProductionTargetRate(group,
-                                                                 well_state,
+                                                                 ws,
                                                                  group_state,
                                                                  schedule,
                                                                  summaryState,
@@ -295,19 +294,19 @@ bool
 WellInterfaceFluidSystem<FluidSystem>::
 zeroGroupRateTarget(const SummaryState& summary_state,
                     const Schedule& schedule,
-                    const WellState<Scalar>& well_state,
+                    const SingleWellState<Scalar>& ws,
                     const GroupState<Scalar>& group_state,
                     DeferredLogger& deferred_logger) const
 {
     const auto& well = this->well_ecl_;
     const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
     const Scalar efficiencyFactor = well.getEfficiencyFactor() *
-                                    well_state[well.name()].efficiency_scaling_factor;
+                                    ws.efficiency_scaling_factor;
     if (this->isInjector()) {
         // Check injector under group control
         const auto& controls = well.injectionControls(summary_state);
         const std::optional<Scalar> target =
-            this->getGroupInjectionTargetRate(group, well_state,
+            this->getGroupInjectionTargetRate(group, ws,
                                               group_state, schedule,
                                               summary_state, controls.injector_type,
                                               efficiencyFactor, deferred_logger);
@@ -319,7 +318,7 @@ zeroGroupRateTarget(const SummaryState& summary_state,
     } else {
         // Check producer under group control
         const Scalar scale =
-            this->getGroupProductionTargetRate(group, well_state,
+            this->getGroupProductionTargetRate(group, ws,
                                                group_state, schedule,
                                                summary_state, efficiencyFactor,
                                                deferred_logger);

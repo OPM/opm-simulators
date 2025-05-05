@@ -34,7 +34,8 @@ class DeferredLogger;
 class SummaryState;
 class Well;
 template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
+template<class Scalar> class SingleWellState;
 
 //! \brief Class for computing BHP limits.
 template<class Scalar>
@@ -84,37 +85,37 @@ public:
     void updateThp(const Scalar rho,
                    const std::function<Scalar()>& alq_value,
                    const std::array<unsigned,3>& active,
-                   WellState<Scalar>& well_state,
+                   SingleWellState<Scalar>& ws,
                    const SummaryState& summary_state,
                    DeferredLogger& deferred_logger) const;
 
     template<class EvalWell>
-    EvalWell calculateBhpFromThp(const WellState<Scalar>& well_state,
+    EvalWell calculateBhpFromThp(const SingleWellState<Scalar>& ws,
                                  const std::vector<EvalWell>& rates,
                                  const Well& well,
                                  const SummaryState& summaryState,
                                  const Scalar rho,
                                  DeferredLogger& deferred_logger) const;
 
-    Scalar calculateMinimumBhpFromThp(const WellState<Scalar>& well_state,
+    Scalar calculateMinimumBhpFromThp(const SingleWellState<Scalar>& ws,
                                       const Well& well,
                                       const SummaryState& summaryState,
                                       const Scalar rho) const;
 
-  bool isStableSolution(const WellState<Scalar>& well_state,
+  bool isStableSolution(const SingleWellState<Scalar>& ws,
                         const Well& well,
                         const std::vector<Scalar>& rates,
                         const SummaryState& summaryState) const;   
 
   std::optional<Scalar>
-  estimateStableBhp (const WellState<Scalar>& well_state,
+  estimateStableBhp (const SingleWellState<Scalar>& ws,
                     const Well& well,
                     const std::vector<Scalar>& rates,
                     const Scalar rho,
                     const SummaryState& summaryState) const;    
 
   std::pair<Scalar, Scalar>
-  getFloIPR(const WellState<Scalar>& well_state,
+  getFloIPR(const SingleWellState<Scalar>& ws,
             const Well& well, 
             const SummaryState& summary_state) const;
 

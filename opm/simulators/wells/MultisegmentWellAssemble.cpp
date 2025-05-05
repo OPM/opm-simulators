@@ -37,7 +37,7 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 namespace Opm {
 
@@ -84,7 +84,7 @@ private:
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellAssemble<FluidSystem,Indices>::
-assembleControlEq(const WellState<Scalar>& well_state,
+assembleControlEq(const SingleWellState<Scalar>& ws,
                   const GroupState<Scalar>& group_state,
                   const Schedule& schedule,
                   const SummaryState& summaryState,
@@ -152,7 +152,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
         // Setup function for evaluation of BHP from THP (used only if needed).
         std::function<EvalWell()> bhp_from_thp = [&]() {
             const auto rates = getRates();
-            return WellBhpThpCalculator(well_).calculateBhpFromThp(well_state,
+            return WellBhpThpCalculator(well_).calculateBhpFromThp(ws,
                                                                    rates,
                                                                    well,
                                                                    summaryState,
@@ -160,7 +160,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
                                                                    deferred_logger);
         };
         // Call generic implementation.
-        WellAssemble(well_).assembleControlEqInj(well_state,
+        WellAssemble(well_).assembleControlEqInj(ws,
                                                  group_state,
                                                  schedule,
                                                  summaryState,
@@ -175,7 +175,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
         const auto rates = getRates();
         // Setup function for evaluation of BHP from THP (used only if needed).
         std::function<EvalWell()> bhp_from_thp = [&]() {
-            return WellBhpThpCalculator(well_).calculateBhpFromThp(well_state,
+            return WellBhpThpCalculator(well_).calculateBhpFromThp(ws,
                                                                    rates,
                                                                    well,
                                                                    summaryState,
@@ -183,7 +183,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
                                                                    deferred_logger);
         };
         // Call generic implementation.
-        WellAssemble(well_).assembleControlEqProd(well_state,
+        WellAssemble(well_).assembleControlEqProd(ws,
                                                   group_state,
                                                   schedule,
                                                   summaryState,

@@ -40,7 +40,7 @@ template<class Scalar> class GroupState;
 class Schedule;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 struct WellInjectionControls;
 struct WellProductionControls;
 
@@ -55,7 +55,7 @@ public:
     explicit WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well);
 
     template<class EvalWell>
-    void assembleControlEqProd(const WellState<Scalar>& well_state,
+    void assembleControlEqProd(const SingleWellState<Scalar>& ws,
                                const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
@@ -67,7 +67,7 @@ public:
                                DeferredLogger& deferred_logger) const;
 
     template<class EvalWell>
-    void assembleControlEqInj(const WellState<Scalar>& well_state,
+    void assembleControlEqInj(const SingleWellState<Scalar>& ws,
                               const GroupState<Scalar>& group_state,
                               const Schedule& schedule,
                               const SummaryState& summaryState,

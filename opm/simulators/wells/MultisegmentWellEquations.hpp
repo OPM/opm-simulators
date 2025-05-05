@@ -45,7 +45,7 @@ template<class Scalar> class MultisegmentWellGeneric;
 template<class Scalar> class WellContributions;
 #endif
 template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 template<class Scalar, int numWellEq, int numEq>
 class MultisegmentWellEquations
@@ -121,7 +121,7 @@ public:
                                   const bool /*use_well_weights*/,
                                   const WellInterfaceGeneric<Scalar>& well,
                                   const int seg_pressure_var_ind,
-                                  const WellState<Scalar>& well_state) const;
+                                  const SingleWellState<Scalar>& well_state) const;
 
     //! \brief Sum with off-process contribution.
     void sumDistributed(Parallel::Communication comm);

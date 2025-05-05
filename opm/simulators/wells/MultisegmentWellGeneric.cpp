@@ -32,7 +32,7 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <cmath>
 
@@ -52,9 +52,8 @@ void
 MultisegmentWellGeneric<Scalar>::
 scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
                                const std::vector<std::vector<int>>& segment_perforations,
-                               WellState<Scalar>& well_state) const
+                               SingleWellState<Scalar>& ws) const
 {
-    auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
     Scalar sumTw = 0;
@@ -102,9 +101,8 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
 template <typename Scalar>
 void
 MultisegmentWellGeneric<Scalar>::
-scaleSegmentPressuresWithBhp(WellState<Scalar>& well_state) const
+scaleSegmentPressuresWithBhp(SingleWellState<Scalar>& ws) const
 {
-    auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     segments.scale_pressure(ws.bhp);
 }

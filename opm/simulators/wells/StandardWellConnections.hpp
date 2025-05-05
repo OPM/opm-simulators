@@ -37,7 +37,7 @@ namespace Opm
 class DeferredLogger;
 enum class Phase;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 template<class Scalar> class PerfData;
 
 template<class FluidSystem, class Indices>
@@ -73,12 +73,12 @@ public:
     };
 
     Properties
-    computePropertiesForPressures(const WellState<Scalar>&         well_state,
+    computePropertiesForPressures(const SingleWellState<Scalar>&         ws,
                                   const PressurePropertyFunctions& propFunc) const;
 
     //! \brief Compute connection properties (densities, pressure drop, ...)
     void computeProperties(const bool                      stop_or_zero_rate_target,
-                           const WellState<Scalar>&        well_state,
+                           const SingleWellState<Scalar>&        ws,
                            const DensityPropertyFunctions& prop_func,
                            const Properties&               props,
                            DeferredLogger&                 deferred_logger);

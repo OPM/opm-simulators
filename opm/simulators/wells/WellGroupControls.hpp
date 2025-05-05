@@ -43,6 +43,7 @@ class Schedule;
 class SummaryState;
 template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 //! \brief Class for computing well group controls.
 template<class Scalar>
@@ -56,7 +57,6 @@ public:
 
     template<class EvalWell>
     void getGroupInjectionControl(const Group& group,
-                                  const WellState<Scalar>& well_state,
                                   const GroupState<Scalar>& group_state,
                                   const Schedule& schedule,
                                   const SummaryState& summaryState,
@@ -70,7 +70,7 @@ public:
 
     std::optional<Scalar>
     getGroupInjectionTargetRate(const Group& group,
-                                const WellState<Scalar>& well_state,
+                                const SingleWellState<Scalar>& ws,
                                 const GroupState<Scalar>& group_state,
                                 const Schedule& schedule,
                                 const SummaryState& summaryState,
@@ -81,7 +81,6 @@ public:
 
     template<class EvalWell>
     void getGroupProductionControl(const Group& group,
-                                   const WellState<Scalar>& well_state,
                                    const GroupState<Scalar>& group_state,
                                    const Schedule& schedule,
                                    const SummaryState& summaryState,
@@ -93,7 +92,7 @@ public:
                                    DeferredLogger& deferred_logger) const;
 
     Scalar getGroupProductionTargetRate(const Group& group,
-                                        const WellState<Scalar>& well_state,
+                                        const SingleWellState<Scalar>& ws,
                                         const GroupState<Scalar>& group_state,
                                         const Schedule& schedule,
                                         const SummaryState& summaryState,
@@ -103,7 +102,6 @@ public:
 
     static std::pair<Scalar, Group::ProductionCMode> getAutoChokeGroupProductionTargetRate(const std::string& name,
                                                         const Group& parent,
-                                                        const WellState<Scalar>& well_state,
                                                         const GroupState<Scalar>& group_state,
                                                         const Schedule& schedule,
                                                         const SummaryState& summaryState,

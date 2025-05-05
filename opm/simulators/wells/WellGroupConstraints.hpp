@@ -41,7 +41,7 @@ using RegionId = int;
 class Schedule;
 class SummaryState;
 template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 //! \brief Class for computing well group constraints.
 template<class Scalar>
@@ -55,7 +55,7 @@ public:
                                             const std::optional<std::string>&,
                                             std::vector<Scalar>&)>;
 
-    bool checkGroupConstraints(WellState<Scalar>& well_state,
+    bool checkGroupConstraints(SingleWellState<Scalar>& ws,
                                const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
@@ -65,7 +65,7 @@ public:
 private:
     std::pair<bool, Scalar>
     checkGroupConstraintsInj(const Group& group,
-                             const WellState<Scalar>& well_state,
+                             const SingleWellState<Scalar>& ws,
                              const GroupState<Scalar>& group_state,
                              const Scalar efficiencyFactor,
                              const Schedule& schedule,
@@ -75,7 +75,7 @@ private:
 
     std::pair<bool, Scalar>
     checkGroupConstraintsProd(const Group& group,
-                              const WellState<Scalar>& well_state,
+                              const SingleWellState<Scalar>& ws,
                               const GroupState<Scalar>& group_state,
                               const Scalar efficiencyFactor,
                               const Schedule& schedule,

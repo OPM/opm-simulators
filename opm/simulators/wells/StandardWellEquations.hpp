@@ -40,7 +40,7 @@ template<class Scalar, int numEq> class StandardWellEquationAccess;
 template<class Scalar> class WellContributions;
 #endif
 template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 template<class Scalar, int numEq>
 class StandardWellEquations
@@ -115,7 +115,7 @@ public:
                                   const bool use_well_weights,
                                   const WellInterfaceGeneric<Scalar>& well,
                                   const int bhp_var_index,
-                                  const WellState<Scalar>& well_state) const;
+                                  const SingleWellState<Scalar>& ws) const;
 
     //! \brief Get the number of blocks of the C and B matrices.
     unsigned int getNumBlocks() const;

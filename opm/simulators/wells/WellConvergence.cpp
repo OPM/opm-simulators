@@ -25,7 +25,7 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <cmath>
 #include <stdexcept>
@@ -34,7 +34,7 @@ namespace Opm {
 
 template<class Scalar>
 void WellConvergence<Scalar>::
-checkConvergenceControlEq(const WellState<Scalar>& well_state,
+checkConvergenceControlEq(const SingleWellState<Scalar>& ws,
                           const Tolerances& tolerances,
                           const Scalar well_control_residual,
                           const bool well_is_stopped, 
@@ -45,8 +45,6 @@ checkConvergenceControlEq(const WellState<Scalar>& well_state,
     using CR = ConvergenceReport;
     CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
 
-    const int well_index = well_.indexOfWell();
-    const auto& ws = well_state.well(well_index);
     if (well_is_stopped) {
         ctrltype = CR::WellFailure::Type::ControlRate;
         control_tolerance = tolerances.rates; // use smaller tolerance for zero control?

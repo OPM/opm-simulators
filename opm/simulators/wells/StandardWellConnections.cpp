@@ -35,7 +35,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -460,7 +460,7 @@ computeDensitiesForStoppedProducer(const DensityPropertyFunctions& prop_func)
 template<class FluidSystem, class Indices>
 typename StandardWellConnections<FluidSystem, Indices>::Properties
 StandardWellConnections<FluidSystem,Indices>::
-computePropertiesForPressures(const WellState<Scalar>&         well_state,
+computePropertiesForPressures(const SingleWellState<Scalar>&         ws,
                               const PressurePropertyFunctions& prop_func) const
 {
     auto props = Properties{};
@@ -470,8 +470,6 @@ computePropertiesForPressures(const WellState<Scalar>&         well_state,
 
     props.b_perf        .resize(nperf * this->well_.numComponents());
     props.surf_dens_perf.resize(nperf * this->well_.numComponents());
-
-    const auto& ws = well_state.well(this->well_.indexOfWell());
 
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -664,7 +662,7 @@ copyInPerforationRates(const Properties&       props,
 template<class FluidSystem, class Indices>
 void StandardWellConnections<FluidSystem,Indices>::
 computeProperties(const bool                      stopped_or_zero_rate_target,
-                  const WellState<Scalar>&        well_state,
+                  const SingleWellState<Scalar>&        ws,
                   const DensityPropertyFunctions& prop_func,
                   const Properties&               props,
                   DeferredLogger&                 deferred_logger)
@@ -677,7 +675,7 @@ computeProperties(const bool                      stopped_or_zero_rate_target,
     else {
         // Injector or flowing producer.
         const auto perfRates = this->copyInPerforationRates
-            (props, well_state.well(this->well_.indexOfWell()).perf_data);
+            (props, ws.perf_data);
 
         this->computeDensities(perfRates, props, deferred_logger);
     }

@@ -38,7 +38,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <fmt/format.h>
 
@@ -119,7 +119,7 @@ resize(const int numWellEq)
 
 template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
-update(const WellState<Scalar>& well_state,
+update(const SingleWellState<Scalar>& ws,
        const bool stop_or_zero_rate_target,
        DeferredLogger& deferred_logger)
 {
@@ -127,10 +127,8 @@ update(const WellState<Scalar>& well_state,
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
 
-    const int well_index = well_.indexOfWell();
     const int np = well_.numPhases();
     const auto& pu = well_.phaseUsage();
-    const auto& ws = well_state.well(well_index);
     // the weighted total well rate
     Scalar total_well_rate = 0.0;
     for (int p = 0; p < np; ++p) {
@@ -228,10 +226,9 @@ update(const WellState<Scalar>& well_state,
 
 template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
-updatePolyMW(const WellState<Scalar>& well_state)
+updatePolyMW(const SingleWellState<Scalar>& ws)
 {
     if (well_.isInjector()) {
-        const auto& ws = well_state.well(well_.indexOfWell());
         const auto& perf_data = ws.perf_data;
         const auto& water_velocity = perf_data.water_velocity;
         const auto& skin_pressure = perf_data.skin_pressure;
@@ -328,7 +325,7 @@ updateNewtonPolyMW(const BVectorWell& dwells)
 
 template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
-copyToWellState(WellState<Scalar>& well_state,
+copyToWellState(SingleWellState<Scalar>& ws,
                 DeferredLogger& deferred_logger) const
 {
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -398,7 +395,6 @@ copyToWellState(WellState<Scalar>& well_state,
         F[pu.phase_pos[Gas]] += F_solvent;
     }
 
-    auto& ws = well_state.well(well_.indexOfWell());
     ws.bhp = value_[Bhp];
 
     // calculate the phase rates based on the primary variables
@@ -433,10 +429,9 @@ copyToWellState(WellState<Scalar>& well_state,
 
 template<class FluidSystem, class Indices>
 void StandardWellPrimaryVariables<FluidSystem,Indices>::
-copyToWellStatePolyMW(WellState<Scalar>& well_state) const
+copyToWellStatePolyMW(SingleWellState<Scalar>& ws) const
 {
     if (well_.isInjector()) {
-        auto& ws = well_state.well(well_.indexOfWell());
         auto& perf_data = ws.perf_data;
         auto& perf_water_velocity = perf_data.water_velocity;
         auto& perf_skin_pressure = perf_data.skin_pressure;

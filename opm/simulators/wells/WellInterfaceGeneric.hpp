@@ -44,7 +44,7 @@ struct PhaseUsage;
 class SummaryState;
 template<class Scalar> class VFPProperties;
 class WellTestState;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 template<class Scalar> class SingleWellState;
 class Group;
 class Schedule;
@@ -100,8 +100,8 @@ public:
     void closeCompletions(const WellTestState& wellTestState);
 
     void setVFPProperties(const VFPProperties<Scalar>* vfp_properties_arg);
-    void setPrevSurfaceRates(WellState<Scalar>& well_state,
-                             const WellState<Scalar>& prev_well_state) const;
+    void setPrevSurfaceRates(SingleWellState<Scalar>& ws,
+                             const SingleWellState<Scalar>& prev_well_state) const;
     void setGuideRate(const GuideRate* guide_rate_arg);
     void setWellEfficiencyFactor(const Scalar efficiency_factor);
     void setRepRadiusPerfLength();
@@ -148,7 +148,7 @@ public:
     const std::map<int,std::vector<int>>& getCompletions() const { return completions_; }
 
     Scalar getTHPConstraint(const SummaryState& summaryState) const;
-    Scalar getALQ(const WellState<Scalar>& well_state) const;
+    Scalar getALQ(const SingleWellState<Scalar>& ws) const;
     Scalar wsolvent() const;
     Scalar rsRvInj() const;
 
@@ -178,7 +178,7 @@ public:
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
-    bool isPressureControlled(const WellState<Scalar>& well_state) const;
+    bool isPressureControlled(const SingleWellState<Scalar>& ws) const;
 
     Scalar wellEfficiencyFactor() const { return well_efficiency_factor_; }
 
@@ -220,20 +220,20 @@ protected:
     int polymerWaterTable_() const;
 
     bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
-                                           const WellState<Scalar>& well_state) const;
+                                           const SingleWellState<Scalar>& ws) const;
 
     bool wellUnderGroupControl(const SingleWellState<Scalar>& ws) const;
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<Scalar>& well_potentials,
-                          const WellState<Scalar>& well_state);
+                          const SingleWellState<Scalar>& ws);
 
     void checkNegativeWellPotentials(std::vector<Scalar>& well_potentials,
                                      const bool checkOperability,
                                      DeferredLogger& deferred_logger);
 
     void prepareForPotentialCalculations(const SummaryState& summary_state,
-                                         WellState<Scalar>& well_state,
+                                         SingleWellState<Scalar>& ws,
                                          Well::InjectionControls& inj_controls,
                                          Well::ProductionControls& prod_controls) const;
 

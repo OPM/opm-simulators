@@ -156,11 +156,11 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const Simulator& simulator,
-                           const WellState<Scalar>& well_state,
+                           const SingleWellState<Scalar>& ws,
                            DeferredLogger& deferred_logger)
     {
-        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
-        this->primary_variables_.update(well_state, stop_or_zero_rate_target);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, ws, deferred_logger);
+        this->primary_variables_.update(ws, stop_or_zero_rate_target);
     }
 
 
@@ -173,16 +173,16 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellStateWithTarget(const Simulator& simulator,
                               const GroupState<Scalar>& group_state,
-                              WellState<Scalar>& well_state,
+                              SingleWellState<Scalar>& ws,
                               DeferredLogger&  deferred_logger) const
     {
-        Base::updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
+        Base::updateWellStateWithTarget(simulator, group_state, ws, deferred_logger);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
         this->scaleSegmentRatesWithWellRates(this->segments_.inlets(),
                                              this->segments_.perforations(),
-                                             well_state);
-        this->scaleSegmentPressuresWithBhp(well_state);
+                                             ws);
+        this->scaleSegmentPressuresWithBhp(ws);
     }
 
 
@@ -193,12 +193,12 @@ namespace Opm
     ConvergenceReport
     MultisegmentWell<TypeTag>::
     getWellConvergence(const Simulator& /* simulator */,
-                       const WellState<Scalar>& well_state,
+                       const SingleWellState<Scalar>& ws,
                        const std::vector<Scalar>& B_avg,
                        DeferredLogger& deferred_logger,
                        const bool relax_tolerance) const
     {
-        return this->MSWEval::getWellConvergence(well_state,
+        return this->MSWEval::getWellConvergence(ws,
                                                  B_avg,
                                                  deferred_logger,
                                                  this->param_.max_residual_allowed_,
@@ -255,7 +255,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                           const BVector& x,
-                                          WellState<Scalar>& well_state,
+                                          SingleWellState<Scalar>& ws,
                                           DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) {
@@ -264,7 +264,7 @@ namespace Opm
 
         BVectorWell xw(1);
         this->linSys_.recoverSolutionWell(x, xw);
-        updateWellState(simulator, xw, well_state, deferred_logger);
+        updateWellState(simulator, xw, ws, deferred_logger);
     }
 
 
@@ -275,12 +275,12 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     computeWellPotentials(const Simulator& simulator,
-                          const WellState<Scalar>& well_state,
+                          const SingleWellState<Scalar>& ws,
                           std::vector<Scalar>& well_potentials,
                           DeferredLogger& deferred_logger)
     {
         const auto [compute_potential, bhp_controlled_well] =
-            this->WellInterfaceGeneric<Scalar>::computeWellPotentials(well_potentials, well_state);
+            this->WellInterfaceGeneric<Scalar>::computeWellPotentials(well_potentials, ws);
 
         if (!compute_potential) {
             return;
@@ -289,7 +289,7 @@ namespace Opm
         debug_cost_counter_ = 0;
         bool converged_implicit = false;
         if (this->param_.local_well_solver_control_switching_) {
-            converged_implicit = computeWellPotentialsImplicit(simulator, well_state, well_potentials, deferred_logger);
+            converged_implicit = computeWellPotentialsImplicit(simulator, ws, well_potentials, deferred_logger);
             if (!converged_implicit) {
                 deferred_logger.debug("Implicit potential calculations failed for well "
                                        + this->name() + ",  reverting to original aproach.");
@@ -302,7 +302,7 @@ namespace Opm
                 computeWellRatesAtBhpLimit(simulator, well_potentials, deferred_logger);
             } else {
                 well_potentials = computeWellPotentialWithTHP(
-                    well_state, simulator, deferred_logger);
+                    ws, simulator, deferred_logger);
             }
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
@@ -418,7 +418,7 @@ namespace Opm
             ws.production_cmode = Well::ProducerCMode::BHP;
         }
         ws.bhp = bhp;
-        well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
+        well_copy.scaleSegmentPressuresWithBhp(ws);
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp
         const int np = this->number_of_phases_;
@@ -434,12 +434,12 @@ namespace Opm
         }
         well_copy.scaleSegmentRatesWithWellRates(this->segments_.inlets(),
                                                  this->segments_.perforations(),
-                                                 well_state_copy);
+                                                 ws);
 
-        well_copy.calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
+        well_copy.calculateExplicitQuantities(simulator, ws, deferred_logger);
         const double dt = simulator.timeStepSize();
         // iterate to get a solution at the given bhp.
-        well_copy.iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, well_state_copy, group_state,
+        well_copy.iterateWellEqWithControl(simulator, dt, inj_controls, prod_controls, ws, group_state,
                                            deferred_logger);
 
         // compute the potential and store in the flux vector.
@@ -457,7 +457,7 @@ namespace Opm
     template<typename TypeTag>
     std::vector<typename MultisegmentWell<TypeTag>::Scalar>
     MultisegmentWell<TypeTag>::
-    computeWellPotentialWithTHP(const WellState<Scalar>& well_state,
+    computeWellPotentialWithTHP(const SingleWellState<Scalar>& ws,
                                 const Simulator& simulator,
                                 DeferredLogger& deferred_logger) const
     {
@@ -484,7 +484,7 @@ namespace Opm
             }
         } else {
             auto bhp_at_thp_limit = computeBhpAtThpLimitProd(
-                  well_state, simulator, summary_state, deferred_logger);
+                  ws, simulator, summary_state, deferred_logger);
             if (bhp_at_thp_limit) {
                 const auto& controls = well.productionControls(summary_state);
                 const Scalar bhp = std::max(*bhp_at_thp_limit,
@@ -509,7 +509,7 @@ namespace Opm
     bool
     MultisegmentWell<TypeTag>::
     computeWellPotentialsImplicit(const Simulator& simulator,
-                                  const WellState<Scalar>& well_state,
+                                  const SingleWellState<Scalar>& ws,
                                   std::vector<Scalar>& well_potentials,
                                   DeferredLogger& deferred_logger) const
     {
@@ -520,9 +520,8 @@ namespace Opm
         well_copy.debug_cost_counter_ = 0;
 
         // store a copy of the well state, we don't want to update the real well state
-        WellState<Scalar> well_state_copy = well_state;
+        SingleWellState<Scalar> ws_copy = ws;
         const auto& group_state = simulator.problem().wellModel().groupState();
-        auto& ws = well_state_copy.well(this->index_of_well_);
         
         // get current controls        
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -534,34 +533,34 @@ namespace Opm
             : Well::ProductionControls(0);
         
         // prepare/modify well state and control
-        well_copy.prepareForPotentialCalculations(summary_state, well_state_copy, inj_controls, prod_controls);
+        well_copy.prepareForPotentialCalculations(summary_state, ws_copy, inj_controls, prod_controls);
         
-        well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
+        well_copy.scaleSegmentPressuresWithBhp(ws_copy);
 
         // initialize rates from previous potentials
         const int np = this->number_of_phases_;
         bool trivial = true;
         for (int phase = 0; phase < np; ++phase){
-            trivial = trivial && (ws.well_potentials[phase] == 0.0) ;
+            trivial = trivial && (ws_copy.well_potentials[phase] == 0.0) ;
         }
         if (!trivial) {
             const Scalar sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
             for (int phase = 0; phase < np; ++phase) {
-                ws.surface_rates[phase] = sign * ws.well_potentials[phase];
+                ws_copy.surface_rates[phase] = sign * ws_copy.well_potentials[phase];
             }
         }
         well_copy.scaleSegmentRatesWithWellRates(this->segments_.inlets(),
                                                  this->segments_.perforations(),
-                                                 well_state_copy);
+                                                 ws_copy);
 
-        well_copy.calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
+        well_copy.calculateExplicitQuantities(simulator, ws_copy, deferred_logger);
         const double dt = simulator.timeStepSize();
         // solve equations
         bool converged = false;
         if (this->well_ecl_.isProducer() && this->wellHasTHPConstraints(summary_state)) {
-            converged = well_copy.solveWellWithTHPConstraint(simulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
+            converged = well_copy.solveWellWithTHPConstraint(simulator, dt, inj_controls, prod_controls, ws_copy, group_state, deferred_logger);
         } else {
-            converged = well_copy.iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
+            converged = well_copy.iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, ws_copy, group_state, deferred_logger);
         }
 
         // fetch potentials (sign is updated on the outside).
@@ -579,7 +578,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     solveEqAndUpdateWellState(const Simulator& simulator,
-                              WellState<Scalar>& well_state,
+                              SingleWellState<Scalar>& ws,
                               DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
@@ -589,7 +588,7 @@ namespace Opm
         try{
             const BVectorWell dx_well = this->linSys_.solve();
 
-            updateWellState(simulator, dx_well, well_state, deferred_logger);
+            updateWellState(simulator, dx_well, ws, deferred_logger);
         }
         catch(const NumericalProblem& exp) {
             // Add information about the well and log to deferred logger
@@ -686,7 +685,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellState(const Simulator& simulator,
                     const BVectorWell& dwells,
-                    WellState<Scalar>& well_state,
+                    SingleWellState<Scalar>& ws,
                     DeferredLogger& deferred_logger,
                     const Scalar relaxation_factor)
     {
@@ -695,7 +694,7 @@ namespace Opm
         const Scalar dFLimit = this->param_.dwell_fraction_max_;
         const Scalar max_pressure_change = this->param_.max_pressure_change_ms_wells_;
         const bool stop_or_zero_rate_target =
-            this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+            this->stoppedOrZeroRateTarget(simulator, ws, deferred_logger);
         this->primary_variables_.updateNewton(dwells,
                                               relaxation_factor,
                                               dFLimit,
@@ -704,16 +703,15 @@ namespace Opm
 
         const auto& summary_state = simulator.vanguard().summaryState();
         this->primary_variables_.copyToWellState(*this, getRefDensity(),
-                                                 well_state,
+                                                 ws,
                                                  summary_state,
                                                  deferred_logger);
 
         {
-            auto& ws = well_state.well(this->index_of_well_);
             this->segments_.copyPhaseDensities(ws.pu, ws.segments);
         }
 
-        Base::calculateReservoirRates(simulator.vanguard().eclState().runspec().co2Storage(), well_state.well(this->index_of_well_));
+        Base::calculateReservoirRates(simulator.vanguard().eclState().runspec().co2Storage(), ws);
     }
 
 
@@ -724,10 +722,10 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     calculateExplicitQuantities(const Simulator& simulator,
-                                const WellState<Scalar>& well_state,
+                                const SingleWellState<Scalar>& ws,
                                 DeferredLogger& deferred_logger)
     {
-        updatePrimaryVariables(simulator, well_state, deferred_logger);
+        updatePrimaryVariables(simulator, ws, deferred_logger);
         computePerfCellPressDiffs(simulator);
         computeInitialSegmentFluids(simulator);
     }
@@ -741,7 +739,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateProductivityIndex(const Simulator& simulator,
                             const WellProdIndexCalculator<Scalar>& wellPICalc,
-                            WellState<Scalar>& well_state,
+                            SingleWellState<Scalar>& ws,
                             DeferredLogger& deferred_logger) const
     {
         auto fluidState = [&simulator, this](const int local_perf_index)
@@ -762,7 +760,6 @@ namespace Opm
             std::transform(src, src + np, dest, dest, std::plus<>{});
         };
 
-        auto& ws = well_state.well(this->index_of_well_);
         auto& perf_data = ws.perf_data;
         auto* connPI = perf_data.prod_index.data();
         auto* wellPI = ws.productivity_index.data();
@@ -860,7 +857,7 @@ namespace Opm
                              const BVector& weights,
                              const int pressureVarIndex,
                              const bool use_well_weights,
-                             const WellState<Scalar>& well_state) const
+                             const SingleWellState<Scalar>& ws) const
     {
         if (this->number_of_local_perforations_ == 0) {
             // If there are no open perforations on this process, there are no contributions the cpr pressure matrix.
@@ -873,7 +870,7 @@ namespace Opm
                                                use_well_weights,
                                                *this,
                                                this->SPres,
-                                               well_state);
+                                               ws);
     }
 
 
@@ -1178,7 +1175,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    checkOperabilityUnderBHPLimit(const WellState<Scalar>& /*well_state*/,
+    checkOperabilityUnderBHPLimit(const SingleWellState<Scalar>& /*ws*/,
                                   const Simulator& simulator,
                                   DeferredLogger& deferred_logger)
     {
@@ -1344,7 +1341,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateIPRImplicit(const Simulator& simulator,
-                      WellState<Scalar>& well_state,
+                      SingleWellState<Scalar>& ws,
                       DeferredLogger& deferred_logger)
     {
         // Compute IPR based on *converged* well-equation:
@@ -1354,12 +1351,11 @@ namespace Opm
 
         // We shouldn't have zero rates at this stage, but check
         bool zero_rates;
-        auto rates = well_state.well(this->index_of_well_).surface_rates;
+        auto rates = ws.surface_rates;
         zero_rates = true;
         for (std::size_t p = 0; p < rates.size(); ++p) {
             zero_rates &= rates[p] == 0.0;
         }
-        auto& ws = well_state.well(this->index_of_well_);
         if (zero_rates) {
             const auto msg = fmt::format("updateIPRImplicit: Well {} has zero rate, IPRs might be problematic", this->name());
             deferred_logger.debug(msg);
@@ -1378,17 +1374,17 @@ namespace Opm
 
         std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
         std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
-        //WellState well_state_copy = well_state;    
+        //SingleWellState well_state_copy = well_state;    
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
         prod_controls.addControl(Well::ProducerCMode::BHP);
-        prod_controls.bhp_limit = well_state.well(this->index_of_well_).bhp;
+        prod_controls.bhp_limit = ws.bhp;
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
         const auto cmode = ws.production_cmode;
         ws.production_cmode = Well::ProducerCMode::BHP;
         const double dt = simulator.timeStepSize();
-        assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, ws, group_state, deferred_logger);
 
         BVectorWell rhs(this->numberOfSegments());
         rhs = 0.0;
@@ -1413,13 +1409,13 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     checkOperabilityUnderTHPLimit(const Simulator& simulator,
-                                  const WellState<Scalar>& well_state,
+                                  const SingleWellState<Scalar>& ws,
                                   DeferredLogger& deferred_logger)
     {
         const auto& summaryState = simulator.vanguard().summaryState();
         const auto obtain_bhp = this->isProducer()
             ? computeBhpAtThpLimitProd(
-                        well_state, simulator, summaryState, deferred_logger)
+                        ws, simulator, summaryState, deferred_logger)
             : computeBhpAtThpLimitInj(simulator, summaryState, deferred_logger);
 
         if (obtain_bhp) {
@@ -1468,7 +1464,7 @@ namespace Opm
                              const double dt,
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
-                             WellState<Scalar>& well_state,
+                             SingleWellState<Scalar>& ws,
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger)
     {
@@ -1493,7 +1489,7 @@ namespace Opm
         this->regularize_ = false;
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
-            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, ws, group_state, deferred_logger);
 
             BVectorWell dx_well;
             try{
@@ -1513,7 +1509,7 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            const auto report = getWellConvergence(simulator, ws, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {
                 converged = true;
                 break;
@@ -1526,7 +1522,7 @@ namespace Opm
                     return false;
 
                 residual_history.push_back(residuals);
-                measure_history.push_back(this->getResidualMeasureValue(well_state,
+                measure_history.push_back(this->getResidualMeasureValue(ws,
                                                                     residual_history[it],
                                                                     this->param_.tolerance_wells_,
                                                                     this->param_.tolerance_pressure_ms_wells_,
@@ -1535,7 +1531,7 @@ namespace Opm
             bool min_relaxation_reached = this->update_relaxation_factor(measure_history, relaxation_factor, this->regularize_, deferred_logger);
             if (min_relaxation_reached || this->repeatedStagnation(measure_history, this->regularize_, deferred_logger)) {
                 // try last attempt with relaxed tolerances
-                const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, true);
+                const auto reportStag = getWellConvergence(simulator, ws, Base::B_avg_, deferred_logger, true);
                 if (reportStag.converged()) {
                     converged = true;
                     std::string message = fmt::format("Well stagnates/oscillates but {} manages to get converged with relaxed tolerances in {} inner iterations."
@@ -1546,7 +1542,7 @@ namespace Opm
                 }
                 break;
             }
-            updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
+            updateWellState(simulator, dx_well, ws, deferred_logger, relaxation_factor);
         }
 
         // TODO: we should decide whether to keep the updated well_state, or recover to use the old well_state
@@ -1586,7 +1582,7 @@ namespace Opm
                              const double dt,
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
-                             WellState<Scalar>& well_state,
+                             SingleWellState<Scalar>& ws,
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger, 
                              const bool fixed_control /*false*/, 
@@ -1622,9 +1618,9 @@ namespace Opm
         const auto operability_orig = this->operability_status_;
         // don't allow opening wells that are stopped from schedule or has a stopped well state
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
-                                 well_state.well(this->index_of_well_).status == WellStatus::OPEN;
+                                 ws.status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
-        const bool allow_switching = !this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) &&
+        const bool allow_switching = !this->wellUnderZeroRateTarget(simulator, ws, deferred_logger) &&
                                      (!fixed_control || !fixed_status) && allow_open;
         bool final_check = false;
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
@@ -1635,7 +1631,7 @@ namespace Opm
             ++its_since_last_switch;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const Scalar wqTotal = this->primary_variables_.getWQTotal().value();
-                bool changed = this->updateWellControlAndStatusLocalIteration(simulator, well_state, group_state,
+                bool changed = this->updateWellControlAndStatusLocalIteration(simulator, ws, group_state,
                                                                               inj_controls, prod_controls, wqTotal,
                                                                               deferred_logger, fixed_control,
                                                                               fixed_status);
@@ -1651,7 +1647,7 @@ namespace Opm
             }
 
             assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls,
-                                           well_state, group_state, deferred_logger);
+                                           ws, group_state, deferred_logger);
 
             const BVectorWell dx_well = this->linSys_.solve();
 
@@ -1660,7 +1656,7 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            const auto report = getWellConvergence(simulator, ws, Base::B_avg_, deferred_logger, relax_convergence);
             converged = report.converged();
             if (this->parallel_well_info_.communication().size() > 1 && converged != this->parallel_well_info_.communication().min(converged)) {
                 OPM_THROW(std::runtime_error, fmt::format("Misalignment of the parallel simulation run in iterateWellEqWithSwitching - the well calculation succeeded on rank {} but failed on other ranks.", this->parallel_well_info_.communication().rank()));
@@ -1686,7 +1682,7 @@ namespace Opm
             }
 
             if (!converged) {
-                measure_history.push_back(this->getResidualMeasureValue(well_state,
+                measure_history.push_back(this->getResidualMeasureValue(ws,
                                                                         residual_history[it],
                                                                         this->param_.tolerance_wells_,
                                                                         this->param_.tolerance_pressure_ms_wells_,
@@ -1697,7 +1693,7 @@ namespace Opm
                     break;
                 }
             }
-            updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
+            updateWellState(simulator, dx_well, ws, deferred_logger, relaxation_factor);
         }
 
         if (converged) {
@@ -1738,7 +1734,7 @@ namespace Opm
                                    const double dt,
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
-                                   WellState<Scalar>& well_state,
+                                   SingleWellState<Scalar>& ws,
                                    const GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger)
     {
@@ -1753,7 +1749,6 @@ namespace Opm
         // clear all entries
         this->linSys_.clear();
 
-        auto& ws = well_state.well(this->index_of_well_);
         ws.phase_mixing_rates.fill(0.0);
 
         // for the black oil cases, there will be four equations,
@@ -1875,9 +1870,9 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = simulator.vanguard().summaryState();
                 const Schedule& schedule = simulator.vanguard().schedule();
-                const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+                const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, ws, deferred_logger);
                 MultisegmentWellAssemble(*this).
-                        assembleControlEq(well_state,
+                        assembleControlEq(ws,
                                         group_state,
                                         schedule,
                                         summaryState,
@@ -1891,7 +1886,7 @@ namespace Opm
             } else {
                 const UnitSystem& unit_system = simulator.vanguard().eclState().getDeckUnitSystem();
                 const auto& summary_state = simulator.vanguard().summaryState();
-                this->assemblePressureEq(seg, unit_system, well_state, summary_state, this->param_.use_average_density_ms_wells_, deferred_logger);
+                this->assemblePressureEq(seg, unit_system, ws, summary_state, this->param_.use_average_density_ms_wells_, deferred_logger);
             }
         }
 
@@ -1967,7 +1962,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWaterThroughput(const double /*dt*/, WellState<Scalar>& /*well_state*/) const
+    updateWaterThroughput(const double /*dt*/, SingleWellState<Scalar>& /*ws*/) const
     {
     }
 
@@ -1998,7 +1993,7 @@ namespace Opm
     template<typename TypeTag>
     std::optional<typename MultisegmentWell<TypeTag>::Scalar>
     MultisegmentWell<TypeTag>::
-    computeBhpAtThpLimitProd(const WellState<Scalar>& well_state,
+    computeBhpAtThpLimitProd(const SingleWellState<Scalar>& ws,
                              const Simulator& simulator,
                              const SummaryState& summary_state,
                              DeferredLogger& deferred_logger) const
@@ -2006,7 +2001,7 @@ namespace Opm
         return this->MultisegmentWell<TypeTag>::computeBhpAtThpLimitProdWithAlq(
                                                simulator,
                                                summary_state,
-                                               this->getALQ(well_state),
+                                               this->getALQ(ws),
                                                deferred_logger,
                                                /*iterate_if_no_solution */ true);
     }

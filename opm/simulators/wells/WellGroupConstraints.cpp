@@ -38,7 +38,7 @@ template<class Scalar>
 std::pair<bool, Scalar>
 WellGroupConstraints<Scalar>::
 checkGroupConstraintsInj(const Group& group,
-                         const WellState<Scalar>& well_state,
+                         const SingleWellState<Scalar>& ws,
                          const GroupState<Scalar>& group_state,
                          const Scalar efficiencyFactor,
                          const Schedule& schedule,
@@ -74,12 +74,10 @@ checkGroupConstraintsInj(const Group& group,
     std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
-    const auto& ws = well_state.well(well_.indexOfWell());
     // Call check for the well's injection phase.
     return WellGroupHelpers<Scalar>::checkGroupConstraintsInj(well_.name(),
                                                               well_.wellEcl().groupName(),
                                                               group,
-                                                              well_state,
                                                               group_state,
                                                               well_.currentStep(),
                                                               well_.guideRate(),
@@ -97,7 +95,7 @@ template<class Scalar>
 std::pair<bool, Scalar>
 WellGroupConstraints<Scalar>::
 checkGroupConstraintsProd(const Group& group,
-                          const WellState<Scalar>& well_state,
+                          const SingleWellState<Scalar>& ws,
                           const GroupState<Scalar>& group_state,
                           const Scalar efficiencyFactor,
                           const Schedule& schedule,
@@ -109,11 +107,9 @@ checkGroupConstraintsProd(const Group& group,
     std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
-    const auto& ws = well_state.well(well_.indexOfWell());
     return WellGroupHelpers<Scalar>::checkGroupConstraintsProd(well_.name(),
                                                                well_.wellEcl().groupName(),
                                                                group,
-                                                               well_state,
                                                                group_state,
                                                                well_.currentStep(),
                                                                well_.guideRate(),
@@ -128,7 +124,7 @@ checkGroupConstraintsProd(const Group& group,
 
 template<class Scalar>
 bool WellGroupConstraints<Scalar>::
-checkGroupConstraints(WellState<Scalar>& well_state,
+checkGroupConstraints(SingleWellState<Scalar>& ws,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -136,8 +132,6 @@ checkGroupConstraints(WellState<Scalar>& well_state,
                       DeferredLogger& deferred_logger) const
 {
     const auto& well = well_.wellEcl();
-    const int well_index = well_.indexOfWell();
-    auto& ws = well_state.well(well_index);
 
     if (well.isInjector()) {
         const auto currentControl = ws.injection_cmode;
@@ -151,9 +145,9 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // control is the active one for the well (if any).
             const auto& group = schedule.getGroup(well.groupName(), well_.currentStep());
             const Scalar efficiencyFactor = well.getEfficiencyFactor() *
-                                            well_state[well.name()].efficiency_scaling_factor;
+                                            ws.efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
-                this->checkGroupConstraintsInj(group, well_state,
+                this->checkGroupConstraintsInj(group, ws,
                                                group_state, efficiencyFactor,
                                                schedule, summaryState,
                                                rateConverter,
@@ -162,7 +156,7 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // be GRUP.
             if (group_constraint.first) {
                 ws.injection_cmode = Well::InjectorCMode::GRUP;
-                const int np = well_state.numPhases();
+                const int np = well_.phaseUsage().num_phases;
                 for (int p = 0; p<np; ++p) {
                     ws.surface_rates[p] *= group_constraint.second;
                 }
@@ -183,9 +177,9 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // control is the active one for the well (if any).
             const auto& group = schedule.getGroup(well.groupName(), well_.currentStep());
             const Scalar efficiencyFactor = well.getEfficiencyFactor() *
-                                            well_state[well.name()].efficiency_scaling_factor;
+                                            ws.efficiency_scaling_factor;
             const std::pair<bool, Scalar> group_constraint =
-                this->checkGroupConstraintsProd(group, well_state,
+                this->checkGroupConstraintsProd(group, ws,
                                                 group_state, efficiencyFactor,
                                                 schedule, summaryState,
                                                 rateConverter, deferred_logger);
@@ -193,7 +187,7 @@ checkGroupConstraints(WellState<Scalar>& well_state,
             // be GRUP.
             if (group_constraint.first) {
                 ws.production_cmode = Well::ProducerCMode::GRUP;
-                const int np = well_state.numPhases();
+                const int np = well_.phaseUsage().num_phases;
                 for (int p = 0; p<np; ++p) {
                     ws.surface_rates[p] *= group_constraint.second;
                 }

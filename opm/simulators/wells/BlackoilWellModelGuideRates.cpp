@@ -330,7 +330,7 @@ getGuideRateValues(const Well& well) const
     }
 
     const auto qs = WellGroupHelpers<Scalar>::
-        getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
+        getWellRateVector(wellModel_.groupState(), wellModel_.phaseUsage(), wname);
 
     this->getGuideRateValues(qs, well.isInjector(), wname, grval);
 
@@ -438,7 +438,7 @@ assignWellGuideRates(data::Wells& wsrpt,
             || RetrieveWellGuideRate{wellModel_.guideRate(), wname};
 
         const auto qs = WellGroupHelpers<Scalar>::
-            getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
+            getWellRateVector(wellModel_.groupState(), wellModel_.phaseUsage(), wname);
 
         auto getGR = [this, &wname, &qs](const GuideRateModel::Target t)
         {

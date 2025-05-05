@@ -305,14 +305,13 @@ void WellBhpThpCalculator<Scalar>::
 updateThp(const Scalar rho,
           const std::function<Scalar()>& alq_value,
           const std::array<unsigned,3>& active,
-          WellState<Scalar>& well_state,
+          SingleWellState<Scalar>& ws,
           const SummaryState& summary_state,
           DeferredLogger& deferred_logger) const
 {
     static constexpr int Gas = BlackoilPhases::Vapour;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Water = BlackoilPhases::Aqua;
-    auto& ws = well_state.well(well_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
     if (!well_.isVFPActive(deferred_logger)) {
@@ -347,7 +346,7 @@ updateThp(const Scalar rho,
 template<class Scalar>
 template<class EvalWell>
 EvalWell WellBhpThpCalculator<Scalar>::
-calculateBhpFromThp(const WellState<Scalar>& well_state,
+calculateBhpFromThp(const SingleWellState<Scalar>& ws,
                     const std::vector<EvalWell>& rates,
                     const Well& well,
                     const SummaryState& summaryState,
@@ -389,7 +388,7 @@ calculateBhpFromThp(const WellState<Scalar>& well_state,
         bhp_tab = well_.vfpProperties()->getProd()->bhp(controls.vfp_table_number,
                                                       aqua, liquid, vapour,
                                                       thp_limit,
-                                                      well_.getALQ(well_state),
+                                                      well_.getALQ(ws),
                                                       wfr, gfr, use_vfpexplicit);
     }
     else {
@@ -412,7 +411,7 @@ calculateBhpFromThp(const WellState<Scalar>& well_state,
 
 template<class Scalar>
 Scalar WellBhpThpCalculator<Scalar>::
-calculateMinimumBhpFromThp(const WellState<Scalar>& well_state,
+calculateMinimumBhpFromThp(const SingleWellState<Scalar>& ws,
                            const Well& well,
                            const SummaryState& summaryState,
                            const Scalar rho) const
@@ -427,7 +426,7 @@ calculateMinimumBhpFromThp(const WellState<Scalar>& well_state,
 
     const Scalar bhp_min = well_.vfpProperties()->getProd()->minimumBHP(controls.vfp_table_number,
                                                                         thp_limit, wfr, gfr, 
-                                                                        well_.getALQ(well_state));
+                                                                        well_.getALQ(ws));
  
     const Scalar vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
     const auto bhp_adjustment = getVfpBhpAdjustment(bhp_min, thp_limit);
@@ -896,7 +895,7 @@ bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
 
 template<class Scalar>
 bool WellBhpThpCalculator<Scalar>::
-isStableSolution(const WellState<Scalar>& well_state,
+isStableSolution(const SingleWellState<Scalar>& ws,
                  const Well& well,
                  const std::vector<Scalar>& rates,
                  const SummaryState& summaryState) const
@@ -921,26 +920,26 @@ isStableSolution(const WellState<Scalar>& well_state,
     const bool use_vfpexplicit = well_.useVfpExplicit();
 
     auto bhp = VFPHelpers<double>::bhp(table, aqua, liquid, vapour, thp,
-                                       well_.getALQ(well_state), wfr, gfr,
+                                       well_.getALQ(ws), wfr, gfr,
                                        use_vfpexplicit);
 
     if (bhp.dflo >= 0) {
         return true;
     } else {    // maybe check if ipr is available
-        const auto ipr = getFloIPR(well_state, well, summaryState);
+        const auto ipr = getFloIPR(ws, well, summaryState);
         return bhp.dflo + 1.0 / ipr.second >= 0;
     }                  
 }
 
 template<class Scalar>
 std::optional<Scalar> WellBhpThpCalculator<Scalar>::
-estimateStableBhp(const WellState<Scalar>& well_state,
+estimateStableBhp(const SingleWellState<Scalar>& ws,
                   const Well& well,
                   const std::vector<Scalar>& rates,
                   const Scalar rho,
                   const SummaryState& summaryState) const
 {   
-    // Given a *converged* well_state with ipr, estimate bhp of the stable solution 
+    // Given a *converged* ws with ipr, estimate bhp of the stable solution 
     const auto& controls = well.productionControls(summaryState);
     const Scalar thp = well_.getTHPConstraint(summaryState);
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
@@ -958,7 +957,7 @@ estimateStableBhp(const WellState<Scalar>& well_state,
         gfr = detail::getGFR(table, aqua, liquid, vapour);   
     }
 
-    auto ipr = getFloIPR(well_state, well, summaryState);
+    auto ipr = getFloIPR(ws, well, summaryState);
     
     const Scalar vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
 
@@ -968,7 +967,7 @@ estimateStableBhp(const WellState<Scalar>& well_state,
            return bhp - dp_hydro + getVfpBhpAdjustment(bhp, thp);
        };
     const auto retval = VFPHelpers<double>::intersectWithIPR(table, thp, wfr, gfr,
-                                                             well_.getALQ(well_state),
+                                                             well_.getALQ(ws),
                                                              ipr.first, ipr.second,
                                                              bhp_adjusted);
     if (retval.has_value()) {
@@ -981,7 +980,7 @@ estimateStableBhp(const WellState<Scalar>& well_state,
 
 template<class Scalar>
 std::pair<Scalar, Scalar> WellBhpThpCalculator<Scalar>::
-getFloIPR(const WellState<Scalar>& well_state,
+getFloIPR(const SingleWellState<Scalar>& ws,
           const Well& well, 
           const SummaryState& summary_state) const 
 {
@@ -989,11 +988,11 @@ getFloIPR(const WellState<Scalar>& well_state,
     const auto& controls = well.productionControls(summary_state);
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
     const auto& pu = well_.phaseUsage();
-    const auto& ipr_a = well_state.well(well_.indexOfWell()).implicit_ipr_a;
+    const auto& ipr_a = ws.implicit_ipr_a;
     const Scalar& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
     const Scalar& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
     const Scalar& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
-    const auto& ipr_b = well_state.well(well_.indexOfWell()).implicit_ipr_b;
+    const auto& ipr_b = ws.implicit_ipr_b;
     const Scalar& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
     const Scalar& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
     const Scalar& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
@@ -1070,7 +1069,7 @@ bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
 #define INSTANTIATE(T,...)                                   \
     template __VA_ARGS__                                     \
     WellBhpThpCalculator<T>::                                \
-        calculateBhpFromThp(const WellState<T>&,             \
+        calculateBhpFromThp(const SingleWellState<T>&,             \
                             const std::vector<__VA_ARGS__>&, \
                             const Well&,                     \
                             const SummaryState&,             \

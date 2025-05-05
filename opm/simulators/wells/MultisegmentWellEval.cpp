@@ -36,7 +36,7 @@
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <fmt/format.h>
 
@@ -79,7 +79,7 @@ initMatrixAndVectors()
 template<typename FluidSystem, typename Indices>
 ConvergenceReport
 MultisegmentWellEval<FluidSystem,Indices>::
-getWellConvergence(const WellState<Scalar>& well_state,
+getWellConvergence(const SingleWellState<Scalar>& ws,
                    const std::vector<Scalar>& B_avg,
                    DeferredLogger& deferred_logger,
                    const Scalar max_residual_allowed,
@@ -156,7 +156,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
     }
 
     WellConvergence(baseif_).
-        checkConvergenceControlEq(well_state,
+        checkConvergenceControlEq(ws,
                                   {tolerance_pressure_ms_wells,
                                    tolerance_pressure_ms_wells,
                                    tolerance_wells,
@@ -169,7 +169,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
 
     // for stopped well, we do not enforce the following checking to avoid dealing with sign of near-zero values
     // for BHP or THP controlled wells, we need to make sure the flow direction is correct
-    if (!well_is_stopped && baseif_.isPressureControlled(well_state)) {
+    if (!well_is_stopped && baseif_.isPressureControlled(ws)) {
         // checking the flow direction
         const Scalar sign = baseif_.isProducer() ? -1. : 1.;
         const auto weight_total_flux = this->primary_variables_.getWQTotal() * sign;
@@ -200,11 +200,11 @@ template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleAccelerationPressureLoss(const int seg,
-                                 WellState<Scalar>& well_state)
+                                 SingleWellState<Scalar>& ws)
 {
     // Computes and assembles p-drop due to acceleration
     assert(seg != 0); // top segment can not enter here
-    auto& segments = well_state.well(baseif_.indexOfWell()).segments;
+    auto& segments = ws.segments;
     const auto& segment_set = this->segmentSet();
 
     // Add segment head
@@ -248,7 +248,7 @@ template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleDefaultPressureEq(const int seg,
-                          WellState<Scalar>& well_state,
+                          SingleWellState<Scalar>& ws,
                           const bool use_average_density)
 {
     assert(seg != 0); // not top segment
@@ -264,7 +264,6 @@ assembleDefaultPressureEq(const int seg,
     // TODO: we might be able to add member variables to store these values, then we update well state
     // after converged
 
-    auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
 
     if (this->frictionalPressureLossConsidered()) {
@@ -287,7 +286,7 @@ assembleDefaultPressureEq(const int seg,
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure, linSys_);
 
-    assembleAccelerationAndHydroPressureLosses(seg, well_state, use_average_density);
+    assembleAccelerationAndHydroPressureLosses(seg, ws, use_average_density);
 }
 
 template<typename FluidSystem, typename Indices>
@@ -295,7 +294,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
-                      WellState<Scalar>& well_state,
+                      SingleWellState<Scalar>& ws,
                       const SummaryState& summary_state,
                       const bool use_average_density,
                       DeferredLogger& deferred_logger)
@@ -310,7 +309,6 @@ assembleICDPressureEq(const int seg,
         MultisegmentWellAssemble(baseif_).
             assembleTrivialEq(seg, this->primary_variables_.eval(seg)[WQTotal].value(), linSys_);
 
-        auto& ws = well_state.well(baseif_.indexOfWell());
         ws.segments.pressure_drop_friction[seg] = 0.;
         return;
     }
@@ -358,7 +356,6 @@ assembleICDPressureEq(const int seg,
     }
 
     pressure_equation = pressure_equation - icd_pressure_drop;
-    auto& ws = well_state.well(baseif_.indexOfWell());
     ws.segments.pressure_drop_friction[seg] = icd_pressure_drop.value();
 
     // contribution from the outlet segment
@@ -370,24 +367,23 @@ assembleICDPressureEq(const int seg,
                            pressure_equation, outlet_pressure,
                            linSys_);
 
-    assembleAccelerationAndHydroPressureLosses(seg, well_state, use_average_density);
+    assembleAccelerationAndHydroPressureLosses(seg, ws, use_average_density);
 }
 
 template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleAccelerationAndHydroPressureLosses(const int seg,
-                                           WellState<Scalar>& well_state,
+                                           SingleWellState<Scalar>& ws,
                                            const bool use_average_density)
 {
     if (this->accelerationalPressureLossConsidered()) {
-        assembleAccelerationPressureLoss(seg, well_state);
+        assembleAccelerationPressureLoss(seg, ws);
     }
 
     // Since density derivatives are organized differently than what is required for assemblePressureEq,
     // this part needs to be assembled separately. Optionally use average density variant.
     const auto hydro_pressure_drop_seg = segments_.getHydroPressureLoss(seg, seg);
-    auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     if (!use_average_density){
         MultisegmentWellAssemble(baseif_).
@@ -409,7 +405,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
-                   WellState<Scalar>& well_state,
+                   SingleWellState<Scalar>& ws,
                    const SummaryState& summary_state,
                    const bool use_average_density,
                    DeferredLogger& deferred_logger)
@@ -418,11 +414,11 @@ assemblePressureEq(const int seg,
         case Segment::SegmentType::SICD :
         case Segment::SegmentType::AICD :
         case Segment::SegmentType::VALVE : {
-            assembleICDPressureEq(seg, unit_system, well_state, summary_state, use_average_density, deferred_logger);
+            assembleICDPressureEq(seg, unit_system, ws, summary_state, use_average_density, deferred_logger);
             break;
         }
         default :
-            assembleDefaultPressureEq(seg, well_state, use_average_density);
+            assembleDefaultPressureEq(seg, ws, use_average_density);
     }
 }
 
@@ -473,15 +469,13 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 template<typename FluidSystem, typename Indices>
 typename MultisegmentWellEval<FluidSystem,Indices>::Scalar
 MultisegmentWellEval<FluidSystem,Indices>::
-getControlTolerance(const WellState<Scalar>& well_state,
+getControlTolerance(const SingleWellState<Scalar>& ws,
                     const Scalar tolerance_wells,
                     const Scalar tolerance_pressure_ms_wells,
                     DeferredLogger& deferred_logger) const
 {
     Scalar control_tolerance = 0.;
 
-    const int well_index = baseif_.indexOfWell();
-    const auto& ws = well_state.well(well_index);
     if (baseif_.isInjector() )
     {
         auto current = ws.injection_cmode;
@@ -540,7 +534,7 @@ getControlTolerance(const WellState<Scalar>& well_state,
 template<typename FluidSystem, typename Indices>
 typename MultisegmentWellEval<FluidSystem,Indices>::Scalar
 MultisegmentWellEval<FluidSystem,Indices>::
-getResidualMeasureValue(const WellState<Scalar>& well_state,
+getResidualMeasureValue(const SingleWellState<Scalar>& ws,
                         const std::vector<Scalar>& residuals,
                         const Scalar tolerance_wells,
                         const Scalar tolerance_pressure_ms_wells,
@@ -564,7 +558,7 @@ getResidualMeasureValue(const WellState<Scalar>& well_state,
         ++count;
     }
 
-    const Scalar control_tolerance = getControlTolerance(well_state,
+    const Scalar control_tolerance = getControlTolerance(ws,
                                                          tolerance_wells,
                                                          tolerance_pressure_ms_wells,
                                                          deferred_logger);

@@ -34,7 +34,7 @@
 #include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 
 #include <cassert>
@@ -53,7 +53,7 @@ template<class FluidSystem>
 template<class EvalWell>
 void
 WellAssemble<FluidSystem>::
-assembleControlEqProd(const WellState<Scalar>& well_state,
+assembleControlEqProd(const SingleWellState<Scalar>& ws,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -64,10 +64,10 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
                       EvalWell& control_eq,
                       DeferredLogger& deferred_logger) const
 {
-    const auto current = well_state.well(well_.indexOfWell()).production_cmode;
+    const auto current = ws.production_cmode;
     const auto& pu = well_.phaseUsage();
     const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
-                                    well_state[well_.name()].efficiency_scaling_factor;
+                                    ws.efficiency_scaling_factor;
 
     switch (current) {
     case Well::ProducerCMode::ORAT: {
@@ -104,7 +104,7 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
         auto total_rate = rates[0]; // To get the correct type only.
         total_rate = 0.0;
         std::vector<Scalar> convert_coeff(well_.numPhases(), 1.0);
-        well_.rateConverter().calcCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), well_state.well(well_.indexOfWell()).surface_rates, convert_coeff);
+        well_.rateConverter().calcCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), ws.surface_rates, convert_coeff);
         for (int phase = 0; phase < 3; ++phase) {
             if (pu.phase_used[phase]) {
                 const int pos = pu.phase_pos[phase];
@@ -166,7 +166,6 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
         };
 
         WellGroupControls(well_).getGroupProductionControl(group, 
-                                                           well_state,
                                                            group_state,
                                                            schedule,
                                                            summaryState,
@@ -195,7 +194,7 @@ template<class FluidSystem>
 template<class EvalWell>
 void
 WellAssemble<FluidSystem>::
-assembleControlEqInj(const WellState<Scalar>& well_state,
+assembleControlEqInj(const SingleWellState<Scalar>& ws,
                      const GroupState<Scalar>& group_state,
                      const Schedule& schedule,
                      const SummaryState& summaryState,
@@ -206,11 +205,11 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
                      EvalWell& control_eq,
                      DeferredLogger& deferred_logger) const
 {
-    auto current = well_state.well(well_.indexOfWell()).injection_cmode;
+    auto current = ws.injection_cmode;
     const InjectorType injectorType = controls.injector_type;
     const auto& pu = well_.phaseUsage();
     const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor() *
-                                    well_state[well_.name()].efficiency_scaling_factor;
+                                    ws.efficiency_scaling_factor;
 
     switch (current) {
     case Well::InjectorCMode::RATE: {
@@ -266,7 +265,6 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
             }
         };
         WellGroupControls(well_).getGroupInjectionControl(group,
-                                                          well_state,
                                                           group_state,
                                                           schedule,
                                                           summaryState,
@@ -287,7 +285,7 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
 
 #define INSTANTIATE_METHODS(A,...)                                        \
 template void WellAssemble<A>::                                           \
-assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&,  \
+assembleControlEqProd<__VA_ARGS__>(const SingleWellState<typename A::Scalar>&,  \
                                    const GroupState<typename A::Scalar>&, \
                                    const Schedule&,                       \
                                    const SummaryState&,                   \
@@ -298,7 +296,7 @@ assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&,  \
                                    __VA_ARGS__&,                          \
                                    DeferredLogger&) const;                \
 template void WellAssemble<A>::                                           \
-assembleControlEqInj<__VA_ARGS__>(const WellState<typename A::Scalar>&,   \
+assembleControlEqInj<__VA_ARGS__>(const SingleWellState<typename A::Scalar>&,   \
                                   const GroupState<typename A::Scalar>&,  \
                                   const Schedule&,                        \
                                   const SummaryState&,                    \

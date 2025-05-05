@@ -40,7 +40,7 @@ class Schedule;
 class SummaryState;
 
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 template<typename FluidSystem, typename Indices>
 class MultisegmentWellEval : public MultisegmentWellGeneric<typename FluidSystem::Scalar>
@@ -76,31 +76,31 @@ protected:
     void initMatrixAndVectors();
 
     void assembleDefaultPressureEq(const int seg,
-                                   WellState<Scalar>& well_state,
+                                   SingleWellState<Scalar>& ws,
                                    const bool use_average_density);
 
     // assemble pressure equation for ICD segments
     void assembleICDPressureEq(const int seg,
                                const UnitSystem& unit_system,
-                               WellState<Scalar>& well_state,
+                               SingleWellState<Scalar>& ws,
                                const SummaryState& summary_state,
                                const bool use_average_density,
                                DeferredLogger& deferred_logger);
 
     void assembleAccelerationAndHydroPressureLosses(const int seg,
-                                                    WellState<Scalar>& well_state,
+                                                    SingleWellState<Scalar>& ws,
                                                     const bool use_average_density);
 
 
     void assemblePressureEq(const int seg,
                             const UnitSystem& unit_system,
-                            WellState<Scalar>& well_state,
+                            SingleWellState<Scalar>& ws,
                             const SummaryState& summary_state,
                             const bool use_average_density,
                             DeferredLogger& deferred_logger);
 
     /// check whether the well equations get converged for this well
-    ConvergenceReport getWellConvergence(const WellState<Scalar>& well_state,
+    ConvergenceReport getWellConvergence(const SingleWellState<Scalar>& ws,
                                          const std::vector<Scalar>& B_avg,
                                          DeferredLogger& deferred_logger,
                                          const Scalar max_residual_allowed,
@@ -115,19 +115,19 @@ protected:
     getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
                            DeferredLogger& deferred_logger) const;
 
-    Scalar getControlTolerance(const WellState<Scalar>& well_state,
+    Scalar getControlTolerance(const SingleWellState<Scalar>& ws,
                                const Scalar tolerance_wells,
                                const Scalar tolerance_pressure_ms_wells,
                                DeferredLogger& deferred_logger) const;
 
-    Scalar getResidualMeasureValue(const WellState<Scalar>& well_state,
+    Scalar getResidualMeasureValue(const SingleWellState<Scalar>& ws,
                                    const std::vector<Scalar>& residuals,
                                    const Scalar tolerance_wells,
                                    const Scalar tolerance_pressure_ms_wells,
                                    DeferredLogger& deferred_logger) const;
 
     void assembleAccelerationPressureLoss(const int seg,
-                                          WellState<Scalar>& well_state);
+                                          SingleWellState<Scalar>& ws);
 
     EvalWell pressureDropAutoICD(const int seg,
                                  const UnitSystem& unit_system) const;

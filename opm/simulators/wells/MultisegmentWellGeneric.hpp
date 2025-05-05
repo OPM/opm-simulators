@@ -32,7 +32,7 @@ class SummaryState;
 template<class Scalar> class WellInterfaceGeneric;
 enum class WellSegmentCompPressureDrop;
 class WellSegments;
-template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 
 template <typename Scalar>
 class MultisegmentWellGeneric
@@ -54,8 +54,8 @@ protected:
     // scale the segment rates and pressure based on well rates and bhp
     void scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
                                         const std::vector<std::vector<int>>& segment_perforations,
-                                        WellState<Scalar>& well_state) const;
-    void scaleSegmentPressuresWithBhp(WellState<Scalar>& well_state) const;
+                                        SingleWellState<Scalar>& ws) const;
+    void scaleSegmentPressuresWithBhp(SingleWellState<Scalar>& ws) const;
 
     // components of the pressure drop to be included
     WellSegmentCompPressureDrop compPressureDrop() const;

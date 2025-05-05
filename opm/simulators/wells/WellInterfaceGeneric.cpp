@@ -43,7 +43,7 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellTest.hpp>
 
 #include <fmt/format.h>
@@ -421,11 +421,9 @@ setVFPProperties(const VFPProperties<Scalar>* vfp_properties_arg)
 
 template<class Scalar>
 void WellInterfaceGeneric<Scalar>::
-setPrevSurfaceRates(WellState<Scalar>& well_state,
-                    const WellState<Scalar>& prev_well_state) const
+setPrevSurfaceRates(SingleWellState<Scalar>& ws,
+                    const SingleWellState<Scalar>& ws_prev) const
 {
-    auto& ws = well_state.well(this->index_of_well_);
-    auto& ws_prev = prev_well_state.well(this->index_of_well_);
     // The logic here is a bit fragile:
     // We need non-zero prev_surface_rates for the purpose of providing explicit fractions
     // (if needed) for vfp interpolation.
@@ -603,13 +601,14 @@ bool WellInterfaceGeneric<Scalar>::thpLimitViolatedButNotSwitched() const
 
 template<class Scalar>
 Scalar WellInterfaceGeneric<Scalar>::
-getALQ(const WellState<Scalar>& well_state) const
+getALQ(const SingleWellState<Scalar>& ws) const
 {
     // no alq for injectors.
     if (isInjector())
         return 0.0;
 
-    return well_state.getALQ(name());
+    #warning
+    //return ws.getALQ(name());
 }
 
 template<class Scalar>
@@ -636,9 +635,8 @@ reportWellSwitching(const SingleWellState<Scalar> &ws,
 
 template<class Scalar>
 bool WellInterfaceGeneric<Scalar>::
-isPressureControlled(const WellState<Scalar>& well_state) const
+isPressureControlled(const SingleWellState<Scalar>& ws) const
 {
-    const auto& ws = well_state.well(this->index_of_well_);
     if (this->isInjector()) {
         const Well::InjectorCMode& current = ws.injection_cmode;
         return current == Well::InjectorCMode::THP ||
@@ -653,15 +651,15 @@ isPressureControlled(const WellState<Scalar>& well_state) const
 template<class Scalar>
 bool WellInterfaceGeneric<Scalar>::
 wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
-                                  const WellState<Scalar>& well_state) const
+                                  const SingleWellState<Scalar>& ws) const
 {
     if (this->isProducer()) { // producers
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
-        const auto prod_mode = well_state.well(this->indexOfWell()).production_cmode;
+        const auto prod_mode = ws.production_cmode;
         return wellhelpers::rateControlWithZeroProdTarget(prod_controls, prod_mode);
     } else { // injectors
         const auto inj_controls = this->well_ecl_.injectionControls(summary_state);
-        const auto inj_mode = well_state.well(this->indexOfWell()).injection_cmode;
+        const auto inj_mode = ws.injection_cmode;
         return wellhelpers::rateControlWithZeroInjTarget(inj_controls, inj_mode);
     }
 }
@@ -821,7 +819,7 @@ int WellInterfaceGeneric<Scalar>::polymerInjTable_() const
 template<class Scalar>
 std::pair<bool,bool> WellInterfaceGeneric<Scalar>::
 computeWellPotentials(std::vector<Scalar>& well_potentials,
-                      const WellState<Scalar>& well_state)
+                      const SingleWellState<Scalar>& ws)
 {
     const int np = this->number_of_phases_;
     well_potentials.resize(np, 0.0);
@@ -836,7 +834,6 @@ computeWellPotentials(std::vector<Scalar>& well_potentials,
     bool thp_controlled_well = false;
     bool bhp_controlled_well = false;
     bool compute_potential = true;
-    const auto& ws = well_state.well(this->index_of_well_);
     if (this->isInjector()) {
         const Well::InjectorCMode& current = ws.injection_cmode;
         if (current == Well::InjectorCMode::THP) {
@@ -900,12 +897,11 @@ checkNegativeWellPotentials(std::vector<Scalar>& well_potentials,
 template<class Scalar>
 void WellInterfaceGeneric<Scalar>::
 prepareForPotentialCalculations(const SummaryState& summary_state,
-                                WellState<Scalar>& well_state,
+                                SingleWellState<Scalar>& ws,
                                 Well::InjectionControls& inj_controls,
                                 Well::ProductionControls& prod_controls) const
 {
     const bool has_thp = this->wellHasTHPConstraints(summary_state);
-    auto& ws = well_state.well(this->index_of_well_);
     // Modify control (only pressure constraints) and set new target if needed.
     // Also set value for current target in state
     if (this->isInjector()) {

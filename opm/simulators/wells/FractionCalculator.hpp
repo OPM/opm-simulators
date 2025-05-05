@@ -39,7 +39,6 @@ class FractionCalculator
 {
 public:
     FractionCalculator(const Schedule& schedule,
-                       const WellState<Scalar>& well_state,
                        const GroupState<Scalar>& group_state,
                        const SummaryState& summary_state,
                        const int report_step,
@@ -69,7 +68,7 @@ private:
                              const std::string& always_included_child);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
     const Schedule& schedule_;
-    const WellState<Scalar>& well_state_;
+    //const WellState<Scalar>& well_state_;
     const GroupState<Scalar>& group_state_;
     const SummaryState& summary_state_;
     int report_step_;

@@ -357,14 +357,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const bool /*use_well_weights*/,
                          const WellInterfaceGeneric<Scalar>& well,
                          const int seg_pressure_var_ind,
-                         const WellState<Scalar>& well_state) const
+                         const SingleWellState<Scalar>& ws) const
 {
     // Add the pressure contribution to the cpr system for the well
 
     // Add for coupling from well to reservoir
     const int number_cells = weights.size();
     const int welldof_ind = number_cells + well.indexOfWell();
-    if (!well.isPressureControlled(well_state)) {
+    if (!well.isPressureControlled(ws)) {
         for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(),
                       endC = duneC_[rowC].end(); colC != endC; ++colC) {
@@ -382,7 +382,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     }
 
     // make cpr weights for well by pure avarage of reservoir weights of the perforations
-    if (!well.isPressureControlled(well_state)) {
+    if (!well.isPressureControlled(ws)) {
         auto well_weight = weights[0];
         well_weight = 0.0;
         int num_perfs = 0;
@@ -455,7 +455,7 @@ sumDistributed(Parallel::Communication comm)
                                  const bool,                                                   \
                                  const WellInterfaceGeneric<T>&,                               \
                                  const int,                                                    \
-                                 const WellState<T>&) const;
+                                 const SingleWellState<T>&) const;
 
 #define INSTANTIATE_TYPE(T) \
     INSTANTIATE(T,2,1)      \

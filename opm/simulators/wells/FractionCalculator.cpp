@@ -35,7 +35,6 @@ namespace Opm::WGHelpers {
 template<class Scalar>
 FractionCalculator<Scalar>::
 FractionCalculator(const Schedule& schedule,
-                   const WellState<Scalar>& well_state,
                    const GroupState<Scalar>& group_state,
                    const SummaryState& summary_state,
                    const int report_step,
@@ -45,7 +44,6 @@ FractionCalculator(const Schedule& schedule,
                    const bool is_producer,
                    const Phase injection_phase)
     : schedule_(schedule)
-    , well_state_(well_state)
     , group_state_(group_state)
     , summary_state_(summary_state)
     , report_step_(report_step)
@@ -140,10 +138,11 @@ guideRateSum(const Group& group,
 
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
+        #warning
         if (is_producer_) {
-            included |= well_state_.isProductionGrup(child_well);
+            //included |= well_state_.isProductionGrup(child_well);
         } else {
-            included |= well_state_.isInjectionGrup(child_well);
+            //included |= well_state_.isInjectionGrup(child_well);
         }
         if (included) {
             number_of_included_well_or_groups++;
@@ -160,7 +159,8 @@ guideRate(const std::string& name,
           const bool always_use_potentials)
 {
     if (schedule_.hasWell(name, report_step_)) {
-        return WellGroupHelpers<Scalar>::getGuideRate(name, schedule_, well_state_, group_state_,
+        
+        return WellGroupHelpers<Scalar>::getGuideRate(name, schedule_, group_state_,
                                                       report_step_, guide_rate_, target_, pu_);
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
@@ -188,7 +188,6 @@ groupControlledWells(const std::string& group_name,
                      const std::string& always_included_child)
 {
     return WellGroupHelpers<Scalar>::groupControlledWells(schedule_,
-                                                          well_state_,
                                                           this->group_state_,
                                                           this->summary_state_,
                                                           this->guide_rate_,
@@ -196,6 +195,7 @@ groupControlledWells(const std::string& group_name,
                                                           group_name,
                                                           always_included_child,
                                                           is_producer_,
+                                                          this->pu_,
                                                           injection_phase_);
 }
 

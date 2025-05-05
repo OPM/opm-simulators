@@ -233,7 +233,7 @@ public:
                             const int report_time_step);
 
     static GuideRate::RateVector
-    getWellRateVector(const WellState<Scalar>& well_state,
+    getWellRateVector(const GroupState<Scalar>& group_state,
                       const PhaseUsage& pu,
                       const std::string& name);
 
@@ -244,7 +244,6 @@ public:
 
     static Scalar getGuideRate(const std::string& name,
                                const Schedule& schedule,
-                               const WellState<Scalar>& wellState,
                                const GroupState<Scalar>& group_state,
                                const int reportStepIdx,
                                const GuideRate* guideRate,
@@ -262,7 +261,6 @@ public:
                                   const PhaseUsage& pu);
 
     static int groupControlledWells(const Schedule& schedule,
-                                    const WellState<Scalar>& well_state,
                                     const GroupState<Scalar>& group_state,
                                     const SummaryState& summary_state,
                                     const GuideRate* guideRate,
@@ -270,13 +268,13 @@ public:
                                     const std::string& group_name,
                                     const std::string& always_included_child,
                                     const bool is_production_group,
+                                    const PhaseUsage& pu,
                                     const Phase injection_phase);
 
     static std::pair<bool, Scalar>
     checkGroupConstraintsInj(const std::string& name,
                              const std::string& parent,
                              const Group& group,
-                             const WellState<Scalar>& wellState,
                              const GroupState<Scalar>& group_state,
                              const int reportStepIdx,
                              const GuideRate* guideRate,
@@ -305,7 +303,6 @@ public:
     checkGroupConstraintsProd(const std::string& name,
                               const std::string& parent,
                               const Group& group,
-                              const WellState<Scalar>& wellState,
                               const GroupState<Scalar>& group_state,
                               const int reportStepIdx,
                               const GuideRate* guideRate,

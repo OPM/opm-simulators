@@ -35,7 +35,7 @@
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #include <fmt/format.h>
 
@@ -67,7 +67,7 @@ setEvaluationsFromValues()
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
-update(const WellState<Scalar>& well_state,
+update(const SingleWellState<Scalar>& ws,
        const bool stop_or_zero_rate_target)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -80,8 +80,7 @@ update(const WellState<Scalar>& well_state,
 
     const Well& well = well_.wellEcl();
 
-    // the index of the top segment in the WellState
-    const auto& ws = well_state.well(well_.indexOfWell());
+    // the index of the top segment in the SingleWellState
     const auto& segments = ws.segments;
     // maybe a throw for parallel running?
     assert(segments.size() == value_.size());
@@ -216,7 +215,7 @@ template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                 const Scalar rho,
-                WellState<Scalar>& well_state,
+                SingleWellState<Scalar>& ws,
                 const SummaryState& summary_state,
                 DeferredLogger& deferred_logger) const
 {
@@ -229,7 +228,6 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     const PhaseUsage& pu = well_.phaseUsage();
     const int oil_pos = pu.phase_pos[Oil];
 
-    auto& ws = well_state.well(well_.indexOfWell());
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
     auto& disgas = segments.dissolved_gas_rate;
@@ -422,14 +420,14 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                        [maxVel](const auto hf) { return (hf > 0.0) ? maxVel : 0.0; });
     }
 
-    // Note: for the ALQ value, in the StandardWell, WellInterfaceGeneric::getALQ(well_state) is used.
+    // Note: for the ALQ value, in the StandardWell, WellInterfaceGeneric::getALQ(ws) is used.
     // We might want to unify the way regarding AQL value.
     WellBhpThpCalculator(well_)
         .updateThp(rho, [this, &summary_state]() { return well_.wellEcl().alq_value(summary_state); },
                    {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                     FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
                     FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
-                   well_state, summary_state, deferred_logger);
+                   ws, summary_state, deferred_logger);
 }
 
 template<class FluidSystem, class Indices>
