@@ -70,7 +70,7 @@ Norway</institution>
 <copyright-statement>Authors of papers retain copyright and release the
 work under a Creative Commons Attribution 4.0 International License (CC
 BY 4.0)</copyright-statement>
-<copyright-year>2022</copyright-year>
+<copyright-year>1970</copyright-year>
 <copyright-holder>The article authors</copyright-holder>
 <license license-type="open-access" xlink:href="https://creativecommons.org/licenses/by/4.0/">
 <license-p>Authors of papers retain copyright and release the work under
@@ -108,15 +108,15 @@ a Creative Commons Attribution 4.0 International License (CC BY
   (<xref alt="Blatt &amp; Bastian, 2007" rid="ref-dune-istl" ref-type="bibr">Blatt
   &amp; Bastian, 2007</xref>) are essential in the simulator. To
   GPU-accelerate the simulator with minimal effort,
-  <monospace>gpu-ISTL</monospace> provides classes than can instantiate
+  <monospace>gpu-ISTL</monospace> provides classes that can instantiate
   <monospace>Dune-ISTL</monospace> algorithms with types that
   automatically runs the algorithms provided on the GPU. Both AMD and
   Nvidia GPUs are supported in the same source code by utilizing
   hipify-perl
-  (<xref alt="Inc, 2024b" rid="ref-hipify" ref-type="bibr">Inc,
-  2024b</xref>) to generate HIP code
-  (<xref alt="Inc, 2024a" rid="ref-HIP" ref-type="bibr">Inc,
-  2024a</xref>) from the existing CUDA code
+  (<xref alt="Advanced Micro Devices, Inc., 2024b" rid="ref-hipify" ref-type="bibr">Advanced
+  Micro Devices, Inc., 2024b</xref>) to generate HIP code
+  (<xref alt="Advanced Micro Devices, Inc., 2024a" rid="ref-HIP" ref-type="bibr">Advanced
+  Micro Devices, Inc., 2024a</xref>) from the existing CUDA code
   (<xref alt="NVIDIA et al., 2023" rid="ref-cuda" ref-type="bibr">NVIDIA
   et al., 2023</xref>) when compiling OPM Flow.</p>
 </sec>
@@ -150,10 +150,12 @@ a Creative Commons Attribution 4.0 International License (CC BY
   reservoir simulation by leveraging OPM Flow’s extensive infrastructure
   for complex reservoirs. It enables investigations into GPU-based
   linear solvers, preconditioners, autotuning and mixed-precision
-  computations. By integrating <monospace>gpu-ISTL</monospace> into the
-  OPM Flow linear solver subsystem, development remains synchronized
-  with the simulator’s rapidly evolving codebase, ensuring compatibility
-  and continuity in development efforts.</p>
+  computations, see for instance
+  (<xref alt="Andersen et al., 2025" rid="ref-andersen_ilu_dilu_rsc" ref-type="bibr">Andersen
+  et al., 2025</xref>). By integrating <monospace>gpu-ISTL</monospace>
+  into the OPM Flow linear solver subsystem, development remains
+  synchronized with the simulator’s rapidly evolving codebase, ensuring
+  compatibility and continuity in development efforts.</p>
   <p>Several standalone libraries GPU-accelerate linear algebra
   operations. Some also support at least both Nvidia and AMD cards, as
   well as the iterative solvers required by OPM Flow. Examples of
@@ -190,14 +192,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
   simulations, including CUDA-aware MPI for Nvidia cards to accelerate
   inter-process memory transfers. The library also provides capabilities
   for autotuning thread-block sizes in user-implemented GPU kernels.
-  Figure 1 contains a simplified class diagram with an overview of some
-  of the components that constitute <monospace>gpu-ISTL</monospace>.
-  Furthermore, Figure 2 provides a sequence diagram for the call stack
-  of a single linear solve in OPM Flow using the gpu-ISTL framework. We
-  note that the sequence diagram is for the MPI free version. In Figure
-  2 we denote the (indirect) calls to specific GPU kernels as an arrow
-  from the corresponding <monospace>gpu-ISTL</monospace> classes to the
-  right-hand red box representing the GPU.</p>
+  Figure 1 contains a simplified class diagram with of some of the
+  components that constitute <monospace>gpu-ISTL</monospace>.</p>
   <fig>
     <caption><p>Class diagram showing a simplified view of how
     <monospace>gpu-ISTL</monospace> is implemented. The colored
@@ -209,6 +205,13 @@ a Creative Commons Attribution 4.0 International License (CC BY
     green represents general linear algebra functionality.</p></caption>
     <graphic mimetype="image" mime-subtype="png" xlink:href="mpiparallel_gpuistl.png" />
   </fig>
+  <p>Furthermore, Figure 2 provides a sequence diagram for the call
+  stack of a single linear solve in OPM Flow using the gpu-ISTL
+  framework. We note that the sequence diagram is for the MPI free
+  version. In Figure 2 we denote the (indirect) calls to specific GPU
+  kernels as an arrow from the corresponding
+  <monospace>gpu-ISTL</monospace> classes to the right-hand red box
+  representing the GPU.</p>
   <fig>
     <caption><p>A sequence diagram for a single linear solver in OPM
     Flow using the <monospace>gpu-ISTL</monospace> framework. For
@@ -222,15 +225,16 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <graphic mimetype="image" mime-subtype="png" xlink:href="timeloopgpuistlproper.png" />
   </fig>
   <p>OPM Flow’s build system utilizes hipify-perl
-  (<xref alt="Inc, 2024b" rid="ref-hipify" ref-type="bibr">Inc,
-  2024b</xref>), which translates CUDA
+  (<xref alt="Advanced Micro Devices, Inc., 2024b" rid="ref-hipify" ref-type="bibr">Advanced
+  Micro Devices, Inc., 2024b</xref>), which translates CUDA
   (<xref alt="NVIDIA et al., 2023" rid="ref-cuda" ref-type="bibr">NVIDIA
   et al., 2023</xref>) code to HIP
-  (<xref alt="Inc, 2024a" rid="ref-HIP" ref-type="bibr">Inc,
-  2024a</xref>) code if one wants to compile for AMD GPUs. Incorporating
-  the translation in the build system ensures that the hardware of the
-  two largest GPU vendors are supported without incuring any extra
-  overhead for the developers of the CUDA code in the repository.</p>
+  (<xref alt="Advanced Micro Devices, Inc., 2024a" rid="ref-HIP" ref-type="bibr">Advanced
+  Micro Devices, Inc., 2024a</xref>) code if one wants to compile for
+  AMD GPUs. Incorporating the translation in the build system ensures
+  that the hardware of the two largest GPU vendors are supported without
+  incurring any extra overhead for the developers of the CUDA code in
+  the repository.</p>
 </sec>
 <sec id="performance-case-study-of-co_2-storage-simulation">
   <title>Performance Case Study of <inline-formula><alternatives>
@@ -244,8 +248,9 @@ a Creative Commons Attribution 4.0 International License (CC BY
   (<xref alt="Nordbotten et al., 2024" rid="ref-Nordbotten2024" ref-type="bibr">Nordbotten
   et al., 2024</xref>). Specifically, we simulate Case C from the SPE11
   CSP using Pyopmspe11
-  (<xref alt="Landa-Marbán, 2024" rid="ref-pyopmspe11" ref-type="bibr">Landa-Marbán,
-  2024</xref>) with sucessively finer discretizations.</p>
+  (<xref alt="Landa-Marbán &amp; Sandve, 2025" rid="ref-pyopmspe11" ref-type="bibr">Landa-Marbán
+  &amp; Sandve, 2025</xref>) with successively finer
+  discretizations.</p>
   <p>We simulate using the ILU0 preconditioned BiCGSTAB as the linear
   solver on three different hardware configurations, tracking the time
   spent in the linear solver normalized by the number of linear
@@ -276,7 +281,6 @@ a Creative Commons Attribution 4.0 International License (CC BY
   2021 to 2024 was a part of the EU project <italic>HPC, Big Data, and
   Artificial Intelligence convergent platform</italic> (ACROSS).
   Development in 2024 has been financed by Equinor.</p>
-  <p>```</p>
 </sec>
 </body>
 <back>
@@ -401,11 +405,14 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <element-citation publication-type="article-journal">
       <person-group person-group-type="author">
         <name><surname>Landa-Marbán</surname><given-names>David</given-names></name>
+        <name><surname>Sandve</surname><given-names>Tor H.</given-names></name>
       </person-group>
-      <article-title>pyopmspe11: A Python framework using OPM Flow for the SPE11 benchmark project [IN REVIEW]</article-title>
+      <article-title>pyopmspe11: A Python framework using OPM Flow for the SPE11 benchmark project</article-title>
       <source>Journal of Open Source Software</source>
-      <year iso-8601-date="2024">2024</year>
-      <pub-id pub-id-type="doi">---</pub-id>
+      <publisher-name>The Open Journal</publisher-name>
+      <year iso-8601-date="2025">2025</year>
+      <uri>https://doi.org/10.21105/joss.07357</uri>
+      <pub-id pub-id-type="doi">10.21105/joss.07357</pub-id>
     </element-citation>
   </ref>
   <ref id="ref-Nordbotten2024">
@@ -447,6 +454,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
       <publisher-name>Springer</publisher-name>
       <publisher-loc>Berlin/Heidelberg</publisher-loc>
       <year iso-8601-date="2007">2007</year>
+      <pub-id pub-id-type="doi">10.1007/978-3-540-75755-9_82</pub-id>
       <fpage>666</fpage>
       <lpage>675</lpage>
     </element-citation>
@@ -466,7 +474,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
   <ref id="ref-hipify">
     <element-citation>
       <person-group person-group-type="author">
-        <name><surname>Inc</surname><given-names>Advanced Micro Devices</given-names></name>
+        <string-name>Advanced Micro Devices, Inc.</string-name>
       </person-group>
       <article-title>Hipify-perl</article-title>
       <year iso-8601-date="2024">2024</year>
@@ -476,7 +484,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
   <ref id="ref-HIP">
     <element-citation>
       <person-group person-group-type="author">
-        <name><surname>Inc</surname><given-names>Advanced Micro Devices</given-names></name>
+        <string-name>Advanced Micro Devices, Inc.</string-name>
       </person-group>
       <article-title>Heterogeneous-computing interface for portability</article-title>
       <year iso-8601-date="2024">2024</year>
@@ -513,6 +521,24 @@ a Creative Commons Attribution 4.0 International License (CC BY
       <source>arXiv:2308.03120v1</source>
       <year iso-8601-date="2023-08">2023</year><month>08</month>
       <uri>http://arxiv.org/abs/2308.03120v1</uri>
+    </element-citation>
+  </ref>
+  <ref id="ref-andersen_ilu_dilu_rsc">
+    <element-citation publication-type="book">
+      <person-group person-group-type="author">
+        <name><surname>Andersen</surname><given-names>T. M.</given-names></name>
+        <name><surname>Torben</surname><given-names>J.</given-names></name>
+        <name><surname>Lye</surname><given-names>K. O.</given-names></name>
+        <name><surname>Rasmussen</surname><given-names>A. F.</given-names></name>
+        <name><surname>Lie</surname><given-names>K. A.</given-names></name>
+      </person-group>
+      <source>A comparison of DILU and ILU(0) as GPU-accelerated preconditioners</source>
+      <year iso-8601-date="2025-03">2025</year><month>03</month>
+      <volume>SPE Reservoir Simulation Conference</volume>
+      <uri>https://doi.org/10.2118/223873-MS</uri>
+      <pub-id pub-id-type="doi">10.2118/223873-MS</pub-id>
+      <fpage>D021S009R004</fpage>
+      <lpage></lpage>
     </element-citation>
   </ref>
 </ref-list>
