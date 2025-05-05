@@ -30,13 +30,14 @@ class DeferredLogger;
 template<class Scalar> class GroupState;
 template<typename FluidSystem, typename Indices> class WellState;
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class GasLiftCommon
 {
 public:
     virtual ~GasLiftCommon() = default;
 
 protected:
+    using Scalar = typename FluidSystem::Scalar;
     GasLiftCommon(WellState<FluidSystem, Indices>& well_state,
                   const GroupState<Scalar>& group_state,
                   DeferredLogger& deferred_logger,

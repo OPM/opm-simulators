@@ -26,14 +26,20 @@
 
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <fmt/format.h>
 
 #include <stdexcept>
 
 namespace Opm {
 
-template<class Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+GasLiftGroupInfo<FluidSystem, Indices>::
 GasLiftGroupInfo(GLiftEclWells& ecl_wells,
                  const Schedule& schedule,
                  const SummaryState& summary_state,
@@ -41,11 +47,11 @@ GasLiftGroupInfo(GLiftEclWells& ecl_wells,
                  const int iteration_idx,
                  const PhaseUsage& phase_usage,
                  DeferredLogger& deferred_logger,
-                 WellState<Scalar>& well_state,
+                 WellState<FluidSystem, Indices>& well_state,
                  const GroupState<Scalar>& group_state,
                  const Communication& comm,
                  bool glift_debug)
-    : GasLiftCommon<Scalar>(well_state, group_state, deferred_logger, comm, glift_debug)
+    : GasLiftCommon<FluidSystem, Indices>(well_state, group_state, deferred_logger, comm, glift_debug)
     , ecl_wells_{ecl_wells}
     , schedule_{schedule}
     , summary_state_{summary_state}
@@ -59,64 +65,70 @@ GasLiftGroupInfo(GLiftEclWells& ecl_wells,
  * Public methods in alphabetical order
  ****************************************/
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 alqRate(const std::string& group_name)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.alq();
 }
 
-template<class Scalar>
-int GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+int GasLiftGroupInfo<FluidSystem, Indices>::
 getGroupIdx(const std::string& group_name)
 {
     return this->group_idx_.at(group_name);
 }
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 gasRate(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.gasRate();
 }
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 gasPotential(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.gasPotential();
 }
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 waterPotential(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.waterPotential();
 }
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 oilPotential(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.oilPotential();
 }
 
-template<class Scalar>
-std::optional<Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 gasTarget(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.gasTarget();
 }
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 getRate(Rate rate_type, const std::string& group_name) const
 {
     switch (rate_type) {
@@ -134,8 +146,9 @@ getRate(Rate rate_type, const std::string& group_name) const
     }
 }
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 getPotential(Rate rate_type, const std::string& group_name) const
 {
     switch (rate_type) {
@@ -153,9 +166,12 @@ getPotential(Rate rate_type, const std::string& group_name) const
     }
 }
 
-template<class Scalar>
-std::tuple<Scalar, Scalar, Scalar, Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::tuple<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 getRates(const int group_idx) const
 {
     const auto& group_name = groupIdxToName(group_idx);
@@ -163,9 +179,9 @@ getRates(const int group_idx) const
     return std::make_tuple(rates.oilRate(), rates.gasRate(), rates.waterRate(), rates.alq());
 }
 
-template<class Scalar>
-std::optional<Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 getTarget(Rate rate_type, const std::string& group_name) const
 {
     switch (rate_type) {
@@ -183,18 +199,18 @@ getTarget(Rate rate_type, const std::string& group_name) const
     }
 }
 
-template<class Scalar>
-std::vector<std::pair<std::string,Scalar>>&
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::vector<std::pair<std::string,typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>>&
+GasLiftGroupInfo<FluidSystem, Indices>::
 getWellGroups(const std::string& well_name)
 {
     assert(this->well_group_map_.count(well_name) == 1);
     return this->well_group_map_[well_name];
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 const std::string&
-GasLiftGroupInfo<Scalar>::
+GasLiftGroupInfo<FluidSystem, Indices>::
 groupIdxToName(int group_idx) const
 {
     const std::string* group_name = nullptr;
@@ -214,23 +230,23 @@ groupIdxToName(int group_idx) const
     return *group_name;
 }
 
-template<class Scalar>
-bool GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GasLiftGroupInfo<FluidSystem, Indices>::
 hasAnyTarget(const std::string& group_name) const
 {
     return oilTarget(group_name)   || gasTarget(group_name)
         || waterTarget(group_name) || liquidTarget(group_name);
 }
 
-template<class Scalar>
-bool GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GasLiftGroupInfo<FluidSystem, Indices>::
 hasWell(const std::string& well_name)
 {
     return this->well_group_map_.count(well_name) == 1;
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 initialize()
 {
     const auto& group = this->schedule_.getGroup("FIELD", this->report_step_idx_);
@@ -241,53 +257,54 @@ initialize()
         group, group_names, group_efficiency, /*current efficiency=*/1.0);
 }
 
-template<class Scalar>
-std::optional<Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 liquidTarget(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.liquidTarget();
 }
 
-template<class Scalar>
-std::optional<Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 maxAlq(const std::string& group_name)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.maxAlq();
 }
 
-template<class Scalar>
-std::optional<Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 maxTotalGasRate(const std::string& group_name)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.maxTotalGasRate();
 }
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 oilRate(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.oilRate();
 }
 
-template<class Scalar>
-std::optional<Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 oilTarget(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.oilTarget();
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 const std::string
-GasLiftGroupInfo<Scalar>::
+GasLiftGroupInfo<FluidSystem, Indices>::
 rateToString(Rate rate) {
     switch (rate) {
     case Rate::oil:
@@ -303,25 +320,26 @@ rateToString(Rate rate) {
     }
 }
 
-template<class Scalar>
-Scalar GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar
+GasLiftGroupInfo<FluidSystem, Indices>::
 waterRate(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.waterRate();
 }
 
-template<class Scalar>
-std::optional<Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 waterTarget(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.waterTarget();
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 update(const std::string& group_name,
         Scalar delta_oil,
         Scalar delta_gas,
@@ -332,8 +350,8 @@ update(const std::string& group_name,
     group_rate.update(delta_oil, delta_gas, delta_water, delta_alq);
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 updateRate(int idx,
            Scalar oil_rate,
            Scalar gas_rate,
@@ -349,8 +367,8 @@ updateRate(int idx,
  * Protected methods in alphabetical order
  ****************************************/
 
-template<class Scalar>
-bool GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GasLiftGroupInfo<FluidSystem, Indices>::
 checkDoGasLiftOptimization_(const std::string& well_name)
 {
     auto itr = this->ecl_wells_.find(well_name);
@@ -409,8 +427,8 @@ checkDoGasLiftOptimization_(const std::string& well_name)
     }
 }
 
-template<class Scalar>
-bool GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GasLiftGroupInfo<FluidSystem, Indices>::
 checkNewtonIterationIdxOk_(const std::string& well_name)
 {
     if (this->glo_.all_newton()) {
@@ -439,8 +457,8 @@ checkNewtonIterationIdxOk_(const std::string& well_name)
 
 // This is called by each rank, but the value of "well_name" should be unique
 // across ranks
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 debugDisplayWellContribution_(const std::string& gr_name,
                               const std::string& well_name,
                               Scalar eff_factor,
@@ -461,8 +479,8 @@ debugDisplayWellContribution_(const std::string& gr_name,
     displayDebugMessage_(msg);
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 debugDisplayUpdatedGroupRates(const std::string& name,
                               Scalar oil_rate,
                               Scalar gas_rate,
@@ -475,24 +493,24 @@ debugDisplayUpdatedGroupRates(const std::string& name,
     this->displayDebugMessageOnRank0_(msg);
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 debugEndInitializeGroup(const std::string& name) const
 {
     const std::string msg = fmt::format("Finished with group {} ...", name);
     this->displayDebugMessageOnRank0_(msg);
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 debugStartInitializeGroup(const std::string& name) const
 {
     const std::string msg = fmt::format("Initializing group {} ...", name);
     this->displayDebugMessageOnRank0_(msg);
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 displayDebugMessage_(const std::string& msg) const
 {
     if (this->debug) {
@@ -501,8 +519,8 @@ displayDebugMessage_(const std::string& msg) const
     }
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 displayDebugMessage_(const std::string& msg, const std::string& well_name)
 {
     if (this->debug) {
@@ -511,9 +529,14 @@ displayDebugMessage_(const std::string& msg, const std::string& well_name)
     }
 }
 
-template<class Scalar>
-std::tuple<Scalar, Scalar, Scalar, Scalar, Scalar, Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::tuple<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 getProducerWellRates_(const Well* well, int well_index)
 {
     const auto& pu = this->phase_usage_;
@@ -562,9 +585,15 @@ getProducerWellRates_(const Well* well, int well_index)
     return {oil_rate, gas_rate, water_rate, oil_pot, gas_pot, water_pot};
 }
 
-template<class Scalar>
-std::tuple<Scalar, Scalar, Scalar, Scalar, Scalar, Scalar, Scalar>
-GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::tuple<typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar,
+           typename GasLiftGroupInfo<FluidSystem, Indices>::Scalar>
+GasLiftGroupInfo<FluidSystem, Indices>::
 initializeGroupRatesRecursive_(const Group& group)
 {
     std::array<Scalar,7> rates{};
@@ -680,8 +709,8 @@ initializeGroupRatesRecursive_(const Group& group)
     return std::make_tuple(oil_rate, gas_rate, water_rate, oil_potential, gas_potential, water_potential, alq);
 }
 
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 initializeWell2GroupMapRecursive_(const Group& group,
                                   std::vector<std::string>& group_names,
                                   std::vector<Scalar>& group_efficiency,
@@ -746,8 +775,8 @@ initializeWell2GroupMapRecursive_(const Group& group,
 //  per time step (or better: once per report step) and saved e.g. in
 //  the well state object, instead of rebuilding here for each of
 //  NUPCOL well iteration for each time step.
-template<class Scalar>
-void GasLiftGroupInfo<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GasLiftGroupInfo<FluidSystem, Indices>::
 updateGroupIdxMap_(const std::string& group_name)
 {
     if (this->group_idx_.count(group_name) == 0) {
@@ -757,10 +786,41 @@ updateGroupIdxMap_(const std::string& group_name)
     }
 }
 
-template class GasLiftGroupInfo<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class GasLiftGroupInfo<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class GasLiftGroupInfo<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm

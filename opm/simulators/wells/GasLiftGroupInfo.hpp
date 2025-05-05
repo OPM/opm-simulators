@@ -42,18 +42,19 @@ class Well;
 template<typename FluidSystem, typename Indices> class WellState;
 
 
-template<class Scalar>
-class GasLiftGroupInfo : public GasLiftCommon<Scalar>
+template<typename FluidSystem, typename Indices>
+class GasLiftGroupInfo : public GasLiftCommon<FluidSystem, Indices>
 {
 protected:
     class GroupRates;
+    using Scalar = typename FluidSystem::Scalar;
     // NOTE: In the Well2GroupMap below, in the std::vector value we store
     //    pairs of group names and efficiency factors. The efficiency factors
     //    are the product of the wells efficiency factor and all the efficiency
     //    factors of the child groups of the group all the way down
     //    to the well group.
     using Well2GroupMap =
-        std::map<std::string, std::vector<std::pair<std::string,Scalar>>>;
+        std::map<std::string, std::vector<std::pair<std::string, Scalar>>>;
     using GroupRateMap =
         std::map<std::string, GroupRates>;
     using GroupIdxMap = std::map<std::string, int>;
@@ -76,7 +77,7 @@ public:
                      const int iteration_idx,
                      const PhaseUsage& phase_usage,
                      DeferredLogger& deferred_logger,
-                     WellState<Scalar>& well_state,
+                     WellState<FluidSystem, Indices>& well_state,
                      const GroupState<Scalar>& group_state,
                      const Parallel::Communication& comm,
                      bool glift_debug);
