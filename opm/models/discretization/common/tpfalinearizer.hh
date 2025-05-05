@@ -436,11 +436,11 @@ private:
             stencil.update(elem);
 
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
-                unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
+                const unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
                 loc_nbinfo.resize(stencil.numDof() - 1); // Do not include the primary dof in neighborInfo_
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
-                    unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
+                    const unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     sparsityPattern[myIdx].insert(neighborIdx);
                     if (dofIdx > 0) {
                         const Scalar trans = problem_().transmissibility(myIdx, neighborIdx);
@@ -507,7 +507,7 @@ private:
 
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
-        std::size_t numAuxMod = model.numAuxiliaryModules();
+        const std::size_t numAuxMod = model.numAuxiliaryModules();
         for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern);
         }
@@ -555,7 +555,7 @@ private:
         const auto& model = model_();
         const auto& nncOutput = simulator_().problem().eclWriter().getOutputNnc();
         Stencil stencil(gridView_(), model_().dofMapper());
-        unsigned numCells = model.numTotalDof();
+        const unsigned numCells = model.numTotalDof();
         std::unordered_multimap<int, std::pair<int, int>> nncIndices;
         std::vector<FlowInfo> loc_flinfo;
         std::vector<VelocityInfo> loc_vlinfo;
@@ -582,13 +582,13 @@ private:
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
-                unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
-                int numFaces = stencil.numBoundaryFaces() + stencil.numInteriorFaces();
+                const unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
+                const int numFaces = stencil.numBoundaryFaces() + stencil.numInteriorFaces();
                 loc_flinfo.resize(numFaces);
                 loc_vlinfo.resize(stencil.numDof() - 1);
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
-                    unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
+                    const unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     if (dofIdx > 0) {
                         const auto scvfIdx = dofIdx - 1;
                         const auto& scvf = stencil.interiorFace(scvfIdx);
@@ -611,7 +611,7 @@ private:
 
                 for (unsigned bdfIdx = 0; bdfIdx < stencil.numBoundaryFaces(); ++bdfIdx) {
                     const auto& scvf = stencil.boundaryFace(bdfIdx);
-                    int faceId = scvf.dirId();
+                    const int faceId = scvf.dirId();
                     loc_flinfo[stencil.numInteriorFaces() + bdfIdx] = FlowInfo{faceId, flow, nncId};
                 }
 
@@ -671,7 +671,7 @@ public:
                 short loc = 0;
                 for (const auto& nbInfo : nbInfos) {
                     OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
-                    unsigned globJ = nbInfo.neighbor;
+                    const unsigned globJ = nbInfo.neighbor;
                     assert(globJ != globI);
                     adres = 0.0;
                     darcyFlux = 0.0;
@@ -757,7 +757,7 @@ private:
                 short loc = 0;
                 for (const auto& nbInfo : nbInfos) {
                     OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
-                    unsigned globJ = nbInfo.neighbor;
+                    const unsigned globJ = nbInfo.neighbor;
                     assert(globJ != globI);
                     res = 0.0;
                     bMat = 0.0;
@@ -785,9 +785,9 @@ private:
             }
 
             // Accumulation term.
-            double dt = simulator_().timeStepSize();
-            double volume = model_().dofTotalVolume(globI);
-            Scalar storefac = volume / dt;
+            const double dt = simulator_().timeStepSize();
+            const double volume = model_().dofTotalVolume(globI);
+            const Scalar storefac = volume / dt;
             adres = 0.0;
             {
                 OPM_TIMEBLOCK_LOCAL(computeStorage);
@@ -817,7 +817,7 @@ private:
                     }
                     else {
                         Dune::FieldVector<Scalar, numEq> tmp;
-                        IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+                        const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
                         LocalResidual::computeStorage(tmp, intQuantOld);
                         model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
                     }
@@ -827,7 +827,7 @@ private:
             else {
                 OPM_TIMEBLOCK_LOCAL(computeStorage0);
                 Dune::FieldVector<Scalar, numEq> tmp;
-                IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+                const IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
                 LocalResidual::computeStorage(tmp, intQuantOld);
                 // assume volume do not change
                 res -= tmp;
@@ -889,14 +889,15 @@ private:
             // that will also initialize the residual consistently.
             initFirstIteration_();
         }
-        unsigned numCells = model_().numTotalDof();
+
+        const unsigned numCells = model_().numTotalDof();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (unsigned globI = 0; globI < numCells; globI++) {
             auto nbInfos = neighborInfo_[globI]; // nbInfos will be a SparseTable<...>::mutable_iterator_range.
             for (auto& nbInfo : nbInfos) {
-                unsigned globJ = nbInfo.neighbor;
+                const unsigned globJ = nbInfo.neighbor;
                 nbInfo.res_nbinfo.trans = problem_().transmissibility(globI, globJ);
             }
         }
