@@ -44,6 +44,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <stdexcept>
 #include <type_traits>
 
@@ -146,7 +147,7 @@ public:
      */
     void eval(ElementContext& elemCtx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         internalResidual_.resize(numDof);
         asImp_().eval(internalResidual_, elemCtx);
     }
@@ -177,7 +178,7 @@ public:
         if (useVolumetricResidual) {
             // make the residual volume specific (i.e., make it incorrect mass per cubic
             // meter instead of total mass)
-            size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+            std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
             for (unsigned dofIdx=0; dofIdx < numDof; ++dofIdx) {
                 if (elemCtx.dofTotalVolume(dofIdx, /*timeIdx=*/0) > 0.0) {
                     // interior DOF
@@ -214,7 +215,7 @@ public:
         if (timeIdx == 0) {
             // calculate the amount of conservation each quantity inside
             // all primary sub control volumes
-            size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+            std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
             for (unsigned dofIdx=0; dofIdx < numPrimaryDof; dofIdx++) {
                 storage[dofIdx] = 0.0;
 
@@ -252,7 +253,7 @@ public:
             // for all previous solutions, the storage term does _not_ depend on the
             // current primary variables, so we use scalars to store it.
             if (elemCtx.enableStorageCache()) {
-                size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
+                std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
                 for (unsigned dofIdx=0; dofIdx < numPrimaryDof; dofIdx++) {
                     unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
                     const auto& cachedStorage = elemCtx.model().cachedStorage(globalDofIdx, timeIdx);
@@ -264,7 +265,7 @@ public:
                 // calculate the amount of conservation each quantity inside
                 // all primary sub control volumes
                 Dune::FieldVector<Scalar, numEq> tmp;
-                size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+                std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
                 for (unsigned dofIdx=0; dofIdx < numPrimaryDof; dofIdx++) {
                     tmp = 0.0;
                     asImp_().computeStorage(tmp,
@@ -282,7 +283,7 @@ public:
         }
 
 #ifndef NDEBUG
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned dofIdx=0; dofIdx < numPrimaryDof; dofIdx++) {
             for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                 Valgrind::CheckDefined(storage[dofIdx][eqIdx]);
@@ -307,7 +308,7 @@ public:
 
         const auto& stencil = elemCtx.stencil(timeIdx);
         // calculate the mass flux over the sub-control volume faces
-        size_t numInteriorFaces = elemCtx.numInteriorFaces(timeIdx);
+        std::size_t numInteriorFaces = elemCtx.numInteriorFaces(timeIdx);
         for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
             const auto& face = stencil.interiorFace(scvfIdx);
             unsigned i = face.interiorIndex();
@@ -352,7 +353,7 @@ public:
 
 #if !defined NDEBUG
         // in debug mode, ensure that the residual is well-defined
-        size_t numDof = elemCtx.numDof(timeIdx);
+        std::size_t numDof = elemCtx.numDof(timeIdx);
         for (unsigned i=0; i < numDof; i++) {
             for (unsigned j = 0; j < numEq; ++ j) {
                 assert(isfinite(residual[i][j]));
@@ -432,7 +433,7 @@ protected:
             boundaryCtx.increment();
 
         // evaluate the boundary for all boundary faces of the current context
-        size_t numBoundaryFaces = boundaryCtx.numBoundaryFaces(/*timeIdx=*/0);
+        std::size_t numBoundaryFaces = boundaryCtx.numBoundaryFaces(/*timeIdx=*/0);
         for (unsigned faceIdx = 0; faceIdx < numBoundaryFaces; ++faceIdx, boundaryCtx.increment()) {
             // add the residual of all vertices of the boundary
             // segment
@@ -444,7 +445,7 @@ protected:
 
 #if !defined NDEBUG
         // in debug mode, ensure that the residual and the storage terms are well-defined
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         for (unsigned i=0; i < numDof; i++) {
             for (unsigned j = 0; j < numEq; ++ j) {
                 assert(isfinite(residual[i][j]));
@@ -502,7 +503,7 @@ protected:
         tmp2 = 0.0;
 
         // evaluate the volumetric terms (storage + source terms)
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned dofIdx=0; dofIdx < numPrimaryDof; dofIdx++) {
             Scalar extrusionFactor =
                 elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).extrusionFactor();
@@ -618,7 +619,7 @@ protected:
 
 #if !defined NDEBUG
         // in debug mode, ensure that the residual is well-defined
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         for (unsigned i=0; i < numDof; i++) {
             for (unsigned j = 0; j < numEq; ++ j) {
                 assert(isfinite(residual[i][j]));
