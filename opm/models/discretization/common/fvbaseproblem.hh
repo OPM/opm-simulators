@@ -140,14 +140,14 @@ public:
         }
 
         if (enableVtkOutput_()) {
-            bool asyncVtkOutput =
+            const bool asyncVtkOutput =
                 simulator_.gridView().comm().size() == 1 &&
                 Parameters::Get<Parameters::EnableAsyncVtkOutput>();
 
             // asynchonous VTK output currently does not work in conjunction with grid
             // adaptivity because the async-IO code assumes that the grid stays
             // constant. complain about that case.
-            bool enableGridAdaptation = Parameters::Get<Parameters::EnableGridAdaptation>();
+            const bool enableGridAdaptation = Parameters::Get<Parameters::EnableGridAdaptation>();
             if (asyncVtkOutput && enableGridAdaptation) {
                 throw std::runtime_error("Asynchronous VTK output currently cannot be used "
                                          "at the same time as grid adaptivity");
@@ -443,17 +443,17 @@ public:
     {
         const auto& executionTimer = simulator().executionTimer();
 
-        Scalar executionTime = executionTimer.realTimeElapsed();
-        Scalar setupTime = simulator().setupTimer().realTimeElapsed();
-        Scalar prePostProcessTime = simulator().prePostProcessTimer().realTimeElapsed();
-        Scalar localCpuTime = executionTimer.cpuTimeElapsed();
-        Scalar globalCpuTime = executionTimer.globalCpuTimeElapsed();
-        Scalar writeTime = simulator().writeTimer().realTimeElapsed();
-        Scalar linearizeTime = simulator().linearizeTimer().realTimeElapsed();
-        Scalar solveTime = simulator().solveTimer().realTimeElapsed();
-        Scalar updateTime = simulator().updateTimer().realTimeElapsed();
-        unsigned numProcesses = static_cast<unsigned>(this->gridView().comm().size());
-        unsigned threadsPerProcess = ThreadManager::maxThreads();
+        const Scalar executionTime = executionTimer.realTimeElapsed();
+        const Scalar setupTime = simulator().setupTimer().realTimeElapsed();
+        const Scalar prePostProcessTime = simulator().prePostProcessTimer().realTimeElapsed();
+        const Scalar localCpuTime = executionTimer.cpuTimeElapsed();
+        const Scalar globalCpuTime = executionTimer.globalCpuTimeElapsed();
+        const Scalar writeTime = simulator().writeTimer().realTimeElapsed();
+        const Scalar linearizeTime = simulator().linearizeTimer().realTimeElapsed();
+        const Scalar solveTime = simulator().solveTimer().realTimeElapsed();
+        const Scalar updateTime = simulator().updateTimer().realTimeElapsed();
+        const unsigned numProcesses = static_cast<unsigned>(this->gridView().comm().size());
+        const unsigned threadsPerProcess = ThreadManager::maxThreads();
         if (gridView().comm().rank() == 0) {
             std::cout << std::setprecision(3)
                       << "Simulation of problem '" << asImp_().name() << "' finished.\n"
@@ -498,7 +498,7 @@ public:
      */
     void timeIntegration()
     {
-        unsigned maxFails = asImp_().maxTimeIntegrationFailures();
+        const unsigned maxFails = asImp_().maxTimeIntegrationFailures();
         Scalar minTimeStep = asImp_().minTimeStepSize();
 
         std::string errorMessage;
@@ -508,7 +508,7 @@ public:
                 return;
             }
 
-            Scalar dt = simulator().timeStepSize();
+            const Scalar dt = simulator().timeStepSize();
             Scalar nextDt = dt / 2.0;
             if (dt < minTimeStep * (1.0 + 1e-9)) {
                 if (asImp_().continueOnConvergenceError()) {
@@ -786,7 +786,7 @@ public:
         }
 
         // calculate the time _after_ the time was updated
-        Scalar t = simulator().time() + simulator().timeStepSize();
+        const Scalar t = simulator().time() + simulator().timeStepSize();
 
         defaultVtkWriter_->beginWrite(t);
         model().prepareOutputFields();
