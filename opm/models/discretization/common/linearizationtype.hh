@@ -28,8 +28,7 @@
 #ifndef EWOMS_FV_BASE_LINEARIZATIONTYPE_HH
 #define EWOMS_FV_BASE_LINEARIZATIONTYPE_HH
 
-namespace Opm
-{
+namespace Opm {
 
 struct LinearizationType
 {
@@ -39,6 +38,5 @@ struct LinearizationType
 };
 
 } // namespace Opm
-
 
 #endif
