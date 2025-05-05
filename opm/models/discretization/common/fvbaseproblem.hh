@@ -152,11 +152,9 @@ public:
                 throw std::runtime_error("Asynchronous VTK output currently cannot be used "
                                          "at the same time as grid adaptivity");
 
-            std::string outputDir = asImp_().outputDir();
-
             defaultVtkWriter_ = std::make_unique<VtkMultiWriter>(asyncVtkOutput,
                                                                  gridView_,
-                                                                 outputDir,
+                                                                 asImp_().outputDir(),
                                                                  asImp_().name());
         }
     }
@@ -501,7 +499,7 @@ public:
     void timeIntegration()
     {
         unsigned maxFails = asImp_().maxTimeIntegrationFailures();
-        Scalar minTimeStepSize = asImp_().minTimeStepSize();
+        Scalar minTimeStep = asImp_().minTimeStepSize();
 
         std::string errorMessage;
         for (unsigned i = 0; i < maxFails; ++i) {
@@ -511,7 +509,7 @@ public:
 
             Scalar dt = simulator().timeStepSize();
             Scalar nextDt = dt / 2.0;
-            if (dt < minTimeStepSize*(1 + 1e-9)) {
+            if (dt < minTimeStep * (1.0 + 1e-9)) {
                 if (asImp_().continueOnConvergenceError()) {
                     if (gridView().comm().rank() == 0)
                         std::cout << "Newton solver did not converge with minimum time step of "
@@ -522,12 +520,12 @@ public:
                 else {
                     errorMessage =
                         "Time integration did not succeed with the minumum time step size of "
-                        + std::to_string(double(minTimeStepSize)) + " seconds. Giving up!";
+                        + std::to_string(double(minTimeStep)) + " seconds. Giving up!";
                     break; // give up: we can't make the time step smaller anymore!
                 }
             }
-            else if (nextDt < minTimeStepSize)
-                nextDt = minTimeStepSize;
+            else if (nextDt < minTimeStep)
+                nextDt = minTimeStep;
             simulator().setTimeStepSize(nextDt);
 
             // update failed
