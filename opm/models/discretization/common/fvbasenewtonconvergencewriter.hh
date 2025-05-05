@@ -52,6 +52,7 @@ struct VtkOutputFormat;
 //! \endcond
 
 namespace Opm {
+
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
@@ -67,7 +68,7 @@ class FvBaseNewtonConvergenceWriter
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
@@ -94,13 +95,14 @@ public:
      */
     void beginIteration()
     {
-        ++ iteration_;
-        if (!vtkMultiWriter_)
+        ++iteration_;
+        if (!vtkMultiWriter_) {
             vtkMultiWriter_ =
                 std::make_unique<VtkMultiWriter>(/*async=*/false,
                                                  newtonMethod_.problem().gridView(),
                                                  newtonMethod_.problem().outputDir(),
                                                  "convergence");
+        }
         vtkMultiWriter_->beginWrite(timeStepIdx_ + iteration_ / 100.0);
     }
 
