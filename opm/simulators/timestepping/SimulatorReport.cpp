@@ -387,7 +387,7 @@ namespace Opm
 
     void SimulatorReport::fullReports(std::ostream& os) const
     {
-        os << "  Time(day)  TStep(day)  Assembly    LSetup    LSolve    Update    Output WellIt Lins NewtIt LinIt Conv\n";
+        os << "  Time(day)  TStep(day)  Assembly    LSetup    LSolve    LocSol    Update    Output WellIt Lins NewtIt LinIt Conv\n";
         for (std::size_t i = 0; i < this->stepreports.size(); ++i) {
             const SimulatorReportSingle& sr = this->stepreports[i];
             os.precision(10);
