@@ -148,9 +148,10 @@ public:
             // adaptivity because the async-IO code assumes that the grid stays
             // constant. complain about that case.
             bool enableGridAdaptation = Parameters::Get<Parameters::EnableGridAdaptation>();
-            if (asyncVtkOutput && enableGridAdaptation)
+            if (asyncVtkOutput && enableGridAdaptation) {
                 throw std::runtime_error("Asynchronous VTK output currently cannot be used "
                                          "at the same time as grid adaptivity");
+            }
 
             defaultVtkWriter_ = std::make_unique<VtkMultiWriter>(asyncVtkOutput,
                                                                  gridView_,
@@ -214,8 +215,9 @@ public:
                                     const char **argv)
     {
         std::string desc = Implementation::briefDescription();
-        if (!desc.empty())
+        if (!desc.empty()) {
             desc = desc + "\n";
+        }
 
         return
             "Usage: "+std::string(argv[0]) + " [OPTIONS]\n"
@@ -287,8 +289,9 @@ public:
                 elementMapper_.update(gridView_);
                 vertexMapper_.update(gridView_);
 
-        if (enableVtkOutput_())
+        if (enableVtkOutput_()) {
             defaultVtkWriter_->gridChanged();
+        }
     }
 
     /*!
@@ -504,17 +507,19 @@ public:
         std::string errorMessage;
         for (unsigned i = 0; i < maxFails; ++i) {
             bool converged = model().update();
-            if (converged)
+            if (converged) {
                 return;
+            }
 
             Scalar dt = simulator().timeStepSize();
             Scalar nextDt = dt / 2.0;
             if (dt < minTimeStep * (1.0 + 1e-9)) {
                 if (asImp_().continueOnConvergenceError()) {
-                    if (gridView().comm().rank() == 0)
+                    if (gridView().comm().rank() == 0) {
                         std::cout << "Newton solver did not converge with minimum time step of "
                                   << dt << " seconds. Continuing with unconverged solution!\n"
                                   << std::flush;
+                    }
                     return;
                 }
                 else {
@@ -524,22 +529,25 @@ public:
                     break; // give up: we can't make the time step smaller anymore!
                 }
             }
-            else if (nextDt < minTimeStep)
+            else if (nextDt < minTimeStep) {
                 nextDt = minTimeStep;
+            }
             simulator().setTimeStepSize(nextDt);
 
             // update failed
-            if (gridView().comm().rank() == 0)
+            if (gridView().comm().rank() == 0) {
                 std::cout << "Newton solver did not converge with "
                           << "dt=" << dt << " seconds. Retrying with time step of "
                           << nextDt << " seconds\n" << std::flush;
+            }
         }
 
-        if (errorMessage.empty())
+        if (errorMessage.empty()) {
             errorMessage =
                 "Newton solver didn't converge after "
                 +std::to_string(maxFails)+" time-step divisions. dt="
                 +std::to_string(double(simulator().timeStepSize()));
+        }
         throw std::runtime_error(errorMessage);
     }
 
@@ -577,8 +585,9 @@ public:
      */
     Scalar nextTimeStepSize() const
     {
-        if (nextTimeStepSize_ > 0.0)
+        if (nextTimeStepSize_ > 0.0) {
             return nextTimeStepSize_;
+        }
 
         Scalar dtNext = std::min(Parameters::Get<Parameters::MaxTimeStepSize<Scalar>>(),
                                  newtonMethod().suggestTimeStepSize(simulator().timeStepSize()));
@@ -741,8 +750,9 @@ public:
     template <class Restarter>
     void serialize(Restarter& res)
     {
-        if (enableVtkOutput_())
+        if (enableVtkOutput_()) {
             defaultVtkWriter_->serialize(res);
+        }
     }
 
     /*!
@@ -758,8 +768,9 @@ public:
     template <class Restarter>
     void deserialize(Restarter& res)
     {
-        if (enableVtkOutput_())
+        if (enableVtkOutput_()) {
             defaultVtkWriter_->deserialize(res);
+        }
     }
 
     /*!
@@ -770,12 +781,14 @@ public:
      */
     void writeOutput(bool verbose = true)
     {
-        if (!enableVtkOutput_())
+        if (!enableVtkOutput_()) {
             return;
+        }
 
-        if (verbose && gridView().comm().rank() == 0)
+        if (verbose && gridView().comm().rank() == 0) {
             std::cout << "Writing visualization results for the current time step.\n"
                       << std::flush;
+        }
 
         // calculate the time _after_ the time was updated
         Scalar t = simulator().time() + simulator().timeStepSize();
