@@ -126,12 +126,10 @@ public:
         , simulator_(simulator)
     {
         // calculate the bounding box of the local partition of the grid view
-        VertexIterator vIt = gridView_.template begin<dim>();
-        const VertexIterator vEndIt = gridView_.template end<dim>();
-        for (; vIt!=vEndIt; ++vIt) {
+        for (const auto& vertex : vertices(gridView_)) {
             for (unsigned i=0; i<dim; i++) {
-                boundingBoxMin_[i] = std::min(boundingBoxMin_[i], vIt->geometry().corner(0)[i]);
-                boundingBoxMax_[i] = std::max(boundingBoxMax_[i], vIt->geometry().corner(0)[i]);
+                boundingBoxMin_[i] = std::min(boundingBoxMin_[i], vertex.geometry().corner(0)[i]);
+                boundingBoxMax_[i] = std::max(boundingBoxMax_[i], vertex.geometry().corner(0)[i]);
             }
         }
 
