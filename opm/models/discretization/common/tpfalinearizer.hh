@@ -112,10 +112,11 @@ class TpfaLinearizer
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
     using ADVectorBlock = GetPropType<TypeTag, Properties::RateVector>;
 
-    static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
-    static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
-    static const bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
-    static const bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
+    static constexpr bool linearizeNonLocalElements =
+        getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static constexpr bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
 
     // copying the linearizer is not a good idea
     TpfaLinearizer(const TpfaLinearizer&) = delete;
@@ -123,14 +124,9 @@ class TpfaLinearizer
 
 public:
     TpfaLinearizer()
-        : jacobian_()
     {
-        simulatorPtr_ = 0;
+        simulatorPtr_ = nullptr;
         separateSparseSourceTerms_ = Parameters::Get<Parameters::SeparateSparseSourceTerms>();
-    }
-
-    ~TpfaLinearizer()
-    {
     }
 
     /*!
@@ -201,15 +197,13 @@ public:
             linearizeDomain(fullDomain_);
             succeeded = 1;
         }
-        catch (const std::exception& e)
-        {
+        catch (const std::exception& e) {
             std::cout << "rank " << simulator_().gridView().comm().rank()
                       << " caught an exception while linearizing:" << e.what()
                       << "\n"  << std::flush;
             succeeded = 0;
         }
-        catch (...)
-        {
+        catch (...) {
             std::cout << "rank " << simulator_().gridView().comm().rank()
                       << " caught an exception while linearizing"
                       << "\n"  << std::flush;
@@ -247,7 +241,8 @@ public:
         if (domain.cells.size() == model_().numTotalDof()) {
             // We are on the full domain.
             resetSystem_();
-        } else {
+        }
+        else {
             resetSystem_(domain);
         }
 
@@ -308,50 +303,43 @@ public:
     GlobalEqVector& residual()
     { return residual_; }
 
-    void setLinearizationType(LinearizationType linearizationType){
-        linearizationType_ = linearizationType;
-    };
+    void setLinearizationType(LinearizationType linearizationType)
+    { linearizationType_ = linearizationType; }
 
-    const LinearizationType& getLinearizationType() const{
-        return linearizationType_;
-    };
+    const LinearizationType& getLinearizationType() const
+    { return linearizationType_; }
 
     /*!
      * \brief Return constant reference to the flowsInfo.
      *
      * (This object is only non-empty if the FLOWS keyword is true.)
      */
-    const auto& getFlowsInfo() const{
-
-        return flowsInfo_;
-    }
+    const auto& getFlowsInfo() const
+    { return flowsInfo_; }
 
     /*!
      * \brief Return constant reference to the floresInfo.
      *
      * (This object is only non-empty if the FLORES keyword is true.)
      */
-    const auto& getFloresInfo() const{
-
-        return floresInfo_;
-    }
+    const auto& getFloresInfo() const
+    { return floresInfo_; }
 
     /*!
      * \brief Return constant reference to the velocityInfo.
      *
      * (This object is only non-empty if the DISPERC keyword is true.)
      */
-    const auto& getVelocityInfo() const{
-
-        return velocityInfo_;
-    }
+    const auto& getVelocityInfo() const
+    { return velocityInfo_; }
 
     void updateDiscretizationParameters()
     {
         updateStoredTransmissibilities();
     }
 
-    void updateBoundaryConditionData() {
+    void updateBoundaryConditionData()
+    {
         for (auto& bdyInfo : boundaryInfo_) {
             const auto [type, massrateAD] = problem_().boundaryCondition(bdyInfo.cell, bdyInfo.dir);
 
@@ -374,7 +362,7 @@ public:
      *
      * (This object is only non-empty if the EnableConstraints property is true.)
      */
-    const std::map<unsigned, Constraints> constraintsMap() const
+    std::map<unsigned, Constraints> constraintsMap() const
     { return {}; }
 
     template <class SubDomainType>
@@ -392,16 +380,19 @@ public:
 private:
     Simulator& simulator_()
     { return *simulatorPtr_; }
+
     const Simulator& simulator_() const
     { return *simulatorPtr_; }
 
     Problem& problem_()
     { return simulator_().problem(); }
+
     const Problem& problem_() const
     { return simulator_().problem(); }
 
     Model& model_()
     { return simulator_().model(); }
+
     const Model& model_() const
     { return simulator_().model(); }
 
@@ -435,7 +426,7 @@ private:
 
         // for the main model, find out the global indices of the neighboring degrees of
         // freedom of each primary degree of freedom
-        using NeighborSet = std::set< unsigned >;
+        using NeighborSet = std::set<unsigned>;
         std::vector<NeighborSet> sparsityPattern(model.numTotalDof());
         const Scalar gravity = problem_().gravity()[dimWorld - 1];
         unsigned numCells = model.numTotalDof();
@@ -462,15 +453,15 @@ private:
                         const Scalar zEx = problem_().dofCenterDepth(neighborIdx);
                         const Scalar dZg = (zIn - zEx)*gravity;
                         const Scalar thpres = problem_().thresholdPressure(myIdx, neighborIdx);
-                        Scalar inAlpha {0.};
-                        Scalar outAlpha {0.};
-                        Scalar diffusivity {0.};
-                        Scalar dispersivity {0.};
-                        if constexpr(enableEnergy){
+                        Scalar inAlpha {};
+                        Scalar outAlpha {};
+                        Scalar diffusivity{};
+                        Scalar dispersivity{};
+                        if constexpr (enableEnergy) {
                             inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
                             outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
                         }
-                        if constexpr(enableDiffusion){
+                        if constexpr (enableDiffusion) {
                             diffusivity = problem_().diffusivity(myIdx, neighborIdx);
                         }
                         if (simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion()) {
@@ -479,8 +470,10 @@ private:
                         const auto dirId = scvf.dirId();
                         auto faceDir = dirId < 0 ? FaceDir::DirEnum::Unknown
                                                  : FaceDir::FromIntersectionIndex(dirId);
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, faceDir, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity}, nullptr};
-
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres,
+                                                                            dZg, faceDir, Vin, Vex,
+                                                                            inAlpha, outAlpha,
+                                                                            diffusivity, dispersivity}, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -570,7 +563,7 @@ private:
         VectorBlock flow(0.0);
 
         // Create a nnc structure to use fast lookup
-        for (unsigned int nncIdx = 0; nncIdx < nncOutput.size(); ++nncIdx) {
+        for (unsigned nncIdx = 0; nncIdx < nncOutput.size(); ++nncIdx) {
             const int ci1 = nncOutput[nncIdx].cell1;
             const int ci2 = nncOutput[nncIdx].cell2;
             nncIndices.emplace(ci1, std::make_pair(ci2, nncIdx));
@@ -622,7 +615,6 @@ private:
                     loc_flinfo[stencil.numInteriorFaces() + bdfIdx] = FlowInfo{faceId, flow, nncId};
                 }
 
-
                 if (anyFlows) {
                     flowsInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
                 }
@@ -639,12 +631,12 @@ private:
 public:
     void setResAndJacobi(VectorBlock& res, MatrixBlock& bMat, const ADVectorBlock& resid) const
     {
-        for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             res[eqIdx] = resid[eqIdx].value();
         }
 
-        for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
-            for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+            for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                 // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of
                 // the residual function 'eqIdx' for the degree of freedom 'dofIdx'
                 // with regard to the focus variable 'pvIdx' of the degree of freedom
@@ -654,7 +646,8 @@ public:
         }
     }
 
-    void updateFlowsInfo() {
+    void updateFlowsInfo()
+    {
         OPM_TIMEBLOCK(updateFlows);
         const bool enableFlows = simulator_().problem().eclWriter().outputModule().getFlows().hasFlows() ||
                                  simulator_().problem().eclWriter().outputModule().getFlows().hasBlockFlows();
@@ -674,29 +667,30 @@ public:
             const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
             // Flux term.
             {
-            OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
-            short loc = 0;
-            for (const auto& nbInfo : nbInfos) {
-                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
-                unsigned globJ = nbInfo.neighbor;
-                assert(globJ != globI);
-                adres = 0.0;
-                darcyFlux = 0.0;
-                const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, problem_().moduleParams());
-                adres *= nbInfo.res_nbinfo.faceArea;
-                if (enableFlows) {
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
-                        flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
+                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
+                short loc = 0;
+                for (const auto& nbInfo : nbInfos) {
+                    OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
+                    unsigned globJ = nbInfo.neighbor;
+                    assert(globJ != globI);
+                    adres = 0.0;
+                    darcyFlux = 0.0;
+                    const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                    LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn,
+                                               intQuantsEx, nbInfo.res_nbinfo, problem_().moduleParams());
+                    adres *= nbInfo.res_nbinfo.faceArea;
+                    if (enableFlows) {
+                        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                            flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
+                        }
                     }
-                }
-                if (enableFlores) {
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
-                        floresInfo_[globI][loc].flow[eqIdx] = darcyFlux[eqIdx].value();
+                    if (enableFlores) {
+                        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                            floresInfo_[globI][loc].flow[eqIdx] = darcyFlux[eqIdx].value();
+                        }
                     }
+                    ++loc;
                 }
-                ++loc;
-            }
             }
         }
 
@@ -714,7 +708,7 @@ public:
             adres *= bdyInfo.bcdata.faceArea;
             const unsigned bfIndex = bdyInfo.bfIndex;
             if (enableFlows) {
-                for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
+                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                     flowsInfo_[globI][nbInfos.size() + bfIndex].flow[eqIdx] = adres[eqIdx].value();
                 }
             }
@@ -759,33 +753,35 @@ private:
 
             // Flux term.
             {
-            OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
-            short loc = 0;
-            for (const auto& nbInfo : nbInfos) {
-                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
-                unsigned globJ = nbInfo.neighbor;
-                assert(globJ != globI);
-                res = 0.0;
-                bMat = 0.0;
-                adres = 0.0;
-                darcyFlux = 0.0;
-                const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo,  problem_().moduleParams());
-                adres *= nbInfo.res_nbinfo.faceArea;
-                if (enableDispersion || enableMICP) {
-                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
-                        velocityInfo_[globI][loc].velocity[phaseIdx] = darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
+                short loc = 0;
+                for (const auto& nbInfo : nbInfos) {
+                    OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
+                    unsigned globJ = nbInfo.neighbor;
+                    assert(globJ != globI);
+                    res = 0.0;
+                    bMat = 0.0;
+                    adres = 0.0;
+                    darcyFlux = 0.0;
+                    const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                    LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx,
+                                               nbInfo.res_nbinfo,  problem_().moduleParams());
+                    adres *= nbInfo.res_nbinfo.faceArea;
+                    if (enableDispersion || enableMICP) {
+                        for (unsigned phaseIdx = 0; phaseIdx < numEq; ++phaseIdx) {
+                            velocityInfo_[globI][loc].velocity[phaseIdx] =
+                                darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+                        }
                     }
+                    setResAndJacobi(res, bMat, adres);
+                    residual_[globI] += res;
+                    //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
+                    *diagMatAddress_[globI] += bMat;
+                    bMat *= -1.0;
+                    //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+                    *nbInfo.matBlockAddress += bMat;
+                    ++loc;
                 }
-                setResAndJacobi(res, bMat, adres);
-                residual_[globI] += res;
-                //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
-                *diagMatAddress_[globI] += bMat;
-                bMat *= -1.0;
-                //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
-                *nbInfo.matBlockAddress += bMat;
-                ++loc;
-            }
             }
 
             // Accumulation term.
@@ -818,7 +814,8 @@ private:
                             // otherwise this will be left un-updated.
                             model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
                         }
-                    } else {
+                    }
+                    else {
                         Dune::FieldVector<Scalar, numEq> tmp;
                         IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
                         LocalResidual::computeStorage(tmp, intQuantOld);
@@ -826,7 +823,8 @@ private:
                     }
                 }
                 res -= model_().cachedStorage(globI, 1);
-            } else {
+            }
+            else {
                 OPM_TIMEBLOCK_LOCAL(computeStorage0);
                 Dune::FieldVector<Scalar, numEq> tmp;
                 IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
@@ -847,7 +845,8 @@ private:
             adres = 0.0;
             if (separateSparseSourceTerms_) {
                 LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
-            } else {
+            }
+            else {
                 LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
             }
             adres *= -volume;
@@ -903,16 +902,15 @@ private:
         }
     }
 
-
-    Simulator *simulatorPtr_;
+    Simulator* simulatorPtr_{};
 
     // the jacobian matrix
-    std::unique_ptr<SparseMatrixAdapter> jacobian_;
+    std::unique_ptr<SparseMatrixAdapter> jacobian_{};
 
     // the right-hand side
     GlobalEqVector residual_;
 
-    LinearizationType linearizationType_;
+    LinearizationType linearizationType_{};
 
     using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
     struct NeighborInfo
@@ -921,8 +919,8 @@ private:
         ResidualNBInfo res_nbinfo;
         MatrixBlock* matBlockAddress;
     };
-    SparseTable<NeighborInfo> neighborInfo_;
-    std::vector<MatrixBlock*> diagMatAddress_;
+    SparseTable<NeighborInfo> neighborInfo_{};
+    std::vector<MatrixBlock*> diagMatAddress_{};
 
     struct FlowInfo
     {
@@ -950,6 +948,7 @@ private:
         double faceZCoord;
         ScalarFluidState exFluidState;
     };
+
     struct BoundaryInfo
     {
         unsigned int cell;
@@ -958,7 +957,9 @@ private:
         BoundaryConditionData bcdata;
     };
     std::vector<BoundaryInfo> boundaryInfo_;
+
     bool separateSparseSourceTerms_ = false;
+
     struct FullDomain
     {
         std::vector<int> cells;
