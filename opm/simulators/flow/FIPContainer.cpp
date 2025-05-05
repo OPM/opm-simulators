@@ -423,6 +423,26 @@ assignCalciteMass(const unsigned globalDofIdx,
 }
 
 template<class FluidSystem>
+bool
+FIPContainer<FluidSystem>::
+hasWaterMass() const
+{
+    return has(Inplace::Phase::WaterMass);
+}
+
+template<class FluidSystem>
+void
+FIPContainer<FluidSystem>::
+assignWaterMass(const unsigned globalDofIdx,
+                const std::array<Scalar, numPhases>& fip,
+                const Scalar   rhoW)
+{
+    if (this->has(Inplace::Phase::WaterMass)) {
+        this->fip_[Inplace::Phase::WaterMass][globalDofIdx] = fip[waterPhaseIdx] * rhoW;
+    }
+}
+
+template<class FluidSystem>
 void
 FIPContainer<FluidSystem>::
 assignOilGasDistribution(const unsigned globalDofIdx,

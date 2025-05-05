@@ -1764,6 +1764,11 @@ namespace Opm
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(simulator);
 
         const int nseg = this->numberOfSegments();
+        
+        const Scalar rhow = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ?
+            FluidSystem::referenceDensity( FluidSystem::waterPhaseIdx, Base::pvtRegionIdx() ) : 0.0;
+        const unsigned watCompIdx = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ?
+            Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) : 0;
 
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
@@ -1801,6 +1806,11 @@ namespace Opm
                     perf_rates[local_perf_index*this->number_of_phases_ + this->modelCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
                 }
                 perf_press_state[local_perf_index] = perf_press.value();
+
+                // mass rates, for now only water
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    perf_data.wat_mass_rates[local_perf_index] = cq_s[watCompIdx].value() * rhow;
+                }
 
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     // the cq_s entering mass balance equations need to consider the efficiency factors.

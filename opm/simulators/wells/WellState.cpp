@@ -549,6 +549,7 @@ WellState<Scalar>::report(const int* globalCellIdxMap,
             well.rates.set(rt::reservoir_water, reservoir_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
             well.rates.set(rt::productivity_index_water, wpi[pu.phase_pos[BlackoilPhases::Aqua]]);
             well.rates.set(rt::well_potential_water, well_potentials[pu.phase_pos[BlackoilPhases::Aqua]]);
+            well.rates.set(rt::mass_wat, ws.sum_wat_mass_rates());
         }
 
         if (pu.phase_used[BlackoilPhases::Liquid]) {
@@ -1157,6 +1158,12 @@ reportConnectionPressuresAndRates(const std::size_t well_index,
     if (pu.has_co2_or_h2store) {
         for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
             connections[i].rates.set(rt::mass_gas, perf_data.gas_mass_rates[i]);
+        }
+    }
+
+    if (pu.phase_used[Water]) {
+        for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
+            connections[i].rates.set(rt::mass_wat, perf_data.wat_mass_rates[i]);
         }
     }
 }

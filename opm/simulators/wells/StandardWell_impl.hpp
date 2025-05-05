@@ -644,6 +644,13 @@ namespace Opm
             const Scalar rho = FluidSystem::referenceDensity( FluidSystem::gasPhaseIdx, Base::pvtRegionIdx() );
             perf_data.gas_mass_rates[perf] = cq_s[gas_comp_idx].value() * rho;
         }
+
+        // Store the perforation water mass rate.
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const unsigned wat_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            const Scalar rho = FluidSystem::referenceDensity( FluidSystem::waterPhaseIdx, Base::pvtRegionIdx() );
+            perf_data.wat_mass_rates[perf] = cq_s[wat_comp_idx].value() * rho;
+        }
     }
 
 
