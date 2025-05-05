@@ -216,8 +216,9 @@ public:
         }
         succeeded = simulator_().gridView().comm().min(succeeded);
 
-        if (!succeeded)
+        if (!succeeded) {
             throw NumericalProblem("A process did not succeed in linearizing the system");
+        }
     }
 
     /*!
@@ -237,8 +238,9 @@ public:
         // we defer the initialization of the Jacobian matrix until here because the
         // auxiliary modules usually assume the problem, model and grid to be fully
         // initialized...
-        if (!jacobian_)
+        if (!jacobian_) {
             initFirstIteration_();
+        }
 
         // Called here because it is no longer called from linearize_().
         if (domain.cells.size() == model_().numTotalDof()) {
@@ -281,8 +283,9 @@ public:
 
             succeeded = comm.min(succeeded);
 
-            if (!succeeded)
+            if (!succeeded) {
                 throw NumericalProblem("linearization of an auxiliary equation failed");
+            }
         }
     }
 
@@ -485,8 +488,9 @@ private:
                         const auto& bf = stencil.boundaryFace(bfIndex);
                         const int dir_id = bf.dirId();
                         // not for NNCs
-                        if (dir_id < 0)
+                        if (dir_id < 0) {
                             continue;
+                        }
                         const auto [type, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
                         // Strip the unnecessary (and zero anyway) derivatives off massrate.
                         VectorBlock massrate(0.0);
@@ -510,8 +514,9 @@ private:
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
         size_t numAuxMod = model.numAuxiliaryModules();
-        for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx)
+        for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern);
+        }
 
         // allocate raw matrix
         jacobian_.reset(new SparseMatrixAdapter(simulator_()));
@@ -633,8 +638,9 @@ private:
 public:
     void setResAndJacobi(VectorBlock& res, MatrixBlock& bMat, const ADVectorBlock& resid) const
     {
-        for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++)
+        for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
             res[eqIdx] = resid[eqIdx].value();
+        }
 
         for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
             for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
@@ -695,8 +701,9 @@ public:
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
         for (const auto& bdyInfo : boundaryInfo_) {
-            if (bdyInfo.bcdata.type == BCType::NONE)
+            if (bdyInfo.bcdata.type == BCType::NONE) {
                 continue;
+            }
 
             ADVectorBlock adres(0.0);
             const unsigned globI = bdyInfo.cell;
@@ -856,8 +863,9 @@ private:
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
         for (const auto& bdyInfo : boundaryInfo_) {
-            if (bdyInfo.bcdata.type == BCType::NONE)
+            if (bdyInfo.bcdata.type == BCType::NONE) {
                 continue;
+            }
 
             VectorBlock res(0.0);
             MatrixBlock bMat(0.0);
