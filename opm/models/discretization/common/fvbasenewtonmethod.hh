@@ -28,8 +28,7 @@
 #ifndef EWOMS_FV_BASE_NEWTON_METHOD_HH
 #define EWOMS_FV_BASE_NEWTON_METHOD_HH
 
-#include "fvbasenewtonconvergencewriter.hh"
-
+#include <opm/models/discretization/common/fvbasenewtonconvergencewriter.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
 #include <opm/models/utils/propertysystem.hh>
 
@@ -40,6 +39,7 @@ class FvBaseNewtonMethod;
 
 template <class TypeTag>
 class FvBaseNewtonConvergenceWriter;
+
 } // namespace Opm
 
 namespace Opm::Properties {
@@ -94,11 +94,10 @@ class FvBaseNewtonMethod : public NewtonMethod<TypeTag>
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using EqVector = GetPropType<TypeTag, Properties::EqVector>;
 
-
 public:
     explicit FvBaseNewtonMethod(Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {}
 
 protected:
     friend class NewtonMethod<TypeTag>;
@@ -130,10 +129,11 @@ protected:
         // make sure that the intensive quantities get recalculated at the next
         // linearization
         if (model_().storeIntensiveQuantities()) {
-            for (unsigned dofIdx = 0; dofIdx < model_().numGridDof(); ++dofIdx)
+            for (unsigned dofIdx = 0; dofIdx < model_().numGridDof(); ++dofIdx) {
                 model_().setIntensiveQuantitiesCacheEntryValidity(dofIdx,
                                                                   /*timeIdx=*/0,
                                                                   /*valid=*/false);
+            }
         }
     }
 
@@ -166,6 +166,7 @@ private:
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 };
+
 } // namespace Opm
 
 #endif
