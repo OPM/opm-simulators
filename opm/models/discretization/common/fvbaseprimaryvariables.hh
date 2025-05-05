@@ -29,11 +29,12 @@
 #define EWOMS_FV_BASE_PRIMARY_VARIABLES_HH
 
 #include <dune/common/fvector.hh>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-#include <opm/models/discretization/common/linearizationtype.hh>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
 
 #include <stdexcept>
 #include <type_traits>
@@ -92,16 +93,20 @@ public:
      * it represents the a constant f = x_i. (the difference is that in the first case,
      * the derivative w.r.t. x_i is 1, while it is 0 in the second case.
      */
-    Evaluation makeEvaluation(unsigned varIdx, unsigned timeIdx, LinearizationType linearizationType = LinearizationType()) const
+    Evaluation makeEvaluation(unsigned varIdx, unsigned timeIdx,
+                              LinearizationType linearizationType = LinearizationType()) const
     {
-        if (std::is_same<Evaluation, Scalar>::value)
+        if constexpr (std::is_same_v<Evaluation, Scalar>) {
             return (*this)[varIdx]; // finite differences
+        }
         else {
             // automatic differentiation
-            if (timeIdx == linearizationType.time)
+            if (timeIdx == linearizationType.time) {
                 return Toolbox::createVariable((*this)[varIdx], varIdx);
-            else
+            }
+            else {
                 return Toolbox::createConstant((*this)[varIdx]);
+            }
         }
     }
 
@@ -135,37 +140,37 @@ public:
 
 namespace Dune {
 
-  /** Compatibility traits class for DenseVector and DenseMatrix.
-   */
-  template<class TypeTag, bool>
-  struct FieldTraitsImpl;
+    /** Compatibility traits class for DenseVector and DenseMatrix.
+     */
+    template<class TypeTag, bool>
+    struct FieldTraitsImpl;
 
-  /** FieldTraitsImpl for classes derived from
-   * Opm::FvBasePrimaryVariables: use FieldVector's FieldTraits implementation) */
-  template<class TypeTag>
-  struct FieldTraitsImpl< TypeTag, true >
-      : public FieldTraits<FieldVector<Opm::GetPropType<TypeTag, Opm::Properties::Scalar>,
-                                       Opm::getPropValue<TypeTag, Opm::Properties::NumEq>()> >
-  {
-  };
+    /** FieldTraitsImpl for classes derived from
+     * Opm::FvBasePrimaryVariables: use FieldVector's FieldTraits implementation) */
+    template<class TypeTag>
+    struct FieldTraitsImpl<TypeTag, true>
+        : public FieldTraits<FieldVector<Opm::GetPropType<TypeTag, Opm::Properties::Scalar>,
+                                         Opm::getPropValue<TypeTag, Opm::Properties::NumEq>()>>
+    {
+    };
 
-  /** FieldTraitsImpl for classes not derived from
-   * Opm::FvBasePrimaryVariables, fall bakc to existing implementation */
-  template<class T>
-  struct FieldTraitsImpl< T, false >
-    : public FieldTraits< T >
-  {
-  };
+    /** FieldTraitsImpl for classes not derived from
+     * Opm::FvBasePrimaryVariables, fall bakc to existing implementation */
+    template<class T>
+    struct FieldTraitsImpl<T, false>
+      : public FieldTraits<T>
+    {
+    };
 
+    /** Specialization of FieldTraits for all PrimaryVariables derived from Opm::FvBasePrimaryVariables */
+    template<class TypeTag, template <class> class EwomsPrimaryVariable>
+    struct FieldTraits<EwomsPrimaryVariable<TypeTag>>
+      : public FieldTraitsImpl<TypeTag,
+                               std::is_base_of_v<Opm::FvBasePrimaryVariables<TypeTag>,
+                                                 EwomsPrimaryVariable<TypeTag>>>
+    {
+    };
 
-  /** Specialization of FieldTraits for all PrimaryVariables derived from Opm::FvBasePrimaryVariables */
-  template<class TypeTag, template <class> class EwomsPrimaryVariable>
-  struct FieldTraits< EwomsPrimaryVariable< TypeTag > >
-    : public FieldTraitsImpl< TypeTag,
-                              std::is_base_of< Opm::FvBasePrimaryVariables< TypeTag >,
-                                               EwomsPrimaryVariable< TypeTag > > :: value >
-  {
-  };
-}
+} // namespace Dune
 
 #endif
