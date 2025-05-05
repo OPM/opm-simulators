@@ -85,7 +85,8 @@ namespace {
         }
 
         const Scalar denom = Scalar{1} - rs*rv;
-        if (! (denom > Scalar{0})) {
+        // too small denominator can cause small volrat and too big density
+        if (! (denom > threshold)) {
             const auto msg = fmt::format(R"(Problematic denominator value {} for well {}.
     Connection density calculation with (Rs, Rv) = ({}, {}).
     Proceeding as if no dissolution or vaporisation for this connection)",
@@ -131,7 +132,8 @@ namespace {
         }
 
         const Scalar d = Scalar{1} - rsw*rvw;
-        if (! (d > Scalar{0})) {
+        // too small denominator can cause small volrat and too big density
+        if (! (d > threshold)) {
             const auto msg = fmt::format(R"(Problematic denominator value {} for well {}.
     Connection density calculation with (Rsw, Rvw) = ({}, {}).
     Proceeding as if no dissolution or vaporisation for this connection)",
