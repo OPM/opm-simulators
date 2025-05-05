@@ -513,7 +513,7 @@ private:
         }
 
         // allocate raw matrix
-        jacobian_.reset(new SparseMatrixAdapter(simulator_()));
+        jacobian_ = std::make_unique<SparseMatrixAdapter>(simulator_());
         diagMatAddress_.resize(numCells);
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern);
