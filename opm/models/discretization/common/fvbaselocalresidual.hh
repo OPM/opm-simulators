@@ -28,21 +28,24 @@
 #ifndef EWOMS_FV_BASE_LOCAL_RESIDUAL_HH
 #define EWOMS_FV_BASE_LOCAL_RESIDUAL_HH
 
-#include "fvbaseproperties.hh"
-
-#include <opm/models/utils/parametersystem.hpp>
-#include <opm/models/utils/alignedallocator.hh>
-
-#include <opm/material/common/Valgrind.hpp>
-
-#include <dune/istl/bvector.hh>
-#include <dune/grid/common/geometry.hh>
-
+#include <dune/common/classname.hh>
 #include <dune/common/fvector.hh>
 
-#include <dune/common/classname.hh>
+#include <dune/grid/common/geometry.hh>
 
+#include <dune/istl/bvector.hh>
+
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/alignedallocator.hh>
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <cassert>
 #include <cmath>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm {
 /*!
