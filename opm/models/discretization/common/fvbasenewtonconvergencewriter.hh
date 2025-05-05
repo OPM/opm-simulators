@@ -33,6 +33,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <iostream>
+#include <memory>
 
 //! \cond SKIP_THIS
 namespace Opm::Properties {
@@ -75,11 +76,7 @@ public:
     {
         timeStepIdx_ = 0;
         iteration_ = 0;
-        vtkMultiWriter_ = 0;
     }
-
-    ~FvBaseNewtonConvergenceWriter()
-    { delete vtkMultiWriter_; }
 
     /*!
      * \brief Called by the Newton method before the actual algorithm
@@ -100,10 +97,10 @@ public:
         ++ iteration_;
         if (!vtkMultiWriter_)
             vtkMultiWriter_ =
-                new VtkMultiWriter(/*async=*/false,
-                                   newtonMethod_.problem().gridView(),
-                                   newtonMethod_.problem().outputDir(),
-                                   "convergence");
+                std::make_unique<VtkMultiWriter>(/*async=*/false,
+                                                 newtonMethod_.problem().gridView(),
+                                                 newtonMethod_.problem().outputDir(),
+                                                 "convergence");
         vtkMultiWriter_->beginWrite(timeStepIdx_ + iteration_ / 100.0);
     }
 
@@ -151,7 +148,7 @@ public:
 private:
     int timeStepIdx_;
     int iteration_;
-    VtkMultiWriter *vtkMultiWriter_;
+    std::unique_ptr<VtkMultiWriter> vtkMultiWriter_{};
     NewtonMethod& newtonMethod_;
 };
 
