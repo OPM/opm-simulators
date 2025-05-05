@@ -43,6 +43,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <string>
 
 namespace Opm::Properties {
@@ -123,7 +124,6 @@ public:
         , boundingBoxMin_(std::numeric_limits<double>::max())
         , boundingBoxMax_(-std::numeric_limits<double>::max())
         , simulator_(simulator)
-        , defaultVtkWriter_(0)
     {
         // calculate the bounding box of the local partition of the grid view
         VertexIterator vIt = gridView_.template begin<dim>();
@@ -156,13 +156,12 @@ public:
 
             std::string outputDir = asImp_().outputDir();
 
-            defaultVtkWriter_ =
-                new VtkMultiWriter(asyncVtkOutput, gridView_, outputDir, asImp_().name());
+            defaultVtkWriter_ = std::make_unique<VtkMultiWriter>(asyncVtkOutput,
+                                                                 gridView_,
+                                                                 outputDir,
+                                                                 asImp_().name());
         }
     }
-
-    ~FvBaseProblem()
-    { delete defaultVtkWriter_; }
 
     /*!
      * \brief Registers all available parameters for the problem and
@@ -797,7 +796,7 @@ public:
      *        to write the default ouput after each time step to disk.
      */
     VtkMultiWriter& defaultVtkWriter() const
-    { return defaultVtkWriter_; }
+    { return *defaultVtkWriter_; }
 
 protected:
     Scalar nextTimeStepSize_;
@@ -823,7 +822,7 @@ private:
 
     // Attributes required for the actual simulation
     Simulator& simulator_;
-    mutable VtkMultiWriter *defaultVtkWriter_;
+    std::unique_ptr<VtkMultiWriter> defaultVtkWriter_{};
 };
 
 } // namespace Opm
