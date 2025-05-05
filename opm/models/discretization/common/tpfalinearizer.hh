@@ -40,15 +40,21 @@
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/Schedule/BCProp.hpp>
 
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
 
+#include <cassert>
 #include <exception>   // current_exception, rethrow_exception
 #include <iostream>
+#include <map>
+#include <memory>
 #include <numeric>
 #include <set>
-#include <type_traits>
+#include <stdexcept>
+#include <unordered_map>
 #include <vector>
 
 namespace Opm::Parameters {
