@@ -1832,12 +1832,14 @@ getWellsForTesting(const int timeStepIdx,
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
 assignMassGasRate(data::Wells& wsrpt,
-                  const Scalar& gasDensity) const
+                  const Scalar gasDensity) const
 {
     using rt = data::Rates::opt;
+
     for (auto& wrpt : wsrpt) {
         auto& well_rates = wrpt.second.rates;
         const auto w_mass_rate = well_rates.get(rt::gas, 0.0) * gasDensity;
+
         well_rates.set(rt::mass_gas, w_mass_rate);
     }
 }
@@ -1870,8 +1872,9 @@ assignMswTracerRates(data::Wells& wsrpt,
                      const MswTracerRates& mswTracerRates,
                      const unsigned reportStep) const
 {
-    if (mswTracerRates.empty())
+    if (mswTracerRates.empty()) {
         return;
+    }
 
     for (const auto& mswTR : mswTracerRates) {
         const auto& eclWell = schedule_.getWell(mswTR.first, reportStep);

@@ -461,7 +461,7 @@ protected:
                               const unsigned reportStep) const;
 
     void assignMassGasRate(data::Wells& wsrpt,
-                           const Scalar& gasDensity) const;
+                           const Scalar gasDensity) const;
 
     Schedule& schedule_;
     const SummaryState& summaryState_;
