@@ -407,6 +407,9 @@ copyToWellState(WellState<Scalar>& well_state,
         const Scalar g_total = value_[WQTotal];
         for (int p = 0; p < well_.numPhases(); ++p) {
             ws.surface_rates[p] = g_total * F[p];
+            // It should use value_ for this for consistencya, since value_ is more updated at this point
+            const auto& comp_idx = well_.modelCompIdxToFlowCompIdx(p);
+            ws.composition_fractions[p] = surfaceVolumeFraction(comp_idx).value();
         }
     } else { // injectors
         for (int p = 0; p < well_.numPhases(); ++p) {
