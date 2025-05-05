@@ -47,6 +47,7 @@
 #include <opm/models/discretization/common/linearizationtype.hh>
 
 #include <cassert>
+#include <cstddef>
 #include <exception>   // current_exception, rethrow_exception
 #include <iostream>
 #include <map>
@@ -356,7 +357,7 @@ public:
 
             // Strip the unnecessary (and zero anyway) derivatives off massrate.
             VectorBlock massrate(0.0);
-            for (size_t ii = 0; ii < massrate.size(); ++ii) {
+            for (std::size_t ii = 0; ii < massrate.size(); ++ii) {
                 massrate[ii] = massrateAD[ii].value();
             }
             if (type != BCType::NONE) {
@@ -494,7 +495,7 @@ private:
                         const auto [type, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
                         // Strip the unnecessary (and zero anyway) derivatives off massrate.
                         VectorBlock massrate(0.0);
-                        for (size_t ii = 0; ii < massrate.size(); ++ii) {
+                        for (std::size_t ii = 0; ii < massrate.size(); ++ii) {
                             massrate[ii] = massrateAD[ii].value();
                         }
                         const auto& exFluidState = problem_().boundaryFluidState(myIdx, dir_id);
@@ -513,7 +514,7 @@ private:
 
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
-        size_t numAuxMod = model.numAuxiliaryModules();
+        std::size_t numAuxMod = model.numAuxiliaryModules();
         for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern);
         }
