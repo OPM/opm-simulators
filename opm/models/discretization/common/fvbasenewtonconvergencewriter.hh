@@ -29,6 +29,7 @@
 #define EWOMS_FV_BASE_NEWTON_CONVERGENCE_WRITER_HH
 
 #include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <iostream>
