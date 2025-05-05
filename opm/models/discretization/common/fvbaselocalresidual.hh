@@ -174,11 +174,11 @@ public:
         if (useVolumetricResidual) {
             // make the residual volume specific (i.e., make it incorrect mass per cubic
             // meter instead of total mass)
-            std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+            const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
             for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
                 if (elemCtx.dofTotalVolume(dofIdx, /*timeIdx=*/0) > 0.0) {
                     // interior DOF
-                    Scalar dofVolume = elemCtx.dofTotalVolume(dofIdx, /*timeIdx=*/0);
+                    const Scalar dofVolume = elemCtx.dofTotalVolume(dofIdx, /*timeIdx=*/0);
 
                     assert(std::isfinite(dofVolume));
                     Valgrind::CheckDefined(dofVolume);
@@ -212,12 +212,12 @@ public:
         if (timeIdx == 0) {
             // calculate the amount of conservation each quantity inside
             // all primary sub control volumes
-            std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+            const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
             for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
                 storage[dofIdx] = 0.0;
 
                 // the volume of the associated DOF
-                Scalar alpha =
+                const Scalar alpha =
                     elemCtx.stencil(timeIdx).subControlVolume(dofIdx).volume() *
                     elemCtx.intensiveQuantities(dofIdx, timeIdx).extrusionFactor();
 
@@ -252,9 +252,9 @@ public:
             // for all previous solutions, the storage term does _not_ depend on the
             // current primary variables, so we use scalars to store it.
             if (elemCtx.enableStorageCache()) {
-                std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
+                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
                 for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
-                    unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+                    const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
                     const auto& cachedStorage = elemCtx.model().cachedStorage(globalDofIdx, timeIdx);
                     for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                         storage[dofIdx][eqIdx] = cachedStorage[eqIdx];
@@ -265,7 +265,7 @@ public:
                 // calculate the amount of conservation each quantity inside
                 // all primary sub control volumes
                 Dune::FieldVector<Scalar, numEq> tmp;
-                std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
                 for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
                     tmp = 0.0;
                     asImp_().computeStorage(tmp,
@@ -282,7 +282,7 @@ public:
         }
 
 #ifndef NDEBUG
-        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
             for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                 Valgrind::CheckDefined(storage[dofIdx][eqIdx]);
@@ -307,11 +307,11 @@ public:
 
         const auto& stencil = elemCtx.stencil(timeIdx);
         // calculate the mass flux over the sub-control volume faces
-        std::size_t numInteriorFaces = elemCtx.numInteriorFaces(timeIdx);
+        const std::size_t numInteriorFaces = elemCtx.numInteriorFaces(timeIdx);
         for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; ++scvfIdx) {
             const auto& face = stencil.interiorFace(scvfIdx);
-            unsigned i = face.interiorIndex();
-            unsigned j = face.exteriorIndex();
+            const unsigned i = face.interiorIndex();
+            const unsigned j = face.exteriorIndex();
 
             Valgrind::SetUndefined(flux);
             asImp_().computeFlux(flux, /*context=*/elemCtx, scvfIdx, timeIdx);
@@ -322,8 +322,7 @@ public:
             }
 #endif
 
-            Scalar alpha = elemCtx.extensiveQuantities(scvfIdx, timeIdx).extrusionFactor();
-            alpha *= face.area();
+            const Scalar alpha = elemCtx.extensiveQuantities(scvfIdx, timeIdx).extrusionFactor() * face.area();
             Valgrind::CheckDefined(alpha);
             assert(alpha > 0.0);
             assert(isfinite(alpha));
@@ -354,7 +353,7 @@ public:
 
 #if !defined NDEBUG
         // in debug mode, ensure that the residual is well-defined
-        std::size_t numDof = elemCtx.numDof(timeIdx);
+        const std::size_t numDof = elemCtx.numDof(timeIdx);
         for (unsigned i = 0; i < numDof; ++i) {
             for (unsigned j = 0; j < numEq; ++j) {
                 assert(isfinite(residual[i][j]));
@@ -435,7 +434,7 @@ protected:
         }
 
         // evaluate the boundary for all boundary faces of the current context
-        std::size_t numBoundaryFaces = boundaryCtx.numBoundaryFaces(/*timeIdx=*/0);
+        const std::size_t numBoundaryFaces = boundaryCtx.numBoundaryFaces(/*timeIdx=*/0);
         for (unsigned faceIdx = 0; faceIdx < numBoundaryFaces; ++faceIdx, boundaryCtx.increment()) {
             // add the residual of all vertices of the boundary
             // segment
@@ -447,7 +446,7 @@ protected:
 
 #if !defined NDEBUG
         // in debug mode, ensure that the residual and the storage terms are well-defined
-        std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
         for (unsigned i = 0; i < numDof; ++i) {
             for (unsigned j = 0; j < numEq; ++j) {
                 assert(isfinite(residual[i][j]));
@@ -473,7 +472,7 @@ protected:
         Valgrind::CheckDefined(values);
 
         const auto& stencil = boundaryCtx.stencil(timeIdx);
-        unsigned dofIdx = stencil.boundaryFace(boundaryFaceIdx).interiorIndex();
+        const unsigned dofIdx = stencil.boundaryFace(boundaryFaceIdx).interiorIndex();
         const auto& insideIntQuants = boundaryCtx.elementContext().intensiveQuantities(dofIdx, timeIdx);
         for (unsigned eqIdx = 0; eqIdx < values.size(); ++eqIdx)  {
             values[eqIdx] *= stencil.boundaryFace(boundaryFaceIdx).area() *
@@ -504,14 +503,14 @@ protected:
         tmp2 = 0.0;
 
         // evaluate the volumetric terms (storage + source terms)
-        std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
         for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
-            Scalar extrusionFactor =
+            const Scalar extrusionFactor =
                 elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).extrusionFactor();
             Valgrind::CheckDefined(extrusionFactor);
             assert(isfinite(extrusionFactor));
             assert(extrusionFactor > 0.0);
-            Scalar scvVolume =
+            const Scalar scvVolume =
                elemCtx.stencil(/*timeIdx=*/0).subControlVolume(dofIdx).volume() * extrusionFactor;
             Valgrind::CheckDefined(scvVolume);
             assert(isfinite(scvVolume));
@@ -542,7 +541,7 @@ protected:
 
             if (elemCtx.enableStorageCache()) {
                 const auto& model = elemCtx.model();
-                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
                 if (model.newtonMethod().numIterations() == 0 &&
                     !elemCtx.haveStashedIntensiveQuantities())
                 {
@@ -589,7 +588,7 @@ protected:
 
             // Use the implicit Euler time discretization
             for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-                double dt = elemCtx.simulator().timeStepSize();
+                const double dt = elemCtx.simulator().timeStepSize();
                 assert(dt > 0);
                 tmp[eqIdx] -= tmp2[eqIdx];
                 tmp[eqIdx] *= scvVolume / dt;
