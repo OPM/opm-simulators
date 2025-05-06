@@ -34,38 +34,40 @@ namespace Opm::gpuistl
 {
 //! \brief DILU preconditioner on the GPU.
 //!
-//! \tparam M The matrix type to operate on
+//! \tparam CPUMatrixT Type of the matrix on the CPU
 //! \tparam X Type of the update
 //! \tparam Y Type of the defect
 //! \tparam l Ignored. Just there to have the same number of template arguments
 //!    as other preconditioners.
 //!
+//! \todo Remove the reliance on CPUMatrix. We should be able to use the GPU matrix type
+//!    directly.
+//!
 //! \note We assume X and Y are both GpuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
-template <class M, class X, class Y, int l = 1>
+template <class CPUMatrixT, class X, class Y, int l = 1>
 class GpuDILU : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
-    //! \brief The matrix type the preconditioner is for.
-    using matrix_type = typename std::remove_const<M>::type;
     //! \brief The domain type of the preconditioner.
     using domain_type = X;
     //! \brief The range type of the preconditioner.
     using range_type = Y;
     //! \brief The field type of the preconditioner.
     using field_type = typename X::field_type;
-    //! \brief The GPU matrix type
-    using CuMat = GpuSparseMatrix<field_type>;
+
+    using GPUMatrix = GpuSparseMatrix<field_type>;
     using FloatMat = GpuSparseMatrix<float>;
     using FloatVec = GpuVector<float>;
 
+    //! \brief The matrix type the preconditioner is for.
+    using matrix_type = GPUMatrix;
+
+    
     //! \brief Constructor.
     //!
     //!  Constructor gets all parameters to operate the prec.
-    //! \param A The matrix to operate on.
-    //! \param w The relaxation factor.
-    //!
-    explicit GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme);
+    explicit GpuDILU(const GPUMatrix& gpuMatrix, const CPUMatrixT& cpuMatrix, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -116,10 +118,8 @@ private:
     void apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int upperSolveThreadBlockSize);
     //! \brief Updates the matrix data.
     void update(int moveThreadBlockSize, int factorizationThreadBlockSize);
-    //! \brief Reference to the underlying matrix
-    const M& m_cpuMatrix;
     //! \brief size_t describing the dimensions of the square block elements
-    static constexpr const size_t blocksize_ = matrix_type::block_type::cols;
+    static constexpr const size_t blocksize_ = CPUMatrixT::block_type::cols;
     //! \brief SparseTable storing each row by level
     Opm::SparseTable<size_t> m_levelSets;
     //! \brief converts from index in reordered structure to index natural ordered structure
@@ -127,12 +127,12 @@ private:
     //! \brief converts from index in natural ordered structure to index reordered strucutre
     std::vector<int> m_naturalToReordered;
     //! \brief The A matrix stored on the gpu, and its reordred version
-    CuMat m_gpuMatrix;
+    const GPUMatrix& m_gpuMatrix;
     //! \brief Stores the matrix in its entirety reordered. Optional in case splitting is used
-    std::unique_ptr<CuMat> m_gpuMatrixReordered;
+    std::unique_ptr<GPUMatrix> m_gpuMatrixReordered;
     //! \brief If matrix splitting is enabled, then we store the lower and upper part separately
-    std::unique_ptr<CuMat> m_gpuMatrixReorderedLower;
-    std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
+    std::unique_ptr<GPUMatrix> m_gpuMatrixReorderedLower;
+    std::unique_ptr<GPUMatrix> m_gpuMatrixReorderedUpper;
     //! \brief If matrix splitting is enabled, we also store the diagonal separately
     std::unique_ptr<GpuVector<field_type>> m_gpuMatrixReorderedDiag;
     //! \brief If mixed precision is enabled, store a float matrix

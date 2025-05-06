@@ -50,6 +50,31 @@ struct is_gpu_operator
 template <typename T>
 static constexpr bool is_gpu_operator_v = is_gpu_operator<T>::value;
 
+
+/**
+ * \brief Check if a given operator is a GPU matrix.
+ *
+ * This is used to check if the matrix is a GPU matrix, which is used
+ * in say the preconditioners to specialize
+ *
+ * \tparam T The type of the matrix to check.
+ */
+ template <typename T>
+ struct is_gpu_matrix
+ {
+ #if HAVE_CUDA
+
+     static constexpr bool value
+         = std::is_same_v<T, Opm::gpuistl::GpuSparseMatrix<typename T::field_type>>;
+ #else
+     // If CUDA is not enabled, we assume that the matrix is not a GPU matrix.
+     static constexpr bool value = false;
+ #endif
+ };
+ 
+ template <typename T>
+ static constexpr bool is_gpu_matrix_v = is_gpu_matrix<T>::value;
+
 } // namespace Opm
 
 #endif // OPM_IS_GPU_OPERATOR_HEADER

@@ -33,8 +33,8 @@ namespace Opm::gpuistl::detail
  * @param numberOfRows The number of rows in the matrices
  */
 template <class T, int blocksize>
-void copyMatDataToReordered(T* srcMatrix,
-                            int* srcRowIndices,
+void copyMatDataToReordered(const T* srcMatrix,
+                            const int* srcRowIndices,
                             T* dstMatrix,
                             int* dstRowIndices,
                             int* naturalToReordered,
@@ -56,9 +56,9 @@ void copyMatDataToReordered(T* srcMatrix,
  * @param numberOfRows The number of rows in the matrices
  */
 template <class T, int blocksize>
-void copyMatDataToReorderedSplit(T* srcMatrix,
-                                 int* srcRowIndices,
-                                 int* srcColumnIndices,
+void copyMatDataToReorderedSplit(const T* srcMatrix,
+                                 const int* srcRowIndices,
+                                 const int* srcColumnIndices,
                                  T* dstLowerMatrix,
                                  int* dstLowerRowIndices,
                                  T* dstUpperMatrix,

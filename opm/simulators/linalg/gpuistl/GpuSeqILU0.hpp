@@ -25,6 +25,8 @@
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseResource.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/fix_zero_diagonal.hpp>
+#include <opm/simulators/linalg/is_gpu_operator.hpp>
 
 
 
@@ -64,7 +66,19 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
+    template <typename T = M, typename std::enable_if_t<is_gpu_matrix_v<T>, int> = 0>
     GpuSeqILU0(const M& A, field_type w);
+
+
+    //! \brief Constructor.
+    //!
+    //!  Constructor gets all parameters to operate the prec.
+    //! \param A The matrix to operate on.
+    //! \param w The relaxation factor.
+    //!
+    template <typename T = M, typename std::enable_if_t<!is_gpu_matrix_v<T>, int> = 0>
+    GpuSeqILU0(const M& A, field_type w);
+
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -133,6 +147,62 @@ private:
 
     void updateILUConfiguration();
 };
+
+
+// Case where matrix is a CPU matrix as input
+template <class M, class X, class Y, int l>
+template <typename T, typename std::enable_if_t<!is_gpu_matrix_v<T>, int>>
+GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
+    : m_underlyingMatrix(A)
+    , m_w(w)
+    , m_LU(GpuSparseMatrix<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
+    , m_temporaryStorage(m_LU.N() * m_LU.blockSize())
+    , m_descriptionL(detail::createLowerDiagonalDescription())
+    , m_descriptionU(detail::createUpperDiagonalDescription())
+    , m_cuSparseHandle(detail::CuSparseHandle::getInstance())
+{
+    // Some sanity check
+    OPM_ERROR_IF(A.N() != m_LU.N(),
+                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_LU.N(), A.N()));
+    OPM_ERROR_IF(
+        A[0][0].N() != m_LU.blockSize(),
+        fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.", m_LU.blockSize(), A[0][0].N()));
+    OPM_ERROR_IF(
+        A.N() * A[0][0].N() != m_LU.dim(),
+        fmt::format("CuSparse matrix not same dimension as DUNE matrix. {} vs {}.", m_LU.dim(), A.N() * A[0][0].N()));
+    OPM_ERROR_IF(A.nonzeroes() != m_LU.nonzeroes(),
+                 fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
+                             m_LU.nonzeroes(),
+                             A.nonzeroes()));
+
+
+    updateILUConfiguration();
+}
+
+// Case where matrix is a GPU matrix as input
+template <class M, class X, class Y, int l>
+template <typename T, typename std::enable_if_t<is_gpu_matrix_v<T>, int>>
+GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
+    : m_underlyingMatrix(A)
+    , m_w(w)
+    , m_LU(A)
+    , m_temporaryStorage(m_LU.N() * m_LU.blockSize())
+    , m_descriptionL(detail::createLowerDiagonalDescription())
+    , m_descriptionU(detail::createUpperDiagonalDescription())
+    , m_cuSparseHandle(detail::CuSparseHandle::getInstance())
+{
+    // Some sanity check
+    OPM_ERROR_IF(A.N() != m_LU.N(),
+                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_LU.N(), A.N()));
+    OPM_ERROR_IF(A.nonzeroes() != m_LU.nonzeroes(),
+                 fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
+                             m_LU.nonzeroes(),
+                             A.nonzeroes()));
+
+
+    updateILUConfiguration();
+}
+
 } // end namespace Opm::gpuistl
 
 #endif
