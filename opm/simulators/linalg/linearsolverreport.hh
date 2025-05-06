@@ -49,10 +49,10 @@ public:
         converged_ = 0;
     }
 
-    const Opm::Timer& timer() const
+    const Timer& timer() const
     { return timer_; }
 
-    Opm::Timer& timer()
+    Timer& timer()
     { return timer_; }
 
     unsigned iterations() const
@@ -71,7 +71,7 @@ public:
     { converged_ = value; }
 
 private:
-    Opm::Timer timer_;
+    Timer timer_;
     unsigned iterations_;
     bool converged_;
 };
