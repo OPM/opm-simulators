@@ -185,7 +185,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
   gradient stabilized (BiCGSTAB) method within
   <monospace>gpu-ISTL</monospace>. Adapter classes like
   <monospace>SolverAdapter</monospace> and
-  <monospace>PreconditionerAdapter</monospace> allows mixing GPU and CPU
+  <monospace>PreconditionerAdapter</monospace> allow mixing GPU and CPU
   solvers or preconditioners for ease of development, testing and
   validation. Moreover, <monospace>GpuOwnerOverlapCopy</monospace>
   extends the MPI functionality in Dune to support multi-GPU
@@ -275,10 +275,61 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <graphic mimetype="image" mime-subtype="svg+xml" xlink:href="lin_its_small.svg" />
   </fig>
 </sec>
+<sec id="case-study-simulation-configurations">
+  <title>Case Study Simulation Configurations</title>
+  <p>To run OPM Flow simulations for the case study on CPU, we use the
+  following command to run OPM Flow with 16 processes in parallel, where
+  we specify that the linear solver is described in a JSON file called
+  “cpu_ilu0.json”.</p>
+  <code language="bash">    mpirun -n 16 flow \
+        /path/to/DATA/file \
+        --output-dir=/path/to/output \
+        --linear-solver=/path/to/cpu_ilu0.json \
+        --threads-per-process=1 \
+        --newton-min-iterations=1 \
+        --matrix-add-well-contributions=true</code>
+  <p>To recreate the CPU runs, use the following “cpu_ilu0.json”.</p>
+  <code language="json">{
+    &quot;tol&quot;: &quot;0.01&quot;,
+    &quot;maxiter&quot;: &quot;200&quot;,
+    &quot;verbosity&quot;: &quot;0&quot;,
+    &quot;solver&quot;: &quot;bicgstab&quot;,
+    &quot;preconditioner&quot;: {
+        &quot;type&quot;: &quot;ILU0&quot;,
+        &quot;ilulevel&quot;: &quot;0&quot;
+    }
+}</code>
+  <p>We use the command below to run the GPU simulations, where we only
+  use one process. To save simulation time we use 16 threads in
+  parallel, this does not affect the timing for the linear solver which
+  exists entirely on the GPU.
+  </p>
+  <code language="bash">    mpirun -n 1 flow \
+        /path/to/DATA/file \
+        --output-dir=/path/to/output \
+        --linear-solver=/path/to/gpu_ilu0.json \
+        --threads-per-process=16 \
+        --newton-min-iterations=1 \
+        --matrix-add-well-contributions=true</code>
+  <p>The “gpu_ilu0.json” file enables the use of
+  <monospace>gpu-ISTL</monospace> by specifying that we want to use the
+  <monospace>gpubicgstab</monospace> linear solver, and the
+  <monospace>OPMGPUILU0</monospace> preconditioner.</p>
+  <code language="json">{
+    &quot;tol&quot;: &quot;0.01&quot;,
+    &quot;maxiter&quot;: &quot;200&quot;,
+    &quot;verbosity&quot;: &quot;0&quot;,
+    &quot;solver&quot;: &quot;gpubicgstab&quot;,
+    &quot;preconditioner&quot;: {
+        &quot;type&quot;: &quot;OPMGPUILU0&quot;,
+        &quot;ilulevel&quot;: &quot;0&quot;
+    }
+}</code>
+</sec>
 <sec id="acknowledgements">
   <title>Acknowledgements</title>
   <p>Development of <monospace>gpu-ISTL</monospace> in OPM Flow from
-  2021 to 2024 was a part of the EU project <italic>HPC, Big Data, and
+  2021 to 2024 was part of the EU project <italic>HPC, Big Data, and
   Artificial Intelligence convergent platform</italic> (ACROSS).
   Development in 2024 has been financed by Equinor.</p>
 </sec>

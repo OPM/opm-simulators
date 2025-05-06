@@ -44,7 +44,7 @@ Several standalone libraries GPU-accelerate linear algebra operations. Some also
 
 # The `gpu-ISTL` Components
 
-The `gpu-ISTL` library encompasses numerical algorithms, Dune adapters, and essential linear algebra components such as `GpuVector` and `GpuSparseMatrix` that leverage optimized libraries from Nvidia and AMD for efficient mathematical operations. Preconditioners such as Jacobi, ILU(0), and DILU are implemented with custom GPU kernels to enhance the performance of the bi-conjugate gradient stabilized (BiCGSTAB) method within `gpu-ISTL`. Adapter classes like `SolverAdapter` and `PreconditionerAdapter` allows mixing GPU and CPU solvers or preconditioners for ease of development, testing and validation. Moreover, `GpuOwnerOverlapCopy` extends the MPI functionality in Dune to support multi-GPU simulations, including CUDA-aware MPI for Nvidia cards to accelerate inter-process memory transfers. The library also provides capabilities for autotuning thread-block sizes in user-implemented GPU kernels. Figure 1 contains a simplified class diagram with of some of the components that constitute `gpu-ISTL`.
+The `gpu-ISTL` library encompasses numerical algorithms, Dune adapters, and essential linear algebra components such as `GpuVector` and `GpuSparseMatrix` that leverage optimized libraries from Nvidia and AMD for efficient mathematical operations. Preconditioners such as Jacobi, ILU(0), and DILU are implemented with custom GPU kernels to enhance the performance of the bi-conjugate gradient stabilized (BiCGSTAB) method within `gpu-ISTL`. Adapter classes like `SolverAdapter` and `PreconditionerAdapter` allow mixing GPU and CPU solvers or preconditioners for ease of development, testing and validation. Moreover, `GpuOwnerOverlapCopy` extends the MPI functionality in Dune to support multi-GPU simulations, including CUDA-aware MPI for Nvidia cards to accelerate inter-process memory transfers. The library also provides capabilities for autotuning thread-block sizes in user-implemented GPU kernels. Figure 1 contains a simplified class diagram with of some of the components that constitute `gpu-ISTL`.
 
 ![Class diagram showing a simplified view of how `gpu-ISTL` is implemented. The colored backgrounds indicate which namespace the classes belong to. Colors on individual classes correspond to what conceptual part of the simulator they are a part of. White represents linear solvers, red represents the classes enabling multiprocess simulations, orange represents the implementation linear solver preconditioners, and green represents general linear algebra functionality.](figures/mpiparallel_gpuistl.png)
 
@@ -62,10 +62,58 @@ We simulate using the ILU0 preconditioned BiCGSTAB as the linear solver on three
 
 ![Speedup of the mean time per linear iteration across a 2000-year simulation case derived from Case C of the 11th SPE Comparative Solution Project compared to the CPU implementation. A speedup of 5.6 and 4.8 is achieved on the largest case for the RTX 4070Ti and Radeon RX 7900XTX respectively.](figures/lin_its_small.svg)
 
+# Case Study Simulation Configurations
+To run OPM Flow simulations for the case study on CPU, we use the following command to run OPM Flow with 16 processes in parallel, where we specify that the linear solver is described in a JSON file called "cpu_ilu0.json".
+```bash
+    mpirun -n 16 flow \
+        /path/to/DATA/file \
+        --output-dir=/path/to/output \
+        --linear-solver=/path/to/cpu_ilu0.json \
+        --threads-per-process=1 \
+        --newton-min-iterations=1 \
+        --matrix-add-well-contributions=true
+```
+To recreate the CPU runs, use the following "cpu_ilu0.json".
+```json
+{
+    "tol": "0.01",
+    "maxiter": "200",
+    "verbosity": "0",
+    "solver": "bicgstab",
+    "preconditioner": {
+        "type": "ILU0",
+        "ilulevel": "0"
+    }
+}
+```
 
+We use the command below to run the GPU simulations, where we only use one process. To save simulation time we use 16 threads in parallel, this does not affect the timing for the linear solver which exists entirely on the GPU.
+\
+```bash
+    mpirun -n 1 flow \
+        /path/to/DATA/file \
+        --output-dir=/path/to/output \
+        --linear-solver=/path/to/gpu_ilu0.json \
+        --threads-per-process=16 \
+        --newton-min-iterations=1 \
+        --matrix-add-well-contributions=true
+```
+The "gpu_ilu0.json" file enables the use of `gpu-ISTL` by specifying that we want to use the `gpubicgstab` linear solver, and the `OPMGPUILU0` preconditioner.
+```json
+{
+    "tol": "0.01",
+    "maxiter": "200",
+    "verbosity": "0",
+    "solver": "gpubicgstab",
+    "preconditioner": {
+        "type": "OPMGPUILU0",
+        "ilulevel": "0"
+    }
+}
+```
 # Acknowledgements
 
-Development of `gpu-ISTL` in OPM Flow from 2021 to 2024 was a part of the EU project *HPC, Big Data, and Artificial Intelligence convergent platform* (ACROSS). Development in 2024 has been financed by Equinor.
+Development of `gpu-ISTL` in OPM Flow from 2021 to 2024 was part of the EU project *HPC, Big Data, and Artificial Intelligence convergent platform* (ACROSS). Development in 2024 has been financed by Equinor.
 
 # References
 
