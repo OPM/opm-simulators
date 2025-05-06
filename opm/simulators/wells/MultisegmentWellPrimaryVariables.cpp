@@ -129,7 +129,6 @@ update(const WellState<Scalar>& well_state,
                 const int gas_pos = pu.phase_pos[Gas];
                 value_[seg][GFrac] = well_.scalingFactor(gas_pos) * segment_rates[well_.numPhases() * seg + gas_pos] / total_seg_rate;
             }
-            // what about water and gas injection?
         } else { // total_seg_rate == 0
             if (well_.isInjector()) {
                 // only single phase injection handled
