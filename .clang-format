@@ -20,6 +20,7 @@
 	BraceWrapping: {
 		       AfterStruct: true,
 		       AfterClass: true,
-		       AfterFunction: true
+		       AfterFunction: true,
+		       AfterNamespace: true,
 	}
 }
