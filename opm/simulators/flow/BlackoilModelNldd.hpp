@@ -95,6 +95,8 @@ public:
 
     static constexpr int numEq = Indices::numEq;
 
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+
     //! \brief The constructor sets up the subdomains.
     //! \param model BlackOil model to solve for
     //! \param param param Model parameters
@@ -178,6 +180,13 @@ public:
                                         skip);
         }
 
+        // Initialize storage for previous mobilities per domain
+        domainPreviousMobilities_.resize(domains_.size());
+        for (size_t domIdx = 0; domIdx < domains_.size(); ++domIdx) {
+            const auto& domain = domains_[domIdx];
+            domainPreviousMobilities_[domIdx].resize(domain.cells.size() * numPhases, 0.0);
+        }
+
         // Set up container for the local system matrices.
         domain_matrices_.resize(num_domains);
 
@@ -257,7 +266,10 @@ public:
             SimulatorReportSingle local_report;
             detailTimer.reset();
             detailTimer.start();
-            if (domain.skip) {
+
+            bool needsSolving = checkIfSubdomainNeedsSolving(domain);
+
+            if (domain.skip || !needsSolving) {
                 local_report.converged = true;
                 domain_reports[domain.index] = local_report;
                 continue;
@@ -571,7 +583,6 @@ private:
             if (!convreport.converged() && !convreport.wellFailed()) {
                 bool oscillate = false;
                 bool stagnate = false;
-                const int numPhases = convergence_history.front().size();
                 detail::detectOscillations(convergence_history, iter, numPhases,
                                            Scalar{0.2}, 1, oscillate, stagnate);
                 if (oscillate) {
@@ -1065,6 +1076,85 @@ private:
                                      param.local_domains_partition_well_neighbor_levels_);
     }
 
+    bool checkIfSubdomainNeedsSolving(const Domain& domain)
+    {
+        if (domain.skip) {
+            return false;
+        }
+
+        // Skip mobility check on first iteration
+        bool firstIteration = (model_.simulator().model().newtonMethod().numIterations() == 0);
+        if (firstIteration) {
+            return true;
+        }
+
+        return checkSubdomainChangeRelative(domain);
+    }
+
+    bool checkSubdomainChangeRelative(const Domain& domain)
+    {
+        // TODO: Make these parameters configurable
+        const Scalar relativeMobilityChangeTol = 0.1;  // Threshold for single cell relative mobility change
+        const Scalar averageRelativeMobilityChangeTol = 0.005;  // Threshold for domain-wide average relative change
+
+        int numCells = domain.cells.size();
+        auto& prevMobilities = domainPreviousMobilities_[domain.index];
+        bool needsSolving = false;
+        Scalar totalRelativeChange = 0.0;
+
+        // Check mobility changes for all cells in the domain
+        for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+            unsigned globalDofIdx = domain.cells[cellIdx];
+            const auto& intQuants = *model_.simulator().model().cachedIntensiveQuantities(globalDofIdx, /*timeIdx=*/0);
+            
+            // Calculate average previous mobility for normalization
+            Scalar cellMob = 0.0;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                cellMob += prevMobilities[cellIdx * numPhases + phaseIdx] / numPhases;
+            }
+
+            // Check relative changes for each phase
+            Scalar cellMaxRelDiff = 0.0;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                unsigned mobIdx = cellIdx * numPhases + phaseIdx;
+                const auto mobility = getValue(intQuants.mobility(phaseIdx));
+                const auto relDiff = std::abs(mobility - prevMobilities[mobIdx]) / cellMob;
+
+                // Store current value for next iteration
+                prevMobilities[mobIdx] = mobility;
+                
+                // Check if this change exceeds single-cell tolerance
+                if (relDiff > relativeMobilityChangeTol) {
+                    needsSolving = true;
+                }
+                cellMaxRelDiff = std::max(cellMaxRelDiff, relDiff);
+            }
+            totalRelativeChange += cellMaxRelDiff;
+        }
+
+        // Check if average change exceeds domain-wide tolerance
+        const Scalar avgRelativeChange = totalRelativeChange / numCells;
+        if (avgRelativeChange > averageRelativeMobilityChangeTol) {
+            needsSolving = true;
+        }
+
+        if (!needsSolving) {
+            OpmLog::debug(fmt::format("Domain {} skipped: as no cell has a relative change larger than {}", 
+                                     domain.index, relativeMobilityChangeTol));
+        }
+        if (avgRelativeChange > averageRelativeMobilityChangeTol) {
+            OpmLog::debug(fmt::format("Domain {} needs solving: avg relative change {} exceeds threshold {}", 
+                                     domain.index, avgRelativeChange, averageRelativeMobilityChangeTol));
+        }
+        return needsSolving;
+    }
+
     BlackoilModel<TypeTag>& model_; //!< Reference to model
     BlackoilWellModelNldd<TypeTag> wellModel_; //!< NLDD well model adapter
     std::vector<Domain> domains_; //!< Vector of subdomains
@@ -1074,6 +1164,8 @@ private:
     // mutable because we need to update the number of wells for each domain in getDomainAccumulatedReports()
     mutable std::vector<SimulatorReport> domain_reports_accumulated_; //!< Accumulated convergence reports per domain
     int rank_ = 0; //!< MPI rank of this process
+    // Store previous mobilities to check for changes
+    std::vector<std::vector<Scalar>> domainPreviousMobilities_;
 };
 
 } // namespace Opm
