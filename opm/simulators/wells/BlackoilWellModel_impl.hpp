@@ -436,10 +436,10 @@ namespace Opm {
             // This is done only for producers, as injectors will only have a single
             // nonzero phase anyway.
             for (const auto& well : well_container_) {
-                const bool zero_target = well->stoppedOrZeroRateTarget(simulator_, this->wellState(), local_deferredLogger);
-                if (well->isProducer() && !zero_target) {
-                    well->updateWellStateRates(simulator_, this->wellState(), local_deferredLogger);
-                }
+                //const bool zero_target = well->stoppedOrZeroRateTarget(simulator_, this->wellState(), local_deferredLogger);
+                //if (well->isProducer()){// && !zero_target) {
+                    well->initializeWellState(simulator_, this->groupState(), this->wellState(), local_deferredLogger);
+                //}
             }
         }
 
@@ -559,7 +559,7 @@ namespace Opm {
 
             // initialize rates/previous rates to prevent zero fractions in vfp-interpolation
             if (well->isProducer()) {
-                well->updateWellStateRates(simulator_, this->wellState(), deferred_logger);
+                well->initializeWellState(simulator_, this->groupState(), this->wellState(), deferred_logger);
             }
             if (well->isVFPActive(deferred_logger)) {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
