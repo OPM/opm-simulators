@@ -139,17 +139,15 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Could not distribute the vanguard data: ", comm);
         }
 
-        // Only relevant for CpGrid
+        // Only relevant for CpGrid and serial runs.
         if (verbose_) {
             std::cout << "Adding LGRs, if any, in serial run\n" << std::flush;
         }
 
         {
-            if ( comm.size() == 1 ) { // serial run
-                OPM_BEGIN_PARALLEL_TRY_CATCH();
-                vanguard_->addLgrs();
-                OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation vanguard in serial run failed: ", comm);
-            }
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            vanguard_->addLgrs();
+            OPM_END_PARALLEL_TRY_CATCH("Adding LGRs to the simulation vanguard in serial run failed: ", comm);
         }
 
         if (verbose_) {
