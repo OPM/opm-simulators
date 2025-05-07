@@ -33,6 +33,59 @@
 
 namespace Opm {
 
+namespace details {
+
+void printDistributionSummary(const DomainInfo& info)
+{
+    std::ostringstream ss;
+    ss << "\nNLDD domain distribution summary:\n"
+    << "  rank   owned cells   overlap cells   total cells   wells   domains\n"
+    << "--------------------------------------------------------------------\n";
+
+    int total_owned = std::accumulate(info.all_owned.begin(), info.all_owned.end(), 0);
+    int total_overlap = std::accumulate(info.all_overlap.begin(), info.all_overlap.end(), 0);
+    int total_wells = std::accumulate(info.all_wells.begin(), info.all_wells.end(), 0);
+    int total_domains = std::accumulate(info.all_domains.begin(), info.all_domains.end(), 0);
+
+    for (std::size_t r = 0; r < info.all_owned.size(); ++r) {
+        ss << std::setw(6) << r
+        << std::setw(13) << info.all_owned[r]
+        << std::setw(15) << info.all_overlap[r]
+        << std::setw(14) << (info.all_owned[r] + info.all_overlap[r])
+        << std::setw(8) << info.all_wells[r]
+        << std::setw(9) << info.all_domains[r] << '\n';
+    }
+
+    ss << "--------------------------------------------------------------------\n"
+    << "   sum"
+    << std::setw(13) << total_owned
+    << std::setw(15) << total_overlap
+    << std::setw(14) << (total_owned + total_overlap)
+    << std::setw(8) << total_wells
+    << std::setw(9) << total_domains << '\n';
+
+    OpmLog::info(ss.str());
+}
+
+void writeNlddFile(const std::string& fname,
+                   std::string_view header,
+                   const std::vector<int>& data)
+{
+    std::ofstream resInsightFile { fname };
+
+    // Write header
+    resInsightFile << header << '\n';
+
+    // Write all data
+    for (const auto& val : data) {
+        resInsightFile << val << '\n';
+    }
+    resInsightFile << "/" << '\n';
+}
+
+} // namespace details
+
+
 /**
  * Reports NLDD statistics after simulation.
  *
