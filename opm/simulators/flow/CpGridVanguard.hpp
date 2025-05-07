@@ -259,7 +259,39 @@ public:
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
         }
+
+        this->updateGridView_();
+        // this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
     }
+
+    /*!
+     * \brief Add LGRs and update Leaf Grid View in the global view of simulation grid.
+     */
+    void addLgrsInGlobalView()
+    {
+        this->grid_->switchToGlobalView();
+
+        this->addLgrs();
+      
+        this->grid_->switchToDistributedView();
+    }
+
+
+    /*!
+     * \brief Synchronize cell ids, if LGRs were added before/after loadBalance.
+     */
+    void synchronizeCellIds()
+    {
+        this->grid_->syncDistributedGlobalCellIds();
+
+        this->updateGridView_();
+        //this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
+    }
+
 
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const {
         return elemIndex;

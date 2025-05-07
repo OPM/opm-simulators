@@ -1387,7 +1387,7 @@ protected:
         const auto& eclState = vanguard.eclState();
 
         std::size_t numDof = this->model().numGridDof();
-
+        
         this->referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
         const auto& fp = eclState.fieldProps();
