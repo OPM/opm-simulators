@@ -262,9 +262,20 @@ namespace Opm
             return;
         }
 
-        BVectorWell xw(1);
-        this->linSys_.recoverSolutionWell(x, xw);
-        updateWellState(simulator, xw, well_state, deferred_logger);
+        try {
+            BVectorWell xw(1);
+            this->linSys_.recoverSolutionWell(x, xw);
+
+            updateWellState(simulator, xw, well_state, deferred_logger);
+        }
+        catch (const NumericalProblem& exp) {
+            // Add information about the well and log to deferred logger
+            // (Logging done inside of recoverSolutionWell() (i.e. by UMFpack) will only be seen if
+            // this is the process with rank zero)
+            deferred_logger.problem("In MultisegmentWell::recoverWellSolutionAndUpdateWellState for well "
+                                    + this->name() +": "+exp.what());
+            throw;
+        }
     }
 
 
