@@ -36,12 +36,14 @@
 #include <opm/simulators/wells/ConnectionIndexMap.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellTracerRate.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <map>
@@ -61,7 +63,6 @@ namespace Opm {
     template<class Scalar> class GasLiftWellState;
     class Group;
     class GuideRateConfig;
-    template<class Scalar> class ParallelWellInfo;
     class RestartValue;
     class Schedule;
     struct SimulatorUpdate;
@@ -267,6 +268,17 @@ public:
     const ParallelWellInfo<Scalar>&
     parallelWellInfo(const std::size_t idx) const
     { return local_parallel_well_info_[idx].get(); }
+
+    bool isOwner(const std::string& wname) const
+    {
+        auto pwInfoPos = std::find_if(this->parallel_well_info_.begin(),
+                                      this->parallel_well_info_.end(),
+                                      [&wname](const auto& pwInfo)
+                                      { return pwInfo.name() == wname; });
+
+        return (pwInfoPos != this->parallel_well_info_.end())
+            && pwInfoPos->isOwner();
+    }
 
     const ConnectionIndexMap& connectionIndexMap(const std::size_t idx)
     { return conn_idx_map_[idx]; }
