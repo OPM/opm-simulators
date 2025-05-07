@@ -1483,6 +1483,8 @@ namespace Opm
                 return false;
         }
 
+        updatePrimaryVariables(simulator, well_state, deferred_logger);
+
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<Scalar> measure_history;
         int it = 0;
@@ -1600,6 +1602,8 @@ namespace Opm
             if(!isFinite)
                 return false;
         }
+
+        updatePrimaryVariables(simulator, well_state, deferred_logger);
 
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<Scalar> measure_history;

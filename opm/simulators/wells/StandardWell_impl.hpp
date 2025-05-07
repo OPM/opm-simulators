@@ -2317,6 +2317,8 @@ namespace Opm
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger)
     {
+        updatePrimaryVariables(simulator, well_state, deferred_logger);
+
         const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
         bool converged;
@@ -2364,6 +2366,8 @@ namespace Opm
                                const bool fixed_control /*false*/,
                                const bool fixed_status /*false*/)
     {
+        updatePrimaryVariables(simulator, well_state, deferred_logger);
+
         const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
         bool converged = false;

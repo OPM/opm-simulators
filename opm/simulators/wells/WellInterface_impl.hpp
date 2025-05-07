@@ -1137,6 +1137,10 @@ namespace Opm
         const auto& summaryState = simulator.vanguard().summaryState();
         const auto& schedule = simulator.vanguard().schedule();
 
+        // Discard old primary variables, the new well state
+        // may not be anywhere near the old one.
+        ws.primaryvar.resize(0);
+
         if (this->wellIsStopped()) {
             for (int p = 0; p<np; ++p) {
                 ws.surface_rates[p] = 0;
