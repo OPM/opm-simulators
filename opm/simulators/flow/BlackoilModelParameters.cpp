@@ -92,6 +92,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     local_tolerance_scaling_mb_ = Parameters::Get<Parameters::LocalToleranceScalingMb<Scalar>>();
     local_tolerance_scaling_cnv_ = Parameters::Get<Parameters::LocalToleranceScalingCnv<Scalar>>();
     nldd_num_initial_newton_iter_ = Parameters::Get<Parameters::NlddNumInitialNewtonIter>();
+    nldd_relative_mobility_change_tol_ = Parameters::Get<Parameters::NlddRelativeMobilityChangeTol<Scalar>>();
     num_local_domains_ = Parameters::Get<Parameters::NumLocalDomains>();
     local_domains_partition_imbalance_ = std::max(Scalar{1.0}, Parameters::Get<Parameters::LocalDomainsPartitioningImbalance<Scalar>>());
     local_domains_partition_method_ = Parameters::Get<Parameters::LocalDomainsPartitioningMethod>();
@@ -246,6 +247,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Set lower than 1.0 to use stricter convergence tolerance for local solves.");
     Parameters::Register<Parameters::NlddNumInitialNewtonIter>
         ("Number of initial global Newton iterations when running the NLDD nonlinear solver.");
+    Parameters::Register<Parameters::NlddRelativeMobilityChangeTol<Scalar>>
+        ("Threshold for single cell relative mobility change in the NLDD solver");
     Parameters::Register<Parameters::NumLocalDomains>
         ("Number of local domains for NLDD nonlinear solver.");
     Parameters::Register<Parameters::LocalDomainsPartitioningImbalance<Scalar>>

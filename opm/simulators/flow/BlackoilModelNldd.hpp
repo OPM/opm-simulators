@@ -1093,9 +1093,8 @@ private:
 
     bool checkSubdomainChangeRelative(const Domain& domain)
     {
-        // TODO: Make these parameters configurable
-        const Scalar relativeMobilityChangeTol = 0.1;  // Threshold for single cell relative mobility change
-        const Scalar averageRelativeMobilityChangeTol = 0.005;  // Threshold for domain-wide average relative change
+        // Threshold for domain-wide average relative change
+        const Scalar averageRelativeMobilityChangeTol = 0.005;
 
         int numCells = domain.cells.size();
         auto& prevMobilities = domainPreviousMobilities_[domain.index];
@@ -1106,7 +1105,7 @@ private:
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
             unsigned globalDofIdx = domain.cells[cellIdx];
             const auto& intQuants = *model_.simulator().model().cachedIntensiveQuantities(globalDofIdx, /*timeIdx=*/0);
-            
+
             // Calculate average previous mobility for normalization
             Scalar cellMob = 0.0;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -1128,28 +1127,25 @@ private:
 
                 // Store current value for next iteration
                 prevMobilities[mobIdx] = mobility;
-                
                 // Check if this change exceeds single-cell tolerance
-                if (relDiff > relativeMobilityChangeTol) {
+                if (relDiff > model_.param().nldd_relative_mobility_change_tol_) {
                     needsSolving = true;
                 }
                 cellMaxRelDiff = std::max(cellMaxRelDiff, relDiff);
             }
             totalRelativeChange += cellMaxRelDiff;
         }
-
+        if (!needsSolving) {
+            OpmLog::debug(fmt::format("Domain {} skipped: as no cell has a relative change larger than {}",
+                                     domain.index, model_.param().nldd_relative_mobility_change_tol_));
+        }
         // Check if average change exceeds domain-wide tolerance
         const Scalar avgRelativeChange = totalRelativeChange / numCells;
         if (avgRelativeChange > averageRelativeMobilityChangeTol) {
             needsSolving = true;
         }
-
-        if (!needsSolving) {
-            OpmLog::debug(fmt::format("Domain {} skipped: as no cell has a relative change larger than {}", 
-                                     domain.index, relativeMobilityChangeTol));
-        }
-        if (avgRelativeChange > averageRelativeMobilityChangeTol) {
-            OpmLog::debug(fmt::format("Domain {} needs solving: avg relative change {} exceeds threshold {}", 
+        if (avgRelativeChange < averageRelativeMobilityChangeTol) {
+            OpmLog::debug(fmt::format("Domain {} skipped: avg relative change {} is below threshold {}",
                                      domain.index, avgRelativeChange, averageRelativeMobilityChangeTol));
         }
         return needsSolving;
