@@ -23,6 +23,12 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -35,10 +41,10 @@
 
 namespace Opm {
 
-template<class Scalar>
-void WellFilterCake<Scalar>::
-updatePostStep(const WellInterfaceGeneric<Scalar>& well,
-               WellState<Scalar>& well_state,
+template<typename FluidSystem, typename Indices>
+void WellFilterCake<FluidSystem, Indices>::
+updatePostStep(const WellInterfaceGeneric<FluidSystem, Indices>& well,
+               WellState<FluidSystem, Indices>& well_state,
                const double dt,
                const Scalar conc,
                const std::size_t water_index,
@@ -60,17 +66,17 @@ updatePostStep(const WellInterfaceGeneric<Scalar>& well,
     updateSkinFactorsAndMultipliers(well, well_state, dt, water_index, deferred_logger);
 }
 
-template<class Scalar>
-void WellFilterCake<Scalar>::
-updatePreStep(const WellInterfaceGeneric<Scalar>& well, DeferredLogger& deferred_logger)
+template<typename FluidSystem, typename Indices>
+void WellFilterCake<FluidSystem, Indices>::
+updatePreStep(const WellInterfaceGeneric<FluidSystem, Indices>& well, DeferredLogger& deferred_logger)
 {
     // Apply cleaning and reset any filter cake cleaning multipliers (even if the well is producing at this time)
     applyCleaning(well, deferred_logger);
 }
 
-template<class Scalar>
-void WellFilterCake<Scalar>::
-applyCleaning(const WellInterfaceGeneric<Scalar>& well,
+template<typename FluidSystem, typename Indices>
+void WellFilterCake<FluidSystem, Indices>::
+applyCleaning(const WellInterfaceGeneric<FluidSystem, Indices>& well,
               DeferredLogger& deferred_logger)
 {
     const auto& connections = well.wellEcl().getConnections();
@@ -116,10 +122,10 @@ applyCleaning(const WellInterfaceGeneric<Scalar>& well,
 }
 
 
-template<class Scalar>
-void WellFilterCake<Scalar>::
-updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
-                  WellState<Scalar>& well_state,
+template<typename FluidSystem, typename Indices>
+void WellFilterCake<FluidSystem, Indices>::
+updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<FluidSystem, Indices>& well,
+                  WellState<FluidSystem, Indices>& well_state,
                   const double dt,
                   const std::size_t water_index,
                   DeferredLogger& deferred_logger)
@@ -210,8 +216,9 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
     }
 }
 
-template<class Scalar> template <class Conn>
-void WellFilterCake<Scalar>::
+template<typename FluidSystem, typename Indices>
+template <class Conn>
+void WellFilterCake<FluidSystem, Indices>::
 updateMultiplier(const Conn& connection, const int perf)
 {
     const auto denom = connection.ctfProperties().peaceman_denom;
@@ -219,10 +226,41 @@ updateMultiplier(const Conn& connection, const int perf)
     inj_fc_multiplier_[perf] = denom / denom2;
 }
 
-template class WellFilterCake<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class WellFilterCake<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellFilterCake<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm

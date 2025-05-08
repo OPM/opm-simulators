@@ -41,13 +41,15 @@ class GuideRateConfig;
 template<class Scalar> struct PerforationData;
 struct PhaseUsage;
 template<class Scalar> class SingleWellState;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
 /// Class for restarting the blackoil well model.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class BlackoilWellModelRestart
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     //! \brief Constructor initializes reference to the well model.
     explicit BlackoilWellModelRestart(const BlackoilWellModelGeneric<Scalar>& wellModel)
         : wellModel_(wellModel)
@@ -69,7 +71,7 @@ public:
     void loadRestartData(const data::Wells&                 rst_wells,
                          const data::GroupAndNetworkValues& grpNwrkValues,
                          const bool                         handle_ms_well,
-                         WellState<Scalar>&                 well_state,
+                         WellState<FluidSystem, Indices>&   well_state,
                          GroupState<Scalar>&                grpState) const;
 
 private:

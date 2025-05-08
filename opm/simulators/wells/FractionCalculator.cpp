@@ -24,6 +24,12 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -32,10 +38,10 @@
 
 namespace Opm::WGHelpers {
 
-template<class Scalar>
-FractionCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+FractionCalculator<FluidSystem, Indices>::
 FractionCalculator(const Schedule& schedule,
-                   const WellState<Scalar>& well_state,
+                   const WellState<FluidSystem, Indices>& well_state,
                    const GroupState<Scalar>& group_state,
                    const SummaryState& summary_state,
                    const int report_step,
@@ -57,8 +63,9 @@ FractionCalculator(const Schedule& schedule,
 {
 }
 
-template<class Scalar>
-Scalar FractionCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FractionCalculator<FluidSystem, Indices>::Scalar
+FractionCalculator<FluidSystem, Indices>::
 fraction(const std::string& name,
          const std::string& control_group_name,
          const bool always_include_this)
@@ -72,8 +79,9 @@ fraction(const std::string& name,
     return fraction;
 }
 
-template<class Scalar>
-Scalar FractionCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FractionCalculator<FluidSystem, Indices>::Scalar
+FractionCalculator<FluidSystem, Indices>::
 localFraction(const std::string& name,
               const std::string& always_included_child)
 {
@@ -99,8 +107,8 @@ localFraction(const std::string& name,
     return my_guide_rate / total_guide_rate;
 }
 
-template<class Scalar>
-std::string FractionCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::string FractionCalculator<FluidSystem, Indices>::
 parent(const std::string& name)
 {
     if (schedule_.hasWell(name)) {
@@ -110,8 +118,9 @@ parent(const std::string& name)
     }
 }
 
-template<class Scalar>
-std::pair<Scalar, int> FractionCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::pair<typename FractionCalculator<FluidSystem, Indices>::Scalar, int>
+FractionCalculator<FluidSystem, Indices>::
 guideRateSum(const Group& group,
              const std::string& always_included_child,
              const bool always_use_potentials)
@@ -153,14 +162,15 @@ guideRateSum(const Group& group,
     return {total_guide_rate, number_of_included_well_or_groups};
 }
 
-template<class Scalar>
-Scalar FractionCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FractionCalculator<FluidSystem, Indices>::Scalar
+FractionCalculator<FluidSystem, Indices>::
 guideRate(const std::string& name,
           const std::string& always_included_child,
           const bool always_use_potentials)
 {
     if (schedule_.hasWell(name, report_step_)) {
-        return WellGroupHelpers<Scalar>::getGuideRate(name, schedule_, well_state_, group_state_,
+        return WellGroupHelpers<FluidSystem, Indices>::getGuideRate(name, schedule_, well_state_, group_state_,
                                                       report_step_, guide_rate_, target_, pu_);
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
@@ -182,12 +192,12 @@ guideRate(const std::string& name,
     }
 }
 
-template<class Scalar>
-int FractionCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+int FractionCalculator<FluidSystem, Indices>::
 groupControlledWells(const std::string& group_name,
                      const std::string& always_included_child)
 {
-    return WellGroupHelpers<Scalar>::groupControlledWells(schedule_,
+    return WellGroupHelpers<FluidSystem, Indices>::groupControlledWells(schedule_,
                                                           well_state_,
                                                           this->group_state_,
                                                           report_step_,
@@ -197,20 +207,51 @@ groupControlledWells(const std::string& group_name,
                                                           injection_phase_);
 }
 
-template<class Scalar>
-GuideRate::RateVector FractionCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+GuideRate::RateVector FractionCalculator<FluidSystem, Indices>::
 getGroupRateVector(const std::string& group_name)
 {
     assert(is_producer_);
-    return WellGroupHelpers<Scalar>::getProductionGroupRateVector(this->group_state_,
+    return WellGroupHelpers<FluidSystem, Indices>::getProductionGroupRateVector(this->group_state_,
                                                                   this->pu_,
                                                                   group_name);
 }
 
-template class FractionCalculator<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class FractionCalculator<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class FractionCalculator<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm::WGHelpers
