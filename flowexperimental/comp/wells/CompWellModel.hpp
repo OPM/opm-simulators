@@ -93,7 +93,7 @@ public:
 
     void beginEpisode() { beginReportStep(simulator_.episodeIndex()); }
     void beginReportStep(unsigned report_step);
-    void beginTimeStep();
+    void beginTimeStep(bool lastStepFailed = false);
     void beginIteration();
 
     void init();
