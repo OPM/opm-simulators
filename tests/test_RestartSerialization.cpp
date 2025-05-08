@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(FlowGenericProblem)
     using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
     auto gridView = grid.leafGridView();
     auto data_out
-        = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>>::
+        = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultFluidSystemIndices>>::
             serializationTestObject(eclState, schedule, gridView);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE(FlowGenericProblem)
 BOOST_AUTO_TEST_CASE(MixingRateControls)
 {
     Opm::Schedule schedule;
-    using FS = Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>;
+    using FS = Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultFluidSystemIndices>;
     auto data_out = Opm::MixingRateControls<FS>::serializationTestObject(schedule);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -278,7 +278,7 @@ BOOST_AUTO_TEST_CASE(FlowGenericProblemFem)
     auto gridPart = GridPart(grid);
     auto gridView = gridPart.gridView();
     auto data_out
-        = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>>::
+        = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultFluidSystemIndices>>::
             serializationTestObject(eclState, schedule, gridView);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE(FlowGenericTracerModel)
                                            GridView,
                                            Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
                                            Opm::EcfvStencil<double, GridView, false, false>,
-                                           Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>,
+                                           Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultFluidSystemIndices>,
                                            double>
         ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
     Opm::Serialization::MemPacker packer;
@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE(FlowGenericTracerModelFem)
                                            GridView,
                                            Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
                                            Opm::EcfvStencil<double, GridView, false, false>,
-                                           Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>,
+                                           Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultFluidSystemIndices>,
                                            double>
         ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
     Opm::Serialization::MemPacker packer;

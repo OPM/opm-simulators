@@ -44,7 +44,7 @@ namespace Opm {
                                       EcfvStencil<T,Dune::GridView<                                     \
                                                         Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>, \
                                                   false,false>,                                         \
-                                      BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>,                \
+                                      BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>,        \
                                       T>;
 
 INSTANTIATE_TYPE(double)
@@ -62,7 +62,7 @@ template class GenericTracerModel<Dune::CpGrid,
                                   GV,
                                   Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
                                   EcfvStencil<double, GV, false, false>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
+                                  BlackOilFluidSystem<double, BlackOilDefaultFluidSystemIndices>,
                                   double>;
 
 #if FLOW_INSTANTIATE_FLOAT
@@ -70,7 +70,7 @@ template class GenericTracerModel<Dune::CpGrid,
                                   GV,
                                   Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
                                   EcfvStencil<float, GV, false, false>,
-                                  BlackOilFluidSystem<float,BlackOilDefaultIndexTraits>,
+                                  BlackOilFluidSystem<float, BlackOilDefaultFluidSystemIndices>,
                                   float>;
 #endif
 

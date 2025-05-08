@@ -356,7 +356,7 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
 }
 
 #define INSTANTIATE_TYPE(T) \
-    template class MixingRateControls<BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>>;
+    template class MixingRateControls<BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>>;
 
 INSTANTIATE_TYPE(double)
 

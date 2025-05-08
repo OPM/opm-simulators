@@ -21,7 +21,7 @@
 #include <config.h>
 #include <opm/simulators/wells/RateConverter.hpp>
 
-#include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <algorithm>
@@ -370,7 +370,7 @@ inferDissolvedVaporisedRatio(const Scalar rsMax,
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE_TYPE(T)                                              \
     template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \

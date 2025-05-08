@@ -650,7 +650,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoilextensivequantities.hh
   opm/models/blackoil/blackoilfoammodules.hh
   opm/models/blackoil/blackoilfoamparams.hpp
-  opm/models/blackoil/blackoilindices.hh
+  opm/models/blackoil/blackoilvariableandequationindices.hh
   opm/models/blackoil/blackoilintensivequantities.hh
   opm/models/blackoil/blackoillocalresidual.hh
   opm/models/blackoil/blackoillocalresidualtpfa.hh

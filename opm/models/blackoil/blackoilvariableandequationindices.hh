@@ -23,17 +23,17 @@
 /*!
  * \file
  *
- * \copydoc Opm::BlackOilIndices
+ * \copydoc Opm::BlackOilVariableAndEquationIndices
  */
-#ifndef EWOMS_BLACK_OIL_INDICES_HH
-#define EWOMS_BLACK_OIL_INDICES_HH
+#ifndef OPM_BLACK_OIL_VARIABLE_AND_EQUATION_INDICES_HH
+#define OPM_BLACK_OIL_VARIABLE_AND_EQUATION_INDICES_HH
 
 namespace Opm {
 
 /*!
  * \ingroup BlackOilModel
  *
- * \brief The primary variable and equation indices for the black-oil model.
+ * \brief The primary variable and equation indices for the three-phase black-oil model.
  */
 template<unsigned numSolventsV,
          unsigned numExtbosV,
@@ -43,7 +43,7 @@ template<unsigned numSolventsV,
          bool enableBrine,
          unsigned PVOffset,
          unsigned numMICPsV>
-struct BlackOilIndices
+struct BlackOilVariableAndEquationIndices
 {
     //! Number of phases active at all times
     static constexpr int numPhases = 3;

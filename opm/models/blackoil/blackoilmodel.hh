@@ -40,7 +40,7 @@
 #include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilextensivequantities.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
-#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilvariableandequationindices.hh>
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
 #include <opm/models/blackoil/blackoillocalresidual.hh>
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
@@ -122,14 +122,14 @@ struct FluxModule<TypeTag, TTag::BlackOilModel> { using type = BlackOilDarcyFlux
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::BlackOilModel>
-{ using type = BlackOilIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                               getPropValue<TypeTag, Properties::EnableExtbo>(),
-                               getPropValue<TypeTag, Properties::EnablePolymer>(),
-                               getPropValue<TypeTag, Properties::EnableEnergy>(),
-                               getPropValue<TypeTag, Properties::EnableFoam>(),
-                               getPropValue<TypeTag, Properties::EnableBrine>(),
-                               /*PVOffset=*/0,
-                               getPropValue<TypeTag, Properties::EnableMICP>()>; };
+{ using type = BlackOilVariableAndEquationIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                                  getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                                  getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                                  getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                  getPropValue<TypeTag, Properties::EnableFoam>(),
+                                                  getPropValue<TypeTag, Properties::EnableBrine>(),
+                                                  /*PVOffset=*/0,
+                                                  getPropValue<TypeTag, Properties::EnableMICP>()>; };
 
 //! Set the fluid system to the black-oil fluid system by default
 template<class TypeTag>
