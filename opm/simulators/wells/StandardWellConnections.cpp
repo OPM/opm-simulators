@@ -253,7 +253,8 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
         this->initialiseConnectionMixture(num_comp, perf,
                                           q_out_perf,
                                           phaseMixture,
-                                          componentMixture);
+                                          componentMixture,
+                                          deferred_logger);
 
         // Initial phase mixture for this perforation is the same as the
         // initialised component mixture, which in turn is possibly just
@@ -345,8 +346,11 @@ initialiseConnectionMixture(const int                  num_comp,
                             const int                  perf,
                             const std::vector<Scalar>& q_out_perf,
                             const std::vector<Scalar>& phaseMixture,
-                            std::vector<Scalar>&       componentMixture) const
+                            std::vector<Scalar>&       componentMixture,
+                            DeferredLogger&            deferred_logger) const
 {
+    const auto threshold = static_cast<Scalar>(1.0e-12);
+
     // Find component mix.
     const auto tot_surf_rate =
         std::accumulate(q_out_perf.begin() + num_comp*(perf + 0),
@@ -418,6 +422,17 @@ initialiseConnectionMixture(const int                  num_comp,
                 componentMixture = phaseMixture;
             }
         }
+    }
+    // normalize the component mixture
+    const Scalar sum = std::accumulate(componentMixture.begin(), componentMixture.end(), Scalar{0});
+    if (sum > threshold) {
+        for (auto& val : componentMixture) {
+            val /= sum;
+        }
+    } else {
+        const auto msg = fmt::format(R"(Problematic componentMixture values for perf {} of the well {} when
+initializing the connection mixture. Values:[{}])", perf, this->well_.name(),fmt::join(componentMixture, ", "));
+        deferred_logger.debug(msg);
     }
 }
 
