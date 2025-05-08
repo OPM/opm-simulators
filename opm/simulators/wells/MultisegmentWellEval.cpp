@@ -60,8 +60,8 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const Pa
     , linSys_(*this, pw_info)
     , primary_variables_(baseif)
     , segments_(this->numberOfSegments(), pw_info, baseif)
-    , cell_perforation_depth_diffs_(baseif_.numPerfs(), 0.0)
-    , cell_perforation_pressure_diffs_(baseif_.numPerfs(), 0.0)
+    , cell_perforation_depth_diffs_(baseif_.numLocalPerfs(), 0.0)
+    , cell_perforation_pressure_diffs_(baseif_.numLocalPerfs(), 0.0)
 {
 }
 
@@ -70,7 +70,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 initMatrixAndVectors()
 {
-    linSys_.init(baseif_.numPerfs(),
+    linSys_.init(baseif_.numLocalPerfs(),
                  baseif_.cells(), segments_.inlets(),
                  segments_.perforations());
     primary_variables_.resize(this->numberOfSegments());

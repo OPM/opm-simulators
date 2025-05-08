@@ -64,7 +64,7 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
     if (calculateSumTw) {
         // Due to various reasons, the well/top segment rate can be zero for this phase.
         // We can not scale this rate directly. The following approach is used to initialize the segment rates.
-        for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
+        for (int perf = 0; perf < baseif_.numLocalPerfs(); ++perf) {
             sumTw += baseif_.wellIndex()[perf];
         }
         // We need to communicate here to scale the perf_phaserate_scaled with the contribution of all segments
@@ -80,9 +80,9 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
         } else { // In this case, we calculated sumTw
             // only handling this specific phase
             constexpr Scalar num_single_phase = 1;
-            std::vector<Scalar> perforation_rates(num_single_phase * baseif_.numPerfs(), 0.0);
+            std::vector<Scalar> perforation_rates(num_single_phase * baseif_.numLocalPerfs(), 0.0);
             const Scalar perf_phaserate_scaled = ws.surface_rates[phase] / sumTw;
-            for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
+            for (int perf = 0; perf < baseif_.numLocalPerfs(); ++perf) {
                 perforation_rates[perf] = baseif_.wellIndex()[perf] * perf_phaserate_scaled;
             }
 

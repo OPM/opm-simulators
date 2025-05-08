@@ -158,7 +158,7 @@ namespace Opm
         Value skin_pressure = zeroElem();
         if (has_polymermw) {
             if (this->isInjector()) {
-                const int pskin_index = Bhp + 1 + this->numPerfs() + perf;
+                const int pskin_index = Bhp + 1 + this->numLocalPerfs() + perf;
                 skin_pressure = obtainN(this->primary_variables_.eval(pskin_index));
             }
         }
