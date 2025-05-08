@@ -49,10 +49,13 @@ template<class Scalar> class SingleWellState;
 class Group;
 class Schedule;
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellInterfaceGeneric {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     using ModelParameters = BlackoilModelParameters<Scalar>;
+
+    using WellStateType = WellState<FluidSystem, Indices>;
 
     WellInterfaceGeneric(const Well& well,
                          const ParallelWellInfo<Scalar>& parallel_well_info,
@@ -100,8 +103,8 @@ public:
     void closeCompletions(const WellTestState& wellTestState);
 
     void setVFPProperties(const VFPProperties<Scalar>* vfp_properties_arg);
-    void setPrevSurfaceRates(WellState<Scalar>& well_state,
-                             const WellState<Scalar>& prev_well_state) const;
+    void setPrevSurfaceRates(WellStateType& well_state,
+                             const WellStateType& prev_well_state) const;
     void setGuideRate(const GuideRate* guide_rate_arg);
     void setWellEfficiencyFactor(const Scalar efficiency_factor);
     void setRepRadiusPerfLength();
@@ -148,7 +151,7 @@ public:
     const std::map<int,std::vector<int>>& getCompletions() const { return completions_; }
 
     Scalar getTHPConstraint(const SummaryState& summaryState) const;
-    Scalar getALQ(const WellState<Scalar>& well_state) const;
+    Scalar getALQ(const WellStateType& well_state) const;
     Scalar wsolvent() const;
     Scalar rsRvInj() const;
 
@@ -178,7 +181,7 @@ public:
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
-    bool isPressureControlled(const WellState<Scalar>& well_state) const;
+    bool isPressureControlled(const WellStateType& well_state) const;
 
     Scalar wellEfficiencyFactor() const { return well_efficiency_factor_; }
 
@@ -226,14 +229,14 @@ protected:
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<Scalar>& well_potentials,
-                          const WellState<Scalar>& well_state);
+                          const WellStateType& well_state);
 
     void checkNegativeWellPotentials(std::vector<Scalar>& well_potentials,
                                      const bool checkOperability,
                                      DeferredLogger& deferred_logger);
 
     void prepareForPotentialCalculations(const SummaryState& summary_state,
-                                         WellState<Scalar>& well_state,
+                                         WellStateType& well_state,
                                          Well::InjectionControls& inj_controls,
                                          Well::ProductionControls& prod_controls) const;
 

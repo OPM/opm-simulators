@@ -22,6 +22,12 @@
 
 #include <config.h>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
@@ -33,8 +39,8 @@
 
 namespace Opm {
 
-template<class Scalar>
-void BlackoilWellModelGasLiftGeneric<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelGasLiftGeneric<FluidSystem, Indices>::
 gliftDebug([[maybe_unused]] const std::string& msg,
            [[maybe_unused]] DeferredLogger& deferred_logger) const
 {
@@ -47,10 +53,10 @@ gliftDebug([[maybe_unused]] const std::string& msg,
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelGasLiftGeneric<Scalar>::
-gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar>*>& well_container,
-                  const WellState<Scalar>& wellState,
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelGasLiftGeneric<FluidSystem, Indices>::
+gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<FluidSystem, Indices>*>& well_container,
+                  const WellState<FluidSystem, Indices>& wellState,
                   DeferredLogger& deferred_logger)
 {
     for (const auto& well : well_container) {
@@ -70,16 +76,16 @@ gliftDebugShowALQ(const std::vector<WellInterfaceGeneric<Scalar>*>& well_contain
 // currently has the largest weighted incremental gradient. The
 // procedure takes account of any limits on the group production
 // rate or lift gas supply applied to any level of group.
-template<class Scalar>
-void BlackoilWellModelGasLiftGeneric<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelGasLiftGeneric<FluidSystem, Indices>::
 gasLiftOptimizationStage2(const Parallel::Communication& comm,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
-                          WellState<Scalar>& wellState,
+                          WellState<FluidSystem, Indices>& wellState,
                           GroupState<Scalar>& groupState,
                           GLiftProdWells& prod_wells,
                           GLiftOptWells& glift_wells,
-                          GasLiftGroupInfo<Scalar>& group_info,
+                          GasLiftGroupInfo<FluidSystem, Indices>& group_info,
                           GLiftWellStateMap& glift_well_state_map,
                           const int episodeIndex,
                           DeferredLogger& deferred_logger)
@@ -102,10 +108,41 @@ gasLiftOptimizationStage2(const Parallel::Communication& comm,
     glift.runOptimize();
 }
 
-template class BlackoilWellModelGasLiftGeneric<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class BlackoilWellModelGasLiftGeneric<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class BlackoilWellModelGasLiftGeneric<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 }
