@@ -33,13 +33,14 @@ template<class Scalar> class BlackoilWellModelGeneric;
 class DeferredLogger;
 template<class Scalar> class GroupState;
 class SummaryState;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
 /// Class for handling constraints for the blackoil well model.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class BlackoilWellModelConstraints
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     //! \brief Constructor initializes reference to the well model.
     explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar>& wellModel)
         : wellModel_(wellModel)
@@ -62,7 +63,7 @@ public:
                                    const int reportStepIdx,
                                    const Group::GroupLimitAction group_limit_action,
                                    const Group::ProductionCMode& newControl,
-                                   const WellState<Scalar>& well_state,
+                                   const WellState<FluidSystem, Indices>& well_state,
                                    std::optional<std::string>& worst_offending_well,
                                    GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger) const;
@@ -75,7 +76,7 @@ public:
                                       std::map<std::string, std::vector<Group::ProductionCMode>>& switched_prod,
                                       std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                                       GroupState<Scalar>& group_state,
-                                      WellState<Scalar>& well_state,
+                                      WellState<FluidSystem, Indices>& well_state,
                                       DeferredLogger& deferred_logger) const;
 
 private:

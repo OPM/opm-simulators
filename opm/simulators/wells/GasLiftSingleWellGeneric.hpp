@@ -22,6 +22,12 @@
 
 #include <opm/input/eclipse/Schedule/Well/WellProductionControls.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 
@@ -41,7 +47,7 @@ class GasLiftWell;
 template<class Scalar> class GasLiftWellState;
 class Schedule;
 class SummaryState;
-template<class Scalar> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
 template<typename FluidSystem, typename Indices> class WellState;
 template<class Scalar> class GroupState;
 
@@ -110,7 +116,7 @@ public:
 
     std::pair<Scalar, bool> wellTestALQ();
 
-    virtual const WellInterfaceGeneric<Scalar>& getWell() const = 0;
+    virtual const WellInterfaceGeneric<FluidSystem, Indices>& getWell() const = 0;
 
 protected:
     GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,
