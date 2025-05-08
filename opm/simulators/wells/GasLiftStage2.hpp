@@ -40,20 +40,21 @@ class Group;
 template<class Scalar> class GroupState;
 class Schedule;
 template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
-template<class Scalar>
-class GasLiftStage2 : public GasLiftCommon<Scalar>
+template<typename FluidSystem, typename Indices>
+class GasLiftStage2 : public GasLiftCommon<FluidSystem, Indices>
 {
-    using GasLiftSingleWell = GasLiftSingleWellGeneric<Scalar>;
+    using Scalar = typename FluidSystem::Scalar;
+    using GasLiftSingleWell = GasLiftSingleWellGeneric<FluidSystem, Indices>;
     using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
     using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric<Scalar>*>;
     using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState<Scalar>>>;
     using GradPair = std::pair<std::string, Scalar>;
     using GradPairItr = typename std::vector<GradPair>::iterator;
-    using GradInfo = typename GasLiftSingleWellGeneric<Scalar>::GradInfo;
+    using GradInfo = typename GasLiftSingleWellGeneric<FluidSystem, Indices>::GradInfo;
     using GradMap = std::map<std::string, GradInfo>;
-    using MessageType = typename GasLiftCommon<Scalar>::MessageType;
+    using MessageType = typename GasLiftCommon<FluidSystem, Indices>::MessageType;
 
     static const int Water = BlackoilPhases::Aqua;
     static const int Oil = BlackoilPhases::Liquid;
@@ -65,11 +66,11 @@ public:
                   const Schedule& schedule,
                   const SummaryState& summary_state,
                   DeferredLogger& deferred_logger,
-                  WellState<Scalar>& well_state,
+                  WellState<FluidSystem, Indices>& well_state,
                   const GroupState<Scalar>& group_state,
                   GLiftProdWells& prod_wells,
                   GLiftOptWells& glift_wells,
-                  GasLiftGroupInfo<Scalar>& group_info,
+                  GasLiftGroupInfo<FluidSystem, Indices>& group_info,
                   GLiftWellStateMap& state_map,
                   bool glift_debug);
 
@@ -151,7 +152,7 @@ protected:
 
     GLiftProdWells& prod_wells_;
     GLiftOptWells& stage1_wells_;
-    GasLiftGroupInfo<Scalar>& group_info_;
+    GasLiftGroupInfo<FluidSystem, Indices>& group_info_;
     GLiftWellStateMap& well_state_map_;
 
     int report_step_idx_;
@@ -209,7 +210,7 @@ protected:
     {
         SurplusState(GasLiftStage2& parent_,
                      const Group& group_,
-                     const WellState<Scalar>& well_state_,
+                     const WellState<FluidSystem, Indices>& well_state_,
                      Scalar oil_rate_,
                      Scalar gas_rate_,
                      Scalar water_rate_,
@@ -240,7 +241,7 @@ protected:
 
         GasLiftStage2 &parent;
         const Group &group;
-        const WellState<Scalar>& well_state;
+        const WellState<FluidSystem, Indices>& well_state;
         Scalar oil_rate;
         Scalar gas_rate;
         Scalar water_rate;
