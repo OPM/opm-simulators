@@ -263,8 +263,8 @@ public:
             this->updateCellDepths_();
             this->updateCellThickness_();
         }
-        else {
-            Opm::OpmLog::warning("Adding LGRs in parallel run is not supported yet.\n");
+        else if (this->grid_->comm().size() > 1) {
+            OpmLog::warning("Adding LGRs in parallel run is not supported yet.\n");
         }
     }
 
