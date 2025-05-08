@@ -44,7 +44,7 @@ struct PhaseUsage;
 class SummaryState;
 template<class Scalar> class VFPProperties;
 class WellTestState;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 template<class Scalar> class SingleWellState;
 class Group;
 class Schedule;
@@ -220,7 +220,7 @@ protected:
     int polymerWaterTable_() const;
 
     bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
-                                           const WellState<Scalar>& well_state) const;
+                                           const WellState<FluidSystem, Indices>& well_state) const;
 
     bool wellUnderGroupControl(const SingleWellState<Scalar>& ws) const;
 
