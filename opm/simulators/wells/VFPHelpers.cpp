@@ -21,6 +21,7 @@
 #include <opm/simulators/wells/VFPHelpers.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -368,6 +369,9 @@ findTHP(const std::vector<Scalar>& bhp_array,
 {
     int nthp = thp_array.size();
 
+    if (std::isnan(bhp)) {
+        throw NumericalProblem("findTHP: Error bhp is nan");
+    }
     Scalar thp = -1e100;
 
     //Check that our thp axis is sorted
