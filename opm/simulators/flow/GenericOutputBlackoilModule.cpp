@@ -157,7 +157,7 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
     , flowsC_(schedule, summaryConfig)
     , rftC_(eclState_, schedule_,
             [this](const std::string& wname)
-            { return !isDefunctParallelWell(wname); })
+            { return this->isOwnedByCurrentRank(wname); })
     , rst_conv_(std::move(globalCell), comm)
     , local_data_valid_(false)
 {

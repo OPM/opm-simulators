@@ -220,6 +220,8 @@ template<class Scalar> class WellContributions;
 
                 this->assignWellTargets(wsrpt);
 
+                this->assignDynamicWellStatus(wsrpt, this->reportStepIndex());
+
                 // Assigning (a subset of the) property values in shut
                 // connections should be the last step of wellData().
                 this->assignShutConnections(wsrpt, this->reportStepIndex());

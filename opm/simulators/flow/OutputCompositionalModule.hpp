@@ -354,7 +354,7 @@ public:
     }
 
 private:
-    bool isDefunctParallelWell(std::string wname) const override
+    bool isDefunctParallelWell(const std::string& wname) const override
     {
         if (simulator_.gridView().comm().size() == 1)
             return false;
@@ -362,6 +362,14 @@ private:
         std::pair<std::string, bool> value {wname, true};
         auto candidate = std::lower_bound(parallelWells.begin(), parallelWells.end(), value);
         return candidate == parallelWells.end() || *candidate != value;
+    }
+
+    bool isOwnedByCurrentRank(const std::string& wname) const override
+    {
+        // Note: This statement is not correct for distributed wells and
+        // will need additional logic once those are supported for
+        // compositional flows.
+        return ! this->isDefunctParallelWell(wname);
     }
 
     void createLocalRegion_(std::vector<int>& region)

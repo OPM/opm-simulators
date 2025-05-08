@@ -36,12 +36,14 @@
 #include <opm/simulators/wells/ConnectionIndexMap.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellTracerRate.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <map>
@@ -61,7 +63,6 @@ namespace Opm {
     template<class Scalar> class GasLiftWellState;
     class Group;
     class GuideRateConfig;
-    template<class Scalar> class ParallelWellInfo;
     class RestartValue;
     class Schedule;
     struct SimulatorUpdate;
@@ -268,6 +269,17 @@ public:
     parallelWellInfo(const std::size_t idx) const
     { return local_parallel_well_info_[idx].get(); }
 
+    bool isOwner(const std::string& wname) const
+    {
+        auto pwInfoPos = std::find_if(this->parallel_well_info_.begin(),
+                                      this->parallel_well_info_.end(),
+                                      [&wname](const auto& pwInfo)
+                                      { return pwInfo.name() == wname; });
+
+        return (pwInfoPos != this->parallel_well_info_.end())
+            && pwInfoPos->isOwner();
+    }
+
     const ConnectionIndexMap& connectionIndexMap(const std::size_t idx)
     { return conn_idx_map_[idx]; }
 
@@ -370,11 +382,33 @@ protected:
                                   const int pvtreg,
                                   std::vector<Scalar>& resv_coeff) = 0;
 
+    /// Assign dynamic well status for each well owned by current rank
+    ///
+    /// \param[in,out] wsrpt Well solution object.  On exit, holds current
+    /// values for \code data::Well::dynamicStatus \endcode.
+    ///
+    /// \param[in] reportStepIdx Zero-based index of current report step.
+    void assignDynamicWellStatus(data::Wells& wsrpt,
+                                 const int reportStepIdx) const;
+
+    /// Assign basic result quantities for shut connections of wells owned
+    /// by current rank.
+    ///
+    /// Mostly provided for summary file output purposes.  Applies to fully
+    /// shut/stopped wells and shut connections of open/flowing wells.
+    ///
+    /// \param[in,out] wsrpt Well solution object.  On exit, also contains a
+    /// few quantities, like the D factor, the Kh product and the CTF, for
+    /// shut connections.
+    ///
+    /// \param[in] reportStepIdx Zero-based index of current report step.
     void assignShutConnections(data::Wells& wsrpt,
                                const int reportStepIndex) const;
+
     void assignWellTargets(data::Wells& wsrpt) const;
     void assignProductionWellTargets(const Well& well, data::WellControlLimits& limits) const;
     void assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) const;
+
     void assignGroupControl(const Group& group,
                             data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
@@ -550,8 +584,25 @@ private:
 
     void updateEclWellsCTFFromAction(const int timeStepIdx,
                                      const SimulatorUpdate& sim_update);
-};
 
+    /// Run caller-defined code for each well owned by current rank
+    ///
+    /// 'const' version.
+    ///
+    /// \tparam LoopBody Call-back type for user-defined code.  Expected to
+    /// support a function call operator of the form
+    /// \code
+    ///   void operator()(const std::size_t i, const Well& well) const
+    /// \endcode
+    /// which will be invoked for each well owned by the local process.  The
+    /// parameters are the index into \c wells_ecl_ and the object at that
+    /// index, respectively.
+    ///
+    /// \param[in] loopBody Call-back function.  Typically defined as a
+    /// lambda expression.
+    template <typename LoopBody>
+    void loopOwnedWells(LoopBody&& loopBody) const;
+};
 
 } // namespace Opm
 

@@ -330,7 +330,8 @@ protected:
     void setupExtraBlockData(const std::size_t        reportStepNum,
                              std::function<bool(int)> isCartIdxOnThisRank);
 
-    virtual bool isDefunctParallelWell(std::string wname) const = 0;
+    virtual bool isDefunctParallelWell(const std::string& wname) const = 0;
+    virtual bool isOwnedByCurrentRank(const std::string& wname) const = 0;
 
     const EclipseState& eclState_;
     const Schedule& schedule_;

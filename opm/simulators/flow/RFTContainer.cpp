@@ -85,19 +85,21 @@ addToWells(data::Wells& wellDatas,
         gatherAndUpdateMap(gasConnectionSaturations_, comm);
     }
 
-    for (const auto& well: schedule_.getWells(reportStepNum)) {
-
-        // don't bother with wells not on this process
-        if (!wellQuery_(well.name())) {
+    for (const auto& wname : this->schedule_.wellNames(reportStepNum)) {
+        // Don't bother with wells not on this process.
+        if (!wellQuery_(wname)) {
             continue;
         }
 
-        //add data infrastructure for shut wells
-        if (!wellDatas.count(well.name())) {
-            auto& wellData = wellDatas[well.name()];
-            wellData.connections.reserve(well.getConnections().size());
-            std::transform(well.getConnections().begin(),
-                           well.getConnections().end(),
+        // Add data infrastructure for shut wells.
+        if (!wellDatas.count(wname)) {
+            const auto& conns = this->schedule_[reportStepNum]
+                .wells(wname).getConnections();
+
+            auto& wellData = wellDatas[wname];
+            wellData.connections.reserve(conns.size());
+
+            std::transform(conns.begin(), conns.end(),
                            std::back_inserter(wellData.connections),
                            [](const auto& connection)
                            {
@@ -107,7 +109,7 @@ addToWells(data::Wells& wellDatas,
                            });
         }
 
-        data::Well& wellData = wellDatas.at(well.name());
+        data::Well& wellData = wellDatas.at(wname);
 
         auto cond_assign = [](double& dest, unsigned idx, const auto& map)
         {
