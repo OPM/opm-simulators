@@ -274,7 +274,7 @@ public:
             detailTimer.reset();
             detailTimer.start();
 
-            bool needsSolving = checkIfSubdomainNeedsSolving(domain);
+            bool needsSolving = checkIfSubdomainNeedsSolving(domain, iteration);
 
             if (domain.skip || !needsSolving) {
                 local_report.converged = true;
@@ -381,6 +381,8 @@ public:
         }
 #endif // HAVE_MPI
 
+        // update the mobilities after the local solves
+        updateMobilities();
         const bool is_iorank = this->rank_ == 0;
         if (is_iorank) {
             OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains did no work. {} total local Newton iterations.\n",
@@ -1083,15 +1085,39 @@ private:
                                      param.local_domains_partition_well_neighbor_levels_);
     }
 
-    bool checkIfSubdomainNeedsSolving(const Domain& domain)
+    void updateMobilities()
+    {
+    // Store mobility values for all domains
+    for (const auto& domain : domains_) {
+        if (domain.skip) {
+            continue;
+        }
+
+        for (int cellIdx = 0; cellIdx < domain.cells.size(); ++cellIdx) {
+            unsigned globalDofIdx = domain.cells[cellIdx];
+            const auto& intQuants = *model_.simulator().model().cachedIntensiveQuantities(globalDofIdx, /*timeIdx=*/0);
+
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+                unsigned mobIdx = cellIdx * numPhases + phaseIdx;
+                domainPreviousMobilities_[domain.index][mobIdx] = getValue(intQuants.mobility(phaseIdx));
+            }
+        }
+
+    }
+}
+
+    bool checkIfSubdomainNeedsSolving(const Domain& domain, const int iteration)
     {
         if (domain.skip) {
             return false;
         }
 
-        // Skip mobility check on first iteration
-        bool firstIteration = (model_.simulator().model().newtonMethod().numIterations() == 0);
-        if (firstIteration) {
+        // Skip mobility check on first NLDD iteration
+        bool firstNlddIteration = (iteration <= model_.param().nldd_num_initial_newton_iter_);
+        if (firstNlddIteration) {
             return true;
         }
 
@@ -1126,9 +1152,6 @@ private:
                 unsigned mobIdx = cellIdx * numPhases + phaseIdx;
                 const auto mobility = getValue(intQuants.mobility(phaseIdx));
                 const auto relDiff = std::abs(mobility - prevMobilities[mobIdx]) / cellMob;
-
-                // Store current value for next iteration
-                prevMobilities[mobIdx] = mobility;
                 if (relDiff > model_.param().nldd_relative_mobility_change_tol_) {
                     needsSolving = true;
                 }
