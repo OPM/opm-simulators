@@ -111,7 +111,16 @@ update(const WellState<Scalar>& well_state,
         if (stop_or_zero_rate_target && seg == 0) {
             value_[seg][WQTotal] = 0;
         }
-        if (std::abs(total_seg_rate) > 0.) {
+
+        // todo to map old fraction to new perforations for now start from scratch.
+        if (ws.primaryvar.size() == value_.size() * numWellEq) {
+            if (has_wfrac_variable) {
+                value_[seg][WFrac] = ws.primaryvar[seg * numWellEq + WFrac];
+            }
+            if (has_gfrac_variable) {
+                value_[seg][GFrac] = ws.primaryvar[seg * numWellEq + GFrac];
+            }
+        } else if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
                 const int water_pos = pu.phase_pos[Water];
                 value_[seg][WFrac] = well_.scalingFactor(water_pos) * segment_rates[well_.numPhases() * seg + water_pos] / total_seg_rate;
@@ -230,6 +239,15 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     const int oil_pos = pu.phase_pos[Oil];
 
     auto& ws = well_state.well(well_.indexOfWell());
+
+    // Store primary variables
+    ws.primaryvar.resize(value_.size() * numWellEq);
+    for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+        for (int ii = 0; ii < numWellEq; ++ii) {
+            ws.primaryvar[seg * numWellEq + ii] = value_[seg][ii];
+        }
+    }
+
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
     auto& disgas = segments.dissolved_gas_rate;

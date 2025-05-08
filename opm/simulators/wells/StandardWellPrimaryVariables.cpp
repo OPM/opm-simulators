@@ -163,7 +163,17 @@ update(const WellState<Scalar>& well_state,
             }
     }
 
-    if (std::abs(total_well_rate) > 0.) {
+    if (ws.primaryvar.size() > 0) {
+        if constexpr (has_wfrac_variable) {
+             value_[WFrac] = ws.primaryvar[WFrac];
+        }
+        if constexpr (has_gfrac_variable) {
+             value_[GFrac] = ws.primaryvar[GFrac];
+        }
+        if constexpr (Indices::enableSolvent) {
+            value_[SFrac] = ws.primaryvar[SFrac];
+         }
+    } else if (std::abs(total_well_rate) > 0.) {
         if constexpr (has_wfrac_variable) {
             value_[WFrac] = well_.scalingFactor(pu.phase_pos[Water]) * ws.surface_rates[pu.phase_pos[Water]] / total_well_rate;
         }
@@ -175,7 +185,6 @@ update(const WellState<Scalar>& well_state,
         if constexpr (Indices::enableSolvent) {
             value_[SFrac] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
         }
-
     } else { // total_well_rate == 0
         if (well_.isInjector()) {
             // only single phase injection handled
@@ -399,6 +408,7 @@ copyToWellState(WellState<Scalar>& well_state,
     }
 
     auto& ws = well_state.well(well_.indexOfWell());
+    ws.primaryvar = value_;
     ws.bhp = value_[Bhp];
 
     // calculate the phase rates based on the primary variables

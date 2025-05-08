@@ -65,7 +65,7 @@ public:
         serializer(well_potentials);
         serializer(productivity_index);
         serializer(implicit_ipr_a);
-        serializer(implicit_ipr_b);        
+        serializer(implicit_ipr_b);
         serializer(surface_rates);
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
@@ -76,6 +76,7 @@ public:
         serializer(production_cmode);
         serializer(filtrate_conc);
         serializer(perf_data);
+        serializer(primaryvar);
     }
 
     bool operator==(const SingleWellState&) const;
@@ -115,7 +116,7 @@ public:
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
-
+    std::vector<Scalar> primaryvar;
 
     /// Special purpose method to support dynamically rescaling a well's
     /// CTFs through WELPI.

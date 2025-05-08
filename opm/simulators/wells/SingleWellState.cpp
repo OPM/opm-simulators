@@ -252,6 +252,7 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
         return;
     }
 
+    std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0.0);
     switch (prod_controls.cmode) {
     case Well::ProducerCMode::ORAT:
         assert(this->pu.phase_used[BlackoilPhases::Liquid]);
@@ -268,15 +269,12 @@ update_producer_targets(const Well& ecl_well, const SummaryState& st)
     case Well::ProducerCMode::GRUP:
     case Well::ProducerCMode::THP:
     case Well::ProducerCMode::BHP:
-        if (this->pu.phase_used[BlackoilPhases::Liquid]) {
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
-        }
-        if (this->pu.phase_used[BlackoilPhases::Aqua]) {
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
-        }
-        if (this->pu.phase_used[BlackoilPhases::Vapour]){
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -100000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
-        }
+        // Keeping all rates at zero, they will be initialized properly in
+        // a call to WellInterface::initializeProducerWellState() later, which will
+        // use the reservoir state to find a better initial value.
+        // This also applies to the ORAT/WRAT/GRAT above, but then only the
+        // rate not set in the above will be modified in
+        // WellInterface::initializeProducerWellState().
         break;
 
     default:
