@@ -230,8 +230,7 @@ nonlinearIteration(const int iteration,
     }
 
     SimulatorReportSingle result;
-    if ((this->param_.nonlinear_solver_ != "nldd") ||
-        (iteration < this->param_.nldd_num_initial_newton_iter_))
+    if (this->param_.nonlinear_solver_ != "nldd")
     {
         result = this->nonlinearIterationNewton(iteration,
                                                 timer,

@@ -239,6 +239,13 @@ public:
         // -----------   Set up reports and timer   -----------
         SimulatorReportSingle report;
 
+        if (iteration < model_.param().nldd_num_initial_newton_iter_) {
+            report = model_.nonlinearIterationNewton(iteration,
+                                                     timer,
+                                                     nonlinear_solver);
+            return report;
+        }
+
         model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), nonlinear_solver.maxIter(), timer);
 
         if (report.converged) {
