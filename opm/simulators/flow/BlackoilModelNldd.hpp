@@ -1100,13 +1100,9 @@ private:
 
     bool checkSubdomainChangeRelative(const Domain& domain)
     {
-        // Threshold for domain-wide average relative change
-        const Scalar averageRelativeMobilityChangeTol = 0.005;
-
         int numCells = domain.cells.size();
         auto& prevMobilities = domainPreviousMobilities_[domain.index];
         bool needsSolving = false;
-        Scalar totalRelativeChange = 0.0;
 
         // Check mobility changes for all cells in the domain
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
@@ -1123,7 +1119,6 @@ private:
             }
 
             // Check relative changes for each phase
-            Scalar cellMaxRelDiff = 0.0;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
@@ -1134,26 +1129,10 @@ private:
 
                 // Store current value for next iteration
                 prevMobilities[mobIdx] = mobility;
-                // Check if this change exceeds single-cell tolerance
                 if (relDiff > model_.param().nldd_relative_mobility_change_tol_) {
                     needsSolving = true;
                 }
-                cellMaxRelDiff = std::max(cellMaxRelDiff, relDiff);
             }
-            totalRelativeChange += cellMaxRelDiff;
-        }
-        if (!needsSolving) {
-            OpmLog::debug(fmt::format("Domain {} skipped: as no cell has a relative change larger than {}",
-                                     domain.index, model_.param().nldd_relative_mobility_change_tol_));
-        }
-        // Check if average change exceeds domain-wide tolerance
-        const Scalar avgRelativeChange = totalRelativeChange / numCells;
-        if (avgRelativeChange > averageRelativeMobilityChangeTol) {
-            needsSolving = true;
-        }
-        if (avgRelativeChange < averageRelativeMobilityChangeTol) {
-            OpmLog::debug(fmt::format("Domain {} skipped: avg relative change {} is below threshold {}",
-                                     domain.index, avgRelativeChange, averageRelativeMobilityChangeTol));
         }
         return needsSolving;
     }
