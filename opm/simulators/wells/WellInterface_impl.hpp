@@ -1882,7 +1882,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     getMobility(const Simulator& simulator,
-                const int perf,
+                const int local_perf_index,
                 std::vector<Value>& mob,
                 Callback& extendEval,
                 [[maybe_unused]] DeferredLogger& deferred_logger) const
@@ -1895,17 +1895,17 @@ namespace Opm
                                     return std::array<Eval,3>{};
                                 }
                             };
-        if (static_cast<std::size_t>(perf) >= this->well_cells_.size()) {
+        if (static_cast<std::size_t>(local_perf_index) >= this->well_cells_.size()) {
             OPM_THROW(std::invalid_argument,"The perforation index exceeds the size of the local containers - possibly getMobility was called with a global instead of a local perforation index!");
         }
-        const int cell_idx = this->well_cells_[perf];
+        const int cell_idx = this->well_cells_[local_perf_index];
         assert (int(mob.size()) == this->num_components_);
         const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
         const auto& materialLawManager = simulator.problem().materialLawManager();
 
         // either use mobility of the perforation cell or calculate its own
         // based on passing the saturation table index
-        const int satid = this->saturation_table_number_[perf] - 1;
+        const int satid = this->saturation_table_number_[local_perf_index] - 1;
         const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
         if (satid == satid_elem) { // the same saturation number is used. i.e. just use the mobilty from the cell
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -1944,12 +1944,12 @@ namespace Opm
         }
 
         if (this->isInjector() && !this->inj_fc_multiplier_.empty()) {
-            const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+            const auto perf_ecl_index = this->perforationData()[local_perf_index].ecl_index;
             const auto& connections = this->well_ecl_.getConnections();
             const auto& connection = connections[perf_ecl_index];
             if (connection.filterCakeActive()) {
                 std::transform(mob.begin(), mob.end(), mob.begin(),
-                               [mult = this->inj_fc_multiplier_[perf] ](const auto val)
+                               [mult = this->inj_fc_multiplier_[local_perf_index] ](const auto val)
                                { return val * mult; });
             }
         }
