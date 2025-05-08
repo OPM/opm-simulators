@@ -204,7 +204,7 @@ dumpGuideRates()
         printHeader_();
         int level = 0;  // 0 is the root level
         this->dumpGuideRatesRecursive_(group, level);
-        printTrailer_();
+        printFooter_();
     }
 }
 
@@ -372,7 +372,7 @@ printHeader_()
 template <class Scalar>
 void
 GuideRateHandler<Scalar>::GuideRateDumper::
-printTrailer_()
+printFooter_()
 {
     this->deferredLogger().debug(
         fmt::format(

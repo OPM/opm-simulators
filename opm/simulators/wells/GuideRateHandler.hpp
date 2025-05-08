@@ -68,7 +68,7 @@ public:
         ) const;
         void printGroupGuideRates_(const Group& group, int level);
         void printHeader_();
-        void printTrailer_();
+        void printFooter_();
         void printWellGuideRates_(const Well& well, int level);
 
         GuideRateHandler<Scalar> &parent_;
