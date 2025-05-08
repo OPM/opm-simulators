@@ -671,6 +671,7 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     const int np = pu.num_phases;
 
     std::optional<std::string> distributedMSWellLocalErrorMessage;
+    std::optional<std::string> connectionWithoutAssociatedSegmentsLocalErrorMessage;
 
     // in the init function, the well rates and perforation rates have been initialized or copied from prevState
     // what we do here, is to set the segment rates and perforation rates
@@ -701,11 +702,16 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 if (connection.state() == Connection::State::OPEN) {
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
                     if (segment_index == -1) {
-                        OPM_THROW(std::logic_error,
-                                  fmt::format("COMPSEGS: Well {} has connection in cell {}, {}, {} "
-                                              "without associated segment.", well_ecl.name(),
-                                              connection.getI() + 1 , connection.getJ() + 1,
-                                              connection.getK() + 1 ));
+                        if (!connectionWithoutAssociatedSegmentsLocalErrorMessage) {
+                            connectionWithoutAssociatedSegmentsLocalErrorMessage = ""; // First well with error: initialize the string
+                        }
+
+                        // Append to the existing error message for errors in further wells
+                        *connectionWithoutAssociatedSegmentsLocalErrorMessage +=
+                            fmt::format("COMPSEGS: Well {} has connection in cell {}, {}, {} "
+                            "without associated segment.\n", well_ecl.name(),
+                            connection.getI() + 1 , connection.getJ() + 1,
+                            connection.getK() + 1 );
                     }
 
                     segment_perforations[segment_index].push_back(n_activeperf);
@@ -830,11 +836,24 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         }
     }
 
-    // Instead of throwing inside the loop over all wells, collect the findings and throw at the end.
-    // Throwing inside of the loop over all wells leads to a deadlock in some cases.
+    {
+        // Instead of throwing inside the loop over all wells, collect the findings and throw at the end.
+        // Throwing inside of the loop over all wells leads to a deadlock in some cases.
 
-    if (!this->enableDistributedWells_ && distributedMSWellLocalErrorMessage) {
-        throw std::logic_error(*distributedMSWellLocalErrorMessage);
+        std::string fullErrorMessage = {};
+
+        if (!this->enableDistributedWells_ && distributedMSWellLocalErrorMessage) {
+            *distributedMSWellLocalErrorMessage += "Either adjust the partitioning or set the flag --allow-distributed-wells to true.\n";
+            fullErrorMessage += *distributedMSWellLocalErrorMessage;
+        }
+
+        if (connectionWithoutAssociatedSegmentsLocalErrorMessage) {
+            fullErrorMessage += *connectionWithoutAssociatedSegmentsLocalErrorMessage;
+        }
+
+        if (!fullErrorMessage.empty()) {
+            throw std::logic_error(fullErrorMessage);
+        }
     }
 
     if (prev_well_state) {
