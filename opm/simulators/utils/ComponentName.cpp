@@ -87,7 +87,7 @@ ComponentName<FluidSystem,Indices>::ComponentName()
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE(T,...) \
     template class ComponentName<FS<T>, __VA_ARGS__>;

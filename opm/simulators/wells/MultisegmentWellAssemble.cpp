@@ -421,7 +421,7 @@ assemblePerforationEq(const int seg,
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE(T,...) \
     template class MultisegmentWellAssemble<FS<T>,__VA_ARGS__>;

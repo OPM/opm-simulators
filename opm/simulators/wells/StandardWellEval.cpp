@@ -208,7 +208,7 @@ init(std::vector<Scalar>& perf_depth,
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE(T,...)                                                   \
     template class StandardWellEval<FS<T>,__VA_ARGS__>;

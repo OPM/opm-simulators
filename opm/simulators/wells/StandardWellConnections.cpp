@@ -850,7 +850,7 @@ connectionRatezFraction(Scalar& rate,
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE(T,...) \
     template class StandardWellConnections<FS<T>, __VA_ARGS__>;

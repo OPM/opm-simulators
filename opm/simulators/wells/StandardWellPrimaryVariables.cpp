@@ -742,7 +742,7 @@ checkFinite(DeferredLogger& deferred_logger) const
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE(T,...) \
     template class StandardWellPrimaryVariables<FS<T>,__VA_ARGS__>;

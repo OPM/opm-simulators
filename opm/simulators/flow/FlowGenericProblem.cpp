@@ -44,7 +44,7 @@ namespace Opm {
     template class FlowGenericProblem<                                    \
                       Dune::GridView<                                     \
                           Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>, \
-                      BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>>;
+                      BlackOilFluidSystem<T, BlackOilDefaultFluidSystemIndices>>;
 
 INSTANTIATE_TYPE(double)
 
@@ -57,10 +57,10 @@ using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                            (Dune::PartitionIteratorType)4,
                                            false>;
 template class FlowGenericProblem<GV,
-                                  BlackOilFluidSystem<double, BlackOilDefaultIndexTraits>>;
+                                  BlackOilFluidSystem<double, BlackOilDefaultFluidSystemIndices>>;
 #if FLOW_INSTANTIATE_FLOAT
 template class FlowGenericProblem<GV,
-                                  BlackOilFluidSystem<float, BlackOilDefaultIndexTraits>>;
+                                  BlackOilFluidSystem<float, BlackOilDefaultFluidSystemIndices>>;
 #endif
 
 #endif // HAVE_DUNE_FEM

@@ -577,7 +577,7 @@ getResidualMeasureValue(const WellState<Scalar>& well_state,
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE(T,...) \
     template class MultisegmentWellEval<FS<T>,__VA_ARGS__>;

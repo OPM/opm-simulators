@@ -132,7 +132,7 @@ scalingFactor(const int phaseIdx) const
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE(T,...) \
     template class WellInterfaceIndices<FS<T>, __VA_ARGS__>;

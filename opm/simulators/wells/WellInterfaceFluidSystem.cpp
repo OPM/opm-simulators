@@ -328,7 +328,7 @@ zeroGroupRateTarget(const SummaryState& summary_state,
 }
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 template class WellInterfaceFluidSystem<FS<double>>;
 

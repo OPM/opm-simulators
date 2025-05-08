@@ -310,7 +310,7 @@ assembleControlEqInj<__VA_ARGS__>(const WellState<typename A::Scalar>&,   \
                                   DeferredLogger&) const;
 
 template<class Scalar>
-using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultFluidSystemIndices>;
 
 #define INSTANTIATE_TYPE(T)                                   \
     template class WellAssemble<FS<T>>;                       \
