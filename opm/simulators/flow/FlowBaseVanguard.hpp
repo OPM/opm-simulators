@@ -362,9 +362,9 @@ protected:
             cellCenterDepth_[elemIdx] = cellCenterDepth(element);
 
             if (!num_aqu_cells.empty()) {
-               const unsigned int global_index = cartesianIndex(elemIdx);
-               const auto search = num_aqu_cells.find(global_index);
-               if (search != num_aqu_cells.end()) {
+                const unsigned int global_index = cartesianIndex(elemIdx);
+                const auto search = num_aqu_cells.find(global_index);
+                if (search != num_aqu_cells.end()) {
                     // updating the cell depth using aquifer cell depth
                     cellCenterDepth_[elemIdx] = search->second->depth;
                 }

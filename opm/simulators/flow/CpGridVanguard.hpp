@@ -255,9 +255,16 @@ public:
         // Check if input file contains Lgrs.
         //
         // If there are lgrs, create the grid with them, and update the leaf grid view.
-        if (const auto& lgrs = this->eclState().getLgrs(); lgrs.size() > 0) {
+        if (const auto& lgrs = this->eclState().getLgrs(); (lgrs.size() > 0) && (this->grid_->comm().size() == 1)) {
             OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
             this->addLgrsUpdateLeafView(lgrs, lgrs.size(), *this->grid_);
+
+            this->updateGridView_();
+            this->updateCellDepths_();
+            this->updateCellThickness_();
+        }
+        else {
+            Opm::OpmLog::warning("Adding LGRs in parallel run is not supported yet.\n");
         }
     }
 
