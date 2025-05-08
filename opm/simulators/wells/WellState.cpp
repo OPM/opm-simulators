@@ -44,6 +44,7 @@
 #include <cassert>
 #include <initializer_list>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <type_traits>
@@ -670,6 +671,10 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     const auto& pu = this->phaseUsage();
     const int np = pu.num_phases;
 
+    std::optional<std::string> distributedMSWellLocalErrorMessage;
+    std::optional<std::string> connectionWithoutAssociatedSegmentsLocalErrorMessage;
+    std::optional<std::string> initializePerforationMismatchLocalErrorMessage;
+
     // in the init function, the well rates and perforation rates have been initialized or copied from prevState
     // what we do here, is to set the segment rates and perforation rates
     for (int w = 0; w < nw; ++w) {
@@ -699,11 +704,16 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 if (connection.state() == Connection::State::OPEN) {
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
                     if (segment_index == -1) {
-                        OPM_THROW(std::logic_error,
-                                  fmt::format("COMPSEGS: Well {} has connection in cell {}, {}, {} "
-                                              "without associated segment.", well_ecl.name(),
-                                              connection.getI() + 1 , connection.getJ() + 1,
-                                              connection.getK() + 1 ));
+                        if (!connectionWithoutAssociatedSegmentsLocalErrorMessage) {
+                            connectionWithoutAssociatedSegmentsLocalErrorMessage = ""; // First well with error: initialize the string
+                        }
+
+                        // Append to the existing error message for errors in further wells
+                        *connectionWithoutAssociatedSegmentsLocalErrorMessage +=
+                            fmt::format("COMPSEGS: Well {} has connection in cell {}, {}, {} "
+                            "without associated segment.\n", well_ecl.name(),
+                            connection.getI() + 1 , connection.getJ() + 1,
+                            connection.getK() + 1 );
                     }
 
                     segment_perforations[segment_index].push_back(n_activeperf);
@@ -717,8 +727,26 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             }
             ws.parallel_info.get().setActiveToLocalMap(active_to_local);
 
-            if (!this->enableDistributedWells_ && static_cast<int>(ws.perf_data.size()) != n_activeperf)
-                throw std::logic_error("Distributed multi-segment wells cannot be initialized properly yet.");
+            // Check if the multi-segment well is distributed across several processes by comparing the local number
+            // of active perforations (ws.perf_data.size()) with the total number of active perforations (n_activeperf).
+            // If they differ on any rank, the well is considered distributed.
+
+            if (static_cast<int>(ws.perf_data.size()) != n_activeperf) {
+                if (!distributedMSWellLocalErrorMessage) {
+                    distributedMSWellLocalErrorMessage = ""; // First well with error: initialize the string
+                }
+
+                // Append to the existing error message for errors in further wells
+                *distributedMSWellLocalErrorMessage += fmt::format(
+                    "Distributed multi-segment well {} detected on rank {}.\n"
+                    "The number of active perforations on rank {} is {}, but the total number of active perforations is {}.\n\n",
+                    well_ecl.name(),
+                    ws.parallel_info.get().communication().rank(),
+                    ws.parallel_info.get().communication().rank(),
+                    ws.perf_data.size(),
+                    n_activeperf
+                );
+            }
 
 
             std::vector<std::vector<int>> segment_inlets(well_nseg);
@@ -773,7 +801,12 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                         perforation_rates[global_active_perf_index * np + i] = perf_rates[perf * np + i];
                     }
                 } else {
-                    OPM_THROW(std::logic_error,fmt::format("Error when initializing MS Well state, there is no active perforation index for the local index {}", perf));
+                    if (!initializePerforationMismatchLocalErrorMessage) {
+                        initializePerforationMismatchLocalErrorMessage = ""; // First well with error: initialize the string
+                    }
+
+                    // Append to the existing error message for errors in further wells
+                    *initializePerforationMismatchLocalErrorMessage += fmt::format("Error when initializing MS Well state of well {}, there is no active perforation index for the local index {}.\n", well_ecl.name(), perf);
                 }
             }
             if (ws.parallel_info.get().communication().size() > 1) {
@@ -810,6 +843,29 @@ void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         }
     }
 
+    {
+        // Instead of throwing inside the loop over all wells, collect the findings and throw at the end.
+        // Throwing inside of the loop over all wells leads to a deadlock in some cases.
+
+        std::string fullErrorMessage = {};
+
+        if (!this->enableDistributedWells_ && distributedMSWellLocalErrorMessage) {
+            *distributedMSWellLocalErrorMessage += "Either adjust the partitioning or set the flag --allow-distributed-wells to true.\n";
+            fullErrorMessage += *distributedMSWellLocalErrorMessage;
+        }
+
+        if (connectionWithoutAssociatedSegmentsLocalErrorMessage) {
+            fullErrorMessage += *connectionWithoutAssociatedSegmentsLocalErrorMessage;
+        }
+
+        if (initializePerforationMismatchLocalErrorMessage) {
+            fullErrorMessage += *initializePerforationMismatchLocalErrorMessage;
+        }
+
+        if (!fullErrorMessage.empty()) {
+            throw std::logic_error(fullErrorMessage);
+        }
+    }
 
     if (prev_well_state) {
         for (int w = 0; w < nw; ++w) {
