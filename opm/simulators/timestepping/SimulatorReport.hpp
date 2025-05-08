@@ -68,7 +68,7 @@ namespace Opm
         int converged_domains = 0;
         int unconverged_domains = 0;
         int accepted_unconverged_domains = 0;
-
+        int skipped_domains = 0;
 
         static SimulatorReportSingle serializationTestObject();
 
@@ -114,6 +114,7 @@ namespace Opm
             serializer(converged_domains);
             serializer(unconverged_domains);
             serializer(accepted_unconverged_domains);
+            serializer(skipped_domains);
         }
     };
 

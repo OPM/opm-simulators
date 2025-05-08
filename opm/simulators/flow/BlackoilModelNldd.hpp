@@ -277,6 +277,7 @@ public:
             bool needsSolving = checkIfSubdomainNeedsSolving(domain, iteration);
 
             if (domain.skip || !needsSolving) {
+                local_report.skipped_domains = true;
                 local_report.converged = true;
                 domain_reports[domain.index] = local_report;
                 continue;
@@ -317,11 +318,12 @@ public:
         // Accumulate local solve data.
         // Putting the counts in a single array to avoid multiple
         // comm.sum() calls. Keeping the named vars for readability.
-        std::array<int, 4> counts{ 0, 0, 0, static_cast<int>(domain_reports.size()) };
+        std::array<int, 5> counts{ 0, 0, 0, static_cast<int>(domain_reports.size()), 0 };
         int& num_converged = counts[0];
         int& num_converged_already = counts[1];
         int& num_local_newtons = counts[2];
         int& num_domains = counts[3];
+        int& num_skipped = counts[4];
         {
             auto step_newtons = 0;
             const auto dr_size = domain_reports.size();
@@ -332,6 +334,9 @@ public:
                     if (dr.total_newton_iterations == 0) {
                         ++num_converged_already;
                     }
+                }
+                if (dr.skipped_domains) {
+                    ++num_skipped;
                 }
                 step_newtons += dr.total_newton_iterations;
                 // Accumulate local reports per domain
@@ -385,8 +390,8 @@ public:
         updateMobilities();
         const bool is_iorank = this->rank_ == 0;
         if (is_iorank) {
-            OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains did no work. {} total local Newton iterations.\n",
-                                      num_converged, num_domains, num_converged_already, num_local_newtons));
+            OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains were skipped. {} domains did no work. {} total local Newton iterations.\n",
+                                      num_converged, num_domains, num_skipped, num_converged_already, num_local_newtons));
         }
         auto total_local_solve_time = localSolveTimer.stop();
         report.local_solve_time += total_local_solve_time;

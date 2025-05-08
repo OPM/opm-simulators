@@ -36,7 +36,7 @@ namespace Opm
                                      7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
                                      13, 14, 15, 16, 17, 18,
                                      true, false, false, 19, 20.0, 21.0,
-                                     22, 23, 24, 25, 26, 27, 28};
+                                     22, 23, 24, 25, 26, 27, 28, 29};
     }
 
     bool SimulatorReportSingle::operator==(const SimulatorReportSingle& rhs) const
@@ -71,7 +71,8 @@ namespace Opm
                this->num_owned_cells == rhs.num_owned_cells &&
                this->converged_domains == rhs.converged_domains &&
                this->unconverged_domains == rhs.unconverged_domains &&
-               this->accepted_unconverged_domains == rhs.accepted_unconverged_domains;
+               this->accepted_unconverged_domains == rhs.accepted_unconverged_domains &&
+               this->skipped_domains == rhs.skipped_domains;
     }
 
     void SimulatorReportSingle::operator+=(const SimulatorReportSingle& sr)
@@ -100,7 +101,7 @@ namespace Opm
         converged_domains += sr.converged_domains;
         unconverged_domains += sr.unconverged_domains;
         accepted_unconverged_domains += sr.accepted_unconverged_domains;
-
+        skipped_domains += sr.skipped_domains;
         // It makes no sense adding time points. Therefore, do not 
         // overwrite the value of global_time which gets set in 
         // NonlinearSolver.hpp by the line:
@@ -332,6 +333,9 @@ namespace Opm
         }
         os << std::endl;
         os << fmt::format("-------------------------------------------------------\n");
+        n = skipped_domains + (failureReport ? failureReport->skipped_domains : 0);
+        os << fmt::format("Skipped domain solves:       {:7}", n);
+        os << std::endl;
         n = converged_domains + (failureReport ? failureReport->converged_domains : 0);
         os << fmt::format("Converged domain solves:     {:7}", n);
         os << std::endl;
