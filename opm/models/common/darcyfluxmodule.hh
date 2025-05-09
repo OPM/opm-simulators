@@ -30,8 +30,8 @@
 #ifndef EWOMS_DARCY_FLUX_MODULE_HH
 #define EWOMS_DARCY_FLUX_MODULE_HH
 
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <opm/common/Exceptions.hpp>
 
@@ -40,6 +40,12 @@
 #include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
+
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <string>
+#include <type_traits>
 
 namespace Opm {
 
@@ -67,7 +73,7 @@ struct DarcyFluxModule
      * \brief Register all run-time parameters for the flux module.
      */
     static void registerParameters()
-    { }
+    {}
 };
 
 /*!
@@ -77,7 +83,7 @@ struct DarcyFluxModule
  */
 template <class TypeTag>
 class DarcyBaseProblem
-{ };
+{};
 
 /*!
  * \ingroup FluxModules
@@ -87,11 +93,12 @@ template <class TypeTag>
 class DarcyIntensiveQuantities
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+
 protected:
     void update_(const ElementContext&,
                  unsigned,
                  unsigned)
-    { }
+    {}
 };
 
 /*!
@@ -190,11 +197,11 @@ protected:
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(faceIdx);
         const auto& faceNormal = scvf.normal();
 
-        unsigned i = scvf.interiorIndex();
-        unsigned j = scvf.exteriorIndex();
+        const unsigned i = scvf.interiorIndex();
+        const unsigned j = scvf.exteriorIndex();
         interiorDofIdx_ = static_cast<short>(i);
         exteriorDofIdx_ = static_cast<short>(j);
-        unsigned focusDofIdx = elemCtx.focusDofIndex();
+        const unsigned focusDofIdx = elemCtx.focusDofIndex();
 
         // calculate the "raw" pressure gradient
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -233,10 +240,11 @@ protected:
             distVecIn -= posFace;
             distVecEx -= posFace;
             distVecTotal -= posIn;
-            Scalar absDistTotalSquared = distVecTotal.two_norm2();
-            for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-                if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            const Scalar absDistTotalSquared = distVecTotal.two_norm2();
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                     continue;
+                }
 
                 // calculate the hydrostatic pressure at the integration point of the face
                 Evaluation pStatIn;
@@ -245,11 +253,11 @@ protected:
                     interiorDofIdx_ == static_cast<int>(focusDofIdx))
                 {
                     const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
-                    pStatIn = - rhoIn*(gIn*distVecIn);
+                    pStatIn = -rhoIn * (gIn * distVecIn);
                 }
                 else {
-                    Scalar rhoIn = Toolbox::value(intQuantsIn.fluidState().density(phaseIdx));
-                    pStatIn = - rhoIn*(gIn*distVecIn);
+                    const Scalar rhoIn = Toolbox::value(intQuantsIn.fluidState().density(phaseIdx));
+                    pStatIn = -rhoIn * (gIn * distVecIn);
                 }
 
                 // the quantities on the exterior side of the face do not influence the
@@ -260,11 +268,11 @@ protected:
                     exteriorDofIdx_ == static_cast<int>(focusDofIdx))
                 {
                     const Evaluation& rhoEx = intQuantsEx.fluidState().density(phaseIdx);
-                    pStatEx = - rhoEx*(gEx*distVecEx);
+                    pStatEx = -rhoEx * (gEx * distVecEx);
                 }
                 else {
-                    Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
-                    pStatEx = - rhoEx*(gEx*distVecEx);
+                    const Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
+                    pStatEx = -rhoEx * (gEx * distVecEx);
                 }
 
                 // compute the hydrostatic gradient between the two control volumes (this
@@ -272,16 +280,17 @@ protected:
                 // control volume centers and the length (pStaticExterior -
                 // pStaticInterior)/distanceInteriorToExterior
                 Dune::FieldVector<Evaluation, dimWorld> f(distVecTotal);
-                f *= (pStatEx - pStatIn)/absDistTotalSquared;
+                f *= (pStatEx - pStatIn) / absDistTotalSquared;
 
                 // calculate the final potential gradient
-                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                     potentialGrad_[phaseIdx][dimIdx] += f[dimIdx];
+                }
 
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
                     if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
                         throw NumericalProblem("Non-finite potential gradient for phase '"
-                                               + std::string(FluidSystem::phaseName(phaseIdx))+"'");
+                                               + std::string(FluidSystem::phaseName(phaseIdx)) + "'");
                     }
                 }
             }
@@ -299,8 +308,9 @@ protected:
 
             // determine the upstream and downstream DOFs
             Evaluation tmp = 0.0;
-            for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx)
+            for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx) {
                 tmp += potentialGrad_[phaseIdx][dimIdx]*faceNormal[dimIdx];
+            }
 
             if (tmp > 0) {
                 upstreamDofIdx_[phaseIdx] = exteriorDofIdx_;
@@ -314,10 +324,12 @@ protected:
             // we only carry the derivatives along if the upstream DOF is the one which
             // we currently focus on
             const auto& up = elemCtx.intensiveQuantities(upstreamDofIdx_[phaseIdx], timeIdx);
-            if (upstreamDofIdx_[phaseIdx] == static_cast<int>(focusDofIdx))
+            if (upstreamDofIdx_[phaseIdx] == static_cast<int>(focusDofIdx)) {
                 mobility_[phaseIdx] = up.mobility(phaseIdx);
-            else
+            }
+            else {
                 mobility_[phaseIdx] = Toolbox::value(up.mobility(phaseIdx));
+            }
         }
     }
 
@@ -352,7 +364,7 @@ protected:
         }
 
         const auto& scvf = elemCtx.stencil(timeIdx).boundaryFace(boundaryFaceIdx);
-        auto i = scvf.interiorIndex();
+        const auto i = scvf.interiorIndex();
         interiorDofIdx_ = static_cast<short>(i);
         exteriorDofIdx_ = -1;
         int focusDofIdx = elemCtx.focusDofIndex();
@@ -372,16 +384,17 @@ protected:
             // the distance between the face center and the center of the control volume
             DimVector distVecIn(posIn);
             distVecIn -= posFace;
-            Scalar absDistSquared = distVecIn.two_norm2();
-            Scalar gTimesDist = gIn*distVecIn;
+            const Scalar absDistSquared = distVecIn.two_norm2();
+            const Scalar gTimesDist = gIn * distVecIn;
 
-            for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-                if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                     continue;
+                }
 
                 // calculate the hydrostatic pressure at the integration point of the face
-                Evaluation rhoIn = intQuantsIn.fluidState().density(phaseIdx);
-                Evaluation pStatIn = - gTimesDist*rhoIn;
+                const Evaluation rhoIn = intQuantsIn.fluidState().density(phaseIdx);
+                const Evaluation pStatIn = -gTimesDist * rhoIn;
 
                 Valgrind::CheckDefined(pStatIn);
                 // compute the hydrostatic gradient between the control volume and face integration
@@ -393,14 +406,15 @@ protected:
                 f *= pStatIn / absDistSquared;
 
                 // calculate the final potential gradient
-                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                     potentialGrad_[phaseIdx][dimIdx] += f[dimIdx];
+                }
 
                 Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
                     if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
                         throw NumericalProblem("Non-finite potential gradient for phase '"
-                                               + std::string(FluidSystem::phaseName(phaseIdx))+"'");
+                                               + std::string(FluidSystem::phaseName(phaseIdx)) + "'");
                     }
                 }
             }
@@ -411,17 +425,19 @@ protected:
 
         const auto& matParams = elemCtx.problem().materialLawParams(elemCtx, i, timeIdx);
 
-        Scalar kr[numPhases];
+        std::array<Scalar, numPhases> kr;
         MaterialLaw::relativePermeabilities(kr, matParams, fluidState);
         Valgrind::CheckDefined(kr);
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             Evaluation tmp = 0.0;
-            for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx)
-                tmp += potentialGrad_[phaseIdx][dimIdx]*faceNormal[dimIdx];
+            for (unsigned dimIdx = 0; dimIdx < faceNormal.size(); ++dimIdx) {
+                tmp += potentialGrad_[phaseIdx][dimIdx] * faceNormal[dimIdx];
+            }
 
             if (tmp > 0) {
                 upstreamDofIdx_[phaseIdx] = exteriorDofIdx_;
@@ -434,18 +450,20 @@ protected:
 
             // take the phase mobility from the DOF in upstream direction
             if (upstreamDofIdx_[phaseIdx] < 0) {
-                if (interiorDofIdx_ == focusDofIdx)
-                    mobility_[phaseIdx] =
-                        kr[phaseIdx] / fluidState.viscosity(phaseIdx);
-                else
-                    mobility_[phaseIdx] =
-                        Toolbox::value(kr[phaseIdx])
-                        / Toolbox::value(fluidState.viscosity(phaseIdx));
+                if (interiorDofIdx_ == focusDofIdx) {
+                    mobility_[phaseIdx] = kr[phaseIdx] / fluidState.viscosity(phaseIdx);
+                }
+                else {
+                    mobility_[phaseIdx] = Toolbox::value(kr[phaseIdx]) /
+                                          Toolbox::value(fluidState.viscosity(phaseIdx));
+                }
             }
-            else if (upstreamDofIdx_[phaseIdx] != focusDofIdx)
+            else if (upstreamDofIdx_[phaseIdx] != focusDofIdx) {
                 mobility_[phaseIdx] = Toolbox::value(intQuantsIn.mobility(phaseIdx));
-            else
+            }
+            else {
                 mobility_[phaseIdx] = intQuantsIn.mobility(phaseIdx);
+            }
             Valgrind::CheckDefined(mobility_[phaseIdx]);
         }
     }
@@ -462,18 +480,20 @@ protected:
         const DimVector& normal = scvf.normal();
         Valgrind::CheckDefined(normal);
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             filterVelocity_[phaseIdx] = 0.0;
             volumeFlux_[phaseIdx] = 0.0;
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 continue;
+            }
 
             asImp_().calculateFilterVelocity_(phaseIdx);
             Valgrind::CheckDefined(filterVelocity_[phaseIdx]);
 
             volumeFlux_[phaseIdx] = 0.0;
-            for (unsigned i = 0; i < normal.size(); ++i)
+            for (unsigned i = 0; i < normal.size(); ++i) {
                 volumeFlux_[phaseIdx] += filterVelocity_[phaseIdx][i] * normal[i];
+            }
         }
     }
 
@@ -491,7 +511,7 @@ protected:
         const DimVector& normal = scvf.normal();
         Valgrind::CheckDefined(normal);
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
                 filterVelocity_[phaseIdx] = 0.0;
                 volumeFlux_[phaseIdx] = 0.0;
@@ -501,8 +521,9 @@ protected:
             asImp_().calculateFilterVelocity_(phaseIdx);
             Valgrind::CheckDefined(filterVelocity_[phaseIdx]);
             volumeFlux_[phaseIdx] = 0.0;
-            for (unsigned i = 0; i < normal.size(); ++i)
+            for (unsigned i = 0; i < normal.size(); ++i) {
                 volumeFlux_[phaseIdx] += filterVelocity_[phaseIdx][i] * normal[i];
+            }
         }
     }
 
@@ -510,17 +531,20 @@ protected:
     {
 #ifndef NDEBUG
         assert(isfinite(mobility_[phaseIdx]));
-        for (unsigned i = 0; i < K_.M(); ++ i)
-            for (unsigned j = 0; j < K_.N(); ++ j)
+        for (unsigned i = 0; i < K_.M(); ++i) {
+            for (unsigned j = 0; j < K_.N(); ++j) {
                 assert(std::isfinite(K_[i][j]));
+            }
+        }
 #endif
 
         K_.mv(potentialGrad_[phaseIdx], filterVelocity_[phaseIdx]);
         filterVelocity_[phaseIdx] *= - mobility_[phaseIdx];
 
 #ifndef NDEBUG
-        for (unsigned i = 0; i < filterVelocity_[phaseIdx].size(); ++ i)
+        for (unsigned i = 0; i < filterVelocity_[phaseIdx].size(); ++i) {
             assert(isfinite(filterVelocity_[phaseIdx][i]));
+        }
 #endif
     }
 
@@ -536,21 +560,21 @@ protected:
     DimMatrix K_;
 
     // mobilities of all fluid phases [1 / (Pa s)]
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation, numPhases> mobility_;
 
     // filter velocities of all phases [m/s]
-    EvalDimVector filterVelocity_[numPhases];
+    std::array<EvalDimVector, numPhases> filterVelocity_;
 
     // the volumetric flux of all fluid phases over the control
     // volume's face [m^3/s / m^2]
-    Evaluation volumeFlux_[numPhases];
+    std::array<Evaluation, numPhases> volumeFlux_;
 
     // pressure potential gradients of all phases [Pa / m]
-    EvalDimVector potentialGrad_[numPhases];
+    std::array<EvalDimVector, numPhases> potentialGrad_;
 
     // upstream, downstream, interior and exterior DOFs
-    short upstreamDofIdx_[numPhases];
-    short downstreamDofIdx_[numPhases];
+    std::array<short, numPhases> upstreamDofIdx_;
+    std::array<short, numPhases> downstreamDofIdx_;
     short interiorDofIdx_;
     short exteriorDofIdx_;
 };
