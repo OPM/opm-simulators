@@ -46,8 +46,8 @@ struct RatioLimitCheckReport;
 template<class Scalar> class SingleWellState;
 template<typename FluidSystem, typename Indices> class WellState;
 
-template<class FluidSystem>
-class WellInterfaceFluidSystem : public WellInterfaceGeneric<typename FluidSystem::Scalar>
+template<typename FluidSystem, typename Indices>
+class WellInterfaceFluidSystem : public WellInterfaceGeneric<FluidSystem, Indices>
 {
 protected:
     using RateConverterType = RateConverter::
@@ -89,14 +89,14 @@ protected:
                                     const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
                                     const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
-    bool checkGroupConstraints(WellState<Scalar>& well_state,
+    bool checkGroupConstraints(WellState<FluidSystem, Indices>& well_state,
                                const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const bool check_guide_rate,
                                DeferredLogger& deferred_logger) const;
 
-    bool checkConstraints(WellState<Scalar>& well_state,
+    bool checkConstraints(WellState<FluidSystem, Indices>& well_state,
                           const GroupState<Scalar>& group_state,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
@@ -104,7 +104,7 @@ protected:
 
     std::optional<Scalar>
     getGroupInjectionTargetRate(const Group& group,
-                                const WellState<Scalar>& well_state,
+                                const WellState<FluidSystem, Indices>& well_state,
                                 const GroupState<Scalar>& group_state,
                                 const Schedule& schedule,
                                 const SummaryState& summaryState,
@@ -114,7 +114,7 @@ protected:
 
     Scalar
     getGroupProductionTargetRate(const Group& group,
-                                 const WellState<Scalar>& well_state,
+                                 const WellState<FluidSystem, Indices>& well_state,
                                  const GroupState<Scalar>& group_state,
                                  const Schedule& schedule,
                                  const SummaryState& summaryState,
@@ -123,7 +123,7 @@ protected:
 
     bool zeroGroupRateTarget(const SummaryState& summary_state,
                              const Schedule& schedule,
-                             const WellState<Scalar>& well_state,
+                             const WellState<FluidSystem, Indices>& well_state,
                              const GroupState<Scalar>& group_state,
                              DeferredLogger& deferredLogger) const;
 

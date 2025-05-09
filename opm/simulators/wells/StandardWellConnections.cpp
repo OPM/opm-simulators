@@ -666,7 +666,7 @@ copyInPerforationRates(const Properties&       props,
 template<class FluidSystem, class Indices>
 void StandardWellConnections<FluidSystem,Indices>::
 computeProperties(const bool                      stopped_or_zero_rate_target,
-                  const WellState<Scalar>&        well_state,
+                  const WellState<FluidSystem, Indices>&        well_state,
                   const DensityPropertyFunctions& prop_func,
                   const Properties&               props,
                   DeferredLogger&                 deferred_logger)
