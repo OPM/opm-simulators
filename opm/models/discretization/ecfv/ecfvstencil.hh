@@ -28,18 +28,24 @@
 #ifndef EWOMS_ECFV_STENCIL_HH
 #define EWOMS_ECFV_STENCIL_HH
 
-#include <opm/models/utils/quadraturegeometries.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
-#include <opm/material/common/ConditionalStorage.hpp>
+#include <dune/geometry/type.hh>
 
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/intersectioniterator.hh>
-#include <dune/geometry/type.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
+
 #include <opm/common/ErrorMacros.hpp>
+
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
+#include <opm/material/common/ConditionalStorage.hpp>
+
+#include <opm/models/utils/quadraturegeometries.hh>
+
+#include <cassert>
+#include <stdexcept>
 #include <vector>
 
 namespace Opm {
