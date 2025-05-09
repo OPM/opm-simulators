@@ -38,6 +38,7 @@
 
 #if HAVE_DUNE_LOCALFUNCTIONS
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
+#include <array>
 #include <cstddef>
 #include <vector>
 #endif // HAVE_DUNE_LOCALFUNCTIONS
@@ -355,8 +356,8 @@ private:
     static LocalFiniteElementCache feCache_;
 
     const LocalFiniteElement* localFiniteElement_{nullptr};
-    std::vector<Dune::FieldVector<Scalar, 1>> p1Value_[maxFap]{};
-    DimVector p1Gradient_[maxFap][maxDof]{};
+    std::array<std::vector<Dune::FieldVector<Scalar, 1>>, maxFap> p1Value_{};
+    std::array<std::array<DimVector, maxDof>, maxFap>{};
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 };
 
