@@ -117,13 +117,14 @@ public:
             RateVector tmp;
 
             // mass conservation
-            if (pBoundary < pInside)
+            if (pBoundary < pInside) {
                 // outflux
                 LocalResidual::template evalPhaseFluxes_<Evaluation>(tmp,
                                                                      phaseIdx,
                                                                      insideIntQuants.pvtRegionIndex(),
                                                                      extQuants,
                                                                      insideIntQuants.fluidState());
+            }
             else if (pBoundary > pInside) {
                 using RhsEval = std::conditional_t<std::is_same_v<typename FluidState::Scalar, Evaluation>,
                                                    Evaluation, Scalar>;
@@ -135,8 +136,9 @@ public:
                                                                   fluidState);
             }
 
-            for (unsigned i = 0; i < tmp.size(); ++i)
+            for (unsigned i = 0; i < tmp.size(); ++i) {
                 (*this)[i] += tmp[i];
+            }
 
             // energy conservation
             if constexpr (enableEnergy) {
@@ -168,10 +170,12 @@ public:
 
         if constexpr (enableSolvent) {
             (*this)[Indices::contiSolventEqIdx] = extQuants.solventVolumeFlux();
-            if (blackoilConserveSurfaceVolume)
+            if (blackoilConserveSurfaceVolume) {
                 (*this)[Indices::contiSolventEqIdx] *= insideIntQuants.solventInverseFormationVolumeFactor();
-            else
+            }
+            else {
                 (*this)[Indices::contiSolventEqIdx] *= insideIntQuants.solventDensity();
+            }
 
         }
 
@@ -191,8 +195,9 @@ public:
         LocalResidual::adaptMassConservationQuantities_(*this, insideIntQuants.pvtRegionIndex());
 
         // heat conduction
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux()*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
+        }
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
@@ -270,8 +275,9 @@ public:
             (*this)[contiEnergyEqIdx] += extQuants.energyFlux();
 
 #ifndef NDEBUG
-            for (unsigned i = 0; i < numEq; ++i)
+            for (unsigned i = 0; i < numEq; ++i) {
                 Valgrind::CheckDefined((*this)[i]);
+            }
             Valgrind::CheckDefined(*this);
 #endif
         }
