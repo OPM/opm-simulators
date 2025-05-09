@@ -129,7 +129,7 @@ class BlackOilIntensiveQuantitiesGlobalIndex
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
-    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
+    using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
 public:
     using FluidState = BlackOilFluidState<Evaluation,
@@ -424,13 +424,13 @@ public:
     {
         using Dir = FaceDir::DirEnum;
         if (dirMob_) {
-            switch(facedir) {
+            switch (facedir) {
             case Dir::XPlus:
-                return dirMob_->mobilityX_[phaseIdx];
+                return dirMob_->getArray(0)[phaseIdx];
             case Dir::YPlus:
-                return dirMob_->mobilityY_[phaseIdx];
+                return dirMob_->getArray(1)[phaseIdx];
             case Dir::ZPlus:
-                return dirMob_->mobilityZ_[phaseIdx];
+                return dirMob_->getArray(2)[phaseIdx];
             default:
                 throw std::runtime_error("Unexpected face direction");
             }

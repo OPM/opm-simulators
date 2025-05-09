@@ -27,42 +27,51 @@
 #define OPM_MODELS_DIRECTIONAL_MOBILITY_HH
 
 #include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/material/densead/Evaluation.hpp>
 
 #include <array>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 namespace Opm {
-template <class TypeTag, class Evaluation>
-struct DirectionalMobility {
-    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    // TODO: This (line below) did not work. I get error: ‘Evaluation’ is not a member of ‘Opm::Properties’
-    //  when compiling the tracer model (eclgenerictracermodel.cc). 
-    //  QuickFix: I am adding Evaluation as a class template parameter..
-    //using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
+template <class TypeTag>
+class DirectionalMobility
+{
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+
+public:
     using array_type = std::array<Evaluation,numPhases>;
-    DirectionalMobility(const DirectionalMobility& other)
-        : mobilityX_{other.mobilityX_}, mobilityY_{other.mobilityY_}, mobilityZ_{other.mobilityZ_} {}
-    DirectionalMobility(const array_type& mX, const array_type& mY, const array_type& mZ)
-        : mobilityX_{mX}, mobilityY_{mY}, mobilityZ_{mZ} {}
-    DirectionalMobility() : mobilityX_{}, mobilityY_{}, mobilityZ_{} {}
-    array_type& getArray(int index) {
-        switch(index) {
-            case 0:
-                return mobilityX_;
-            case 1:
-                return mobilityY_;
-            case 2:
-                return mobilityZ_;
-            default:
-                throw std::runtime_error("Unexpected mobility array index");
+
+    DirectionalMobility() = default;
+
+    DirectionalMobility(const array_type& mX,
+                        const array_type& mY,
+                        const array_type& mZ)
+        : mobility_{mX, mY, mZ}
+    {}
+
+    const array_type& getArray(unsigned index) const
+    {
+        if (index > 2) {
+            throw std::runtime_error("Unexpected mobility array index " + std::to_string(index));
         }
+
+        return mobility_[index];
     }
-    array_type mobilityX_;
-    array_type mobilityY_;
-    array_type mobilityZ_;
+
+    array_type& getArray(unsigned index)
+    {
+        return const_cast<array_type&>(std::as_const(*this).getArray(index));
+    }
+
+private:
+    std::array<array_type,3> mobility_{};
 };
+
 } // namespace Opm
+
 #endif

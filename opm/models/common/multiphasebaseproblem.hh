@@ -75,7 +75,7 @@ class MultiPhaseBaseProblem
     using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
     using ThermalConductionLawParams = GetPropType<TypeTag, Properties::ThermalConductionLawParams>;
     using MaterialLawParams = typename GetPropType<TypeTag, Properties::MaterialLaw>::Params;
-    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
+    using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
