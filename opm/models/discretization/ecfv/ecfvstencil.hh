@@ -45,6 +45,7 @@
 #include <opm/models/utils/quadraturegeometries.hh>
 
 #include <cassert>
+#include <cstddef>
 #include <stdexcept>
 #include <vector>
 
@@ -331,7 +332,7 @@ public:
      * \brief Returns the number of degrees of freedom which the
      *        current element interacts with.
      */
-    size_t numDof() const
+    std::size_t numDof() const
     { return subControlVolumes_.size(); }
 
     /*!
@@ -343,7 +344,7 @@ public:
      *
      * For element centered finite elements, this is only the central DOF.
      */
-    size_t numPrimaryDof() const
+    std::size_t numPrimaryDof() const
     { return 1; }
 
     /*!
@@ -396,7 +397,7 @@ public:
     /*!
      * \brief Returns the number of interior faces of the stencil.
      */
-    size_t numInteriorFaces() const
+    std::size_t numInteriorFaces() const
     { return interiorFaces_.size(); }
 
     /*!
@@ -409,7 +410,7 @@ public:
     /*!
      * \brief Returns the number of boundary faces of the stencil.
      */
-    size_t numBoundaryFaces() const
+    std::size_t numBoundaryFaces() const
     { return boundaryFaces_.size(); }
 
     /*!
