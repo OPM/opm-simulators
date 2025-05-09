@@ -403,9 +403,9 @@ namespace Opm
             ws.production_cmode = Well::ProducerCMode::BHP;
         }
 
-        updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
+        updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger, /*initialize*/ true);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
-        updatePrimaryVariables(simulator, well_state_copy, deferred_logger, /*initialize*/ true);
+        updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
 
         if (this->isProducer()) {
             const auto& schedule = simulator.vanguard().schedule();
