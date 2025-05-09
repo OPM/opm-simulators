@@ -28,20 +28,24 @@
 #ifndef EWOMS_VCFV_STENCIL_HH
 #define EWOMS_VCFV_STENCIL_HH
 
-#include <opm/models/utils/quadraturegeometries.hh>
+#include <dune/common/version.hh>
+#include <dune/geometry/referenceelements.hh>
 
 #include <dune/grid/common/intersectioniterator.hh>
 #include <dune/grid/common/mcmgmapper.hh>
-#include <dune/geometry/referenceelements.hh>
+
+#include <opm/models/utils/quadraturegeometries.hh>
 
 #if HAVE_DUNE_LOCALFUNCTIONS
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
+#include <vector>
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 
-#include <dune/common/version.hh>
-
+#include <cassert>
+#include <cmath>
 #include <stdexcept>
-#include <vector>
+#include <string>
+#include <utility>
 
 namespace Opm {
 
