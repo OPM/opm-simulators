@@ -102,6 +102,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     network_max_sub_iterations_ = Parameters::Get<Parameters::NetworkMaxSubIterations>();
     network_pressure_update_damping_factor_ = Parameters::Get<Parameters::NetworkPressureUpdateDampingFactor<Scalar>>();
     network_max_pressure_update_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>();
+    network_max_pressure_imbalance_in_bars_ = Parameters::Get<Parameters::NetworkMaxPressureImbalanceInBars<Scalar>>();
     local_domains_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
     write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
 
@@ -233,6 +234,8 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Damping factor in the inner network pressure update iterations");
     Parameters::Register<Parameters::NetworkMaxPressureUpdateInBars<Scalar>>
         ("Maximum pressure update in the inner network pressure update iterations");
+    Parameters::Register<Parameters::NetworkMaxPressureImbalanceInBars<Scalar>>
+        ("Maximum pressure imbalance allowed without chopping timesteps");
     Parameters::Register<Parameters::NonlinearSolver>
         ("Choose nonlinear solver. Valid choices are newton or nldd.");
     Parameters::Register<Parameters::LocalSolveApproach>
