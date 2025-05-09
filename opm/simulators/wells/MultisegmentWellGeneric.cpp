@@ -26,6 +26,12 @@
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -40,19 +46,19 @@
 
 namespace Opm {
 
-template<typename Scalar>
-MultisegmentWellGeneric<Scalar>::
-MultisegmentWellGeneric(WellInterfaceGeneric<Scalar>& baseif)
+template<typename FluidSystem, typename Indices>
+MultisegmentWellGeneric<FluidSystem, Indices>::
+MultisegmentWellGeneric(WellInterfaceGeneric<FluidSystem, Indices>& baseif)
     : baseif_(baseif)
 {
 }
 
-template<typename Scalar>
+template<typename FluidSystem, typename Indices>
 void
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
                                const std::vector<std::vector<int>>& segment_perforations,
-                               WellState<Scalar>& well_state) const
+                               WellState<FluidSystem, Indices>& well_state) const
 {
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
@@ -87,7 +93,7 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
             }
 
             std::vector<Scalar> rates;
-            WellState<Scalar>::calculateSegmentRates(ws.parallel_info,
+            WellState<FluidSystem, Indices>::calculateSegmentRates(ws.parallel_info,
                                                      segment_inlets,
                                                      segment_perforations,
                                                      perforation_rates,
@@ -99,51 +105,51 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
     }
 }
 
-template <typename Scalar>
+template <typename FluidSystem, typename Indices>
 void
-MultisegmentWellGeneric<Scalar>::
-scaleSegmentPressuresWithBhp(WellState<Scalar>& well_state) const
+MultisegmentWellGeneric<FluidSystem, Indices>::
+scaleSegmentPressuresWithBhp(WellState<FluidSystem, Indices>& well_state) const
 {
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     segments.scale_pressure(ws.bhp);
 }
 
-template<typename Scalar>
+template<typename FluidSystem, typename Indices>
 const WellSegments&
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 segmentSet() const
 {
     return baseif_.wellEcl().getSegments();
 }
 
-template <typename Scalar>
+template <typename FluidSystem, typename Indices>
 int
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 numberOfSegments() const
 {
     return segmentSet().size();
 }
 
-template <typename Scalar>
+template <typename FluidSystem, typename Indices>
 WellSegments::CompPressureDrop
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 compPressureDrop() const
 {
     return segmentSet().compPressureDrop();
 }
 
-template<typename Scalar>
+template<typename FluidSystem, typename Indices>
 int
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 segmentNumberToIndex(const int segment_number) const
 {
     return segmentSet().segmentNumberToIndex(segment_number);
 }
 
-template<typename Scalar>
+template<typename FluidSystem, typename Indices>
 bool
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 update_relaxation_factor(const std::vector<Scalar>& measure_history, Scalar& relaxation_factor, bool& regularize, DeferredLogger& deferred_logger) const
 {
     const auto it = measure_history.size() - 1;
@@ -180,9 +186,9 @@ update_relaxation_factor(const std::vector<Scalar>& measure_history, Scalar& rel
     return false;
 }
 
-template<typename Scalar>
+template<typename FluidSystem, typename Indices>
 bool
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 repeatedStagnation(const std::vector<Scalar>& measure_history, bool& regularize, DeferredLogger& deferred_logger) const
 {
     const auto it = measure_history.size() - 1;
@@ -211,27 +217,27 @@ repeatedStagnation(const std::vector<Scalar>& measure_history, bool& regularize,
 }
 
 
-template<typename Scalar>
+template<typename FluidSystem, typename Indices>
 bool
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 frictionalPressureLossConsidered() const
 {
     // HF- and HFA needs to consider frictional pressure loss
     return (segmentSet().compPressureDrop() != WellSegments::CompPressureDrop::H__);
 }
 
-template<typename Scalar>
+template<typename FluidSystem, typename Indices>
 bool
-MultisegmentWellGeneric<Scalar>::
+MultisegmentWellGeneric<FluidSystem, Indices>::
 accelerationalPressureLossConsidered() const
 {
     return (segmentSet().compPressureDrop() == WellSegments::CompPressureDrop::HFA);
 }
 
 
-template<class Scalar>
-Scalar
-MultisegmentWellGeneric<Scalar>::getSegmentDp(const int seg,
+template<typename FluidSystem, typename Indices>
+typename MultisegmentWellGeneric<FluidSystem, Indices>::Scalar
+MultisegmentWellGeneric<FluidSystem, Indices>::getSegmentDp(const int seg,
                                               const Scalar density,
                                               const std::vector<Scalar>& seg_dp) const
 {
@@ -249,10 +255,41 @@ MultisegmentWellGeneric<Scalar>::getSegmentDp(const int seg,
     return dp;
 }
 
-template class MultisegmentWellGeneric<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class MultisegmentWellGeneric<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class MultisegmentWellGeneric<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm

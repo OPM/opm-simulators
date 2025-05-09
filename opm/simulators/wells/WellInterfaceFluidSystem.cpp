@@ -55,7 +55,7 @@ WellInterfaceFluidSystem(const Well& well,
                          const int num_phases,
                          const int index_of_well,
                          const std::vector<PerforationData<Scalar>>& perf_data)
-    : WellInterfaceGeneric<Scalar>(well, parallel_well_info, time_step, param,
+    : WellInterfaceGeneric<FluidSystem, Indices>(well, parallel_well_info, time_step, param,
                                    pvtRegionIdx, num_components, num_phases,
                                    index_of_well, perf_data)
     , rateConverter_(rate_converter)

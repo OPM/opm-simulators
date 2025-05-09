@@ -40,7 +40,7 @@ template<class Scalar> class GroupState;
 class Schedule;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 struct WellInjectionControls;
 struct WellProductionControls;
 

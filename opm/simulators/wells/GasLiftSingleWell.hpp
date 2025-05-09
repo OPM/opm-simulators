@@ -45,14 +45,14 @@ public:
                       const Simulator& simulator,
                       const SummaryState& summary_state,
                       DeferredLogger& deferred_logger,
-                      WellState<Scalar>& well_state,
+                      WellState<FluidSystem, Indices>& well_state,
                       const GroupState<Scalar>& group_state,
                       GasLiftGroupInfo<Scalar>& group_info,
                       GLiftSyncGroups& sync_groups,
                       const Parallel::Communication& comm,
                       bool glift_debug);
 
-    const WellInterfaceGeneric<Scalar>& getWell() const override { return well_; }
+    const WellInterfaceGeneric<FluidSystem, Indices>& getWell() const override { return well_; }
 
 private:
     std::optional<Scalar>

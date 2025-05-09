@@ -30,14 +30,14 @@ namespace Opm
 
 class ConvergenceReport;
 class DeferredLogger;
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellState;
 
 template<class Scalar>
 class WellConvergence
 {
 public:
-    explicit WellConvergence(const WellInterfaceGeneric<Scalar>& well)
+    explicit WellConvergence(const WellInterfaceGeneric<FluidSystem, Indices>& well)
         : well_(well)
     {}
 
@@ -63,7 +63,7 @@ public:
                                 ConvergenceReport& report) const;
 
 private:
-    const WellInterfaceGeneric<Scalar>& well_;
+    const WellInterfaceGeneric<FluidSystem, Indices>& well_;
 };
 
 }

@@ -462,7 +462,7 @@ computeDensitiesForStoppedProducer(const DensityPropertyFunctions& prop_func)
 template<class FluidSystem, class Indices>
 typename StandardWellConnections<FluidSystem, Indices>::Properties
 StandardWellConnections<FluidSystem,Indices>::
-computePropertiesForPressures(const WellState<Scalar>&         well_state,
+computePropertiesForPressures(const WellState<FluidSystem, Indices>&         well_state,
                               const PressurePropertyFunctions& prop_func) const
 {
     auto props = Properties{};

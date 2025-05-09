@@ -32,17 +32,19 @@
 namespace Opm
 {
 
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename FluidSystem, typename Indices> class BlackoilWellModelGeneric;
 class DeferredLogger;
 class Group;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 class WellTestState;
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class GroupEconomicLimitsChecker
 {
 public:
-    GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar>& well_model,
+    using Scalar = typename FluidSystem::Scalar;
+
+    GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<FluidSystem, Indices>& well_model,
                                WellTestState& well_test_state,
                                const Group& group,
                                const double simulation_time,
@@ -74,14 +76,14 @@ private:
     bool closeWellsRecursive(const Group& group, int level = 0);
     void throwNotImplementedError(const std::string& error) const;
 
-    const BlackoilWellModelGeneric<Scalar>& well_model_;
+    const BlackoilWellModelGeneric<FluidSystem, Indices>& well_model_;
     const Group& group_;
     const double simulation_time_;
     const int report_step_idx_;
     DeferredLogger& deferred_logger_;
     const std::string date_string_;
     const UnitSystem& unit_system_;
-    const WellState<Scalar>& well_state_;
+    const WellState<FluidSystem, Indices>& well_state_;
     WellTestState& well_test_state_;
     const Schedule& schedule_;
     GroupEconProductionLimits::GEconGroupProp gecon_props_;

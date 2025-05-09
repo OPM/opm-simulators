@@ -36,9 +36,10 @@ class VFPProdTable;
  * A thin wrapper class that holds one VFPProdProperties and one
  * VFPInjProperties object.
  */
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class VFPProperties {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     /**
      * Constructor
      * Takes *no* ownership of data.
@@ -48,7 +49,7 @@ public:
 
     VFPProperties(const std::vector<std::reference_wrapper<const VFPInjTable>>& inj_tables,
                   const std::vector<std::reference_wrapper<const VFPProdTable>>& prod_tables,
-                  const WellState<Scalar>& well_state)
+                  const WellState<FluidSystem, Indices>& well_state)
         : well_state_(well_state)
     {
         for (const auto& vfpinj : inj_tables)
@@ -99,7 +100,7 @@ public:
 private:
     VFPInjProperties<Scalar> m_inj;
     VFPProdProperties<Scalar> m_prod;
-    const WellState<Scalar>& well_state_;
+    const WellState<FluidSystem, Indices>& well_state_;
 };
 
 } // namespace Opm
