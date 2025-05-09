@@ -54,7 +54,7 @@ namespace Opm
 template<typename FluidSystem, typename Indices>
 MultisegmentWellEval<FluidSystem,Indices>::
 MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif, const ParallelWellInfo<Scalar>& pw_info)
-    : MultisegmentWellGeneric<Scalar>(baseif)
+    :  MultisegmentWellGeneric<FluidSystem, Indices>(baseif)
     , pw_info_(pw_info)
     , baseif_(baseif)
     , linSys_(*this, pw_info)

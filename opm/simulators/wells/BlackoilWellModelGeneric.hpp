@@ -57,7 +57,7 @@
 namespace Opm {
     class DeferredLogger;
     class EclipseState;
-    template<class Scalar> class BlackoilWellModelGasLiftGeneric;
+    template<typename FluidSystem, typename Indices> class BlackoilWellModelGasLiftGeneric;
     template<class Scalar> class GasLiftGroupInfo;
     template<class Scalar> class GasLiftSingleWellGeneric;
     template<class Scalar> class GasLiftWellState;
@@ -67,9 +67,9 @@ namespace Opm {
     class Schedule;
     struct SimulatorUpdate;
     class SummaryConfig;
-    template<class Scalar> class VFPProperties;
-    template<class Scalar> class WellInterfaceGeneric;
-    template<class Scalar> class WellState;
+    template<typename FluidSystem, typename Indices> class VFPProperties;
+    template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+    template<typename FluidSystem, typename Indices> class WellState;
 } // namespace Opm
 
 namespace Opm { namespace data {
@@ -88,12 +88,13 @@ struct EnableTerminalOutput { static constexpr bool value = true; };
 namespace Opm {
 
 /// Class for handling the blackoil well model.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class BlackoilWellModelGeneric
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     BlackoilWellModelGeneric(Schedule& schedule,
-                             BlackoilWellModelGasLiftGeneric<Scalar>& gaslift,
+                             BlackoilWellModelGasLiftGeneric<FluidSystem, Indices>& gaslift,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsage& phase_usage,
@@ -132,16 +133,16 @@ public:
     const Schedule& schedule() const { return schedule_; }
     const PhaseUsage& phaseUsage() const { return phase_usage_; }
     const GroupState<Scalar>& groupState() const { return this->active_wgstate_.group_state; }
-    std::vector<const WellInterfaceGeneric<Scalar>*> genericWells() const
+    std::vector<const WellInterfaceGeneric<FluidSystem, Indices>*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
 
-    std::vector<WellInterfaceGeneric<Scalar>*> genericWells()
+    std::vector<WellInterfaceGeneric<FluidSystem, Indices>*> genericWells()
     { return well_container_generic_; }
 
     /*
       Immutable version of the currently active wellstate.
     */
-    const WellState<Scalar>& wellState() const
+    const WellState<FluidSystem, Indices>& wellState() const
     {
         return this->active_wgstate_.well_state;
     }
@@ -149,7 +150,7 @@ public:
     /*
       Mutable version of the currently active wellstate.
     */
-    WellState<Scalar>& wellState()
+    WellState<FluidSystem, Indices>& wellState()
     {
         return this->active_wgstate_.well_state;
     }
@@ -158,7 +159,7 @@ public:
       Will return the currently active nupcolWellState; must update
       the internal nupcol wellstate with updateNupcolWGState() first.
     */
-    const WellState<Scalar>& nupcolWellState() const
+    const WellState<FluidSystem, Indices>& nupcolWellState() const
     {
         return this->nupcol_wgstate_.well_state;
     }
@@ -313,12 +314,12 @@ protected:
       prevWellState() must have been stored with the commitWGState()
       function first.
     */
-    const WellState<Scalar>& prevWellState() const
+    const WellState<FluidSystem, Indices>& prevWellState() const
     {
         return this->last_valid_wgstate_.well_state;
     }
 
-    const WGState<Scalar>& prevWGState() const
+    const WGState<FluidSystem, Indices>& prevWGState() const
     {
         return this->last_valid_wgstate_;
     }
@@ -328,7 +329,7 @@ protected:
       last_valid_well_state_ member, that state can then be recovered
       with a subsequent call to resetWellState().
     */
-    void commitWGState(WGState<Scalar> wgstate)
+    void commitWGState(WGState<FluidSystem, Indices> wgstate)
     {
         this->last_valid_wgstate_ = std::move(wgstate);
     }
@@ -372,7 +373,7 @@ protected:
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
-                        const WellState<Scalar>& wellState);
+                        const WellState<FluidSystem, Indices>& wellState);
     void setWsolvent(const Group& group,
                      const int reportStepIdx,
                      Scalar wsolvent);
@@ -421,7 +422,7 @@ protected:
     void calculateEfficiencyFactors(const int reportStepIdx);
 
     void checkGconsaleLimits(const Group& group,
-                             WellState<Scalar>& well_state,
+                             WellState<FluidSystem, Indices>& well_state,
                              const int reportStepIdx,
                              DeferredLogger& deferred_logger);
 
@@ -445,7 +446,7 @@ protected:
     void setRepRadiusPerfLength();
 
     virtual void computePotentials(const std::size_t widx,
-                                   const WellState<Scalar>& well_state_copy,
+                                   const WellState<FluidSystem, Indices>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type,
                                    DeferredLogger& deferred_logger) = 0;
@@ -503,8 +504,8 @@ protected:
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Parallel::Communication& comm_;
-    BlackoilWellModelGasLiftGeneric<Scalar>& gen_gaslift_;
-    BlackoilWellModelWBP<Scalar> wbp_;
+    BlackoilWellModelGasLiftGeneric<FluidSystem, Indices>& gen_gaslift_;
+    BlackoilWellModelWBP<FluidSystem, Indices> wbp_;
 
     PhaseUsage phase_usage_;
     bool terminal_output_{false};
@@ -528,7 +529,7 @@ protected:
     std::function<bool(const Well&)> not_on_process_{};
 
     // a vector of all the wells.
-    std::vector<WellInterfaceGeneric<Scalar>*> well_container_generic_{};
+    std::vector<WellInterfaceGeneric<FluidSystem, Indices>*> well_container_generic_{};
 
     std::vector<int> local_shut_wells_{};
 
@@ -542,7 +543,7 @@ protected:
     mutable std::unordered_set<std::string> closed_this_step_;
 
     GuideRate guideRate_;
-    std::unique_ptr<VFPProperties<Scalar>> vfp_properties_{};
+    std::unique_ptr<VFPProperties<FluidSystem, Indices>> vfp_properties_{};
 
     // Network pressures for output and initialization
     std::map<std::string, Scalar> node_pressures_;
@@ -553,7 +554,7 @@ protected:
     std::unordered_map<std::string, std::vector<Scalar>> prev_inj_multipliers_;
 
     // Handling for filter cake injection multipliers
-    std::unordered_map<std::string, WellFilterCake<Scalar>> filter_cake_;
+    std::unordered_map<std::string, WellFilterCake<FluidSystem, Indices>> filter_cake_;
 
     /*
       The various wellState members should be accessed and modified
@@ -561,9 +562,9 @@ protected:
       commitWellState(), resetWellState(), nupcolWellState() and
       updateNupcolWGState().
     */
-    WGState<Scalar> active_wgstate_;
-    WGState<Scalar> last_valid_wgstate_;
-    WGState<Scalar> nupcol_wgstate_;
+    WGState<FluidSystem, Indices> active_wgstate_;
+    WGState<FluidSystem, Indices> last_valid_wgstate_;
+    WGState<FluidSystem, Indices> nupcol_wgstate_;
     WellGroupEvents report_step_start_events_; //!< Well group events at start of report step
 
     bool wellStructureChangedDynamically_{false};
@@ -575,7 +576,7 @@ protected:
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
 
 private:
-    WellInterfaceGeneric<Scalar>* getGenWell(const std::string& well_name);
+    WellInterfaceGeneric<FluidSystem, Indices>* getGenWell(const std::string& well_name);
 
     template <typename Iter, typename Body>
     void wellUpdateLoop(Iter first, Iter last, const int timeStepIdx, Body&& body);

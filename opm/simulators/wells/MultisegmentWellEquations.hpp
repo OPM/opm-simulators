@@ -40,17 +40,19 @@ namespace Opm
 {
 
 template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquationAccess;
-template<class Scalar> class MultisegmentWellGeneric;
+template<typename FluidSystem, typename Indices> class MultisegmentWellGeneric;
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellState;
 
-template<class Scalar, int numWellEq, int numEq>
+// TODO: numWelEq and numEq should be able to related to the Indices
+template<typename FluidSystem, typename Indices, int numWellEq, int numEq>
 class MultisegmentWellEquations
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     // sparsity pattern for the matrices
     // [A C^T    [x       =  [ res
     //  B  D ]   x_well]      res_well]
@@ -70,7 +72,7 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
-    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well, const ParallelWellInfo<Scalar>& pw_info);
+    MultisegmentWellEquations(const MultisegmentWellGeneric<FluidSystem, Indices>& well, const ParallelWellInfo<Scalar>& pw_info);
 
     //! \brief Setup sparsity pattern for the matrices.
     //! \param numPerfs Number of perforations
@@ -119,9 +121,9 @@ public:
                                   const BVector& weights,
                                   const int pressureVarIndex,
                                   const bool /*use_well_weights*/,
-                                  const WellInterfaceGeneric<Scalar>& well,
+                                  const WellInterfaceGeneric<FluidSystem, Indices>& well,
                                   const int seg_pressure_var_ind,
-                                  const WellState<Scalar>& well_state) const;
+                                  const WellState<FluidSystem, Indices>& well_state) const;
 
     //! \brief Sum with off-process contribution.
     void sumDistributed(Parallel::Communication comm);
@@ -148,7 +150,7 @@ public:
     // residuals of the well equations
     BVectorWell resWell_;
 
-    const MultisegmentWellGeneric<Scalar>& well_; //!< Reference to well
+    const  MultisegmentWellGeneric<FluidSystem, Indices>& well_; //!< Reference to well
 
     // Store the global index of well perforated cells
     std::vector<int> cells_;
@@ -160,5 +162,7 @@ public:
 };
 
 }
+
+#include "MultisegmentWellEquations.cpp"
 
 #endif // OPM_MULTISEGMENTWELLWELL_EQUATIONS_HEADER_INCLUDED

@@ -292,9 +292,9 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
                          const bool use_well_weights,
-                         const WellInterfaceGeneric<Scalar>& well,
+                         const WellInterfaceGeneric<FluidSystem, Indices>& well,
                          const int bhp_var_index,
-                         const WellState<Scalar>& well_state) const
+                         const WellState<FluidSystem, Indices>& well_state) const
 {
     // This adds pressure quation for cpr
     // For use_well_weights=true

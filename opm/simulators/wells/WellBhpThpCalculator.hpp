@@ -33,15 +33,17 @@ namespace Opm {
 class DeferredLogger;
 class SummaryState;
 class Well;
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellState;
 
 //! \brief Class for computing BHP limits.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellBhpThpCalculator {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     //! \brief Constructor sets reference to well.
-    explicit WellBhpThpCalculator(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellBhpThpCalculator(const WellInterfaceGeneric<FluidSystem, Indices>& well) : well_(well) {}
 
     //! \brief Checks if well has THP constraints.
     bool wellHasTHPConstraints(const SummaryState& summaryState) const;
@@ -84,37 +86,37 @@ public:
     void updateThp(const Scalar rho,
                    const std::function<Scalar()>& alq_value,
                    const std::array<unsigned,3>& active,
-                   WellState<Scalar>& well_state,
+                   WellState<FluidSystem, Indices>& well_state,
                    const SummaryState& summary_state,
                    DeferredLogger& deferred_logger) const;
 
     template<class EvalWell>
-    EvalWell calculateBhpFromThp(const WellState<Scalar>& well_state,
+    EvalWell calculateBhpFromThp(const WellState<FluidSystem, Indices>& well_state,
                                  const std::vector<EvalWell>& rates,
                                  const Well& well,
                                  const SummaryState& summaryState,
                                  const Scalar rho,
                                  DeferredLogger& deferred_logger) const;
 
-    Scalar calculateMinimumBhpFromThp(const WellState<Scalar>& well_state,
+    Scalar calculateMinimumBhpFromThp(const WellState<FluidSystem, Indices>& well_state,
                                       const Well& well,
                                       const SummaryState& summaryState,
                                       const Scalar rho) const;
 
-  bool isStableSolution(const WellState<Scalar>& well_state,
+  bool isStableSolution(const WellState<FluidSystem, Indices>& well_state,
                         const Well& well,
                         const std::vector<Scalar>& rates,
                         const SummaryState& summaryState) const;   
 
   std::optional<Scalar>
-  estimateStableBhp (const WellState<Scalar>& well_state,
+  estimateStableBhp (const WellState<FluidSystem, Indices>& well_state,
                     const Well& well,
                     const std::vector<Scalar>& rates,
                     const Scalar rho,
                     const SummaryState& summaryState) const;    
 
   std::pair<Scalar, Scalar>
-  getFloIPR(const WellState<Scalar>& well_state,
+  getFloIPR(const WellState<FluidSystem, Indices>& well_state,
             const Well& well, 
             const SummaryState& summary_state) const;
 
@@ -179,7 +181,7 @@ private:
                                      const Scalar dp,
                                      DeferredLogger& deferred_logger) const;
 
-    const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<FluidSystem, Indices>& well_; //!< Reference to well interface
 };
 
 }

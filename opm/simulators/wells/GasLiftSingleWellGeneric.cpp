@@ -25,6 +25,12 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
@@ -135,7 +141,7 @@ calcIncOrDecGradient(Scalar oil_rate,
 }
 
 template<typename FluidSystem, typename Indices>
-std::unique_ptr<GasLiftWellState<Scalar>>
+std::unique_ptr<GasLiftWellState<typename FluidSystem::Scalar>>
 GasLiftSingleWellGeneric<FluidSystem, Indices>::
 runOptimize(const int iteration_idx)
 {
@@ -896,7 +902,7 @@ getLiquidRateWithGroupLimit_(const Scalar new_oil_rate,
 }
 
 template<typename FluidSystem, typename Indices>
-std::tuple<typename GasLiftSingleWellGeneric<FluidSystem, Indices>::Scalar, const std::string*, Scalar>
+std::tuple<typename GasLiftSingleWellGeneric<FluidSystem, Indices>::Scalar, const std::string*, typename FluidSystem::Scalar>
 GasLiftSingleWellGeneric<FluidSystem, Indices>::
 getRateWithGroupLimit_(Rate rate_type,
                        const Scalar new_rate,
@@ -1336,7 +1342,7 @@ reduceALQtoWellTarget_(const Scalar orig_alq,
 //  - return value: a new GasLiftWellState or nullptr
 //
 template<typename FluidSystem, typename Indices>
-std::unique_ptr<GasLiftWellState<Scalar>>
+std::unique_ptr<GasLiftWellState<typename FluidSystem::Scalar>>
 GasLiftSingleWellGeneric<FluidSystem, Indices>::
 runOptimizeLoop_(bool increase)
 {
@@ -1456,7 +1462,7 @@ runOptimizeLoop_(bool increase)
 }
 
 template<typename FluidSystem, typename Indices>
-std::unique_ptr<GasLiftWellState<Scalar>>
+std::unique_ptr<GasLiftWellState<typename FluidSystem::Scalar>>
 GasLiftSingleWellGeneric<FluidSystem, Indices>::runOptimize1_()
 {
     OPM_TIMEFUNCTION();
@@ -1479,7 +1485,7 @@ GasLiftSingleWellGeneric<FluidSystem, Indices>::runOptimize1_()
 }
 
 template<typename FluidSystem, typename Indices>
-std::unique_ptr<GasLiftWellState<Scalar>>
+std::unique_ptr<GasLiftWellState<typename FluidSystem::Scalar>>
 GasLiftSingleWellGeneric<FluidSystem, Indices>::runOptimize2_()
 {
     OPM_TIMEFUNCTION();
@@ -1492,14 +1498,14 @@ GasLiftSingleWellGeneric<FluidSystem, Indices>::runOptimize2_()
 }
 
 template<typename FluidSystem, typename Indices>
-std::unique_ptr<GasLiftWellState<Scalar>>
+std::unique_ptr<GasLiftWellState<typename FluidSystem::Scalar>>
 GasLiftSingleWellGeneric<FluidSystem, Indices>::tryDecreaseLiftGas_()
 {
     return runOptimizeLoop_(/*increase=*/false);
 }
 
 template<typename FluidSystem, typename Indices>
-std::unique_ptr<GasLiftWellState<Scalar>>
+std::unique_ptr<GasLiftWellState<typename FluidSystem::Scalar>>
 GasLiftSingleWellGeneric<FluidSystem, Indices>::tryIncreaseLiftGas_()
 {
     return runOptimizeLoop_(/*increase=*/true);
@@ -2000,10 +2006,41 @@ BasicRates(const LimitedRates& rates)
     bhp_is_limited = rates.bhp_is_limited;
 }
 
-template class GasLiftSingleWellGeneric<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class GasLiftSingleWellGeneric<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class GasLiftSingleWellGeneric<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm

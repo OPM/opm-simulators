@@ -47,7 +47,7 @@ template<class Scalar>
 template<class EvalWell>
 void WellGroupControls<Scalar>::
 getGroupInjectionControl(const Group& group,
-                         const WellState<Scalar>& well_state,
+                         const WellState<FluidSystem, Indices>& well_state,
                          const GroupState<Scalar>& group_state,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
@@ -198,7 +198,7 @@ template<class Scalar>
 std::optional<Scalar>
 WellGroupControls<Scalar>::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState<Scalar>& well_state,
+                            const WellState<FluidSystem, Indices>& well_state,
                             const GroupState<Scalar>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
@@ -331,7 +331,7 @@ template<class Scalar>
 template<class EvalWell>
 void WellGroupControls<Scalar>::
 getGroupProductionControl(const Group& group,
-                          const WellState<Scalar>& well_state,
+                          const WellState<FluidSystem, Indices>& well_state,
                           const GroupState<Scalar>& group_state,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
@@ -448,7 +448,7 @@ getGroupProductionControl(const Group& group,
 template<class Scalar>
 Scalar WellGroupControls<Scalar>::
 getGroupProductionTargetRate(const Group& group,
-                             const WellState<Scalar>& well_state,
+                             const WellState<FluidSystem, Indices>& well_state,
                              const GroupState<Scalar>& group_state,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
@@ -557,7 +557,7 @@ template<class Scalar>
 std::pair<Scalar, Group::ProductionCMode> WellGroupControls<Scalar>::
 getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const Group& group,
-                                      const WellState<Scalar>& well_state,
+                                      const WellState<FluidSystem, Indices>& well_state,
                                       const GroupState<Scalar>& group_state,
                                       const Schedule& schedule,
                                       const SummaryState& summaryState,
