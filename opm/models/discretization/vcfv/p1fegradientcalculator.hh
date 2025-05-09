@@ -152,7 +152,7 @@ public:
     auto calculateScalarValue([[maybe_unused]] const ElementContext& elemCtx,
                               [[maybe_unused]] unsigned fapIdx,
                               [[maybe_unused]] const QuantityCallback& quantityCallback) const
-        ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
+        ->  std::remove_reference_t<typename QuantityCallback::ResultType>
     {
         if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
@@ -160,15 +160,15 @@ public:
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
                                    " finite element gradients");
 #else
-            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
-            using QuantityType = typename std::remove_const<QuantityConstType>::type;
+            using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
+            using QuantityType = std::remove_const_t<QuantityConstType>;
             using Toolbox = MathToolbox<QuantityType>;
 
             // If the user does not want to use two-point gradients, we
             // use P1 finite element gradients..
             QuantityType value(0.0);
             for (unsigned vertIdx = 0; vertIdx < elemCtx.numDof(/*timeIdx=*/0); ++vertIdx) {
-                if (std::is_same<QuantityType, Scalar>::value ||
+                if (std::is_same_v<QuantityType, Scalar> ||
                     elemCtx.focusDofIndex() == vertIdx)
                     value += quantityCallback(vertIdx)*p1Value_[fapIdx][vertIdx];
                 else
@@ -197,7 +197,7 @@ public:
     auto calculateVectorValue([[maybe_unused]] const ElementContext& elemCtx,
                               [[maybe_unused]] unsigned fapIdx,
                               [[maybe_unused]] const QuantityCallback& quantityCallback) const
-        ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
+        ->  std::remove_reference_t<typename QuantityCallback::ResultType>
     {
         if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
@@ -205,11 +205,11 @@ public:
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
                                    " finite element gradients");
 #else
-            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
-            using QuantityType = typename std::remove_const<QuantityConstType>::type;
+            using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
+            using QuantityType = std::remove_const_t<QuantityConstType>;
 
             using RawFieldType = decltype(std::declval<QuantityType>()[0]);
-            using FieldType = typename std::remove_const<typename std::remove_reference<RawFieldType>::type>::type;
+            using FieldType = std::remove_const_t<std::remove_reference_t<RawFieldType>>;
 
             using Toolbox = MathToolbox<FieldType>;
 
@@ -217,7 +217,7 @@ public:
             // use P1 finite element gradients..
             QuantityType value(0.0);
             for (unsigned vertIdx = 0; vertIdx < elemCtx.numDof(/*timeIdx=*/0); ++vertIdx) {
-                if (std::is_same<QuantityType, Scalar>::value ||
+                if (std::is_same_v<QuantityType, Scalar> ||
                     elemCtx.focusDofIndex() == vertIdx)
                 {
                     const auto& tmp = quantityCallback(vertIdx);
@@ -261,14 +261,14 @@ public:
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
                                    " finite element gradients");
 #else
-            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
-            using QuantityType = typename std::remove_const<QuantityConstType>::type;
+            using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
+            using QuantityType = std::remove_const_t<QuantityConstType>;
 
             // If the user does not want two-point gradients, we use P1 finite element
             // gradients...
             quantityGrad = 0.0;
             for (unsigned vertIdx = 0; vertIdx < elemCtx.numDof(/*timeIdx=*/0); ++vertIdx) {
-                if (std::is_same<QuantityType, Scalar>::value ||
+                if (std::is_same_v<QuantityType, Scalar> ||
                     elemCtx.focusDofIndex() == vertIdx)
                 {
                     const auto& dofVal = quantityCallback(vertIdx);
