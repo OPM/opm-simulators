@@ -376,8 +376,10 @@ typename BlackoilModel<TypeTag>::Scalar
 BlackoilModel<TypeTag>::
 relativeChange() const
 {
-    Scalar resultDelta = 0.0;
-    Scalar resultDenom = 0.0;
+    std::array<Scalar,4> r{};
+    auto& [resultDeltaPressure, resultDenomPressure, resultDeltaSaturation, resultDenomSaturation] = r;
+
+    auto version = this->param_.relative_change_version_;
 
     const auto& elemMapper = simulator_.model().elementMapper();
     const auto& gridView = simulator_.gridView();
@@ -419,10 +421,9 @@ relativeChange() const
         Scalar saturationsOld[FluidSystem::numPhases] = { 0.0 };
         Scalar oilSaturationOld = 1.0;
 
-        // NB fix me! adding pressures changes to saturation changes does not make sense
         Scalar tmp = pressureNew - pressureOld;
-        resultDelta += tmp*tmp;
-        resultDenom += pressureNew*pressureNew;
+        resultDeltaPressure += tmp*tmp;
+        resultDenomPressure += pressureNew*pressureNew;
 
         if (FluidSystem::numActivePhases() > 1) {
             if (priVarsOld.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
@@ -444,18 +445,33 @@ relativeChange() const
             }
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
                 Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-                resultDelta += tmpSat*tmpSat;
-                resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
-                assert(std::isfinite(resultDelta));
-                assert(std::isfinite(resultDenom));
+                resultDeltaSaturation += tmpSat*tmpSat;
+                resultDenomSaturation += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
+                assert(std::isfinite(resultDeltaSaturation));
+                assert(std::isfinite(resultDenomSaturation));
             }
         }
     }
 
-    resultDelta = gridView.comm().sum(resultDelta);
-    resultDenom = gridView.comm().sum(resultDenom);
+    gridView.comm().sum(r.data(), r.size());
 
-    return resultDenom > 0.0 ? resultDelta / resultDenom : 0.0;
+    if (version == "pressure") {
+        if (resultDenomPressure > 0.0)
+            return resultDeltaPressure / resultDenomPressure;
+    }
+    else if (version == "saturation") {
+        if (resultDenomSaturation > 0.0)
+            return resultDeltaSaturation / resultDenomSaturation;
+    }
+    else if (version == "pressure+saturation") {
+        if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0)
+            return std::max(resultDeltaPressure/resultDenomPressure, resultDeltaSaturation/resultDenomSaturation);        
+    }
+    else {
+        OPM_THROW(std::runtime_error, "Unsupported relative change version: " + version);
+    }
+    
+    return 0.0;
 }
 
 template <class TypeTag>
