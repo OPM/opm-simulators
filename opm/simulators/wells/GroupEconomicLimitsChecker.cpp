@@ -26,6 +26,12 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
@@ -52,9 +58,9 @@ std::string simTimeToString(const std::time_t start_time, const double sim_time)
     return ss.str();
 }
 
-template<class Scalar>
-GroupEconomicLimitsChecker<Scalar>::
-GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar>& well_model,
+template<typename FluidSystem, typename Indices>
+GroupEconomicLimitsChecker<FluidSystem, Indices>::
+GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<FluidSystem, Indices>& well_model,
                            WellTestState& well_test_state,
                            const Group& group,
                            const double simulation_time,
@@ -91,22 +97,22 @@ GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar>& well_model,
  * Public methods in alphabetical order
  ****************************************/
 
-template<class Scalar>
-void GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GroupEconomicLimitsChecker<FluidSystem, Indices>::
 activateEndRun()
 {
     displayDebugMessage("activate end run");
 }
 
-template<class Scalar>
-void GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GroupEconomicLimitsChecker<FluidSystem, Indices>::
 closeWells()
 {
     closeWellsRecursive(this->group_);
 }
 
-template<class Scalar>
-void GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GroupEconomicLimitsChecker<FluidSystem, Indices>::
 doWorkOver()
 {
     if (this->gecon_props_.workover() != GroupEconProductionLimits::EconWorkover::NONE) {
@@ -114,8 +120,8 @@ doWorkOver()
     }
 }
 
-template<class Scalar>
-bool GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 endRun()
 {
     if (this->gecon_props_.endRun()) {
@@ -124,8 +130,8 @@ endRun()
     return false;
 }
 
-template<class Scalar>
-bool GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 GOR()
 {
     auto oil_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
@@ -158,8 +164,8 @@ GOR()
     return false;
 }
 
-template<class Scalar>
-bool GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 minGasRate()
 {
     auto phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Vapour];
@@ -185,8 +191,8 @@ minGasRate()
     return false;
 }
 
-template<class Scalar>
-bool GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 minOilRate()
 {
     auto phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
@@ -212,22 +218,22 @@ minOilRate()
     return false;
 }
 
-template<class Scalar>
-int GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+int GroupEconomicLimitsChecker<FluidSystem, Indices>::
 numProducersOpen()
 {
     return 1;
 }
 
-template<class Scalar>
-int GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+int GroupEconomicLimitsChecker<FluidSystem, Indices>::
 numProducersOpenInitially()
 {
     return 1;
 }
 
-template<class Scalar>
-bool GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 waterCut()
 {
     auto oil_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
@@ -266,8 +272,8 @@ waterCut()
     return false;
 }
 
-template<class Scalar>
-bool GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 WGR()
 {
     auto water_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Aqua];
@@ -304,8 +310,8 @@ WGR()
  * Private methods in alphabetical order
  ****************************************/
 
-template<class Scalar>
-void GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GroupEconomicLimitsChecker<FluidSystem, Indices>::
 displayDebugMessage(const std::string& msg) const
 {
     if (this->debug_) {
@@ -315,8 +321,8 @@ displayDebugMessage(const std::string& msg) const
     }
 }
 
-template<class Scalar>
-void GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GroupEconomicLimitsChecker<FluidSystem, Indices>::
 addPrintMessage(const std::string& msg,
                 const Scalar value,
                 const Scalar limit,
@@ -338,8 +344,8 @@ addPrintMessage(const std::string& msg,
     this->message_ += message;
 }
 
-template<class Scalar>
-bool GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool GroupEconomicLimitsChecker<FluidSystem, Indices>::
 closeWellsRecursive(const Group& group, int level)
 {
     bool wells_closed = false;
@@ -396,8 +402,8 @@ closeWellsRecursive(const Group& group, int level)
     return wells_closed;
 }
 
-template<class Scalar>
-void GroupEconomicLimitsChecker<Scalar>::
+template<typename FluidSystem, typename Indices>
+void GroupEconomicLimitsChecker<FluidSystem, Indices>::
 throwNotImplementedError(const std::string& error) const
 {
     const std::string msg = fmt::format("Group: {} : GECON : {} not implemented",
@@ -405,10 +411,41 @@ throwNotImplementedError(const std::string& error) const
     OPM_DEFLOG_THROW(std::runtime_error, msg, this->deferred_logger_);
 }
 
-template class GroupEconomicLimitsChecker<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class GroupEconomicLimitsChecker<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class GroupEconomicLimitsChecker<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm
