@@ -91,25 +91,21 @@ addToWells(data::Wells& wellDatas,
             continue;
         }
 
-        // Add data infrastructure for shut wells.
-        if (!wellDatas.count(wname)) {
+        const auto& [wellDataPos, inserted] = wellDatas.try_emplace(wname);
+
+        if (inserted) {
+            // New well.  Typically a shut/inactive one.  Allocate
+            // data::Connection result objects for this well.
             const auto& conns = this->schedule_[reportStepNum]
                 .wells(wname).getConnections();
 
-            auto& wellData = wellDatas[wname];
-            wellData.connections.reserve(conns.size());
+            auto& xcon = wellDataPos->second.connections;
 
-            std::transform(conns.begin(), conns.end(),
-                           std::back_inserter(wellData.connections),
-                           [](const auto& connection)
-                           {
-                               data::Connection res;
-                               res.index = connection.global_index();
-                               return res;
-                           });
+            xcon.reserve(conns.size());
+            for (const auto& conn : conns) {
+                xcon.emplace_back().index = conn.global_index();
+            }
         }
-
-        data::Well& wellData = wellDatas.at(wname);
 
         auto cond_assign = [](double& dest, unsigned idx, const auto& map)
         {
@@ -119,7 +115,8 @@ addToWells(data::Wells& wellDatas,
             }
         };
 
-        std::for_each(wellData.connections.begin(), wellData.connections.end(),
+        std::for_each(wellDataPos->second.connections.begin(),
+                      wellDataPos->second.connections.end(),
                       [&cond_assign, this](auto& connectionData)
                       {
                           const auto index = connectionData.index;
