@@ -1,0 +1,17 @@
+name: Verify manual labels
+
+on:
+  pull_request_target:
+      types: [opened, labeled, unlabeled, synchronize]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Verify labels
+      uses: jesusvasquez333/verify-pr-label-action@v1.4.0
+      with:
+        github-token: '${{ secrets.GITHUB_TOKEN }}'
+        valid-labels: 'manual:bugfix, manual:enhancement, manual:new-feature, manual:irrelevant'
+        disable-reviews: 'true'
+        pull-request-number: '${{ github.event.pull_request.number }}'
