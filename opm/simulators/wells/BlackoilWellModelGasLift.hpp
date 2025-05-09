@@ -23,6 +23,7 @@
 #define OPM_BLACKOILWELLMODEL_GASLIFT_HEADER_INCLUDED
 
 #include "opm/models/utils/basicproperties.hh"
+#include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 
 #include <memory>
@@ -93,7 +94,7 @@ template<typename TypeTag>
 class BlackoilWellModelGasLift :
     public BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::FluidSystem>, GetPropType<TypeTag, Properties::Indices>>
 {
-    using Base = BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::FluidSystem>, GetPropType<TypeTag, Properties::Indices>>;
+    using Base = BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::FluidSystem>, GetPropType<TypeTag, Properties::Indices>;
 
 public:
     using Base::glift_debug;

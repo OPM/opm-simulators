@@ -34,7 +34,7 @@ class DeferredLogger;
 struct PhaseUsage;
 template<class Scalar> class SingleWellState;
 class WellEconProductionLimits;
-template<class Scalar> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
 class WellTestState;
 
 //! \brief Class for performing well tests.
@@ -42,7 +42,7 @@ template<class Scalar>
 class WellTest {
 public:
     //! \brief Constructor sets reference to well.
-    explicit WellTest(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
+    explicit WellTest(const WellInterfaceGeneric<FluidSystem, Indices>& well) : well_(well) {}
 
     void updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
                                      const double simulation_time,
@@ -97,7 +97,7 @@ private:
                          DeferredLogger& deferred_logger) const;
 
 
-    const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<FluidSystem, Indices>& well_; //!< Reference to well interface
 };
 
 }

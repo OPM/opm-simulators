@@ -36,9 +36,9 @@ namespace Opm
 {
 
 class DeferredLogger;
-template<class Scalar> class MultisegmentWellGeneric;
+template <typename FluidSystem, typename Indices> class MultisegmentWellGeneric;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
 template<class FluidSystem, class Indices>
 class MultisegmentWellPrimaryVariables
@@ -71,7 +71,7 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using EvalWell = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq + numWellEq>;
 
-    using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
+    using Equations = MultisegmentWellEquations<FluidSystem, Indices, numWellEq, Indices::numEq>;
     using BVectorWell = typename Equations::BVectorWell;
 
     explicit MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
@@ -82,7 +82,7 @@ public:
     void resize(const int numSegments);
 
     //! \brief Copy values from well state.
-    void update(const WellState<Scalar>& well_state,
+    void update(const WellState<FluidSystem, Indices>& well_state,
                 const bool stop_or_zero_rate_target);
 
     //! \brief Update values from newton update vector.
@@ -93,9 +93,9 @@ public:
                       const Scalar max_pressure_change);
 
     //! \brief Copy values to well state.
-    void copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
+    void copyToWellState(const  MultisegmentWellGeneric<FluidSystem, Indices>& mswell,
                          const Scalar rho,
-                         WellState<Scalar>& well_state,
+                         WellState<FluidSystem, Indices>& well_state,
                          const SummaryState& summary_state,
                          DeferredLogger& deferred_logger) const;
 

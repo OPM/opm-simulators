@@ -36,16 +36,18 @@ template<class Scalar> class ParallelWellInfo;
 
 struct PhaseUsage;
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 struct WGState
 {
+    using Scalar = typename FluidSystem::Scalar;
+
     explicit WGState(const PhaseUsage& pu);
 
     static WGState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
     void wtest_state(std::unique_ptr<WellTestState> wtest_state);
 
-    WellState<Scalar> well_state;
+    WellState<FluidSystem, Indices> well_state;
     GroupState<Scalar> group_state;
     WellTestState well_test_state;
 
