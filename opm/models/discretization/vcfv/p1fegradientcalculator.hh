@@ -109,8 +109,9 @@ public:
 
                 // Evaluate the P1 shape functions and their gradients at all
                 // flux approximation points.
-                if (prepareValues)
+                if (prepareValues) {
                     localFE.localBasis().evaluateFunction(localFacePos, p1Value_[faceIdx]);
+                }
 
                 if (prepareGradients) {
                     // first, get the shape function's gradient in local coordinates
@@ -133,8 +134,9 @@ public:
             }
 #endif
         }
-        else
+        else {
             ParentType::template prepare<prepareValues, prepareGradients>(elemCtx, timeIdx);
+        }
     }
 
     /*!
@@ -170,16 +172,20 @@ public:
             for (unsigned vertIdx = 0; vertIdx < elemCtx.numDof(/*timeIdx=*/0); ++vertIdx) {
                 if (std::is_same_v<QuantityType, Scalar> ||
                     elemCtx.focusDofIndex() == vertIdx)
+                {
                     value += quantityCallback(vertIdx)*p1Value_[fapIdx][vertIdx];
-                else
+                }
+                else {
                     value += Toolbox::value(quantityCallback(vertIdx))*p1Value_[fapIdx][vertIdx];
+                }
             }
 
             return value;
 #endif
         }
-        else
+        else {
             return ParentType::calculateScalarValue(elemCtx, fapIdx, quantityCallback);
+        }
     }
 
     /*!
@@ -221,21 +227,24 @@ public:
                     elemCtx.focusDofIndex() == vertIdx)
                 {
                     const auto& tmp = quantityCallback(vertIdx);
-                    for (unsigned k = 0; k < tmp.size(); ++k)
+                    for (unsigned k = 0; k < tmp.size(); ++k) {
                         value[k] += tmp[k]*p1Value_[fapIdx][vertIdx];
+                    }
                 }
                 else {
                     const auto& tmp = quantityCallback(vertIdx);
-                    for (unsigned k = 0; k < tmp.size(); ++k)
+                    for (unsigned k = 0; k < tmp.size(); ++k) {
                         value[k] += Toolbox::value(tmp[k])*p1Value_[fapIdx][vertIdx];
+                    }
                 }
             }
 
             return value;
 #endif
         }
-        else
+        else {
             return ParentType::calculateVectorValue(elemCtx, fapIdx, quantityCallback);
+        }
     }
 
     /*!
@@ -273,20 +282,23 @@ public:
                 {
                     const auto& dofVal = quantityCallback(vertIdx);
                     const auto& tmp = p1Gradient_[fapIdx][vertIdx];
-                    for (int dimIdx = 0; dimIdx < dim; ++ dimIdx)
+                    for (int dimIdx = 0; dimIdx < dim; ++ dimIdx) {
                         quantityGrad[dimIdx] += dofVal*tmp[dimIdx];
+                    }
                 }
                 else {
                     const auto& dofVal = quantityCallback(vertIdx);
                     const auto& tmp = p1Gradient_[fapIdx][vertIdx];
-                    for (int dimIdx = 0; dimIdx < dim; ++ dimIdx)
+                    for (int dimIdx = 0; dimIdx < dim; ++ dimIdx) {
                         quantityGrad[dimIdx] += scalarValue(dofVal)*tmp[dimIdx];
+                    }
                 }
             }
 #endif
         }
-        else
+        else {
             ParentType::calculateGradient(quantityGrad, elemCtx, fapIdx, quantityCallback);
+        }
     }
 
     /*!
