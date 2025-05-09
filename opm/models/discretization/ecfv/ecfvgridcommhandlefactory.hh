@@ -34,6 +34,7 @@
 #include <memory>
 
 namespace Opm {
+
 /*!
  * \ingroup EcfvDiscretization
  *
@@ -84,6 +85,7 @@ public:
         return std::make_shared<Handle>(array, dofMapper);
     }
 };
+
 } // namespace Opm
 
 #endif
