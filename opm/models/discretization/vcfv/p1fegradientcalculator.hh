@@ -92,7 +92,7 @@ public:
     void prepare([[maybe_unused]] const ElementContext& elemCtx,
                  [[maybe_unused]] unsigned timeIdx)
     {
-        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
+        if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
@@ -154,7 +154,7 @@ public:
                               [[maybe_unused]] const QuantityCallback& quantityCallback) const
         ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
     {
-        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
+        if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
@@ -199,7 +199,7 @@ public:
                               [[maybe_unused]] const QuantityCallback& quantityCallback) const
         ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
     {
-        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
+        if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
@@ -255,7 +255,7 @@ public:
                            [[maybe_unused]] unsigned fapIdx,
                            [[maybe_unused]] const QuantityCallback& quantityCallback) const
     {
-        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
+        if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
