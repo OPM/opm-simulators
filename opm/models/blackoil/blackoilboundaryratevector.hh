@@ -66,7 +66,8 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
 
-    static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
+    static constexpr bool blackoilConserveSurfaceVolume =
+        getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
     using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
 
@@ -163,8 +164,9 @@ public:
                     specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
                 }
 
-                Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
-                EnergyModule::addToEnthalpyRate(*this, enthalpyRate*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
+                Evaluation enthalpyRate = density * extQuants.volumeFlux(phaseIdx) * specificEnthalpy;
+                EnergyModule::addToEnthalpyRate(*this, enthalpyRate *
+                                                       getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
             }
         }
 
@@ -176,17 +178,20 @@ public:
             else {
                 (*this)[Indices::contiSolventEqIdx] *= insideIntQuants.solventDensity();
             }
-
         }
 
         if constexpr (enablePolymer) {
-            (*this)[Indices::contiPolymerEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.polymerConcentration();
+            (*this)[Indices::contiPolymerEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) *
+                                                  insideIntQuants.polymerConcentration();
         }
 
         if constexpr (enableMICP) {
-            (*this)[Indices::contiMicrobialEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.microbialConcentration();
-            (*this)[Indices::contiOxygenEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.oxygenConcentration();
-            (*this)[Indices::contiUreaEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.ureaConcentration();
+            (*this)[Indices::contiMicrobialEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) *
+                                                    insideIntQuants.microbialConcentration();
+            (*this)[Indices::contiOxygenEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) *
+                                                 insideIntQuants.oxygenConcentration();
+            (*this)[Indices::contiUreaEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) *
+                                               insideIntQuants.ureaConcentration();
             // since the urea concentration can be much larger than 1, then we apply a scaling factor
             (*this)[Indices::contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
         }
@@ -196,7 +201,8 @@ public:
 
         // heat conduction
         if constexpr (enableEnergy) {
-            EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux()*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
+            EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux() *
+                                                   getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
         }
 
 #ifndef NDEBUG
@@ -221,7 +227,7 @@ public:
         // we only allow fluxes in the direction opposite to the outer
         // unit normal
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            Scalar& val = this->operator[](eqIdx);
+            Scalar& val = (*this)[eqIdx];
             val = std::min<Scalar>(0.0, val);
         }
     }
@@ -240,7 +246,7 @@ public:
         // we only allow fluxes in the same direction as the outer
         // unit normal
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            Scalar& val = this->operator[](eqIdx);
+            Scalar& val = (*this)[eqIdx];
             val = std::max( Scalar(0), val);
         }
     }
