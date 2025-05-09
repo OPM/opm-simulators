@@ -1386,7 +1386,7 @@ private:
     //! data of the boundary faces
     std::array<BoundaryFace, maxBF> boundaryFace_{};
 
-    unsigned numBoundarySegments_;
+    unsigned numBoundarySegments_{};
 
     //! global coordinates of the edge centers
     std::array<GlobalPosition, maxNE> edgeCoord{};
@@ -1395,13 +1395,13 @@ private:
     std::array<GlobalPosition, maxNF> faceCoord{};
 
     //! number of verts
-    unsigned numVertices;
+    unsigned numVertices{};
 
     //! number of edges
-    unsigned numEdges;
+    unsigned numEdges{};
 
     //! number of faces (0 in < 3D)
-    unsigned numFaces;
+    unsigned numFaces{};
 
     Dune::GeometryType geometryType_;
 };
