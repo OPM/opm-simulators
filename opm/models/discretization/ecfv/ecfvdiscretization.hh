@@ -30,19 +30,21 @@
 
 #include <opm/material/densead/Math.hpp>
 
-#include "ecfvproperties.hh"
-#include "ecfvstencil.hh"
-#include "ecfvgridcommhandlefactory.hh"
-#include "ecfvbaseoutputmodule.hh"
+#include <opm/models/discretization/common/fvbasediscretization.hh>
+#include <opm/models/discretization/ecfv/ecfvbaseoutputmodule.hh>
+#include <opm/models/discretization/ecfv/ecfvgridcommhandlefactory.hh>
+#include <opm/models/discretization/ecfv/ecfvproperties.hh>
+#include <opm/models/discretization/ecfv/ecfvstencil.hh>
 
 #include <opm/simulators/linalg/elementborderlistfromgrid.hh>
-#include <opm/models/discretization/common/fvbasediscretization.hh>
 
 #if HAVE_DUNE_FEM
 #include <opm/models/discretization/common/fvbasediscretizationfemadapt.hh>
 #include <dune/fem/space/common/functionspace.hh>
 #include <dune/fem/space/finitevolume.hh>
 #endif
+
+#include <string>
 
 namespace Opm {
 template <class TypeTag>
