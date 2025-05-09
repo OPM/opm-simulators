@@ -44,7 +44,7 @@ template<class Scalar> class GroupState;
 class Schedule;
 struct RatioLimitCheckReport;
 template<class Scalar> class SingleWellState;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
 template<class FluidSystem>
 class WellInterfaceFluidSystem : public WellInterfaceGeneric<typename FluidSystem::Scalar>
@@ -57,7 +57,7 @@ protected:
 
 public:
     using Scalar = typename FluidSystem::Scalar;
-    using ModelParameters = typename WellInterfaceGeneric<Scalar>::ModelParameters;
+    using ModelParameters = typename WellInterfaceGeneric<FluidSystem, Indices>::ModelParameters;
 
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;

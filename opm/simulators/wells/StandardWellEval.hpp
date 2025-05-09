@@ -39,7 +39,7 @@ class Schedule;
 class SummaryState;
 template<class Scalar> class WellContributions;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 
 template<class FluidSystem, class Indices>
 class StandardWellEval
@@ -77,7 +77,7 @@ protected:
     // computing the accumulation term for later use in well mass equations
     void computeAccumWell();
 
-    ConvergenceReport getWellConvergence(const WellState<Scalar>& well_state,
+    ConvergenceReport getWellConvergence(const WellState<FluidSystem, Indices>& well_state,
                                          const std::vector<Scalar>& B_avg,
                                          const Scalar maxResidualAllowed,
                                          const Scalar tol_wells,

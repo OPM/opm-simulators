@@ -25,29 +25,35 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
 #include <cassert>
 
 namespace Opm {
 
-template<class Scalar>
-BlackoilWellModelWBP<Scalar>::
-BlackoilWellModelWBP(BlackoilWellModelGeneric<Scalar>& well_model)
+template<typename FluidSystem, typename Indices>
+BlackoilWellModelWBP<FluidSystem, Indices>::
+BlackoilWellModelWBP(BlackoilWellModelGeneric<FluidSystem, Indices>& well_model)
     : well_model_(well_model)
     , wbpCalculationService_(well_model.eclipseState().gridDims(), well_model.comm())
 {}
 
-template<class Scalar>
-void BlackoilWellModelWBP<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelWBP<FluidSystem, Indices>::
 initializeSources(typename ParallelWBPCalculation<Scalar>::GlobalToLocal index,
                   typename ParallelWBPCalculation<Scalar>::Evaluator eval)
 {
     this->wbpCalculationService_.localCellIndex(index).evalCellSource(eval);
 }
 
-template<class Scalar>
-void BlackoilWellModelWBP<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelWBP<FluidSystem, Indices>::
 registerOpenWellsForWBPCalculation()
 {
     assert(this->wbpCalcMap_.size() ==
@@ -57,14 +63,14 @@ registerOpenWellsForWBPCalculation()
         wbpCalc.openWellIdx_.reset();
     }
 
-    auto openWellIdx = typename std::vector<WellInterfaceGeneric<Scalar>*>::size_type{0};
+    auto openWellIdx = typename std::vector<WellInterfaceGeneric<FluidSystem, Indices>*>::size_type{0};
     for (const auto* openWell : well_model_.genericWells()) {
         this->wbpCalcMap_[openWell->indexOfWell()].openWellIdx_ = openWellIdx++;
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelWBP<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelWBP<FluidSystem, Indices>::
 initializeWBPCalculationService()
 {
     this->wbpCalcMap_.clear();
@@ -86,9 +92,9 @@ initializeWBPCalculationService()
     this->wbpCalculationService_.defineCommunication();
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 data::WellBlockAveragePressures
-BlackoilWellModelWBP<Scalar>::
+BlackoilWellModelWBP<FluidSystem, Indices>::
 computeWellBlockAveragePressures(const Scalar gravity) const
 {
     auto wbpResult = data::WellBlockAveragePressures{};
@@ -128,9 +134,9 @@ computeWellBlockAveragePressures(const Scalar gravity) const
     return wbpResult;
 }
 
-template<class Scalar>
-typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
-BlackoilWellModelWBP<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename ParallelWBPCalculation<typename FluidSystem::Scalar>::EvaluatorFactory
+BlackoilWellModelWBP<FluidSystem, Indices>::
 makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
 {
     using Span = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
@@ -179,10 +185,41 @@ makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
     };
 }
 
-template class BlackoilWellModelWBP<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class BlackoilWellModelWBP<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class BlackoilWellModelWBP<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 }

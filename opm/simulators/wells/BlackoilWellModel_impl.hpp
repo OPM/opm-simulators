@@ -72,7 +72,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& simulator, const PhaseUsage& phase_usage)
         : WellConnectionModule(*this, simulator.gridView().comm())
-        , BlackoilWellModelGeneric<Scalar>(simulator.vanguard().schedule(),
+        , BlackoilWellModelGeneric<FluidSystem, Indices>(simulator.vanguard().schedule(),
                                            gaslift_,
                                            simulator.vanguard().summaryState(),
                                            simulator.vanguard().eclState(),
@@ -2033,7 +2033,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::computePotentials(const std::size_t widx,
-                                                  const WellState<Scalar>& well_state_copy,
+                                                  const WellState<FluidSystem, Indices>& well_state_copy,
                                                   std::string& exc_msg,
                                                   ExceptionType::ExcEnum& exc_type,
                                                   DeferredLogger& deferred_logger)
@@ -2138,7 +2138,7 @@ namespace Opm {
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
-            if (events.hasEvent(WellState<Scalar>::event_mask)) {
+            if (events.hasEvent(WellState<FluidSystem, Indices>::event_mask)) {
                 well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
                 well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
                 // There is no new well control change input within a report step,
@@ -2389,9 +2389,9 @@ namespace Opm {
         const auto reportStepIdx = static_cast<unsigned int>(this->reportStepIndex());
         const auto& trMod = this->simulator_.problem().tracerModel();
 
-        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
-        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
-        BlackoilWellModelGeneric<Scalar>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<FluidSystem, Indices>::assignWellTracerRates(wsrpt, trMod.getWellTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<FluidSystem, Indices>::assignWellTracerRates(wsrpt, trMod.getWellFreeTracerRates(), reportStepIdx);
+        BlackoilWellModelGeneric<FluidSystem, Indices>::assignWellTracerRates(wsrpt, trMod.getWellSolTracerRates(), reportStepIdx);
 
         this->assignMswTracerRates(wsrpt, trMod.getMswTracerRates(), reportStepIdx);
     }

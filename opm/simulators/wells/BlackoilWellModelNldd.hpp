@@ -50,7 +50,7 @@ public:
     { return well_domain_; }
 
 protected:
-    BlackoilWellModelNlddGeneric(BlackoilWellModelGeneric<Scalar>& model)
+    BlackoilWellModelNlddGeneric(BlackoilWellModelGeneric<FluidSystem, Indices>& model)
         : genWellModel_(model)
     {}
 
@@ -63,7 +63,7 @@ private:
 
     void calcLocalIndices(const std::vector<const SubDomainIndices*>& domains);
 
-    BlackoilWellModelGeneric<Scalar>& genWellModel_;
+    BlackoilWellModelGeneric<FluidSystem, Indices>& genWellModel_;
 
     // Keep track of the domain of each well
     std::map<std::string, int> well_domain_{};
