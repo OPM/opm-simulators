@@ -49,6 +49,7 @@
 #include <string>
 
 namespace Opm {
+
 template <class TypeTag>
 class VcfvDiscretization;
 
@@ -70,11 +71,13 @@ public:
 
 //! Mapper for the degrees of freedoms.
 template<class TypeTag>
-struct DofMapper<TypeTag, TTag::VcfvDiscretization> { using type = GetPropType<TypeTag, Properties::VertexMapper>; };
+struct DofMapper<TypeTag, TTag::VcfvDiscretization>
+{ using type = GetPropType<TypeTag, Properties::VertexMapper>; };
 
 //! The concrete class which manages the spatial discretization
 template<class TypeTag>
-struct Discretization<TypeTag, TTag::VcfvDiscretization> { using type = VcfvDiscretization<TypeTag>; };
+struct Discretization<TypeTag, TTag::VcfvDiscretization>
+{ using type = VcfvDiscretization<TypeTag>; };
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
@@ -94,7 +97,8 @@ struct GridCommHandleFactory<TypeTag, TTag::VcfvDiscretization>
 
 //! Use two-point gradients by default for the vertex centered finite volume scheme.
 template<class TypeTag>
-struct UseP1FiniteElementGradients<TypeTag, TTag::VcfvDiscretization> { static constexpr bool value = false; };
+struct UseP1FiniteElementGradients<TypeTag, TTag::VcfvDiscretization>
+{ static constexpr bool value = false; };
 
 #if HAVE_DUNE_FEM
 //! Set the DiscreteFunctionSpace
@@ -109,30 +113,33 @@ private:
                                                    Scalar,
                                                    GridPart::GridType::dimensionworld,
                                                    numEq>;
+
 public:
     // Lagrange discrete function space with unknowns at the cell vertices
     using type = Dune::Fem::LagrangeDiscreteFunctionSpace< FunctionSpace, GridPart, 1 >;
 };
 #else
 template <class TypeTag>
-struct DummySpaceVcfv {
+struct DummySpaceVcfv
+{
     using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
-    explicit DummySpaceVcfv(const DiscreteFunctionSpace&) {};
-    explicit DummySpaceVcfv(const int&) {};
+    explicit DummySpaceVcfv(const DiscreteFunctionSpace&) {}
+    explicit DummySpaceVcfv(const int&) {}
 };
 
 template <class TypeTag>
-struct DiscreteFunctionSpace<TypeTag, TTag::VcfvDiscretization> {
-    using type = DummySpaceVcfv<TypeTag>;
-};
+struct DiscreteFunctionSpace<TypeTag, TTag::VcfvDiscretization>
+{ using type = DummySpaceVcfv<TypeTag>; };
 #endif
 
 //! Set the border list creator for vertices
 template<class TypeTag>
 struct BorderListCreator<TypeTag, TTag::VcfvDiscretization>
-{ private:
+{
+private:
     using VertexMapper = GetPropType<TypeTag, Properties::VertexMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+
 public:
     using type = Linear::VertexBorderListFromGrid<GridView, VertexMapper>;
 };
@@ -141,8 +148,8 @@ public:
 //! be assembled to avoid accounting twice for the fluxes over the process boundary faces
 //! of the local process' grid partition
 template<class TypeTag>
-struct LinearizeNonLocalElements<TypeTag, TTag::VcfvDiscretization> { static constexpr bool value = false; };
-
+struct LinearizeNonLocalElements<TypeTag, TTag::VcfvDiscretization>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
@@ -167,7 +174,7 @@ class VcfvDiscretization : public GetPropType<TypeTag, Properties::BaseDiscretiz
 public:
     explicit VcfvDiscretization(Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {}
 
     /*!
      * \brief Returns a string of discretization's human-readable name
@@ -216,9 +223,11 @@ public:
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 };
+
 } // namespace Opm
 
 #endif
