@@ -41,6 +41,7 @@
 #include <vector>
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
@@ -99,13 +100,8 @@ public:
     { return scvGeoms_[scvIdx]; }
 
 private:
-    static ScvLocalGeometry scvGeoms_[numScv];
+    static std::array<ScvLocalGeometry, numScv> scvGeoms_;
 };
-
-template <class Scalar>
-typename VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::cube>::ScvLocalGeometry
-VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::cube>::scvGeoms_[
-    VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::cube>::numScv];
 
 template <class Scalar>
 class VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::simplex>
@@ -169,13 +165,8 @@ public:
     }
 
 private:
-    static ScvLocalGeometry scvGeoms_[numScv];
+    static std::array<ScvLocalGeometry, numScv> scvGeoms_;
 };
-
-template <class Scalar>
-typename VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::simplex>::ScvLocalGeometry
-VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::simplex>::scvGeoms_[
-    VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::simplex>::numScv];
 
 template <class Scalar>
 class VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>
@@ -227,13 +218,8 @@ public:
             scvGeoms_[scvIdx].setCorners(scvCorners[scvIdx], ScvLocalGeometry::numCorners);
     }
 
-    static ScvLocalGeometry scvGeoms_[numScv];
+    static std::array<ScvLocalGeometry, numScv> scvGeoms_;
 };
-
-template <class Scalar>
-typename VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>::ScvLocalGeometry
-VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>::scvGeoms_[
-    VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>::numScv];
 
 ////////////////////
 // local geometries for 3D elements
@@ -309,13 +295,8 @@ public:
     }
 
 private:
-    static ScvLocalGeometry scvGeoms_[numScv];
+    static std::array<ScvLocalGeometry, numScv> scvGeoms_;
 };
-
-template <class Scalar>
-typename VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::simplex>::ScvLocalGeometry
-VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::simplex>::scvGeoms_[
-    VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::simplex>::numScv];
 
 template <class Scalar>
 class VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>
@@ -435,13 +416,8 @@ public:
             scvGeoms_[scvIdx].setCorners(scvCorners[scvIdx], ScvLocalGeometry::numCorners);
     }
 private:
-    static ScvLocalGeometry scvGeoms_[numScv];
+    static std::array<ScvLocalGeometry, numScv> scvGeoms_;
 };
-
-template <class Scalar>
-typename VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>::ScvLocalGeometry
-VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>::scvGeoms_[
-    VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>::numScv];
 
 /*!
  * \endcond
@@ -1368,16 +1344,16 @@ private:
     //! element volume
     Scalar elementVolume;
     //! data of the sub control volumes
-    SubControlVolume subContVol[maxNC];
+    std::array<SubControlVolume, maxNC> subContVol{};
     //! data of the sub control volume faces
-    SubControlVolumeFace subContVolFace[maxNE];
+    std::array<SubControlVolumeFace, maxNE> subContVolFace{};
     //! data of the boundary faces
-    BoundaryFace boundaryFace_[maxBF];
+    std::array<BoundaryFace, maxBF> boundaryFace_{};
     unsigned numBoundarySegments_;
     //! global coordinates of the edge centers
-    GlobalPosition edgeCoord[maxNE];
+    std::array<GlobalPosition, maxNE> edgeCoord{};
     //! global coordinates of the face centers
-    GlobalPosition faceCoord[maxNF];
+    std::array<GlobalPosition, maxNF> faceCoord{};
     //! number of verts
     unsigned numVertices;
     //! number of edges
@@ -1392,6 +1368,31 @@ template<class Scalar, class GridView>
 typename VcfvStencil<Scalar, GridView>::LocalFiniteElementCache
 VcfvStencil<Scalar, GridView>::feCache_;
 #endif // HAVE_DUNE_LOCALFUNCTIONS
+
+template <class Scalar>
+std::array<typename VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::cube>::ScvLocalGeometry,
+           VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::cube>::numScv>
+VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::cube>::scvGeoms_{};
+
+template <class Scalar>
+std::array<typename VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::simplex>::ScvLocalGeometry,
+           VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::simplex>::numScv>
+VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::simplex>::scvGeoms_{};
+
+template <class Scalar>
+std::array<typename VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>::ScvLocalGeometry,
+           VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>::numScv>
+VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>::scvGeoms_{};
+
+template <class Scalar>
+std::array<typename VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::simplex>::ScvLocalGeometry,
+           VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::simplex>::numScv>
+VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::simplex>::scvGeoms_{};
+
+template <class Scalar>
+std::array<typename VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>::ScvLocalGeometry,
+           VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>::numScv>
+VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>::scvGeoms_{};
 
 } // namespace Opm
 
