@@ -81,13 +81,12 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
                                                     std::size_t pressureIndex,
                                                     std::function<Vector()> weightsCalculator,
                                                     const bool forceSerial,
-                                                    [[maybe_unused]] Comm& comm)
-
+                                                    [[maybe_unused]] Comm* comm)
 {
     // Write sizes of linear systems on all ranks to debug log.
     if (!forceSerial) {
 #if HAVE_MPI
-        auto basic_comm = comm.communicator();
+        auto basic_comm = comm->communicator();
 #else
         auto basic_comm = Dune::Communication<Dune::No_Comm>{};
 #endif // HAVE_MPI
@@ -112,9 +111,9 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
 #if HAVE_MPI
         if (!wellOperator_) {
             using ParOperatorType = Opm::GhostLastMatrixAdapter<Matrix, Vector, Vector, Comm>;
-            auto pop = std::make_unique<ParOperatorType>(matrix, comm);
+            auto pop = std::make_unique<ParOperatorType>(matrix, *comm);
             using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
-            auto sol = std::make_unique<FlexibleSolverType>(*pop, comm, prm,
+            auto sol = std::make_unique<FlexibleSolverType>(*pop, *comm, prm,
                                                             weightsCalculator,
                                                             pressureIndex);
             this->pre_ = &sol->preconditioner();
@@ -125,7 +124,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
             auto pop = std::make_unique<ParOperatorType>(matrix, *wellOperator_,
                                                          interiorCellNum_);
             using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
-            auto sol = std::make_unique<FlexibleSolverType>(*pop, comm, prm,
+            auto sol = std::make_unique<FlexibleSolverType>(*pop, *comm, prm,
                                                             weightsCalculator,
                                                             pressureIndex);
             this->pre_ = &sol->preconditioner();
