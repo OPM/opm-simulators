@@ -125,8 +125,8 @@ public:
                                                                      extQuants,
                                                                      insideIntQuants.fluidState());
             else if (pBoundary > pInside) {
-                using RhsEval = typename std::conditional<std::is_same<typename FluidState::Scalar, Evaluation>::value,
-                                                          Evaluation, Scalar>::type;
+                using RhsEval = std::conditional_t<std::is_same_v<typename FluidState::Scalar, Evaluation>,
+                                                   Evaluation, Scalar>;
                 // influx
                 LocalResidual::template evalPhaseFluxes_<RhsEval>(tmp,
                                                                   phaseIdx,
