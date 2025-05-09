@@ -28,9 +28,7 @@
 #ifndef EWOMS_ECFV_VTK_BASE_OUTPUT_MODULE_HH
 #define EWOMS_ECFV_VTK_BASE_OUTPUT_MODULE_HH
 
-#include "ecfvproperties.hh"
-
-#include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/io/baseoutputwriter.hh>
 
 namespace Opm {
 /*!
