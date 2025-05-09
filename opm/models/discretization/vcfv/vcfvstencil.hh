@@ -52,7 +52,7 @@ namespace Opm {
 /*!
  * \brief The types of reference elements available.
  */
-enum ElementType
+enum class ElementType
 {
     none,
     simplex,
@@ -62,7 +62,7 @@ enum ElementType
 /*!
  * \cond SKIP_THIS
  */
-template <class Scalar, unsigned dim, unsigned basicGeomType>
+template <class Scalar, unsigned dim, ElementType basicGeomType>
 class VcfvScvGeometries;
 
 ////////////////////
