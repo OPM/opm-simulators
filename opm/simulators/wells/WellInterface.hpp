@@ -99,11 +99,11 @@ public:
     using WellStateType = WellState<FluidSystem, Indices>;
 
     using RateConverterType =
-    typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
+    typename WellInterfaceFluidSystem<FluidSystem, Indices>::RateConverterType;
 
-    using WellInterfaceFluidSystem<FluidSystem>::Gas;
-    using WellInterfaceFluidSystem<FluidSystem>::Oil;
-    using WellInterfaceFluidSystem<FluidSystem>::Water;
+    using WellInterfaceFluidSystem<FluidSystem, Indices>::Gas;
+    using WellInterfaceFluidSystem<FluidSystem, Indices>::Oil;
+    using WellInterfaceFluidSystem<FluidSystem, Indices>::Water;
 
     using ModelParameters = typename Base::ModelParameters;
 

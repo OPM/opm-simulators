@@ -39,12 +39,12 @@ class Group;
 template<class Scalar> class GroupState;
 class Schedule;
 class SummaryState;
-template<class FluidSystem> class WellInterfaceFluidSystem;
+template<typename FluidSystem, typename Indices> class WellInterfaceFluidSystem;
 template<typename FluidSystem, typename Indices> class WellState;
 struct WellInjectionControls;
 struct WellProductionControls;
 
-template<class FluidSystem>
+template<typename FluidSystem, typename Indices>
 class WellAssemble {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -52,10 +52,10 @@ class WellAssemble {
     using Scalar = typename FluidSystem::Scalar;
 
 public:
-    explicit WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well);
+    explicit WellAssemble(const WellInterfaceFluidSystem<FluidSystem, Indices>& well);
 
     template<class EvalWell>
-    void assembleControlEqProd(const WellState<Scalar>& well_state,
+    void assembleControlEqProd(const WellState<FluidSystem, Indices>& well_state,
                                const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
@@ -67,7 +67,7 @@ public:
                                DeferredLogger& deferred_logger) const;
 
     template<class EvalWell>
-    void assembleControlEqInj(const WellState<Scalar>& well_state,
+    void assembleControlEqInj(const WellState<FluidSystem, Indices>& well_state,
                               const GroupState<Scalar>& group_state,
                               const Schedule& schedule,
                               const SummaryState& summaryState,
@@ -79,7 +79,7 @@ public:
                               DeferredLogger& deferred_logger) const;
 
 private:
-    const WellInterfaceFluidSystem<FluidSystem>& well_;
+    const WellInterfaceFluidSystem<FluidSystem, Indices>& well_;
 };
 
 
