@@ -105,7 +105,7 @@ struct FlexibleSolverInfo
                 std::size_t pressureIndex,
                 std::function<Vector()> weightCalculator,
                 const bool forceSerial,
-                Comm& comm);
+                Comm* comm);
 
     std::unique_ptr<AbstractSolverType> solver_;
     std::unique_ptr<AbstractOperatorType> op_;
@@ -513,7 +513,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                          pressureIndex,
                                                          weightCalculator,
                                                          forceSerial_,
-                                                         *comm_);
+                                                         comm_.get());
             }
             else
             {
