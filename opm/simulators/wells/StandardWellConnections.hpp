@@ -73,12 +73,12 @@ public:
     };
 
     Properties
-    computePropertiesForPressures(const WellState<Scalar>&         well_state,
+    computePropertiesForPressures(const WellState<FluidSystem, Indices>&         well_state,
                                   const PressurePropertyFunctions& propFunc) const;
 
     //! \brief Compute connection properties (densities, pressure drop, ...)
     void computeProperties(const bool                      stop_or_zero_rate_target,
-                           const WellState<Scalar>&        well_state,
+                           const WellState<FluidSystem, Indices>&        well_state,
                            const DensityPropertyFunctions& prop_func,
                            const Properties&               props,
                            DeferredLogger&                 deferred_logger);

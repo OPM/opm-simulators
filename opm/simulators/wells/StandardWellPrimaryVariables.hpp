@@ -85,7 +85,7 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     //! \brief Evaluation for the well equations.
     using EvalWell = DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + Indices::numEq + 1>;
-    using BVectorWell = typename StandardWellEquations<Scalar,Indices::numEq>::BVectorWell;
+    using BVectorWell = typename StandardWellEquations<FluidSystem, Indices, Indices::numEq>::BVectorWell;
 
     //! \brief Constructor initializes reference to well interface.
     explicit StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
@@ -99,12 +99,12 @@ public:
     int numWellEq() const { return numWellEq_; }
 
     //! \brief Copy values from well state.
-    void update(const WellState<Scalar>& well_state,
+    void update(const WellState<FluidSystem, Indices>& well_state,
                 const bool stop_or_zero_rate_target,
                 DeferredLogger& deferred_logger);
 
     //! \brief Copy polymer molecular weigt values from well state.
-    void updatePolyMW(const WellState<Scalar>& well_state);
+    void updatePolyMW(const WellState<FluidSystem, Indices>& well_state);
 
     //! \brief Update values from newton update vector.
     void updateNewton(const BVectorWell& dwells,
@@ -120,11 +120,11 @@ public:
     void checkFinite(DeferredLogger& deferred_logger) const;
 
     //! \brief Copy values to well state.
-    void copyToWellState(WellState<Scalar>& well_state,
+    void copyToWellState(WellState<FluidSystem, Indices>& well_state,
                          DeferredLogger& deferred_logger) const;
 
     //! \brief Copy polymer molecular weight values to well state.
-    void copyToWellStatePolyMW(WellState<Scalar>& well_state) const;
+    void copyToWellStatePolyMW(WellState<FluidSystem, Indices>& well_state) const;
 
     //! \brief Returns scaled volume fraction for a component.
     EvalWell volumeFractionScaled(const int compIdx) const;

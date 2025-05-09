@@ -45,7 +45,7 @@ namespace Opm
 
 template<class FluidSystem>
 WellAssemble<FluidSystem>::
-WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well)
+WellAssemble(const WellInterfaceFluidSystem<FluidSystem, Indices>& well)
     : well_(well)
 {}
 
