@@ -120,7 +120,8 @@ public:
                 const bool handle_ms_well,
                 const std::size_t numCells,
                 const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
-                const SummaryState& summary_state);
+                const SummaryState& summary_state,
+                const bool enable_distributed_wells);
 
     void setCurrentWellRates(const std::string& wellName,
                              const std::vector<Scalar>& new_rates)

@@ -178,11 +178,13 @@ public:
     void initFromRestartFile(const RestartValue& restartValues,
                              std::unique_ptr<WellTestState> wtestState,
                              const std::size_t numCells,
-                             bool handle_ms_well);
+                             bool handle_ms_well,
+                             bool enable_distributed_wells);
 
     void prepareDeserialize(int report_step,
                             const std::size_t numCells,
-                            bool handle_ms_well);
+                            bool handle_ms_well,
+                            bool enable_distributed_wells);
 
     /*
       Will assign the internal member last_valid_well_state_ to the
