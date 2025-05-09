@@ -53,7 +53,7 @@ public:
     static void attachScalarDofData_(BaseOutputWriter& baseWriter,
                                      ScalarBuffer& buffer,
                                      const std::string& name)
-    { baseWriter.attachScalarElementData(buffer, name.c_str()); }
+    { baseWriter.attachScalarElementData(buffer, name); }
 
     /*!
      * \brief Add a buffer where the data is associated with the
@@ -62,7 +62,7 @@ public:
     static void attachVectorDofData_(BaseOutputWriter& baseWriter,
                                      VectorBuffer& buffer,
                                      const std::string& name)
-    { baseWriter.attachVectorElementData(buffer, name.c_str()); }
+    { baseWriter.attachVectorElementData(buffer, name); }
 
     /*!
      * \brief Add a buffer where the data is associated with the
@@ -71,7 +71,7 @@ public:
     static void attachTensorDofData_(BaseOutputWriter& baseWriter,
                                      TensorBuffer& buffer,
                                      const std::string& name)
-    { baseWriter.attachTensorElementData(buffer, name.c_str()); }
+    { baseWriter.attachTensorElementData(buffer, name); }
 };
 
 } // namespace Opm
