@@ -34,6 +34,7 @@
 #include <memory>
 
 namespace Opm {
+
 /*!
  * \ingroup VcfvDiscretization
  *
@@ -48,7 +49,7 @@ class VcfvGridCommHandleFactory
     using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int dim = GridView::dimension;
+    static constexpr int dim = GridView::dimension;
 
 public:
     /*!
@@ -76,7 +77,7 @@ public:
     }
 
     /*!
-     * \brief Return a handle which computes the sum of all values
+     * \brief Return a handle which computes the sum of all values of
      *        all overlapping degrees of freedom across all processes.
      */
     template <class ValueType, class ArrayType>
@@ -87,6 +88,7 @@ public:
         return std::make_shared<Handle>(array, dofMapper);
     }
 };
+
 } // namespace Opm
 
 #endif
