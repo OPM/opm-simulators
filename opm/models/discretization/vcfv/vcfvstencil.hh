@@ -80,7 +80,7 @@ public:
     static void init()
     {
         // 1D LINE SEGMENTS
-        Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] = {
+        const Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] = {
             { // corners of the first sub control volume
                 { 0.0 },
                 { 0.5 }
@@ -136,7 +136,7 @@ public:
     static void init()
     {
         // 2D SIMPLEX
-        Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] =
+        const Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] =
         {
             { // SCV 0 corners
                 { 0.0,   0.0 },
@@ -184,7 +184,7 @@ public:
     static void init()
     {
         // 2D CUBE
-        Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] =
+        const Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] =
         {
             { // SCV 0 corners
                 { 0.0, 0.0 },
@@ -241,7 +241,7 @@ public:
     static void init()
     {
         // 3D SIMPLEX
-        Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] =
+        const Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] =
         {
             { // SCV 0 corners
                 { 0.0,   0.0,   0.0 },
@@ -316,7 +316,7 @@ public:
     static void init()
     {
         // 3D CUBE
-        Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] =
+        const Scalar scvCorners[numScv][ScvLocalGeometry::numCorners][dim] =
         {
             { // SCV 0 corners
                 { 0.0,   0.0,   0.0 },
@@ -976,11 +976,11 @@ public:
                 continue;
             }
 
-            unsigned face = static_cast<unsigned>(intersection.indexInInside());
-            unsigned numVerticesOfFace = static_cast<unsigned>(referenceElement.size(static_cast<int>(face), 1, dim));
+            const unsigned face = static_cast<unsigned>(intersection.indexInInside());
+            const unsigned numVerticesOfFace = static_cast<unsigned>(referenceElement.size(static_cast<int>(face), 1, dim));
             for (unsigned vertInFace = 0; vertInFace < numVerticesOfFace; ++vertInFace) {
-                unsigned short vertInElement = static_cast<unsigned short>(referenceElement.subEntity(static_cast<int>(face), 1, static_cast<int>(vertInFace), dim));
-                unsigned bfIdx = numBoundarySegments_;
+                const unsigned short vertInElement = static_cast<unsigned short>(referenceElement.subEntity(static_cast<int>(face), 1, static_cast<int>(vertInFace), dim));
+                const unsigned bfIdx = numBoundarySegments_;
                 ++numBoundarySegments_;
 
                 if constexpr (dim == 1) {
