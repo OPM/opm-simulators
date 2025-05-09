@@ -1157,7 +1157,7 @@ runSubStep_()
         handleFailure("Solver convergence failure - Iteration limit reached", e);
     }
     catch (const TimeSteppingBreakdown& e) {
-        handleFailure("Time step was too large", e);
+        handleFailure(e.what(), e);
     }
     catch (const ConvergenceMonitorFailure& e) {
         handleFailure("Convergence monitor failure", e, /*log_exception=*/false);
