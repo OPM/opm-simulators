@@ -30,7 +30,7 @@
 
 namespace Opm {
 
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename FluidSystem, typename Indices> class BlackoilWellModelGeneric;
 namespace data {
 struct GroupData;
 class GroupAndNetworkValues;
@@ -51,7 +51,7 @@ public:
     using Scalar = typename FluidSystem::Scalar;
 
     //! \brief Constructor initializes reference to the well model.
-    explicit BlackoilWellModelRestart(const BlackoilWellModelGeneric<Scalar>& wellModel)
+    explicit BlackoilWellModelRestart(const BlackoilWellModelGeneric<FluidSystem, Indices>& wellModel)
         : wellModel_(wellModel)
     {}
 
@@ -100,7 +100,7 @@ private:
                               const data::GroupData& value,
                               GroupState<Scalar>&    grpState) const;
 
-    const BlackoilWellModelGeneric<Scalar>& wellModel_; //!< Reference to well model
+    const BlackoilWellModelGeneric<FluidSystem, Indices>& wellModel_; //!< Reference to well model
 };
 
 

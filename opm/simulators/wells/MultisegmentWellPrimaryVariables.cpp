@@ -67,7 +67,7 @@ setEvaluationsFromValues()
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
-update(const WellState<Scalar>& well_state,
+update(const WellState<FluidSystem, Indices>& well_state,
        const bool stop_or_zero_rate_target)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -223,9 +223,9 @@ updateNewton(const BVectorWell& dwells,
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
-copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
+copyToWellState(const  MultisegmentWellGeneric<FluidSystem, Indices>& mswell,
                 const Scalar rho,
-                WellState<Scalar>& well_state,
+                WellState<FluidSystem, Indices>& well_state,
                 const SummaryState& summary_state,
                 DeferredLogger& deferred_logger) const
 {

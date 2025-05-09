@@ -42,7 +42,7 @@ template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
 struct PhaseUsage;
 class SummaryState;
-template<class Scalar> class VFPProperties;
+template<typename FluidSystem, typename Indices> class VFPProperties;
 class WellTestState;
 template<typename FluidSystem, typename Indices> class WellState;
 template<class Scalar> class SingleWellState;
@@ -102,7 +102,7 @@ public:
     void initCompletions();
     void closeCompletions(const WellTestState& wellTestState);
 
-    void setVFPProperties(const VFPProperties<Scalar>* vfp_properties_arg);
+    void setVFPProperties(const VFPProperties<FluidSystem, Indices>* vfp_properties_arg);
     void setPrevSurfaceRates(WellStateType& well_state,
                              const WellStateType& prev_well_state) const;
     void setGuideRate(const GuideRate* guide_rate_arg);
@@ -138,7 +138,7 @@ public:
 
     Scalar gravity() const { return gravity_; }
 
-    const VFPProperties<Scalar>* vfpProperties() const { return vfp_properties_; }
+    const VFPProperties<FluidSystem, Indices>* vfpProperties() const { return vfp_properties_; }
 
     const ParallelWellInfo<Scalar>& parallelWellInfo() const { return parallel_well_info_; }
 
@@ -392,7 +392,7 @@ protected:
     std::vector<Scalar> inj_fc_multiplier_;
 
     Scalar well_efficiency_factor_;
-    const VFPProperties<Scalar>* vfp_properties_;
+    const VFPProperties<FluidSystem, Indices>* vfp_properties_;
     const GuideRate* guide_rate_;
 
     std::vector<std::string> well_control_log_;

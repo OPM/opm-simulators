@@ -39,8 +39,8 @@ template<class Scalar, int numEq> class StandardWellEquationAccess;
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
-template<class Scalar> class WellInterfaceGeneric;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
+template<typename FluidSystem, typename Indices> class WellState;
 
 template<class Scalar, int numEq>
 class StandardWellEquations
@@ -113,9 +113,9 @@ public:
                                   const BVector& weights,
                                   const int pressureVarIndex,
                                   const bool use_well_weights,
-                                  const WellInterfaceGeneric<Scalar>& well,
+                                  const WellInterfaceGeneric<FluidSystem, Indices>& well,
                                   const int bhp_var_index,
-                                  const WellState<Scalar>& well_state) const;
+                                  const WellState<FluidSystem, Indices>& well_state) const;
 
     //! \brief Get the number of blocks of the C and B matrices.
     unsigned int getNumBlocks() const;

@@ -37,7 +37,7 @@ namespace Opm
 class DeferredLogger;
 enum class Phase;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-template<class Scalar> class WellState;
+template<typename FluidSystem, typename Indices> class WellState;
 template<class Scalar> class PerfData;
 
 template<class FluidSystem, class Indices>

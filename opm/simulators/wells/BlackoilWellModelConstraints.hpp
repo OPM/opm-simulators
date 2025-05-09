@@ -29,7 +29,7 @@
 
 namespace Opm {
 
-template<class Scalar> class BlackoilWellModelGeneric;
+template<typename FluidSystem, typename Indices> class BlackoilWellModelGeneric;
 class DeferredLogger;
 template<class Scalar> class GroupState;
 class SummaryState;
@@ -42,7 +42,7 @@ class BlackoilWellModelConstraints
 public:
     using Scalar = typename FluidSystem::Scalar;
     //! \brief Constructor initializes reference to the well model.
-    explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<Scalar>& wellModel)
+    explicit BlackoilWellModelConstraints(const BlackoilWellModelGeneric<FluidSystem, Indices>& wellModel)
         : wellModel_(wellModel)
     {}
 
@@ -92,7 +92,7 @@ private:
                                     const int reportStepIdx,
                                     DeferredLogger& deferred_logger) const;
 
-    const BlackoilWellModelGeneric<Scalar>& wellModel_; //!< Reference to well model
+    const BlackoilWellModelGeneric<FluidSystem, Indices>& wellModel_; //!< Reference to well model
 };
 
 } // namespace Opm

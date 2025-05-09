@@ -29,6 +29,12 @@
 
 #include <opm/output/data/Groups.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -67,8 +73,8 @@ namespace {
 
 namespace Opm {
 
-template<class Scalar>
-void BlackoilWellModelRestart<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelRestart<FluidSystem, Indices>::
 loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
                           const data::Well&                    rst_well,
                           const std::vector<PerforationData<Scalar>>&  old_perf_data,
@@ -92,8 +98,8 @@ loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelRestart<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelRestart<FluidSystem, Indices>::
 loadRestartSegmentData(const std::string&                   well_name,
                        const std::vector<data::Rates::opt>& phs,
                        const data::Well&                    rst_well,
@@ -124,8 +130,8 @@ loadRestartSegmentData(const std::string&                   well_name,
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelRestart<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelRestart<FluidSystem, Indices>::
 loadRestartWellData(const std::string&                   well_name,
                     const bool                           handle_ms_well,
                     const std::vector<data::Rates::opt>& phs,
@@ -158,8 +164,8 @@ loadRestartWellData(const std::string&                   well_name,
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelRestart<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelRestart<FluidSystem, Indices>::
 loadRestartGroupData(const std::string&     group,
                      const data::GroupData& value,
                      GroupState<Scalar>&    grpState) const
@@ -184,8 +190,8 @@ loadRestartGroupData(const std::string&     group,
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelRestart<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelRestart<FluidSystem, Indices>::
 loadRestartGuideRates(const int                    report_step,
                       const GuideRateModel::Target target,
                       const data::Wells&           rst_wells,
@@ -203,8 +209,8 @@ loadRestartGuideRates(const int                    report_step,
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelRestart<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelRestart<FluidSystem, Indices>::
 loadRestartGuideRates(const int                                     report_step,
                       const GuideRateConfig&                        config,
                       const std::map<std::string, data::GroupData>& rst_groups,
@@ -227,12 +233,12 @@ loadRestartGuideRates(const int                                     report_step,
     }
 }
 
-template<class Scalar>
-void BlackoilWellModelRestart<Scalar>::
+template<typename FluidSystem, typename Indices>
+void BlackoilWellModelRestart<FluidSystem, Indices>::
 loadRestartData(const data::Wells&                 rst_wells,
                 const data::GroupAndNetworkValues& grpNwrkValues,
                 const bool                         handle_ms_well,
-                WellState<Scalar>&                 well_state,
+                WellState<FluidSystem, Indices>&   well_state,
                 GroupState<Scalar>&                grpState) const
 {
     using rt = data::Rates::opt;
@@ -269,10 +275,41 @@ loadRestartData(const data::Wells&                 rst_wells,
     }
 }
 
-template class BlackoilWellModelRestart<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class BlackoilWellModelRestart<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class BlackoilWellModelRestart<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm
