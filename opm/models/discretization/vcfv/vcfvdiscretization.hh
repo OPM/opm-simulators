@@ -30,20 +30,22 @@
 
 #include <opm/material/densead/Math.hpp>
 
-#include "vcfvproperties.hh"
-#include "vcfvstencil.hh"
-#include "p1fegradientcalculator.hh"
-#include "vcfvgridcommhandlefactory.hh"
-#include "vcfvbaseoutputmodule.hh"
+#include <opm/models/discretization/common/fvbasediscretization.hh>
+#include <opm/models/discretization/vcfv/p1fegradientcalculator.hh>
+#include <opm/models/discretization/vcfv/vcfvbaseoutputmodule.hh>
+#include <opm/models/discretization/vcfv/vcfvgridcommhandlefactory.hh>
+#include <opm/models/discretization/vcfv/vcfvproperties.hh>
+#include <opm/models/discretization/vcfv/vcfvstencil.hh>
 
 #include <opm/simulators/linalg/vertexborderlistfromgrid.hh>
-#include <opm/models/discretization/common/fvbasediscretization.hh>
 
 #if HAVE_DUNE_FEM
-#include <opm/models/discretization/common/fvbasediscretizationfemadapt.hh>
 #include <dune/fem/space/common/functionspace.hh>
 #include <dune/fem/space/lagrange.hh>
+#include <opm/models/discretization/common/fvbasediscretizationfemadapt.hh>
 #endif
+
+#include <string>
 
 namespace Opm {
 template <class TypeTag>
