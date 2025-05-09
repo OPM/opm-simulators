@@ -33,6 +33,9 @@
 
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 
+#include <algorithm>
+#include <type_traits>
+
 namespace Opm {
 
 /*!
