@@ -50,6 +50,7 @@
 #include <vector>
 
 namespace Opm {
+
 /*!
  * \ingroup EcfvDiscretization
  *
@@ -79,8 +80,8 @@ class EcfvStencil
     using WorldVector = Dune::FieldVector<Scalar, dimWorld>;
 
 public:
-    using Entity = Element       ;
-    using Mapper = ElementMapper ;
+    using Entity = Element;
+    using Mapper = ElementMapper;
 
     using LocalGeometry = typename Element::Geometry;
 
@@ -108,7 +109,7 @@ public:
         { element_ = element; }
 
         void update()
-        { }
+        {}
 
         /*!
          * \brief The global position associated with the sub-control volume
@@ -221,9 +222,7 @@ public:
          * and -1 for NNC faces.
          */
         int dirId() const
-        {
-            return dirId_;
-        }
+        { return dirId_; }
 
         /*!
          * \brief Returns the direction of the face
@@ -286,7 +285,7 @@ public:
             // degree of freedom and an internal face, else add a
             // boundary face
             if (intersection.neighbor()) {
-                elements_.emplace_back( intersection.outside() );
+                elements_.emplace_back(intersection.outside());
                 subControlVolumes_.emplace_back(/*SubControlVolume(*/elements_.back()/*)*/);
                 interiorFaces_.emplace_back(/*SubControlVolumeFace(*/intersection, subControlVolumes_.size() - 1/*)*/);
             }
@@ -319,7 +318,7 @@ public:
      * \brief Return the element to which the stencil refers.
      */
     const Element& element() const
-    { return element( 0 ); }
+    { return element(0); }
 
     /*!
      * \brief Return the grid view of the element to which the stencil
@@ -383,9 +382,7 @@ public:
      *        freedom.
      */
     const Entity& entity(unsigned dofIdx) const
-    {
-        return element( dofIdx );
-    }
+    { return element( dofIdx ); }
 
     /*!
      * \brief Returns the sub-control volume object belonging to a
@@ -432,6 +429,4 @@ protected:
 
 } // namespace Opm
 
-
 #endif
-
