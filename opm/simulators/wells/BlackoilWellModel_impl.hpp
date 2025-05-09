@@ -1095,9 +1095,12 @@ namespace Opm {
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
 
-        const bool changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
+        bool changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
         assembleWellEqWithoutIteration(dt, deferred_logger);
-        const bool converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+        bool converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+
+        if (converged)
+            return;
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (auto& well : this->well_container_) {
@@ -1106,9 +1109,12 @@ namespace Opm {
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::doPreStepNetworkRebalance() failed: ",
                                     this->simulator_.vanguard().grid().comm());
 
+        changed_well_group = updateWellControlsAndNetwork(true, dt, deferred_logger);
+        assembleWellEqWithoutIteration(dt, deferred_logger);
+        converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
         if (!converged) {
             const std::string msg = fmt::format("Initial (pre-step) network balance did not converge.");
-            deferred_logger.warning(msg);
+            deferred_logger.debug(msg);
         }
     }
 
