@@ -28,9 +28,10 @@
 #ifndef EWOMS_VCFV_GRID_COMM_HANDLE_FACTORY_HH
 #define EWOMS_VCFV_GRID_COMM_HANDLE_FACTORY_HH
 
-#include "vcfvproperties.hh"
-
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/parallel/gridcommhandles.hh>
+
+#include <memory>
 
 namespace Opm {
 /*!
