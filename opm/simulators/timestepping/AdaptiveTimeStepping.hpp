@@ -89,8 +89,6 @@ private:
     };
 
     // Forward declaration of SubStepIteration
-    // TODO: This forward declaration is not enough for GCC version 9.4.0 (released June 2021),
-    //  but it works fine with GCC version 13.2.0 (released July 2023).
     template <class Solver> class SubStepIteration;
 
     template <class Solver>
@@ -104,7 +102,7 @@ private:
 
         AdaptiveTimeStepping<TypeTag>& getAdaptiveTimerStepper();
         SimulatorReport run();
-        friend class AdaptiveTimeStepping<TypeTag>::template SubStepIteration<Solver>;
+        friend class SubStepIteration<Solver>;
 
     private:
         bool isReservoirCouplingMaster_() const;
