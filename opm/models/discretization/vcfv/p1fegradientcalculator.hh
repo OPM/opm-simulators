@@ -28,22 +28,21 @@
 #ifndef EWOMS_P1FE_GRADIENT_CALCULATOR_HH
 #define EWOMS_P1FE_GRADIENT_CALCULATOR_HH
 
-#include "vcfvproperties.hh"
-
-#include <opm/models/discretization/common/fvbasegradientcalculator.hh>
-
 #include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
 
 #include <dune/geometry/type.hh>
 
+#include <dune/common/version.hh>
+#include <opm/models/discretization/common/fvbasegradientcalculator.hh>
+#include <opm/models/discretization/vcfv/vcfvproperties.hh>
+
 #if HAVE_DUNE_LOCALFUNCTIONS
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
+#include <vector>
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 
-#include <dune/common/fvector.hh>
-
-#include <vector>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm {
 /*!
