@@ -28,14 +28,12 @@
 #ifndef EWOMS_VCFV_VTK_BASE_OUTPUT_MODULE_HH
 #define EWOMS_VCFV_VTK_BASE_OUTPUT_MODULE_HH
 
-#include "vcfvproperties.hh"
-
 #include <opm/models/io/baseoutputwriter.hh>
 
 #include <string>
-#include <vector>
 
 namespace Opm {
+
 /*!
  * \ingroup VcfvDiscretization
  *
