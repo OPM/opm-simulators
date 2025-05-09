@@ -48,8 +48,10 @@
 #include <string>
 
 namespace Opm {
+
 template <class TypeTag>
 class EcfvDiscretization;
+
 }
 
 namespace Opm::Properties {
@@ -68,11 +70,13 @@ public:
 
 //! Mapper for the degrees of freedoms.
 template<class TypeTag>
-struct DofMapper<TypeTag, TTag::EcfvDiscretization> { using type = GetPropType<TypeTag, Properties::ElementMapper>; };
+struct DofMapper<TypeTag, TTag::EcfvDiscretization>
+{ using type = GetPropType<TypeTag, Properties::ElementMapper>; };
 
 //! The concrete class which manages the spatial discretization
 template<class TypeTag>
-struct Discretization<TypeTag, TTag::EcfvDiscretization> { using type = EcfvDiscretization<TypeTag>; };
+struct Discretization<TypeTag, TTag::EcfvDiscretization>
+{ using type = EcfvDiscretization<TypeTag>; };
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
@@ -98,30 +102,33 @@ private:
                                                    Scalar,
                                                    GridPart::GridType::dimensionworld,
                                                    numEq>;
+
 public:
     using type = Dune::Fem::FiniteVolumeSpace< FunctionSpace, GridPart, 0 >;
 };
 #else
 template <class TypeTag>
-struct DummySpaceEcfv {
+struct DummySpaceEcfv
+{
     using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
-    explicit DummySpaceEcfv(const DiscreteFunctionSpace&) {};
-    explicit DummySpaceEcfv(const int&) {};
+    explicit DummySpaceEcfv(const DiscreteFunctionSpace&) {}
+    explicit DummySpaceEcfv(const int&) {}
 };
 
 template <class TypeTag>
-struct DiscreteFunctionSpace<TypeTag, TTag::EcfvDiscretization> {
-    using type = DummySpaceEcfv<TypeTag>;
-};
+struct DiscreteFunctionSpace<TypeTag, TTag::EcfvDiscretization>
+{ using type = DummySpaceEcfv<TypeTag>; };
 #endif
 
 //! Set the border list creator for to the one of an element based
 //! method
 template<class TypeTag>
 struct BorderListCreator<TypeTag, TTag::EcfvDiscretization>
-{ private:
+{
+private:
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+
 public:
     using type = Linear::ElementBorderListFromGrid<GridView, ElementMapper>;
 };
@@ -130,16 +137,19 @@ public:
 //! assembled to calculate the fluxes over the process boundary faces of the local
 //! process' grid partition
 template<class TypeTag>
-struct LinearizeNonLocalElements<TypeTag, TTag::EcfvDiscretization> { static constexpr bool value = true; };
+struct LinearizeNonLocalElements<TypeTag, TTag::EcfvDiscretization>
+{ static constexpr bool value = true; };
 
 //! locking is not required for the element centered finite volume method because race
 //! conditions cannot occur since each matrix/vector entry is written exactly once
 template<class TypeTag>
-struct UseLinearizationLock<TypeTag, TTag::EcfvDiscretization> { static constexpr bool value = false; };
+struct UseLinearizationLock<TypeTag, TTag::EcfvDiscretization>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
 namespace Opm {
+
 /*!
  * \ingroup EcfvDiscretization
  *
@@ -159,7 +169,7 @@ class EcfvDiscretization : public GetPropType<TypeTag, Properties::BaseDiscretiz
 public:
     explicit EcfvDiscretization(Simulator& simulator)
         : ParentType(simulator)
-    { }
+    {}
 
     /*!
      * \brief Returns a string of discretization's human-readable name
@@ -232,9 +242,11 @@ public:
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 };
+
 } // namespace Opm
 
 #endif
