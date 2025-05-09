@@ -38,6 +38,7 @@
 
 #if HAVE_DUNE_LOCALFUNCTIONS
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
+#include <cstddef>
 #include <vector>
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 
@@ -125,7 +126,7 @@ public:
                     const auto& jacInvT =
                         geom.jacobianInverseTransposed(localFacePos);
 
-                    size_t numVertices = elemCtx.numDof(timeIdx);
+                    std::size_t numVertices = elemCtx.numDof(timeIdx);
                     for (unsigned vertIdx = 0; vertIdx < numVertices; vertIdx++) {
                         jacInvT.mv(/*xVector=*/localGradient[vertIdx][0],
                                    /*destVector=*/p1Gradient_[faceIdx][vertIdx]);
