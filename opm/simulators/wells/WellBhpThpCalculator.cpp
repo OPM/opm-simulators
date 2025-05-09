@@ -50,8 +50,8 @@ static constexpr bool extraThpFromBhpOutput = false;
 
 namespace Opm {
 
-template<class Scalar>
-bool WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool WellBhpThpCalculator<FluidSystem, Indices>::
 wellHasTHPConstraints(const SummaryState& summaryState) const
 {
     const auto& well_ecl = well_.wellEcl();
@@ -70,8 +70,8 @@ wellHasTHPConstraints(const SummaryState& summaryState) const
     return false;
 }
 
-template<class Scalar>
-Scalar WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar WellBhpThpCalculator<FluidSystem, Indices>::
 getTHPConstraint(const SummaryState& summaryState) const
 {
     const auto& well_ecl = well_.wellEcl();
@@ -88,8 +88,8 @@ getTHPConstraint(const SummaryState& summaryState) const
     return 0.0;
 }
 
-template<class Scalar>
-Scalar WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar WellBhpThpCalculator<FluidSystem, Indices>::
 mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const
 {
     const auto& well_ecl = well_.wellEcl();
@@ -106,8 +106,8 @@ mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const
     return 0.0;
 }
 
-template<class Scalar>
-Scalar WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar WellBhpThpCalculator<FluidSystem, Indices>::
 calculateThpFromBhp(const std::vector<Scalar>& rates,
                     const Scalar bhp,
                     const Scalar rho,
@@ -160,8 +160,8 @@ calculateThpFromBhp(const std::vector<Scalar>& rates,
     return thp;
 }
 
-template<class Scalar>
-Scalar WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar WellBhpThpCalculator<FluidSystem, Indices>::
 findThpFromBhpIteratively(const std::function<Scalar(const Scalar, const Scalar)>& thp_func,
                           const Scalar bhp,
                           const Scalar thp_limit,
@@ -195,9 +195,9 @@ findThpFromBhpIteratively(const std::function<Scalar(const Scalar, const Scalar)
     return thp;
 }
 
-template<class Scalar>
-std::optional<Scalar>
-WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename FluidSystem::Scalar>
+WellBhpThpCalculator<FluidSystem, Indices>::
 computeBhpAtThpLimitProd(const std::function<std::vector<Scalar>(const Scalar)>& frates,
                          const SummaryState& summary_state,
                          const Scalar maxPerfPress,
@@ -278,9 +278,9 @@ computeBhpAtThpLimitProd(const std::function<std::vector<Scalar>(const Scalar)>&
     return this->computeBhpAtThpLimit(frates, fbhp, range, deferred_logger);
 }
 
-template<class Scalar>
-std::optional<Scalar>
-WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename FluidSystem::Scalar>
+WellBhpThpCalculator<FluidSystem, Indices>::
 computeBhpAtThpLimitInj(const std::function<std::vector<Scalar>(const Scalar)>& frates,
                         const SummaryState& summary_state,
                         const Scalar rho,
@@ -300,12 +300,12 @@ computeBhpAtThpLimitInj(const std::function<std::vector<Scalar>(const Scalar)>& 
     }
 }
 
-template<class Scalar>
-void WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellBhpThpCalculator<FluidSystem, Indices>::
 updateThp(const Scalar rho,
           const std::function<Scalar()>& alq_value,
           const std::array<unsigned,3>& active,
-          WellState<Scalar>& well_state,
+          WellState<FluidSystem, Indices>& well_state,
           const SummaryState& summary_state,
           DeferredLogger& deferred_logger) const
 {
@@ -344,10 +344,10 @@ updateThp(const Scalar rho,
     ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, alq, thp_limit, deferred_logger);
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template<class EvalWell>
-EvalWell WellBhpThpCalculator<Scalar>::
-calculateBhpFromThp(const WellState<Scalar>& well_state,
+EvalWell WellBhpThpCalculator<FluidSystem, Indices>::
+calculateBhpFromThp(const WellState<FluidSystem, Indices>& well_state,
                     const std::vector<EvalWell>& rates,
                     const Well& well,
                     const SummaryState& summaryState,
@@ -410,9 +410,9 @@ calculateBhpFromThp(const WellState<Scalar>& well_state,
     return bhp_tab - dp_hydro + bhp_adjustment;
 }
 
-template<class Scalar>
-Scalar WellBhpThpCalculator<Scalar>::
-calculateMinimumBhpFromThp(const WellState<Scalar>& well_state,
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar WellBhpThpCalculator<FluidSystem, Indices>::
+calculateMinimumBhpFromThp(const WellState<FluidSystem, Indices>& well_state,
                            const Well& well,
                            const SummaryState& summaryState,
                            const Scalar rho) const
@@ -436,17 +436,17 @@ calculateMinimumBhpFromThp(const WellState<Scalar>& well_state,
     return bhp_min - dp_hydro + bhp_adjustment;
 }
 
-template<class Scalar>
-Scalar WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar WellBhpThpCalculator<FluidSystem, Indices>::
 getVfpBhpAdjustment(const Scalar bhp_tab, const Scalar thp_limit) const
 {
     return well_.wellEcl().getWVFPDP().getPressureLoss(bhp_tab, thp_limit);
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template<class ErrorPolicy>
-std::optional<Scalar>
-WellBhpThpCalculator<Scalar>::
+std::optional<typename FluidSystem::Scalar>
+WellBhpThpCalculator<FluidSystem, Indices>::
 computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar)>& frates,
                             const SummaryState& summary_state,
                             const Scalar rho,
@@ -635,9 +635,9 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
     }
 }
 
-template<class Scalar>
-std::optional<Scalar>
-WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename FluidSystem::Scalar>
+WellBhpThpCalculator<FluidSystem, Indices>::
 bhpMax(const std::function<Scalar(const Scalar)>& fflo,
        const Scalar bhp_limit,
        const Scalar maxPerfPress,
@@ -716,9 +716,9 @@ bhpMax(const std::function<Scalar(const Scalar)>& fflo,
     return bhp_max;
 }
 
-template<class Scalar>
-std::optional<Scalar>
-WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::optional<typename FluidSystem::Scalar>
+WellBhpThpCalculator<FluidSystem, Indices>::
 computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& frates,
                      const std::function<Scalar(const std::vector<Scalar>)>& fbhp,
                      const std::array<Scalar, 2>& range,
@@ -786,8 +786,8 @@ computeBhpAtThpLimit(const std::function<std::vector<Scalar>(const Scalar)>& fra
     }
 }
 
-template<class Scalar>
-bool WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool WellBhpThpCalculator<FluidSystem, Indices>::
 bisectBracket(const std::function<Scalar(const Scalar)>& eq,
               const std::array<Scalar, 2>& range,
               Scalar& low, Scalar& high,
@@ -862,8 +862,8 @@ bisectBracket(const std::function<Scalar(const Scalar)>& eq,
     return finding_bracket;
 }
 
-template<class Scalar>
-bool WellBhpThpCalculator<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool WellBhpThpCalculator<FluidSystem, Indices>::
 bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
                   const std::array<Scalar, 2>& range,
                   Scalar& low, Scalar& high,
@@ -894,9 +894,9 @@ bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
     return bracket_found;
 }
 
-template<class Scalar>
-bool WellBhpThpCalculator<Scalar>::
-isStableSolution(const WellState<Scalar>& well_state,
+template<typename FluidSystem, typename Indices>
+bool WellBhpThpCalculator<FluidSystem, Indices>::
+isStableSolution(const WellState<FluidSystem, Indices>& well_state,
                  const Well& well,
                  const std::vector<Scalar>& rates,
                  const SummaryState& summaryState) const
@@ -932,9 +932,9 @@ isStableSolution(const WellState<Scalar>& well_state,
     }                  
 }
 
-template<class Scalar>
-std::optional<Scalar> WellBhpThpCalculator<Scalar>::
-estimateStableBhp(const WellState<Scalar>& well_state,
+template<typename FluidSystem, typename Indices>
+std::optional<typename FluidSystem::Scalar> WellBhpThpCalculator<FluidSystem, Indices>::
+estimateStableBhp(const WellState<FluidSystem, Indices>& well_state,
                   const Well& well,
                   const std::vector<Scalar>& rates,
                   const Scalar rho,
@@ -979,9 +979,9 @@ estimateStableBhp(const WellState<Scalar>& well_state,
     }
 }
 
-template<class Scalar>
-std::pair<Scalar, Scalar> WellBhpThpCalculator<Scalar>::
-getFloIPR(const WellState<Scalar>& well_state,
+template<typename FluidSystem, typename Indices>
+std::pair<typename FluidSystem::Scalar, typename FluidSystem::Scalar> WellBhpThpCalculator<FluidSystem, Indices>::
+getFloIPR(const WellState<FluidSystem, Indices>& well_state,
           const Well& well, 
           const SummaryState& summary_state) const 
 {
@@ -1003,9 +1003,9 @@ getFloIPR(const WellState<Scalar>& well_state,
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 bool
-WellBhpThpCalculator<Scalar>::
+WellBhpThpCalculator<FluidSystem, Indices>::
 bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                            const std::array<Scalar, 2>& range,
                            Scalar& low, Scalar& high,
@@ -1043,9 +1043,9 @@ bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
     return bracket_found;
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 bool
-WellBhpThpCalculator<Scalar>::
+WellBhpThpCalculator<FluidSystem, Indices>::
 bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                            Scalar& min_thp, Scalar& max_thp)
 {
@@ -1066,7 +1066,7 @@ bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
     }
     return bracket_found;
 }
-
+/*
 #define INSTANTIATE(T,...)                                   \
     template __VA_ARGS__                                     \
     WellBhpThpCalculator<T>::                                \
@@ -1102,5 +1102,6 @@ INSTANTIATE_TYPE(double)
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
 #endif
+*/
 
 } // namespace Opm

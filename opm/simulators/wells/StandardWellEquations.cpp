@@ -18,6 +18,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_STANDARDWELL_EQUATIONS_CPP_INCLUDED
+#define OPM_STANDARDWELL_EQUATIONS_CPP_INCLUDED
 
 #include <config.h>
 #include <opm/common/Exceptions.hpp>
@@ -40,8 +42,8 @@
 namespace Opm
 {
 
-template<class Scalar, int numEq>
-StandardWellEquations<Scalar,numEq>::
+template<typename FluidSystem, typename Indices, int numEq>
+StandardWellEquations<FluidSystem, Indices, numEq>::
 StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
     : parallelB_(duneB_, parallel_well_info)
 {
@@ -50,8 +52,8 @@ StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
     invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::
 init(const int numWellEq,
      const int numPerfs,
      const std::vector<int>& cells)
@@ -115,8 +117,8 @@ init(const int numWellEq,
     cells_ = cells;
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::clear()
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::clear()
 {
     duneB_ = 0.0;
     duneC_ = 0.0;
@@ -124,8 +126,8 @@ void StandardWellEquations<Scalar,numEq>::clear()
     resWell_ = 0.0;
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::apply(const BVector& x, BVector& Ax) const
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::apply(const BVector& x, BVector& Ax) const
 {
     assert(Bx_.size() == duneB_.N());
     assert(invDrw_.size() == invDuneD_.N());
@@ -143,8 +145,8 @@ void StandardWellEquations<Scalar,numEq>::apply(const BVector& x, BVector& Ax) c
     duneC_.mmtv(invDBx, Ax);
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::apply(BVector& r) const
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::apply(BVector& r) const
 {
     assert(invDrw_.size() == invDuneD_.N());
 
@@ -154,8 +156,8 @@ void StandardWellEquations<Scalar,numEq>::apply(BVector& r) const
     duneC_.mmtv(invDrw_, r);
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::invert()
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::invert()
 {
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
@@ -169,20 +171,20 @@ void StandardWellEquations<Scalar,numEq>::invert()
     }
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::solve(BVectorWell& dx_well) const
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::solve(BVectorWell& dx_well) const
 {
     invDuneD_.mv(resWell_, dx_well);
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::solve(const BVectorWell& rhs_well, BVectorWell& x_well) const
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::solve(const BVectorWell& rhs_well, BVectorWell& x_well) const
 {
     invDuneD_.mv(rhs_well, x_well);
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
     BVectorWell resWell = resWell_;
@@ -193,8 +195,8 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 }
 
 #if COMPILE_GPU_BRIDGE
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::
 extract(const int numStaticWellEq,
         WellContributions<Scalar>& wellContribs) const
 {
@@ -248,9 +250,9 @@ extract(const int numStaticWellEq,
 }
 #endif
 
-template<class Scalar, int numEq>
+template<typename FluidSystem, typename Indices, int numEq>
 template<class SparseMatrixAdapter>
-void StandardWellEquations<Scalar,numEq>::
+void StandardWellEquations<FluidSystem, Indices,numEq>::
 extract(SparseMatrixAdapter& jacobian) const
 {
     // We need to change matrx A as follows
@@ -278,16 +280,16 @@ extract(SparseMatrixAdapter& jacobian) const
     }
 }
 
-template<class Scalar, int numEq>
-unsigned int StandardWellEquations<Scalar,numEq>::
+template<typename FluidSystem, typename Indices, int numEq>
+unsigned int StandardWellEquations<FluidSystem, Indices,numEq>::
 getNumBlocks() const
 {
     return duneB_.nonzeroes();
 }
 
-template<class Scalar, int numEq>
+template<typename FluidSystem, typename Indices, int numEq>
 template<class PressureMatrix>
-void StandardWellEquations<Scalar,numEq>::
+void StandardWellEquations<FluidSystem, Indices,numEq>::
 extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
@@ -414,14 +416,15 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     }
 }
 
-template<class Scalar, int numEq>
-void StandardWellEquations<Scalar,numEq>::
+template<typename FluidSystem, typename Indices, int numEq>
+void StandardWellEquations<FluidSystem, Indices,numEq>::
 sumDistributed(Parallel::Communication comm)
 {
   // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
     wellhelpers::sumDistributedWellEntries(duneD_[0][0], resWell_[0], comm);
 }
 
+/*
 #define INSTANTIATE(T,N)                                                              \
     template class StandardWellEquations<T,N>;                                        \
     template void StandardWellEquations<T,N>::                                        \
@@ -448,5 +451,10 @@ INSTANTIATE_TYPE(double)
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
 #endif
+*/
 
 }
+
+#include "StandardWellEquations.cpp" // TODO: will do instantiation after removing the numEq template parameter
+
+#endif

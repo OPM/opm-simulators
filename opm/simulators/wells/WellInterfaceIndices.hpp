@@ -30,15 +30,15 @@
 namespace Opm {
 
 template<class FluidSystem, class Indices>
-class WellInterfaceIndices : public WellInterfaceFluidSystem<FluidSystem>
+class WellInterfaceIndices : public WellInterfaceFluidSystem<FluidSystem, Indices>
 {
 public:
-    using WellInterfaceFluidSystem<FluidSystem>::Gas;
-    using WellInterfaceFluidSystem<FluidSystem>::Oil;
-    using WellInterfaceFluidSystem<FluidSystem>::Water;
+    using WellInterfaceFluidSystem<FluidSystem, Indices>::Gas;
+    using WellInterfaceFluidSystem<FluidSystem, Indices>::Oil;
+    using WellInterfaceFluidSystem<FluidSystem, Indices>::Water;
     using Scalar = typename FluidSystem::Scalar;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
-    using ModelParameters = typename WellInterfaceFluidSystem<FluidSystem>::ModelParameters;
+    using ModelParameters = typename WellInterfaceFluidSystem<FluidSystem, Indices>::ModelParameters;
 
     int flowPhaseToModelCompIdx(const int phaseIdx) const;
     int modelCompIdxToFlowCompIdx(const int compIdx) const;
@@ -61,7 +61,7 @@ protected:
                          const ParallelWellInfo<Scalar>& parallel_well_info,
                          const int time_step,
                          const ModelParameters& param,
-                         const typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType& rate_converter,
+                         const typename WellInterfaceFluidSystem<FluidSystem, Indices>::RateConverterType& rate_converter,
                          const int pvtRegionIdx,
                          const int num_components,
                          const int num_phases,
