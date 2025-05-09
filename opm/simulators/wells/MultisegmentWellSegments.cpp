@@ -64,6 +64,10 @@ MultisegmentWellSegments(const int numSegments,
                          WellInterfaceGeneric<Scalar>& well)
     : perforations_(numSegments)
     , local_perforation_depth_diffs_(well.numLocalPerfs(), 0.0)
+    // Generally, the info stored with the class MultisegmentWellSegments is global, i.e., the same across all
+    // processes, since segments do not have a 1:1 correspondence to the grid. All members of this class store
+    // global information, except for local_perforation_depth_diffs_, which is the only one that contains only
+    // local information. This is an exception and intentionally, since here, we only need the local entries.
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
     , densities_(numSegments, 0.0)
