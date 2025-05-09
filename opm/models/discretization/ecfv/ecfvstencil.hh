@@ -157,11 +157,13 @@ public:
         {
             exteriorIdx_ = static_cast<unsigned short>(localNeighborIdx);
 
-            if (needNormal)
+            if (needNormal) {
                 (*normal_) = intersection.centerUnitOuterNormal();
+            }
             const auto& geometry = intersection.geometry();
-            if (needIntegrationPos)
+            if (needIntegrationPos) {
                 (*integrationPos_) = geometry.center();
+            }
             area_ = geometry.volume();
             // TODO: facedir_ = intersection.boundaryId();  // This did not compile for some reason
             // using indexInInside() as in ecltransmissibility.cc instead
