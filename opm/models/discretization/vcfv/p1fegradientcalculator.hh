@@ -46,11 +46,12 @@
 #include <type_traits>
 
 namespace Opm {
+
 /*!
  * \ingroup FiniteElementDiscretizations
  *
  * \brief This class calculates gradients of arbitrary quantities at flux integration
- *        points using first order finite elemens ansatz functions.
+ *        points using first order finite elements ansatz functions.
  *
  * This approach can also be used for the vertex-centered finite volume (VCFV)
  * discretization.
@@ -96,7 +97,7 @@ public:
         if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
-            throw std::logic_error("The dune-localfunctions module is required in oder to use"
+            throw std::logic_error("The dune-localfunctions module is required in order to use"
                                    " finite element gradients");
 #else
             const auto& stencil = elemCtx.stencil(timeIdx);
@@ -160,7 +161,7 @@ public:
         if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
-            throw std::logic_error("The dune-localfunctions module is required in oder to use"
+            throw std::logic_error("The dune-localfunctions module is required in order to use"
                                    " finite element gradients");
 #else
             using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
@@ -209,7 +210,7 @@ public:
         if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
-            throw std::logic_error("The dune-localfunctions module is required in oder to use"
+            throw std::logic_error("The dune-localfunctions module is required in order to use"
                                    " finite element gradients");
 #else
             using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
@@ -268,7 +269,7 @@ public:
         if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
-            throw std::logic_error("The dune-localfunctions module is required in oder to use"
+            throw std::logic_error("The dune-localfunctions module is required in order to use"
                                    " finite element gradients");
 #else
             using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
@@ -283,15 +284,15 @@ public:
                 {
                     const auto& dofVal = quantityCallback(vertIdx);
                     const auto& tmp = p1Gradient_[fapIdx][vertIdx];
-                    for (int dimIdx = 0; dimIdx < dim; ++ dimIdx) {
-                        quantityGrad[dimIdx] += dofVal*tmp[dimIdx];
+                    for (int dimIdx = 0; dimIdx < dim; ++dimIdx) {
+                        quantityGrad[dimIdx] += dofVal * tmp[dimIdx];
                     }
                 }
                 else {
                     const auto& dofVal = quantityCallback(vertIdx);
                     const auto& tmp = p1Gradient_[fapIdx][vertIdx];
-                    for (int dimIdx = 0; dimIdx < dim; ++ dimIdx) {
-                        quantityGrad[dimIdx] += scalarValue(dofVal)*tmp[dimIdx];
+                    for (int dimIdx = 0; dimIdx < dim; ++dimIdx) {
+                        quantityGrad[dimIdx] += scalarValue(dofVal) * tmp[dimIdx];
                     }
                 }
             }
@@ -364,6 +365,7 @@ template<class TypeTag>
 typename P1FeGradientCalculator<TypeTag>::LocalFiniteElementCache
 P1FeGradientCalculator<TypeTag>::feCache_;
 #endif
+
 } // namespace Opm
 
 #endif
