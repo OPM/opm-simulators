@@ -28,16 +28,21 @@
 #ifndef EWOMS_FV_BASE_AD_LOCAL_LINEARIZER_HH
 #define EWOMS_FV_BASE_AD_LOCAL_LINEARIZER_HH
 
-#include "fvbaseproperties.hh"
-
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <dune/istl/bvector.hh>
 #include <dune/istl/matrix.hh>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/densead/Math.hpp>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <opm/simulators/linalg/linalgproperties.hh>
+
+#include <cstddef>
+#include <memory>
 
 namespace Opm {
 // forward declaration
@@ -63,7 +68,7 @@ template<class TypeTag>
 struct Evaluation<TypeTag, TTag::AutoDiffLocalLinearizer>
 {
 private:
-    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
+    static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
@@ -108,22 +113,17 @@ private:
     using ScalarLocalBlockMatrix = Dune::Matrix<ScalarMatrixBlock>;
 
 public:
-    FvBaseAdLocalLinearizer()
-        : internalElemContext_(0)
-    { }
+    FvBaseAdLocalLinearizer() = default;
 
     // copying local linearizer objects around is a very bad idea, so we explicitly
     // prevent it...
     FvBaseAdLocalLinearizer(const FvBaseAdLocalLinearizer&) = delete;
 
-    ~FvBaseAdLocalLinearizer()
-    { delete internalElemContext_; }
-
     /*!
      * \brief Register all run-time parameters for the local jacobian.
      */
     static void registerParameters()
-    { }
+    {}
 
     /*!
      * \brief Initialize the local Jacobian object.
@@ -136,8 +136,7 @@ public:
     void init(Simulator& simulator)
     {
         simulatorPtr_ = &simulator;
-        delete internalElemContext_;
-        internalElemContext_ = new ElementContext(simulator);
+        internalElemContext_ = std::make_unique<ElementContext>(simulator);
     }
 
     /*!
@@ -182,8 +181,8 @@ public:
         resize_(elemCtx);
 
         // compute the local residual and its Jacobian
-        unsigned numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned focusDofIdx = 0; focusDofIdx < numPrimaryDof; focusDofIdx++) {
+        const unsigned numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        for (unsigned focusDofIdx = 0; focusDofIdx < numPrimaryDof; ++focusDofIdx) {
             elemCtx.setFocusDofIndex(focusDofIdx);
             elemCtx.updateAllExtensiveQuantities();
 
@@ -231,13 +230,16 @@ public:
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
     const Simulator& simulator_() const
     { return *simulatorPtr_; }
+
     const Problem& problem_() const
     { return simulatorPtr_->problem(); }
+
     const Model& model_() const
     { return simulatorPtr_->model(); }
 
@@ -247,12 +249,13 @@ protected:
      */
     void resize_(const ElementContext& elemCtx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
 
         residual_.resize(numDof);
-        if (jacobian_.N() != numDof || jacobian_.M() != numPrimaryDof)
-          jacobian_.setSize(numDof, numPrimaryDof);
+        if (jacobian_.N() != numDof || jacobian_.M() != numPrimaryDof) {
+            jacobian_.setSize(numDof, numPrimaryDof);
+        }
     }
 
     /*!
@@ -273,13 +276,14 @@ protected:
     {
         const auto& resid = localResidual_.residual();
 
-        for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++)
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             residual_[focusDofIdx][eqIdx] = resid[focusDofIdx][eqIdx].value();
+        }
 
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
-            for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
-                for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                for (unsigned pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                     // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of
                     // the residual function 'eqIdx' for the degree of freedom 'dofIdx'
                     // with regard to the focus variable 'pvIdx' of the degree of freedom
@@ -291,15 +295,14 @@ protected:
         }
     }
 
-    Simulator *simulatorPtr_;
-    Model *modelPtr_;
+    Simulator* simulatorPtr_{};
 
-    ElementContext *internalElemContext_;
+    std::unique_ptr<ElementContext> internalElemContext_{};
 
-    LocalResidual localResidual_;
+    LocalResidual localResidual_{};
 
-    ScalarLocalBlockVector residual_;
-    ScalarLocalBlockMatrix jacobian_;
+    ScalarLocalBlockVector residual_{};
+    ScalarLocalBlockMatrix jacobian_{};
 };
 
 } // namespace Opm
