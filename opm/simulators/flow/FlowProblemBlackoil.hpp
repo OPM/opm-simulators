@@ -1600,8 +1600,11 @@ protected:
         const auto isIoRank = this->simulator().vanguard()
             .grid().comm().rank() == ioRank;
 
+        // Note: Run saturation function consistency checks on main grid
+        // only (i.e., levelGridView(0)).  These checks are not supported
+        // for LGRs at this time.
         sfuncConsistencyChecks.collectFailuresTo(ioRank)
-            .run(this->simulator().vanguard().grid().leafGridView(),
+            .run(this->simulator().vanguard().grid().levelGridView(0),
                  [&vg   = this->simulator().vanguard(),
                   &emap = this->simulator().model().elementMapper()]
                  (const auto& elem)
