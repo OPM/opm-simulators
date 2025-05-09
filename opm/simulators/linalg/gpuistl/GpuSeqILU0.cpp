@@ -16,6 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp"
+#include "opm/simulators/linalg/is_gpu_operator.hpp"
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cusparse.h>
@@ -32,6 +34,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/fix_zero_diagonal.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <type_traits>
 
 // This file is based on the guide at https://docs.nvidia.com/cuda/cusparse/index.html#csrilu02_solve ,
 // it highly recommended to read that before proceeding.
@@ -40,34 +43,7 @@
 namespace Opm::gpuistl
 {
 
-template <class M, class X, class Y, int l>
-GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
-    : m_underlyingMatrix(A)
-    , m_w(w)
-    , m_LU(GpuSparseMatrix<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
-    , m_temporaryStorage(m_LU.N() * m_LU.blockSize())
-    , m_descriptionL(detail::createLowerDiagonalDescription())
-    , m_descriptionU(detail::createUpperDiagonalDescription())
-    , m_cuSparseHandle(detail::CuSparseHandle::getInstance())
-{
-    // Some sanity check
-    OPM_ERROR_IF(A.N() != m_LU.N(),
-                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_LU.N(), A.N()));
-    OPM_ERROR_IF(
-        A[0][0].N() != m_LU.blockSize(),
-        fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.", m_LU.blockSize(), A[0][0].N()));
-    OPM_ERROR_IF(
-        A.N() * A[0][0].N() != m_LU.dim(),
-        fmt::format("CuSparse matrix not same dimension as DUNE matrix. {} vs {}.", m_LU.dim(), A.N() * A[0][0].N()));
-    OPM_ERROR_IF(A.nonzeroes() != m_LU.nonzeroes(),
-                 fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
-                             m_LU.nonzeroes(),
-                             A.nonzeroes()));
-
-
-    updateILUConfiguration();
-}
-
+    
 template <class M, class X, class Y, int l>
 void
 GpuSeqILU0<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
@@ -148,7 +124,11 @@ template <class M, class X, class Y, int l>
 void
 GpuSeqILU0<M, X, Y, l>::update()
 {
-    m_LU.updateNonzeroValues(detail::makeMatrixWithNonzeroDiagonal(m_underlyingMatrix));
+    if constexpr (is_gpu_matrix_v<M>) {
+        m_LU.updateNonzeroValues(detail::makeMatrixWithNonzeroDiagonal(m_underlyingMatrix));
+    } else {
+        m_LU.updateNonzeroValues(m_underlyingMatrix);
+    }
     createILU();
 }
 
@@ -338,13 +318,14 @@ GpuSeqILU0<M, X, Y, l>::updateILUConfiguration()
     createILU();
 }
 } // namespace Opm::gpuistl
-#define INSTANTIATE_GPUSEQILU0_DUNE(realtype, blockdim)                                                                 \
+#define INSTANTIATE_GPUSEQILU0_DUNE(realtype, blockdim)                                                                  \
     template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>;                                        \
     template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>
+   
 
 
 INSTANTIATE_GPUSEQILU0_DUNE(double, 1);
@@ -353,6 +334,9 @@ INSTANTIATE_GPUSEQILU0_DUNE(double, 3);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 4);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 5);
 INSTANTIATE_GPUSEQILU0_DUNE(double, 6);
+template class ::Opm::gpuistl::GpuSeqILU0<Opm::gpuistl::GpuSparseMatrix<double>,
+    ::Opm::gpuistl::GpuVector<double>,
+    ::Opm::gpuistl::GpuVector<double>>;
 
 INSTANTIATE_GPUSEQILU0_DUNE(float, 1);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 2);
@@ -360,3 +344,6 @@ INSTANTIATE_GPUSEQILU0_DUNE(float, 3);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 4);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 5);
 INSTANTIATE_GPUSEQILU0_DUNE(float, 6);
+template class ::Opm::gpuistl::GpuSeqILU0<Opm::gpuistl::GpuSparseMatrix<float>,
+    ::Opm::gpuistl::GpuVector<float>,
+    ::Opm::gpuistl::GpuVector<float>>;

@@ -30,6 +30,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/PreconditionerCPUMatrixToGPUMatrix.hpp>
 #include <random>
 #include <vector>
 
@@ -45,7 +46,9 @@ using CuMatrix = Opm::gpuistl::GpuSparseMatrix<T>;
 using CuIntVec = Opm::gpuistl::GpuVector<int>;
 using CuFloatingPointVec = Opm::gpuistl::GpuVector<T>;
 using GpuDilu1x1 = Opm::gpuistl::GpuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using Wrapped1x1 = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<CuFloatingPointVec, CuFloatingPointVec, GpuDilu1x1, Sp1x1BlockMatrix>;
 using GpuDilu2x2 = Opm::gpuistl::GpuDILU<Sp2x2BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using Wrapped2x2 = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<CuFloatingPointVec, CuFloatingPointVec, GpuDilu2x2, Sp2x2BlockMatrix>;
 
 Sp1x1BlockMatrix
 get1x1BlockTestMatrix()
@@ -211,7 +214,7 @@ BOOST_AUTO_TEST_CASE(TestDiluApply)
 
     // Initialize preconditioner objects
     Dune::MultithreadDILU<Sp1x1BlockMatrix, B1x1Vec, B1x1Vec> cpudilu(matA);
-    auto gpudilu = GpuDilu1x1(matA, true, true, false);
+    auto gpudilu = Wrapped1x1(matA, matA, true, true, false);
 
     // Use the apply
     gpudilu.apply(d_output, d_input);
@@ -235,7 +238,7 @@ BOOST_AUTO_TEST_CASE(TestDiluApplyBlocked)
 
     // init matrix with 2x2 blocks
     Sp2x2BlockMatrix matA = get2x2BlockTestMatrix();
-    auto gpudilu = GpuDilu2x2(matA, true, true, false);
+    auto gpudilu = Wrapped2x2(matA, matA, true, true, false);
     Dune::MultithreadDILU<Sp2x2BlockMatrix, B2x2Vec, B2x2Vec> cpudilu(matA);
 
     // create input/output buffers for the apply
@@ -275,7 +278,7 @@ BOOST_AUTO_TEST_CASE(TestDiluInitAndUpdateLarge)
 {
     // create gpu dilu preconditioner
     Sp1x1BlockMatrix matA = get1x1BlockTestMatrix();
-    auto gpudilu = GpuDilu1x1(matA, true, true, false);
+    auto gpudilu = Wrapped1x1(matA, matA, true, true, false);
 
     matA[0][0][0][0] = 11.0;
     matA[0][1][0][0] = 12.0;

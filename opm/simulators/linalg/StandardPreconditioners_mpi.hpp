@@ -21,6 +21,10 @@
 #ifndef OPM_STANDARDPRECONDITIONERS_MPI_HEADER
 #define OPM_STANDARDPRECONDITIONERS_MPI_HEADER
 
+#if HAVE_CUDA
+#include <opm/simulators/linalg/gpuistl/PreconditionerCPUMatrixToGPUMatrix.hpp>
+#endif
+
 
 namespace Opm {
 
@@ -322,10 +326,14 @@ struct StandardPreconditioners
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using GpuJac =
-                typename gpuistl::GpuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            auto gpuJac = std::make_shared<GpuJac>(op.getmat(), w);
+                typename gpuistl::GpuJac<gpuistl::GpuSparseMatrix<field_type>, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            
+            using MatrixOwner = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<gpuistl::GpuVector<field_type>, 
+                gpuistl::GpuVector<field_type>, GpuJac, M>;
+           
+            auto gpuJac = std::make_shared<MatrixOwner>(op.getmat(), w);
 
-            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuJac>>(gpuJac);
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, MatrixOwner>>(gpuJac);
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
@@ -336,9 +344,14 @@ struct StandardPreconditioners
             const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
             using field_type = typename V::field_type;
             using GpuDILU = typename gpuistl::GpuDILU<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            auto gpuDILU = std::make_shared<GpuDILU>(op.getmat(), split_matrix, tune_gpu_kernels, mixed_precision_scheme);
+            using MatrixOwner = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<gpuistl::GpuVector<field_type>, 
+                gpuistl::GpuVector<field_type>, GpuDILU, M>;
+        
+            // Note: op.getmat() is passed twice, because the GpuDILU needs both the CPU and GPU matrix.
+            // The first argument will be converted to a GPU matrix, and the second one is used as a CPU matrix.
+            auto gpuDILU = std::make_shared<MatrixOwner>(op.getmat(), op.getmat(), split_matrix, tune_gpu_kernels, mixed_precision_scheme);
 
-            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuDILU>>(gpuDILU);
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, MatrixOwner>>(gpuDILU);
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
@@ -349,9 +362,15 @@ struct StandardPreconditioners
             const int mixed_precision_scheme = prm.get<int>("mixed_precision_scheme", 0);
             using field_type = typename V::field_type;
             using OpmGpuILU0 = typename gpuistl::OpmGpuILU0<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            auto gpuilu0 = std::make_shared<OpmGpuILU0>(op.getmat(), split_matrix, tune_gpu_kernels, mixed_precision_scheme);
 
-            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, OpmGpuILU0>>(gpuilu0);
+            using MatrixOwner = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<gpuistl::GpuVector<field_type>, 
+                gpuistl::GpuVector<field_type>, OpmGpuILU0, M>;
+    
+            // Note: op.getmat() is passed twice, because the OPMGPUILU0 needs both the CPU and GPU matrix.
+            // The first argument will be converted to a GPU matrix, and the second one is used as a CPU matrix.
+            auto gpuilu0 = std::make_shared<MatrixOwner>(op.getmat(), op.getmat(), split_matrix, tune_gpu_kernels, mixed_precision_scheme);
+
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, MatrixOwner>>(gpuilu0);
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });

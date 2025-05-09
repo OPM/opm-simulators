@@ -42,12 +42,11 @@ namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme)
-    : m_cpuMatrix(A)
-    , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
+GpuDILU<M, X, Y, l>::GpuDILU(const typename GpuDILU<M, X, Y, l>::GPUMatrix& gpuMatrix, const M& cpuMatrix, bool splitMatrix, bool tuneKernels, int mixedPrecisionScheme)
+    : m_levelSets(Opm::getMatrixRowColoring(cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
     , m_naturalToReordered(detail::createNaturalToReordered(m_levelSets))
-    , m_gpuMatrix(GpuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
+    , m_gpuMatrix(gpuMatrix)
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
@@ -57,29 +56,29 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels, int
 {
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
     // Some sanity check
-    OPM_ERROR_IF(A.N() != m_gpuMatrix.N(),
-                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), A.N()));
-    OPM_ERROR_IF(A[0][0].N() != m_gpuMatrix.blockSize(),
+    OPM_ERROR_IF(cpuMatrix.N() != m_gpuMatrix.N(),
+                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), cpuMatrix.N()));
+    OPM_ERROR_IF(cpuMatrix[0][0].N() != m_gpuMatrix.blockSize(),
                  fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.",
                              m_gpuMatrix.blockSize(),
-                             A[0][0].N()));
-    OPM_ERROR_IF(A.N() * A[0][0].N() != m_gpuMatrix.dim(),
+                             cpuMatrix[0][0].N()));
+    OPM_ERROR_IF(cpuMatrix.N() * cpuMatrix[0][0].N() != m_gpuMatrix.dim(),
                  fmt::format("CuSparse matrix not same dimension as DUNE matrix. {} vs {}.",
                              m_gpuMatrix.dim(),
-                             A.N() * A[0][0].N()));
-    OPM_ERROR_IF(A.nonzeroes() != m_gpuMatrix.nonzeroes(),
+                             cpuMatrix.N() * cpuMatrix[0][0].N()));
+    OPM_ERROR_IF(cpuMatrix.nonzeroes() != m_gpuMatrix.nonzeroes(),
                  fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
                              m_gpuMatrix.nonzeroes(),
-                             A.nonzeroes()));
+                             cpuMatrix.nonzeroes()));
     if (m_splitMatrix) {
-        m_gpuMatrixReorderedDiag = std::make_unique<GpuVector<field_type>>(blocksize_ * blocksize_ * m_cpuMatrix.N());
+        m_gpuMatrixReorderedDiag = std::make_unique<GpuVector<field_type>>(blocksize_ * blocksize_ * cpuMatrix.N());
         std::tie(m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper)
-            = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(m_cpuMatrix,
+            = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(cpuMatrix,
                                                                                               m_reorderedToNatural);
     }
     else {
         m_gpuMatrixReordered = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
-            m_cpuMatrix, m_reorderedToNatural);
+            cpuMatrix, m_reorderedToNatural);
     }
 
     if (m_mixedPrecisionScheme != MatrixStorageMPScheme::DOUBLE_DIAG_DOUBLE_OFFDIAG) {
@@ -204,7 +203,7 @@ GpuDILU<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int 
         levelStartIdx += numOfRowsInLevel;
     }
 
-    levelStartIdx = m_cpuMatrix.N();
+    levelStartIdx = m_gpuMatrix.N();
     //  upper triangular solve: (D + U_A) v = Dy
     for (int level = m_levelSets.size() - 1; level >= 0; --level) {
         const int numOfRowsInLevel = m_levelSets[level].size();
@@ -283,7 +282,6 @@ GpuDILU<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
     {
-        m_gpuMatrix.updateNonzeroValues(m_cpuMatrix); // send updated matrix to the gpu
         reorderAndSplitMatrix(m_moveThreadBlockSize);
         computeDiagonal(m_DILUFactorizationThreadBlockSize);
     }
@@ -297,7 +295,6 @@ GpuDILU<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationBlockSize)
     OPM_GPU_SAFE_CALL(cudaEventRecord(m_before.get(), 0));
     OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(m_stream.get(), m_before.get(), 0));
 
-    m_gpuMatrix.updateNonzeroValues(m_cpuMatrix); // send updated matrix to the gpu
     reorderAndSplitMatrix(moveThreadBlockSize);
     computeDiagonal(factorizationBlockSize);
 
@@ -446,7 +443,7 @@ GpuDILU<M, X, Y, l>::tuneThreadBlockSizes()
 }
 
 } // namespace Opm::gpuistl
-#define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                    \
+#define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                      \
     template class ::Opm::gpuistl::GpuDILU<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,            \
                                          ::Opm::gpuistl::GpuVector<realtype>,                                            \
                                          ::Opm::gpuistl::GpuVector<realtype>>;                                           \

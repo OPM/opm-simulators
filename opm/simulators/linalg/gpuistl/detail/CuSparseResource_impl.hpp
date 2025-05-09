@@ -94,6 +94,13 @@ CuSparseResource<T>::CuSparseResource()
 }
 
 template <class T>
+CuSparseResource<T>::CuSparseResource(const CuSparseResource& other)
+    : CuSparseResource<T>(other.m_creator, other.m_deleter)
+{
+    *m_resource = other.m_resource;
+}
+
+template <class T>
 CuSparseResource<T>::~CuSparseResource()
 {
     // TODO: This should probably not use this macro since it will disguise the

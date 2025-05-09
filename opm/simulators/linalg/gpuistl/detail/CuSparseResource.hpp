@@ -76,8 +76,8 @@ public:
      */
     ~CuSparseResource();
 
-    // This should not be copyable.
-    CuSparseResource(const CuSparseResource&) = delete;
+    CuSparseResource(const CuSparseResource&);
+
     CuSparseResource& operator=(const CuSparseResource&) = delete;
 
     /**

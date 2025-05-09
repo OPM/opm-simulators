@@ -32,7 +32,7 @@ namespace Opm::gpuistl::detail::JAC
  * @param[out] vec Pointer to the vector where the inverse of the diagonal matrix should be stored
  */
 template <class T, int blocksize>
-void invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec);
+void invertDiagonalAndFlatten(const T* mat, const int* rowIndices, const int* colIndices, size_t numberOfRows, T* vec);
 
 } // namespace Opm::gpuistl::detail::JAC
 #endif

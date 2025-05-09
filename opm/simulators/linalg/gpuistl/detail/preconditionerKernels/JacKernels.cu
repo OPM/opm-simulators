@@ -29,7 +29,7 @@ namespace
 {
     template <class T, int blocksize>
     __global__ void
-    cuInvertDiagonalAndFlatten(T* matNonZeroValues, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
+    cuInvertDiagonalAndFlatten(const T* matNonZeroValues, const int* rowIndices, const int* colIndices, size_t numberOfRows, T* vec)
     {
         const auto row = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -44,7 +44,7 @@ namespace
             }
 
             // diagBlock points to the start of where the diagonal block is stored
-            T* diagBlock = &matNonZeroValues[blocksize * blocksize * nnzIdx];
+            const T* diagBlock = &matNonZeroValues[blocksize * blocksize * nnzIdx];
             // vecBlock points to the start of the block element in the vector where the inverse of the diagonal block
             // element should be stored
             T* vecBlock = &vec[blocksize * blocksize * row];
@@ -56,7 +56,7 @@ namespace
 
 template <class T, int blocksize>
 void
-invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
+invertDiagonalAndFlatten(const T* mat, const int* rowIndices, const int* colIndices, size_t numberOfRows, T* vec)
 {
     if (blocksize <= 3) {
         int threadBlockSize
@@ -70,7 +70,7 @@ invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t number
 }
 
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
-    template void invertDiagonalAndFlatten<T, blocksize>(T*, int*, int*, size_t, T*);
+    template void invertDiagonalAndFlatten<T, blocksize>(const T*, const int*, const int*, size_t, T*);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);

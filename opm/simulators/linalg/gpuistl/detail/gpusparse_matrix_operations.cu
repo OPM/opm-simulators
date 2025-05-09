@@ -29,7 +29,7 @@ namespace
 {
     template <class T, int blocksize>
     __global__ void cuMoveDataToReordered(
-        T* srcMatrix, int* srcRowIndices, T* dstMatrix, int* dstRowIndices, int* indexConversion, size_t numberOfRows)
+        const T* srcMatrix, const int* srcRowIndices, T* dstMatrix, int* dstRowIndices, int* indexConversion, size_t numberOfRows)
     {
         const auto srcRow = blockDim.x * blockIdx.x + threadIdx.x;
         if (srcRow < numberOfRows) {
@@ -50,9 +50,9 @@ namespace
     }
 
     template <class T, int blocksize>
-    __global__ void cuMoveDataToReorderedSplit(T* srcMatrix,
-                                               int* srcRowIndices,
-                                               int* srcColumnIndices,
+    __global__ void cuMoveDataToReorderedSplit(const T* srcMatrix,
+                                               const int* srcRowIndices,
+                                               const int* srcColumnIndices,
                                                T* dstLowerMatrix,
                                                int* dstLowerRowIndices,
                                                T* dstUpperMatrix,
@@ -101,8 +101,8 @@ namespace
 
 template <class T, int blocksize>
 void
-copyMatDataToReordered(T* srcMatrix,
-                       int* srcRowIndices,
+copyMatDataToReordered(const T* srcMatrix,
+                       const int* srcRowIndices,
                        T* dstMatrix,
                        int* dstRowIndices,
                        int* naturalToReordered,
@@ -118,9 +118,9 @@ copyMatDataToReordered(T* srcMatrix,
 
 template <class T, int blocksize>
 void
-copyMatDataToReorderedSplit(T* srcMatrix,
-                            int* srcRowIndices,
-                            int* srcColumnIndices,
+copyMatDataToReorderedSplit(const T* srcMatrix,
+                            const int* srcRowIndices,
+                            const int* srcColumnIndices,
                             T* dstLowerMatrix,
                             int* dstLowerRowIndices,
                             T* dstUpperMatrix,
@@ -146,8 +146,8 @@ copyMatDataToReorderedSplit(T* srcMatrix,
 }
 
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
-    template void copyMatDataToReordered<T, blocksize>(T*, int*, T*, int*, int*, size_t, int);                         \
-    template void copyMatDataToReorderedSplit<T, blocksize>(T*, int*, int*, T*, int*, T*, int*, T*, int*, size_t, int);
+    template void copyMatDataToReordered<T, blocksize>(const T*, const int*, T*, int*, int*, size_t, int);                         \
+    template void copyMatDataToReorderedSplit<T, blocksize>(const T*, const int*, const int*, T*, int*, T*, int*, T*, int*, size_t, int);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);

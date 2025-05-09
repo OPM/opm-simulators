@@ -30,6 +30,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/fix_zero_diagonal.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/PreconditionerCPUMatrixToGPUMatrix.hpp>
 
 using NumericTypes = boost::mpl::list<double, float>;
 
@@ -49,7 +50,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GPUJACApplyBlocksize2, T, NumericTypes)
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, blocksize>>;
-    using GpuJac = Opm::gpuistl::GpuJac<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
+    using GpuMatrix = Opm::gpuistl::GpuSparseMatrix<T>;
+    using GpuJac = Opm::gpuistl::GpuJac<GpuMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
+    using GpuVector = Opm::gpuistl::GpuVector<T>;
+    using Wrapped = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<GpuVector, GpuVector, GpuJac, SpMatrix>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -70,7 +74,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GPUJACApplyBlocksize2, T, NumericTypes)
     B[1][1][0][0] = -1.0;
     B[1][1][1][1] = -1.0;
 
-    auto gpujac = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, GpuJac>(std::make_shared<GpuJac>(B, 0.5));
+    auto gpujac = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, Wrapped>(std::make_shared<Wrapped>(B, 0.5));
 
     Vector vVector(2);
     Vector dVector(2);
@@ -103,7 +107,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GPUJACApplyBlocksize1, T, NumericTypes)
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, blocksize>>;
-    using GpuJac = Opm::gpuistl::GpuJac<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
+    using GpuMatrix = Opm::gpuistl::GpuSparseMatrix<T>;
+    using GpuJac = Opm::gpuistl::GpuJac<GpuMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
+    using GpuVector = Opm::gpuistl::GpuVector<T>;
+    using Wrapped = Opm::gpuistl::PreconditionerCPUMatrixToGPUMatrix<GpuVector, GpuVector, GpuJac, SpMatrix>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -129,7 +136,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GPUJACApplyBlocksize1, T, NumericTypes)
     B[2][2][0][0] = -1.0;
     B[3][3][0][0] = -1.0;
 
-    auto gpujac = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, GpuJac>(std::make_shared<GpuJac>(B, 0.5));
+    auto gpujac = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, Wrapped>(std::make_shared<Wrapped>(B, 0.5));
 
     Vector vVector(4);
     Vector dVector(4);
