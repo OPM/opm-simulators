@@ -244,9 +244,9 @@ updatePolyMW(const WellState<Scalar>& well_state)
         const auto& perf_data = ws.perf_data;
         const auto& water_velocity = perf_data.water_velocity;
         const auto& skin_pressure = perf_data.skin_pressure;
-        for (int perf = 0; perf < well_.numPerfs(); ++perf) {
+        for (int perf = 0; perf < well_.numLocalPerfs(); ++perf) {
             value_[Bhp + 1 + perf] = water_velocity[perf];
-            value_[Bhp + 1 + well_.numPerfs() + perf] = skin_pressure[perf];
+            value_[Bhp + 1 + well_.numLocalPerfs() + perf] = skin_pressure[perf];
         }
     }
     setEvaluationsFromValues();
@@ -320,9 +320,9 @@ void StandardWellPrimaryVariables<FluidSystem,Indices>::
 updateNewtonPolyMW(const BVectorWell& dwells)
 {
     if (well_.isInjector()) {
-        for (int perf = 0; perf < well_.numPerfs(); ++perf) {
+        for (int perf = 0; perf < well_.numLocalPerfs(); ++perf) {
             const int wat_vel_index = Bhp + 1 + perf;
-            const int pskin_index = Bhp + 1 + well_.numPerfs() + perf;
+            const int pskin_index = Bhp + 1 + well_.numLocalPerfs() + perf;
 
             const Scalar relaxation_factor = 0.9;
             const Scalar dx_wat_vel = dwells[0][wat_vel_index];
@@ -450,9 +450,9 @@ copyToWellStatePolyMW(WellState<Scalar>& well_state) const
         auto& perf_data = ws.perf_data;
         auto& perf_water_velocity = perf_data.water_velocity;
         auto& perf_skin_pressure = perf_data.skin_pressure;
-        for (int perf = 0; perf < well_.numPerfs(); ++perf) {
+        for (int perf = 0; perf < well_.numLocalPerfs(); ++perf) {
             perf_water_velocity[perf] = value_[Bhp + 1 + perf];
-            perf_skin_pressure[perf] = value_[Bhp + 1 + well_.numPerfs() + perf];
+            perf_skin_pressure[perf] = value_[Bhp + 1 + well_.numLocalPerfs() + perf];
         }
     }
 }

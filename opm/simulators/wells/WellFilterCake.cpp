@@ -74,7 +74,7 @@ applyCleaning(const WellInterfaceGeneric<Scalar>& well,
               DeferredLogger& deferred_logger)
 {
     const auto& connections = well.wellEcl().getConnections();
-    const auto nperf = well.numPerfs();
+    const auto nperf = well.numLocalPerfs();
     for (int perf = 0; perf < nperf; ++perf) {
         const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
         const auto& connection = connections[perf_ecl_index];
@@ -124,7 +124,7 @@ updateSkinFactorsAndMultipliers(const WellInterfaceGeneric<Scalar>& well,
                   const std::size_t water_index,
                   DeferredLogger& deferred_logger)
 {
-    const auto nperf = well.numPerfs();
+    const auto nperf = well.numLocalPerfs();
     inj_fc_multiplier_.assign(nperf, 1.0);
 
     assert(well.isInjector());

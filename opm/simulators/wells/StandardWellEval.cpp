@@ -183,8 +183,8 @@ init(std::vector<Scalar>& perf_depth,
      const std::vector<Scalar>& depth_arg,
      const bool has_polymermw)
 {
-    perf_depth.resize(baseif_.numPerfs(), 0.);
-    for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
+    perf_depth.resize(baseif_.numLocalPerfs(), 0.);
+    for (int perf = 0; perf < baseif_.numLocalPerfs(); ++perf) {
         const int cell_idx = baseif_.cells()[perf];
         perf_depth[perf] = depth_arg[cell_idx];
     }
@@ -194,9 +194,9 @@ init(std::vector<Scalar>& perf_depth,
     if (has_polymermw) {
         if (baseif_.isInjector()) {
             // adding a primary variable for water perforation rate per connection
-            numWellEq += baseif_.numPerfs();
+            numWellEq += baseif_.numLocalPerfs();
             // adding a primary variable for skin pressure per connection
-            numWellEq += baseif_.numPerfs();
+            numWellEq += baseif_.numLocalPerfs();
         }
     }
 
@@ -204,7 +204,7 @@ init(std::vector<Scalar>& perf_depth,
     primary_variables_.resize(numWellEq);
 
     // setup sparsity pattern for the matrices
-    this->linSys_.init(numWellEq, baseif_.numPerfs(), baseif_.cells());
+    this->linSys_.init(numWellEq, baseif_.numLocalPerfs(), baseif_.cells());
 }
 
 template<class Scalar>
