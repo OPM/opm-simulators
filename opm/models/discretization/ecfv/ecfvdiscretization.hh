@@ -44,6 +44,7 @@
 #include <dune/fem/space/finitevolume.hh>
 #endif
 
+#include <cstddef>
 #include <string>
 
 namespace Opm {
@@ -169,8 +170,8 @@ public:
     /*!
      * \brief Returns the number of global degrees of freedom (DOFs) due to the grid
      */
-    size_t numGridDof() const
-    { return static_cast<size_t>(this->gridView_.size(/*codim=*/0)); }
+    std::size_t numGridDof() const
+    { return static_cast<std::size_t>(this->gridView_.size(/*codim=*/0)); }
 
     /*!
      * \brief Mapper to convert the Dune entities of the
