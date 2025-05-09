@@ -57,7 +57,7 @@ public:
     minHandle(ArrayType& array, const DofMapper& dofMapper)
     {
         using Handle = GridCommHandleMin<ValueType, ArrayType,  DofMapper, /*commCodim=*/0>;
-        return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
+        return std::make_shared<Handle>(array, dofMapper);
     }
 
     /*!
@@ -69,7 +69,7 @@ public:
     maxHandle(ArrayType& array, const DofMapper& dofMapper)
     {
         using Handle = GridCommHandleMax<ValueType, ArrayType,  DofMapper, /*commCodim=*/0>;
-        return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
+        return std::make_shared<Handle>(array, dofMapper);
     }
 
     /*!
@@ -81,7 +81,7 @@ public:
     sumHandle(ArrayType& array, const DofMapper& dofMapper)
     {
         using Handle = GridCommHandleSum<ValueType, ArrayType,  DofMapper, /*commCodim=*/0>;
-        return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
+        return std::make_shared<Handle>(array, dofMapper);
     }
 };
 } // namespace Opm
