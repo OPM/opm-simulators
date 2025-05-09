@@ -971,10 +971,7 @@ public:
         } // end loop over edges / sub control volume faces
 
         // fill boundary face data:
-        IntersectionIterator endit = gridView_.iend(e);
-        for (IntersectionIterator it = gridView_.ibegin(e); it != endit; ++it) {
-            const typename IntersectionIterator::Intersection& intersection = *it ;
-
+        for (const auto& intersection : intersections(gridView_, e)) {
             if (!intersection.boundary()) {
                 continue;
             }
