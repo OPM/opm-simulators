@@ -460,8 +460,10 @@ void WellState<Scalar>::resize(const std::vector<Well>& wells_ecl,
                                const bool handle_ms_well,
                                const std::size_t numCells,
                                const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
-                               const SummaryState& summary_state)
+                               const SummaryState& summary_state,
+                               const bool enable_distributed_wells)
 {
+    this->enableDistributedWells_ = enable_distributed_wells;
     const std::vector<Scalar> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
     init(tmp, tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state, this->enableDistributedWells_);
 

@@ -217,7 +217,8 @@ void BlackoilWellModelGeneric<Scalar>::
 initFromRestartFile(const RestartValue& restartValues,
                     std::unique_ptr<WellTestState> wtestState,
                     const std::size_t numCells,
-                    bool handle_ms_well)
+                    bool handle_ms_well,
+                    bool enable_distributed_wells)
 {
     // The restart step value is used to identify wells present at the given
     // time step. Wells that are added at the same time step as RESTART is initiated
@@ -238,7 +239,7 @@ initFromRestartFile(const RestartValue& restartValues,
     // Resize for restart step
     this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
                              this->schedule(), handle_ms_well, numCells,
-                             this->well_perf_data_, this->summaryState_);
+                             this->well_perf_data_, this->summaryState_, enable_distributed_wells);
 
     BlackoilWellModelRestart(*this).
         loadRestartData(restartValues.wells,
@@ -270,7 +271,7 @@ initFromRestartFile(const RestartValue& restartValues,
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
-prepareDeserialize(int report_step, const std::size_t numCells, bool handle_ms_well)
+prepareDeserialize(int report_step, const std::size_t numCells, bool handle_ms_well, bool enable_distributed_wells)
 {
     // wells_ecl_ should only contain wells on this processor.
     wells_ecl_ = getLocalWells(report_step);
@@ -283,7 +284,7 @@ prepareDeserialize(int report_step, const std::size_t numCells, bool handle_ms_w
         handle_ms_well &= anyMSWellOpenLocal();
         this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
                                  this->schedule(), handle_ms_well, numCells,
-                                 this->well_perf_data_, this->summaryState_);
+                                 this->well_perf_data_, this->summaryState_, enable_distributed_wells);
 
     }
     this->wellState().clearWellRates();
