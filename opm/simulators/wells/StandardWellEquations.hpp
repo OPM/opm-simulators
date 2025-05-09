@@ -35,17 +35,18 @@ namespace Opm
 {
 
 template<class Scalar> class ParallelWellInfo;
-template<class Scalar, int numEq> class StandardWellEquationAccess;
+template<typename FluidSystem, typename Indices, int numEq> class StandardWellEquationAccess;
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
 template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
 template<typename FluidSystem, typename Indices> class WellState;
 
-template<class Scalar, int numEq>
+template<typename FluidSystem, typename Indices, int numEq>
 class StandardWellEquations
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     // sparsity pattern for the matrices
     //[A C^T    [x       =  [ res
     // B  D ]   x_well]      res_well]
@@ -130,7 +131,7 @@ public:
     }
 
 private:
-    friend class StandardWellEquationAccess<Scalar,numEq>;
+    friend class StandardWellEquationAccess<FluidSystem, Indices, numEq>;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
