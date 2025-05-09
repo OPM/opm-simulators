@@ -269,9 +269,6 @@ public:
 
     void updateTopology(const Element& element)
     {
-        auto isIt = gridView_.ibegin(element);
-        const auto& endIsIt = gridView_.iend(element);
-
         // add the "center" element of the stencil
         subControlVolumes_.clear();
         subControlVolumes_.emplace_back(/*SubControlVolume(*/element/*)*/);
@@ -281,8 +278,7 @@ public:
         interiorFaces_.clear();
         boundaryFaces_.clear();
 
-        for (; isIt != endIsIt; ++isIt) {
-            const auto& intersection = *isIt;
+        for (const auto& intersection : intersections(gridView_, element)) {
             // if the current intersection has a neighbor, add a
             // degree of freedom and an internal face, else add a
             // boundary face
