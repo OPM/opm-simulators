@@ -92,8 +92,9 @@ public:
                 { 1.0 }
             }
         };
-        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx)
+        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx) {
             scvGeoms_[scvIdx].setCorners(scvCorners[scvIdx], ScvLocalGeometry::numCorners);
+        }
     }
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
@@ -160,8 +161,9 @@ public:
             }
         };
 
-        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx)
+        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx) {
             scvGeoms_[scvIdx].setCorners(scvCorners[scvIdx], ScvLocalGeometry::numCorners);
+        }
     }
 
 private:
@@ -214,8 +216,9 @@ public:
             }
         };
 
-        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx)
+        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx) {
             scvGeoms_[scvIdx].setCorners(scvCorners[scvIdx], ScvLocalGeometry::numCorners);
+        }
     }
 
     static std::array<ScvLocalGeometry, numScv> scvGeoms_;
@@ -290,8 +293,9 @@ public:
             }
         };
 
-        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx)
+        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx) {
             scvGeoms_[scvIdx].setCorners(scvCorners[scvIdx],  ScvLocalGeometry::numCorners);
+        }
     }
 
 private:
@@ -412,8 +416,9 @@ public:
             },
         };
 
-        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx)
+        for (unsigned scvIdx = 0; scvIdx < numScv; ++scvIdx) {
             scvGeoms_[scvIdx].setCorners(scvCorners[scvIdx], ScvLocalGeometry::numCorners);
+        }
     }
 private:
     static std::array<ScvLocalGeometry, numScv> scvGeoms_;
@@ -511,24 +516,29 @@ private:
                        const GlobalPosition& p5)
     {
         DimVector a(p4);
-        for (unsigned k = 0; k < dimWorld; ++k)
+        for (unsigned k = 0; k < dimWorld; ++k) {
             a[k] -= p0[k];
+        }
         DimVector b(p1);
-        for (unsigned k = 0; k < dimWorld; ++k)
+        for (unsigned k = 0; k < dimWorld; ++k) {
             b[k] -= p3[k];
+        }
         DimVector m;
         crossProduct(m, a, b);
 
-        for (unsigned k = 0; k < dimWorld; ++k)
+        for (unsigned k = 0; k < dimWorld; ++k) {
             a[k] = p1[k] - p0[k];
-        for (unsigned k = 0; k < dimWorld; ++k)
+        }
+        for (unsigned k = 0; k < dimWorld; ++k) {
             b[k] = p2[k] - p0[k];
+        }
         DimVector n;
         crossProduct(n, a, b);
         n += m;
 
-        for (unsigned k = 0; k < dimWorld; ++k)
+        for (unsigned k = 0; k < dimWorld; ++k) {
             a[k] = p5[k] - p0[k];
+        }
 
         return std::abs(1.0/6.0*(n*a));
     }
@@ -554,11 +564,13 @@ private:
                                  const GlobalPosition& p3)
     {
         DimVector a(p2);
-        for (unsigned k = 0; k < dimWorld; ++k)
+        for (unsigned k = 0; k < dimWorld; ++k) {
             a[k] -= p0[k];
+        }
         DimVector b(p3);
-        for (unsigned k = 0; k < dimWorld; ++k)
+        for (unsigned k = 0; k < dimWorld; ++k) {
             b[k] -= p1[k];
+        }
 
         crossProduct(normal, a, b);
         normal *= 0.5;
@@ -886,8 +898,9 @@ public:
         for (unsigned k = 0; k < numEdges; k++) { // begin loop over edges / sub control volume faces
             unsigned short i = static_cast<unsigned short>(referenceElement.subEntity(static_cast<int>(k), dim-1, 0, dim));
             unsigned short j = static_cast<unsigned short>(referenceElement.subEntity(static_cast<int>(k), dim-1, 1, dim));
-            if (numEdges == 4 && (i == 2 || j == 2))
+            if (numEdges == 4 && (i == 2 || j == 2)) {
                 std::swap(i, j);
+            }
             subContVolFace[k].i = i;
             subContVolFace[k].j = j;
 
@@ -908,16 +921,19 @@ public:
                 ipLocal_ = referenceElement.position(static_cast<int>(k), dim-1) + elementLocal;
                 ipLocal_ *= 0.5;
                 subContVolFace[k].ipLocal_ = ipLocal_;
-                for (unsigned m = 0; m < dimWorld; ++m)
+                for (unsigned m = 0; m < dimWorld; ++m) {
                     diffVec[m] = elementGlobal[m] - edgeCoord[k][m];
+                }
                 subContVolFace[k].normal_[0] = diffVec[1];
                 subContVolFace[k].normal_[1] = -diffVec[0];
 
-                for (unsigned m = 0; m < dimWorld; ++m)
+                for (unsigned m = 0; m < dimWorld; ++m) {
                     diffVec[m] = subContVol[j].global[m] - subContVol[i].global[m];
+                }
                 // make sure the normal points to the right direction
-                if (subContVolFace[k].normal_ * diffVec < 0)
+                if (subContVolFace[k].normal_ * diffVec < 0) {
                     subContVolFace[k].normal_ *= -1;
+                }
 
                 subContVolFace[k].area_ = subContVolFace[k].normal_.two_norm();
                 subContVolFace[k].normal_ /= subContVolFace[k].area_;
@@ -947,8 +963,9 @@ public:
         for (IntersectionIterator it = gridView_.ibegin(e); it != endit; ++it) {
             const typename IntersectionIterator::Intersection& intersection = *it ;
 
-            if ( ! intersection.boundary())
+            if ( ! intersection.boundary()) {
                 continue;
+            }
 
             unsigned face = static_cast<unsigned>(intersection.indexInInside());
             unsigned numVerticesOfFace = static_cast<unsigned>(referenceElement.size(static_cast<int>(face), 1, dim));
@@ -983,8 +1000,9 @@ public:
                                             faceCoord[face],
                                             edgeCoord[leftEdge]);
                 }
-                else
+                else {
                     throw std::logic_error("Not implemented:VcfvStencil for dim = "+std::to_string(dim));
+                }
 
                 boundaryFace_[bfIdx].ipGlobal_ = geometry.global(boundaryFace_[bfIdx].ipLocal_);
                 boundaryFace_[bfIdx].i = vertInElement;
@@ -1017,8 +1035,9 @@ public:
                     &VcfvScvGeometries<Scalar, dim, ElementType::cube>::get(vertIdx);
             }
         }
-        else
+        else {
             throw std::logic_error("Not implemented: SCV geometries for non hexahedron elements");
+        }
     }
 
 #if HAVE_DUNE_LOCALFUNCTIONS
@@ -1140,8 +1159,9 @@ private:
         else if constexpr (dim == 3) {
             switch (numVertices) {
             case 4: // 3D, tetrahedron
-                for (unsigned k = 0; k < numVertices; k++)
+                for (unsigned k = 0; k < numVertices; k++) {
                     subContVol[k].volume_ = elementVolume / 4.0;
+                }
                 break;
             case 5: // 3D, pyramid
                 subContVol[0].volume_ =
@@ -1321,8 +1341,9 @@ private:
                                        +", numVertices = "+std::to_string(numVertices));
             }
         }
-        else
+        else {
             throw std::logic_error("Not implemented:VcfvStencil for dim = "+std::to_string(dim));
+        }
     }
 #if __GNUC__ || __clang__
 #pragma GCC diagnostic pop
