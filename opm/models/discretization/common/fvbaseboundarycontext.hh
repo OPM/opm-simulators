@@ -28,9 +28,11 @@
 #ifndef EWOMS_FV_BASE_BOUNDARY_CONTEXT_HH
 #define EWOMS_FV_BASE_BOUNDARY_CONTEXT_HH
 
-#include "fvbaseproperties.hh"
-
 #include <dune/common/fvector.hh>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <cstddef>
 
 namespace Opm {
 
@@ -70,14 +72,15 @@ public:
     explicit FvBaseBoundaryContext(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
         , intersectionIt_(gridView().ibegin(element()))
-    { }
+    {}
 
     void increment()
     {
         const auto& iend = gridView().iend(element());
 
-        if(intersectionIt_ == iend)
-          return;
+        if (intersectionIt_ == iend) {
+            return;
+        }
 
         ++intersectionIt_;
         // iterate to the next boundary intersection
@@ -125,25 +128,25 @@ public:
     /*!
      * \copydoc Opm::ElementContext::numDof()
      */
-    size_t numDof(unsigned timeIdx) const
+    std::size_t numDof(unsigned timeIdx) const
     { return elemCtx_.numDof(timeIdx); }
 
     /*!
      * \copydoc Opm::ElementContext::numPrimaryDof()
      */
-    size_t numPrimaryDof(unsigned timeIdx) const
+    std::size_t numPrimaryDof(unsigned timeIdx) const
     { return elemCtx_.numPrimaryDof(timeIdx); }
 
     /*!
      * \copydoc Opm::ElementContext::numInteriorFaces()
      */
-    size_t numInteriorFaces(unsigned timeIdx) const
+    std::size_t numInteriorFaces(unsigned timeIdx) const
     { return elemCtx_.numInteriorFaces(timeIdx); }
 
     /*!
      * \brief Return the number of boundary segments of the current element
      */
-    size_t numBoundaryFaces(unsigned timeIdx) const
+    std::size_t numBoundaryFaces(unsigned timeIdx) const
     { return elemCtx_.stencil(timeIdx).numBoundaryFaces(); }
 
     /*!
@@ -188,7 +191,7 @@ public:
      */
     const GlobalPosition& cvCenter(unsigned boundaryFaceIdx, unsigned timeIdx) const
     {
-        unsigned scvIdx = stencil(timeIdx).boundaryFace(boundaryFaceIdx).interiorIndex();
+        const unsigned scvIdx = stencil(timeIdx).boundaryFace(boundaryFaceIdx).interiorIndex();
         return stencil(timeIdx).subControlVolume(scvIdx).globalPos();
     }
 
@@ -228,7 +231,7 @@ public:
      */
     const IntensiveQuantities& intensiveQuantities(unsigned boundaryFaceIdx, unsigned timeIdx) const
     {
-        unsigned interiorScvIdx = this->interiorScvIndex(boundaryFaceIdx, timeIdx);
+        const unsigned interiorScvIdx = this->interiorScvIndex(boundaryFaceIdx, timeIdx);
         return elemCtx_.intensiveQuantities(interiorScvIdx, timeIdx);
     }
 
