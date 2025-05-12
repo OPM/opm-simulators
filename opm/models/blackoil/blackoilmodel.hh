@@ -87,56 +87,68 @@ struct BlackOilModel
 
 //! Set the local residual function
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::BlackOilModel> { using type = BlackOilLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilLocalResidual<TypeTag>; };
 
 //! Use the black-oil specific newton method
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::BlackOilModel> { using type = BlackOilNewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilNewtonMethod<TypeTag>; };
 
 //! The Model property
 template<class TypeTag>
-struct Model<TypeTag, TTag::BlackOilModel> { using type = BlackOilModel<TypeTag>; };
+struct Model<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilModel<TypeTag>; };
 
 //! The Problem property
 template<class TypeTag>
-struct BaseProblem<TypeTag, TTag::BlackOilModel> { using type = BlackOilProblem<TypeTag>; };
+struct BaseProblem<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilProblem<TypeTag>; };
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::BlackOilModel> { using type = BlackOilRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::BlackOilModel> { using type = BlackOilBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilBoundaryRateVector<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::BlackOilModel> { using type = BlackOilPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilPrimaryVariables<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::BlackOilModel> { using type = BlackOilIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::BlackOilModel> { using type = BlackOilExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilExtensiveQuantities<TypeTag>; };
 
 //! Use the the velocity module which is aware of the black-oil specific model extensions
 //! (i.e., the polymer and solvent extensions)
 template<class TypeTag>
-struct FluxModule<TypeTag, TTag::BlackOilModel> { using type = BlackOilDarcyFluxModule<TypeTag>; };
+struct FluxModule<TypeTag, TTag::BlackOilModel>
+{ using type = BlackOilDarcyFluxModule<TypeTag>; };
 
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::BlackOilModel>
-{ using type = BlackOilVariableAndEquationIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                                  getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                                  getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                                  getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                                  getPropValue<TypeTag, Properties::EnableFoam>(),
-                                                  getPropValue<TypeTag, Properties::EnableBrine>(),
-                                                  /*PVOffset=*/0,
-                                                  getPropValue<TypeTag, Properties::EnableMICP>()>; };
+{
+    using type = BlackOilVariableAndEquationIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                    getPropValue<TypeTag, Properties::EnableFoam>(),
+                                                    getPropValue<TypeTag, Properties::EnableBrine>(),
+                                                    /*PVOffset=*/0,
+                                                    getPropValue<TypeTag, Properties::EnableMICP>()>;
+};
 
 //! Set the fluid system to the black-oil fluid system by default
 template<class TypeTag>
@@ -150,41 +162,67 @@ public:
 
 // by default, all ECL extension modules are disabled
 template<class TypeTag>
-struct EnableSolvent<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableSolvent<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableExtbo<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableExtbo<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnablePolymer<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnablePolymerMW<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnablePolymerMW<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableFoam<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableFoam<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableBrine<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableVapwat<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableDisgasInWater<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableSaltPrecipitation<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableMICP<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
 
 //! By default, the blackoil model is isothermal and does not conserve energy
 template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableTemperature<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableEnergy<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
 
 //! disable diffusion by default
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
 
 //! disable disperison by default
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableDispersion<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct EnableConvectiveMixing<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct EnableConvectiveMixing<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
 
 //! by default, scale the energy equation by the inverse of the energy required to heat
 //! up one kg of water by 30 Kelvin. If we conserve surface volumes, this must be divided
@@ -197,7 +235,8 @@ struct BlackOilEnergyScalingFactor<TypeTag, TTag::BlackOilModel>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr Scalar alpha = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>() ? 1000.0 : 1.0;
+    static constexpr Scalar alpha =
+        getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>() ? 1000.0 : 1.0;
 
 public:
     using type = Scalar;
@@ -210,7 +249,8 @@ struct BlackOilUreaScalingFactor<TypeTag, TTag::BlackOilModel>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr Scalar alpha = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>() ? 1000.0 : 1.0;
+    static constexpr Scalar alpha =
+        getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>() ? 1000.0 : 1.0;
 
 public:
     using type = Scalar;
@@ -220,7 +260,8 @@ public:
 // by default, ebos formulates the conservation equations in terms of mass not surface
 // volumes
 template<class TypeTag>
-struct BlackoilConserveSurfaceVolume<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::BlackOilModel>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
@@ -297,6 +338,7 @@ public:
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+
 private:
     using Implementation = GetPropType<TypeTag, Properties::Model>;
     using ParentType = MultiPhaseBaseModel<TypeTag>;
@@ -324,7 +366,6 @@ private:
     using MICPModule = BlackOilMICPModule<TypeTag>;
 
 public:
-
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
 
     explicit BlackOilModel(Simulator& simulator)
@@ -364,16 +405,14 @@ public:
      */
     std::string primaryVarName(int pvIdx) const
     {
-        std::ostringstream oss;
-
         if (pvIdx == Indices::waterSwitchIdx) {
-            oss << "water_switching";
+            return "water_switching";
         }
         else if (pvIdx == Indices::pressureSwitchIdx) {
-            oss << "pressure_switching";
+            return "pressure_switching";
         }
         else if (static_cast<int>(pvIdx) == Indices::compositionSwitchIdx) {
-            oss << "composition_switching";
+            return "composition_switching";
         }
         else if (SolventModule::primaryVarApplies(pvIdx)) {
             return SolventModule::primaryVarName(pvIdx);
@@ -390,8 +429,6 @@ public:
         else {
             assert(false);
         }
-
-        return oss.str();
     }
 
     /*!
@@ -399,10 +436,10 @@ public:
      */
     std::string eqName(int eqIdx) const
     {
-        std::ostringstream oss;
-
         if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx + numComponents) {
+            std::ostringstream oss;
             oss << "conti_" << FluidSystem::phaseName(eqIdx - Indices::conti0EqIdx);
+            return oss.str();
         }
         else if (SolventModule::eqApplies(eqIdx)) {
             return SolventModule::eqName(eqIdx);
@@ -419,8 +456,6 @@ public:
         else {
             assert(false);
         }
-
-        return oss.str();
     }
 
     /*!
@@ -442,7 +477,7 @@ public:
         // oil pressures usually are in the range of 100 to 500 bars for typical oil
         // reservoirs (which is the only relevant application for the black-oil model).
         else if (int(Indices::pressureSwitchIdx) == int(pvIdx)) {
-            return 1.0/300e5;
+            return 1.0 / 300e5;
         }
 
         // deal with primary variables stemming from the solvent module
@@ -473,13 +508,12 @@ public:
             return 1.0; // gas saturation
         }
         else if (pvMeaning == PrimaryVariables::GasMeaning::Rs) {
-            return 1.0/250.; // gas dissolution factor
+            return 1.0 / 250.; // gas dissolution factor
         }
         else {
             assert(pvMeaning == PrimaryVariables::GasMeaning::Rv);
-            return 1.0/0.025; // oil vaporization factor
+            return 1.0 / 0.025; // oil vaporization factor
         }
-
     }
 
     /*!
@@ -496,9 +530,8 @@ public:
         return eqWeights_[eqIdx];
     }
 
-    void setEqWeight(unsigned eqIdx, Scalar value) {
-        eqWeights_[eqIdx] = value;
-    }
+    void setEqWeight(unsigned eqIdx, Scalar value)
+    { eqWeights_[eqIdx] = value; }
 
     /*!
      * \brief Write the current solution for a degree of freedom to a
@@ -515,7 +548,7 @@ public:
 
         // write phase state
         if (!outstream.good()) {
-            throw std::runtime_error("Could not serialize degree of freedom "+std::to_string(dofIdx));
+            throw std::runtime_error("Could not serialize degree of freedom " + std::to_string(dofIdx));
         }
 
         // write the primary variables
@@ -555,7 +588,7 @@ public:
         auto& priVars = this->solution(/*timeIdx=*/0)[dofIdx];
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             if (!instream.good()) {
-                throw std::runtime_error("Could not deserialize degree of freedom "+std::to_string(dofIdx));
+                throw std::runtime_error("Could not deserialize degree of freedom " + std::to_string(dofIdx));
             }
             instream >> priVars[eqIdx];
         }
@@ -574,7 +607,7 @@ public:
         instream >> pvtRegionIdx;
 
         if (!instream.good()) {
-            throw std::runtime_error("Could not deserialize degree of freedom "+std::to_string(dofIdx));
+            throw std::runtime_error("Could not deserialize degree of freedom " + std::to_string(dofIdx));
         }
 
         SolventModule::deserializeEntity(asImp_(), instream, dof);
@@ -656,8 +689,10 @@ protected:
 
 private:
     std::vector<Scalar> eqWeights_;
+
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
