@@ -427,7 +427,7 @@ protected:
         const auto& face = stencil.boundaryFace(bfIdx);
 
         const auto& elemCtx = context.elementContext();
-        unsigned insideScvIdx = face.interiorIndex();
+        const unsigned insideScvIdx = face.interiorIndex();
         const auto& insideScv = stencil.subControlVolume(insideScvIdx);
 
         const auto& intQuantsInside = elemCtx.intensiveQuantities(insideScvIdx, timeIdx);
@@ -437,7 +437,7 @@ protected:
         DimVector distVec = face.integrationPos();
         distVec -= context.element().geometry().global(insideScv.localGeometry().center());
 
-        Scalar dist = distVec * face.normal();
+        const Scalar dist = distVec * face.normal();
 
         // if the following assertation triggers, the center of the
         // center of the interior SCV was not inside the element!
