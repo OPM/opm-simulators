@@ -43,9 +43,10 @@ enum class WellInjectorCMode;
 enum class WellProducerCMode;
 
 //! \brief Class for computing well group constraints.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellConstraints {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     //! \brief Constructor sets reference to well.
     explicit WellConstraints(const WellInterfaceGeneric<FluidSystem, Indices>& well) : well_(well) {}
 
