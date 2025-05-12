@@ -177,7 +177,7 @@ public:
                                       Toolbox::template decay<LhsEval>(fs.saltConcentration());
 
             if constexpr (enableSaltPrecipitation) {
-                double saltDensity = intQuants.saltDensity(); // Solid salt density kg/m3
+                const double saltDensity = intQuants.saltDensity(); // Solid salt density kg/m3
                 const LhsEval solidSalt =
                               Toolbox::template decay<LhsEval>(intQuants.porosity()) /
                               (1.0 - Toolbox::template decay<LhsEval>(intQuants.saltSaturation()) + 1.e-8) *
@@ -236,7 +236,7 @@ public:
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
         if constexpr (enableBrine) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
             const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
             outstream << priVars[saltConcentrationIdx];
         }
@@ -246,7 +246,7 @@ public:
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
         if constexpr (enableBrine) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
             PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
             PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
@@ -261,7 +261,7 @@ public:
                                            unsigned scvIdx,
                                            unsigned timeIdx)
     {
-        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.referencePressure_[pvtnumRegionIdx];
     }
 
@@ -269,7 +269,7 @@ public:
                                                   unsigned scvIdx,
                                                   unsigned timeIdx)
     {
-        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.bdensityTable_[pvtnumRegionIdx];
     }
 
@@ -280,7 +280,7 @@ public:
                                                   unsigned scvIdx,
                                                   unsigned timeIdx)
     {
-        unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.permfactTable_[satnumRegionIdx];
     }
 
@@ -291,7 +291,7 @@ public:
                                                   unsigned scvIdx,
                                                   unsigned timeIdx)
     {
-        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.saltsolTable_[pvtnumRegionIdx];
     }
 
@@ -299,7 +299,7 @@ public:
                                      unsigned scvIdx,
                                      unsigned timeIdx)
     {
-        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.saltdenTable_[pvtnumRegionIdx];
     }
 
