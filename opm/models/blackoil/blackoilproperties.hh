@@ -37,40 +37,50 @@ namespace Opm::Properties {
 //! compatible with those produced by the commercial Eclipse simulator
 template<class TypeTag, class MyTypeTag>
 struct EnableEclipseOutput { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for solvents. ("Second gas")
 template<class TypeTag, class MyTypeTag>
 struct EnableSolvent { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for extended BO. ("Second gas" - alternative approach)
 template<class TypeTag, class MyTypeTag>
 struct EnableExtbo { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for polymer.
 template<class TypeTag, class MyTypeTag>
 struct EnablePolymer { using type = UndefinedProperty; };
+
 //! Enable the tracking polymer molecular weight tracking and related functionalities
 template<class TypeTag, class MyTypeTag>
 struct EnablePolymerMW { using type = UndefinedProperty; };
+
 //! Enable surface volume scaling
 template<class TypeTag, class MyTypeTag>
 struct BlackoilConserveSurfaceVolume { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for foam
 template<class TypeTag, class MyTypeTag>
 struct EnableFoam { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for salt
 template<class TypeTag, class MyTypeTag>
 struct EnableBrine { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for salt precipitation
 template<class TypeTag, class MyTypeTag>
 struct EnableSaltPrecipitation { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for water evaporation
 template<class TypeTag, class MyTypeTag>
 struct EnableVapwat { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for disolution of gas into water
 template<class TypeTag, class MyTypeTag>
 struct EnableDisgasInWater { using type = UndefinedProperty; };
+
 //! Enable the ECL-blackoil extension for MICP.
 template<class TypeTag, class MyTypeTag>
 struct EnableMICP { using type = UndefinedProperty; };
-
 
 //! Allow the spatial and temporal domains to exhibit non-constant temperature
 //! in the black-oil model
