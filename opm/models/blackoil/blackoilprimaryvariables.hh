@@ -26,6 +26,7 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
@@ -43,7 +44,12 @@
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
+#include <algorithm>
+#include <array>
+#include <cassert>
 #include <cstdint>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm::Parameters {
 
