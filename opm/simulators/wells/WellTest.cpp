@@ -27,6 +27,12 @@
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -34,9 +40,9 @@
 
 namespace Opm {
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template<class RatioFunc>
-bool WellTest<Scalar>::
+bool WellTest<FluidSystem, Indices>::
 checkMaxRatioLimitWell(const SingleWellState<Scalar>& ws,
                        const Scalar max_ratio_limit,
                        const RatioFunc& ratioFunc) const
@@ -52,9 +58,9 @@ checkMaxRatioLimitWell(const SingleWellState<Scalar>& ws,
     return (well_ratio > max_ratio_limit);
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template<class RatioFunc>
-void WellTest<Scalar>::
+void WellTest<FluidSystem, Indices>::
 checkMaxRatioLimitCompletions(const SingleWellState<Scalar>& ws,
                               const Scalar max_ratio_limit,
                               const RatioFunc& ratioFunc,
@@ -99,8 +105,8 @@ checkMaxRatioLimitCompletions(const SingleWellState<Scalar>& ws,
     }
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
                  const SingleWellState<Scalar>& ws,
                  RatioLimitCheckReport& report) const
@@ -133,8 +139,8 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
     }
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
                  const SingleWellState<Scalar>& ws,
                  RatioLimitCheckReport& report) const
@@ -167,8 +173,8 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
     }
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                       const SingleWellState<Scalar>& ws,
                       RatioLimitCheckReport& report) const
@@ -207,8 +213,8 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
     }
 }
 
-template<class Scalar>
-bool WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool WellTest<FluidSystem, Indices>::
 checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                     const std::vector<Scalar>& rates_or_potentials,
                     DeferredLogger& deferred_logger) const
@@ -252,9 +258,9 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
     return false;
 }
 
-template<class Scalar>
-typename WellTest<Scalar>::RatioLimitCheckReport
-WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename WellTest<FluidSystem, Indices>::RatioLimitCheckReport
+WellTest<FluidSystem, Indices>::
 checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                      const SingleWellState<Scalar>& ws,
                      DeferredLogger& deferred_logger) const
@@ -304,8 +310,8 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     return report;
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
                             const double simulation_time,
                             const bool write_message_to_opmlog,
@@ -459,8 +465,8 @@ updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
     }
 }
 
-template<class Scalar>
-void WellTest<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellTest<FluidSystem, Indices>::
 updateWellTestStatePhysical(const double simulation_time,
                             const bool write_message_to_opmlog,
                             WellTestState& well_test_state,
@@ -479,10 +485,47 @@ updateWellTestStatePhysical(const double simulation_time,
     }
 }
 
-template class WellTest<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class WellTest<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellTest<float>;
+    INSTANTIATE_TYPE(float)
 #endif
+
+//template class WellTest<double>;
+//
+//#if FLOW_INSTANTIATE_FLOAT
+//template class WellTest<float>;
+//#endif
 
 } // namespace Opm

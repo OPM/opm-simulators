@@ -87,3 +87,5 @@ private:
 }
 
 #endif // OPM_WELL_ASSEMBLE_HEADER_INCLUDED
+
+#include "WellAssemble.cpp"
