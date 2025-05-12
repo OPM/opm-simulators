@@ -28,8 +28,12 @@
 #ifndef EWOMS_BLACK_OIL_SOLVENT_MODULE_HH
 #define EWOMS_BLACK_OIL_SOLVENT_MODULE_HH
 
+#include <dune/common/fvector.hh>
+
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
@@ -40,11 +44,9 @@
 
 #include <opm/models/io/vtkblackoilsolventmodule.hpp>
 
-#include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
-
+#include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <istream>
 #include <memory>
