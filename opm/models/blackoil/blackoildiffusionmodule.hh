@@ -165,8 +165,10 @@ public:
                                  unsigned spaceIdx, unsigned timeIdx)
     {
         // Only work if diffusion is enabled run-time by DIFFUSE in the deck
-        if(!FluidSystem::enableDiffusion())
+        if (!FluidSystem::enableDiffusion()) {
             return;
+        }
+
         const auto& extQuants = context.extensiveQuantities(spaceIdx, timeIdx);
         const auto& inIq = context.intensiveQuantities(extQuants.interiorIndex(), timeIdx);
         const auto& exIq = context.intensiveQuantities(extQuants.exteriorIndex(), timeIdx);
@@ -231,8 +233,9 @@ public:
             bSAvg /= 2;
 
             // phase not present, skip
-            if(bSAvg < 1.0e-6)
+            if (bSAvg < 1.0e-6) {
                 continue;
+            }
             Evaluation convFactor = 1.0;
             if (FluidSystem::enableDissolvedGas() && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && phaseIdx == FluidSystem::oilPhaseIdx) {
                 Evaluation rsAvg = (inFs.Rs() + Toolbox::value(exFs.Rs())) / 2;
@@ -394,7 +397,9 @@ public:
     BlackOilDiffusionIntensiveQuantities&
     operator=(const BlackOilDiffusionIntensiveQuantities& rhs)
     {
-        if (this == &rhs) return *this;
+        if (this == &rhs) {
+            return *this;
+        }
 
         if (FluidSystem::enableDiffusion()) {
           std::copy(rhs.tortuosity_, rhs.tortuosity_ + numPhases, tortuosity_);
@@ -428,11 +433,12 @@ public:
     {
         // For the blackoil model tortuosity is disabled.
         // TODO add a run-time parameter to enable tortuosity
-        static bool enableTortuosity = false;
-        if (enableTortuosity)
+        static constexpr bool enableTortuosity = false;
+        if constexpr (enableTortuosity) {
             return tortuosity_[phaseIdx] * diffusionCoefficient_[phaseIdx][compIdx];
-
-        return diffusionCoefficient_[phaseIdx][compIdx];
+        } else {
+            return diffusionCoefficient_[phaseIdx][compIdx];
+        }
     }
 
 protected:
@@ -448,8 +454,10 @@ protected:
                  unsigned timeIdx)
     {
         // Only work if diffusion is enabled run-time by DIFFUSE in the deck
-        if(!FluidSystem::enableDiffusion())
+        if (!FluidSystem::enableDiffusion()) {
             return;
+        }
+
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         update_(fluidState, paramCache, intQuants);
     }
@@ -601,8 +609,9 @@ protected:
     void update_(const ElementContext& elemCtx, unsigned faceIdx, unsigned timeIdx)
     {
         // Only work if diffusion is enabled run-time by DIFFUSE in the deck
-        if(!FluidSystem::enableDiffusion())
+        if (!FluidSystem::enableDiffusion()) {
             return;
+        }
 
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& face = stencil.interiorFace(faceIdx);
