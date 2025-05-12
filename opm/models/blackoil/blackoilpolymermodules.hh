@@ -32,6 +32,8 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <opm/models/blackoil/blackoilpolymerparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -39,10 +41,15 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
+#include <algorithm>
+#include <cassert>
 #include <cmath>
+#include <istream>
 #include <memory>
+#include <ostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace Opm {
 /*!
