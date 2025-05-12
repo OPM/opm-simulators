@@ -429,7 +429,7 @@ protected:
     }
 
 private:
-    Scalar normVelocityCell_[numPhases];
+    std::array<Scalar, numPhases> normVelocityCell_{};
 };
 
 /*!
@@ -526,7 +526,7 @@ class BlackOilDispersionExtensiveQuantities<TypeTag, /*enableDispersion=*/true>
     using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
 public:
-    using ScalarArray = Scalar[numPhases];
+    using ScalarArray = std::array<Scalar, numPhases>;
     static void update(ScalarArray& normVelocityAvg,
                        const IntensiveQuantities& intQuantsInside,
                        const IntensiveQuantities& intQuantsOutside)
@@ -579,7 +579,7 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    const Scalar& normVelocityAvg(unsigned phaseIdx) const
+    Scalar normVelocityAvg(unsigned phaseIdx) const
     { return normVelocityAvg_[phaseIdx]; }
 
     const auto& normVelocityAvg() const
