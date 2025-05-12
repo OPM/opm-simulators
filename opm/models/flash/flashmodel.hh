@@ -273,7 +273,7 @@ public:
         }
 
         if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx + numComponents) {
-            unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+            const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
             std::ostringstream oss;
             oss << "continuity^" << FluidSystem::componentName(compIdx);
             return oss.str();
@@ -289,12 +289,12 @@ public:
      */
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
-        Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
+        const Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
         if (tmp > 0) {
             return tmp;
         }
 
-        unsigned compIdx = pvIdx - Indices::cTot0Idx;
+        const unsigned compIdx = pvIdx - Indices::cTot0Idx;
 
         // make all kg equal. also, divide the weight of all total
         // compositions by 100 to make the relative errors more
@@ -309,12 +309,12 @@ public:
      */
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
-        Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
+        const Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
         if (tmp > 0) {
             return tmp;
         }
 
-        unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+        const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
 
         // make all kg equal
         return FluidSystem::molarMass(compIdx);
