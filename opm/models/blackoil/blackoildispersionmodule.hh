@@ -30,13 +30,20 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#if HAVE_ECL_INPUT
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#endif
 
+#include <array>
+#include <cmath>
 #include <stdexcept>
 
 namespace Opm {
