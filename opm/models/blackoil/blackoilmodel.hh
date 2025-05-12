@@ -366,22 +366,30 @@ public:
     {
         std::ostringstream oss;
 
-        if (pvIdx == Indices::waterSwitchIdx)
+        if (pvIdx == Indices::waterSwitchIdx) {
             oss << "water_switching";
-        else if (pvIdx == Indices::pressureSwitchIdx)
+        }
+        else if (pvIdx == Indices::pressureSwitchIdx) {
             oss << "pressure_switching";
-        else if (static_cast<int>(pvIdx) == Indices::compositionSwitchIdx)
+        }
+        else if (static_cast<int>(pvIdx) == Indices::compositionSwitchIdx) {
             oss << "composition_switching";
-        else if (SolventModule::primaryVarApplies(pvIdx))
+        }
+        else if (SolventModule::primaryVarApplies(pvIdx)) {
             return SolventModule::primaryVarName(pvIdx);
-        else if (ExtboModule::primaryVarApplies(pvIdx))
+        }
+        else if (ExtboModule::primaryVarApplies(pvIdx)) {
             return ExtboModule::primaryVarName(pvIdx);
-        else if (PolymerModule::primaryVarApplies(pvIdx))
+        }
+        else if (PolymerModule::primaryVarApplies(pvIdx)) {
             return PolymerModule::primaryVarName(pvIdx);
-        else if (EnergyModule::primaryVarApplies(pvIdx))
+        }
+        else if (EnergyModule::primaryVarApplies(pvIdx)) {
             return EnergyModule::primaryVarName(pvIdx);
-        else
+        }
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -393,18 +401,24 @@ public:
     {
         std::ostringstream oss;
 
-        if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx + numComponents)
+        if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx + numComponents) {
             oss << "conti_" << FluidSystem::phaseName(eqIdx - Indices::conti0EqIdx);
-        else if (SolventModule::eqApplies(eqIdx))
+        }
+        else if (SolventModule::eqApplies(eqIdx)) {
             return SolventModule::eqName(eqIdx);
-        else if (ExtboModule::eqApplies(eqIdx))
+        }
+        else if (ExtboModule::eqApplies(eqIdx)) {
             return ExtboModule::eqName(eqIdx);
-        else if (PolymerModule::eqApplies(eqIdx))
+        }
+        else if (PolymerModule::eqApplies(eqIdx)) {
             return PolymerModule::eqName(eqIdx);
-        else if (EnergyModule::eqApplies(eqIdx))
+        }
+        else if (EnergyModule::eqApplies(eqIdx)) {
             return EnergyModule::eqName(eqIdx);
-        else
+        }
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -416,42 +430,51 @@ public:
     {
         // do not care about the auxiliary equations as they are supposed to scale
         // themselves
-        if (globalDofIdx >= this->numGridDof())
+        if (globalDofIdx >= this->numGridDof()) {
             return 1.0;
+        }
 
         // saturations are always in the range [0, 1]!
-        if (int(Indices::waterSwitchIdx) == int(pvIdx))
+        if (int(Indices::waterSwitchIdx) == int(pvIdx)) {
             return 1.0;
+        }
 
         // oil pressures usually are in the range of 100 to 500 bars for typical oil
         // reservoirs (which is the only relevant application for the black-oil model).
-        else if (int(Indices::pressureSwitchIdx) == int(pvIdx))
+        else if (int(Indices::pressureSwitchIdx) == int(pvIdx)) {
             return 1.0/300e5;
+        }
 
         // deal with primary variables stemming from the solvent module
-        else if (SolventModule::primaryVarApplies(pvIdx))
+        else if (SolventModule::primaryVarApplies(pvIdx)) {
             return SolventModule::primaryVarWeight(pvIdx);
+        }
 
         // deal with primary variables stemming from the extBO module
-        else if (ExtboModule::primaryVarApplies(pvIdx))
+        else if (ExtboModule::primaryVarApplies(pvIdx)) {
             return ExtboModule::primaryVarWeight(pvIdx);
+        }
 
         // deal with primary variables stemming from the polymer module
-        else if (PolymerModule::primaryVarApplies(pvIdx))
+        else if (PolymerModule::primaryVarApplies(pvIdx)) {
             return PolymerModule::primaryVarWeight(pvIdx);
+        }
 
         // deal with primary variables stemming from the energy module
-        else if (EnergyModule::primaryVarApplies(pvIdx))
+        else if (EnergyModule::primaryVarApplies(pvIdx)) {
             return EnergyModule::primaryVarWeight(pvIdx);
+        }
 
         // if the primary variable is either the gas saturation, Rs or Rv
         assert(int(Indices::compositionSwitchIdx) == int(pvIdx));
 
         auto pvMeaning = this->solution(0)[globalDofIdx].primaryVarsMeaningGas();
-        if (pvMeaning == PrimaryVariables::GasMeaning::Sg)
+        if (pvMeaning == PrimaryVariables::GasMeaning::Sg) {
             return 1.0; // gas saturation
-        else if (pvMeaning == PrimaryVariables::GasMeaning::Rs)
+        }
+        else if (pvMeaning == PrimaryVariables::GasMeaning::Rs) {
             return 1.0/250.; // gas dissolution factor
+        }
         else {
             assert(pvMeaning == PrimaryVariables::GasMeaning::Rv);
             return 1.0/0.025; // oil vaporization factor
@@ -466,8 +489,9 @@ public:
     {
         // do not care about the auxiliary equations as they are supposed to scale
         // themselves
-        if (globalDofIdx >= this->numGridDof())
+        if (globalDofIdx >= this->numGridDof()) {
             return 1.0;
+        }
 
         return eqWeights_[eqIdx];
     }
@@ -490,13 +514,15 @@ public:
         unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
 
         // write phase state
-        if (!outstream.good())
+        if (!outstream.good()) {
             throw std::runtime_error("Could not serialize degree of freedom "+std::to_string(dofIdx));
+        }
 
         // write the primary variables
         const auto& priVars = this->solution(/*timeIdx=*/0)[dofIdx];
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             outstream << priVars[eqIdx] << " ";
+        }
 
         // write the pseudo primary variables
         outstream << static_cast<int>(priVars.primaryVarsMeaningGas()) << " ";
@@ -528,8 +554,9 @@ public:
         // read in the "real" primary variables of the DOF
         auto& priVars = this->solution(/*timeIdx=*/0)[dofIdx];
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            if (!instream.good())
+            if (!instream.good()) {
                 throw std::runtime_error("Could not deserialize degree of freedom "+std::to_string(dofIdx));
+            }
             instream >> priVars[eqIdx];
         }
 
@@ -546,8 +573,9 @@ public:
         unsigned pvtRegionIdx;
         instream >> pvtRegionIdx;
 
-        if (!instream.good())
+        if (!instream.good()) {
             throw std::runtime_error("Could not deserialize degree of freedom "+std::to_string(dofIdx));
+        }
 
         SolventModule::deserializeEntity(asImp_(), instream, dof);
         ExtboModule::deserializeEntity(asImp_(), instream, dof);
@@ -621,8 +649,9 @@ protected:
         this->addOutputModule(std::make_unique<VtkBlackOilModule<TypeTag>>(this->simulator_));
         this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));
 
-        if constexpr (enableDiffusion)
+        if constexpr (enableDiffusion) {
             this->addOutputModule(std::make_unique<VtkDiffusionModule<TypeTag>>(this->simulator_));
+        }
     }
 
 private:
