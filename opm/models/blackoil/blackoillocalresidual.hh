@@ -118,10 +118,12 @@ public:
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 if (Indices::numPhases == 3) { // add trivial equation for the pseudo phase
                     unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                    if (timeIdx == 0)
+                    if (timeIdx == 0) {
                         storage[conti0EqIdx + activeCompIdx] = variable<LhsEval>(0.0, conti0EqIdx + activeCompIdx);
-                    else
+                    }
+                    else {
                         storage[conti0EqIdx + activeCompIdx] = 0.0;
+                    }
                 }
                 continue;
             }
@@ -206,16 +208,19 @@ public:
         const ExtensiveQuantities& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         unsigned focusDofIdx = elemCtx.focusDofIndex();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
+            }
 
             unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
             unsigned pvtRegionIdx = up.pvtRegionIndex();
-            if (upIdx == focusDofIdx)
+            if (upIdx == focusDofIdx) {
                 evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, extQuants, up.fluidState());
-            else
+            }
+            else {
                 evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, extQuants, up.fluidState());
+            }
         }
         // deal with solvents (if present)
         SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
@@ -259,8 +264,9 @@ public:
         MICPModule::addSource(source, elemCtx, dofIdx, timeIdx);
 
         // scale the source term of the energy equation
-        if constexpr(enableEnergy)
+        if constexpr (enableEnergy) {
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+        }
     }
 
     /*!
