@@ -35,8 +35,7 @@
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <algorithm>
-#include <cstddef>
+#include <array>
 #include <stdexcept>
 
 namespace Opm {
@@ -402,14 +401,10 @@ public:
         }
 
         if (FluidSystem::enableDiffusion()) {
-          std::copy(rhs.tortuosity_, rhs.tortuosity_ + numPhases, tortuosity_);
-          for (std::size_t i = 0; i < numPhases; ++i) {
-              std::copy(rhs.diffusionCoefficient_[i],
-                        rhs.diffusionCoefficient_[i]+numComponents,
-                        diffusionCoefficient_[i]);
-          }
-      }
-      return *this;
+            tortuosity_ = rhs.tortuosity_;
+            diffusionCoefficient_ = rhs.diffusionCoefficient_;
+        }
+        return *this;
     }
     /*!
      * \brief Returns the molecular diffusion coefficient for a
@@ -509,8 +504,8 @@ protected:
     }
 
 private:
-    Evaluation tortuosity_[numPhases];
-    Evaluation diffusionCoefficient_[numPhases][numComponents];
+    std::array<Evaluation, numPhases> tortuosity_{};
+    std::array<std::array<Evaluation, numComponents>, numPhases> diffusionCoefficient_{};
 };
 
 /*!
@@ -600,7 +595,7 @@ class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 public:
-    using EvaluationArray = Evaluation[numPhases][numComponents];
+    using EvaluationArray = std::array<std::array<Evaluation, numComponents>, numPhases>;
 protected:
     /*!
      * \brief Update the quantities required to calculate
