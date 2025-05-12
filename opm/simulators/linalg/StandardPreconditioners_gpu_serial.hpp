@@ -116,14 +116,14 @@ private:
         Dune::BCRSMatrix<BlockType> matrix(N, N, numberOfNonZeroes, Dune::BCRSMatrix<BlockType>::row_wise);
         for (auto row = matrix.createbegin(); row != matrix.createend(); ++row) {
 
-            for (std::size_t j = rowIndices[row.index()]; j != rowIndices[row.index() + 1]; ++j) {
+            for (auto j = rowIndices[row.index()]; j != rowIndices[row.index() + 1]; ++j) {
                 const auto columnIndex = columnIndices[j];
                 row.insert(columnIndex);
             }
         }
 
         for (std::size_t i = 0; i < N; ++i) {
-            for (std::size_t j = rowIndices[i]; j != rowIndices[i + 1]; ++j) {
+            for (auto j = rowIndices[i]; j != rowIndices[i + 1]; ++j) {
                 const auto columnIndex = columnIndices[j];
                 // Now it gets a bit tricky, first we need to fetch the block matrix
                 BlockType blockMatrix;
