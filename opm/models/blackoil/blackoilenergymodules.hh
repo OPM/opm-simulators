@@ -38,7 +38,12 @@
 #include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/models/io/vtkblackoilenergymodule.hpp>
 
+#include <cassert>
+#include <cmath>
+#include <istream>
 #include <memory>
+#include <ostream>
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
