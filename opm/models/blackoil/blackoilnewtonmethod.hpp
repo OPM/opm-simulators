@@ -38,6 +38,10 @@
 
 #include <opm/models/utils/signum.hh>
 
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
 namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
