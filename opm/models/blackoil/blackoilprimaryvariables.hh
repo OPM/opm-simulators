@@ -215,7 +215,7 @@ public:
         if (varIdx == pressureSwitchIdx) {
             scale = this->pressureScale_;
         }
-        if (std::is_same<Evaluation, Scalar>::value) {
+        if (std::is_same_v<Evaluation, Scalar>) {
             return (*this)[varIdx] * scale; // finite differences
         }
         else {
@@ -318,8 +318,8 @@ public:
                                 const MaterialLawParams& matParams,
                                 bool isInEquilibrium = false)
     {
-        using ConstEvaluation = typename std::remove_reference<typename FluidState::Scalar>::type;
-        using FsEvaluation = typename std::remove_const<ConstEvaluation>::type;
+        using ConstEvaluation = std::remove_reference_t<typename FluidState::Scalar>;
+        using FsEvaluation = std::remove_const_t<ConstEvaluation>;
         using FsToolbox = MathToolbox<FsEvaluation>;
 
 #ifndef NDEBUG
@@ -397,8 +397,8 @@ public:
     template <class FluidState>
     void assignNaive(const FluidState& fluidState)
     {
-        using ConstEvaluation = typename std::remove_reference<typename FluidState::Scalar>::type;
-        using FsEvaluation = typename std::remove_const<ConstEvaluation>::type;
+        using ConstEvaluation = std::remove_reference_t<typename FluidState::Scalar>;
+        using FsEvaluation = std::remove_const_t<ConstEvaluation>;
         using FsToolbox = MathToolbox<FsEvaluation>;
 
         bool gasPresent = FluidSystem::phaseIsActive(gasPhaseIdx)?(fluidState.saturation(gasPhaseIdx) > 0.0):false;
