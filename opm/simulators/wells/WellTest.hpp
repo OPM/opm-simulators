@@ -38,9 +38,11 @@ template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
 class WellTestState;
 
 //! \brief Class for performing well tests.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellTest {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     //! \brief Constructor sets reference to well.
     explicit WellTest(const WellInterfaceGeneric<FluidSystem, Indices>& well) : well_(well) {}
 

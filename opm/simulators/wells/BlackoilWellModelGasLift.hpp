@@ -94,13 +94,14 @@ template<typename TypeTag>
 class BlackoilWellModelGasLift :
     public BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::FluidSystem>, GetPropType<TypeTag, Properties::Indices>>
 {
-    using Base = BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::FluidSystem>, GetPropType<TypeTag, Properties::Indices>;
+    // using Base = BlackoilWellModelGasLiftGeneric<GetPropType<TypeTag, Properties::FluidSystem>, GetPropType<TypeTag, Properties::Indices>;
 
 public:
-    using Base::glift_debug;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Base = BlackoilWellModelGasLiftGeneric<FluidSystem, Indices>;
+    using Base::glift_debug;
     using GLiftEclWells = typename GasLiftGroupInfo<FluidSystem, Indices>::GLiftEclWells;
     using GLiftOptWells = typename Base::GLiftOptWells;
     using GLiftProdWells = typename Base::GLiftProdWells;

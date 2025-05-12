@@ -34,6 +34,12 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -84,12 +90,12 @@ namespace {
 
 namespace Opm {
 
-    template<class Scalar>
-    Scalar WellGroupHelpers<Scalar>::
+    template<typename FluidSystem, typename Indices>
+    typename FluidSystem::Scalar WellGroupHelpers<FluidSystem, Indices>::
     sumWellPhaseRates(bool res_rates,
                       const Opm::Group& group,
                       const Opm::Schedule& schedule,
-                      const Opm::WellState<Scalar>& wellState,
+                      const Opm::WellState<FluidSystem, Indices>& wellState,
                       const int reportStepIdx,
                       const int phasePos,
                       const bool injector,
@@ -148,8 +154,8 @@ namespace Opm {
         return rate;
     }
 
-template <typename Scalar>
-Scalar WellGroupHelpers<Scalar>::
+template <typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar WellGroupHelpers<FluidSystem, Indices>::
 satelliteProduction(const ScheduleState& sched,
                     const std::vector<std::string>& groups,
                     const GSatProd::GSatProdGroup::Rate rateComp)
@@ -165,8 +171,8 @@ satelliteProduction(const ScheduleState& sched,
     return gsatProdRate;
 }
 
-template <typename Scalar>
-std::optional<GSatProd::GSatProdGroup::Rate> WellGroupHelpers<Scalar>::
+template <typename FluidSystem, typename Indices>
+std::optional<GSatProd::GSatProdGroup::Rate> WellGroupHelpers<FluidSystem, Indices>::
 selectRateComponent(const PhaseUsage& pu, const int phasePos)
 {
     using Rate = GSatProd::GSatProdGroup::Rate;
@@ -184,8 +190,8 @@ selectRateComponent(const PhaseUsage& pu, const int phasePos)
     return std::nullopt;
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 setCmodeGroup(const Group& group,
               const Schedule& schedule,
               const SummaryState& summaryState,
@@ -244,8 +250,8 @@ setCmodeGroup(const Group& group,
     }
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 accumulateGroupEfficiencyFactor(const Group& group,
                                 const Schedule& schedule,
                                 const int reportStepIdx,
@@ -257,11 +263,12 @@ accumulateGroupEfficiencyFactor(const Group& group,
             schedule.getGroup(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
 }
 
-template<class Scalar>
-Scalar WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+WellGroupHelpers<FluidSystem, Indices>::
 sumWellSurfaceRates(const Group& group,
                     const Schedule& schedule,
-                    const WellState<Scalar>& wellState,
+                    const WellState<FluidSystem, Indices>& wellState,
                     const int reportStepIdx,
                     const int phasePos,
                     const bool injector)
@@ -269,11 +276,12 @@ sumWellSurfaceRates(const Group& group,
     return sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phasePos, injector);
 }
 
-template<class Scalar>
-Scalar WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+WellGroupHelpers<FluidSystem, Indices>::
 sumWellResRates(const Group& group,
                 const Schedule& schedule,
-                const WellState<Scalar>& wellState,
+                const WellState<FluidSystem, Indices>& wellState,
                 const int reportStepIdx,
                 const int phasePos,
                 const bool injector)
@@ -281,11 +289,12 @@ sumWellResRates(const Group& group,
     return sumWellPhaseRates(true, group, schedule, wellState, reportStepIdx, phasePos, injector);
 }
 
-template<class Scalar>
-Scalar WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+WellGroupHelpers<FluidSystem, Indices>::
 sumSolventRates(const Group& group,
                 const Schedule& schedule,
-                const WellState<Scalar>& wellState,
+                const WellState<FluidSystem, Indices>& wellState,
                 const int reportStepIdx,
                 const bool injector)
 {
@@ -325,15 +334,15 @@ sumSolventRates(const Group& group,
     return rate;
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateGroupTargetReduction(const Group& group,
                            const Schedule& schedule,
                            const int reportStepIdx,
                            const bool isInjector,
                            const PhaseUsage& pu,
                            const GuideRate& guide_rate,
-                           const WellState<Scalar>& wellState,
+                           const WellState<FluidSystem, Indices>& wellState,
                            const SummaryState& summaryState,
                            GroupState<Scalar>& group_state,
                            std::vector<Scalar>& groupTargetReduction)
@@ -468,15 +477,15 @@ updateGroupTargetReduction(const Group& group,
         group_state.update_production_reduction_rates(group.name(), groupTargetReduction);
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateWellRatesFromGroupTargetScale(const Scalar scale,
                                     const Group& group,
                                     const Schedule& schedule,
                                     const int reportStepIdx,
                                     bool isInjector,
                                     const GroupState<Scalar>& group_state,
-                                    WellState<Scalar>& wellState)
+                                    WellState<FluidSystem, Indices>& wellState)
 {
     OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
@@ -536,12 +545,12 @@ updateWellRatesFromGroupTargetScale(const Scalar scale,
 
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateVREPForGroups(const Group& group,
                     const Schedule& schedule,
                     const int reportStepIdx,
-                    const WellState<Scalar>& wellState,
+                    const WellState<FluidSystem, Indices>& wellState,
                     GroupState<Scalar>& group_state)
 {
     OPM_TIMEFUNCTION();
@@ -563,12 +572,12 @@ updateVREPForGroups(const Group& group,
     group_state.update_injection_vrep_rate(group.name(), resv);
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateReservoirRatesInjectionGroups(const Group& group,
                                     const Schedule& schedule,
                                     const int reportStepIdx,
-                                    const WellState<Scalar>& wellState,
+                                    const WellState<FluidSystem, Indices>& wellState,
                                     GroupState<Scalar>& group_state)
 {
     OPM_TIMEFUNCTION();
@@ -590,12 +599,12 @@ updateReservoirRatesInjectionGroups(const Group& group,
     group_state.update_injection_reservoir_rates(group.name(), resv);
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateSurfaceRatesInjectionGroups(const Group& group,
                                   const Schedule& schedule,
                                   const int reportStepIdx,
-                                  const WellState<Scalar>& wellState,
+                                  const WellState<FluidSystem, Indices>& wellState,
                                   GroupState<Scalar>& group_state)
 {
     OPM_TIMEFUNCTION();
@@ -617,13 +626,13 @@ updateSurfaceRatesInjectionGroups(const Group& group,
     group_state.update_injection_surface_rates(group.name(), rates);
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateWellRates(const Group& group,
                 const Schedule& schedule,
                 const int reportStepIdx,
-                const WellState<Scalar>& wellStateNupcol,
-                WellState<Scalar>& wellState)
+                const WellState<FluidSystem, Indices>& wellStateNupcol,
+                WellState<FluidSystem, Indices>& wellState)
 {
     OPM_TIMEFUNCTION();
     for (const std::string& groupName : group.groups()) {
@@ -650,12 +659,12 @@ updateWellRates(const Group& group,
     }
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateGroupProductionRates(const Group& group,
                            const Schedule& schedule,
                            const int reportStepIdx,
-                           const WellState<Scalar>& wellState,
+                           const WellState<FluidSystem, Indices>& wellState,
                            GroupState<Scalar>& group_state)
 {
     OPM_TIMEFUNCTION();
@@ -671,11 +680,11 @@ updateGroupProductionRates(const Group& group,
     group_state.update_production_rates(group.name(), rates);
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateNetworkLeafNodeProductionRates(const Schedule& schedule,
                                      const int reportStepIdx,
-                                     const WellState<Scalar>& wellState,
+                                     const WellState<FluidSystem, Indices>& wellState,
                                      GroupState<Scalar>& group_state)
 {
     const auto& network = schedule[reportStepIdx].network();
@@ -696,14 +705,14 @@ updateNetworkLeafNodeProductionRates(const Schedule& schedule,
     }
 }
 
-template<class Scalar>
-void WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+void WellGroupHelpers<FluidSystem, Indices>::
 updateREINForGroups(const Group& group,
                     const Schedule& schedule,
                     const int reportStepIdx,
                     const PhaseUsage& pu,
                     const SummaryState& st,
-                    const WellState<Scalar>& wellState,
+                    const WellState<FluidSystem, Indices>& wellState,
                     GroupState<Scalar>& group_state,
                     bool sum_rank)
 {
@@ -731,15 +740,15 @@ updateREINForGroups(const Group& group,
     group_state.update_injection_rein_rates(group.name(), rein);
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template <class RegionalValues>
-void WellGroupHelpers<Scalar>::
+void WellGroupHelpers<FluidSystem, Indices>::
 updateGpMaintTargetForGroups(const Group& group,
                              const Schedule& schedule,
                              const RegionalValues& regional_values,
                              const int reportStepIdx,
                              const double dt,
-                             const WellState<Scalar>& well_state,
+                             const WellState<FluidSystem, Indices>& well_state,
                              GroupState<Scalar>& group_state)
 {
     OPM_TIMEFUNCTION();
@@ -826,11 +835,11 @@ updateGpMaintTargetForGroups(const Group& group,
     group_state.update_gpmaint_target(group.name(), std::max(Scalar{0.0}, sign * rate));
 }
 
-template<class Scalar>
-std::map<std::string, Scalar>
-WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::map<std::string, typename FluidSystem::Scalar>
+WellGroupHelpers<FluidSystem, Indices>::
 computeNetworkPressures(const Network::ExtNetwork& network,
-                        const WellState<Scalar>& well_state,
+                        const WellStateType& well_state,
                         const GroupState<Scalar>& group_state,
                         const VFPProdProperties<Scalar>& vfp_prod_props,
                         const Schedule& schedule,
@@ -983,19 +992,19 @@ computeNetworkPressures(const Network::ExtNetwork& network,
     return node_pressures;
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 GuideRate::RateVector
-WellGroupHelpers<Scalar>::
-getWellRateVector(const WellState<Scalar>& well_state,
+WellGroupHelpers<FluidSystem, Indices>::
+getWellRateVector(const WellState<FluidSystem, Indices>& well_state,
                   const PhaseUsage& pu,
                   const std::string& name)
 {
     return getGuideRateVector(well_state.currentWellRates(name), pu);
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 GuideRate::RateVector
-WellGroupHelpers<Scalar>::
+WellGroupHelpers<FluidSystem, Indices>::
 getProductionGroupRateVector(const GroupState<Scalar>& group_state,
                              const PhaseUsage& pu,
                              const std::string& group_name)
@@ -1003,11 +1012,12 @@ getProductionGroupRateVector(const GroupState<Scalar>& group_state,
     return getGuideRateVector(group_state.production_rates(group_name), pu);
 }
 
-template<class Scalar>
-Scalar WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+WellGroupHelpers<FluidSystem, Indices>::
 getGuideRate(const std::string& name,
              const Schedule& schedule,
-             const WellState<Scalar>& wellState,
+             const WellState<FluidSystem, Indices>& wellState,
              const GroupState<Scalar>& group_state,
              const int reportStepIdx,
              const GuideRate* guideRate,
@@ -1058,11 +1068,12 @@ getGuideRate(const std::string& name,
     return totalGuideRate;
 }
 
-template<class Scalar>
-Scalar WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+typename FluidSystem::Scalar
+WellGroupHelpers<FluidSystem, Indices>::
 getGuideRateInj(const std::string& name,
                 const Schedule& schedule,
-                const WellState<Scalar>& wellState,
+                const WellState<FluidSystem, Indices>& wellState,
                 const GroupState<Scalar>& group_state,
                 const int reportStepIdx,
                 const GuideRate* guideRate,
@@ -1110,17 +1121,17 @@ getGuideRateInj(const std::string& name,
     return totalGuideRate;
 }
 
-template<class Scalar>
-int WellGroupHelpers<Scalar>::
-updateGroupControlledWells(const Schedule& schedule,
-                           const WellState<Scalar>& well_state,
-                           GroupState<Scalar>& group_state,
-                           const SummaryState& summary_state,
-                           const GuideRate* guideRate,
-                           const int report_step,
-                           const std::string& group_name,
-                           const bool is_production_group,
-                           const Phase injection_phase)
+template<typename FluidSystem, typename Indices>
+int WellGroupHelpers<FluidSystem, Indices>::
+groupControlledWells(const Schedule& schedule,
+                     const WellState<FluidSystem, Indices>& well_state,
+                     const GroupState<Scalar>& group_state,
+                     const SummaryState& summary_state,
+                     const GuideRate* guideRate,
+                     const int report_step,
+                     const std::string& group_name,
+                     const bool is_production_group,
+                     const Phase injection_phase)
 {
     OPM_TIMEFUNCTION();
     const Group& group = schedule.getGroup(group_name, report_step);
@@ -1168,7 +1179,7 @@ updateGroupControlledWells(const Schedule& schedule,
             const PhaseUsage& pu = well_state.phaseUsage();
             std::vector<Scalar> rates(pu.num_phases, 0.0);
             for (int phase_pos = 0; phase_pos < pu.num_phases; ++phase_pos) {
-                 rates[phase_pos] = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
+                 rates[phase_pos] = WellGroupHelpers<FluidSystem, Indices>::sumWellSurfaceRates(group,
                                                                                   schedule,
                                                                                   well_state,
                                                                                   report_step,
@@ -1261,9 +1272,9 @@ groupControlledWells(const Schedule& schedule,
     return num_wells;
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 std::vector<std::string>
-WellGroupHelpers<Scalar>::
+WellGroupHelpers<FluidSystem, Indices>::
 groupChainTopBot(const std::string& bottom,
                  const std::string& top,
                  const Schedule& schedule,
@@ -1292,9 +1303,9 @@ groupChainTopBot(const std::string& bottom,
     return chain;
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 bool
-WellGroupHelpers<Scalar>::
+WellGroupHelpers<FluidSystem, Indices>::
 isInGroupChainTopBot(const std::string& bottom,
                      const std::string& top,
                      const Schedule& schedule,
@@ -1319,9 +1330,9 @@ isInGroupChainTopBot(const std::string& bottom,
     return true;
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 std::string
-WellGroupHelpers<Scalar>::
+WellGroupHelpers<FluidSystem, Indices>::
 control_group(const Group& group,
               const GroupState<Scalar>& group_state,
               const int reportStepIdx,
@@ -1343,13 +1354,13 @@ control_group(const Group& group,
     return group.name();
 }
 
-template<class Scalar>
-std::pair<bool, Scalar>
-WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::pair<bool, typename FluidSystem::Scalar>
+WellGroupHelpers<FluidSystem, Indices>::
 checkGroupConstraintsProd(const std::string& name,
                           const std::string& parent,
                           const Group& group,
-                          const WellState<Scalar>& wellState,
+                          const WellState<FluidSystem, Indices>& wellState,
                           const GroupState<Scalar>& group_state,
                           const int reportStepIdx,
                           const GuideRate* guideRate,
@@ -1682,13 +1693,13 @@ getWellGroupTargetProducer(const std::string& name,
     return std::max(Scalar(0.0), target / efficiencyFactor);;
 }
 
-template<class Scalar>
-std::pair<bool, Scalar>
-WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::pair<bool, typename FluidSystem::Scalar>
+WellGroupHelpers<FluidSystem, Indices>::
 checkGroupConstraintsInj(const std::string& name,
                          const std::string& parent,
                          const Group& group,
-                         const WellState<Scalar>& wellState,
+                         const WellState<FluidSystem, Indices>& wellState,
                          const GroupState<Scalar>& group_state,
                          const int reportStepIdx,
                          const GuideRate* guideRate,
@@ -2031,16 +2042,16 @@ getWellGroupTargetInjector(const std::string& name,
 }
 
 
-template<class Scalar>
-std::pair<std::optional<std::string>, Scalar>
-WellGroupHelpers<Scalar>::
+template<typename FluidSystem, typename Indices>
+std::pair<std::optional<std::string>, typename FluidSystem::Scalar>
+WellGroupHelpers<FluidSystem, Indices>::
 worstOffendingWell(const Group& group,
                    const Schedule& schedule,
                    const int reportStepIdx,
                    const Group::ProductionCMode& offendedControl,
                    const PhaseUsage& pu,
                    const Parallel::Communication& comm,
-                   const WellState<Scalar>& wellState,
+                   const WellState<FluidSystem, Indices>& wellState,
                    DeferredLogger& deferred_logger)
 {
     std::pair<std::optional<std::string>, Scalar> offending_well {std::nullopt, 0.0};
@@ -2131,9 +2142,9 @@ worstOffendingWell(const Group& group,
     return offending_well;
 }
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 template <class AverageRegionalPressureType>
-void WellGroupHelpers<Scalar>::
+void WellGroupHelpers<FluidSystem, Indices>::
 setRegionAveragePressureCalculator(const Group& group,
                                    const Schedule& schedule,
                                    const int reportStepIdx,
@@ -2160,7 +2171,6 @@ setRegionAveragePressureCalculator(const Group& group,
     }
 }
 
-
 template<class Scalar>
 using AvgP = RegionAverageCalculator::
     AverageRegionalPressure<BlackOilFluidSystem<Scalar>,std::vector<int>>;
@@ -2168,28 +2178,55 @@ using AvgP = RegionAverageCalculator::
 template<class Scalar>
 using AvgPMap = std::map<std::string, std::unique_ptr<AvgP<Scalar>>>;
 
-#define INSTANTIATE_TYPE(T)                                                   \
-    template class WellGroupHelpers<T>;                                       \
-    template void WellGroupHelpers<T>::                                       \
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class WellGroupHelpers<FS<T>, __VA_ARGS__>; \
+    template void WellGroupHelpers<FS<T>, __VA_ARGS__>::                       \
         updateGpMaintTargetForGroups<AvgPMap<T>>(const Group&,                \
                                                  const Schedule&,             \
                                                  const AvgPMap<T>&,           \
                                                  int,                         \
                                                  double,                      \
-                                                 const WellState<T>&,         \
+                                                 const WellState<FS<T>, __VA_ARGS__>&,         \
                                                  GroupState<T>&);             \
-    template void WellGroupHelpers<T>::                                       \
+    template void WellGroupHelpers<FS<T>, __VA_ARGS__>::                       \
         setRegionAveragePressureCalculator<AvgP<T>>(const Group&,             \
                                                     const Schedule&,          \
                                                     const int,                \
                                                     const FieldPropsManager&, \
                                                     const PhaseUsage&,        \
                                                     AvgPMap<T>&);
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
 
-INSTANTIATE_TYPE(double)
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_TYPE(float)
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm::WellGroupHelpers

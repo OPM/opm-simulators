@@ -70,7 +70,7 @@ extendEval(const Eval& in) const
 template<class FluidSystem, class Indices>
 void
 StandardWellEval<FluidSystem,Indices>::
-updateWellStateFromPrimaryVariables(WellState<Scalar>& well_state,
+updateWellStateFromPrimaryVariables(WellState<FluidSystem, Indices>& well_state,
                                     const SummaryState& summary_state,
                                     DeferredLogger& deferred_logger) const
 {
@@ -98,7 +98,7 @@ computeAccumWell()
 template<class FluidSystem, class Indices>
 ConvergenceReport
 StandardWellEval<FluidSystem,Indices>::
-getWellConvergence(const WellState<Scalar>& well_state,
+getWellConvergence(const WellState<FluidSystem, Indices>& well_state,
                    const std::vector<Scalar>& B_avg,
                    const Scalar maxResidualAllowed,
                    const Scalar tol_wells,

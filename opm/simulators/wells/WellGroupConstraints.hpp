@@ -44,9 +44,10 @@ template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
 template<typename FluidSystem, typename Indices> class WellState;
 
 //! \brief Class for computing well group constraints.
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class WellGroupConstraints {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     //! \brief Constructor sets reference to well.
     explicit WellGroupConstraints(const WellInterfaceGeneric<FluidSystem, Indices>& well) : well_(well) {}
 
