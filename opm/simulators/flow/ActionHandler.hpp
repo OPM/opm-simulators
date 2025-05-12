@@ -51,6 +51,7 @@ template<typename FluidSystem, typename Indices>
 class ActionHandler
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     //! \brief Function handle to update transmissiblities.
     using TransFunc = std::function<void(bool)>;
 
