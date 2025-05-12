@@ -43,6 +43,7 @@
 #include <stdexcept>
 
 namespace Opm {
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
@@ -118,8 +119,12 @@ public:
     static bool eqApplies(unsigned eqIdx)
     {
         if constexpr (enableMICP) {
-            return eqIdx == contiMicrobialEqIdx || eqIdx == contiOxygenEqIdx || eqIdx == contiUreaEqIdx 
-                   || eqIdx == contiBiofilmEqIdx || eqIdx == contiCalciteEqIdx;
+            return
+                eqIdx == contiMicrobialEqIdx
+             || eqIdx == contiOxygenEqIdx
+             || eqIdx == contiUreaEqIdx
+             || eqIdx == contiBiofilmEqIdx
+             || eqIdx == contiCalciteEqIdx;
         }
         else {
             return false;
@@ -141,27 +146,34 @@ public:
     {
         if constexpr (enableMICP) {
             const auto& fs = intQuants.fluidState();
-            LhsEval surfaceVolumeWater = Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx))
-                                         * Toolbox::template decay<LhsEval>(intQuants.porosity());
+            LhsEval surfaceVolumeWater = Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx)) *
+                                         Toolbox::template decay<LhsEval>(intQuants.porosity());
             // avoid singular matrix if no water is present
             surfaceVolumeWater = max(surfaceVolumeWater, 1e-10);
             // suspended microbes in water phase
-            const LhsEval massMicrobes = surfaceVolumeWater * Toolbox::template decay<LhsEval>(intQuants.microbialConcentration());
+            const LhsEval massMicrobes = surfaceVolumeWater *
+                                         Toolbox::template decay<LhsEval>(intQuants.microbialConcentration());
             LhsEval accumulationMicrobes = massMicrobes;
             storage[contiMicrobialEqIdx] += accumulationMicrobes;
+
             // oxygen in water phase
-            const LhsEval massOxygen = surfaceVolumeWater * Toolbox::template decay<LhsEval>(intQuants.oxygenConcentration());
+            const LhsEval massOxygen = surfaceVolumeWater *
+                                       Toolbox::template decay<LhsEval>(intQuants.oxygenConcentration());
             LhsEval accumulationOxygen = massOxygen;
             storage[contiOxygenEqIdx] += accumulationOxygen;
+
             // urea in water phase (applying the scaling factor for the urea equation)
-            const LhsEval massUrea = surfaceVolumeWater * Toolbox::template decay<LhsEval>(intQuants.ureaConcentration());
+            const LhsEval massUrea = surfaceVolumeWater *
+                                     Toolbox::template decay<LhsEval>(intQuants.ureaConcentration());
             LhsEval accumulationUrea = massUrea;
             storage[contiUreaEqIdx] += accumulationUrea;
             storage[contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
+
             // biofilm
             const LhsEval massBiofilm = Toolbox::template decay<LhsEval>(intQuants.biofilmConcentration());
             LhsEval accumulationBiofilm = massBiofilm;
             storage[contiBiofilmEqIdx] += accumulationBiofilm;
+
             // calcite
             const LhsEval massCalcite = Toolbox::template decay<LhsEval>(intQuants.calciteConcentration());
             LhsEval accumulationCalcite = massCalcite;
@@ -175,15 +187,9 @@ public:
                                const IntensiveQuantities& upFs)
     {
         if constexpr (enableMICP) {
-            flux[contiMicrobialEqIdx] +=
-                decay<UpEval>(upFs.microbialConcentration())
-                * volumeFlux;
-            flux[contiOxygenEqIdx] +=
-                decay<UpEval>(upFs.oxygenConcentration())
-                * volumeFlux;
-            flux[contiUreaEqIdx] +=
-                decay<UpEval>(upFs.ureaConcentration())
-                * volumeFlux;
+            flux[contiMicrobialEqIdx] += decay<UpEval>(upFs.microbialConcentration()) * volumeFlux;
+            flux[contiOxygenEqIdx] += decay<UpEval>(upFs.oxygenConcentration()) * volumeFlux;
+            flux[contiUreaEqIdx] += decay<UpEval>(upFs.ureaConcentration()) * volumeFlux;
         }
     }
 
@@ -199,7 +205,6 @@ public:
                             [[maybe_unused]] const ElementContext& elemCtx,
                             [[maybe_unused]] unsigned scvfIdx,
                             [[maybe_unused]] unsigned timeIdx)
-
     {
         if constexpr (enableMICP) {
             flux[contiMicrobialEqIdx] = 0.0;
@@ -308,85 +313,53 @@ public:
         }
     }
 
-    static const Scalar densityBiofilm(unsigned satnumRegionIdx)
-    {
-        return params_.densityBiofilm_[satnumRegionIdx];
-    }
+    static Scalar densityBiofilm(unsigned satnumRegionIdx)
+    { return params_.densityBiofilm_[satnumRegionIdx]; }
 
-    static const Scalar densityCalcite(unsigned satnumRegionIdx)
-    {
-        return params_.densityCalcite_[satnumRegionIdx];
-    }
+    static Scalar densityCalcite(unsigned satnumRegionIdx)
+    { return params_.densityCalcite_[satnumRegionIdx]; }
 
-    static const Scalar detachmentRate(unsigned satnumRegionIdx)
-    {
-        return params_.detachmentRate_[satnumRegionIdx];
-    }
+    static Scalar detachmentRate(unsigned satnumRegionIdx)
+    { return params_.detachmentRate_[satnumRegionIdx]; }
 
-    static const Scalar detachmentExponent(unsigned satnumRegionIdx)
-    {
-        return params_.detachmentExponent_[satnumRegionIdx];
-    }
+    static Scalar detachmentExponent(unsigned satnumRegionIdx)
+    { return params_.detachmentExponent_[satnumRegionIdx]; }
 
-    static const Scalar halfVelocityOxygen(unsigned satnumRegionIdx)
-    {
-        return params_.halfVelocityOxygen_[satnumRegionIdx];
-    }
+    static Scalar halfVelocityOxygen(unsigned satnumRegionIdx)
+    { return params_.halfVelocityOxygen_[satnumRegionIdx]; }
 
-    static const Scalar halfVelocityUrea(unsigned satnumRegionIdx)
-    {
-        return params_.halfVelocityUrea_[satnumRegionIdx];
-    }
+    static Scalar halfVelocityUrea(unsigned satnumRegionIdx)
+    { return params_.halfVelocityUrea_[satnumRegionIdx]; }
 
-    static const Scalar maximumGrowthRate(unsigned satnumRegionIdx)
-    {
-        return params_.maximumGrowthRate_[satnumRegionIdx];
-    }
+    static Scalar maximumGrowthRate(unsigned satnumRegionIdx)
+    { return params_.maximumGrowthRate_[satnumRegionIdx]; }
 
-    static const Scalar maximumUreaUtilization(unsigned satnumRegionIdx)
-    {
-        return params_.maximumUreaUtilization_[satnumRegionIdx];
-    }
+    static Scalar maximumUreaUtilization(unsigned satnumRegionIdx)
+    { return params_.maximumUreaUtilization_[satnumRegionIdx]; }
 
-    static const Scalar microbialAttachmentRate(unsigned satnumRegionIdx)
-    {
-        return params_.microbialAttachmentRate_[satnumRegionIdx];
-    }
+    static Scalar microbialAttachmentRate(unsigned satnumRegionIdx)
+    { return params_.microbialAttachmentRate_[satnumRegionIdx]; }
 
-    static const Scalar microbialDeathRate(unsigned satnumRegionIdx)
-    {
-        return params_.microbialDeathRate_[satnumRegionIdx];
-    }
+    static Scalar microbialDeathRate(unsigned satnumRegionIdx)
+    { return params_.microbialDeathRate_[satnumRegionIdx]; }
 
-    static const Scalar oxygenConsumptionFactor(unsigned satnumRegionIdx)
-    {
-        return params_.oxygenConsumptionFactor_[satnumRegionIdx];
-    }
+    static Scalar oxygenConsumptionFactor(unsigned satnumRegionIdx)
+    { return params_.oxygenConsumptionFactor_[satnumRegionIdx]; }
 
-    static const Scalar yieldGrowthCoefficient(unsigned satnumRegionIdx)
-    {
-        return params_.yieldGrowthCoefficient_[satnumRegionIdx];
-    }
+    static Scalar yieldGrowthCoefficient(unsigned satnumRegionIdx)
+    { return params_.yieldGrowthCoefficient_[satnumRegionIdx]; }
 
-    static const Scalar yieldUreaToCalciteCoefficient(unsigned satnumRegionIdx)
-    {
-        return params_.yieldUreaToCalciteCoefficient_[satnumRegionIdx];
-    }
+    static Scalar yieldUreaToCalciteCoefficient(unsigned satnumRegionIdx)
+    { return params_.yieldUreaToCalciteCoefficient_[satnumRegionIdx]; }
 
-    static const Scalar microbialDiffusion(unsigned pvtRegionIdx)
-    {
-        return params_.microbialDiffusion_[pvtRegionIdx];
-    }
+    static Scalar microbialDiffusion(unsigned pvtRegionIdx)
+    { return params_.microbialDiffusion_[pvtRegionIdx]; }
 
-    static const Scalar oxygenDiffusion(unsigned pvtRegionIdx)
-    {
-        return params_.oxygenDiffusion_[pvtRegionIdx];
-    }
+    static Scalar oxygenDiffusion(unsigned pvtRegionIdx)
+    { return params_.oxygenDiffusion_[pvtRegionIdx]; }
 
-    static const Scalar ureaDiffusion(unsigned pvtRegionIdx)
-    {
-        return params_.ureaDiffusion_[pvtRegionIdx];
-    }
+    static Scalar ureaDiffusion(unsigned pvtRegionIdx)
+    { return params_.ureaDiffusion_[pvtRegionIdx]; }
 
     static const TabulatedFunction& permfactTable(const ElementContext& elemCtx,
                                                   unsigned scvIdx,
@@ -397,14 +370,11 @@ public:
     }
 
     static const TabulatedFunction& permfactTable(unsigned satnumRegionIdx)
-    {
-        return params_.permfactTable_[satnumRegionIdx];
-    }
+    { return params_.permfactTable_[satnumRegionIdx]; }
 
 private:
     static BlackOilMICPParams<Scalar> params_;
 };
-
 
 template <class TypeTag, bool enableMICPV>
 BlackOilMICPParams<typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar>
@@ -438,9 +408,7 @@ class BlackOilMICPIntensiveQuantities
     static constexpr int calciteConcentrationIdx = Indices::calciteConcentrationIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
-
 public:
-
     /*!
      * \brief Update the intensive properties needed to handle MICP from the
      *        primary variables
@@ -460,7 +428,9 @@ public:
         biofilmConcentration_ = priVars.makeEvaluation(biofilmConcentrationIdx, timeIdx, linearizationType);
         calciteConcentration_ = priVars.makeEvaluation(calciteConcentrationIdx, timeIdx, linearizationType);
 
-        const Evaluation porosityFactor  = min(1.0 - (biofilmConcentration_+calciteConcentration_)/(referencePorosity_+1e-8), 1.0); //phi/phi_0
+        const Evaluation porosityFactor  = min(1.0 - (biofilmConcentration_ + calciteConcentration_) /
+                                                     (referencePorosity_ + 1e-8),
+                                              1.0); // phi / phi_0
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
         const auto& permfactTable = MICPModule::permfactTable(satnumRegionIdx);
         permFactor_ = permfactTable.eval(porosityFactor, /*extrapolation=*/true);
@@ -502,7 +472,6 @@ protected:
     Evaluation biofilmMass_;
     Evaluation calciteMass_;
     Evaluation permFactor_;
-
 };
 
 template <class TypeTag>
@@ -516,7 +485,7 @@ public:
     void MICPPropertiesUpdate_(const ElementContext&,
                                unsigned,
                                unsigned)
-    { }
+    {}
 
     const Evaluation& microbialConcentration() const
     { throw std::logic_error("microbialConcentration() called but MICP is disabled"); }
