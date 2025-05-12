@@ -625,9 +625,9 @@ protected:
         const auto& intQuantsInside = elemCtx.intensiveQuantities(extQuants.interiorIndex(), timeIdx);
         const auto& intQuantsOutside = elemCtx.intensiveQuantities(extQuants.exteriorIndex(), timeIdx);
 
-        const Scalar diffusivity = elemCtx.problem().diffusivity(elemCtx, face.interiorIndex(), face.exteriorIndex());
+        const Scalar diff = elemCtx.problem().diffusivity(elemCtx, face.interiorIndex(), face.exteriorIndex());
         const Scalar faceArea = face.area();
-        diffusivity_ = diffusivity / faceArea;
+        diffusivity_ = diff / faceArea;
         update(effectiveDiffusionCoefficient_, intQuantsInside, intQuantsOutside);
         Valgrind::CheckDefined(diffusivity_);
     }
