@@ -47,6 +47,7 @@
 #include <string>
 
 namespace Opm {
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
@@ -76,6 +77,7 @@ class BlackOilEnergyModule
 
 public:
     using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+
     /*!
      * \brief Register all run-time parameters for the black-oil energy module.
      */
@@ -105,7 +107,6 @@ public:
         else {
             return false;
         }
-
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -172,7 +173,7 @@ public:
             // add the internal energy of the rock
             Scalar rockFraction = intQuants.rockFraction();
             const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
-            storage[contiEnergyEqIdx] += rockFraction*uRock;
+            storage[contiEnergyEqIdx] += rockFraction * uRock;
             storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }
@@ -217,8 +218,6 @@ public:
         }
     }
 
-
-
     template <class UpEval, class Eval, class FluidState>
     static void addPhaseEnthalpyFluxes_(RateVector& flux,
                                         unsigned phaseIdx,
@@ -226,9 +225,9 @@ public:
                                         const FluidState& upFs)
     {
         flux[contiEnergyEqIdx] +=
-            decay<UpEval>(upFs.enthalpy(phaseIdx))
-            * decay<UpEval>(upFs.density(phaseIdx))
-            * volumeFlux;
+            decay<UpEval>(upFs.enthalpy(phaseIdx)) *
+            decay<UpEval>(upFs.density(phaseIdx)) *
+            volumeFlux;
     }
 
     template <class UpstreamEval>
@@ -368,7 +367,6 @@ class BlackOilEnergyIntensiveQuantities
     static constexpr int temperatureIdx = Indices::temperatureIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
-
 public:
     /*!
      * \brief Update the temperature of the intensive quantity's fluid state
@@ -502,21 +500,24 @@ public:
                                  unsigned,
                                  unsigned,
                                  const typename FluidSystem::template ParameterCache<Evaluation>&)
-    { }
+    {}
 
     const Evaluation& rockInternalEnergy() const
-    { throw std::logic_error("Requested the rock internal energy, which is "
-                             "unavailable because energy is not conserved"); }
+    {
+        throw std::logic_error("Requested the rock internal energy, which is "
+                             "unavailable because energy is not conserved");
+    }
 
     const Evaluation& totalThermalConductivity() const
-    { throw std::logic_error("Requested the total thermal conductivity, which is "
-                             "unavailable because energy is not conserved"); }
+    {
+        throw std::logic_error("Requested the total thermal conductivity, which is "
+                             "unavailable because energy is not conserved");
+    }
 
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 };
-
 
 /*!
  * \ingroup BlackOil
@@ -545,6 +546,7 @@ class BlackOilEnergyExtensiveQuantities
     static const int dimWorld = GridView::dimensionworld;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
+
 public:
     template<class FluidState>
     static void updateEnergy(Evaluation& energyFlux,
@@ -561,19 +563,16 @@ public:
     {
         Evaluation deltaT;
         if (focusDofIndex == inIdx) {
-            deltaT =
-                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
-                - inFs.temperature(/*phaseIdx=*/0);
+            deltaT = decay<Scalar>(exFs.temperature(/*phaseIdx=*/0)) -
+                     inFs.temperature(/*phaseIdx=*/0);
         }
         else if (focusDofIndex == exIdx) {
-            deltaT =
-                exFs.temperature(/*phaseIdx=*/0)
-                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+            deltaT = exFs.temperature(/*phaseIdx=*/0) -
+                     decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
         }
         else {
-            deltaT =
-                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
-                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+            deltaT = decay<Scalar>(exFs.temperature(/*phaseIdx=*/0)) -
+                     decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
         }
 
         Evaluation inLambda;
@@ -600,13 +599,13 @@ public:
             // transmissibility this cannot be done as a preprocessing step because the
             // average thermal conductivity is analogous to the permeability but
             // depends on the solution.
-            H = 1.0/(1.0/inH + 1.0/exH);
+            H = 1.0 / (1.0 / inH + 1.0 / exH);
         }
         else {
             H = 0.0;
         }
 
-        energyFlux = deltaT * (-H/faceArea);
+        energyFlux = deltaT * (-H / faceArea);
     }
 
     void updateEnergy(const ElementContext& elemCtx,
@@ -665,14 +664,12 @@ public:
         const auto& inFs = inIq.fluidState();
         Evaluation deltaT;
         if (focusDofIndex == inIdx) {
-            deltaT =
-                boundaryFs.temperature(/*phaseIdx=*/0)
-                - inFs.temperature(/*phaseIdx=*/0);
+            deltaT = boundaryFs.temperature(/*phaseIdx=*/0) -
+                     inFs.temperature(/*phaseIdx=*/0);
         }
         else {
-            deltaT =
-                decay<Scalar>(boundaryFs.temperature(/*phaseIdx=*/0))
-                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+            deltaT = decay<Scalar>(boundaryFs.temperature(/*phaseIdx=*/0)) -
+                     decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
         }
 
         Evaluation lambda;
@@ -683,13 +680,12 @@ public:
             lambda = decay<Scalar>(inIq.totalThermalConductivity());
         }
 
-
         if (lambda > 0.0) {
             // compute the "thermal transmissibility". In contrast to the normal
             // transmissibility this cannot be done as a preprocessing step because the
             // average thermal conductivity is analogous to the permeability but depends
             // on the solution.
-            energyFlux = deltaT*lambda*(-alpha);
+            energyFlux = deltaT * lambda * -alpha;
         }
         else {
             energyFlux = 0.0;
@@ -713,6 +709,7 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, false>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
 public:
     template<class FluidState>
     static void updateEnergy(Evaluation& /*energyFlux*/,
@@ -749,10 +746,10 @@ public:
                                      Scalar /*alpha*/,
                                      const BoundaryFluidState& /*boundaryFs*/)
     {}
+
     const Evaluation& energyFlux()  const
     { throw std::logic_error("Requested the energy flux, but energy is not conserved"); }
 };
-
 
 } // namespace Opm
 
