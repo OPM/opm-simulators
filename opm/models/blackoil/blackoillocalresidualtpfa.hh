@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/Schedule/BCProp.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
@@ -46,6 +47,7 @@
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #include <array>
+#include <cassert>
 #include <stdexcept>
 #include <string>
 
