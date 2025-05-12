@@ -59,9 +59,15 @@
 #include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkdiffusionmodule.hpp>
 
+#include <cassert>
+#include <istream>
 #include <memory>
+#include <ostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <tuple>
+#include <vector>
 
 namespace Opm {
 
