@@ -59,8 +59,8 @@ namespace Opm {
     class DeferredLogger;
     class EclipseState;
     template<typename FluidSystem, typename Indices> class BlackoilWellModelGasLiftGeneric;
-    template<class Scalar> class GasLiftGroupInfo;
-    template<class Scalar> class GasLiftSingleWellGeneric;
+    template<typename FluidSystem, typename Indices> class GasLiftGroupInfo;
+    template<typename FluidSystem, typename Indices> class GasLiftSingleWellGeneric;
     template<class Scalar> class GasLiftWellState;
     class Group;
     class GuideRateConfig;

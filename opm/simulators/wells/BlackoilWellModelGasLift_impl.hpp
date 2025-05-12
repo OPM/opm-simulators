@@ -141,7 +141,7 @@ gasLiftOptimizationStage1(const Simulator& simulator,
                           GroupState<Scalar>& groupState,
                           GLiftProdWells& prod_wells,
                           GLiftOptWells &glift_wells,
-                          GasLiftGroupInfo<Scalar>& group_info,
+                          GasLiftGroupInfo<FluidSystem, Indices>& group_info,
                           GLiftWellStateMap& state_map,
                           DeferredLogger& deferred_logger)
 {
@@ -267,7 +267,7 @@ gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
                                     GroupState<Scalar>& groupState,
                                     GLiftProdWells& prod_wells,
                                     GLiftOptWells& glift_wells,
-                                    GasLiftGroupInfo<Scalar>& group_info,
+                                    GasLiftGroupInfo<FluidSystem, Indices>& group_info,
                                     GLiftWellStateMap& state_map,
                                     GLiftSyncGroups& sync_groups,
                                     DeferredLogger& deferred_logger)
