@@ -63,7 +63,11 @@ MultisegmentWellSegments(const int numSegments,
                          const ParallelWellInfo<Scalar>& parallel_well_info,
                          WellInterfaceGeneric<Scalar>& well)
     : perforations_(numSegments)
-    , local_perforation_depth_diffs_(well.numPerfs(), 0.0)
+    , local_perforation_depth_diffs_(well.numLocalPerfs(), 0.0)
+    // Generally, the info stored with the class MultisegmentWellSegments is global, i.e., the same across all
+    // processes, since segments do not have a 1:1 correspondence to the grid. All members of this class store
+    // global information, except for local_perforation_depth_diffs_, which is the only one that contains only
+    // local information. This is an exception and intentionally, since here, we only need the local entries.
     , inlets_(well.wellEcl().getSegments().size())
     , depth_diffs_(numSegments, 0.0)
     , densities_(numSegments, 0.0)
@@ -87,7 +91,7 @@ MultisegmentWellSegments(const int numSegments,
     // side
     int i_perf_wells = 0;
     // The perfDepth vector will contain the depths of all perforations across all processes of this well!
-    int num_perfs_whole_mswell = parallel_well_info.communication().sum(well.numPerfs());
+    int num_perfs_whole_mswell = parallel_well_info.communication().sum(well.numLocalPerfs());
     well.perfDepth().resize(num_perfs_whole_mswell, 0.0);
     const auto& segment_set = well_.wellEcl().getSegments();
     for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
