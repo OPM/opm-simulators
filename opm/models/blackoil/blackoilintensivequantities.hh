@@ -162,14 +162,14 @@ public:
 
     BlackOilIntensiveQuantities()
     {
-        if (compositionSwitchEnabled) {
+        if constexpr (compositionSwitchEnabled) {
             fluidState_.setRs(0.0);
             fluidState_.setRv(0.0);
         }        
-        if (enableVapwat) { 
+        if constexpr (enableVapwat) {
             fluidState_.setRvw(0.0);
         }
-        if (has_disgas_in_water) {
+        if constexpr (has_disgas_in_water) {
             fluidState_.setRsw(0.0);
         }
     }
@@ -365,8 +365,11 @@ public:
                                                         SoMax);
                 fluidState_.setRs(min(RsMax, RsSat));
             }
-            else if constexpr (compositionSwitchEnabled)
-                fluidState_.setRs(0.0);
+            else {
+                if constexpr (compositionSwitchEnabled) {
+                    fluidState_.setRs(0.0);
+                }
+            }
         }
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
             const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
@@ -380,8 +383,11 @@ public:
                                                             SoMax);
                 fluidState_.setRv(min(RvMax, RvSat));
             }
-            else if constexpr (compositionSwitchEnabled)
-                fluidState_.setRv(0.0);
+            else {
+                if constexpr (compositionSwitchEnabled) {
+                    fluidState_.setRv(0.0);
+                }
+            }
         }
 
         if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rvw) {
