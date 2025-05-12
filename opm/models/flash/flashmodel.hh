@@ -52,9 +52,11 @@
 #include <opm/models/io/vtkdiffusionmodule.hpp>
 #include <opm/models/io/vtkenergymodule.hpp>
 
+#include <cassert>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <tuple>
 
 namespace Opm {
 template <class TypeTag>
