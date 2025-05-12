@@ -40,6 +40,10 @@
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <cassert>
+#include <istream>
+#include <ostream>
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
