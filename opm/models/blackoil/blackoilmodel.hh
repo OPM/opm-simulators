@@ -503,16 +503,11 @@ public:
         // if the primary variable is either the gas saturation, Rs or Rv
         assert(int(Indices::compositionSwitchIdx) == int(pvIdx));
 
-        auto pvMeaning = this->solution(0)[globalDofIdx].primaryVarsMeaningGas();
-        if (pvMeaning == PrimaryVariables::GasMeaning::Sg) {
-            return 1.0; // gas saturation
-        }
-        else if (pvMeaning == PrimaryVariables::GasMeaning::Rs) {
-            return 1.0 / 250.; // gas dissolution factor
-        }
-        else {
-            assert(pvMeaning == PrimaryVariables::GasMeaning::Rv);
-            return 1.0 / 0.025; // oil vaporization factor
+        switch (this->solution(0)[globalDofIdx].primaryVarsMeaningGas()) {
+        case PrimaryVariables::GasMeaning::Sg: return 1.0; // gas saturation
+        case PrimaryVariables::GasMeaning::Rs: return 1.0 / 250.; // gas dissolution factor
+        case PrimaryVariables::GasMeaning::Rv: return 1.0 / 0.025; // oil vaporization factor
+        default: assert(false);
         }
     }
 
