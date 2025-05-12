@@ -30,11 +30,12 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/material/common/Valgrind.hpp>
-
+#include <algorithm>
 #include <stdexcept>
 
 namespace Opm {
