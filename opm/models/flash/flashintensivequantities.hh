@@ -41,6 +41,8 @@
 #include <opm/models/flash/flashparameters.hh>
 #include <opm/models/flash/flashproperties.hh>
 
+#include <array>
+
 namespace Opm {
 
 /*!
