@@ -203,7 +203,7 @@ public:
         Evaluation diffR = 0.0;
         if constexpr(enableMICP) {
             // The dispersion coefficients are given for mass concentrations
-            Evaluation bAvg = (inFs.invB(waterPhaseIdx) + Toolbox::value(exFs.invB(waterPhaseIdx))) / 2;
+            const Evaluation bAvg = (inFs.invB(waterPhaseIdx) + Toolbox::value(exFs.invB(waterPhaseIdx))) / 2;
             diffR = inIq.microbialConcentration() - Toolbox::value(exIq.microbialConcentration());
             flux[contiMicrobialEqIdx] +=
                  bAvg *
@@ -253,7 +253,7 @@ public:
                 FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
                 phaseIdx == FluidSystem::oilPhaseIdx)
             {
-                Evaluation rsAvg = (inFs.Rs() + Toolbox::value(exFs.Rs())) / 2;
+                const Evaluation rsAvg = (inFs.Rs() + Toolbox::value(exFs.Rs())) / 2;
                 convFactor = 1.0 / (toMassFractionGasOil(pvtRegionIndex) + rsAvg);
                 diffR = inFs.Rs() - Toolbox::value(exFs.Rs());
             }
@@ -261,26 +261,26 @@ public:
                 FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
                 phaseIdx == FluidSystem::gasPhaseIdx)
             {
-                Evaluation rvAvg = (inFs.Rv() + Toolbox::value(exFs.Rv())) / 2;
+                const Evaluation rvAvg = (inFs.Rv() + Toolbox::value(exFs.Rv())) / 2;
                 convFactor = toMassFractionGasOil(pvtRegionIndex) /
                              (1.0 + rvAvg * toMassFractionGasOil(pvtRegionIndex));
                 diffR = inFs.Rv() - Toolbox::value(exFs.Rv());
             }
             if (FluidSystem::enableDissolvedGasInWater() && phaseIdx == FluidSystem::waterPhaseIdx) {
-                Evaluation rsAvg = (inFs.Rsw() + Toolbox::value(exFs.Rsw())) / 2;
+                const Evaluation rsAvg = (inFs.Rsw() + Toolbox::value(exFs.Rsw())) / 2;
                 convFactor = 1.0 / (toMassFractionGasWater(pvtRegionIndex) + rsAvg);
                 diffR = inFs.Rsw() - Toolbox::value(exFs.Rsw());
             }
             if (FluidSystem::enableVaporizedWater() && phaseIdx == FluidSystem::gasPhaseIdx) {
-                Evaluation rvAvg = (inFs.Rvw() + Toolbox::value(exFs.Rvw())) / 2;
+                const Evaluation rvAvg = (inFs.Rvw() + Toolbox::value(exFs.Rvw())) / 2;
                 convFactor = toMassFractionGasWater(pvtRegionIndex) /
                              (1.0 + rvAvg * toMassFractionGasWater(pvtRegionIndex));
                 diffR = inFs.Rvw() - Toolbox::value(exFs.Rvw());
             }
 
             // mass flux of solvent component
-            unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
+            const unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+            const unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
                     -bAvg *
                     normVelocityAvg[phaseIdx] *
@@ -289,8 +289,8 @@ public:
                     diffR;
 
             // mass flux of solute component
-            unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
-            unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
+            const unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
+            const unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
                     bAvg *
                     normVelocityAvg[phaseIdx] *
@@ -303,15 +303,15 @@ public:
 private:
     static Scalar toMassFractionGasOil (unsigned regionIdx)
     {
-        Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
-        Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
+        const Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
+        const Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
         return rhoO / rhoG;
     }
 
     static Scalar toMassFractionGasWater (unsigned regionIdx)
     {
-        Scalar rhoW = FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, regionIdx);
-        Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
+        const Scalar rhoW = FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, regionIdx);
+        const Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
         return rhoW / rhoG;
     }
 };
@@ -412,8 +412,8 @@ protected:
         const std::array<int, 3> phaseIdxs = {gasPhaseIdx, oilPhaseIdx, waterPhaseIdx};
         const std::array<int, 3> compIdxs = {gasCompIdx, oilCompIdx, waterCompIdx};
         const auto& velocityInf = problem.model().linearizer().getVelocityInfo();
-        unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        auto velocityInfos = velocityInf[globalDofIdx];
+        const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        const auto& velocityInfos = velocityInf[globalDofIdx];
         for (unsigned i = 0; i < phaseIdxs.size(); ++i) {
             normVelocityCell_[i] = 0;
         }
@@ -569,7 +569,7 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    const Scalar& dispersivity() const
+    Scalar dispersivity() const
     { return dispersivity_; }
 
     /*!
