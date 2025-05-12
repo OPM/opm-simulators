@@ -146,37 +146,40 @@ public:
     {
         if constexpr (enableMICP) {
             const auto& fs = intQuants.fluidState();
-            LhsEval surfaceVolumeWater = Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx)) *
-                                         Toolbox::template decay<LhsEval>(intQuants.porosity());
+
             // avoid singular matrix if no water is present
-            surfaceVolumeWater = max(surfaceVolumeWater, 1e-10);
+            const LhsEval surfaceVolumeWater =
+                max(Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx)) *
+                    Toolbox::template decay<LhsEval>(intQuants.porosity()),
+                    1e-10);
+
             // suspended microbes in water phase
             const LhsEval massMicrobes = surfaceVolumeWater *
                                          Toolbox::template decay<LhsEval>(intQuants.microbialConcentration());
-            LhsEval accumulationMicrobes = massMicrobes;
+            const LhsEval accumulationMicrobes = massMicrobes;
             storage[contiMicrobialEqIdx] += accumulationMicrobes;
 
             // oxygen in water phase
             const LhsEval massOxygen = surfaceVolumeWater *
                                        Toolbox::template decay<LhsEval>(intQuants.oxygenConcentration());
-            LhsEval accumulationOxygen = massOxygen;
+            const LhsEval accumulationOxygen = massOxygen;
             storage[contiOxygenEqIdx] += accumulationOxygen;
 
             // urea in water phase (applying the scaling factor for the urea equation)
             const LhsEval massUrea = surfaceVolumeWater *
                                      Toolbox::template decay<LhsEval>(intQuants.ureaConcentration());
-            LhsEval accumulationUrea = massUrea;
+            const LhsEval accumulationUrea = massUrea;
             storage[contiUreaEqIdx] += accumulationUrea;
             storage[contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
 
             // biofilm
             const LhsEval massBiofilm = Toolbox::template decay<LhsEval>(intQuants.biofilmConcentration());
-            LhsEval accumulationBiofilm = massBiofilm;
+            const LhsEval accumulationBiofilm = massBiofilm;
             storage[contiBiofilmEqIdx] += accumulationBiofilm;
 
             // calcite
             const LhsEval massCalcite = Toolbox::template decay<LhsEval>(intQuants.calciteConcentration());
-            LhsEval accumulationCalcite = massCalcite;
+            const LhsEval accumulationCalcite = massCalcite;
             storage[contiCalciteEqIdx] += accumulationCalcite;
         }
     }
@@ -211,8 +214,8 @@ public:
             flux[contiOxygenEqIdx] = 0.0;
             flux[contiUreaEqIdx] = 0.0;
             const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-            unsigned focusIdx = elemCtx.focusDofIndex();
-            unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
+            const unsigned focusIdx = elemCtx.focusDofIndex();
+            const unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
             if (upIdx == focusIdx) {
                 addMICPFluxes_<Evaluation>(flux, elemCtx, scvfIdx, timeIdx);
             }
@@ -229,7 +232,7 @@ public:
                                unsigned timeIdx)
     {
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
+        const unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
         const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
         const auto& fs = up.fluidState();
         const auto& volFlux = extQuants.volumeFlux(waterPhaseIdx);
@@ -244,7 +247,7 @@ public:
     {
         if constexpr (enableMICP) {
             const auto& velocityInf = problem.model().linearizer().getVelocityInfo();
-            auto velocityInfos = velocityInf[globalSpaceIdex];
+            const auto& velocityInfos = velocityInf[globalSpaceIdex];
             const Scalar normVelocityCell =
                 std::accumulate(velocityInfos.begin(), velocityInfos.end(), 0.0,
                                 [](const auto acc, const auto& info)
@@ -252,31 +255,31 @@ public:
 
             // get the model parameters
             const auto b = intQuants.fluidState().invB(waterPhaseIdx);
-            unsigned satnumIdx = problem.satnumRegionIndex(globalSpaceIdex);
-            Scalar k_a = microbialAttachmentRate(satnumIdx);
-            Scalar k_d = microbialDeathRate(satnumIdx);
-            Scalar rho_b = densityBiofilm(satnumIdx);
-            Scalar rho_c = densityCalcite(satnumIdx);
-            Scalar k_str = detachmentRate(satnumIdx);
-            Scalar eta = detachmentExponent(satnumIdx);
-            Scalar k_o = halfVelocityOxygen(satnumIdx);
-            Scalar k_u = halfVelocityUrea(satnumIdx);
-            Scalar mu = maximumGrowthRate(satnumIdx);
-            Scalar mu_u = maximumUreaUtilization(satnumIdx);
-            Scalar Y_sb = yieldGrowthCoefficient(satnumIdx);
-            Scalar F = oxygenConsumptionFactor(satnumIdx);
-            Scalar Y_uc = yieldUreaToCalciteCoefficient(satnumIdx);
+            const unsigned satnumIdx = problem.satnumRegionIndex(globalSpaceIdex);
+            const Scalar k_a = microbialAttachmentRate(satnumIdx);
+            const Scalar k_d = microbialDeathRate(satnumIdx);
+            const Scalar rho_b = densityBiofilm(satnumIdx);
+            const Scalar rho_c = densityCalcite(satnumIdx);
+            const Scalar k_str = detachmentRate(satnumIdx);
+            const Scalar eta = detachmentExponent(satnumIdx);
+            const Scalar k_o = halfVelocityOxygen(satnumIdx);
+            const Scalar k_u = halfVelocityUrea(satnumIdx);
+            const Scalar mu = maximumGrowthRate(satnumIdx);
+            const Scalar mu_u = maximumUreaUtilization(satnumIdx);
+            const Scalar Y_sb = yieldGrowthCoefficient(satnumIdx);
+            const Scalar F = oxygenConsumptionFactor(satnumIdx);
+            const Scalar Y_uc = yieldUreaToCalciteCoefficient(satnumIdx);
 
             // compute Monod terms (the negative region is replaced by a straight line)
             // Schäfer et al (1998) https://doi.org/10.1016/S0169-7722(97)00060-0
-            Evaluation k_g = mu * intQuants.oxygenConcentration() / (k_o + intQuants.oxygenConcentration());
-            Evaluation k_c = mu_u * intQuants.ureaConcentration() / (k_u + intQuants.ureaConcentration());
-            if (intQuants.oxygenConcentration() < 0) {
-                k_g = mu * intQuants.oxygenConcentration() / k_o;
-            }
-            if (intQuants.ureaConcentration() < 0) {
-                k_c = mu_u * intQuants.ureaConcentration() / k_u;
-            }
+            const Evaluation k_g =
+                intQuants.oxygenConcentration() < 0
+                    ? mu * intQuants.oxygenConcentration() / k_o
+                    : mu * intQuants.oxygenConcentration() / (k_o + intQuants.oxygenConcentration());
+            const Evaluation k_c =
+                intQuants.ureaConcentration() < 0
+                    ? mu_u * intQuants.ureaConcentration() / k_u
+                    : mu_u * intQuants.ureaConcentration() / (k_u + intQuants.ureaConcentration());
 
             // compute the processes
             source[Indices::contiMicrobialEqIdx] += intQuants.microbialConcentration() * intQuants.porosity() *
@@ -365,7 +368,7 @@ public:
                                                   unsigned scvIdx,
                                                   unsigned timeIdx)
     {
-        unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.permfactTable_[satnumRegionIdx];
     }
 
@@ -431,7 +434,7 @@ public:
         const Evaluation porosityFactor  = min(1.0 - (biofilmConcentration_ + calciteConcentration_) /
                                                      (referencePorosity_ + 1e-8),
                                               1.0); // phi / phi_0
-        unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
+        const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
         const auto& permfactTable = MICPModule::permfactTable(satnumRegionIdx);
         permFactor_ = permfactTable.eval(porosityFactor, /*extrapolation=*/true);
 
