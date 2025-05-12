@@ -363,10 +363,12 @@ public:
 
             const auto convectiveFlux = -trans*transMult*info.Xhi_[up.pvtRegionIndex()]*invB*pressure_difference_convective_mixing*RsupRestricted/(visc*faceArea);
             unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            if (globalUpIndex == globalIndexIn)
+            if (globalUpIndex == globalIndexIn) {
                 flux[conti0EqIdx + activeGasCompIdx] += convectiveFlux;
-            else
-                flux[conti0EqIdx + activeGasCompIdx] += Opm::getValue(convectiveFlux);            
+            }
+            else {
+                flux[conti0EqIdx + activeGasCompIdx] += Opm::getValue(convectiveFlux);
+            }
 
             if constexpr (enableEnergy) {
                 const auto& h = up.fluidState().enthalpy(liquidPhaseIdx) * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, up.pvtRegionIndex());
