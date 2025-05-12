@@ -203,9 +203,9 @@ public:
             const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
 
             if constexpr (blackoilConserveSurfaceVolume) {
-                unsigned inIdx = extQuants.interiorIndex();
+                const unsigned inIdx = extQuants.interiorIndex();
 
-                unsigned upIdxGas = static_cast<unsigned>(extQuants.upstreamIndex(gasPhaseIdx));
+                const unsigned upIdxGas = static_cast<unsigned>(extQuants.upstreamIndex(gasPhaseIdx));
                 const auto& upGas = elemCtx.intensiveQuantities(upIdxGas, timeIdx);
                 const auto& fsGas = upGas.fluidState();
                 if (upIdxGas == inIdx) {
@@ -221,7 +221,7 @@ public:
                             decay<Scalar>(fsGas.invB(gasPhaseIdx));
                 }
                 if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
-                    unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
+                    const unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
                     const auto& upOil = elemCtx.intensiveQuantities(upIdxOil, timeIdx);
                     const auto& fsOil = upOil.fluidState();
                     if (upIdxOil == inIdx) {
@@ -295,7 +295,7 @@ public:
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
         if constexpr (enableExtbo) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
 
             const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
             outstream << priVars[zFractionIdx];
@@ -306,7 +306,7 @@ public:
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
         if constexpr (enableExtbo) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
 
             PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
             PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
@@ -420,8 +420,8 @@ public:
                           unsigned timeIdx)
     {
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        unsigned pvtRegionIdx = priVars.pvtRegionIndex();
-        auto& fs = asImp_().fluidState_;
+        const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
+        const auto& fs = asImp_().fluidState_;
 
         zFraction_ = priVars.makeEvaluation(zFractionIdx, timeIdx);
 
@@ -476,7 +476,7 @@ public:
 
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
            rv_ = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-           Evaluation rvsat = ExtboModule::rv(pvtRegionIdx, pbub, zFraction_);
+           const Evaluation rvsat = ExtboModule::rv(pvtRegionIdx, pbub, zFraction_);
            bg_ = ExtboModule::bg(pvtRegionIdx, pbub, zFraction_) +
                ExtboModule::gasCmp(pvtRegionIdx, zFraction_) * (rv_ - rvsat);
 
@@ -494,7 +494,7 @@ public:
         const auto& iq = asImp_();
         auto& fs = asImp_().fluidState_;
 
-        unsigned pvtRegionIdx = iq.pvtRegionIndex();
+        const unsigned pvtRegionIdx = iq.pvtRegionIndex();
         zRefDensity_ = ExtboModule::referenceDensity(pvtRegionIdx);
 
         fs.setInvB(oilPhaseIdx, 1.0 / bo_);
