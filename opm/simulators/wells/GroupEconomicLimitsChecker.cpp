@@ -83,7 +83,7 @@ GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<FluidSystem, Indices>&
         auto phase_idx = this->phase_idx_map_[i];
         this->phase_idx_reverse_map_[phase_idx] = static_cast<int>(i);
         auto phase_pos = this->well_model_.phaseUsage().phase_pos[phase_idx];
-        Scalar production_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(this->group_,
+        Scalar production_rate = WellGroupHelpers<FluidSystem, Indices>::sumWellSurfaceRates(this->group_,
                                                                                this->schedule_,
                                                                                this->well_state_,
                                                                                this->report_step_idx_,
