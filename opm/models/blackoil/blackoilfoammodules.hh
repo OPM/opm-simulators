@@ -96,8 +96,7 @@ public:
      * \brief Register all run-time parameters for the black-oil foam module.
      */
     static void registerParameters()
-    {
-    }
+    {}
 
     /*!
      * \brief Register all foam specific VTK and ECL output modules.
@@ -145,7 +144,6 @@ public:
         else {
             return false;
         }
-
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -173,15 +171,15 @@ public:
 
             LhsEval surfaceVolume = Toolbox::template decay<LhsEval>(intQuants.porosity());
             if (params_.transport_phase_ == Phase::WATER) {
-                surfaceVolume *= (Toolbox::template decay<LhsEval>(fs.saturation(waterPhaseIdx))
-                * Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx)));
+                surfaceVolume *= Toolbox::template decay<LhsEval>(fs.saturation(waterPhaseIdx)) *
+                                 Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx));
             } else if (params_.transport_phase_ == Phase::GAS) {
-                surfaceVolume *= (Toolbox::template decay<LhsEval>(fs.saturation(gasPhaseIdx))
-                * Toolbox::template decay<LhsEval>(fs.invB(gasPhaseIdx)));
+                surfaceVolume *= Toolbox::template decay<LhsEval>(fs.saturation(gasPhaseIdx)) *
+                                 Toolbox::template decay<LhsEval>(fs.invB(gasPhaseIdx));
             } else if (params_.transport_phase_ == Phase::SOLVENT) {
                 if constexpr (enableSolvent) {
-                    surfaceVolume *= (Toolbox::template decay<LhsEval>( intQuants.solventSaturation())
-                    *  Toolbox::template decay<LhsEval>(intQuants.solventInverseFormationVolumeFactor()));
+                    surfaceVolume *= Toolbox::template decay<LhsEval>( intQuants.solventSaturation()) *
+                                     Toolbox::template decay<LhsEval>(intQuants.solventInverseFormationVolumeFactor());
                 }
             } else {
                 throw std::runtime_error("Transport phase is GAS/WATER/SOLVENT");
@@ -191,14 +189,14 @@ public:
             surfaceVolume = max(surfaceVolume, 1e-10);
 
             // Foam/surfactant in free phase.
-            const LhsEval freeFoam = surfaceVolume
-                * Toolbox::template decay<LhsEval>(intQuants.foamConcentration());
+            const LhsEval freeFoam = surfaceVolume *
+                                     Toolbox::template decay<LhsEval>(intQuants.foamConcentration());
 
             // Adsorbed foam/surfactant.
             const LhsEval adsorbedFoam =
-                Toolbox::template decay<LhsEval>(1.0 - intQuants.porosity())
-                * Toolbox::template decay<LhsEval>(intQuants.foamRockDensity())
-                * Toolbox::template decay<LhsEval>(intQuants.foamAdsorbed());
+                Toolbox::template decay<LhsEval>(1.0 - intQuants.porosity()) *
+                Toolbox::template decay<LhsEval>(intQuants.foamRockDensity()) *
+                Toolbox::template decay<LhsEval>(intQuants.foamAdsorbed());
 
             LhsEval accumulationFoam = freeFoam + adsorbedFoam;
             storage[contiFoamEqIdx] += accumulationFoam;
@@ -209,7 +207,6 @@ public:
                             [[maybe_unused]] const ElementContext& elemCtx,
                             [[maybe_unused]] unsigned scvfIdx,
                             [[maybe_unused]] unsigned timeIdx)
-
     {
         if constexpr (enableFoam) {
             const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
@@ -224,14 +221,14 @@ public:
                     const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
                     if (upIdx == inIdx) {
                         flux[contiFoamEqIdx] =
-                            extQuants.volumeFlux(waterPhaseIdx)
-                            *up.fluidState().invB(waterPhaseIdx)
-                            *up.foamConcentration();
+                            extQuants.volumeFlux(waterPhaseIdx) *
+                            up.fluidState().invB(waterPhaseIdx) *
+                            up.foamConcentration();
                     } else {
                         flux[contiFoamEqIdx] =
-                            extQuants.volumeFlux(waterPhaseIdx)
-                            *decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
-                            *decay<Scalar>(up.foamConcentration());
+                            extQuants.volumeFlux(waterPhaseIdx) *
+                            decay<Scalar>(up.fluidState().invB(waterPhaseIdx)) *
+                            decay<Scalar>(up.foamConcentration());
                     }
                     break;
                 }
@@ -240,40 +237,38 @@ public:
                     const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
                     if (upIdx == inIdx) {
                         flux[contiFoamEqIdx] =
-                            extQuants.volumeFlux(gasPhaseIdx)
-                            *up.fluidState().invB(gasPhaseIdx)
-                            *up.foamConcentration();
+                            extQuants.volumeFlux(gasPhaseIdx) *
+                            up.fluidState().invB(gasPhaseIdx) *
+                            up.foamConcentration();
                     } else {
                         flux[contiFoamEqIdx] =
-                            extQuants.volumeFlux(gasPhaseIdx)
-                            *decay<Scalar>(up.fluidState().invB(gasPhaseIdx))
-                            *decay<Scalar>(up.foamConcentration());
+                            extQuants.volumeFlux(gasPhaseIdx) *
+                            decay<Scalar>(up.fluidState().invB(gasPhaseIdx)) *
+                            decay<Scalar>(up.foamConcentration());
                     }
                     break;
                 }
-                case Phase::SOLVENT: {
+                case Phase::SOLVENT:
                     if constexpr (enableSolvent) {
                         const unsigned upIdx = extQuants.solventUpstreamIndex();
                         const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
                         if (upIdx == inIdx) {
                             flux[contiFoamEqIdx] =
-                                extQuants.solventVolumeFlux()
-                                *up.solventInverseFormationVolumeFactor()
-                                *up.foamConcentration();
+                                extQuants.solventVolumeFlux() *
+                                up.solventInverseFormationVolumeFactor() *
+                                up.foamConcentration();
                         } else {
                             flux[contiFoamEqIdx] =
-                                extQuants.solventVolumeFlux()
-                                *decay<Scalar>(up.solventInverseFormationVolumeFactor())
-                                *decay<Scalar>(up.foamConcentration());
+                                extQuants.solventVolumeFlux() *
+                                decay<Scalar>(up.solventInverseFormationVolumeFactor()) *
+                                decay<Scalar>(up.foamConcentration());
                         }
                     } else {
                         throw std::runtime_error("Foam transport phase is SOLVENT but SOLVENT is not activated.");
                     }
                     break;
-                }
-                default: {
+                default:
                     throw std::runtime_error("Foam transport phase must be GAS/WATER/SOLVENT.");
-                }
             }
         }
     }
@@ -359,9 +354,8 @@ public:
         return params_.foamCoefficients_[satnumRegionIdx];
     }
 
-    static Phase transportPhase() {
-        return params_.transport_phase_;
-    }
+    static Phase transportPhase()
+    { return params_.transport_phase_; }
 
 private:
     static BlackOilFoamParams<Scalar> params_;
@@ -402,7 +396,6 @@ class BlackOilFoamIntensiveQuantities
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
 
 public:
-
     /*!
      * \brief Update the intensive properties needed to handle polymers from the
      *        primary variables
@@ -418,7 +411,7 @@ public:
 
         // Compute gas mobility reduction factor
         Evaluation mobilityReductionFactor = 1.0;
-        if (false) {
+        if constexpr (false) {
             // The functional model is used.
             // TODO: allow this model.
             // In order to do this we must allow transport to be in the water phase, not just the gas phase.
@@ -444,12 +437,12 @@ public:
             const Evaluation S_o = fs.saturation(oilPhaseIdx);
             const Evaluation S_w = fs.saturation(waterPhaseIdx);
 
-            Evaluation F1 = pow(C_surf/fm_surf, ep_surf);
-            Evaluation F2 = pow((fm_oil-S_o)/(fm_oil-fl_oil), ep_oil);
-            Evaluation F3 = pow(fm_cap/Ca, ep_cap);
-            Evaluation F7 = 0.5 + atan(ep_dry*(S_w-fm_dry))/M_PI;
+            Evaluation F1 = pow(C_surf / fm_surf, ep_surf);
+            Evaluation F2 = pow((fm_oil - S_o) / (fm_oil - fl_oil), ep_oil);
+            Evaluation F3 = pow(fm_cap / Ca, ep_cap);
+            Evaluation F7 = 0.5 + atan(ep_dry * (S_w - fm_dry)) / M_PI;
 
-            mobilityReductionFactor = 1./(1. + fm_mob*F1*F2*F3*F7);
+            mobilityReductionFactor = 1. / (1. + fm_mob * F1 * F2 * F3 * F7);
         } else {
             // The tabular model is used.
             // Note that the current implementation only includes the effect of foam concentration (FOAMMOB),
@@ -460,25 +453,21 @@ public:
 
         // adjust mobility
         switch (FoamModule::transportPhase()) {
-            case Phase::WATER: {
+            case Phase::WATER:
                 asImp_().mobility_[waterPhaseIdx] *= mobilityReductionFactor;
                 break;
-            }
-            case Phase::GAS: {
+            case Phase::GAS:
                 asImp_().mobility_[gasPhaseIdx] *= mobilityReductionFactor;
                 break;
-            }
-            case Phase::SOLVENT: {
+            case Phase::SOLVENT:
                 if constexpr (enableSolvent) {
                     asImp_().solventMobility_ *= mobilityReductionFactor;
                 } else {
                     throw std::runtime_error("Foam transport phase is SOLVENT but SOLVENT is not activated.");
                 }
                 break;
-            }
-            default: {
+            default:
                 throw std::runtime_error("Foam transport phase must be GAS/WATER/SOLVENT.");
-            }
         }
 
         foamRockDensity_ = FoamModule::foamRockDensity(elemCtx, dofIdx, timeIdx);
@@ -517,10 +506,9 @@ class BlackOilFoamIntensiveQuantities<TypeTag, false>
 
 public:
     void foamPropertiesUpdate_(const ElementContext&,
-                                  unsigned,
-                                  unsigned)
-    { }
-
+                               unsigned,
+                               unsigned)
+    {}
 
     const Evaluation& foamConcentration() const
     { throw std::runtime_error("foamConcentration() called but foam is disabled"); }
