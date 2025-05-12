@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <istream>
 #include <memory>
 #include <ostream>
@@ -500,11 +501,11 @@ public:
         // where M(v) is computed from user input
         // and P = viscosityMultiplier
         const std::vector<Scalar>& shearEffectRefMultiplier = params_.plyshlogShearEffectRefMultiplier_[pvtnumRegionIdx];
-        size_t numTableEntries = shearEffectRefLogVelocity.size();
+        std::size_t numTableEntries = shearEffectRefLogVelocity.size();
         assert(shearEffectRefMultiplier.size() == numTableEntries);
 
         std::vector<Scalar> shearEffectMultiplier(numTableEntries, 1.0);
-        for (size_t i = 0; i < numTableEntries; ++i) {
+        for (std::size_t i = 0; i < numTableEntries; ++i) {
             shearEffectMultiplier[i] = (1.0 + (viscosityMultiplier - 1.0)*shearEffectRefMultiplier[i]) / viscosityMultiplier;
             shearEffectMultiplier[i] = log(shearEffectMultiplier[i]);
         }
