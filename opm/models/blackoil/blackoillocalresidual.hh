@@ -28,6 +28,7 @@
 #ifndef EWOMS_BLACK_OIL_LOCAL_RESIDUAL_HH
 #define EWOMS_BLACK_OIL_LOCAL_RESIDUAL_HH
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
@@ -40,6 +41,8 @@
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
+
+#include <cassert>
 
 namespace Opm {
 /*!
