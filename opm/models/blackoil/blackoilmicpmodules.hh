@@ -30,11 +30,14 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <opm/models/blackoil/blackoilmicpparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/io/vtkblackoilmicpmodule.hpp>
 
+#include <cmath>
 #include <memory>
 #include <numeric>
 #include <stdexcept>
