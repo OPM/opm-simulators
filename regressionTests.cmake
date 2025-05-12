@@ -1072,6 +1072,16 @@ add_test_compareECLFiles(CASENAME 01_vappars
                          REL_TOL ${rel_tol}
                          DIR vappars)
 
+add_test_compareECLFiles(CASENAME 6_uda_model5_stdw
+  FILENAME 6_UDA_MODEL5_STDW
+  SIMULATOR flow
+  ABS_TOL ${abs_tol}
+  REL_TOL ${rel_tol}
+  DIR model5
+  RESTART_STEP 1
+  TEST_ARGS --enable-tuning=true
+)
+
 set(_mult_cases
   MULTFLT-01
   MULTFLT-02
