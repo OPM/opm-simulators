@@ -39,6 +39,12 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#if HAVE_ECL_INPUT
+#include <cstddef>
+#endif
+
+#include <vector>
+
 namespace Opm {
 
 /*!
@@ -164,7 +170,7 @@ public:
             info.Xhi_.resize(numRegions);
             info.Psi_.resize(numRegions);
         }
-        for (size_t i = 0; i < numRegions; ++i ) {
+        for (std::size_t i = 0; i < numRegions; ++i ) {
             info.active_[i] = control.drsdtConvective(i);
             if (control.drsdtConvective(i)) {
                 info.Xhi_[i] = control.getMaxDRSDT(i);
