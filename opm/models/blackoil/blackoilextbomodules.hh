@@ -112,10 +112,12 @@ public:
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if constexpr (enableExtbo)
+        if constexpr (enableExtbo) {
             return pvIdx == zFractionIdx;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -135,10 +137,12 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if constexpr (enableExtbo)
+        if constexpr (enableExtbo) {
             return eqIdx == contiZfracEqIdx;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -250,8 +254,9 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   Scalar zFraction)
     {
-        if constexpr (enableExtbo)
+        if constexpr (enableExtbo) {
             priVars[zFractionIdx] = zFraction;
+        }
     }
 
     /*!
@@ -261,9 +266,10 @@ public:
                                   const PrimaryVariables& oldPv,
                                   const EqVector& delta)
     {
-        if constexpr (enableExtbo)
+        if constexpr (enableExtbo) {
             // do a plain unchopped Newton update
             newPv[zFractionIdx] = oldPv[zFractionIdx] - delta[zFractionIdx];
+        }
     }
 
     /*!
@@ -444,15 +450,19 @@ public:
 
         bz_ = ExtboModule::bg(pvtRegionIdx, fs.pressure(oilPhaseIdx), Evaluation{0.99});
 
-        if (FluidSystem::enableDissolvedGas())
+        if (FluidSystem::enableDissolvedGas()) {
             rs_ = ExtboModule::rs(pvtRegionIdx, fs.pressure(oilPhaseIdx), zFraction_);
-        else
+        }
+        else {
             rs_ = 0.0;
+        }
 
-        if (FluidSystem::enableVaporizedOil())
+        if (FluidSystem::enableVaporizedOil()) {
             rv_ = ExtboModule::rv(pvtRegionIdx, fs.pressure(gasPhaseIdx), zFraction_);
-        else
+        }
+        else {
             rv_ = 0.0;
+        }
 
         xVolume_ = ExtboModule::xVolume(pvtRegionIdx, fs.pressure(oilPhaseIdx), zFraction_);
         yVolume_ = ExtboModule::yVolume(pvtRegionIdx, fs.pressure(oilPhaseIdx), zFraction_);
@@ -462,8 +472,9 @@ public:
         if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
            static const Scalar thresholdWaterFilledCell = 1.0 - 1e-6;
            Scalar sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx).value();
-           if (sw >= thresholdWaterFilledCell)
+           if (sw >= thresholdWaterFilledCell) {
               rs_ = 0.0;  // water only, zero rs_ ...
+           }
         }
 
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
