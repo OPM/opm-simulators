@@ -63,14 +63,12 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/false>
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
-
     #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize all internal data structures needed by the diffusion module
      */
     static void initFromState(const EclipseState&)
-    {
-    }
+    {}
     #endif
 
     /*!
@@ -119,7 +117,6 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
 
 public:
     using ExtensiveQuantities = BlackOilDiffusionExtensiveQuantities<TypeTag,true>;
-    
     
     #if HAVE_ECL_INPUT
     /*!
@@ -186,27 +183,27 @@ public:
         const auto& inFs = inIq.fluidState();
         const auto& exFs = exIq.fluidState();
         Evaluation diffR = 0.0;
-        if constexpr(enableMICP) {
+        if constexpr (enableMICP) {
             // The diffusion coefficients are given for mass concentrations
             Evaluation bAvg = (inFs.invB(waterPhaseIdx) + Toolbox::value(exFs.invB(waterPhaseIdx))) / 2;
             diffR = inIq.microbialConcentration() - Toolbox::value(exIq.microbialConcentration());
             flux[contiMicrobialEqIdx] +=
-                bAvg
-                * diffR
-                * diffusivity
-                * effectiveDiffusionCoefficient[waterPhaseIdx][contiMicrobialEqIdx - 1];
+                bAvg *
+                diffR *
+                diffusivity *
+                effectiveDiffusionCoefficient[waterPhaseIdx][contiMicrobialEqIdx - 1];
             diffR = inIq.oxygenConcentration() - Toolbox::value(exIq.oxygenConcentration());
             flux[contiOxygenEqIdx] +=
-                bAvg
-                * diffR
-                * diffusivity
-                * effectiveDiffusionCoefficient[waterPhaseIdx][contiOxygenEqIdx - 1];
+                bAvg *
+                diffR *
+                diffusivity *
+                effectiveDiffusionCoefficient[waterPhaseIdx][contiOxygenEqIdx - 1];
             diffR = inIq.ureaConcentration() - Toolbox::value(exIq.ureaConcentration());
             flux[contiUreaEqIdx] +=
-                bAvg
-                * diffR
-                * diffusivity
-                * effectiveDiffusionCoefficient[waterPhaseIdx][contiUreaEqIdx - 1];
+                bAvg *
+                diffR *
+                diffusivity *
+                effectiveDiffusionCoefficient[waterPhaseIdx][contiUreaEqIdx - 1];
             return;
         }
 
@@ -236,14 +233,21 @@ public:
                 continue;
             }
             Evaluation convFactor = 1.0;
-            if (FluidSystem::enableDissolvedGas() && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && phaseIdx == FluidSystem::oilPhaseIdx) {
+            if (FluidSystem::enableDissolvedGas() &&
+                FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+                phaseIdx == FluidSystem::oilPhaseIdx)
+            {
                 Evaluation rsAvg = (inFs.Rs() + Toolbox::value(exFs.Rs())) / 2;
                 convFactor = 1.0 / (toFractionGasOil(pvtRegionIndex) + rsAvg);
                 diffR = inFs.Rs() - Toolbox::value(exFs.Rs());
             }
-            if (FluidSystem::enableVaporizedOil() && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && phaseIdx == FluidSystem::gasPhaseIdx) {
+            if (FluidSystem::enableVaporizedOil() &&
+                FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                phaseIdx == FluidSystem::gasPhaseIdx)
+            {
                 Evaluation rvAvg = (inFs.Rv() + Toolbox::value(exFs.Rv())) / 2;
-                convFactor = toFractionGasOil(pvtRegionIndex) / (1.0 + rvAvg*toFractionGasOil(pvtRegionIndex));
+                convFactor = toFractionGasOil(pvtRegionIndex) /
+                             (1.0 + rvAvg * toFractionGasOil(pvtRegionIndex));
                 diffR = inFs.Rv() - Toolbox::value(exFs.Rv());
             }
             if (FluidSystem::enableDissolvedGasInWater() && phaseIdx == FluidSystem::waterPhaseIdx) {
@@ -253,7 +257,8 @@ public:
             }
             if (FluidSystem::enableVaporizedWater() && phaseIdx == FluidSystem::gasPhaseIdx) {
                 Evaluation rvAvg = (inFs.Rvw() + Toolbox::value(exFs.Rvw())) / 2;
-                convFactor = toFractionGasWater(pvtRegionIndex)/ (1.0 + rvAvg*toFractionGasWater(pvtRegionIndex));
+                convFactor = toFractionGasWater(pvtRegionIndex) /
+                             (1.0 + rvAvg * toFractionGasWater(pvtRegionIndex));
                 diffR = inFs.Rvw() - Toolbox::value(exFs.Rvw());
             }
 
@@ -261,33 +266,36 @@ public:
             unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
             unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
-                    - bSAvg
-                    * convFactor
-                    * diffR
-                    * diffusivity
-                    * effectiveDiffusionCoefficient[phaseIdx][solventCompIdx];
+                    -bSAvg *
+                    convFactor *
+                    diffR *
+                    diffusivity *
+                    effectiveDiffusionCoefficient[phaseIdx][solventCompIdx];
 
             // mass flux of solute component (gas in oil or oil in gas)
             unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
             unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
-                    bSAvg
-                    * diffR
-                    * convFactor
-                    * diffusivity
-                    * effectiveDiffusionCoefficient[phaseIdx][soluteCompIdx];
+                    bSAvg *
+                    diffR *
+                    convFactor *
+                    diffusivity *
+                    effectiveDiffusionCoefficient[phaseIdx][soluteCompIdx];
         }
     }
 
 private:
-    static Scalar toFractionGasOil (unsigned regionIdx) {
+    static Scalar toFractionGasOil (unsigned regionIdx)
+    {
         Scalar mMOil = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::oilCompIdx, regionIdx) : 1;
         Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
         Scalar mMGas = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
         Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
         return rhoO * mMGas / (rhoG * mMOil);
     }
-    static Scalar toFractionGasWater (unsigned regionIdx) {
+
+    static Scalar toFractionGasWater (unsigned regionIdx)
+    {
         Scalar mMWater = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::waterCompIdx, regionIdx) : 1;
         Scalar rhoW = FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, regionIdx);
         Scalar mMGas = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
@@ -364,7 +372,7 @@ protected:
                  const ElementContext&,
                  unsigned,
                  unsigned)
-    { }
+    {}
 };
 
 /*!
@@ -406,6 +414,7 @@ public:
         }
         return *this;
     }
+
     /*!
      * \brief Returns the molecular diffusion coefficient for a
      *        component in a phase.
@@ -460,10 +469,11 @@ protected:
     template<class FluidState>
     void update_(FluidState& fluidState,
                  typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
-                 const IntensiveQuantities& intQuants) {
+                 const IntensiveQuantities& intQuants)
+    {
         using Toolbox = MathToolbox<Evaluation>;
 
-        if constexpr(enableMICP) {
+        if constexpr (enableMICP) {
             unsigned pvtRegionIndex = intQuants.fluidState().pvtRegionIndex();
             diffusionCoefficient_[waterPhaseIdx][0] = MICPModule::microbialDiffusion(pvtRegionIndex);
             diffusionCoefficient_[waterPhaseIdx][1] = MICPModule::oxygenDiffusion(pvtRegionIndex);
@@ -487,11 +497,11 @@ protected:
             constexpr double myeps = 0.0001; //numconst.blackoildiffusionmoduleeps;
             const Evaluation& base =
                 Toolbox::max(myeps, //0.0001,
-                             intQuants.porosity()
-                             * intQuants.fluidState().saturation(phaseIdx));
+                             intQuants.porosity() *
+                             intQuants.fluidState().saturation(phaseIdx));
             tortuosity_[phaseIdx] =
-                1.0 / (intQuants.porosity() * intQuants.porosity())
-                * Toolbox::pow(base, 10.0/3.0);
+                1.0 / (intQuants.porosity() * intQuants.porosity()) *
+                Toolbox::pow(base, 10.0 / 3.0);
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 diffusionCoefficient_[phaseIdx][compIdx] =
@@ -549,7 +559,7 @@ public:
      * \brief The diffusivity the face.
      *
      */
-    const Scalar& diffusivity() const
+    Scalar diffusivity() const
     {
         throw std::logic_error("The method diffusivity() does not "
                                "make sense if diffusion is disabled.");
@@ -568,7 +578,6 @@ public:
         throw std::logic_error("The method effectiveDiffusionCoefficient() "
                                "does not make sense if diffusion is disabled.");
     }
-
 };
 
 /*!
@@ -594,8 +603,10 @@ class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
+
 public:
     using EvaluationArray = std::array<std::array<Evaluation, numComponents>, numPhases>;
+
 protected:
     /*!
      * \brief Update the quantities required to calculate
@@ -624,15 +635,16 @@ protected:
 public:
     static void update(EvaluationArray& effectiveDiffusionCoefficient,
                        const IntensiveQuantities& intQuantsInside,
-                       const IntensiveQuantities& intQuantsOutside) {
+                       const IntensiveQuantities& intQuantsOutside)
+    {
         // opm-models expects per area flux
         // use the arithmetic average for the effective
         // diffusion coefficients.
         if constexpr(enableMICP) {
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                effectiveDiffusionCoefficient[waterPhaseIdx][compIdx] = 0.5 *
-                    ( intQuantsInside.effectiveDiffusionCoefficient(waterPhaseIdx, compIdx) +
-                    intQuantsOutside.effectiveDiffusionCoefficient(waterPhaseIdx, compIdx) );
+                effectiveDiffusionCoefficient[waterPhaseIdx][compIdx] =
+                    0.5 * (intQuantsInside.effectiveDiffusionCoefficient(waterPhaseIdx, compIdx) +
+                           intQuantsOutside.effectiveDiffusionCoefficient(waterPhaseIdx, compIdx));
             }
             return;
         }
@@ -646,13 +658,14 @@ public:
                 continue;
             }
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                effectiveDiffusionCoefficient[phaseIdx][compIdx] = 0.5 *
-                    ( intQuantsInside.effectiveDiffusionCoefficient(phaseIdx, compIdx) +
-                      intQuantsOutside.effectiveDiffusionCoefficient(phaseIdx, compIdx) );
+                effectiveDiffusionCoefficient[phaseIdx][compIdx] =
+                    0.5 * (intQuantsInside.effectiveDiffusionCoefficient(phaseIdx, compIdx) +
+                           intQuantsOutside.effectiveDiffusionCoefficient(phaseIdx, compIdx));
                 Valgrind::CheckDefined(effectiveDiffusionCoefficient[phaseIdx][compIdx]);
             }
         }
     }
+
 protected:
     template <class Context, class FluidState>
     void updateBoundary_(const Context&,
@@ -670,7 +683,7 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    const Scalar& diffusivity() const
+    Scalar diffusivity() const
     { return diffusivity_; }
 
     /*!
@@ -683,9 +696,8 @@ public:
     const Evaluation& effectiveDiffusionCoefficient(unsigned phaseIdx, unsigned compIdx) const
     { return effectiveDiffusionCoefficient_[phaseIdx][compIdx]; }
 
-    const auto& effectiveDiffusionCoefficient() const{
-        return effectiveDiffusionCoefficient_;
-    }
+    const auto& effectiveDiffusionCoefficient() const
+    { return effectiveDiffusionCoefficient_; }
 
 private:
     Scalar diffusivity_;
