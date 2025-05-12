@@ -164,7 +164,7 @@ protected:
 
 
     using TracerModel = GetPropType<TypeTag, Properties::TracerModel>;
-    using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
+    using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
 
 public:
     using BaseType::briefDescription;
@@ -794,7 +794,7 @@ public:
         {
             using Dir = FaceDir::DirEnum;
             constexpr int ndim = 3;
-            dirMob = std::make_unique<DirectionalMobility<TypeTag, Evaluation>>();
+            dirMob = std::make_unique<DirectionalMobility<TypeTag>>();
             Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
             for (int i = 0; i<ndim; i++) {
                 const auto& materialParams = materialLawParams(globalSpaceIdx, facedirs[i]);
