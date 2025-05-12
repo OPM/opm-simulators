@@ -539,7 +539,7 @@ public:
     template <class DofEntity>
     void serializeEntity(std::ostream& outstream, const DofEntity& dof)
     {
-        unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
+        const unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
 
         // write phase state
         if (!outstream.good()) {
@@ -577,7 +577,7 @@ public:
     void deserializeEntity(std::istream& instream,
                            const DofEntity& dof)
     {
-        unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
+        const unsigned dofIdx = static_cast<unsigned>(asImp_().dofMapper().index(dof));
 
         // read in the "real" primary variables of the DOF
         auto& priVars = this->solution(/*timeIdx=*/0)[dofIdx];
@@ -639,7 +639,7 @@ public:
         for (const auto& elem : elements(this->gridView())) {
             elemCtx.updateStencil(elem);
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timIdx=*/0); ++dofIdx) {
-                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timIdx=*/0);
+                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timIdx=*/0);
                 updatePvtRegionIndex_(this->solution(/*timeIdx=*/0)[globalDofIdx],
                                       elemCtx,
                                       dofIdx,
@@ -697,7 +697,7 @@ private:
                                unsigned dofIdx,
                                unsigned timeIdx)
     {
-        unsigned regionIdx = context.problem().pvtRegionIndex(context, dofIdx, timeIdx);
+        const unsigned regionIdx = context.problem().pvtRegionIndex(context, dofIdx, timeIdx);
         priVars.setPvtRegionIndex(regionIdx);
     }
 };
