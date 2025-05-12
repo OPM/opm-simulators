@@ -9,13 +9,12 @@ VERSION_TAG=${3:-""}
 export CMAKE_GENERATOR=Ninja
 
 declare -A python_versions
-python_versions[cp36-cp36m]=/opt/python/cp36-cp36m/bin/python
-python_versions[cp37-cp37m]=/opt/python/cp37-cp37m/bin/python
 python_versions[cp38-cp38]=/opt/python/cp38-cp38/bin/python
 python_versions[cp39-cp39]=/opt/python/cp39-cp39/bin/python
 python_versions[cp310-cp310]=/opt/python/cp310-cp310/bin/python
 python_versions[cp311-cp311]=/opt/python/cp311-cp311/bin/python
 python_versions[cp312-cp312]=/opt/python/cp312-cp312/bin/python
+python_versions[cp313-cp313]=/opt/python/cp313-cp313/bin/python
 
 for python_bin in ${python_versions[*]}
 do
