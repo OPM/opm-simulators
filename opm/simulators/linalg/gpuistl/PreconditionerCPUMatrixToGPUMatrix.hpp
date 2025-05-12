@@ -116,7 +116,7 @@ public:
     }
 
 private:
-    CPUMatrixType m_cpuMatrix;
+    const CPUMatrixType& m_cpuMatrix;
     GpuSparseMatrix<field_type> m_gpuMatrix;
 
     //! \brief the underlying preconditioner to use
