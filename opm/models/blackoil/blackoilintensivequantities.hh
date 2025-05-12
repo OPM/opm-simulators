@@ -286,7 +286,7 @@ public:
             if (BrineModule::hasPcfactTables() &&
                 priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)
             {
-                unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
+                const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
                 const Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
                 const Evaluation porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
                 const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
@@ -342,13 +342,13 @@ public:
         const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         const unsigned pvtRegionIdx = priVars.pvtRegionIndex();
 
-        Scalar RvMax = FluidSystem::enableVaporizedOil()
+        const Scalar RvMax = FluidSystem::enableVaporizedOil()
             ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
             : 0.0;
-        Scalar RsMax = FluidSystem::enableDissolvedGas()
+        const Scalar RsMax = FluidSystem::enableDissolvedGas()
             ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
             : 0.0;
-        Scalar RswMax = FluidSystem::enableDissolvedGasInWater()
+        const Scalar RswMax = FluidSystem::enableDissolvedGasInWater()
             ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
             : 0.0;
 
@@ -522,9 +522,9 @@ public:
 
         // the porosity must be modified by the compressibility of the
         // rock...
-        Scalar rockCompressibility = problem.rockCompressibility(globalSpaceIdx);
+        const Scalar rockCompressibility = problem.rockCompressibility(globalSpaceIdx);
         if (rockCompressibility > 0.0) {
-            Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
+            const Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
             Evaluation x;
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 x = rockCompressibility * (fluidState_.pressure(oilPhaseIdx) - rockRefPressure);
@@ -543,15 +543,17 @@ public:
 
         // deal with MICP
         if constexpr (enableMICP) {
-            Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
-            Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
+            const Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx,
+                                                               timeIdx, linearizationType);
+            const Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx,
+                                                               timeIdx, linearizationType);
             // minimum porosity of 1e-8 to prevent numerical issues 
             porosity_ -= min(biofilm_ + calcite_, referencePorosity_ - 1e-8);
         }
 
         // deal with salt-precipitation
         if (enableSaltPrecipitation && priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-            Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
+            const Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
             porosity_ *= (1.0 - Sp);
         }
     }
@@ -599,7 +601,7 @@ public:
             asImp_().zFractionUpdate_(elemCtx, dofIdx, timeIdx);
         }
 
-        Evaluation SoMax = updateRsRvRsw(elemCtx, dofIdx, timeIdx);
+        const Evaluation SoMax = updateRsRvRsw(elemCtx, dofIdx, timeIdx);
 
         updateMobilityAndInvB();
         updatePhaseDensities();
