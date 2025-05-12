@@ -138,7 +138,24 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
 #if HAVE_MPI
     numOverlap_ = Parameters::Get<Parameters::NumOverlap>();
     addCorners_ = Parameters::Get<Parameters::AddCorners>();
-    partitionMethod_ = Dune::PartitionMethod(Parameters::Get<Parameters::PartitionMethod>());
+
+    const std::string pm = Parameters::Get<Parameters::PartitionMethod>();
+    if (pm == "simple") {
+        partitionMethod_ = Dune::PartitionMethod::simple;
+    } else if (pm == "zoltan") {
+        partitionMethod_ = Dune::PartitionMethod::zoltan;
+    } else if (pm == "metis") {
+        partitionMethod_ = Dune::PartitionMethod::metis;
+    } else if (pm == "zoltanwell") {
+        partitionMethod_ = Dune::PartitionMethod::zoltanGoG;
+    } else {
+        std::string msg = fmt::format("Unknown value for --partition-method parameter: '{}'. "
+                                      "Accepted values are 'simple', 'zoltan', 'metis', and 'zoltanwell'.",
+                                      pm);
+        OpmLog::error(msg);
+        throw std::runtime_error(msg);
+    }
+
     serialPartitioning_ = Parameters::Get<Parameters::SerialPartitioning>();
     zoltanParams_ = Parameters::Get<Parameters::ZoltanParams>();
     zoltanPhgEdgeSizeThreshold_ = Parameters::Get<Parameters::ZoltanPhgEdgeSizeThreshold>();
@@ -476,8 +493,8 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::NumOverlap>
         ("Numbers of layers overlap in parallel partition");
     Parameters::Register<Parameters::PartitionMethod>
-        ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS, "
-         "3=Zoltan with all cells of well represented by one vertex.");
+        ("Choose partitioning method: 'simple', 'zoltan', 'metis', or "
+         "'zoltanwell' (Zoltan with all cells perforated by a well represented by a single vertex).");
     Parameters::Register<Parameters::SerialPartitioning>
         ("Perform partitioning for parallel runs on a single process.");
     Parameters::Register<Parameters::ZoltanImbalanceTol<Scalar>>
