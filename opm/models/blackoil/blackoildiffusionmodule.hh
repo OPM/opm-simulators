@@ -185,7 +185,7 @@ public:
         Evaluation diffR = 0.0;
         if constexpr (enableMICP) {
             // The diffusion coefficients are given for mass concentrations
-            Evaluation bAvg = (inFs.invB(waterPhaseIdx) + Toolbox::value(exFs.invB(waterPhaseIdx))) / 2;
+            const Evaluation bAvg = (inFs.invB(waterPhaseIdx) + Toolbox::value(exFs.invB(waterPhaseIdx))) / 2;
             diffR = inIq.microbialConcentration() - Toolbox::value(exIq.microbialConcentration());
             flux[contiMicrobialEqIdx] +=
                 bAvg *
@@ -207,7 +207,7 @@ public:
             return;
         }
 
-        unsigned pvtRegionIndex = inFs.pvtRegionIndex();
+        const unsigned pvtRegionIndex = inFs.pvtRegionIndex();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -237,7 +237,7 @@ public:
                 FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
                 phaseIdx == FluidSystem::oilPhaseIdx)
             {
-                Evaluation rsAvg = (inFs.Rs() + Toolbox::value(exFs.Rs())) / 2;
+                const Evaluation rsAvg = (inFs.Rs() + Toolbox::value(exFs.Rs())) / 2;
                 convFactor = 1.0 / (toFractionGasOil(pvtRegionIndex) + rsAvg);
                 diffR = inFs.Rs() - Toolbox::value(exFs.Rs());
             }
@@ -245,26 +245,26 @@ public:
                 FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
                 phaseIdx == FluidSystem::gasPhaseIdx)
             {
-                Evaluation rvAvg = (inFs.Rv() + Toolbox::value(exFs.Rv())) / 2;
+                const Evaluation rvAvg = (inFs.Rv() + Toolbox::value(exFs.Rv())) / 2;
                 convFactor = toFractionGasOil(pvtRegionIndex) /
                              (1.0 + rvAvg * toFractionGasOil(pvtRegionIndex));
                 diffR = inFs.Rv() - Toolbox::value(exFs.Rv());
             }
             if (FluidSystem::enableDissolvedGasInWater() && phaseIdx == FluidSystem::waterPhaseIdx) {
-                Evaluation rsAvg = (inFs.Rsw() + Toolbox::value(exFs.Rsw())) / 2;
+                const Evaluation rsAvg = (inFs.Rsw() + Toolbox::value(exFs.Rsw())) / 2;
                 convFactor = 1.0 / (toFractionGasWater(pvtRegionIndex) + rsAvg);
                 diffR = inFs.Rsw() - Toolbox::value(exFs.Rsw());
             }
             if (FluidSystem::enableVaporizedWater() && phaseIdx == FluidSystem::gasPhaseIdx) {
-                Evaluation rvAvg = (inFs.Rvw() + Toolbox::value(exFs.Rvw())) / 2;
+                const Evaluation rvAvg = (inFs.Rvw() + Toolbox::value(exFs.Rvw())) / 2;
                 convFactor = toFractionGasWater(pvtRegionIndex) /
                              (1.0 + rvAvg * toFractionGasWater(pvtRegionIndex));
                 diffR = inFs.Rvw() - Toolbox::value(exFs.Rvw());
             }
 
             // mass flux of solvent component (oil in oil or gas in gas)
-            unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
+            const unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+            const unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
                     -bSAvg *
                     convFactor *
@@ -273,8 +273,8 @@ public:
                     effectiveDiffusionCoefficient[phaseIdx][solventCompIdx];
 
             // mass flux of solute component (gas in oil or oil in gas)
-            unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
-            unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
+            const unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
+            const unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
                     bSAvg *
                     diffR *
@@ -287,19 +287,19 @@ public:
 private:
     static Scalar toFractionGasOil (unsigned regionIdx)
     {
-        Scalar mMOil = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::oilCompIdx, regionIdx) : 1;
-        Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
-        Scalar mMGas = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
-        Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
+        const Scalar mMOil = use_mole_fraction_ ? FluidSystem::molarMass(FluidSystem::oilCompIdx, regionIdx) : 1;
+        const Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
+        const Scalar mMGas = use_mole_fraction_ ? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
+        const Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
         return rhoO * mMGas / (rhoG * mMOil);
     }
 
     static Scalar toFractionGasWater (unsigned regionIdx)
     {
-        Scalar mMWater = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::waterCompIdx, regionIdx) : 1;
-        Scalar rhoW = FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, regionIdx);
-        Scalar mMGas = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
-        Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
+        const Scalar mMWater = use_mole_fraction_ ? FluidSystem::molarMass(FluidSystem::waterCompIdx, regionIdx) : 1;
+        const Scalar rhoW = FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, regionIdx);
+        const Scalar mMGas = use_mole_fraction_ ? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
+        const Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
         return rhoW * mMGas / (rhoG * mMWater);
     }
 
@@ -474,7 +474,7 @@ protected:
         using Toolbox = MathToolbox<Evaluation>;
 
         if constexpr (enableMICP) {
-            unsigned pvtRegionIndex = intQuants.fluidState().pvtRegionIndex();
+            const unsigned pvtRegionIndex = intQuants.fluidState().pvtRegionIndex();
             diffusionCoefficient_[waterPhaseIdx][0] = MICPModule::microbialDiffusion(pvtRegionIndex);
             diffusionCoefficient_[waterPhaseIdx][1] = MICPModule::oxygenDiffusion(pvtRegionIndex);
             diffusionCoefficient_[waterPhaseIdx][2] = MICPModule::ureaDiffusion(pvtRegionIndex);
