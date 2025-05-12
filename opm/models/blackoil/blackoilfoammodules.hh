@@ -115,10 +115,12 @@ public:
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if constexpr (enableFoam)
+        if constexpr (enableFoam) {
             return pvIdx == foamConcentrationIdx;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -137,10 +139,12 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if constexpr (enableFoam)
+        if constexpr (enableFoam) {
             return eqIdx == contiFoamEqIdx;
-        else
+        }
+        else {
             return false;
+        }
 
     }
 
