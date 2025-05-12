@@ -43,7 +43,10 @@
 
 //#include <opm/models/io/vtkBlackOilExtboModule.hh> //TODO: Missing ...
 
+#include <cassert>
 #include <cmath>
+#include <istream>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 
