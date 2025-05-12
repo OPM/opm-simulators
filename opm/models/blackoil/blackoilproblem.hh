@@ -30,6 +30,8 @@
 
 #include <opm/models/common/multiphasebaseproblem.hh>
 
+#include <limits>
+
 namespace Opm {
 
 /*!
