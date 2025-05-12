@@ -362,7 +362,7 @@ updateWellTestState(const SingleWellState<Scalar>& ws,
 }
 
 template<typename FluidSystem, typename Indices>
-Scalar WellInterfaceGeneric<FluidSystem, Indices>::
+typename FluidSystem::Scalar WellInterfaceGeneric<FluidSystem, Indices>::
 getTHPConstraint(const SummaryState& summaryState) const
 {
     if (dynamic_thp_limit_) {

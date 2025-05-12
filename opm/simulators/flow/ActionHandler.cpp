@@ -41,6 +41,14 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
+
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -166,8 +174,8 @@ namespace {
 
 namespace Opm {
 
-template<class Scalar>
-ActionHandler<Scalar>::
+template<typename FluidSystem, typename Indices>
+ActionHandler<FluidSystem, Indices>::
 ActionHandler(EclipseState& ecl_state,
               Schedule& schedule,
               Action::State& actionState,
@@ -182,8 +190,8 @@ ActionHandler(EclipseState& ecl_state,
     , comm_(comm)
 {}
 
-template<class Scalar>
-void ActionHandler<Scalar>::
+template<typename FluidSystem, typename Indices>
+void ActionHandler<FluidSystem, Indices>::
 applyActions(const int reportStep,
              const double sim_time,
              const TransFunc& transUp)
@@ -265,8 +273,8 @@ applyActions(const int reportStep,
     }
 }
 
-template<class Scalar>
-void ActionHandler<Scalar>::
+template<typename FluidSystem, typename Indices>
+void ActionHandler<FluidSystem, Indices>::
 applySimulatorUpdate(const int report_step,
                      const SimulatorUpdate& sim_update,
                      const TransFunc& updateTrans,
@@ -290,8 +298,8 @@ applySimulatorUpdate(const int report_step,
     }
 }
 
-template<class Scalar>
-void ActionHandler<Scalar>::
+template<typename FluidSystem, typename Indices>
+void ActionHandler<FluidSystem, Indices>::
 evalUDQAssignments(const unsigned episodeIdx,
                    UDQState& udq_state)
 {
@@ -303,10 +311,41 @@ evalUDQAssignments(const unsigned episodeIdx,
                      udq_state);
 }
 
-template class ActionHandler<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class ActionHandler<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class ActionHandler<float>;
+    INSTANTIATE_TYPE(float)
 #endif
 
 } // namespace Opm

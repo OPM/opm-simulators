@@ -39,7 +39,7 @@ template<class M> class UMFPack;
 namespace Opm
 {
 
-template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquationAccess;
+template<typename FluidSystem, typename Indices, int numWellEq, int numEq> class MultisegmentWellEquationAccess;
 template<typename FluidSystem, typename Indices> class MultisegmentWellGeneric;
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
@@ -135,7 +135,7 @@ public:
     }
 
   private:
-    friend class MultisegmentWellEquationAccess<Scalar,numWellEq,numEq>;
+    friend class MultisegmentWellEquationAccess<FluidSystem, Indices, numWellEq, numEq>;
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

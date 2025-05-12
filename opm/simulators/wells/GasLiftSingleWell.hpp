@@ -33,12 +33,14 @@ namespace Opm {
 template<class TypeTag> class WellInterface;
 
 template<class TypeTag>
-class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, Properties::Scalar>>
+class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, Properties::FluidSystem>, GetPropType<TypeTag, Properties::Indices>>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
-    using BasicRates = typename GasLiftSingleWellGeneric<Scalar>::BasicRates;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<FluidSystem, Indices>::GLiftSyncGroups;
+    using BasicRates = typename GasLiftSingleWellGeneric<FluidSystem, Indices>::BasicRates;
 
 public:
     GasLiftSingleWell(const WellInterface<TypeTag>& well,
@@ -47,7 +49,7 @@ public:
                       DeferredLogger& deferred_logger,
                       WellState<FluidSystem, Indices>& well_state,
                       const GroupState<Scalar>& group_state,
-                      GasLiftGroupInfo<Scalar>& group_info,
+                      GasLiftGroupInfo<FluidSystem, Indices>& group_info,
                       GLiftSyncGroups& sync_groups,
                       const Parallel::Communication& comm,
                       bool glift_debug);
