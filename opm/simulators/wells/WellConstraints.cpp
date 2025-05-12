@@ -25,6 +25,12 @@
 
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
 #include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
@@ -33,8 +39,8 @@
 
 namespace Opm {
 
-template<class Scalar>
-bool WellConstraints<Scalar>::
+template<typename FluidSystem, typename Indices>
+bool WellConstraints<FluidSystem, Indices>::
 checkIndividualConstraints(SingleWellState<Scalar>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
@@ -69,8 +75,9 @@ checkIndividualConstraints(SingleWellState<Scalar>& ws,
     return false;
 }
 
-template<class Scalar>
-Well::InjectorCMode WellConstraints<Scalar>::
+template<typename FluidSystem, typename Indices>
+Well::InjectorCMode
+WellConstraints<FluidSystem, Indices>::
 activeInjectionConstraint(const SingleWellState<Scalar>& ws,
                           const SummaryState& summaryState,
                           bool& thp_limit_violated_but_not_switched,
@@ -167,8 +174,9 @@ activeInjectionConstraint(const SingleWellState<Scalar>& ws,
     return currentControl;
 }
 
-template<class Scalar>
-Well::ProducerCMode WellConstraints<Scalar>::
+template<typename FluidSystem, typename Indices>
+Well::ProducerCMode
+WellConstraints<FluidSystem, Indices>::
 activeProductionConstraint(const SingleWellState<Scalar>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
@@ -295,10 +303,47 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
     return currentControl;
 }
 
-template class WellConstraints<double>;
+    template<class Scalar>
+    using FS = BlackOilFluidSystem<Scalar, BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE(T,...) \
+    template class WellConstraints<FS<T>, __VA_ARGS__>;
+
+#define INSTANTIATE_TYPE(T)                                                  \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)  \
+    INSTANTIATE(T,BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>) \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)            \
+    INSTANTIATE(T,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
+    INSTANTIATE(T,BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
+    INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-template class WellConstraints<float>;
+    INSTANTIATE_TYPE(float)
 #endif
+
+//template class WellConstraints<double>;
+//
+//#if FLOW_INSTANTIATE_FLOAT
+//template class WellConstraints<float>;
+//#endif
 
 } // namespace Opm
