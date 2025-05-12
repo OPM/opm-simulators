@@ -145,8 +145,9 @@ public:
      */
     static void registerParameters()
     {
-        if constexpr (enablePolymer)
+        if constexpr (enablePolymer) {
             VtkBlackOilPolymerModule<TypeTag>::registerParameters();
+        }
     }
 
     /*!
@@ -155,20 +156,24 @@ public:
     static void registerOutputModules(Model& model,
                                       Simulator& simulator)
     {
-        if constexpr (enablePolymer)
+        if constexpr (enablePolymer) {
             model.addOutputModule(std::make_unique<VtkBlackOilPolymerModule<TypeTag>>(simulator));
+        }
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-      if constexpr (enablePolymer) {
-          if constexpr (enablePolymerMolarWeight)
-              return pvIdx == polymerConcentrationIdx || pvIdx == polymerMoleWeightIdx;
-          else
-               return pvIdx == polymerConcentrationIdx;
-      }
-      else
-        return false;
+        if constexpr (enablePolymer) {
+            if constexpr (enablePolymerMolarWeight) {
+                return pvIdx == polymerConcentrationIdx || pvIdx == polymerMoleWeightIdx;
+            }
+            else {
+                return pvIdx == polymerConcentrationIdx;
+            }
+        }
+        else {
+              return false;
+        }
     }
 
     static std::string primaryVarName(unsigned pvIdx)
@@ -194,23 +199,28 @@ public:
     static bool eqApplies(unsigned eqIdx)
     {
         if constexpr (enablePolymer) {
-            if constexpr (enablePolymerMolarWeight)
+            if constexpr (enablePolymerMolarWeight) {
                 return eqIdx == contiPolymerEqIdx || eqIdx == contiPolymerMolarWeightEqIdx;
-            else
+            }
+            else {
                 return eqIdx == contiPolymerEqIdx;
+            }
         }
-        else
+        else {
             return false;
+        }
     }
 
     static std::string eqName(unsigned eqIdx)
     {
         assert(eqApplies(eqIdx));
 
-        if (eqIdx == contiPolymerEqIdx)
+        if (eqIdx == contiPolymerEqIdx) {
             return "conti^polymer";
-        else
+        }
+        else {
             return "conti^polymer_molecularweight";
+        }
     }
 
     static Scalar eqWeight([[maybe_unused]] unsigned eqIdx)
@@ -303,12 +313,14 @@ public:
 
             // flux related to transport of polymer molecular weight
             if constexpr (enablePolymerMolarWeight) {
-                if (upIdx == inIdx)
+                if (upIdx == inIdx) {
                     flux[contiPolymerMolarWeightEqIdx] =
                         flux[contiPolymerEqIdx]*up.polymerMoleWeight();
-                else
+                }
+                else {
                     flux[contiPolymerMolarWeightEqIdx] =
                         flux[contiPolymerEqIdx]*decay<Scalar>(up.polymerMoleWeight());
+                }
             }
         }
     }
@@ -472,14 +484,16 @@ public:
 
         const Scalar eps = 1e-14;
         // return 1.0 if the polymer has no effect on the water.
-        if (std::abs((viscosityMultiplier - 1.0)) < eps)
+        if (std::abs((viscosityMultiplier - 1.0)) < eps) {
             return ToolboxLocal::createConstant(v0, 1.0);
+        }
 
         const std::vector<Scalar>& shearEffectRefLogVelocity = params_.plyshlogShearEffectRefLogVelocity_[pvtnumRegionIdx];
         auto v0AbsLog = log(abs(v0));
         // return 1.0 if the velocity /sharte is smaller than the first velocity entry.
-        if (v0AbsLog < shearEffectRefLogVelocity[0])
+        if (v0AbsLog < shearEffectRefLogVelocity[0]) {
             return ToolboxLocal::createConstant(v0, 1.0);
+        }
 
         // compute shear factor from input
         // Z = (1 + (P - 1) * M(v)) / P
@@ -658,10 +672,12 @@ public:
 
     const Evaluation& polymerMoleWeight() const
     {
-        if constexpr (enablePolymerMolarWeight)
+        if constexpr (enablePolymerMolarWeight) {
             return polymerMoleWeight_;
-        else
+        }
+        else {
             throw std::logic_error("polymerMoleWeight() is called but polymer milecular weight is disabled");
+        }
     }
 
     const Scalar& polymerDeadPoreVolume() const
@@ -796,8 +812,9 @@ public:
         waterShearFactor_ = 1.0;
         polymerShearFactor_ = 1.0;
 
-        if (!PolymerModule::hasPlyshlog())
+        if (!PolymerModule::hasPlyshlog()) {
             return;
+        }
 
         const ExtensiveQuantities& extQuants = asImp_();
         unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
