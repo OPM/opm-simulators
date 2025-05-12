@@ -302,7 +302,7 @@ GpuVector<T>::copyToHost(std::vector<T>& data) const
 
 template <class T>
 void
-GpuVector<T>::copyFromDevice(const GpuVector<T>& data) const
+GpuVector<T>::copyFromDeviceToDevice(const GpuVector<T>& data) const
 {
     assertHasElements();
     assertSameSize(data);

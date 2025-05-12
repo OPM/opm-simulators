@@ -251,10 +251,10 @@ public:
     void copyToHost(std::vector<T>& data) const;
 
     /**
-     * @brief copyFromDevice copies data from the GPU memory of other to this vector
+     * @brief copyFromDeviceToDevice copies data from the GPU memory of other to this vector
      * @param other the vector to copy from
      */
-    void copyFromDevice(const GpuVector<T>& other) const;
+    void copyFromDeviceToDevice(const GpuVector<T>& other) const;
 
     void prepareSendBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const;
     void syncFromRecvBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const;

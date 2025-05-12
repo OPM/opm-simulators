@@ -206,7 +206,7 @@ GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrix<T>& matrix)
     OPM_ERROR_IF(nonzeroes() != matrix.nonzeroes(), "Matrix does not have the same number of non-zero elements.");
     OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
 
-    m_nonZeroElements.copyFromDevice(matrix.getNonZeroValues());
+    m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
 }
 
 template <typename T>
