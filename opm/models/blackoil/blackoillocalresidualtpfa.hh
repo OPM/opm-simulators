@@ -534,16 +534,24 @@ public:
                                     const IntensiveQuantities& insideIntQuants,
                                     unsigned globalSpaceIdx)
     {
-        if (bdyInfo.type == BCType::NONE) {
+        switch (bdyInfo.type) {
+        case BCType::NONE:
             bdyFlux = 0.0;
-        } else if (bdyInfo.type == BCType::RATE) {
+            break;
+        case BCType::RATE:
             computeBoundaryFluxRate(bdyFlux, bdyInfo);
-        } else if (bdyInfo.type == BCType::FREE || bdyInfo.type == BCType::DIRICHLET) {
+            break;
+        case BCType::FREE:
+        case BCType::DIRICHLET:
             computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-        } else if (bdyInfo.type == BCType::THERMAL) {
+            break;
+        case BCType::THERMAL:
             computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
-        } else {
-            throw std::logic_error("Unknown boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type)) + " in computeBoundaryFlux()." );
+            break;
+        default:
+            throw std::logic_error("Unknown boundary condition type " +
+                                   std::to_string(static_cast<int>(bdyInfo.type)) +
+                                   " in computeBoundaryFlux()." );
         }
     }
 
