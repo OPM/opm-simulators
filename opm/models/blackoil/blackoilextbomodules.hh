@@ -99,16 +99,14 @@ public:
      * \brief Register all run-time parameters for the black-oil solvent module.
      */
     static void registerParameters()
-    {
-    }
+    {}
 
     /*!
      * \brief Register all solvent specific VTK and ECL output modules.
      */
     static void registerOutputModules(Model&,
                                       Simulator&)
-    {
-    }
+    {}
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
@@ -167,27 +165,28 @@ public:
         if constexpr (enableExtbo) {
             if constexpr (blackoilConserveSurfaceVolume) {
                 storage[contiZfracEqIdx] =
-                        Toolbox::template decay<LhsEval>(intQuants.porosity())
-                        * Toolbox::template decay<LhsEval>(intQuants.yVolume())
-                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(gasPhaseIdx))
-                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(gasPhaseIdx));
+                        Toolbox::template decay<LhsEval>(intQuants.porosity()) *
+                        Toolbox::template decay<LhsEval>(intQuants.yVolume()) *
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(gasPhaseIdx)) *
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(gasPhaseIdx));
                 if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
                     storage[contiZfracEqIdx] +=
-                        Toolbox::template decay<LhsEval>(intQuants.porosity())
-                        * Toolbox::template decay<LhsEval>(intQuants.xVolume())
-                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs())
-                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(oilPhaseIdx))
-                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(oilPhaseIdx));
+                        Toolbox::template decay<LhsEval>(intQuants.porosity()) *
+                        Toolbox::template decay<LhsEval>(intQuants.xVolume()) *
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().Rs()) *
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(oilPhaseIdx)) *
+                        Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(oilPhaseIdx));
                 }
                 // Reg. terms: Preliminary attempt to avoid singular behaviour when solvent is invading a pure water
                 //             region. Results seems insensitive to the weighting factor.
                 // TODO: Further investigations ...
                 const Scalar regWghtFactor = 1.0e-6;
-                storage[contiZfracEqIdx] += regWghtFactor*(1.0-Toolbox::template decay<LhsEval>(intQuants.zFraction()))
-                                          + regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.porosity())
-                                                       * Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(gasPhaseIdx))
-                                                       * Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(gasPhaseIdx));
-                storage[contiZfracEqIdx-1] += regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.zFraction());
+                storage[contiZfracEqIdx] +=
+                    regWghtFactor* (1.0 - Toolbox::template decay<LhsEval>(intQuants.zFraction())) +
+                                    regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.porosity()) *
+                                   Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(gasPhaseIdx)) *
+                                   Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(gasPhaseIdx));
+                storage[contiZfracEqIdx - 1] += regWghtFactor*Toolbox::template decay<LhsEval>(intQuants.zFraction());
             }
             else {
                 throw std::runtime_error("Only component conservation in terms of surface volumes is implemented. ");
@@ -199,7 +198,6 @@ public:
                             [[maybe_unused]] const ElementContext& elemCtx,
                             [[maybe_unused]] unsigned scvfIdx,
                             [[maybe_unused]] unsigned timeIdx)
-
     {
         if constexpr (enableExtbo) {
             const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
@@ -212,15 +210,15 @@ public:
                 const auto& fsGas = upGas.fluidState();
                 if (upIdxGas == inIdx) {
                     flux[contiZfracEqIdx] =
-                        extQuants.volumeFlux(gasPhaseIdx)
-                        * (upGas.yVolume())
-                        * fsGas.invB(gasPhaseIdx);
+                        extQuants.volumeFlux(gasPhaseIdx) *
+                        upGas.yVolume() *
+                        fsGas.invB(gasPhaseIdx);
                 }
                 else {
                     flux[contiZfracEqIdx] =
-                            extQuants.volumeFlux(gasPhaseIdx)
-                            * (decay<Scalar>(upGas.yVolume()))
-                            * decay<Scalar>(fsGas.invB(gasPhaseIdx));
+                            extQuants.volumeFlux(gasPhaseIdx) *
+                            decay<Scalar>(upGas.yVolume()) *
+                            decay<Scalar>(fsGas.invB(gasPhaseIdx));
                 }
                 if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
                     unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
@@ -228,17 +226,17 @@ public:
                     const auto& fsOil = upOil.fluidState();
                     if (upIdxOil == inIdx) {
                         flux[contiZfracEqIdx] +=
-                            extQuants.volumeFlux(oilPhaseIdx)
-                            * upOil.xVolume()
-                            * fsOil.Rs()
-                            * fsOil.invB(oilPhaseIdx);
+                            extQuants.volumeFlux(oilPhaseIdx) *
+                            upOil.xVolume() *
+                            fsOil.Rs() *
+                            fsOil.invB(oilPhaseIdx);
                     }
                     else {
                         flux[contiZfracEqIdx] +=
-                            extQuants.volumeFlux(oilPhaseIdx)
-                            * decay<Scalar>(upOil.xVolume())
-                            * decay<Scalar>(fsOil.Rs())
-                            * decay<Scalar>(fsOil.invB(oilPhaseIdx));
+                            extQuants.volumeFlux(oilPhaseIdx) *
+                            decay<Scalar>(upOil.xVolume()) *
+                            decay<Scalar>(fsOil.Rs()) *
+                            decay<Scalar>(fsOil.invB(oilPhaseIdx));
                     }
                 }
             }
@@ -321,72 +319,58 @@ public:
     }
 
     template <typename Value>
-    static Value xVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return params_.X_[pvtRegionIdx].eval(z, pressure, true);
-    }
+    static Value xVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z)
+    { return params_.X_[pvtRegionIdx].eval(z, pressure, true); }
 
     template <typename Value>
-    static Value yVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return params_.Y_[pvtRegionIdx].eval(z, pressure, true);
-    }
+    static Value yVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z)
+    { return params_.Y_[pvtRegionIdx].eval(z, pressure, true); }
 
     template <typename Value>
-    static Value pbubRs(unsigned pvtRegionIdx, const Value& z, const Value& rs) {
-        return params_.PBUB_RS_[pvtRegionIdx].eval(z, rs, true);
-    }
+    static Value pbubRs(unsigned pvtRegionIdx, const Value& z, const Value& rs)
+    { return params_.PBUB_RS_[pvtRegionIdx].eval(z, rs, true); }
 
     template <typename Value>
-    static Value pbubRv(unsigned pvtRegionIdx, const Value& z, const Value& rv) {
-        return params_.PBUB_RV_[pvtRegionIdx].eval(z, rv, true);
-    }
+    static Value pbubRv(unsigned pvtRegionIdx, const Value& z, const Value& rv)
+    { return params_.PBUB_RV_[pvtRegionIdx].eval(z, rv, true); }
 
     template <typename Value>
-    static Value oilViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return params_.VISCO_[pvtRegionIdx].eval(z, pressure, true);
-    }
+    static Value oilViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z)
+    { return params_.VISCO_[pvtRegionIdx].eval(z, pressure, true); }
 
     template <typename Value>
-    static Value gasViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return params_.VISCG_[pvtRegionIdx].eval(z, pressure, true);
-    }
+    static Value gasViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z)
+    { return params_.VISCG_[pvtRegionIdx].eval(z, pressure, true); }
 
     template <typename Value>
-    static Value bo(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return params_.BO_[pvtRegionIdx].eval(z, pressure, true);
-    }
+    static Value bo(unsigned pvtRegionIdx, const Value& pressure, const Value& z)
+    { return params_.BO_[pvtRegionIdx].eval(z, pressure, true); }
 
     template <typename Value>
-    static Value bg(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return params_.BG_[pvtRegionIdx].eval(z, pressure, true);
-    }
+    static Value bg(unsigned pvtRegionIdx, const Value& pressure, const Value& z)
+    { return params_.BG_[pvtRegionIdx].eval(z, pressure, true); }
 
     template <typename Value>
-    static Value rs(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return params_.RS_[pvtRegionIdx].eval(z, pressure, true);
-    }
+    static Value rs(unsigned pvtRegionIdx, const Value& pressure, const Value& z)
+    { return params_.RS_[pvtRegionIdx].eval(z, pressure, true); }
 
     template <typename Value>
-    static Value rv(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return params_.RV_[pvtRegionIdx].eval(z, pressure, true);
-    }
+    static Value rv(unsigned pvtRegionIdx, const Value& pressure, const Value& z)
+    { return params_.RV_[pvtRegionIdx].eval(z, pressure, true); }
 
-    static Scalar referenceDensity(unsigned regionIdx) {
-        return params_.zReferenceDensity_[regionIdx];
-    }
+    static Scalar referenceDensity(unsigned regionIdx)
+    { return params_.zReferenceDensity_[regionIdx]; }
 
-    static Scalar zLim(unsigned regionIdx) {
-        return params_.zLim_[regionIdx];
-    }
+    static Scalar zLim(unsigned regionIdx)
+    { return params_.zLim_[regionIdx]; }
 
     template <typename Value>
-    static Value oilCmp(unsigned pvtRegionIdx, const Value& z) {
-        return params_.oilCmp_[pvtRegionIdx].eval(z, true);
-    }
+    static Value oilCmp(unsigned pvtRegionIdx, const Value& z)
+    { return params_.oilCmp_[pvtRegionIdx].eval(z, true); }
 
     template <typename Value>
-    static Value gasCmp(unsigned pvtRegionIdx, const Value& z) {
-        return params_.gasCmp_[pvtRegionIdx].eval(z, true);
-    }
+    static Value gasCmp(unsigned pvtRegionIdx, const Value& z)
+    { return params_.gasCmp_[pvtRegionIdx].eval(z, true); }
 
 private:
     static BlackOilExtboParams<Scalar> params_;
@@ -424,7 +408,6 @@ class BlackOilExtboIntensiveQuantities
     static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr double cutOff = 1e-12;
-
 
 public:
     /*!
@@ -473,7 +456,7 @@ public:
            static const Scalar thresholdWaterFilledCell = 1.0 - 1e-6;
            Scalar sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx).value();
            if (sw >= thresholdWaterFilledCell) {
-              rs_ = 0.0;  // water only, zero rs_ ...
+               rs_ = 0.0;  // water only, zero rs_ ...
            }
         }
 
@@ -481,11 +464,12 @@ public:
            rs_ = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
            const Evaluation zLim = ExtboModule::zLim(pvtRegionIdx);
            if (zFraction_ > zLim) {
-             pbub = ExtboModule::pbubRs(pvtRegionIdx, zLim, rs_);
+               pbub = ExtboModule::pbubRs(pvtRegionIdx, zLim, rs_);
            } else {
-             pbub = ExtboModule::pbubRs(pvtRegionIdx, zFraction_, rs_);
+               pbub = ExtboModule::pbubRs(pvtRegionIdx, zFraction_, rs_);
            }
-           bo_ = ExtboModule::bo(pvtRegionIdx, pbub, zFraction_) + ExtboModule::oilCmp(pvtRegionIdx, zFraction_)*(fs.pressure(oilPhaseIdx)-pbub);
+           bo_ = ExtboModule::bo(pvtRegionIdx, pbub, zFraction_) +
+                 ExtboModule::oilCmp(pvtRegionIdx, zFraction_) * (fs.pressure(oilPhaseIdx) - pbub);
 
            xVolume_ = ExtboModule::xVolume(pvtRegionIdx, pbub, zFraction_);
         }
@@ -493,7 +477,8 @@ public:
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
            rv_ = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
            Evaluation rvsat = ExtboModule::rv(pvtRegionIdx, pbub, zFraction_);
-           bg_ = ExtboModule::bg(pvtRegionIdx, pbub, zFraction_) + ExtboModule::gasCmp(pvtRegionIdx, zFraction_)*(rv_-rvsat);
+           bg_ = ExtboModule::bg(pvtRegionIdx, pbub, zFraction_) +
+               ExtboModule::gasCmp(pvtRegionIdx, zFraction_) * (rv_ - rvsat);
 
            yVolume_ = ExtboModule::yVolume(pvtRegionIdx, pbub, zFraction_);
         }
@@ -512,18 +497,19 @@ public:
         unsigned pvtRegionIdx = iq.pvtRegionIndex();
         zRefDensity_ = ExtboModule::referenceDensity(pvtRegionIdx);
 
-        fs.setInvB(oilPhaseIdx, 1.0/bo_);
-        fs.setInvB(gasPhaseIdx, 1.0/bg_);
+        fs.setInvB(oilPhaseIdx, 1.0 / bo_);
+        fs.setInvB(gasPhaseIdx, 1.0 / bg_);
 
         fs.setDensity(oilPhaseIdx,
-                      fs.invB(oilPhaseIdx)
-                      *(FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx)
-                        + (1.0-xVolume_)*fs.Rs()*FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx)
-                        + xVolume_*fs.Rs()*zRefDensity_ ));
+                      fs.invB(oilPhaseIdx) *
+                      (FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx) +
+                        (1.0 - xVolume_) * fs.Rs() * FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx) +
+                        xVolume_ * fs.Rs() * zRefDensity_));
         fs.setDensity(gasPhaseIdx,
-                      fs.invB(gasPhaseIdx)
-                      *(FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx)*(1.0-yVolume_)+yVolume_*zRefDensity_
-                        + FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx)*fs.Rv()));
+                      fs.invB(gasPhaseIdx) *
+                      (FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx) *
+                       (1.0 - yVolume_) + yVolume_* zRefDensity_ +
+                        FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx) * fs.Rv()));
     }
 
     const Evaluation& zFraction() const
@@ -554,13 +540,10 @@ public:
     { return rv_; }
 
     const Evaluation zPureInvFormationVolumeFactor() const
-    { return 1.0/bz_; }
+    { return 1.0 / bz_; }
 
-    const Scalar& zRefDensity() const
+    Scalar zRefDensity() const
     { return zRefDensity_; }
-
-private:
-
 
 protected:
     Implementation& asImp_()
@@ -596,14 +579,13 @@ class BlackOilExtboIntensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-
     void zPvtUpdate_()
-    { }
+    {}
 
     void zFractionUpdate_(const ElementContext&,
                           unsigned,
                           unsigned)
-    { }
+    {}
 
     const Evaluation& xVolume() const
     { throw std::runtime_error("xVolume() called but extbo is disabled"); }
@@ -630,10 +612,10 @@ public:
     { throw std::runtime_error("zFraction() called but extbo is disabled"); }
 
     const Evaluation& zInverseFormationVolumeFactor() const
-     { throw std::runtime_error("zInverseFormationVolumeFactor() called but extbo is disabled"); }
+    { throw std::runtime_error("zInverseFormationVolumeFactor() called but extbo is disabled"); }
 
-    const Scalar& zRefDensity() const
-     { throw std::runtime_error("zRefDensity() called but extbo is disabled"); }
+    Scalar zRefDensity() const
+    { throw std::runtime_error("zRefDensity() called but extbo is disabled"); }
 };
 
 /*!
@@ -661,15 +643,11 @@ class BlackOilExtboExtensiveQuantities
     static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int dimWorld = GridView::dimensionworld;
 
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldVector<Evaluation, dimWorld> DimEvalVector;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
-public:
-
-private:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
-
 };
 
 template <class TypeTag>
@@ -677,9 +655,6 @@ class BlackOilExtboExtensiveQuantities<TypeTag, false>
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-
-public:
-
 };
 
 } // namespace Opm
