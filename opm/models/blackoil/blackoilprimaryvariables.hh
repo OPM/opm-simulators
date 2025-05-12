@@ -210,10 +210,7 @@ public:
     makeEvaluation(unsigned varIdx, unsigned timeIdx,
                    LinearizationType linearizationType = LinearizationType()) const
     {
-        Scalar scale = 1.0;
-        if (varIdx == pressureSwitchIdx) {
-            scale = this->pressureScale_;
-        }
+        const Scalar scale = varIdx == pressureSwitchIdx ? this->pressureScale_ : Scalar{1.0};
         if (std::is_same_v<Evaluation, Scalar>) {
             return (*this)[varIdx] * scale; // finite differences
         }
@@ -361,7 +358,8 @@ public:
                 continue;
             }
 
-            Scalar rho = FluidSystem::template density<FlashFluidState, Scalar>(fsFlash, paramCache, phaseIdx);
+            const Scalar rho =
+                FluidSystem::template density<FlashFluidState, Scalar>(fsFlash, paramCache, phaseIdx);
             fsFlash.setDensity(phaseIdx, rho);
         }
 
@@ -413,7 +411,7 @@ public:
         const auto& saltSaturation =
             BlackOil::getSaltSaturation_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
         const bool precipitatedSaltPresent = enableSaltPrecipitation ? saltSaturation > 0.0 : false;
-        bool oneActivePhases = FluidSystem::numActivePhases() == 1;
+        const bool oneActivePhases = FluidSystem::numActivePhases() == 1;
         // deal with the primary variables for the energy extension
         EnergyModule::assignPrimaryVars(*this, fluidState);
 
@@ -604,10 +602,10 @@ public:
         // if solid phase disappeares:  Sp (Solid salt saturation) -> Cs (salt concentration)
         // if solid phase appears: Cs (salt concentration) ->  Sp (Solid salt saturation)
         if constexpr (enableSaltPrecipitation) {
-            Scalar saltSolubility = BrineModule::saltSol(pvtRegionIndex());
+            const Scalar saltSolubility = BrineModule::saltSol(pvtRegionIndex());
             if (primaryVarsMeaningBrine() == BrineMeaning::Sp) {
                 saltConcentration = saltSolubility;
-                Scalar saltSat = (*this)[saltConcentrationIdx];
+                const Scalar saltSat = (*this)[saltConcentrationIdx];
                 if (saltSat < -eps) { // precipitated salt dissappears
                     setPrimaryVarsMeaningBrine(BrineMeaning::Cs);
                     (*this)[saltConcentrationIdx] = saltSolubility; // set salt concentration to solubility limit
@@ -627,17 +625,18 @@ public:
         // Scalar rsolw = 0.0; // not needed at the moment since we dont allow for vapwat in combination with rsolw
         if constexpr (enableSolvent) {
             if (SolventModule::isSolubleInWater()) {
-                Scalar p = (*this)[pressureSwitchIdx]; // cap-pressure?
-                Scalar solLimit = SolventModule::solubilityLimit(pvtRegionIndex(), T , p, saltConcentration);
+                const Scalar p = (*this)[pressureSwitchIdx]; // cap-pressure?
+                const Scalar solLimit =
+                    SolventModule::solubilityLimit(pvtRegionIndex(), T , p, saltConcentration);
                 if (primaryVarsMeaningSolvent() == SolventMeaning::Ss) {
-                    Scalar solSat = (*this)[solventSaturationIdx];
+                    const Scalar solSat = (*this)[solventSaturationIdx];
                     if (solSat < -eps) { // solvent dissappears
                         setPrimaryVarsMeaningSolvent(SolventMeaning::Rsolw);
                         (*this)[solventSaturationIdx] = solLimit; // set rsolw to solubility limit
                     }
                 }
                 else if (primaryVarsMeaningSolvent() == SolventMeaning::Rsolw) {
-                    Scalar rsolw = (*this)[solventSaturationIdx];
+                    const Scalar rsolw = (*this)[solventSaturationIdx];
                     if (rsolw > solLimit + eps) { // solvent appears as phase
                         setPrimaryVarsMeaningSolvent(SolventMeaning::Ss);
                         (*this)[solventSaturationIdx] = 0.0;
@@ -678,9 +677,9 @@ public:
         }
 
         if (BrineModule::hasPcfactTables() && primaryVarsMeaningBrine() == BrineMeaning::Sp) {
-            unsigned satnumRegionIdx = problem.satnumRegionIndex(globalDofIdx);
-            Scalar Sp = saltConcentration_();
-            Scalar porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
+            const unsigned satnumRegionIdx = problem.satnumRegionIndex(globalDofIdx);
+            const Scalar Sp = saltConcentration_();
+            const Scalar porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
             const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
             pcFactor_ = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
         }
@@ -695,9 +694,9 @@ public:
                 if (sw < -eps && sg > eps && FluidSystem::enableVaporizedWater()) {
                     Scalar p = this->pressure_();
                     if (primaryVarsMeaningPressure() == PressureMeaning::Po) {
-                        std::array<Scalar, numPhases> pC = { 0.0 };
+                        std::array<Scalar, numPhases> pC{};
                         const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-                        Scalar so = 1.0 - sg - solventSaturation_();
+                        const Scalar so = 1.0 - sg - solventSaturation_();
                         computeCapillaryPressures_(pC, so, sg + solventSaturation_(), /*sw=*/ 0.0, matParams);
                         p += pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
                     }
@@ -718,16 +717,16 @@ public:
                     assert(primaryVarsMeaningPressure() == PressureMeaning::Pg);
                     std::array<Scalar, numPhases> pC = { 0.0 };
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-                    Scalar so = 1.0 - sw - solventSaturation_();
+                    const Scalar so = 1.0 - sw - solventSaturation_();
                     computeCapillaryPressures_(pC, so,  /*sg=*/ 0.0, sw, matParams);
-                    Scalar pw = pg + pcFactor_ * (pC[waterPhaseIdx] - pC[gasPhaseIdx]);
+                    const Scalar pw = pg + pcFactor_ * (pC[waterPhaseIdx] - pC[gasPhaseIdx]);
                     const Scalar rswSat =
                         FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIdx_,
                                                                               T,
                                                                               pw,
                                                                               saltConcentration);
                     setPrimaryVarsMeaningWater(WaterMeaning::Rsw);
-                    Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
+                    const Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
                     (*this)[Indices::waterSwitchIdx] = min(rswSat, rswMax); //primary variable becomes Rsw
                     setPrimaryVarsMeaningPressure(PressureMeaning::Pw);
                     this->setScaledPressure_(pw);
@@ -741,9 +740,9 @@ public:
                 const Scalar& rvw = (*this)[waterSwitchIdx];
                 Scalar p = this->pressure_();
                 if (primaryVarsMeaningPressure() == PressureMeaning::Po) {
-                    std::array<Scalar, numPhases> pC = { 0.0 };
+                    std::array<Scalar, numPhases> pC{};
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-                    Scalar so = 1.0 - sg - solventSaturation_();
+                    const Scalar so = 1.0 - sg - solventSaturation_();
                     computeCapillaryPressures_(pC, so, sg + solventSaturation_(), /*sw=*/ 0.0, matParams);
                     p += pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
                 }
@@ -773,8 +772,8 @@ public:
                                                                           pw,
                                                                           saltConcentration);
 
-                Scalar rsw = (*this)[Indices::waterSwitchIdx];
-                Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
+                const Scalar rsw = (*this)[Indices::waterSwitchIdx];
+                const Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
                 if (rsw > min(rswSat, rswMax)) {
                     // the gas phase appears, i.e., switch the primary variables to WaterMeaning::Sw
                     setPrimaryVarsMeaningWater(WaterMeaning::Sw);
@@ -783,7 +782,7 @@ public:
                     std::array<Scalar, numPhases> pC{};
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     computeCapillaryPressures_(pC, /*so=*/ 0.0,  /*sg=*/ 0.0, /*sw=*/ 1.0, matParams);
-                    Scalar pg = pw + pcFactor_ * (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
+                    const Scalar pg = pw + pcFactor_ * (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
                     this->setScaledPressure_(pg);
                     changed = true;
                 }
@@ -805,12 +804,12 @@ public:
         switch (primaryVarsMeaningGas()) {
             case GasMeaning::Sg:
             {
-                Scalar s = 1.0 - sw - solventSaturation_();
+                const Scalar s = 1.0 - sw - solventSaturation_();
                 if (sg < -eps && s > 0.0 && FluidSystem::enableDissolvedGas()) {
                     const Scalar po = this->pressure_();
                     setPrimaryVarsMeaningGas(GasMeaning::Rs);
-                    Scalar soMax = std::max(s, problem.maxOilSaturation(globalDofIdx));
-                    Scalar rsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
+                    const Scalar soMax = std::max(s, problem.maxOilSaturation(globalDofIdx));
+                    const Scalar rsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
                     const Scalar rsSat =
                         enableExtbo
                             ? ExtboModule::rs(pvtRegionIndex(), po, zFraction_())
@@ -822,24 +821,24 @@ public:
                     (*this)[Indices::compositionSwitchIdx] = std::min(rsMax, rsSat);
                     changed = true;
                 }
-                Scalar so = 1.0 - sw - solventSaturation_() - sg;
+                const Scalar so = 1.0 - sw - solventSaturation_() - sg;
                 if (so < -eps && sg > 0.0 && FluidSystem::enableVaporizedOil()) {
                     // the oil phase disappeared and some hydrocarbon gas phase is still
                     // present, i.e., switch the primary variables to GasMeaning::Rv.
                     // we only have the oil pressure readily available, but we need the gas
                     // pressure, i.e. we must determine capillary pressure
                     const Scalar po = this->pressure_();
-                    std::array<Scalar, numPhases> pC = { 0.0 };
+                    std::array<Scalar, numPhases> pC{};
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     computeCapillaryPressures_(pC, /*so=*/0.0, sg + solventSaturation_(), sw, matParams);
-                    Scalar pg = po + pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
+                    const Scalar pg = po + pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
 
                     // we start at the GasMeaning::Rv value that corresponds to that of oil-saturated
                     // hydrocarbon gas
                     setPrimaryVarsMeaningPressure(PressureMeaning::Pg);
                     this->setScaledPressure_(pg);
-                    Scalar soMax = problem.maxOilSaturation(globalDofIdx);
-                    Scalar rvMax = problem.maxOilVaporizationFactor(/*timeIdx=*/0, globalDofIdx);
+                    const Scalar soMax = problem.maxOilSaturation(globalDofIdx);
+                    const Scalar rvMax = problem.maxOilVaporizationFactor(/*timeIdx=*/0, globalDofIdx);
                     const Scalar rvSat =
                         enableExtbo
                             ? ExtboModule::rv(pvtRegionIndex(), pg, zFraction_())
@@ -860,9 +859,9 @@ public:
                 // appears as soon as more of the gas component is present in the oil phase
                 // than what saturated oil can hold.
                 const Scalar po = this->pressure_();
-                Scalar so = 1.0 - sw - solventSaturation_();
-                Scalar soMax = std::max(so, problem.maxOilSaturation(globalDofIdx));
-                Scalar rsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
+                const Scalar so = 1.0 - sw - solventSaturation_();
+                const Scalar soMax = std::max(so, problem.maxOilSaturation(globalDofIdx));
+                const Scalar rsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
                 const Scalar rsSat =
                     enableExtbo
                         ? ExtboModule::rs(pvtRegionIndex(), po, zFraction_())
@@ -872,7 +871,7 @@ public:
                                                                               so,
                                                                               soMax);
 
-                Scalar rs = (*this)[Indices::compositionSwitchIdx];
+                const Scalar rs = (*this)[Indices::compositionSwitchIdx];
                 if (rs > std::min(rsMax, rsSat * (Scalar{1.0} + eps))) {
                     // the gas phase appears, i.e., switch the primary variables to GasMeaning::Sg
                     setPrimaryVarsMeaningGas(GasMeaning::Sg);
@@ -888,8 +887,8 @@ public:
                 // than what saturated gas contains. Note that we use the blackoil specific
                 // low-level PVT objects here for performance reasons.
                 const Scalar pg = this->pressure_();
-                Scalar soMax = problem.maxOilSaturation(globalDofIdx);
-                Scalar rvMax = problem.maxOilVaporizationFactor(/*timeIdx=*/0, globalDofIdx);
+                const Scalar soMax = problem.maxOilSaturation(globalDofIdx);
+                const Scalar rvMax = problem.maxOilVaporizationFactor(/*timeIdx=*/0, globalDofIdx);
                 const Scalar rvSat =
                     enableExtbo
                         ? ExtboModule::rv(pvtRegionIndex(), pg, zFraction_())
@@ -899,20 +898,20 @@ public:
                                                                                /*so=*/Scalar(0.0),
                                                                                soMax);
 
-                Scalar rv = (*this)[Indices::compositionSwitchIdx];
+                const Scalar rv = (*this)[Indices::compositionSwitchIdx];
                 if (rv > std::min(rvMax, rvSat * (Scalar{1.0} + eps))) {
                     // switch to phase equilibrium mode because the oil phase appears. here
                     // we also need the capillary pressures to calculate the oil phase
                     // pressure using the gas phase pressure
-                    Scalar sg2 = 1.0 - sw - solventSaturation_();
-                    std::array<Scalar, numPhases> pC = { 0.0 };
+                    const Scalar sg2 = 1.0 - sw - solventSaturation_();
+                    std::array<Scalar, numPhases> pC{};
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     computeCapillaryPressures_(pC,
                                             /*so=*/0.0,
                                             /*sg=*/sg2 + solventSaturation_(),
                                             sw,
                                             matParams);
-                    Scalar po = pg + pcFactor_ * (pC[oilPhaseIdx] - pC[gasPhaseIdx]);
+                    const Scalar po = pg + pcFactor_ * (pC[oilPhaseIdx] - pC[gasPhaseIdx]);
 
                     setPrimaryVarsMeaningGas(GasMeaning::Sg);
                     setPrimaryVarsMeaningPressure(PressureMeaning::Po);
@@ -956,7 +955,7 @@ public:
         so = std::min(std::max(so, Scalar{0.0}), Scalar{1.0});
         sg = std::min(std::max(sg, Scalar{0.0}), Scalar{1.0});
         ssol = std::min(std::max(ssol, Scalar{0.0}), Scalar{1.0});
-        Scalar st = sw + so + sg + ssol;
+        const Scalar st = sw + so + sg + ssol;
         sw = sw / st;
         sg = sg / st;
         ssol = ssol / st;
