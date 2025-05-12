@@ -97,6 +97,8 @@
 #include <filesystem>
 #include <stdexcept>
 
+#include <fmt/format.h>
+
 namespace Opm {
 
 std::unique_ptr<Parallel::Communication> FlowGenericVanguard::comm_;
@@ -112,7 +114,20 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
     defineSimulationModel(std::move(params));
 
     fileName_ = Parameters::Get<Parameters::EclDeckFileName>();
-    edgeWeightsMethod_   = Dune::EdgeWeightMethod(Parameters::Get<Parameters::EdgeWeightsMethod>());
+    const std::string ewm = Parameters::Get<Parameters::EdgeWeightsMethod>();
+    if (ewm == "uniform") {
+        edgeWeightsMethod_ = Dune::EdgeWeightMethod::uniformEdgeWgt;
+    } else if (ewm == "transmissibility") {
+        edgeWeightsMethod_ = Dune::EdgeWeightMethod::defaultTransEdgeWgt;
+    } else if (ewm == "logtrans") {
+        edgeWeightsMethod_ = Dune::EdgeWeightMethod::logTransEdgeWgt;
+    } else {
+        std::string msg = fmt::format("Unknown value for --edge-weights-method parameter: '{}'. "
+                                      "Accepted values are 'uniform', 'transmissibility' and 'logtrans'.",
+                                      ewm);
+        OpmLog::error(msg);
+        throw std::runtime_error(msg);
+    }
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
     numJacobiBlocks_ = Parameters::Get<Parameters::NumJacobiBlocks>();
@@ -446,7 +461,7 @@ void FlowGenericVanguard::registerParameters_()
         ("When restarting: should we try to initialize wells and "
          "groups from historical SCHEDULE section.");
     Parameters::Register<Parameters::EdgeWeightsMethod>
-        ("Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
+        ("Choose edge-weighing strategy: 'uniform', 'transmissibility', or 'logtrans' (logarithm of transmissibility).");
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
     Parameters::Register<Parameters::NumJacobiBlocks>

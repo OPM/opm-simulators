@@ -51,7 +51,7 @@ struct AllowDistributedWells { static constexpr bool value = false; };
 struct AllowSplittingInactiveWells { static constexpr bool value = true; };
 
 struct EclOutputInterval { static constexpr int value = -1; };
-struct EdgeWeightsMethod  { static constexpr int value = 1; };
+struct EdgeWeightsMethod  { static constexpr auto value = "transmissibility"; };
 struct EnableDryRun { static constexpr auto value = "auto"; };
 struct EnableEclOutput { static constexpr auto value = true; };
 struct EnableOpmRstFile { static constexpr bool value = false; };
