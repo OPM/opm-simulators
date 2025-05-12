@@ -19,6 +19,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_WELL_ASSEMBLE_CPP_INCLUDED
+#define OPM_WELL_ASSEMBLE_CPP_INCLUDED
+
 #include <config.h>
 #include <opm/simulators/wells/WellAssemble.hpp>
 
@@ -43,17 +46,17 @@
 namespace Opm
 {
 
-template<class FluidSystem>
-WellAssemble<FluidSystem>::
+template<typename FluidSystem, typename Indices>
+WellAssemble<FluidSystem, Indices>::
 WellAssemble(const WellInterfaceFluidSystem<FluidSystem, Indices>& well)
     : well_(well)
 {}
 
-template<class FluidSystem>
+template<typename FluidSystem, typename Indices>
 template<class EvalWell>
 void
-WellAssemble<FluidSystem>::
-assembleControlEqProd(const WellState<Scalar>& well_state,
+WellAssemble<FluidSystem, Indices>::
+assembleControlEqProd(const WellState<FluidSystem, Indices>& well_state,
                       const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -191,11 +194,11 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
     }
 }
 
-template<class FluidSystem>
+template<typename FluidSystem, typename Indices>
 template<class EvalWell>
 void
-WellAssemble<FluidSystem>::
-assembleControlEqInj(const WellState<Scalar>& well_state,
+WellAssemble<FluidSystem, Indices>::
+assembleControlEqInj(const WellState<FluidSystem, Indices>& well_state,
                      const GroupState<Scalar>& group_state,
                      const Schedule& schedule,
                      const SummaryState& summaryState,
@@ -285,7 +288,7 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
     }
 }
 
-#define INSTANTIATE_METHODS(A,...)                                        \
+/* #define INSTANTIATE_METHODS(A,...)                                        \
 template void WellAssemble<A>::                                           \
 assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&,  \
                                    const GroupState<typename A::Scalar>&, \
@@ -334,6 +337,8 @@ INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
-#endif
+#endif */
 
 } // namespace Opm
+
+#endif
