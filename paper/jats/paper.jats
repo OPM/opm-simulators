@@ -40,7 +40,10 @@ Solvers</article-title>
 </contrib>
 <contrib contrib-type="author">
 <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-7932-3835</contrib-id>
-<string-name>Atgeirr Flø Rasmussen</string-name>
+<name>
+<surname>Rasmussen</surname>
+<given-names>Atgeirr Flø</given-names>
+</name>
 <xref ref-type="aff" rid="aff-1"/>
 </contrib>
 <contrib contrib-type="author">

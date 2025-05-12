@@ -15,7 +15,7 @@ authors:
   - name: Tobias Meyer Andersen
     orcid: 0009-0000-8913-3034
     affiliation: 1
-  - given-names: Atgeirr Flø Rasmussen
+  - name: Atgeirr Flø Rasmussen
     orcid: 0000-0002-7932-3835
     affiliation: 1
   - name: Jakob Torben
