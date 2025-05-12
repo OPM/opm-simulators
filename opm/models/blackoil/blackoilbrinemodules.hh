@@ -96,10 +96,12 @@ public:
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if constexpr (enableBrine)
+        if constexpr (enableBrine) {
             return pvIdx == saltConcentrationIdx;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     /*!
@@ -109,8 +111,9 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   const FluidState& fluidState)
     {
-        if constexpr (enableBrine)
+        if constexpr (enableBrine) {
             priVars[saltConcentrationIdx] = fluidState.saltConcentration();
+        }
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -130,10 +133,12 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if constexpr (enableBrine)
+        if constexpr (enableBrine) {
             return eqIdx == contiBrineEqIdx;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -313,10 +318,12 @@ public:
 
     static bool hasPcfactTables()
     {
-        if constexpr (enableSaltPrecipitation)
+        if constexpr (enableSaltPrecipitation) {
             return !params_.pcfactTable_.empty();
-        else
+        }
+        else {
             return false;
+        }
     }
 
     static Scalar saltSol(unsigned regionIdx) {
@@ -413,8 +420,9 @@ public:
 
             permFactor_ = permfactTable.eval(porosityFactor);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
+                }
 
                 asImp_().mobility_[phaseIdx] *= permFactor_;
             }
