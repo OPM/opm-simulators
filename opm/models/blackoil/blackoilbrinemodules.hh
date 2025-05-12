@@ -28,6 +28,8 @@
 #ifndef EWOMS_BLACK_OIL_BRINE_MODULE_HH
 #define EWOMS_BLACK_OIL_BRINE_MODULE_HH
 
+#include <dune/common/fvector.hh>
+
 #include <opm/models/blackoil/blackoilbrineparams.hpp>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -35,8 +37,10 @@
 
 #include <opm/models/utils/basicproperties.hh>
 
-#include <dune/common/fvector.hh>
-
+#include <cassert>
+#include <istream>
+#include <ostream>
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
