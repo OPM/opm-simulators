@@ -32,6 +32,8 @@
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <cstddef>
+
 namespace Opm {
 
 /*!
@@ -126,25 +128,25 @@ public:
     /*!
      * \copydoc Opm::ElementContext::numDof()
      */
-    size_t numDof(unsigned timeIdx) const
+    std::size_t numDof(unsigned timeIdx) const
     { return elemCtx_.numDof(timeIdx); }
 
     /*!
      * \copydoc Opm::ElementContext::numPrimaryDof()
      */
-    size_t numPrimaryDof(unsigned timeIdx) const
+    std::size_t numPrimaryDof(unsigned timeIdx) const
     { return elemCtx_.numPrimaryDof(timeIdx); }
 
     /*!
      * \copydoc Opm::ElementContext::numInteriorFaces()
      */
-    size_t numInteriorFaces(unsigned timeIdx) const
+    std::size_t numInteriorFaces(unsigned timeIdx) const
     { return elemCtx_.numInteriorFaces(timeIdx); }
 
     /*!
      * \brief Return the number of boundary segments of the current element
      */
-    size_t numBoundaryFaces(unsigned timeIdx) const
+    std::size_t numBoundaryFaces(unsigned timeIdx) const
     { return elemCtx_.stencil(timeIdx).numBoundaryFaces(); }
 
     /*!
