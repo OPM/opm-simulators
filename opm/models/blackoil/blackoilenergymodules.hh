@@ -171,7 +171,7 @@ public:
             }
 
             // add the internal energy of the rock
-            Scalar rockFraction = intQuants.rockFraction();
+            const Scalar rockFraction = intQuants.rockFraction();
             const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
             storage[contiEnergyEqIdx] += rockFraction * uRock;
             storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
@@ -187,13 +187,13 @@ public:
             flux[contiEnergyEqIdx] = 0.0;
 
             const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-            unsigned focusIdx = elemCtx.focusDofIndex();
+            const unsigned focusIdx = elemCtx.focusDofIndex();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
                 }
 
-                unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+                const unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
                 if (upIdx == focusIdx) {
                     addPhaseEnthalpyFlux_<Evaluation>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
                 }
@@ -238,7 +238,7 @@ public:
                                       unsigned timeIdx)
     {
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+        const unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
         const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
         const auto& fs = up.fluidState();
         const auto& volFlux = extQuants.volumeFlux(phaseIdx);
@@ -317,7 +317,7 @@ public:
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
         if constexpr (enableEnergy) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
             const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
             outstream << priVars[temperatureIdx];
         }
@@ -327,7 +327,7 @@ public:
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
         if constexpr (enableEnergy) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
             PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
             PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
@@ -440,7 +440,7 @@ public:
     const Evaluation& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
-    const Scalar& rockFraction() const
+    Scalar rockFraction() const
     { return rockFraction_; }
 
 protected:
@@ -543,7 +543,7 @@ class BlackOilEnergyExtensiveQuantities
 
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
 
-    static const int dimWorld = GridView::dimensionworld;
+    static constexpr int dimWorld = GridView::dimensionworld;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
@@ -646,7 +646,7 @@ public:
         const auto& stencil = ctx.stencil(timeIdx);
         const auto& scvf = stencil.boundaryFace(scvfIdx);
 
-        unsigned inIdx = scvf.interiorIndex();
+        const unsigned inIdx = scvf.interiorIndex();
         const auto& inIq = ctx.intensiveQuantities(inIdx, timeIdx);
         const auto& focusDofIdx = ctx.focusDofIndex();
         const Scalar alpha = ctx.problem().thermalHalfTransmissibilityBoundary(ctx, scvfIdx);
