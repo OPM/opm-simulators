@@ -30,6 +30,7 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
@@ -120,7 +121,6 @@ public:
                 (*this)[Indices::contiSolventEqIdx] /=
                         solventPvt.referenceDensity(pvtRegionIdx);
             }
-
         }
     }
 
@@ -133,15 +133,17 @@ public:
         ParentType::operator=(value);
 
         // then, convert them to mass rates
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             (*this)[conti0EqIdx + compIdx] *= FluidSystem::molarMass(compIdx, pvtRegionIdx);
+        }
 
         const auto& solventPvt = SolventModule::solventPvt();
         (*this)[Indices::contiSolventEqIdx] *= solventPvt.molarMass(pvtRegionIdx);
 
         if constexpr (enablePolymer) {
-            if constexpr (enablePolymerMolarWeight )
+            if constexpr (enablePolymerMolarWeight) {
                 throw std::logic_error("Set molar rate with polymer weight tracking not implemented");
+            }
 
             (*this)[Indices::contiPolymerEqIdx] *= PolymerModule::molarMass(pvtRegionIdx);
         }
@@ -187,11 +189,12 @@ public:
                            unsigned phaseIdx,
                            const RhsEval& volume)
     {
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             (*this)[conti0EqIdx + compIdx] =
-                fluidState.density(phaseIdx)
-                * fluidState.massFraction(phaseIdx, compIdx)
-                * volume;
+                fluidState.density(phaseIdx) *
+                fluidState.massFraction(phaseIdx, compIdx) *
+                volume;
+        }
     }
 
     /*!
@@ -200,8 +203,9 @@ public:
     template <class RhsEval>
     BlackOilRateVector& operator=(const RhsEval& value)
     {
-        for (unsigned i=0; i < this->size(); ++i)
+        for (unsigned i = 0; i < this->size(); ++i) {
             (*this)[i] = value;
+        }
         return *this;
     }
 };
