@@ -198,7 +198,7 @@ public:
                 Toolbox::template decay<LhsEval>(intQuants.foamRockDensity()) *
                 Toolbox::template decay<LhsEval>(intQuants.foamAdsorbed());
 
-            LhsEval accumulationFoam = freeFoam + adsorbedFoam;
+            const LhsEval accumulationFoam = freeFoam + adsorbedFoam;
             storage[contiFoamEqIdx] += accumulationFoam;
         }
     }
@@ -290,7 +290,7 @@ public:
                                 [[maybe_unused]] const DofEntity& dof)
     {
         if constexpr (enableFoam) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
             const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
             outstream << priVars[foamConcentrationIdx];
         }
@@ -302,7 +302,7 @@ public:
                                   [[maybe_unused]] const DofEntity& dof)
     {
         if constexpr (enableFoam) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
             PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
             PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
@@ -317,7 +317,7 @@ public:
                                         unsigned scvIdx,
                                         unsigned timeIdx)
     {
-        unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.foamRockDensity_[satnumRegionIdx];
     }
 
@@ -325,7 +325,7 @@ public:
                                     unsigned scvIdx,
                                     unsigned timeIdx)
     {
-        unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.foamAllowDesorption_[satnumRegionIdx];
     }
 
@@ -333,16 +333,16 @@ public:
                                                       unsigned scvIdx,
                                                       unsigned timeIdx)
     {
-       unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-       return params_.adsorbedFoamTable_[satnumRegionIdx];
+        const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
+        return params_.adsorbedFoamTable_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& gasMobilityMultiplierTable(const ElementContext& elemCtx,
                                                                unsigned scvIdx,
                                                                unsigned timeIdx)
     {
-       unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
-       return params_.gasMobilityMultiplierTable_[pvtnumRegionIdx];
+        const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        return params_.gasMobilityMultiplierTable_[pvtnumRegionIdx];
     }
 
     static const typename BlackOilFoamParams<Scalar>::FoamCoefficients&
@@ -350,7 +350,7 @@ public:
                      const unsigned scvIdx,
                      const unsigned timeIdx)
     {
-        unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
+        const unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
         return params_.foamCoefficients_[satnumRegionIdx];
     }
 
@@ -437,10 +437,10 @@ public:
             const Evaluation S_o = fs.saturation(oilPhaseIdx);
             const Evaluation S_w = fs.saturation(waterPhaseIdx);
 
-            Evaluation F1 = pow(C_surf / fm_surf, ep_surf);
-            Evaluation F2 = pow((fm_oil - S_o) / (fm_oil - fl_oil), ep_oil);
-            Evaluation F3 = pow(fm_cap / Ca, ep_cap);
-            Evaluation F7 = 0.5 + atan(ep_dry * (S_w - fm_dry)) / M_PI;
+            const Evaluation F1 = pow(C_surf / fm_surf, ep_surf);
+            const Evaluation F2 = pow((fm_oil - S_o) / (fm_oil - fl_oil), ep_oil);
+            const Evaluation F3 = pow(fm_cap / Ca, ep_cap);
+            const Evaluation F7 = 0.5 + atan(ep_dry * (S_w - fm_dry)) / M_PI;
 
             mobilityReductionFactor = 1. / (1. + fm_mob * F1 * F2 * F3 * F7);
         } else {
