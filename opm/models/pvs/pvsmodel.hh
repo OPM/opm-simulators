@@ -53,6 +53,7 @@
 #include <opm/models/pvs/pvsratevector.hh>
 
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -614,12 +615,12 @@ public:
         ParentType::registerOutputModules_();
 
         // add the VTK output modules which are meaningful for the model
-        this->addOutputModule(new Opm::VtkPhasePresenceModule<TypeTag>(this->simulator_));
-        this->addOutputModule(new Opm::VtkCompositionModule<TypeTag>(this->simulator_));
+        this->addOutputModule(std::make_unique<VtkPhasePresenceModule<TypeTag>>(this->simulator_));
+        this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));
         if (enableDiffusion)
-            this->addOutputModule(new Opm::VtkDiffusionModule<TypeTag>(this->simulator_));
+            this->addOutputModule(std::make_unique<VtkDiffusionModule<TypeTag>>(this->simulator_));
         if (enableEnergy)
-            this->addOutputModule(new Opm::VtkEnergyModule<TypeTag>(this->simulator_));
+            this->addOutputModule(std::make_unique<VtkEnergyModule<TypeTag>>(this->simulator_));
     }
 
     mutable Scalar referencePressure_;

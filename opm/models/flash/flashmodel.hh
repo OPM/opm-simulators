@@ -52,6 +52,7 @@
 #include <opm/models/io/vtkdiffusionmodule.hpp>
 #include <opm/models/io/vtkenergymodule.hpp>
 
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -316,11 +317,11 @@ public:
         ParentType::registerOutputModules_();
 
         // add the VTK output modules which are meaningful for the model
-        this->addOutputModule(new Opm::VtkCompositionModule<TypeTag>(this->simulator_));
+        this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));
         if (enableDiffusion)
-            this->addOutputModule(new Opm::VtkDiffusionModule<TypeTag>(this->simulator_));
+            this->addOutputModule(std::make_unique<VtkDiffusionModule<TypeTag>>(this->simulator_));
         if (enableEnergy)
-            this->addOutputModule(new Opm::VtkEnergyModule<TypeTag>(this->simulator_));
+            this->addOutputModule(std::make_unique<VtkEnergyModule<TypeTag>>(this->simulator_));
     }
 };
 

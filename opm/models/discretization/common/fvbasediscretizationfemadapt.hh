@@ -28,12 +28,15 @@
 #ifndef EWOMS_FV_BASE_DISCRETIZATION_FEMADAPT_HH
 #define EWOMS_FV_BASE_DISCRETIZATION_FEMADAPT_HH
 
-#include <opm/models/discretization/common/fvbasediscretization.hh>
-
-#include <dune/fem/space/common/adaptationmanager.hh>
-#include <dune/fem/space/common/restrictprolongtuple.hh>
 #include <dune/fem/function/blockvectorfunction.hh>
 #include <dune/fem/misc/capabilities.hh>
+#include <dune/fem/space/common/adaptationmanager.hh>
+#include <dune/fem/space/common/restrictprolongtuple.hh>
+
+#include <opm/models/discretization/common/fvbasediscretization.hh>
+
+#include <memory>
+#include <stdexcept>
 
 namespace Opm {
 
@@ -43,12 +46,12 @@ class FvBaseDiscretizationFemAdapt;
 namespace Properties {
 
 template<class TypeTag>
-struct BaseDiscretizationType<TypeTag,TTag::FvBaseDiscretization> {
-    using type = FvBaseDiscretizationFemAdapt<TypeTag>;
-};
+struct BaseDiscretizationType<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseDiscretizationFemAdapt<TypeTag>; };
 
 template<class TypeTag>
-struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization> {
+struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
+{
     using DiscreteFunctionSpace  = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
     using PrimaryVariables  = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using type = Dune::Fem::ISTLBlockVectorDiscreteFunction<DiscreteFunctionSpace, PrimaryVariables>;
@@ -90,7 +93,8 @@ class FvBaseDiscretizationFemAdapt : public FvBaseDiscretization<TypeTag>
 
 public:
     template<class Serializer>
-    struct SerializeHelper {
+    struct SerializeHelper
+    {
         template<class SolutionType>
         static void serializeOp(Serializer& serializer,
                                 SolutionType& solution)
@@ -143,10 +147,9 @@ public:
                 this->simulator_.problem().gridChanged();
 
                 // notify the modules for visualization output
-                auto outIt = this->outputModules_.begin();
-                auto outEndIt = this->outputModules_.end();
-                for (; outIt != outEndIt; ++outIt)
-                    (*outIt)->allocBuffers();
+                for (auto& module : this->outputModules_) {
+                    module->allocBuffers();
+                }
             }
         }
     }
@@ -156,9 +159,11 @@ public:
         if (!adaptationManager_) {
             // create adaptation objects here, because when doing so in constructor
             // problem is not yet intialized, aka seg fault
-            restrictProlong_ = std::make_unique<RestrictProlong>(DiscreteFunctionRestrictProlong(*(this->solution_[/*timeIdx=*/0])),
-                                                                 this->simulator_.problem().restrictProlongOperator());
-            adaptationManager_ = std::make_unique<AdaptationManager>(this->simulator_.vanguard().grid(), *restrictProlong_);
+            restrictProlong_ =
+                std::make_unique<RestrictProlong>(DiscreteFunctionRestrictProlong(*(this->solution_[/*timeIdx=*/0])),
+                                                  this->simulator_.problem().restrictProlongOperator());
+            adaptationManager_ =
+                std::make_unique<AdaptationManager>(this->simulator_.vanguard().grid(), *restrictProlong_);
         }
         return *adaptationManager_;
     }

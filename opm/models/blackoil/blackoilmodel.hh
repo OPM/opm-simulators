@@ -59,6 +59,7 @@
 #include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkdiffusionmodule.hpp>
 
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -611,11 +612,11 @@ protected:
         EnergyModule::registerOutputModules(asImp_(), this->simulator_);
         MICPModule::registerOutputModules(asImp_(), this->simulator_);
 
-        this->addOutputModule(new VtkBlackOilModule<TypeTag>(this->simulator_));
-        this->addOutputModule(new VtkCompositionModule<TypeTag>(this->simulator_));
+        this->addOutputModule(std::make_unique<VtkBlackOilModule<TypeTag>>(this->simulator_));
+        this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));
 
         if constexpr (enableDiffusion)
-            this->addOutputModule(new VtkDiffusionModule<TypeTag>(this->simulator_));
+            this->addOutputModule(std::make_unique<VtkDiffusionModule<TypeTag>>(this->simulator_));
     }
 
 private:

@@ -47,6 +47,7 @@
 #include <array>
 #include <cmath>
 #include <istream>
+#include <memory>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -123,7 +124,7 @@ public:
                                       Simulator& simulator)
     {
         if constexpr (enableSolvent)
-            model.addOutputModule(new VtkBlackOilSolventModule<TypeTag>(simulator));
+            model.addOutputModule(std::make_unique<VtkBlackOilSolventModule<TypeTag>>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)

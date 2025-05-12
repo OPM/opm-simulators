@@ -38,6 +38,7 @@
 #include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/models/io/vtkblackoilenergymodule.hpp>
 
+#include <memory>
 #include <string>
 
 namespace Opm {
@@ -86,7 +87,7 @@ public:
                                       Simulator& simulator)
     {
         if constexpr (enableEnergy)
-            model.addOutputModule(new VtkBlackOilEnergyModule<TypeTag>(simulator));
+            model.addOutputModule(std::make_unique<VtkBlackOilEnergyModule<TypeTag>>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
