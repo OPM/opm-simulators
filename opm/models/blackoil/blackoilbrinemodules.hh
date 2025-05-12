@@ -165,13 +165,12 @@ public:
         if constexpr (enableBrine) {
             const auto& fs = intQuants.fluidState();
 
-            LhsEval surfaceVolumeWater =
-                    Toolbox::template decay<LhsEval>(fs.saturation(waterPhaseIdx)) *
-                    Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx)) *
-                    Toolbox::template decay<LhsEval>(intQuants.porosity());
-
             // avoid singular matrix if no water is present.
-            surfaceVolumeWater = max(surfaceVolumeWater, 1e-10);
+            const LhsEval surfaceVolumeWater =
+                    max(Toolbox::template decay<LhsEval>(fs.saturation(waterPhaseIdx)) *
+                        Toolbox::template decay<LhsEval>(fs.invB(waterPhaseIdx)) *
+                        Toolbox::template decay<LhsEval>(intQuants.porosity()),
+                        1e-10);
 
             // Brine in water phase
             const LhsEval massBrine = surfaceVolumeWater *
