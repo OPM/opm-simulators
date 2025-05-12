@@ -81,8 +81,9 @@ public:
      */
     static void registerParameters()
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             VtkBlackOilEnergyModule<TypeTag>::registerParameters();
+        }
     }
 
     /*!
@@ -91,16 +92,19 @@ public:
     static void registerOutputModules(Model& model,
                                       Simulator& simulator)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             model.addOutputModule(std::make_unique<VtkBlackOilEnergyModule<TypeTag>>(simulator));
+        }
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             return pvIdx == temperatureIdx;
-        else
+        }
+        else {
             return false;
+        }
 
     }
 
@@ -121,10 +125,12 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             return eqIdx == contiEnergyEqIdx;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -152,8 +158,9 @@ public:
             // accumulate the internal energy of the fluids
             const auto& fs = intQuants.fluidState();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
+                }
 
                 const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
                 const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
@@ -181,14 +188,17 @@ public:
             const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
             unsigned focusIdx = elemCtx.focusDofIndex();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
+                }
 
                 unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
-                if (upIdx == focusIdx)
+                if (upIdx == focusIdx) {
                     addPhaseEnthalpyFlux_<Evaluation>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
-                else
+                }
+                else {
                     addPhaseEnthalpyFlux_<Scalar>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
+                }
             }
 
             // diffusive energy flux
@@ -242,8 +252,9 @@ public:
     static void addToEnthalpyRate(RateVector& flux,
                                   const Evaluation& hRate)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             flux[contiEnergyEqIdx] += hRate;
+        }
     }
 
     /*!
@@ -252,8 +263,9 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   Scalar)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             priVars[temperatureIdx] = temperatureIdx;
+        }
     }
 
     /*!
@@ -263,8 +275,9 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   const FluidState& fluidState)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             priVars[temperatureIdx] = fluidState.temperature(/*phaseIdx=*/0);
+        }
     }
 
     /*!
@@ -274,9 +287,10 @@ public:
                                   const PrimaryVariables& oldPv,
                                   const EqVector& delta)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             // do a plain unchopped Newton update
             newPv[temperatureIdx] = oldPv[temperatureIdx] - delta[temperatureIdx];
+        }
     }
 
     /*!
@@ -546,30 +560,37 @@ public:
                              const Scalar& faceArea)
     {
         Evaluation deltaT;
-        if (focusDofIndex == inIdx)
+        if (focusDofIndex == inIdx) {
             deltaT =
                 decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
                 - inFs.temperature(/*phaseIdx=*/0);
-        else if (focusDofIndex == exIdx)
+        }
+        else if (focusDofIndex == exIdx) {
             deltaT =
                 exFs.temperature(/*phaseIdx=*/0)
                 - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
-        else
+        }
+        else {
             deltaT =
                 decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
                 - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        }
 
         Evaluation inLambda;
-        if (focusDofIndex == inIdx)
+        if (focusDofIndex == inIdx) {
             inLambda = inIq.totalThermalConductivity();
-        else
+        }
+        else {
             inLambda = decay<Scalar>(inIq.totalThermalConductivity());
+        }
 
         Evaluation exLambda;
-        if (focusDofIndex == exIdx)
+        if (focusDofIndex == exIdx) {
             exLambda = exIq.totalThermalConductivity();
-        else
+        }
+        else {
             exLambda = decay<Scalar>(exIq.totalThermalConductivity());
+        }
 
         Evaluation H;
         const Evaluation& inH = inLambda*inAlpha;
@@ -581,8 +602,9 @@ public:
             // depends on the solution.
             H = 1.0/(1.0/inH + 1.0/exH);
         }
-        else
+        else {
             H = 0.0;
+        }
 
         energyFlux = deltaT * (-H/faceArea);
     }
@@ -642,20 +664,24 @@ public:
     {
         const auto& inFs = inIq.fluidState();
         Evaluation deltaT;
-        if (focusDofIndex == inIdx)
+        if (focusDofIndex == inIdx) {
             deltaT =
                 boundaryFs.temperature(/*phaseIdx=*/0)
                 - inFs.temperature(/*phaseIdx=*/0);
-        else
+        }
+        else {
             deltaT =
                 decay<Scalar>(boundaryFs.temperature(/*phaseIdx=*/0))
                 - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        }
 
         Evaluation lambda;
-        if (focusDofIndex == inIdx)
+        if (focusDofIndex == inIdx) {
             lambda = inIq.totalThermalConductivity();
-        else
+        }
+        else {
             lambda = decay<Scalar>(inIq.totalThermalConductivity());
+        }
 
 
         if (lambda > 0.0) {
@@ -665,8 +691,9 @@ public:
             // on the solution.
             energyFlux = deltaT*lambda*(-alpha);
         }
-        else
+        else {
             energyFlux = 0.0;
+        }
     }
 
     const Evaluation& energyFlux()  const
