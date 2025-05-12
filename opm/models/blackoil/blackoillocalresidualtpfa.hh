@@ -88,10 +88,10 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
 
-    static const bool waterEnabled = Indices::waterEnabled;
-    static const bool gasEnabled = Indices::gasEnabled;
-    static const bool oilEnabled = Indices::oilEnabled;
-    static const bool compositionSwitchEnabled = (compositionSwitchIdx >= 0);
+    static constexpr bool waterEnabled = Indices::waterEnabled;
+    static constexpr bool gasEnabled = Indices::gasEnabled;
+    static constexpr bool oilEnabled = Indices::oilEnabled;
+    static constexpr bool compositionSwitchEnabled = compositionSwitchIdx >= 0;
 
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
@@ -779,10 +779,12 @@ public:
     {
         unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
 
-        if (blackoilConserveSurfaceVolume)
+        if constexpr (blackoilConserveSurfaceVolume) {
             flux[conti0EqIdx + activeCompIdx] += surfaceVolumeFlux;
-        else
+        }
+        else {
             flux[conti0EqIdx + activeCompIdx] += surfaceVolumeFlux*FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
+        }
 
         if (phaseIdx == oilPhaseIdx) {
             // dissolved gas (in the oil phase).
@@ -790,10 +792,12 @@ public:
                 const auto& Rs = BlackOil::getRs_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
 
                 unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(gasCompIdx);
-                if (blackoilConserveSurfaceVolume)
+                if constexpr (blackoilConserveSurfaceVolume) {
                     flux[conti0EqIdx + activeGasCompIdx] += Rs*surfaceVolumeFlux;
-                else
+                }
+                else {
                     flux[conti0EqIdx + activeGasCompIdx] += Rs*surfaceVolumeFlux*FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
+                }
             }
         } else  if (phaseIdx == waterPhaseIdx) {
             // dissolved gas (in the water phase).
@@ -801,10 +805,12 @@ public:
                 const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
 
                 unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(gasCompIdx);
-                if (blackoilConserveSurfaceVolume)
+                if constexpr (blackoilConserveSurfaceVolume) {
                     flux[conti0EqIdx + activeGasCompIdx] += Rsw*surfaceVolumeFlux;
-                else
+                }
+                else {
                     flux[conti0EqIdx + activeGasCompIdx] += Rsw*surfaceVolumeFlux*FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
+                }
             }
         }
         else if (phaseIdx == gasPhaseIdx) {
@@ -813,20 +819,24 @@ public:
                 const auto& Rv = BlackOil::getRv_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
 
                 unsigned activeOilCompIdx = Indices::canonicalToActiveComponentIndex(oilCompIdx);
-                if (blackoilConserveSurfaceVolume)
+                if constexpr (blackoilConserveSurfaceVolume) {
                     flux[conti0EqIdx + activeOilCompIdx] += Rv*surfaceVolumeFlux;
-                else
+                }
+                else {
                     flux[conti0EqIdx + activeOilCompIdx] += Rv*surfaceVolumeFlux*FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
+                }
             }
              // vaporized water (in the gas phase).
             if (FluidSystem::enableVaporizedWater()) {
                 const auto& Rvw = BlackOil::getRvw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
 
                 unsigned activeWaterCompIdx = Indices::canonicalToActiveComponentIndex(waterCompIdx);
-                if (blackoilConserveSurfaceVolume)
+                if constexpr (blackoilConserveSurfaceVolume) {
                     flux[conti0EqIdx + activeWaterCompIdx] += Rvw*surfaceVolumeFlux;
-                else
+                }
+                else {
                     flux[conti0EqIdx + activeWaterCompIdx] += Rvw*surfaceVolumeFlux*FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
+                }
             }
         }
     }
@@ -845,29 +855,28 @@ public:
     template <class Scalar>
     static void adaptMassConservationQuantities_(Dune::FieldVector<Scalar, numEq>& container, unsigned pvtRegionIdx)
     {
-        if (blackoilConserveSurfaceVolume)
-            return;
+        if constexpr (!blackoilConserveSurfaceVolume) {
+            // convert "surface volume" to mass. this is complicated a bit by the fact that
+            // not all phases are necessarily enabled. (we here assume that if a fluid phase
+            // is disabled, its respective "main" component is not considered as well.)
 
-        // convert "surface volume" to mass. this is complicated a bit by the fact that
-        // not all phases are necessarily enabled. (we here assume that if a fluid phase
-        // is disabled, its respective "main" component is not considered as well.)
+            if constexpr (waterEnabled) {
+                unsigned activeWaterCompIdx = Indices::canonicalToActiveComponentIndex(waterCompIdx);
+                container[conti0EqIdx + activeWaterCompIdx] *=
+                    FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
+            }
 
-        if (waterEnabled) {
-            unsigned activeWaterCompIdx = Indices::canonicalToActiveComponentIndex(waterCompIdx);
-            container[conti0EqIdx + activeWaterCompIdx] *=
-                FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
-        }
+            if constexpr (gasEnabled) {
+                unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(gasCompIdx);
+                container[conti0EqIdx + activeGasCompIdx] *=
+                    FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
+            }
 
-        if (gasEnabled) {
-            unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(gasCompIdx);
-            container[conti0EqIdx + activeGasCompIdx] *=
-                FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
-        }
-
-        if (oilEnabled) {
-            unsigned activeOilCompIdx = Indices::canonicalToActiveComponentIndex(oilCompIdx);
-            container[conti0EqIdx + activeOilCompIdx] *=
-                FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
+            if constexpr (oilEnabled) {
+                unsigned activeOilCompIdx = Indices::canonicalToActiveComponentIndex(oilCompIdx);
+                container[conti0EqIdx + activeOilCompIdx] *=
+                    FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
+            }
         }
     }
 
