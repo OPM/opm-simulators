@@ -36,6 +36,7 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <algorithm>
+#include <cstddef>
 #include <stdexcept>
 
 namespace Opm {
@@ -397,7 +398,7 @@ public:
 
         if (FluidSystem::enableDiffusion()) {
           std::copy(rhs.tortuosity_, rhs.tortuosity_ + numPhases, tortuosity_);
-          for (size_t i = 0; i < numPhases; ++i) {
+          for (std::size_t i = 0; i < numPhases; ++i) {
               std::copy(rhs.diffusionCoefficient_[i],
                         rhs.diffusionCoefficient_[i]+numComponents,
                         diffusionCoefficient_[i]);
