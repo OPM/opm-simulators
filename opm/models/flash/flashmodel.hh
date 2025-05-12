@@ -251,15 +251,15 @@ public:
             return tmp;
         }
 
-        std::ostringstream oss;
-        if (Indices::cTot0Idx <= pvIdx && pvIdx < Indices::cTot0Idx
-                                                  + numComponents)
-            oss << "c_tot," << FluidSystem::componentName(/*compIdx=*/pvIdx
-                                                          - Indices::cTot0Idx);
-        else
+        if (Indices::cTot0Idx <= pvIdx && pvIdx < Indices::cTot0Idx + numComponents) {
+            std::ostringstream oss;
+            oss << "c_tot," << FluidSystem::componentName(/*compIdx=*/pvIdx - Indices::cTot0Idx);
+            return oss.str();
+        }
+        else {
             assert(false);
-
-        return oss.str();
+            return "";
+        }
     }
 
     /*!
@@ -272,16 +272,16 @@ public:
             return tmp;
         }
 
-        std::ostringstream oss;
-        if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx
-                                                     + numComponents) {
+        if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx + numComponents) {
             unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+            std::ostringstream oss;
             oss << "continuity^" << FluidSystem::componentName(compIdx);
+            return oss.str();
         }
-        else
+        else {
             assert(false);
-
-        return oss.str();
+            return "";
+        }
     }
 
     /*!
