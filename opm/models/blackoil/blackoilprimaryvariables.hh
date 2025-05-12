@@ -215,14 +215,17 @@ public:
         if (varIdx == pressureSwitchIdx) {
             scale = this->pressureScale_;
         }
-        if (std::is_same<Evaluation, Scalar>::value)
+        if (std::is_same<Evaluation, Scalar>::value) {
             return (*this)[varIdx] * scale; // finite differences
+        }
         else {
             // automatic differentiation
-            if (timeIdx == linearizationType.time)
+            if (timeIdx == linearizationType.time) {
                 return Toolbox::createVariable((*this)[varIdx], varIdx) * scale;
-            else
+            }
+            else {
                 return Toolbox::createConstant((*this)[varIdx]) * scale;
+            }
         }
     }
 
@@ -350,14 +353,16 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fsFlash.setPressure(phaseIdx, FsToolbox::value(fluidState.pressure(phaseIdx)));
             fsFlash.setSaturation(phaseIdx, FsToolbox::value(fluidState.saturation(phaseIdx)));
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 fsFlash.setMoleFraction(phaseIdx, compIdx, FsToolbox::value(fluidState.moleFraction(phaseIdx, compIdx)));
+            }
         }
 
         paramCache.updateAll(fsFlash);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
+            }
 
             Scalar rho = FluidSystem::template density<FlashFluidState, Scalar>(fsFlash, paramCache, phaseIdx);
             fsFlash.setDensity(phaseIdx, rho);
@@ -367,8 +372,9 @@ public:
         ComponentVector globalMolarities(0.0);
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
+                }
 
                 globalMolarities[compIdx] +=
                     fsFlash.saturation(phaseIdx) * fsFlash.molarity(phaseIdx, compIdx);
@@ -455,10 +461,12 @@ public:
 
         // Determine the meaning of the brine primary variables
         if constexpr (enableSaltPrecipitation){
-            if (precipitatedSaltPresent)
+            if (precipitatedSaltPresent) {
                 primaryVarsMeaningBrine_ = BrineMeaning::Sp;
-            else
+            }
+            else {
                 primaryVarsMeaningBrine_ = BrineMeaning::Cs;
+            }
         } else {
             primaryVarsMeaningBrine_ = BrineMeaning::Disabled;
         }
@@ -562,15 +570,19 @@ public:
         Scalar sg = 0.0;
         Scalar saltConcentration = 0.0;
         const Scalar& T = asImp_().temperature_(problem, globalDofIdx);
-        if (primaryVarsMeaningWater() == WaterMeaning::Sw)
+        if (primaryVarsMeaningWater() == WaterMeaning::Sw) {
             sw = (*this)[waterSwitchIdx];
-        if (primaryVarsMeaningGas() == GasMeaning::Sg)
+        }
+        if (primaryVarsMeaningGas() == GasMeaning::Sg) {
             sg = (*this)[compositionSwitchIdx];
-        if (primaryVarsMeaningWater() == WaterMeaning::Rsw)
+        }
+        if (primaryVarsMeaningWater() == WaterMeaning::Rsw) {
             sw = 1.0;
+        }
 
-        if (primaryVarsMeaningGas() == GasMeaning::Disabled && gasEnabled)
+        if (primaryVarsMeaningGas() == GasMeaning::Disabled && gasEnabled) {
             sg = 1.0 - sw; // water + gas case
+        }
 
         // if solid phase disappeares:  Sp (Solid salt saturation) -> Cs (salt concentration)
         // if solid phase appears: Cs (salt concentration) ->  Sp (Solid salt saturation)
@@ -635,13 +647,15 @@ public:
                 assert(primaryVarsMeaningWater() == WaterMeaning::Sw);
             }
             // the hydrocarbon gas saturation is set to 0.0
-            if constexpr (compositionSwitchEnabled)
+            if constexpr (compositionSwitchEnabled) {
                 (*this)[Indices::compositionSwitchIdx] = 0.0;
+            }
 
             changed = primaryVarsMeaningGas() != GasMeaning::Sg;
             if(changed) {
-                if constexpr (compositionSwitchEnabled)
+                if constexpr (compositionSwitchEnabled) {
                     setPrimaryVarsMeaningGas(GasMeaning::Sg);
+                }
 
                 // use water pressure?
             }
@@ -908,15 +922,18 @@ public:
             return false;
         }
         Scalar sw = 0.0;
-        if (primaryVarsMeaningWater() == WaterMeaning::Sw)
+        if (primaryVarsMeaningWater() == WaterMeaning::Sw) {
             sw = (*this)[Indices::waterSwitchIdx];
+        }
         Scalar sg = 0.0;
-        if (primaryVarsMeaningGas() == GasMeaning::Sg)
+        if (primaryVarsMeaningGas() == GasMeaning::Sg) {
             sg = (*this)[Indices::compositionSwitchIdx];
+        }
 
         Scalar ssol = 0.0;
-        if (primaryVarsMeaningSolvent() == SolventMeaning::Ss)
+        if (primaryVarsMeaningSolvent() == SolventMeaning::Ss) {
             ssol =(*this) [Indices::solventSaturationIdx];
+        }
 
         Scalar so = 1.0 - sw - sg - ssol;
         sw = std::min(std::max(sw, Scalar{0.0}), Scalar{1.0});
@@ -928,12 +945,15 @@ public:
         sg = sg/st;
         ssol = ssol/st;
         assert(st>0.5);
-        if (primaryVarsMeaningWater() == WaterMeaning::Sw)
+        if (primaryVarsMeaningWater() == WaterMeaning::Sw) {
             (*this)[Indices::waterSwitchIdx] = sw;
-        if (primaryVarsMeaningGas() == GasMeaning::Sg)
+        }
+        if (primaryVarsMeaningGas() == GasMeaning::Sg) {
             (*this)[Indices::compositionSwitchIdx] = sg;
-        if (primaryVarsMeaningSolvent() == SolventMeaning::Ss)
+        }
+        if (primaryVarsMeaningSolvent() == SolventMeaning::Ss) {
             (*this) [Indices::solventSaturationIdx] = ssol;
+        }
 
         return !(st==1);
     }
@@ -953,8 +973,9 @@ public:
     {
 #ifndef NDEBUG
         // check the "real" primary variables
-        for (unsigned i = 0; i < this->size(); ++i)
+        for (unsigned i = 0; i < this->size(); ++i) {
             Valgrind::CheckDefined((*this)[i]);
+        }
 
         // check the "pseudo" primary variables
         Valgrind::CheckDefined(primaryVarsMeaningWater_);
@@ -1001,93 +1022,114 @@ private:
     Scalar solventSaturation_() const
     {
         if constexpr (enableSolvent) {
-            if ( primaryVarsMeaningSolvent() == SolventMeaning::Ss)
+            if (primaryVarsMeaningSolvent() == SolventMeaning::Ss) {
                 return (*this)[Indices::solventSaturationIdx];
+            }
         }
         return 0.0;
     }
 
     Scalar zFraction_() const
     {
-        if constexpr (enableExtbo)
+        if constexpr (enableExtbo) {
             return (*this)[Indices::zFractionIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     Scalar polymerConcentration_() const
     {
-        if constexpr (enablePolymer)
+        if constexpr (enablePolymer) {
             return (*this)[Indices::polymerConcentrationIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     Scalar foamConcentration_() const
     {
-        if constexpr (enableFoam)
+        if constexpr (enableFoam) {
             return (*this)[Indices::foamConcentrationIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     Scalar saltConcentration_() const
     {
-        if constexpr (enableBrine)
+        if constexpr (enableBrine) {
             return (*this)[Indices::saltConcentrationIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     Scalar temperature_(const Problem& problem, [[maybe_unused]] unsigned globalDofIdx) const
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             return (*this)[Indices::temperatureIdx];
-        else if constexpr( enableTemperature)
+        }
+        else if constexpr (enableTemperature) {
             return problem.temperature(globalDofIdx, /*timeIdx*/ 0);
-
-        else
+        }
+        else {
             return FluidSystem::reservoirTemperature();
+        }
     }
 
     Scalar microbialConcentration_() const
     {
-        if constexpr (enableMICP)
+        if constexpr (enableMICP) {
             return (*this)[Indices::microbialConcentrationIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     Scalar oxygenConcentration_() const
     {
-        if constexpr (enableMICP)
+        if constexpr (enableMICP) {
             return (*this)[Indices::oxygenConcentrationIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     Scalar ureaConcentration_() const
     {
-        if constexpr (enableMICP)
+        if constexpr (enableMICP) {
             return (*this)[Indices::ureaConcentrationIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     Scalar biofilmConcentration_() const
     {
-        if constexpr (enableMICP)
+        if constexpr (enableMICP) {
             return (*this)[Indices::biofilmConcentrationIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     Scalar calciteConcentration_() const
     {
-        if constexpr (enableMICP)
+        if constexpr (enableMICP) {
             return (*this)[Indices::calciteConcentrationIdx];
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     template <class Container>
