@@ -402,30 +402,26 @@ public:
                 const auto& invB
                     = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
-                evalPhaseFluxes_<Evaluation, Evaluation, FluidState>(
-                    flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                evalPhaseFluxes_<Evaluation>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
                 if constexpr (enableEnergy) {
-                    EnergyModule::template addPhaseEnthalpyFluxes_<Evaluation, Evaluation, FluidState>(
-                        flux, phaseIdx, darcyFlux, up.fluidState());
+                    EnergyModule::template
+                        addPhaseEnthalpyFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up.fluidState());
                 }
                 if constexpr (enableMICP) {
-                    MICPModule::template addMICPFluxes_<Evaluation, Evaluation, IntensiveQuantities>(
-                        flux, darcyFlux, intQuantsIn);
+                    MICPModule::template
+                        addMICPFluxes_<Evaluation>(flux, darcyFlux, intQuantsIn);
                 }
             } else {
                 const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
-                evalPhaseFluxes_<Scalar, Evaluation, FluidState>(
-                    flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
                 if constexpr (enableEnergy) {
                     EnergyModule::template
-                        addPhaseEnthalpyFluxes_<Scalar, Evaluation, FluidState>
-                        (flux,phaseIdx,darcyFlux, up.fluidState());
+                        addPhaseEnthalpyFluxes_<Scalar>(flux,phaseIdx,darcyFlux, up.fluidState());
                 }
                 if constexpr (enableMICP) {
                     MICPModule::template
-                        addMICPFluxes_<Scalar, Evaluation, IntensiveQuantities>
-                        (flux, darcyFlux, intQuantsEx);
+                        addMICPFluxes_<Scalar>(flux, darcyFlux, intQuantsEx);
                 }
             }
 
@@ -617,11 +613,7 @@ public:
                                          bdyInfo.exFluidState);
                 if constexpr (enableEnergy) {
                     EnergyModule::template
-                        addPhaseEnthalpyFluxes_<Scalar, Evaluation, ScalarFluidState>
-                        (tmp,
-                         phaseIdx,
-                         darcyFlux,
-                         bdyInfo.exFluidState);
+                        addPhaseEnthalpyFluxes_<Scalar>(tmp, phaseIdx, darcyFlux, bdyInfo.exFluidState);
                 }
             }
 
