@@ -55,9 +55,8 @@ struct BlackOilDarcyFluxModule
      * \brief Register all run-time parameters for the flux module.
      */
     static void registerParameters()
-    { }
+    {}
 };
-
 
 /*!
  * \ingroup FluxModules
@@ -70,9 +69,8 @@ struct BlackOilDarcyFluxModule
 template <class TypeTag>
 class BlackOilDarcyExtensiveQuantities : public DarcyExtensiveQuantities<TypeTag>
 {
-    using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
-
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
 public:
     /*!
@@ -84,7 +82,6 @@ public:
         asImp_().updateVolumeFluxPerm(elemCtx,
                                       scvfIdx,
                                       timeIdx);
-
     }
 
     void updatePolymer(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
