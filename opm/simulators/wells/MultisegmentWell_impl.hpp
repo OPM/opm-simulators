@@ -2168,6 +2168,7 @@ namespace Opm
                 max_pressure = std::max(max_pressure, pressure_cell);
             }
         }
+        max_pressure = this->parallel_well_info_.communication().max(max_pressure);
         return max_pressure;
     }
 
