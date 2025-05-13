@@ -28,10 +28,10 @@
 #ifndef EWOMS_IMMISCIBLE_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_IMMISCIBLE_EXTENSIVE_QUANTITIES_HH
 
-#include "immiscibleproperties.hh"
-
-#include <opm/models/common/multiphasebaseextensivequantities.hh>
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseextensivequantities.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 /*!
