@@ -102,8 +102,8 @@ public:
         ExtensiveQuantities extQuants;
         extQuants.updateBoundary(context, bfIdx, timeIdx, fluidState);
         const auto& insideIntQuants = context.intensiveQuantities(bfIdx, timeIdx);
-        unsigned focusDofIdx = context.focusDofIndex();
-        unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
+        const unsigned focusDofIdx = context.focusDofIndex();
+        const unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
 
         ////////
         // advective fluxes of all components in all phases
@@ -153,7 +153,7 @@ public:
                     specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
                 }
 
-                Evaluation enthalpyRate = density * extQuants.volumeFlux(phaseIdx) * specificEnthalpy;
+                const Evaluation enthalpyRate = density * extQuants.volumeFlux(phaseIdx) * specificEnthalpy;
                 EnergyModule::addToEnthalpyRate(*this, enthalpyRate);
             }
         }
