@@ -132,21 +132,23 @@ add_test_compare_parallel_simulation(CASENAME spe9group
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
-add_test_compare_parallel_simulation(CASENAME spe3
+add_test_compare_parallel_simulation(CASENAME spe3_partition_method_zoltan
                                      FILENAME SPE3CASE1
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=1)
-
-add_test_compare_parallel_simulation(CASENAME spe3_partition_method_3
-                                     FILENAME SPE3CASE1
-                                     POSTFIX partition_method_3
+                                     POSTFIX partition_method_zoltan
                                      DIR spe3
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=3)
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=zoltan)
+
+add_test_compare_parallel_simulation(CASENAME spe3_partition_method_zoltanwell
+                                     FILENAME SPE3CASE1
+                                     POSTFIX partition_method_zoltanwell
+                                     DIR spe3
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --tolerance-wells=1e-7 --partition-method=zoltanwell)
 
 add_test_compare_parallel_simulation(CASENAME spe1_solvent
                                      FILENAME SPE1CASE2_SOLVENT

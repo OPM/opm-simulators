@@ -51,7 +51,7 @@ struct AllowDistributedWells { static constexpr bool value = false; };
 struct AllowSplittingInactiveWells { static constexpr bool value = true; };
 
 struct EclOutputInterval { static constexpr int value = -1; };
-struct EdgeWeightsMethod  { static constexpr int value = 1; };
+struct EdgeWeightsMethod  { static constexpr auto value = "transmissibility"; };
 struct EnableDryRun { static constexpr auto value = "auto"; };
 struct EnableEclOutput { static constexpr auto value = true; };
 struct EnableOpmRstFile { static constexpr bool value = false; };
@@ -74,7 +74,7 @@ struct ActionParsingStrictness { static constexpr auto value = "normal"; };
 
 /// 0: simple, 1: Zoltan, 2: METIS, 3: Zoltan with a all cells of a well
 /// represented by one vertex in the graph, see GridEnums.hpp
-struct PartitionMethod { static constexpr int value = 3; };
+struct PartitionMethod { static constexpr auto value = "zoltanwell"; };
 struct AddCorners { static constexpr bool value = false; };
 struct NumOverlap { static constexpr int value = 1; };
 
