@@ -99,6 +99,8 @@ public:
 
 } // namespace Opm
 
+#ifndef OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
 #include "SingleCompWellState_impl.hpp"
+#endif
 
 #endif // OPM_SINGLE_COMP_WELL_STATE_HPP

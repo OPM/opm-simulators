@@ -17,6 +17,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
+#define OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
+
+// Improve IDE experience
+#ifndef OPM_SINGLE_COMP_WELL_STATE_HPP
+#include <config.h>
+#include <flowexperimental/comp/wells/SingleCompWellState.hpp>
+#endif
+
 namespace Opm {
 
 template <class Scalar>
@@ -152,5 +161,6 @@ get_total_surface_rate() const
     return std::accumulate(surface_phase_rates.begin(), surface_phase_rates.end(), Scalar(0));
 }
 
-
 } // namespace Opm
+
+#endif // OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
