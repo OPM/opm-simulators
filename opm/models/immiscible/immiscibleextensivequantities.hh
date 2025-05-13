@@ -34,6 +34,7 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
+
 /*!
  * \ingroup ImmiscibleModel
  * \ingroup ExtensiveQuantities
@@ -58,7 +59,7 @@ class ImmiscibleExtensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     using ParameterCache = typename FluidSystem::template ParameterCache<Evaluation>;
-    using EnergyExtensiveQuantities = Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
+    using EnergyExtensiveQuantities = ::Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     /*!
