@@ -28,18 +28,18 @@
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
 
-using Scalar = double;
+using ScalarT = double;
 constexpr static int Dim = 1;
 
 using CommSeq = Dune::Amg::SequentialInformation;
 
-using MatrixTypeCPU = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>;
-using VectorCPU = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
+using MatrixTypeCPU = Dune::BCRSMatrix<Dune::FieldMatrix<ScalarT, Dim, Dim>>;
+using VectorCPU = Dune::BlockVector<Dune::FieldVector<ScalarT, 1>>;
 using CpuOperatorType = Dune::MatrixAdapter<MatrixTypeCPU, VectorCPU, VectorCPU>;
 using FactoryTypeCpu = Opm::PreconditionerFactory<CpuOperatorType, CommSeq>;
 
-using GpuMatrixType = Opm::gpuistl::GpuSparseMatrix<Scalar>;
-using GpuVectorType = Opm::gpuistl::GpuVector<Scalar>;
+using GpuMatrixType = Opm::gpuistl::GpuSparseMatrix<ScalarT>;
+using GpuVectorType = Opm::gpuistl::GpuVector<ScalarT>;
 using GpuOperatorType = Dune::MatrixAdapter<GpuMatrixType, GpuVectorType, GpuVectorType>;
 using FactoryTypeGpu = Opm::PreconditionerFactory<GpuOperatorType, CommSeq>;
 
@@ -103,8 +103,8 @@ BOOST_AUTO_TEST_CASE(TestMatrixAdapter)
             VectorCPU inputVector(N);
             inputVector[i][0] = 1.0;
             VectorCPU outputVectorWrapped(N);
-            auto outputVectorGPU = Opm::gpuistl::GpuVector<Scalar>(N);
-            auto inputVectorGPU = Opm::gpuistl::GpuVector<Scalar>(inputVector);
+            auto outputVectorGPU = Opm::gpuistl::GpuVector<ScalarT>(N);
+            auto inputVectorGPU = Opm::gpuistl::GpuVector<ScalarT>(inputVector);
             preconditionerGPU->apply(outputVectorGPU, inputVectorGPU);
             preconditionerWrapped->apply(outputVectorWrapped, inputVector);
 
