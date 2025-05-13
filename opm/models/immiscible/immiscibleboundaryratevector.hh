@@ -136,7 +136,7 @@ public:
             (*this)[conti0EqIdx + phaseIdx] += extQuants.volumeFlux(phaseIdx) * density;
 
             // energy conservation
-            if (enableEnergy) {
+            if constexpr (enableEnergy) {
                 Evaluation specificEnthalpy;
                 if (pBoundary > pInside) {
                     if (focusDofIdx == interiorDofIdx) {
