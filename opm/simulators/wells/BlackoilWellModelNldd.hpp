@@ -36,10 +36,12 @@
 
 namespace Opm {
 
-template<class Scalar>
+template<typename FluidSystem, typename Indices>
 class BlackoilWellModelNlddGeneric
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     std::vector<Scalar> getPrimaryVarsDomain(const int domainIdx) const;
     void setPrimaryVarsDomain(const int domainIdx, const std::vector<Scalar>& vars);
 
@@ -75,7 +77,8 @@ private:
 /// Class for handling the blackoil well model in a NLDD solver.
 template<typename TypeTag>
 class BlackoilWellModelNldd :
-    public BlackoilWellModelNlddGeneric<GetPropType<TypeTag, Properties::Scalar>>
+    public BlackoilWellModelNlddGeneric<GetPropType<TypeTag, Properties::FluidSystem>,
+                                        GetPropType<TypeTag, Properties::Indices> >
 {
 public:
     // ---------      Types      ---------
@@ -83,11 +86,13 @@ public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using PressureMatrix = typename BlackoilWellModel<TypeTag>::PressureMatrix;
     using BVector = typename BlackoilWellModel<TypeTag>::BVector;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     using Domain = SubDomain<Grid>;
 
     BlackoilWellModelNldd(BlackoilWellModel<TypeTag>& model)
-        : BlackoilWellModelNlddGeneric<Scalar>(model)
+        : BlackoilWellModelNlddGeneric<FluidSystem, Indices>(model)
         , wellModel_(model)
     {}
 
