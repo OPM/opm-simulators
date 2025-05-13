@@ -26,8 +26,11 @@
 #include <string>
 #include <vector>
 
-
 namespace Opm {
+
+class CompositionalConfig;
+class SummaryState;
+class Well;
 
 template <typename Scalar>
 class CompConnectionData

@@ -26,6 +26,13 @@
 #include <flowexperimental/comp/wells/SingleCompWellState.hpp>
 #endif
 
+#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
+#include <cassert>
+#include <cstddef>
+#include <numeric>
+
 namespace Opm {
 
 template <class Scalar>
@@ -40,9 +47,7 @@ CompConnectionData(std::size_t num_connection,
   , transmissibility_factor(num_connection)
   , satnum_id(num_connection)
   , ecl_index(num_connection)
-{
-}
-
+{}
 
 template <class Scalar>
 CompConnectionData<Scalar>::
@@ -73,8 +78,7 @@ SingleCompWellState(const std::string& well_name,
    , reservoir_phase_rates(FluidSystem::numPhases)
    , total_molar_fractions(comp_config.numComps())
    , connection_data(connections, FluidSystem::numPhases, comp_config)
-{
-}
+{}
 
 template <typename FluidSystem>
 void SingleCompWellState<FluidSystem>::
