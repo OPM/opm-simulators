@@ -103,6 +103,24 @@ public:
     GpuVector& operator=(const GpuVector<T>& other);
 
     /**
+     * @brief GpuVector allocates new GPU memory of the same size as bvector and copies the content of the bvector to
+     * this newly allocated memory.
+     *
+     * @note This does CPU to GPU transfer.
+     * @note This does synchronous transfer.
+     *
+     * @note For now bvector.dim() needs to be within the limits of int due to restrctions of CuBlas.
+     *
+     * @param bvector the vector to copy from
+     */
+    template<int BlockDimension>
+    explicit GpuVector(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector)
+        : GpuVector(bvector.dim())
+    {
+        copyFromHost(bvector);
+    }
+
+    /**
      * @brief operator= sets the whole vector equal to the scalar value.
      *
      * @note This does asynchronous operations
@@ -231,6 +249,12 @@ public:
      * @note This assumes that the size of this vector is equal to the size of the input vector.
      */
     void copyToHost(std::vector<T>& data) const;
+
+    /**
+     * @brief copyFromDeviceToDevice copies data from the GPU memory of other to this vector
+     * @param other the vector to copy from
+     */
+    void copyFromDeviceToDevice(const GpuVector<T>& other) const;
 
     void prepareSendBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const;
     void syncFromRecvBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const;

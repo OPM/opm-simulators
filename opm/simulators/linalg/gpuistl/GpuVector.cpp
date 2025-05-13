@@ -300,6 +300,19 @@ GpuVector<T>::copyToHost(std::vector<T>& data) const
     copyToHost(data.data(), data.size());
 }
 
+template <class T>
+void
+GpuVector<T>::copyFromDeviceToDevice(const GpuVector<T>& data) const
+{
+    assertHasElements();
+    assertSameSize(data);
+
+    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+                                data.m_dataOnDevice,
+                                detail::to_size_t(m_numberOfElements) * sizeof(T),
+                                cudaMemcpyDeviceToDevice));
+}
+
 template <typename T>
 void
 GpuVector<T>::prepareSendBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const

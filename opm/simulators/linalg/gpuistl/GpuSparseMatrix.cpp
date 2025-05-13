@@ -16,6 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp"
 #include <cuda.h>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
@@ -95,6 +96,21 @@ GpuSparseMatrix<T>::GpuSparseMatrix(const GpuVector<int>& rowIndices,
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
 {
 }
+
+template<class T>
+GpuSparseMatrix<T>::GpuSparseMatrix(const GpuSparseMatrix<T>& other)
+    : m_nonZeroElements(other.m_nonZeroElements)
+    , m_columnIndices(other.m_columnIndices)
+    , m_rowIndices(other.m_rowIndices)
+    , m_numberOfNonzeroBlocks(other.m_numberOfNonzeroBlocks)
+    , m_numberOfRows(other.m_numberOfRows)
+    , m_blockSize(other.m_blockSize)
+    , m_matrixDescription(other.m_matrixDescription)
+    , m_cusparseHandle(detail::CuSparseHandle::getInstance())
+{
+    
+}
+
 
 template <class T>
 GpuSparseMatrix<T>::~GpuSparseMatrix()
@@ -181,6 +197,16 @@ GpuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZe
         const T* newNonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
         m_nonZeroElements.copyFromHost(newNonZeroElements, nonzeroes() * blockSize() * blockSize());
     }
+}
+
+template <class T>
+void
+GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrix<T>& matrix)
+{
+    OPM_ERROR_IF(nonzeroes() != matrix.nonzeroes(), "Matrix does not have the same number of non-zero elements.");
+    OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
+
+    m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
 }
 
 template <typename T>

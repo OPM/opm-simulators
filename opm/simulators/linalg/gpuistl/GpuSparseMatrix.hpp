@@ -47,6 +47,8 @@ template <typename T>
 class GpuSparseMatrix
 {
 public:
+    using field_type = T;
+
     //! Create the sparse matrix specified by the raw data.
     //!
     //! \note Prefer to use the constructor taking a const reference to a matrix instead.
@@ -81,14 +83,10 @@ public:
                    const GpuVector<int>& columnIndices,
                    size_t blockSize);
 
-    /**
-     * We don't want to be able to copy this for now (too much hassle in copying the cusparse resources)
-     */
-    GpuSparseMatrix(const GpuSparseMatrix&) = delete;
+    GpuSparseMatrix(const GpuSparseMatrix&);
 
-    /**
-     * We don't want to be able to copy this for now (too much hassle in copying the cusparse resources)
-     */
+    // We want to have this as non-mutable as possible, that is we do not want 
+    // to deal with changing matrix sizes and sparsity patterns.
     GpuSparseMatrix& operator=(const GpuSparseMatrix&) = delete;
 
     virtual ~GpuSparseMatrix();
@@ -292,6 +290,13 @@ public:
      */
     template <class MatrixType>
     void updateNonzeroValues(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
+
+    /**
+     * @brief updateNonzeroValues updates the non-zero values by using the non-zero values of the supplied matrix
+     * @param matrix the matrix to extract the non-zero values from
+     * @note This assumes the given matrix has the same sparsity pattern.
+     */
+     void updateNonzeroValues(const GpuSparseMatrix<T>& matrix);
 
 private:
     GpuVector<T> m_nonZeroElements;
