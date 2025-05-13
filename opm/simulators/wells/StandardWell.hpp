@@ -346,7 +346,7 @@ namespace Opm
                                             const double dt,
                                             const Well::InjectionControls& inj_controls,
                                             const Well::ProductionControls& prod_controls,
-                                            WellState<Scalar>& well_state,
+                                            WellState<FluidSystem, Indices>& well_state,
                                             const GroupState<Scalar>& group_state,
                                             DeferredLogger& deferred_logger) override;
 
@@ -354,13 +354,13 @@ namespace Opm
                                                 const double dt,
                                                 const Well::InjectionControls& inj_controls,
                                                 const Well::ProductionControls& prod_controls,
-                                                WellState<Scalar>& well_state,
+                                                WellState<FluidSystem, Indices>& well_state,
                                                 const GroupState<Scalar>& group_state,
                                                 DeferredLogger& deferred_logger);
 
         void calculateSinglePerf(const Simulator& simulator,
                                  const int perf,
-                                 WellState<Scalar>& well_state,
+                                 WellState<FluidSystem, Indices>& well_state,
                                  std::vector<RateVector>& connectionRates,
                                  std::vector<EvalWell>& cq_s,
                                  EvalWell& water_flux_s,
@@ -368,13 +368,13 @@ namespace Opm
                                  DeferredLogger& deferred_logger) const;
 
         // check whether the well is operable under BHP limit with current reservoir condition
-        void checkOperabilityUnderBHPLimit(const WellState<Scalar>& well_state,
+        void checkOperabilityUnderBHPLimit(const WellState<FluidSystem, Indices>& well_state,
                                            const Simulator& simulator,
                                            DeferredLogger& deferred_logger) override;
 
         // check whether the well is operable under THP limit with current reservoir condition
         void checkOperabilityUnderTHPLimit(const Simulator& simulator,
-                                           const WellState<Scalar>& well_state,
+                                           const WellState<FluidSystem, Indices>& well_state,
                                            DeferredLogger& deferred_logger) override;
 
         // updating the inflow based on the current reservoir condition
@@ -418,13 +418,13 @@ namespace Opm
 
         // handle the extra equations for polymer injectivity study
         void handleInjectivityEquations(const Simulator& simulator,
-                                        const WellState<Scalar>& well_state,
+                                        const WellState<FluidSystem, Indices>& well_state,
                                         const int perf,
                                         const EvalWell& water_flux_s,
                                         DeferredLogger& deferred_logger);
 
         void updateWaterThroughput(const double dt,
-                                   WellState<Scalar>& well_state) const override;
+                                   WellState<FluidSystem, Indices>& well_state) const override;
 
         // checking convergence of extra equations, if there are any
         void checkConvergenceExtraEqs(const std::vector<Scalar>& res,
@@ -433,13 +433,13 @@ namespace Opm
         // updating the connectionRates_ related polymer molecular weight
         void updateConnectionRatePolyMW(const EvalWell& cq_s_poly,
                                         const IntensiveQuantities& int_quants,
-                                        const WellState<Scalar>& well_state,
+                                        const WellState<FluidSystem, Indices>& well_state,
                                         const int perf,
                                         std::vector<RateVector>& connectionRates,
                                         DeferredLogger& deferred_logger) const;
 
         std::optional<Scalar>
-        computeBhpAtThpLimitProd(const WellState<Scalar>& well_state,
+        computeBhpAtThpLimitProd(const WellState<FluidSystem, Indices>& well_state,
                                  const Simulator& simulator,
                                  const SummaryState& summary_state,
                                  DeferredLogger& deferred_logger) const;

@@ -2006,7 +2006,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWaterThroughput(const double /*dt*/, WellState<Scalar>& /*well_state*/) const
+    updateWaterThroughput(const double /*dt*/, WellState<FluidSystem, Indices>& /*well_state*/) const
     {
     }
 
@@ -2037,7 +2037,7 @@ namespace Opm
     template<typename TypeTag>
     std::optional<typename MultisegmentWell<TypeTag>::Scalar>
     MultisegmentWell<TypeTag>::
-    computeBhpAtThpLimitProd(const WellState<Scalar>& well_state,
+    computeBhpAtThpLimitProd(const WellState<FluidSystem, Indices>& well_state,
                              const Simulator& simulator,
                              const SummaryState& summary_state,
                              DeferredLogger& deferred_logger) const
