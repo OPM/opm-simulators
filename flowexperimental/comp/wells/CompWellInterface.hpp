@@ -104,6 +104,8 @@ protected:
 
 } // end of namespace Opm
 
+#ifndef OPM_COMP_WELLINTERFACE_IMPL_HPP
 #include "CompWellInterface_impl.hpp"
+#endif
 
 #endif // OPM_COMP_WELLINTERFACE_HPP

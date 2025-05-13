@@ -17,6 +17,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef OPM_COMP_WELLINTERFACE_IMPL_HPP
+#define OPM_COMP_WELLINTERFACE_IMPL_HPP
+
+// Improve IDE experience
+#ifndef OPM_COMP_WELLINTERFACE_HPP
+#include <config.h>
+#include <flowexperimental/comp/wells/CompWellInterface.hpp>
+#endif
+
 #include <string>
 
 namespace Opm {
@@ -79,3 +88,5 @@ addCellRates(RateVector& rates, unsigned cellIdx) const
 
 
 } // end of namespace Opm
+
+#endif
