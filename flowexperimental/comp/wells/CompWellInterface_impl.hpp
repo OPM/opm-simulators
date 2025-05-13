@@ -26,6 +26,8 @@
 #include <flowexperimental/comp/wells/CompWellInterface.hpp>
 #endif
 
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
 #include <string>
 
 namespace Opm {
@@ -53,7 +55,6 @@ CompWellInterface(const Well& well,
         }
         // TODO: saturation_table_number
     }
-
 }
 
 template <typename TypeTag>
@@ -85,7 +86,6 @@ addCellRates(RateVector& rates, unsigned cellIdx) const
         }
     }
 }
-
 
 } // end of namespace Opm
 
