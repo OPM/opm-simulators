@@ -447,8 +447,8 @@ BOOST_AUTO_TEST_CASE(PartitionCellsComplexWellNetworkTest)
     BOOST_CHECK_EQUAL(part.size(), 100);  // 5x5x4 grid
 
     // Helper to check if two cells are in the same partition
-    auto inSamePartition = [&part](int idx1, int idx2) {
-        return part[idx1] == part[idx2];
+    auto inSamePartition = [&ppart = part](int idx1, int idx2) {
+        return ppart[idx1] == ppart[idx2];
     };
 
     // Test 1: All cells in Well 1 (main bore and branches) should be in the same partition
