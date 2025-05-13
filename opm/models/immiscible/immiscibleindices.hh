@@ -28,8 +28,8 @@
 #ifndef EWOMS_IMMISCIBLE_INDICES_HH
 #define EWOMS_IMMISCIBLE_INDICES_HH
 
-#include "immiscibleproperties.hh"
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 
 namespace Opm {
 
