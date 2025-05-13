@@ -97,8 +97,8 @@ template<class Scalar> class WellContributions;
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
         class BlackoilWellModel : public WellConnectionAuxiliaryModule<TypeTag, BlackoilWellModel<TypeTag>>
-                                , public BlackoilWellModelGeneric<GetPropType<TypeTag,
-                                                                              Properties::Scalar>>
+                                , public BlackoilWellModelGeneric<GetPropType<TypeTag, Properties::FluidSystem>,
+                                                                     GetPropType<TypeTag, Properties::Indices> >
         {
         public:
             // ---------      Types      ---------
