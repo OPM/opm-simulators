@@ -33,6 +33,9 @@
 
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
+#include <opm/grid/utility/ElementChunks.hpp>
+
+#include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/GenericTracerModel.hpp>
@@ -110,6 +113,7 @@ public:
         , wat_(tbatch[0])
         , oil_(tbatch[1])
         , gas_(tbatch[2])
+        , element_chunks_(simulator.gridView(), Dune::Partitions::all, ThreadManager::maxThreads())
     { }
 
 
@@ -612,54 +616,71 @@ protected:
                 }
             }
 
-            ElementContext elemCtx(simulator_);
-            const Scalar dt = elemCtx.simulator().timeStepSize();
-            for (const auto& elem : elements(simulator_.gridView())) {
-                elemCtx.updateStencil(elem);
+            // Parallel loop over element chunks
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
+            for (const auto& chunk : element_chunks_) {
+                ElementContext elemCtx(simulator_);
+                const Scalar dt = elemCtx.simulator().timeStepSize();
 
-                const std::size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
+                for (const auto& elem : chunk) {
+                    elemCtx.updateStencil(elem);
+                    const std::size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
 
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    // Dirichlet boundary conditions needed for the parallel matrix
-                    for (const auto& tr : tbatch) {
-                        if (tr.numTracer() != 0) {
-                            (*tr.mat)[I][I][0][0] = 1.;
-                            (*tr.mat)[I][I][1][1] = 1.;
+                    if (elem.partitionType() != Dune::InteriorEntity) {
+                        // Dirichlet boundary conditions for parallel matrix
+                        // This is safe as each element has a unique I. So each thread
+                        // always writes to different memory locations in the shared arrays.
+                        for (const auto& tr : tbatch) {
+                            if (tr.numTracer() != 0) {
+                                (*tr.mat)[I][I][0][0] = 1.;
+                                (*tr.mat)[I][I][1][1] = 1.;
+                            }
+                        }
+                        continue;
+                    }
+                    elemCtx.updateAllIntensiveQuantities();
+                    elemCtx.updateAllExtensiveQuantities();
+
+                    const Scalar extrusionFactor =
+                        elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
+                    Valgrind::CheckDefined(extrusionFactor);
+                    assert(isfinite(extrusionFactor));
+                    assert(extrusionFactor > 0.0);
+                    const Scalar scvVolume =
+                        elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume() * extrusionFactor;
+                    const std::size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/1);
+
+                    // This is safe as each element has a unique I. So each thread
+                    // always writes to different memory locations in the shared arrays.
+                    for (auto& tr : tbatch) {
+                        if (tr.numTracer() == 0) {
+                            continue;
+                        }
+                        this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
+                    }
+
+                    const std::size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
+                    for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
+                        const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
+                        const unsigned j = face.exteriorIndex();
+                        const unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
+                        for (auto& tr : tbatch) {
+                            if (tr.numTracer() == 0) {
+                                continue;
+                            }
+                            this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J, dt);
                         }
                     }
-                    continue;
-                }
-                elemCtx.updateAllIntensiveQuantities();
-                elemCtx.updateAllExtensiveQuantities();
 
-                const Scalar extrusionFactor =
-                        elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
-                Valgrind::CheckDefined(extrusionFactor);
-                assert(isfinite(extrusionFactor));
-                assert(extrusionFactor > 0.0);
-                const Scalar scvVolume =
-                        elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume()
-                        * extrusionFactor;
-
-                const std::size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/1);
-
-                for (auto& tr : tbatch) {
-                    this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
-                }
-
-                const std::size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
-                for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
-                    const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
-                    const unsigned j = face.exteriorIndex();
-                    const unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
+                     // Source terms (mass transfer between free and solution tracer)
                     for (auto& tr : tbatch) {
-                        this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J, dt);
+                        if (tr.numTracer() == 0) {
+                            continue;
+                        }
+                        this->assembleTracerEquationSource(tr, dt, I);
                     }
-                }
-
-                // Source terms (mass transfer between free and solution tracer)
-                for (auto& tr : tbatch) {
-                    this->assembleTracerEquationSource(tr, dt, I);
                 }
             }
         }
@@ -701,19 +722,29 @@ protected:
             }
         }
 
-        ElementContext elemCtx(simulator_);
-        for (const auto& elem : elements(simulator_.gridView())) {
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-            const Scalar extrusionFactor = elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
-            const Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume() * extrusionFactor;
-            const unsigned globalDofIdx = elemCtx.globalSpaceIndex(0, /*timeIdx=*/0);
-            for (auto& tr : tbatch) {
-                if (tr.numTracer() == 0) {
-                    continue;
+        // Parallel loop over element chunks
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (const auto& chunk : element_chunks_) {
+            ElementContext elemCtx(simulator_);
+
+            for (const auto& elem : chunk) {
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                const Scalar extrusionFactor = elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
+                const Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume() * extrusionFactor;
+                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(0, /*timeIdx=*/0);
+
+                for (auto& tr : tbatch) {
+                    if (tr.numTracer() == 0) {
+                        continue;
+                    }
+                    // This is safe as each element has a unique globalDofIdx. So each thread
+                    // always writes to different memory locations in the shared arrays.
+                    updateElem<Free>(tr, scvVolume, globalDofIdx);
+                    updateElem<Solution>(tr, scvVolume, globalDofIdx);
                 }
-                updateElem<Free>(tr, scvVolume, globalDofIdx);
-                updateElem<Solution>(tr, scvVolume, globalDofIdx);
             }
         }
     }
@@ -938,6 +969,7 @@ protected:
     TracerBatch<TracerVector>& gas_;
     std::array<std::array<std::vector<Scalar>,numPhases>,2> vol1_;
     std::array<std::array<std::vector<Scalar>,numPhases>,2> dVol_;
+    ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
 };
 
 } // namespace Opm
