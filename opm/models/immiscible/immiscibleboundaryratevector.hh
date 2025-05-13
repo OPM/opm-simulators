@@ -60,13 +60,11 @@ class ImmiscibleBoundaryRateVector : public GetPropType<TypeTag, Properties::Rat
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using Toolbox = MathToolbox<Evaluation>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
-    ImmiscibleBoundaryRateVector()
-        : ParentType()
-    {}
+    ImmiscibleBoundaryRateVector() = default;
 
     /*!
      * \brief Constructor that assigns all entries to a scalar value.
@@ -117,25 +115,25 @@ public:
 
             // mass conservation
             Evaluation density;
-            if  (pBoundary > pInside) {
+            if (pBoundary > pInside) {
                 if (focusDofIdx == interiorDofIdx) {
                     density = fluidState.density(phaseIdx);
                 }
                 else {
-                    density = Opm::getValue(fluidState.density(phaseIdx));
+                    density = getValue(fluidState.density(phaseIdx));
                 }
             }
             else if (focusDofIdx == interiorDofIdx) {
                 density = insideIntQuants.fluidState().density(phaseIdx);
             }
             else {
-                density = Opm::getValue(insideIntQuants.fluidState().density(phaseIdx));
+                density = getValue(insideIntQuants.fluidState().density(phaseIdx));
             }
 
-            Opm::Valgrind::CheckDefined(density);
-            Opm::Valgrind::CheckDefined(extQuants.volumeFlux(phaseIdx));
+            Valgrind::CheckDefined(density);
+            Valgrind::CheckDefined(extQuants.volumeFlux(phaseIdx));
 
-            (*this)[conti0EqIdx + phaseIdx] += extQuants.volumeFlux(phaseIdx)*density;
+            (*this)[conti0EqIdx + phaseIdx] += extQuants.volumeFlux(phaseIdx) * density;
 
             // energy conservation
             if (enableEnergy) {
@@ -145,17 +143,17 @@ public:
                         specificEnthalpy = fluidState.enthalpy(phaseIdx);
                     }
                     else {
-                        specificEnthalpy = Opm::getValue(fluidState.enthalpy(phaseIdx));
+                        specificEnthalpy = getValue(fluidState.enthalpy(phaseIdx));
                     }
                 }
                 else if (focusDofIdx == interiorDofIdx) {
                     specificEnthalpy = insideIntQuants.fluidState().enthalpy(phaseIdx);
                 }
                 else {
-                    specificEnthalpy = Opm::getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
+                    specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
                 }
 
-                Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
+                Evaluation enthalpyRate = density * extQuants.volumeFlux(phaseIdx) * specificEnthalpy;
                 EnergyModule::addToEnthalpyRate(*this, enthalpyRate);
             }
         }
@@ -165,9 +163,9 @@ public:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
-            Opm::Valgrind::CheckDefined((*this)[i]);
+            Valgrind::CheckDefined((*this)[i]);
         }
-        Opm::Valgrind::CheckDefined(*this);
+        Valgrind::CheckDefined(*this);
 #endif
     }
 
