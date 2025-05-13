@@ -31,7 +31,11 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-#include "immiscibleintensivequantities.hh"
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <algorithm>
 
 namespace Opm {
 
