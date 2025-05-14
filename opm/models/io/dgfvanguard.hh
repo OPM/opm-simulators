@@ -149,10 +149,7 @@ protected:
         VertexMapper vertexMapper(gridView, Dune::mcmgVertexLayout());
 
         // first create a map of the dune to ART vertex indices
-        auto eIt = gridView.template begin</*codim=*/0>();
-        const auto eEndIt = gridView.template end</*codim=*/0>();
-        for (; eIt != eEndIt; ++eIt) {
-            const auto& element = *eIt;
+        for (const auto& element: elements(gridView)) {
             const auto& refElem =
                 Dune::ReferenceElements<Scalar, Grid::dimension>::general(element.type());
 
