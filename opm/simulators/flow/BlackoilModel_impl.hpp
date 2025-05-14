@@ -386,6 +386,7 @@ relativeChange() const
     for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
         unsigned globalElemIdx = elemMapper.index(elem);
         const auto& priVarsNew = simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
+        const double elemVolume = elem.geometry().volume();
 
         Scalar pressureNew;
         pressureNew = priVarsNew[Indices::pressureSwitchIdx];
@@ -422,8 +423,8 @@ relativeChange() const
         Scalar oilSaturationOld = 1.0;
 
         Scalar tmp = pressureNew - pressureOld;
-        resultDeltaPressure += tmp*tmp;
-        resultDenomPressure += pressureNew*pressureNew;
+        resultDeltaPressure += tmp*tmp * elemVolume;
+        resultDenomPressure += pressureNew*pressureNew * elemVolume;
 
         if (FluidSystem::numActivePhases() > 1) {
             if (priVarsOld.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
@@ -445,8 +446,8 @@ relativeChange() const
             }
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
                 Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
-                resultDeltaSaturation += tmpSat*tmpSat;
-                resultDenomSaturation += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
+                resultDeltaSaturation += tmpSat*tmpSat * elemVolume;
+                resultDenomSaturation += saturationsNew[phaseIdx]*saturationsNew[phaseIdx] * elemVolume;
                 assert(std::isfinite(resultDeltaSaturation));
                 assert(std::isfinite(resultDenomSaturation));
             }
@@ -457,15 +458,19 @@ relativeChange() const
 
     if (version == "pressure") {
         if (resultDenomPressure > 0.0)
-            return resultDeltaPressure / resultDenomPressure;
+            return std::sqrt(resultDeltaPressure / resultDenomPressure);
     }
     else if (version == "saturation") {
         if (resultDenomSaturation > 0.0)
-            return resultDeltaSaturation / resultDenomSaturation;
+            return std::sqrt(resultDeltaSaturation / resultDenomSaturation);
     }
     else if (version == "pressure+saturation") {
-        if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0)
-            return std::max(resultDeltaPressure/resultDenomPressure, resultDeltaSaturation/resultDenomSaturation);        
+        if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0) {
+            if (simulator_.timeStepIndex() == 0) {
+                return std::sqrt(resultDeltaPressure / resultDenomPressure);
+            }
+            return std::max(std::sqrt(resultDeltaPressure/resultDenomPressure), std::sqrt(resultDeltaSaturation/resultDenomSaturation));        
+        }
     }
     else {
         OPM_THROW(std::runtime_error, "Unsupported relative change version: " + version);
