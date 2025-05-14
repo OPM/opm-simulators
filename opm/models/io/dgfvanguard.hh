@@ -54,7 +54,7 @@ class DgfVanguard : public BaseVanguard<TypeTag>
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using FractureMapper = Opm::FractureMapper<TypeTag>;
 
-    using GridPointer = std::unique_ptr< Grid >;
+    using GridPointer = std::unique_ptr<Grid>;
 
 public:
     /*!
@@ -76,17 +76,17 @@ public:
         : ParentType(simulator)
     {
         const std::string dgfFileName = Parameters::Get<Parameters::GridFile>();
-        unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
+        const unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
 
         {
             // create DGF GridPtr from a dgf file
-            Dune::GridPtr< Grid > dgfPointer( dgfFileName );
+            Dune::GridPtr<Grid> dgfPointer(dgfFileName);
 
             // this is only implemented for 2d currently
-            addFractures_( dgfPointer );
+            addFractures_(dgfPointer);
 
             // store pointer to dune grid
-            gridPtr_.reset( dgfPointer.release() );
+            gridPtr_.reset(dgfPointer.release());
         }
 
         if (numRefinments > 0) {
@@ -155,7 +155,7 @@ protected:
             const auto& refElem =
                 Dune::ReferenceElements<Scalar, Grid::dimension>::general(element.type());
 
-            const int edges = refElem.size( edgeCodim );
+            const int edges = refElem.size(edgeCodim);
             for (int edge = 0; edge < edges; ++edge) {
                 const int vertices = refElem.size(edge, edgeCodim, Grid::dimension);
                 std::vector<unsigned> vertexIndices;
