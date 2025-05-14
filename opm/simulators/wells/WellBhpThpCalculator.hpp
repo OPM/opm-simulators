@@ -187,3 +187,5 @@ private:
 }
 
 #endif // OPM_WELL_BHP_THP_CALCULATOR_HEADER_INCLUDED
+
+#include "WellBhpThpCalculator.cpp"

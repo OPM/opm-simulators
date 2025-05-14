@@ -455,6 +455,5 @@ INSTANTIATE_TYPE(float)
 
 }
 
-#include "StandardWellEquations.cpp" // TODO: will do instantiation after removing the numEq template parameter
 
 #endif
