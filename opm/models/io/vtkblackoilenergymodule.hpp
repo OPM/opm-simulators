@@ -130,7 +130,7 @@ public:
 
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
                 const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
                 if (params_.rockInternalEnergyOutput_) {
                     rockInternalEnergy_[globalDofIdx] =
@@ -142,7 +142,7 @@ public:
                         scalarValue(intQuants.totalThermalConductivity());
                 }
 
-                for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                     if (FluidSystem::phaseIsActive(phaseIdx)) {
                         if (params_.fluidInternalEnergiesOutput_) {
                             fluidInternalEnergies_[phaseIdx][globalDofIdx] =
