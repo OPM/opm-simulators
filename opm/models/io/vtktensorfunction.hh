@@ -102,8 +102,9 @@ public:
             // map vertex to an index
             idx = static_cast<size_t>(mapper_.subIndex(e, imin, codim_));
         }
-        else
+        else {
             throw std::logic_error("Only element and vertex based tensor fields are supported so far.");
+        }
 
         unsigned i = static_cast<unsigned>(mycomp);
         unsigned j = static_cast<unsigned>(matrixColumnIdx_);
