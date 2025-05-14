@@ -67,7 +67,7 @@ class VtkCompositionModule : public BaseOutputModule<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     using BufferType = typename ParentType::BufferType;
@@ -132,7 +132,7 @@ public:
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
@@ -162,9 +162,9 @@ public:
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                         totalMass += Toolbox::value(fs.density(phaseIdx)) * Toolbox::value(fs.saturation(phaseIdx));
                         compMass +=
-                            Toolbox::value(fs.density(phaseIdx))
-                            *Toolbox::value(fs.saturation(phaseIdx))
-                            *Toolbox::value(fs.massFraction(phaseIdx, compIdx));
+                            Toolbox::value(fs.density(phaseIdx)) *
+                            Toolbox::value(fs.saturation(phaseIdx)) *
+                            Toolbox::value(fs.massFraction(phaseIdx, compIdx));
                     }
                     totalMassFrac_[compIdx][I] = compMass / totalMass;
                 }
@@ -173,12 +173,12 @@ public:
                     Scalar totalMoles = 0;
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                         totalMoles +=
-                            Toolbox::value(fs.molarDensity(phaseIdx))
-                            *Toolbox::value(fs.saturation(phaseIdx));
+                            Toolbox::value(fs.molarDensity(phaseIdx)) *
+                            Toolbox::value(fs.saturation(phaseIdx));
                         compMoles +=
-                            Toolbox::value(fs.molarDensity(phaseIdx))
-                            *Toolbox::value(fs.saturation(phaseIdx))
-                            *Toolbox::value(fs.moleFraction(phaseIdx, compIdx));
+                            Toolbox::value(fs.molarDensity(phaseIdx)) *
+                            Toolbox::value(fs.saturation(phaseIdx)) *
+                            Toolbox::value(fs.moleFraction(phaseIdx, compIdx));
                     }
                     totalMoleFrac_[compIdx][I] = compMoles / totalMoles;
                 }
@@ -194,8 +194,7 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
