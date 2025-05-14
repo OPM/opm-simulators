@@ -24,12 +24,15 @@
 #ifndef EWOMS_UNSTRUCTURED_GRID_VANGUARD_HH
 #define EWOMS_UNSTRUCTURED_GRID_VANGUARD_HH
 
+#include <dune/grid/io/file/dgfparser/gridptr.hh>
+
 #include <opm/models/io/basevanguard.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
 #ifdef HAVE_OPM_GRID
-#include "opm/grid/UnstructuredGrid.h"
+#include <opm/grid/UnstructuredGrid.h>
+#include <string>
 #endif
 
 namespace Opm {
