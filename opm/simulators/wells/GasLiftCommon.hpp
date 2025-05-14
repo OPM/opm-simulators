@@ -45,7 +45,6 @@ protected:
 
     enum class MessageType { INFO, WARNING };
 
-    int debugUpdateGlobalCounter_() const;
     virtual void displayDebugMessage_(const std::string& msg) const = 0;
     void displayDebugMessageOnRank0_(const std::string& msg) const;
     void logMessage_(const std::string& prefix,

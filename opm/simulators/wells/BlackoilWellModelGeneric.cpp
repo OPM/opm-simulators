@@ -863,10 +863,7 @@ updateEclWellsConstraints(const int              timeStepIdx,
         auto& ws = this->wellState().well(wellIdx);
 
         ws.updateStatus(well.getStatus());
-        auto switchToProducer = ws.update_type_and_targets(well, st);
-        if (switchToProducer) {
-            this->wellState().switchToProducer(well.name());
-        }
+        ws.update_type_and_targets(well, st);
     });
 }
 
@@ -1422,15 +1419,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
                                               reportStepIdx,
                                               well_state_nupcol,
                                               well_state);
-
-    // Set ALQ for off-process wells to zero
-    for (const auto& wname : schedule().wellNames(reportStepIdx)) {
-        const bool is_producer = schedule().getWell(wname, reportStepIdx).isProducer();
-        const bool not_on_this_process = !well_state.has(wname);
-        if (is_producer && not_on_this_process) {
-            well_state.setALQ(wname, 0.0);
-        }
-    }
 
     well_state.communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);

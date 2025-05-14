@@ -609,7 +609,7 @@ getALQ(const WellState<Scalar>& well_state) const
     if (isInjector())
         return 0.0;
 
-    return well_state.getALQ(name());
+    return well_state.well(name()).alq_state.get();
 }
 
 template<class Scalar>

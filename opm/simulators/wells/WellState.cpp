@@ -150,7 +150,6 @@ WellState<Scalar> WellState<Scalar>::
 serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
     WellState result(PhaseUsage{});
-    result.alq_state = ALQState<Scalar>::serializationTestObject();
     result.well_rates = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
     result.wells_.add("test4", SingleWellState<Scalar>::serializationTestObject(pinfo));
 
@@ -587,7 +586,7 @@ WellState<Scalar>::report(const int* globalCellIdxMap,
         }
 
         if (ws.producer) {
-            well.rates.set(rt::alq, getALQ(wname));
+            well.rates.set(rt::alq, ws.alq_state.get());
         }
         else {
             well.rates.set(rt::alq, 0.0);
@@ -976,7 +975,6 @@ void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& com
     std::size_t sz = std::accumulate(this->well_rates.begin(), this->well_rates.end(), std::size_t{0},
                      [](const std::size_t acc, const auto& rates)
                      { return acc + rates.second.second.size(); });
-    sz += this->alq_state.pack_size();
 
     // Make a vector and collect all data into it.
     std::vector<Scalar> data(sz);
@@ -991,9 +989,6 @@ void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& com
                       pos += rates.size();
                   });
 
-    if (pos != data.end()) {
-        pos += this->alq_state.pack_data(&(*pos));
-    }
     assert(pos == data.end());
 
     // Communicate it with a single sum() call.
@@ -1007,9 +1002,6 @@ void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& com
                       std::copy(pos, pos + rates.size(), rates.begin());
                       pos += rates.size();
                   });
-    if (pos != data.end()) {
-        pos += this->alq_state.unpack_data(&(*pos));
-    }
     assert(pos == data.end());
 }
 
@@ -1316,19 +1308,19 @@ void WellState<Scalar>::updateWellsDefaultALQ(const Schedule& schedule,
     const auto wells = schedule.wellNames(report_step);
     for (const auto& wname : wells) {
         const auto& well = schedule.getWell(wname, report_step);
-        if (! well.isProducer()) {
+        const auto& well_index = this->index(wname);
+        if (! well.isProducer() || !well_index) {
             continue;
         }
         const auto alq = well.alq_value(summary_state);
-        this->alq_state.update_default(wname, alq);
+        this->well(wname).alq_state.update_default(alq);
     }
 }
 
 template<class Scalar>
 bool WellState<Scalar>::operator==(const WellState& rhs) const
 {
-    return this->alq_state == rhs.alq_state &&
-           this->well_rates == rhs.well_rates &&
+    return this->well_rates == rhs.well_rates &&
            this->wells_ == rhs.wells_ &&
            this->permanently_inactive_well_names_ == rhs.permanently_inactive_well_names_;
 }

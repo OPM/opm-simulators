@@ -82,7 +82,7 @@ GasLiftSingleWell(const WellInterface<TypeTag>& well,
     //   nonlinear iteration in assemble() in BlackoilWellModel).
     //   If gas lift optimization has not been applied to this well yet, the
     //   default value is used.
-    this->orig_alq_ = this->well_state_.getALQ(this->well_name_);
+    this->orig_alq_ = this->well_state_.well(this->well_name_).alq_state.get();
     if (this->optimize_) {
         this->setAlqMinRate_(gl_well);
         // NOTE: According to item 4 in WLIFTOPT, this value does not
