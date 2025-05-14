@@ -27,6 +27,12 @@
 #ifndef EWOMS_STRUCTURED_GRID_VANGUARD_HH
 #define EWOMS_STRUCTURED_GRID_VANGUARD_HH
 
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+
 #include <opm/models/io/basevanguard.hh>
 
 #include <opm/models/utils/basicparameters.hh>
@@ -34,18 +40,13 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
-#include <dune/grid/yaspgrid.hh>
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
-
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/dgf.hh>
 #endif
 
-#include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
-
 #include <memory>
+#include <sstream>
 
 namespace Opm {
 
