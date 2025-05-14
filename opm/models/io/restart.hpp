@@ -30,10 +30,11 @@
 #include <dune/geometry/dimension.hh>
 #include <dune/grid/common/rangegenerators.hh>
 
-#include <string>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
+#include <string>
 
 namespace Opm {
 
@@ -52,11 +53,11 @@ class Restart
         static const std::string gridName = "blubb"; // gridView.grid().name();
         static const int dim = GridView::dimension;
 
-        int numVertices = gridView.size(dim);
-        int numElements = gridView.size(0);
-        int numEdges = gridView.size(dim - 1);
-        int numCPUs = gridView.comm().size();
-        int rank = gridView.comm().rank();
+        const int numVertices = gridView.size(dim);
+        const int numElements = gridView.size(0);
+        const int numEdges = gridView.size(dim - 1);
+        const int numCPUs = gridView.comm().size();
+        const int rank = gridView.comm().rank();
 
         std::ostringstream oss;
         oss << "eWoms restart file: "

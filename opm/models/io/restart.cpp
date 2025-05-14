@@ -110,7 +110,7 @@ void Restart::openInputStream(const std::string& cookie)
 
 void Restart::openOutputStream(const std::string& cookie)
 {
-    outStream_.open(fileName_.c_str());
+    outStream_.open(fileName_);
     outStream_.precision(20);
 
     serializeSectionBegin(cookie);
