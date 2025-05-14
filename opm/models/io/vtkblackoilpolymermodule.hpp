@@ -67,7 +67,7 @@ class VtkBlackOilPolymerModule : public BaseOutputModule<TypeTag>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
@@ -140,7 +140,7 @@ public:
 
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
                 const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
                 if (params_.polymerConcentrationOutput_) {
                     polymerConcentration_[globalDofIdx] =
@@ -181,8 +181,7 @@ public:
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
         if constexpr (enablePolymer) {
-            VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-            if (!vtkWriter) {
+            if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
                 return;
             }
 
