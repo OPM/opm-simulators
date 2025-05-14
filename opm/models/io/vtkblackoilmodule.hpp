@@ -46,6 +46,7 @@
 #include <type_traits>
 
 namespace Opm {
+
 /*!
  * \ingroup Vtk
  *
@@ -64,7 +65,7 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -75,9 +76,8 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
-    using ScalarBuffer = typename ParentType::ScalarBuffer;
-
     using BufferType = typename ParentType::BufferType;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
     explicit VtkBlackOilModule(const Simulator& simulator)
