@@ -188,7 +188,7 @@ public:
 
         const auto& problem = elemCtx.problem();
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
@@ -241,11 +241,11 @@ public:
             for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ faceIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, /*timeIdx=*/0);
 
-                unsigned i = extQuants.interiorIndex();
-                unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+                const unsigned i = extQuants.interiorIndex();
+                const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
 
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    Scalar weight = extQuants.extrusionFactor();
+                    const Scalar weight = extQuants.extrusionFactor();
 
                     potentialWeight_[phaseIdx][I] += weight;
 
@@ -264,15 +264,15 @@ public:
             for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ faceIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, /*timeIdx=*/0);
 
-                unsigned i = extQuants.interiorIndex();
-                unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+                const unsigned i = extQuants.interiorIndex();
+                const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
 
-                unsigned j = extQuants.exteriorIndex();
-                unsigned J = elemCtx.globalSpaceIndex(j, /*timeIdx=*/0);
+                const unsigned j = extQuants.exteriorIndex();
+                const unsigned J = elemCtx.globalSpaceIndex(j, /*timeIdx=*/0);
 
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    Scalar weight = std::max<Scalar>(1e-16,
-                                                     std::abs(getValue(extQuants.volumeFlux(phaseIdx))));
+                    Scalar weight = std::max(Scalar{1e-16},
+                                             std::abs(getValue(extQuants.volumeFlux(phaseIdx))));
                     Valgrind::CheckDefined(extQuants.extrusionFactor());
                     assert(extQuants.extrusionFactor() > 0);
                     weight *= extQuants.extrusionFactor();
