@@ -469,7 +469,7 @@ public:
     }
 
 private:
-    std::string fileName_()
+    std::string fileName_() const
     {
         // use a new file name for each time step
         std::ostringstream oss;
@@ -478,7 +478,7 @@ private:
         return oss.str();
     }
 
-    std::string fileSuffix_()
+    static std::string fileSuffix_()
     { return (GridView::dimension == 1) ? "vtp" : "vtu"; }
 
     void startMultiFile_(const std::string& multiFileName)
