@@ -31,6 +31,7 @@
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/dynvector.hh>
 
+#include <string_view>
 #include <vector>
 
 namespace Opm {
@@ -62,32 +63,32 @@ public:
     /*!
      * \brief Add a scalar vertex centered vector field to the output.
      */
-    virtual void attachScalarVertexData(ScalarBuffer& buf, std::string name) = 0;
+    virtual void attachScalarVertexData(ScalarBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a scalar element centered quantity to the output.
      */
-    virtual void attachScalarElementData(ScalarBuffer& buf, std::string name) = 0;
+    virtual void attachScalarElementData(ScalarBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a vectorial vertex centered vector field to the output.
      */
-    virtual void attachVectorVertexData(VectorBuffer& buf, std::string name) = 0;
+    virtual void attachVectorVertexData(VectorBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a vectorial element centered quantity to the output.
      */
-    virtual void attachVectorElementData(VectorBuffer& buf, std::string name) = 0;
+    virtual void attachVectorElementData(VectorBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a tensorial vertex centered tensor field to the output.
      */
-    virtual void attachTensorVertexData(TensorBuffer& buf, std::string name) = 0;
+    virtual void attachTensorVertexData(TensorBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a tensorial element centered quantity to the output.
      */
-    virtual void attachTensorElementData(TensorBuffer& buf, std::string name) = 0;
+    virtual void attachTensorElementData(TensorBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Finalizes the current writer.

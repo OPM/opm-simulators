@@ -49,6 +49,7 @@
 #include <filesystem>
 #include <list>
 #include <string>
+#include <string_view>
 #include <limits>
 #include <sstream>
 #include <fstream>
@@ -234,7 +235,7 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behavior_.
      */
-    void attachScalarVertexData(ScalarBuffer& buf, std::string name) override
+    void attachScalarVertexData(ScalarBuffer& buf, std::string_view name) override
     {
         sanitizeScalarBuffer_(buf);
 
@@ -262,7 +263,7 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behaviour_.
      */
-    void attachScalarElementData(ScalarBuffer& buf, std::string name) override
+    void attachScalarElementData(ScalarBuffer& buf, std::string_view name) override
     {
         sanitizeScalarBuffer_(buf);
 
@@ -291,7 +292,7 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behavior_.
      */
-    void attachVectorVertexData(VectorBuffer& buf, std::string name) override
+    void attachVectorVertexData(VectorBuffer& buf, std::string_view name) override
     {
         sanitizeVectorBuffer_(buf);
 
@@ -307,7 +308,7 @@ public:
     /*!
      * \brief Add a finished vertex-centered tensor field to the output.
      */
-    void attachTensorVertexData(TensorBuffer& buf, std::string name) override
+    void attachTensorVertexData(TensorBuffer& buf, std::string_view name) override
     {
         using VtkFn = VtkTensorFunction<GridView, VertexMapper>;
 
@@ -340,7 +341,7 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behaviour_.
      */
-    void attachVectorElementData(VectorBuffer& buf, std::string name) override
+    void attachVectorElementData(VectorBuffer& buf, std::string_view name) override
     {
         sanitizeVectorBuffer_(buf);
 
@@ -356,7 +357,7 @@ public:
     /*!
      * \brief Add a finished element-centered tensor field to the output.
      */
-    void attachTensorElementData(TensorBuffer& buf, std::string name) override
+    void attachTensorElementData(TensorBuffer& buf, std::string_view name) override
     {
         using VtkFn = VtkTensorFunction<GridView, ElementMapper>;
 
