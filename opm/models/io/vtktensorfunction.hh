@@ -27,15 +27,15 @@
 #ifndef VTK_TENSOR_FUNCTION_HH
 #define VTK_TENSOR_FUNCTION_HH
 
-#include <opm/models/io/baseoutputwriter.hh>
-
-#include <dune/grid/io/file/vtk/function.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
+#include <dune/grid/io/file/vtk/function.hh>
+
+#include <opm/models/io/baseoutputwriter.hh>
+
+#include <stdexcept>
 #include <string>
-#include <limits>
-#include <vector>
 
 namespace Opm {
 
