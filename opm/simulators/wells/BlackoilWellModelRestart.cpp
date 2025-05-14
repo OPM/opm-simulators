@@ -172,15 +172,15 @@ loadRestartGroupData(const std::string&     group,
     const auto cwi = value.currentControl.currentWaterInjectionConstraint;
 
     if (cpc != GPMode::NONE) {
-        grpState.production_control(group, cpc);
+        grpState.update_production_control(group, cpc);
     }
 
     if (cgi != GIMode::NONE) {
-        grpState.injection_control(group, Phase::GAS, cgi);
+        grpState.update_injection_control(group, Phase::GAS, cgi);
     }
 
     if (cwi != GIMode::NONE) {
-        grpState.injection_control(group, Phase::WATER, cwi);
+        grpState.update_injection_control(group, Phase::WATER, cwi);
     }
 }
 

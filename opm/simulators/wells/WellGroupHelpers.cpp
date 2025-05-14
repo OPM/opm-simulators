@@ -201,11 +201,11 @@ setCmodeGroup(const Group& group,
     const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
     for (Phase phase : all) {
         if (!group_state.has_injection_control(group.name(), phase)) {
-            group_state.injection_control(group.name(), phase, Group::InjectionCMode::NONE);
+            group_state.update_injection_control(group.name(), phase, Group::InjectionCMode::NONE);
         }
     }
     if (!group_state.has_production_control(group.name())) {
-        group_state.production_control(group.name(), Group::ProductionCMode::NONE);
+        group_state.update_production_control(group.name(), Group::ProductionCMode::NONE);
     }
 
     const auto& events = schedule[reportStepIdx].wellgroup_events();
@@ -217,29 +217,29 @@ setCmodeGroup(const Group& group,
                 continue;
 
             const auto& controls = group.injectionControls(phase, summaryState);
-            group_state.injection_control(group.name(), phase, controls.cmode);
+            group_state.update_injection_control(group.name(), phase, controls.cmode);
         }
     }
 
     if (group.isProductionGroup()
         && events.hasEvent(group.name(), ScheduleEvents::GROUP_PRODUCTION_UPDATE)) {
         const auto controls = group.productionControls(summaryState);
-        group_state.production_control(group.name(), controls.cmode);
+        group_state.update_production_control(group.name(), controls.cmode);
     }
 
     if (group.has_gpmaint_control(Group::ProductionCMode::RESV)) {
-        group_state.production_control(group.name(), Group::ProductionCMode::RESV);
+        group_state.update_production_control(group.name(), Group::ProductionCMode::RESV);
     }
     for (Phase phase : all) {
         if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)) {
-            group_state.injection_control(group.name(), phase, Group::InjectionCMode::RATE);
+            group_state.update_injection_control(group.name(), phase, Group::InjectionCMode::RATE);
         } else if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)) {
-            group_state.injection_control(group.name(), phase, Group::InjectionCMode::RESV);
+            group_state.update_injection_control(group.name(), phase, Group::InjectionCMode::RESV);
         }
     }
 
     if (schedule[reportStepIdx].gconsale().has(group.name())) {
-        group_state.injection_control(group.name(), Phase::GAS, Group::InjectionCMode::SALE);
+        group_state.update_injection_control(group.name(), Phase::GAS, Group::InjectionCMode::SALE);
     }
 }
 

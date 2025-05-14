@@ -369,8 +369,8 @@ has_production_control(const std::string& gname) const
 
 template<class Scalar>
 void GroupState<Scalar>::
-production_control(const std::string& gname,
-                   Group::ProductionCMode cmode)
+update_production_control(const std::string& gname,
+                          Group::ProductionCMode cmode)
 {
     this->production_controls[gname] = cmode;
 }
@@ -397,8 +397,8 @@ has_injection_control(const std::string& gname, Phase phase) const
 
 template<class Scalar>
 void GroupState<Scalar>::
-injection_control(const std::string& gname,
-                  Phase phase, Group::InjectionCMode cmode)
+update_injection_control(const std::string& gname,
+                         Phase phase, Group::InjectionCMode cmode)
 {
     this->injection_controls[ std::make_pair(phase, gname) ] = cmode;
 }

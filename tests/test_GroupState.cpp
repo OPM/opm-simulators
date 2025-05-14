@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(GroupStateCreate)
     BOOST_CHECK(!gs.has_production_control("NO_SUCH_GROUP"));
     BOOST_CHECK(!gs.has_production_control("AGROUP"));
 
-    gs.production_control("AGROUP", Group::ProductionCMode::GRAT);
+    gs.update_production_control("AGROUP", Group::ProductionCMode::GRAT);
     BOOST_CHECK(gs.has_production_control("AGROUP"));
     BOOST_CHECK(gs.production_control("AGROUP") == Group::ProductionCMode::GRAT);
     BOOST_CHECK_THROW(gs.production_control("BGROUP"), std::exception);
