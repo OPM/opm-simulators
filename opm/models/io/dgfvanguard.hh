@@ -29,15 +29,15 @@
 
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 #include <dune/grid/common/mcmgmapper.hh>
-#include <opm/models/discretefracture/fracturemapper.hh>
 
+#include <opm/models/discretefracture/fracturemapper.hh>
 #include <opm/models/io/basevanguard.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
-
-#include <type_traits>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace Opm {
 
