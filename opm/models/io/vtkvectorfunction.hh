@@ -113,7 +113,7 @@ private:
     const GridView gridView_;
     const Mapper& mapper_;
     const VectorBuffer& buf_;
-    unsigned codim_;
+    const unsigned codim_;
 };
 
 } // namespace Opm
