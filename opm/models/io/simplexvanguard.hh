@@ -41,6 +41,7 @@
 #include <memory>
 
 namespace Opm {
+
 /*!
  * \brief Provides a simulator vanguard which a creates regular grid made of simplices.
  */
@@ -90,7 +91,7 @@ public:
     /*!
      * \brief Create the Grid
      */
-    SimplexGridVanguard(Simulator& simulator)
+    explicit SimplexGridVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
         std::array<unsigned, dim> cellRes{};
@@ -115,7 +116,7 @@ public:
                                                                             upperRight,
                                                                             cellRes);
 
-        unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
+        const unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
         simplexGrid_->globalRefine(numRefinments);
 
         this->finalizeInit_();
@@ -136,6 +137,7 @@ public:
 private:
     GridPointer simplexGrid_;
 };
+
 } // namespace Opm
 
 #endif
