@@ -35,6 +35,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace Opm {
 
@@ -52,7 +53,7 @@ class VtkVectorFunction : public Dune::VTKFunction<GridView>
     using VectorBuffer = BaseOutputWriter::VectorBuffer;
 
 public:
-    VtkVectorFunction(std::string name,
+    VtkVectorFunction(std::string_view name,
                       const GridView& gridView,
                       const Mapper& mapper,
                       const VectorBuffer& buf,
