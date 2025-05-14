@@ -120,22 +120,14 @@ public:
         : gridView_(gridView)
         , elementMapper_(gridView, Dune::mcmgElementLayout())
         , vertexMapper_(gridView, Dune::mcmgVertexLayout())
+        , outputDir_(outputDir.empty() ? "." : outputDir)
+        , simName_(simName.empty() ? "sim" : simName)
+        , multiFileName_(multiFileName.empty() ? outputDir_ + "/" + simName_ + ".pvd" : multiFileName)
+        , commSize_(gridView.comm().size())
+        , commRank_(gridView.comm().rank())
         , curWriterNum_(0)
-        , taskletRunner_(/*numThreads=*/asyncWriting?1:0)
-    {
-        outputDir_ = outputDir;
-        if (outputDir == "")
-            outputDir_ = ".";
-
-        simName_ = (simName.empty()) ? "sim" : simName;
-        multiFileName_ = multiFileName;
-        if (multiFileName_.empty()) {
-            multiFileName_ = outputDir_+"/"+simName_+".pvd";
-        }
-
-        commRank_ = gridView.comm().rank();
-        commSize_ = gridView.comm().size();
-    }
+        , taskletRunner_(/*numThreads=*/asyncWriting ? 1 : 0)
+    {}
 
     ~VtkMultiWriter() override
     {
@@ -525,13 +517,13 @@ private:
     ElementMapper elementMapper_;
     VertexMapper vertexMapper_;
 
-    std::string outputDir_;
-    std::string simName_;
+    const std::string outputDir_;
+    const std::string simName_;
     std::ofstream multiFile_;
-    std::string multiFileName_;
+    const std::string multiFileName_;
 
-    int commSize_; // number of processes in the communicator
-    int commRank_; // rank of the current process in the communicator
+    const int commSize_; // number of processes in the communicator
+    const int commRank_; // rank of the current process in the communicator
 
     std::unique_ptr<VtkWriter> curWriter_;
     double curTime_;
