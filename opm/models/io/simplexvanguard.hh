@@ -34,9 +34,10 @@
 #include <opm/models/io/basevanguard.hh>
 
 #include <opm/models/utils/basicproperties.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <array>
 #include <memory>
 
 namespace Opm {
@@ -92,7 +93,7 @@ public:
     SimplexGridVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        Dune::array<unsigned, dim> cellRes;
+        std::array<unsigned, dim> cellRes{};
         GlobalPosition upperRight;
         GlobalPosition lowerLeft;
 
