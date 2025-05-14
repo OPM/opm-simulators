@@ -105,13 +105,13 @@ public:
         }
 
         const auto& elementMapper = elemCtx.model().elementMapper();
-        unsigned elemIdx = static_cast<unsigned>(elementMapper.index(elemCtx.element()));
+        const unsigned elemIdx = static_cast<unsigned>(elementMapper.index(elemCtx.element()));
         if (params_.processRankOutput_ && !processRank_.empty()) {
             processRank_[elemIdx] = static_cast<unsigned>(this->simulator_.gridView().comm().rank());
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& priVars = elemCtx.primaryVars(i, /*timeIdx=*/0);
 
             if (params_.dofIndexOutput_) {
@@ -131,8 +131,7 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
