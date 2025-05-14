@@ -66,15 +66,15 @@ public:
         , codim_(codim)
     { assert(int(buf_.size()) == int(mapper_.size())); }
 
-    virtual std::string name() const
+    std::string name() const override
     { return name_; }
 
-    virtual int ncomps() const
+    int ncomps() const override
     { return 1; }
 
-    virtual double evaluate(int,
-                            const Element& e,
-                            const Dune::FieldVector<ctype, dim>& xi) const
+    double evaluate(int,
+                    const Element& e,
+                    const Dune::FieldVector<ctype, dim>& xi) const override
     {
         unsigned idx;
         if (codim_ == 0) {
