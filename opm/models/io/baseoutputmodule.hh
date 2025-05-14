@@ -41,9 +41,11 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace Opm::Properties {
