@@ -40,6 +40,9 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
+#include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <cstdio>
 
 namespace Opm {
