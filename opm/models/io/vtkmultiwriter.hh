@@ -116,7 +116,7 @@ public:
                    const GridView& gridView,
                    const std::string& outputDir,
                    const std::string& simName = "",
-                   std::string multiFileName = "")
+                   const std::string& multiFileName = "")
         : gridView_(gridView)
         , elementMapper_(gridView, Dune::mcmgElementLayout())
         , vertexMapper_(gridView, Dune::mcmgVertexLayout())
