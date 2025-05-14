@@ -61,7 +61,7 @@ class VtkBlackOilEnergyModule : public BaseOutputModule<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };

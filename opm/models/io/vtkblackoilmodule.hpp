@@ -65,7 +65,7 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };

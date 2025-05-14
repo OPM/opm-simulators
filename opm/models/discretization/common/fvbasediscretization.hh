@@ -239,7 +239,7 @@ struct Linearizer<TypeTag, TTag::FvBaseDiscretization>
 //! Set the format of the VTK output to ASCII by default
 template<class TypeTag>
 struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization>
-{ static constexpr int value = Dune::VTK::ascii; };
+{ static constexpr auto value = Dune::VTK::ascii; };
 
 // disable constraints by default
 template<class TypeTag>

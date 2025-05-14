@@ -59,7 +59,7 @@ namespace Opm {
  * simplifies writing datasets consisting of multiple files. (i.e.
  * multiple time steps or grid refinements within a time step.)
  */
-template <class GridView, int vtkFormat>
+template <class GridView, Dune::VTK::OutputType vtkFormat>
 class VtkMultiWriter : public BaseOutputWriter
 {
     class WriteDataTasklet : public TaskletInterface
@@ -77,11 +77,12 @@ class VtkMultiWriter : public BaseOutputWriter
                 fileName = multiWriter_.curWriter_->pwrite(/*name=*/multiWriter_.curOutFileName_,
                                                            /*path=*/multiWriter_.outputDir_,
                                                            /*extendPath=*/"",
-                                                           static_cast<Dune::VTK::OutputType>(vtkFormat));
+                                                           vtkFormat);
             }
             else {
-                fileName = multiWriter_.curWriter_->write(/*name=*/multiWriter_.outputDir_ + "/" + multiWriter_.curOutFileName_,
-                                                          static_cast<Dune::VTK::OutputType>(vtkFormat));
+                fileName = multiWriter_.curWriter_->write(/*name=*/multiWriter_.outputDir_ + "/" +
+                                                          multiWriter_.curOutFileName_,
+                                                          vtkFormat);
             }
 
             // determine name to write into the multi-file for the

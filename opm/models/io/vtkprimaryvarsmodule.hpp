@@ -52,7 +52,7 @@ class VtkPrimaryVarsModule : public BaseOutputModule<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     using BufferType = typename ParentType::BufferType;

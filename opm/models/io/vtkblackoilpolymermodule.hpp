@@ -67,7 +67,7 @@ class VtkBlackOilPolymerModule : public BaseOutputModule<TypeTag>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };

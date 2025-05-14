@@ -68,7 +68,7 @@ class VtkEnergyModule : public BaseOutputModule<TypeTag>
     using ScalarBuffer = typename ParentType::ScalarBuffer;
     using PhaseBuffer = typename ParentType::PhaseBuffer;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
     using Toolbox = typename Opm::MathToolbox<Evaluation>;
