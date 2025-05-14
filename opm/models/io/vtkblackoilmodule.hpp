@@ -151,7 +151,7 @@ public:
 
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& fs = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState();
-            using FluidState = typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type;
+            using FluidState = std::remove_const_t<std::remove_reference_t<decltype(fs)>>;
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
             const auto& primaryVars = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0);
