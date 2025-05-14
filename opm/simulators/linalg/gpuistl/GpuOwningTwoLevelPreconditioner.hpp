@@ -20,12 +20,11 @@
 #ifndef OPM_GPUOWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 #define OPM_GPUOWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PressureSolverPolicy.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 #include <opm/simulators/linalg/gpuistl/GpuTwoLevelMethodCpr.hpp>
-#include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/gpuistl/PreconditionerHolder.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -37,17 +36,7 @@
 #include <fstream>
 #include <memory>
 
-
-namespace Opm
-{
-// Circular dependency between PreconditionerFactory [which can make an OwningTwoLevelPreconditioner]
-// and OwningTwoLevelPreconditioner [which uses PreconditionerFactory to choose the fine-level smoother]
-// must be broken, accomplished by forward-declaration here.
-template <class Operator, class Comm>
-class PreconditionerFactory;
-}
-
-namespace Dune
+namespace Opm::gpuistl
 {
 
 // Must forward-declare FlexibleSolver as we want to use it as solver for the pressure system.
@@ -55,68 +44,66 @@ template <class Operator>
 class FlexibleSolver;
 
 template <class OperatorType,
-          class GpuVectorType,
+          class VectorType,
           class LevelTransferPolicy,
-          class WeightsVectorType,
           class Communication = Dune::Amg::SequentialInformation>
-class GpuOwningTwoLevelPreconditioner : public Dune::PreconditionerWithUpdate<GpuVectorType, GpuVectorType>
+class GpuOwningTwoLevelPreconditioner : public Dune::PreconditionerWithUpdate<VectorType, VectorType>
 {
 public:
     using MatrixType = typename OperatorType::matrix_type;
     using PrecFactory = Opm::PreconditionerFactory<OperatorType, Communication>;
-    using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, GpuVectorType, GpuVectorType>;
-    using ScalarType = typename GpuVectorType::field_type;
-    using CpuVectorType = typename OperatorType::domain_type;
+    using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
+    using ScalarType = typename VectorType::field_type;
 
     GpuOwningTwoLevelPreconditioner(const OperatorType& linearoperator, const Opm::PropertyTree& prm,
-                                 const std::function<WeightsVectorType()> weightsCalculator,
+                                 const std::function<VectorType()> weightsCalculator,
                                  std::size_t pressureIndex)
-        : linear_operator_(linearoperator)
-        , weightsCalculator_(weightsCalculator)
-        , cpu_weights_(weightsCalculator_())
-        , finesmoother_(PrecFactory::template createGpu<GpuVectorType>(linearoperator,
-                                           prm.get_child_optional("finesmoother") ?
-                                           prm.get_child("finesmoother") : Opm::PropertyTree(),
-                                           std::function<CpuVectorType()>(), pressureIndex))
-        , levelTransferPolicy_(dummy_comm_, cpu_weights_, prm, pressureIndex)
-        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
-        , twolevel_method_(linearoperator,
-                           finesmoother_,
-                           levelTransferPolicy_,
-                           coarseSolverPolicy_,
-                           prm.get<int>("pre_smooth", 0),
-                           prm.get<int>("post_smooth", 1))
-        , prm_(prm)
+        : linear_operator_(linearoperator),
+          weightsCalculator_(weightsCalculator),
+          weights_(weightsCalculator ? weightsCalculator() : VectorType(linearoperator.getmat().N())),
+          finesmoother_(PrecFactory::create(linearoperator,
+                                          prm.get_child_optional("finesmoother") ?
+                                          prm.get_child("finesmoother") : Opm::PropertyTree(),
+                                          std::function<VectorType()>(), pressureIndex)),
+        //levelTransferPolicy_(dummy_comm_, weights_, prm, pressureIndex),
+        coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree()),
+        //, twolevel_method_(linearoperator,
+        //                   finesmoother_,
+        //                   levelTransferPolicy_,
+        //                   coarseSolverPolicy_,
+        //                   prm.get<int>("pre_smooth", 0),
+        //                   prm.get<int>("post_smooth", 1))
+        prm_(prm)
     {
-        if (prm.get<int>("verbosity", 0) > 10) {
-            std::string filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
-            std::ofstream outfile(filename);
-            if (!outfile) {
-                OPM_THROW(std::ofstream::failure,
-                          "Could not write weights to file " + filename + ".");
-            }
-            Dune::writeMatrixMarket(cpu_weights_, outfile);
-        }
+        //if (prm.get<int>("verbosity", 0) > 10) {
+        //    std::string filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
+        //    std::ofstream outfile(filename);
+        //    if (!outfile) {
+        //        OPM_THROW(std::ofstream::failure,
+        //                  "Could not write weights to file " + filename + ".");
+        //    }
+        //    Dune::writeMatrixMarket(weights_, outfile);
+        //}
     }
 
-    virtual void pre(GpuVectorType& x, GpuVectorType& b) override
+    virtual void pre(VectorType& x, VectorType& b) override
     {
-        twolevel_method_.pre(x, b);
+        //twolevel_method_.pre(x, b);
     }
 
-    virtual void apply(GpuVectorType& v, const GpuVectorType& d) override
+    virtual void apply(VectorType& v, const VectorType& d) override
     {
-        twolevel_method_.apply(v, d);
+        //twolevel_method_.apply(v, d);
     }
 
-    virtual void post(GpuVectorType& x) override
+    virtual void post(VectorType& x) override
     {
-        twolevel_method_.post(x);
+        //twolevel_method_.post(x);
     }
 
     virtual void update() override
     {
-        cpu_weights_ = weightsCalculator_();
+        //weights_ = weightsCalculator_();
         updateImpl();
     }
 
@@ -125,8 +112,10 @@ public:
         return linear_operator_.category();
     }
 
-    virtual bool hasPerfectUpdate() const override {
-        return twolevel_method_.hasPerfectUpdate();
+    virtual bool hasPerfectUpdate() const override
+    {
+        //return twolevel_method_.hasPerfectUpdate();
+        return false;
     }
 
     // Static methods to indicate that this preconditioner needs pre() and post() calls
@@ -141,27 +130,27 @@ private:
                                                                FlexibleSolver<CoarseOperator>,
                                                                LevelTransferPolicy>;
 
-    using TwoLevelMethod
-        = Dune::Amg::GpuTwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::PreconditionerWithUpdate<GpuVectorType, GpuVectorType>>;
+    //using TwoLevelMethod
+    //    = Dune::Amg::GpuTwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::PreconditionerWithUpdate<VectorType, VectorType>>;
 
     void updateImpl()
     {
-        twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
+        //twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
     const OperatorType& linear_operator_;
-    std::function<WeightsVectorType()> weightsCalculator_;
-    WeightsVectorType cpu_weights_;
-    std::shared_ptr<PreconditionerWithUpdate<GpuVectorType, GpuVectorType>> finesmoother_;
-    LevelTransferPolicy levelTransferPolicy_;
+    std::function<VectorType()> weightsCalculator_;
+    VectorType weights_;
+    std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>> finesmoother_;
+    //LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
-    TwoLevelMethod twolevel_method_;
+    //TwoLevelMethod twolevel_method_;
     Opm::PropertyTree prm_;
     Communication dummy_comm_;
 
 };
 
-} // namespace Dune
+} // namespace Opm::gpuistl
 
 
 

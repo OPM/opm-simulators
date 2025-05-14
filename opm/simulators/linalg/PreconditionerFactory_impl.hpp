@@ -31,7 +31,6 @@
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/OwningBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp>
-#include <opm/simulators/linalg/gpuistl/GpuOwningTwoLevelPreconditioner.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/PressureBhpTransferPolicy.hpp>
 #include <opm/simulators/linalg/PressureTransferPolicy.hpp>
