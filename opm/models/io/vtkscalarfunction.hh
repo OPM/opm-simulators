@@ -37,6 +37,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace Opm {
 
@@ -54,7 +55,7 @@ class VtkScalarFunction : public Dune::VTKFunction<GridView>
     using ScalarBuffer = BaseOutputWriter::ScalarBuffer;
 
 public:
-    VtkScalarFunction(std::string name,
+    VtkScalarFunction(std::string_view name,
                       const GridView& gridView,
                       const Mapper& mapper,
                       const ScalarBuffer& buf,
