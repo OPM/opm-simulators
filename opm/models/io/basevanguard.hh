@@ -34,9 +34,10 @@
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/space/common/dofmanager.hh>
+#include <cassert>
+#include <type_traits>
 #endif
 
-#include <type_traits>
 #include <memory>
 
 namespace Opm {
@@ -93,7 +94,7 @@ public:
     {
 #if HAVE_DUNE_FEM
         using FemDofManager = Dune::Fem::DofManager< Grid >;
-        return FemDofManager::instance( asImp_().grid() ).sequence();
+        return FemDofManager::instance(asImp_().grid()).sequence();
 #else
         return 0; // return the same sequence number >= 0 means the grid never changes
 #endif
@@ -133,7 +134,8 @@ protected:
 #if HAVE_DUNE_FEM
         if constexpr (std::is_same_v<GridView,
                                      typename GetPropType<TypeTag,
-                                                          Properties::GridPart>::GridViewType>) {
+                                                          Properties::GridPart>::GridViewType>)
+        {
             gridPart_ = std::make_unique<GridPart>(asImp_().grid());
             gridView_ = std::make_unique<GridView>(static_cast<GridView>(*gridPart_));
             assert(gridView_->size(0) == asImp_().grid().leafGridView().size(0));
