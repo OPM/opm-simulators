@@ -327,6 +327,14 @@ suggestedNextStep() const
     return this->suggested_next_timestep_;
 }
 
+template<class TypeTag>
+const TimeStepControlInterface&
+AdaptiveTimeStepping<TypeTag>::
+timeStepControl() const
+{
+    return *this->time_step_control_;
+}
+
 
 template<class TypeTag>
 void
@@ -813,7 +821,7 @@ run()
             report.success.converged = this->substep_timer_.done();
             this->substep_timer_.setLastStepFailed(false);
         }
-        else { // in case of no convergence
+        else { // in case of no convergence or time step tolerance test failure
             this->substep_timer_.setLastStepFailed(true);
             checkTimeStepMaxRestartLimit_(restarts);
 
@@ -1138,7 +1146,7 @@ runSubStep_()
     };
 
     try {
-        substep_report = solver_().step(this->substep_timer_);
+        substep_report = solver_().step(this->substep_timer_, &this->adaptive_time_stepping_.timeStepControl());
         if (solverVerbose_()) {
             // report number of linear iterations
             OpmLog::debug("Overall linear iterations used: "
@@ -1147,6 +1155,9 @@ runSubStep_()
     }
     catch (const TooManyIterations& e) {
         handleFailure("Solver convergence failure - Iteration limit reached", e);
+    }
+    catch (const TimeSteppingBreakdown& e) {
+        handleFailure(e.what(), e);
     }
     catch (const ConvergenceMonitorFailure& e) {
         handleFailure("Convergence monitor failure", e, /*log_exception=*/false);

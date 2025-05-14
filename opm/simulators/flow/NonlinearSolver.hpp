@@ -35,6 +35,7 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/TimeStepControl.hpp>
 
 #include <memory>
 
@@ -128,7 +129,7 @@ struct NonlinearSolverParameters
         }
 
 
-        SimulatorReportSingle step(const SimulatorTimerInterface& timer)
+        SimulatorReportSingle step(const SimulatorTimerInterface& timer, const TimeStepControlInterface *timeStepControl)
         {
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
@@ -173,6 +174,14 @@ struct NonlinearSolverParameters
 
                 std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
                 OPM_THROW_NOLOG(TooManyIterations, msg);
+            }
+            auto relativeChange = model_->relativeChange();
+            if (timeStepControl && !timeStepControl->timeStepAccepted(relativeChange)) {
+                report.converged = false;
+                failureReport_ = report;
+
+                std::string msg = "Relative change in solution for time step was " + std::to_string(relativeChange) + ", which is larger than the tolerance accepted by the timestepping algorithm.";
+                OPM_THROW_NOLOG(TimeSteppingBreakdown, msg);
             }
 
             // Do model-specific post-step actions.
