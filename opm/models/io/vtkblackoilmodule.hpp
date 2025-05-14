@@ -42,6 +42,9 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <algorithm>
+#include <type_traits>
+
 namespace Opm {
 /*!
  * \ingroup Vtk
