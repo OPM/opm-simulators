@@ -33,7 +33,6 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/basicproperties.hh>
 
-#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
@@ -101,7 +100,6 @@ struct NonlinearSolverParameters
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
-        using TimeStepper = AdaptiveTimeStepping<TypeTag>;
         using SolverParameters = NonlinearSolverParameters<Scalar>;
 
         // ---------  Public methods  ---------
@@ -124,7 +122,6 @@ struct NonlinearSolverParameters
             , nonlinearIterationsLast_(0)
             , linearIterationsLast_(0)
             , wellIterationsLast_(0)
-            , enableAdaptiveTimeStepping_(true)
         {
             if (!model_) {
                 OPM_THROW(std::logic_error, "Must provide a non-null model argument for NonlinearSolver.");
@@ -132,7 +129,7 @@ struct NonlinearSolverParameters
         }
 
 
-        SimulatorReportSingle step(const SimulatorTimerInterface& timer, const TimeStepper& adaptiveTimeStepping)
+        SimulatorReportSingle step(const SimulatorTimerInterface& timer, const TimeStepControlInterface *timeStepControl)
         {
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
@@ -179,7 +176,7 @@ struct NonlinearSolverParameters
                 OPM_THROW_NOLOG(TooManyIterations, msg);
             }
             auto relativeChange = model_->relativeChange();
-            if (enableAdaptiveTimeStepping_ && !adaptiveTimeStepping.timeStepControl().timeStepAccepted(relativeChange)) {
+            if (timeStepControl && !timeStepControl->timeStepAccepted(relativeChange)) {
                 report.converged = false;
                 failureReport_ = report;
 
@@ -282,10 +279,6 @@ struct NonlinearSolverParameters
         void setParameters(const SolverParameters& param)
         { param_ = param; }
 
-        /// Set the enableAdaptiveTimeStepping to false
-        void disableAdaptiveTimeStepping()
-        { enableAdaptiveTimeStepping_ = false; }
-
     private:
         // ---------  Data members  ---------
         SimulatorReportSingle failureReport_;
@@ -298,7 +291,6 @@ struct NonlinearSolverParameters
         int nonlinearIterationsLast_;
         int linearIterationsLast_;
         int wellIterationsLast_;
-        bool enableAdaptiveTimeStepping_;
     };
 
 } // namespace Opm

@@ -1146,7 +1146,7 @@ runSubStep_()
     };
 
     try {
-        substep_report = solver_().step(this->substep_timer_, this->adaptive_time_stepping_);
+        substep_report = solver_().step(this->substep_timer_, &this->adaptive_time_stepping_.timeStepControl());
         if (solverVerbose_()) {
             // report number of linear iterations
             OpmLog::debug("Overall linear iterations used: "

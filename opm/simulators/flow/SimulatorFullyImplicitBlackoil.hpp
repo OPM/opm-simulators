@@ -468,8 +468,7 @@ public:
             simulator_.problem().setSimulationReport(report_);
         } else {
             // solve for complete report step
-            solver_->disableAdaptiveTimeStepping();
-            auto stepReport = solver_->step(timer, *adaptiveTimeStepping_);
+            auto stepReport = solver_->step(timer, nullptr);
             report_ += stepReport;
             if (terminalOutput_) {
                 std::ostringstream ss;
