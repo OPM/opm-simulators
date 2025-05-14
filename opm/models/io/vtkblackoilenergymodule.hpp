@@ -165,8 +165,7 @@ public:
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
         if constexpr (enableEnergy) {
-            VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-            if (!vtkWriter) {
+            if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
                 return;
             }
 
