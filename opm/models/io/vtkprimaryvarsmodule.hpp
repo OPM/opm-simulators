@@ -86,7 +86,7 @@ public:
         }
         if (params_.processRankOutput_) {
             this->resizeScalarBuffer_(processRank_,
-                                      /*bufferType=*/ParentType::ElementBuffer);
+                                      /*bufferType=*/ParentType::BufferType::Element);
         }
         if (params_.dofIndexOutput_) {
             this->resizeScalarBuffer_(dofIndex_);
@@ -142,7 +142,7 @@ public:
             this->commitScalarBuffer_(baseWriter,
                                       "process rank",
                                       processRank_,
-                                      /*bufferType=*/ParentType::ElementBuffer);
+                                      /*bufferType=*/ParentType::BufferType::Element);
         }
         if (params_.dofIndexOutput_) {
             this->commitScalarBuffer_(baseWriter, "DOF index", dofIndex_);

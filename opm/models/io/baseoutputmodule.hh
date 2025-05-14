@@ -141,22 +141,22 @@ public:
     { return false; }
 
 protected:
-    enum BufferType {
+    enum class BufferType {
         //! Buffer contains data associated with the degrees of freedom
-        DofBuffer,
+        Dof,
 
         //! Buffer contains data associated with the grid's vertices
-        VertexBuffer,
+        Vertex,
 
         //! Buffer contains data associated with the grid's elements
-        ElementBuffer
+        Element,
     };
 
     /*!
      * \brief Allocate the space for a buffer storing a scalar quantity
      */
     void resizeScalarBuffer_(ScalarBuffer& buffer,
-                             BufferType bufferType = DofBuffer)
+                             BufferType bufferType = BufferType::Dof)
     {
         buffer.resize(this->getBufferSize(bufferType));
         std::fill(buffer.begin(), buffer.end(), 0.0);
@@ -166,7 +166,7 @@ protected:
      * \brief Allocate the space for a buffer storing a tensorial quantity
      */
     void resizeTensorBuffer_(TensorBuffer& buffer,
-                             BufferType bufferType = DofBuffer)
+                             BufferType bufferType = BufferType::Dof)
     {
         buffer.resize(this->getBufferSize(bufferType));
         Tensor nullMatrix(dimWorld, dimWorld, 0.0);
@@ -174,7 +174,7 @@ protected:
     }
 
     void resizeVectorBuffer_(VectorBuffer& buffer,
-                             BufferType bufferType = DofBuffer)
+                             BufferType bufferType = BufferType::Dof)
     {
         buffer.resize(this->getBufferSize(bufferType));
         Vector zerovector(dimWorld,0.0);
@@ -187,7 +187,7 @@ protected:
      *        quantity
      */
     void resizeEqBuffer_(EqBuffer& buffer,
-                         BufferType bufferType = DofBuffer)
+                         BufferType bufferType = BufferType::Dof)
     {
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numEq; ++i) {
@@ -201,7 +201,7 @@ protected:
      *        quantity
      */
     void resizePhaseBuffer_(PhaseBuffer& buffer,
-                            BufferType bufferType = DofBuffer)
+                            BufferType bufferType = BufferType::Dof)
     {
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
@@ -215,7 +215,7 @@ protected:
      *        specific quantity
      */
     void resizeComponentBuffer_(ComponentBuffer& buffer,
-                                BufferType bufferType = DofBuffer)
+                                BufferType bufferType = BufferType::Dof)
     {
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numComponents; ++i) {
@@ -229,7 +229,7 @@ protected:
      *        component specific buffer
      */
     void resizePhaseComponentBuffer_(PhaseComponentBuffer& buffer,
-                                     BufferType bufferType = DofBuffer)
+                                     BufferType bufferType = BufferType::Dof)
     {
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
@@ -246,16 +246,16 @@ protected:
     void commitScalarBuffer_(BaseOutputWriter& baseWriter,
                              const char *name,
                              ScalarBuffer& buffer,
-                             BufferType bufferType = DofBuffer)
+                             BufferType bufferType = BufferType::Dof)
     {
         switch (bufferType) {
-        case DofBuffer:
+        case BufferType::Dof:
             DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer, name);
             break;
-        case VertexBuffer:
+        case BufferType::Vertex:
             attachScalarVertexData_(baseWriter, buffer, name);
             break;
-        case ElementBuffer:
+        case BufferType::Element:
             attachScalarElementData_(baseWriter, buffer, name);
             break;
         default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
@@ -268,16 +268,16 @@ protected:
     void commitVectorBuffer_(BaseOutputWriter& baseWriter,
                              const char *name,
                              VectorBuffer& buffer,
-                             BufferType bufferType = DofBuffer)
+                             BufferType bufferType = BufferType::Dof)
     {
         switch (bufferType) {
-        case DofBuffer:
+        case BufferType::Dof:
             DiscBaseOutputModule::attachVectorDofData_(baseWriter, buffer, name);
             break;
-        case VertexBuffer:
+        case BufferType::Vertex:
             attachVectorVertexData_(baseWriter, buffer, name);
             break;
-        case ElementBuffer:
+        case BufferType::Element:
             attachVectorElementData_(baseWriter, buffer, name);
             break;
         default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
@@ -290,16 +290,16 @@ protected:
     void commitTensorBuffer_(BaseOutputWriter& baseWriter,
                              const char *name,
                              TensorBuffer& buffer,
-                             BufferType bufferType = DofBuffer)
+                             BufferType bufferType = BufferType::Dof)
     {
         switch (bufferType) {
-        case DofBuffer:
+        case BufferType::Dof:
             DiscBaseOutputModule::attachTensorDofData_(baseWriter, buffer, name);
             break;
-        case VertexBuffer:
+        case BufferType::Vertex:
             attachTensorVertexData_(baseWriter, buffer, name);
             break;
-        case ElementBuffer:
+        case BufferType::Element:
             attachTensorElementData_(baseWriter, buffer, name);
             break;
         default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
@@ -312,7 +312,7 @@ protected:
     void commitPriVarsBuffer_(BaseOutputWriter& baseWriter,
                               const char *pattern,
                               EqBuffer& buffer,
-                              BufferType bufferType = DofBuffer)
+                              BufferType bufferType = BufferType::Dof)
     {
         char name[512];
         for (unsigned i = 0; i < numEq; ++i) {
@@ -329,7 +329,7 @@ protected:
     void commitEqBuffer_(BaseOutputWriter& baseWriter,
                          const char *pattern,
                          EqBuffer& buffer,
-                         BufferType bufferType = DofBuffer)
+                         BufferType bufferType = BufferType::Dof)
     {
         char name[512];
         for (unsigned i = 0; i < numEq; ++i) {
@@ -347,7 +347,7 @@ protected:
     void commitPhaseBuffer_(BaseOutputWriter& baseWriter,
                             const char *pattern,
                             PhaseBuffer& buffer,
-                            BufferType bufferType = DofBuffer)
+                            BufferType bufferType = BufferType::Dof)
     {
         char name[512];
         for (unsigned i = 0; i < numPhases; ++i) {
@@ -363,7 +363,7 @@ protected:
     void commitComponentBuffer_(BaseOutputWriter& baseWriter,
                                 const char *pattern,
                                 ComponentBuffer& buffer,
-                                BufferType bufferType = DofBuffer)
+                                BufferType bufferType = BufferType::Dof)
     {
         char name[512];
         for (unsigned i = 0; i < numComponents; ++i) {
@@ -379,7 +379,7 @@ protected:
     void commitPhaseComponentBuffer_(BaseOutputWriter& baseWriter,
                                      const char *pattern,
                                      PhaseComponentBuffer& buffer,
-                                     BufferType bufferType = DofBuffer)
+                                     BufferType bufferType = BufferType::Dof)
     {
         char name[512];
         for (unsigned i= 0; i < numPhases; ++i) {
@@ -426,9 +426,9 @@ protected:
     std::size_t getBufferSize(BufferType bufferType) const
     {
         switch (bufferType) {
-        case VertexBuffer:  return simulator_.gridView().size(dim);
-        case ElementBuffer: return simulator_.gridView().size(0);
-        case DofBuffer:     return simulator_.model().numGridDof();
+        case BufferType::Vertex:  return simulator_.gridView().size(dim);
+        case BufferType::Element: return simulator_.gridView().size(0);
+        case BufferType::Dof:     return simulator_.model().numGridDof();
         default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
         }
     }
