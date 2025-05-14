@@ -42,6 +42,7 @@
 
 #include <opm/models/parallel/tasklets.hpp>
 
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -186,7 +187,7 @@ public:
      * The buffer will be deleted automatically after the data has
      * been written by to disk.
      */
-    ScalarBuffer* allocateManagedScalarBuffer(size_t numEntities)
+    ScalarBuffer* allocateManagedScalarBuffer(std::size_t numEntities)
     {
         managedScalarBuffers_.emplace_back(std::make_unique<ScalarBuffer>(numEntities));
         return managedScalarBuffers_.back().get();
@@ -198,7 +199,7 @@ public:
      * The buffer will be deleted automatically after the data has
      * been written by to disk.
      */
-    VectorBuffer* allocateManagedVectorBuffer(size_t numOuter, size_t numInner)
+    VectorBuffer* allocateManagedVectorBuffer(std::size_t numOuter, std::size_t numInner)
     {
         managedVectorBuffers_.emplace_back(std::make_unique<VectorBuffer>(numOuter));
         for (auto& buffer : *managedVectorBuffers_.back()) {
