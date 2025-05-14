@@ -52,6 +52,7 @@
 #include <vector>
 
 namespace Opm {
+
 /*!
  * \brief Simplifies writing multi-file VTK datasets.
  *
@@ -67,9 +68,9 @@ class VtkMultiWriter : public BaseOutputWriter
     public:
         explicit WriteDataTasklet(VtkMultiWriter& multiWriter)
             : multiWriter_(multiWriter)
-        { }
+        {}
 
-        void run() final
+        void run() override final
         {
             std::string fileName;
             // write the actual data as vtu or vtp (plus the pieces file in the parallel case)
@@ -106,11 +107,11 @@ class VtkMultiWriter : public BaseOutputWriter
 
 public:
     using Scalar = BaseOutputWriter::Scalar;
-    using Vector = BaseOutputWriter::Vector;
     using Tensor = BaseOutputWriter::Tensor;
+    using Vector = BaseOutputWriter::Vector;
     using ScalarBuffer = BaseOutputWriter::ScalarBuffer;
-    using VectorBuffer = BaseOutputWriter::VectorBuffer;
     using TensorBuffer = BaseOutputWriter::TensorBuffer;
+    using VectorBuffer = BaseOutputWriter::VectorBuffer;
 
     using VtkWriter = Dune::VTKWriter<GridView>;
 
@@ -437,7 +438,7 @@ public:
             }
 
             if (fileLen > 0) {
-                multiFile_.open(multiFileName_.c_str());
+                multiFile_.open(multiFileName_);
 
                 std::vector<char> tmp(fileLen);
                 res.deserializeStream().read(tmp.data(), fileLen);
@@ -471,7 +472,7 @@ private:
         // only the first process writes to the multi-file
         if (commRank_ == 0) {
             // generate one meta vtk-file holding the individual time steps
-            multiFile_.open(multiFileName.c_str());
+            multiFile_.open(multiFileName);
             multiFile_ << "<?xml version=\"1.0\"?>\n"
                           "<VTKFile type=\"Collection\"\n"
                           "         version=\"0.1\"\n"
@@ -537,6 +538,7 @@ private:
 
     TaskletRunner taskletRunner_;
 };
+
 } // namespace Opm
 
 #endif
