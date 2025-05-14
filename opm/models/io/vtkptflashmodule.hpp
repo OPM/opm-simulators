@@ -112,7 +112,7 @@ public:
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
@@ -133,8 +133,7 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        auto* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
