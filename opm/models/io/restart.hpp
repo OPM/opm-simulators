@@ -27,6 +27,9 @@
 #ifndef OPM_RESTART_HPP
 #define OPM_RESTART_HPP
 
+#include <dune/geometry/dimension.hh>
+#include <dune/grid/common/rangegenerators.hh>
+
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -125,13 +128,8 @@ public:
         std::string cookie = oss.str();
         serializeSectionBegin(cookie);
 
-        // write element data
-        using Iterator = typename GridView::template Codim<codim>::Iterator;
-
-        Iterator it = gridView.template begin<codim>();
-        const Iterator& endIt = gridView.template end<codim>();
-        for (; it != endIt; ++it) {
-            serializer.serializeEntity(outStream_, *it);
+        for (const auto& entity : entities(gridView, Dune::Codim<codim>())) {
+            serializer.serializeEntity(outStream_, entity);
             outStream_ << "\n";
         }
 
@@ -189,17 +187,14 @@ public:
         std::string curLine;
 
         // read entity data
-        using Iterator = typename GridView::template Codim<codim>::Iterator;
-        Iterator it = gridView.template begin<codim>();
-        const Iterator& endIt = gridView.template end<codim>();
-        for (; it != endIt; ++it) {
+        for (const auto& entity : entities(gridView, Dune::Codim<codim>())) {
             if (!inStream_.good()) {
                 throw std::runtime_error("Restart file is corrupted");
             }
 
             std::getline(inStream_, curLine);
             std::istringstream curLineStream(curLine);
-            deserializer.deserializeEntity(curLineStream, *it);
+            deserializer.deserializeEntity(curLineStream, entity);
         }
 
         deserializeSectionEnd();
