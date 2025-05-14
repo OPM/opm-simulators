@@ -82,6 +82,7 @@ class VtkMultiPhaseModule : public BaseOutputModule<TypeTag>
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
     using VectorBuffer = typename ParentType::VectorBuffer;
     using TensorBuffer = typename ParentType::TensorBuffer;
@@ -113,35 +114,35 @@ public:
     void allocBuffers() override
     {
         if (params_.extrusionFactorOutput_) {
-            this->resizeScalarBuffer_(extrusionFactor_);
+            this->resizeScalarBuffer_(extrusionFactor_, BufferType::Dof);
         }
         if (params_.pressureOutput_) {
-            this->resizePhaseBuffer_(pressure_);
+            this->resizePhaseBuffer_(pressure_, BufferType::Dof);
         }
         if (params_.densityOutput_) {
-            this->resizePhaseBuffer_(density_);
+            this->resizePhaseBuffer_(density_, BufferType::Dof);
         }
         if (params_.saturationOutput_) {
-            this->resizePhaseBuffer_(saturation_);
+            this->resizePhaseBuffer_(saturation_, BufferType::Dof);
         }
         if (params_.mobilityOutput_) {
-            this->resizePhaseBuffer_(mobility_);
+            this->resizePhaseBuffer_(mobility_, BufferType::Dof);
         }
         if (params_.relativePermeabilityOutput_) {
-            this->resizePhaseBuffer_(relativePermeability_);
+            this->resizePhaseBuffer_(relativePermeability_, BufferType::Dof);
         }
         if (params_.viscosityOutput_) {
-            this->resizePhaseBuffer_(viscosity_);
+            this->resizePhaseBuffer_(viscosity_, BufferType::Dof);
         }
         if (params_.averageMolarMassOutput_) {
-            this->resizePhaseBuffer_(averageMolarMass_);
+            this->resizePhaseBuffer_(averageMolarMass_, BufferType::Dof);
         }
 
         if (params_.porosityOutput_) {
-            this->resizeScalarBuffer_(porosity_);
+            this->resizeScalarBuffer_(porosity_, BufferType::Dof);
         }
         if (params_.intrinsicPermeabilityOutput_) {
-            this->resizeTensorBuffer_(intrinsicPermeability_);
+            this->resizeTensorBuffer_(intrinsicPermeability_, BufferType::Dof);
         }
 
         if (params_.velocityOutput_) {
@@ -153,7 +154,7 @@ public:
                     velocity_[phaseIdx][dofIdx] = 0.0;
                 }
             }
-            this->resizePhaseBuffer_(velocityWeight_);
+            this->resizePhaseBuffer_(velocityWeight_, BufferType::Dof);
         }
 
         if (params_.potentialGradientOutput_) {
@@ -166,7 +167,7 @@ public:
                 }
             }
 
-            this->resizePhaseBuffer_(potentialWeight_);
+            this->resizePhaseBuffer_(potentialWeight_, BufferType::Dof);
         }
     }
 
@@ -302,35 +303,39 @@ public:
         }
 
         if (params_.extrusionFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "extrusionFactor", extrusionFactor_);
+            this->commitScalarBuffer_(baseWriter, "extrusionFactor",
+                                      extrusionFactor_, BufferType::Dof);
         }
         if (params_.pressureOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "pressure_%s", pressure_);
+            this->commitPhaseBuffer_(baseWriter, "pressure_%s", pressure_, BufferType::Dof);
         }
         if (params_.densityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "density_%s", density_);
+            this->commitPhaseBuffer_(baseWriter, "density_%s", density_, BufferType::Dof);
         }
         if (params_.saturationOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "saturation_%s", saturation_);
+            this->commitPhaseBuffer_(baseWriter, "saturation_%s", saturation_, BufferType::Dof);
         }
         if (params_.mobilityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "mobility_%s", mobility_);
+            this->commitPhaseBuffer_(baseWriter, "mobility_%s", mobility_, BufferType::Dof);
         }
         if (params_.relativePermeabilityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "relativePerm_%s", relativePermeability_);
+            this->commitPhaseBuffer_(baseWriter, "relativePerm_%s",
+                                     relativePermeability_, BufferType::Dof);
         }
         if (params_.viscosityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "viscosity_%s", viscosity_);
+            this->commitPhaseBuffer_(baseWriter, "viscosity_%s", viscosity_, BufferType::Dof);
         }
         if (params_.averageMolarMassOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "averageMolarMass_%s", averageMolarMass_);
+            this->commitPhaseBuffer_(baseWriter, "averageMolarMass_%s",
+                                     averageMolarMass_, BufferType::Dof);
         }
 
         if (params_.porosityOutput_) {
-            this->commitScalarBuffer_(baseWriter, "porosity", porosity_);
+            this->commitScalarBuffer_(baseWriter, "porosity", porosity_, BufferType::Dof);
         }
         if (params_.intrinsicPermeabilityOutput_) {
-            this->commitTensorBuffer_(baseWriter, "intrinsicPerm", intrinsicPermeability_);
+            this->commitTensorBuffer_(baseWriter, "intrinsicPerm",
+                                      intrinsicPermeability_, BufferType::Dof);
         }
 
         if (params_.velocityOutput_) {

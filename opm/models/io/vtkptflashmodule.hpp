@@ -66,6 +66,7 @@ class VtkPTFlashModule: public BaseOutputModule<TypeTag>
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
+    using BufferType = typename ParentType::BufferType;
     using ComponentBuffer = typename ParentType::ComponentBuffer;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
@@ -91,10 +92,10 @@ public:
     void allocBuffers() override
     {
         if (params_.LOutput_) {
-            this->resizeScalarBuffer_(L_);
+            this->resizeScalarBuffer_(L_, BufferType::Dof);
         }
         if (params_.equilConstOutput_) {
-            this->resizeComponentBuffer_(K_);
+            this->resizeComponentBuffer_(K_, BufferType::Dof);
         }
     }
 
@@ -138,10 +139,10 @@ public:
         }
 
         if (params_.equilConstOutput_) {
-            this->commitComponentBuffer_(baseWriter, "K^%s", K_);
+            this->commitComponentBuffer_(baseWriter, "K^%s", K_, BufferType::Dof);
         }
         if (params_.LOutput_) {
-            this->commitScalarBuffer_(baseWriter, "L", L_);
+            this->commitScalarBuffer_(baseWriter, "L", L_,  BufferType::Dof);
         }
     }
 

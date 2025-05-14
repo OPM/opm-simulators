@@ -155,8 +155,7 @@ protected:
     /*!
      * \brief Allocate the space for a buffer storing a scalar quantity
      */
-    void resizeScalarBuffer_(ScalarBuffer& buffer,
-                             BufferType bufferType = BufferType::Dof)
+    void resizeScalarBuffer_(ScalarBuffer& buffer, BufferType bufferType)
     {
         buffer.resize(this->getBufferSize(bufferType));
         std::fill(buffer.begin(), buffer.end(), 0.0);
@@ -165,16 +164,14 @@ protected:
     /*!
      * \brief Allocate the space for a buffer storing a tensorial quantity
      */
-    void resizeTensorBuffer_(TensorBuffer& buffer,
-                             BufferType bufferType = BufferType::Dof)
+    void resizeTensorBuffer_(TensorBuffer& buffer, BufferType bufferType)
     {
         buffer.resize(this->getBufferSize(bufferType));
         Tensor nullMatrix(dimWorld, dimWorld, 0.0);
         std::fill(buffer.begin(), buffer.end(), nullMatrix);
     }
 
-    void resizeVectorBuffer_(VectorBuffer& buffer,
-                             BufferType bufferType = BufferType::Dof)
+    void resizeVectorBuffer_(VectorBuffer& buffer, BufferType bufferType)
     {
         buffer.resize(this->getBufferSize(bufferType));
         Vector zerovector(dimWorld,0.0);
@@ -186,8 +183,7 @@ protected:
      * \brief Allocate the space for a buffer storing a equation specific
      *        quantity
      */
-    void resizeEqBuffer_(EqBuffer& buffer,
-                         BufferType bufferType = BufferType::Dof)
+    void resizeEqBuffer_(EqBuffer& buffer, BufferType bufferType)
     {
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numEq; ++i) {
@@ -200,8 +196,7 @@ protected:
      * \brief Allocate the space for a buffer storing a phase-specific
      *        quantity
      */
-    void resizePhaseBuffer_(PhaseBuffer& buffer,
-                            BufferType bufferType = BufferType::Dof)
+    void resizePhaseBuffer_(PhaseBuffer& buffer, BufferType bufferType)
     {
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
@@ -214,8 +209,7 @@ protected:
      * \brief Allocate the space for a buffer storing a component
      *        specific quantity
      */
-    void resizeComponentBuffer_(ComponentBuffer& buffer,
-                                BufferType bufferType = BufferType::Dof)
+    void resizeComponentBuffer_(ComponentBuffer& buffer, BufferType bufferType)
     {
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numComponents; ++i) {
@@ -228,8 +222,7 @@ protected:
      * \brief Allocate the space for a buffer storing a phase and
      *        component specific buffer
      */
-    void resizePhaseComponentBuffer_(PhaseComponentBuffer& buffer,
-                                     BufferType bufferType = BufferType::Dof)
+    void resizePhaseComponentBuffer_(PhaseComponentBuffer& buffer, BufferType bufferType)
     {
         const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
@@ -246,7 +239,7 @@ protected:
     void commitScalarBuffer_(BaseOutputWriter& baseWriter,
                              const char *name,
                              ScalarBuffer& buffer,
-                             BufferType bufferType = BufferType::Dof)
+                             BufferType bufferType)
     {
         switch (bufferType) {
         case BufferType::Dof:
@@ -268,7 +261,7 @@ protected:
     void commitVectorBuffer_(BaseOutputWriter& baseWriter,
                              const char *name,
                              VectorBuffer& buffer,
-                             BufferType bufferType = BufferType::Dof)
+                             BufferType bufferType)
     {
         switch (bufferType) {
         case BufferType::Dof:
@@ -290,7 +283,7 @@ protected:
     void commitTensorBuffer_(BaseOutputWriter& baseWriter,
                              const char *name,
                              TensorBuffer& buffer,
-                             BufferType bufferType = BufferType::Dof)
+                             BufferType bufferType)
     {
         switch (bufferType) {
         case BufferType::Dof:
@@ -312,7 +305,7 @@ protected:
     void commitPriVarsBuffer_(BaseOutputWriter& baseWriter,
                               const char *pattern,
                               EqBuffer& buffer,
-                              BufferType bufferType = BufferType::Dof)
+                              BufferType bufferType)
     {
         char name[512];
         for (unsigned i = 0; i < numEq; ++i) {
@@ -329,7 +322,7 @@ protected:
     void commitEqBuffer_(BaseOutputWriter& baseWriter,
                          const char *pattern,
                          EqBuffer& buffer,
-                         BufferType bufferType = BufferType::Dof)
+                         BufferType bufferType)
     {
         char name[512];
         for (unsigned i = 0; i < numEq; ++i) {
@@ -347,7 +340,7 @@ protected:
     void commitPhaseBuffer_(BaseOutputWriter& baseWriter,
                             const char *pattern,
                             PhaseBuffer& buffer,
-                            BufferType bufferType = BufferType::Dof)
+                            BufferType bufferType)
     {
         char name[512];
         for (unsigned i = 0; i < numPhases; ++i) {
@@ -363,7 +356,7 @@ protected:
     void commitComponentBuffer_(BaseOutputWriter& baseWriter,
                                 const char *pattern,
                                 ComponentBuffer& buffer,
-                                BufferType bufferType = BufferType::Dof)
+                                BufferType bufferType)
     {
         char name[512];
         for (unsigned i = 0; i < numComponents; ++i) {
@@ -379,7 +372,7 @@ protected:
     void commitPhaseComponentBuffer_(BaseOutputWriter& baseWriter,
                                      const char *pattern,
                                      PhaseComponentBuffer& buffer,
-                                     BufferType bufferType = BufferType::Dof)
+                                     BufferType bufferType)
     {
         char name[512];
         for (unsigned i= 0; i < numPhases; ++i) {

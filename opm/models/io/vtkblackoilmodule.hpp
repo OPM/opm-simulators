@@ -74,6 +74,8 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
 
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
+    using BufferType = typename ParentType::BufferType;
+
 public:
     explicit VtkBlackOilModule(const Simulator& simulator)
         : ParentType(simulator)
@@ -97,40 +99,40 @@ public:
     void allocBuffers() override
     {
         if (params_.gasDissolutionFactorOutput_) {
-            this->resizeScalarBuffer_(gasDissolutionFactor_);
+            this->resizeScalarBuffer_(gasDissolutionFactor_, BufferType::Dof);
         }
         if (params_.oilVaporizationFactorOutput_) {
-            this->resizeScalarBuffer_(oilVaporizationFactor_);
+            this->resizeScalarBuffer_(oilVaporizationFactor_, BufferType::Dof);
         }
         if (params_.oilFormationVolumeFactorOutput_) {
-            this->resizeScalarBuffer_(oilFormationVolumeFactor_);
+            this->resizeScalarBuffer_(oilFormationVolumeFactor_, BufferType::Dof);
         }
         if (params_.gasFormationVolumeFactorOutput_) {
-            this->resizeScalarBuffer_(gasFormationVolumeFactor_);
+            this->resizeScalarBuffer_(gasFormationVolumeFactor_, BufferType::Dof);
         }
         if (params_.waterFormationVolumeFactorOutput_) {
-            this->resizeScalarBuffer_(waterFormationVolumeFactor_);
+            this->resizeScalarBuffer_(waterFormationVolumeFactor_, BufferType::Dof);
         }
         if (params_.oilSaturationPressureOutput_) {
-            this->resizeScalarBuffer_(oilSaturationPressure_);
+            this->resizeScalarBuffer_(oilSaturationPressure_, BufferType::Dof);
         }
         if (params_.gasSaturationPressureOutput_) {
-            this->resizeScalarBuffer_(gasSaturationPressure_);
+            this->resizeScalarBuffer_(gasSaturationPressure_, BufferType::Dof);
         }
         if (params_.saturatedOilGasDissolutionFactorOutput_) {
-            this->resizeScalarBuffer_(saturatedOilGasDissolutionFactor_);
+            this->resizeScalarBuffer_(saturatedOilGasDissolutionFactor_, BufferType::Dof);
         }
         if (params_.saturatedGasOilVaporizationFactorOutput_) {
-            this->resizeScalarBuffer_(saturatedGasOilVaporizationFactor_);
+            this->resizeScalarBuffer_(saturatedGasOilVaporizationFactor_, BufferType::Dof);
         }
         if (params_.saturationRatiosOutput_) {
-            this->resizeScalarBuffer_(oilSaturationRatio_);
-            this->resizeScalarBuffer_(gasSaturationRatio_);
+            this->resizeScalarBuffer_(oilSaturationRatio_, BufferType::Dof);
+            this->resizeScalarBuffer_(gasSaturationRatio_, BufferType::Dof);
         }
         if (params_.primaryVarsMeaningOutput_) {
-            this->resizeScalarBuffer_(primaryVarsMeaningPressure_);
-            this->resizeScalarBuffer_(primaryVarsMeaningWater_);
-            this->resizeScalarBuffer_(primaryVarsMeaningGas_);
+            this->resizeScalarBuffer_(primaryVarsMeaningPressure_, BufferType::Dof);
+            this->resizeScalarBuffer_(primaryVarsMeaningWater_, BufferType::Dof);
+            this->resizeScalarBuffer_(primaryVarsMeaningGas_, BufferType::Dof);
         }
     }
 
@@ -251,41 +253,55 @@ public:
         }
 
         if (params_.gasDissolutionFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "R_s", gasDissolutionFactor_);
+            this->commitScalarBuffer_(baseWriter, "R_s",
+                                      gasDissolutionFactor_, BufferType::Dof);
         }
         if (params_.oilVaporizationFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "R_v", oilVaporizationFactor_);
+            this->commitScalarBuffer_(baseWriter, "R_v",
+                                      oilVaporizationFactor_, BufferType::Dof);
         }
         if (params_.oilFormationVolumeFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "B_o", oilFormationVolumeFactor_);
+            this->commitScalarBuffer_(baseWriter, "B_o",
+                                      oilFormationVolumeFactor_, BufferType::Dof);
         }
         if (params_.gasFormationVolumeFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "B_g", gasFormationVolumeFactor_);
+            this->commitScalarBuffer_(baseWriter, "B_g",
+                                      gasFormationVolumeFactor_, BufferType::Dof);
         }
         if (params_.waterFormationVolumeFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "B_w", waterFormationVolumeFactor_);
+            this->commitScalarBuffer_(baseWriter, "B_w",
+                                      waterFormationVolumeFactor_, BufferType::Dof);
         }
         if (params_.oilSaturationPressureOutput_) {
-            this->commitScalarBuffer_(baseWriter, "p_o,sat", oilSaturationPressure_);
+            this->commitScalarBuffer_(baseWriter, "p_o,sat",
+                                      oilSaturationPressure_, BufferType::Dof);
         }
         if (params_.gasSaturationPressureOutput_) {
-            this->commitScalarBuffer_(baseWriter, "p_g,sat", gasSaturationPressure_);
+            this->commitScalarBuffer_(baseWriter, "p_g,sat",
+                                      gasSaturationPressure_, BufferType::Dof);
         }
         if (params_.saturatedOilGasDissolutionFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "R_s,sat", saturatedOilGasDissolutionFactor_);
+            this->commitScalarBuffer_(baseWriter, "R_s,sat",
+                                      saturatedOilGasDissolutionFactor_, BufferType::Dof);
         }
         if (params_.saturatedGasOilVaporizationFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "R_v,sat", saturatedGasOilVaporizationFactor_);
+            this->commitScalarBuffer_(baseWriter, "R_v,sat",
+                                      saturatedGasOilVaporizationFactor_, BufferType::Dof);
         }
         if (params_.saturationRatiosOutput_) {
-            this->commitScalarBuffer_(baseWriter, "saturation ratio_oil", oilSaturationRatio_);
-            this->commitScalarBuffer_(baseWriter, "saturation ratio_gas", gasSaturationRatio_);
+            this->commitScalarBuffer_(baseWriter, "saturation ratio_oil",
+                                      oilSaturationRatio_, BufferType::Dof);
+            this->commitScalarBuffer_(baseWriter, "saturation ratio_gas",
+                                      gasSaturationRatio_, BufferType::Dof);
         }
 
         if (params_.primaryVarsMeaningOutput_) {
-            this->commitScalarBuffer_(baseWriter, "primary vars meaning water", primaryVarsMeaningWater_);
-            this->commitScalarBuffer_(baseWriter, "primary vars meaning gas", primaryVarsMeaningGas_);
-            this->commitScalarBuffer_(baseWriter, "primary vars meaning pressure", primaryVarsMeaningPressure_);
+            this->commitScalarBuffer_(baseWriter, "primary vars meaning water",
+                                      primaryVarsMeaningWater_, BufferType::Dof);
+            this->commitScalarBuffer_(baseWriter, "primary vars meaning gas",
+                                      primaryVarsMeaningGas_, BufferType::Dof);
+            this->commitScalarBuffer_(baseWriter, "primary vars meaning pressure",
+                                      primaryVarsMeaningPressure_, BufferType::Dof);
         }
     }
 

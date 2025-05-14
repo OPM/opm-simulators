@@ -55,6 +55,7 @@ class VtkPrimaryVarsModule : public BaseOutputModule<TypeTag>
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
     using EqBuffer = typename ParentType::EqBuffer;
 
@@ -82,14 +83,14 @@ public:
     void allocBuffers() override
     {
         if (params_.primaryVarsOutput_) {
-            this->resizeEqBuffer_(primaryVars_);
+            this->resizeEqBuffer_(primaryVars_, BufferType::Dof);
         }
         if (params_.processRankOutput_) {
             this->resizeScalarBuffer_(processRank_,
-                                      /*bufferType=*/ParentType::BufferType::Element);
+                                      /*bufferType=*/BufferType::Element);
         }
         if (params_.dofIndexOutput_) {
-            this->resizeScalarBuffer_(dofIndex_);
+            this->resizeScalarBuffer_(dofIndex_, BufferType::Dof);
         }
     }
 
@@ -136,16 +137,16 @@ public:
         }
 
         if (params_.primaryVarsOutput_) {
-            this->commitPriVarsBuffer_(baseWriter, "PV_%s", primaryVars_);
+            this->commitPriVarsBuffer_(baseWriter, "PV_%s", primaryVars_, BufferType::Dof);
         }
         if (params_.processRankOutput_) {
             this->commitScalarBuffer_(baseWriter,
                                       "process rank",
                                       processRank_,
-                                      /*bufferType=*/ParentType::BufferType::Element);
+                                      /*bufferType=*/BufferType::Element);
         }
         if (params_.dofIndexOutput_) {
-            this->commitScalarBuffer_(baseWriter, "DOF index", dofIndex_);
+            this->commitScalarBuffer_(baseWriter, "DOF index", dofIndex_, BufferType::Dof);
         }
     }
 

@@ -65,6 +65,7 @@ class VtkBlackOilSolventModule : public BaseOutputModule<TypeTag>
 
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
@@ -99,19 +100,19 @@ public:
             }
 
             if (params_.solventSaturationOutput_) {
-                this->resizeScalarBuffer_(solventSaturation_);
+                this->resizeScalarBuffer_(solventSaturation_, BufferType::Dof);
             }
             if (params_.solventRswOutput_) {
-                this->resizeScalarBuffer_(solventRsw_);
+                this->resizeScalarBuffer_(solventRsw_, BufferType::Dof);
             }
             if (params_.solventDensityOutput_) {
-                this->resizeScalarBuffer_(solventDensity_);
+                this->resizeScalarBuffer_(solventDensity_, BufferType::Dof);
             }
             if (params_.solventViscosityOutput_) {
-                this->resizeScalarBuffer_(solventViscosity_);
+                this->resizeScalarBuffer_(solventViscosity_, BufferType::Dof);
             }
             if (params_.solventMobilityOutput_) {
-                this->resizeScalarBuffer_(solventMobility_);
+                this->resizeScalarBuffer_(solventMobility_, BufferType::Dof);
             }
         }
     }
@@ -172,23 +173,28 @@ public:
             }
 
             if (params_.solventSaturationOutput_) {
-                this->commitScalarBuffer_(baseWriter, "saturation_solvent", solventSaturation_);
+                this->commitScalarBuffer_(baseWriter, "saturation_solvent",
+                                          solventSaturation_, BufferType::Dof);
             }
 
             if (params_.solventRswOutput_) {
-                this->commitScalarBuffer_(baseWriter, "dissolved_solvent", solventRsw_);
+                this->commitScalarBuffer_(baseWriter, "dissolved_solvent",
+                                          solventRsw_, BufferType::Dof);
             }
 
             if (params_.solventDensityOutput_) {
-                this->commitScalarBuffer_(baseWriter, "density_solvent", solventDensity_);
+                this->commitScalarBuffer_(baseWriter, "density_solvent",
+                                          solventDensity_, BufferType::Dof);
             }
 
             if (params_.solventViscosityOutput_) {
-                this->commitScalarBuffer_(baseWriter, "viscosity_solvent", solventViscosity_);
+                this->commitScalarBuffer_(baseWriter, "viscosity_solvent",
+                                          solventViscosity_, BufferType::Dof);
             }
 
             if (params_.solventMobilityOutput_) {
-                this->commitScalarBuffer_(baseWriter, "mobility_solvent", solventMobility_);
+                this->commitScalarBuffer_(baseWriter, "mobility_solvent",
+                                          solventMobility_, BufferType::Dof);
             }
         }
     }

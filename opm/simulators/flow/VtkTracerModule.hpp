@@ -69,6 +69,7 @@ namespace Opm {
         using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 
+        using BufferType = typename ParentType::BufferType;
         using ScalarBuffer = typename ParentType::ScalarBuffer;
 
     public:
@@ -99,9 +100,9 @@ namespace Opm {
                 const auto& enableSolTracers = tracerModel.enableSolTracers();
 
                 for (std::size_t tracerIdx = 0; tracerIdx < eclFreeTracerConcentration_.size(); ++tracerIdx) {
-                    this->resizeScalarBuffer_(eclFreeTracerConcentration_[tracerIdx]);
+                    this->resizeScalarBuffer_(eclFreeTracerConcentration_[tracerIdx], BufferType::Dof);
                     if (enableSolTracers[tracerIdx])
-                        this->resizeScalarBuffer_(eclSolTracerConcentration_[tracerIdx]);
+                        this->resizeScalarBuffer_(eclSolTracerConcentration_[tracerIdx], BufferType::Dof);
                 }
             }
 
@@ -153,10 +154,12 @@ namespace Opm {
 
                 for (std::size_t tracerIdx = 0; tracerIdx < eclFreeTracerConcentration_.size(); ++tracerIdx) {
                     const std::string tmp = "freeTracerConcentration_" + tracerModel.name(tracerIdx);
-                    this->commitScalarBuffer_(baseWriter, tmp.c_str(), eclFreeTracerConcentration_[tracerIdx]);
+                    this->commitScalarBuffer_(baseWriter, tmp.c_str(),
+                                              eclFreeTracerConcentration_[tracerIdx], BufferType::Dof);
                     if (enableSolTracers[tracerIdx]) {
                         const std::string tmp2 = "solTracerConcentration_" + tracerModel.name(tracerIdx);
-                        this->commitScalarBuffer_(baseWriter, tmp2.c_str(), eclSolTracerConcentration_[tracerIdx]);
+                        this->commitScalarBuffer_(baseWriter, tmp2.c_str(),
+                                                  eclSolTracerConcentration_[tracerIdx], BufferType::Dof);
                     }
                 }
             }

@@ -81,7 +81,7 @@ public:
     void allocBuffers() override
     {
         if (params_.phasePresenceOutput_) {
-            this->resizeScalarBuffer_(phasePresence_);
+            this->resizeScalarBuffer_(phasePresence_, ParentType::BufferType::Dof);
         }
     }
 
@@ -117,7 +117,8 @@ public:
         }
 
         if (params_.phasePresenceOutput_) {
-            this->commitScalarBuffer_(baseWriter, "phase presence", phasePresence_);
+            this->commitScalarBuffer_(baseWriter, "phase presence", phasePresence_,
+                                      ParentType::BufferType::Dof);
         }
     }
 

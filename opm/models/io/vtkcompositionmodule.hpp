@@ -70,6 +70,7 @@ class VtkCompositionModule : public BaseOutputModule<TypeTag>
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
+    using BufferType = typename ParentType::BufferType;
     using ComponentBuffer = typename ParentType::ComponentBuffer;
     using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
 
@@ -95,26 +96,26 @@ public:
     void allocBuffers() override
     {
         if (params_.moleFracOutput_) {
-            this->resizePhaseComponentBuffer_(moleFrac_);
+            this->resizePhaseComponentBuffer_(moleFrac_, BufferType::Dof);
         }
         if (params_.massFracOutput_) {
-            this->resizePhaseComponentBuffer_(massFrac_);
+            this->resizePhaseComponentBuffer_(massFrac_, BufferType::Dof);
         }
         if (params_.totalMassFracOutput_) {
-            this->resizeComponentBuffer_(totalMassFrac_);
+            this->resizeComponentBuffer_(totalMassFrac_, BufferType::Dof);
         }
         if (params_.totalMoleFracOutput_) {
-            this->resizeComponentBuffer_(totalMoleFrac_);
+            this->resizeComponentBuffer_(totalMoleFrac_, BufferType::Dof);
         }
         if (params_.molarityOutput_) {
-            this->resizePhaseComponentBuffer_(molarity_);
+            this->resizePhaseComponentBuffer_(molarity_, BufferType::Dof);
         }
 
         if (params_.fugacityOutput_) {
-            this->resizeComponentBuffer_(fugacity_);
+            this->resizeComponentBuffer_(fugacity_, BufferType::Dof);
         }
         if (params_.fugacityCoeffOutput_) {
-            this->resizePhaseComponentBuffer_(fugacityCoeff_);
+            this->resizePhaseComponentBuffer_(fugacityCoeff_, BufferType::Dof);
         }
     }
 
@@ -199,26 +200,33 @@ public:
         }
 
         if (params_.moleFracOutput_) {
-            this->commitPhaseComponentBuffer_(baseWriter, "moleFrac_%s^%s", moleFrac_);
+            this->commitPhaseComponentBuffer_(baseWriter, "moleFrac_%s^%s",
+                                              moleFrac_, BufferType::Dof);
         }
         if (params_.massFracOutput_) {
-            this->commitPhaseComponentBuffer_(baseWriter, "massFrac_%s^%s", massFrac_);
+            this->commitPhaseComponentBuffer_(baseWriter, "massFrac_%s^%s",
+                                              massFrac_, BufferType::Dof);
         }
         if (params_.molarityOutput_) {
-            this->commitPhaseComponentBuffer_(baseWriter, "molarity_%s^%s", molarity_);
+            this->commitPhaseComponentBuffer_(baseWriter, "molarity_%s^%s",
+                                              molarity_, BufferType::Dof);
         }
         if (params_.totalMassFracOutput_) {
-            this->commitComponentBuffer_(baseWriter, "totalMassFrac^%s", totalMassFrac_);
+            this->commitComponentBuffer_(baseWriter, "totalMassFrac^%s",
+                                         totalMassFrac_, BufferType::Dof);
         }
         if (params_.totalMoleFracOutput_) {
-            this->commitComponentBuffer_(baseWriter, "totalMoleFrac^%s", totalMoleFrac_);
+            this->commitComponentBuffer_(baseWriter, "totalMoleFrac^%s",
+                                         totalMoleFrac_, BufferType::Dof);
         }
 
         if (params_.fugacityOutput_) {
-            this->commitComponentBuffer_(baseWriter, "fugacity^%s", fugacity_);
+            this->commitComponentBuffer_(baseWriter, "fugacity^%s",
+                                         fugacity_, BufferType::Dof);
         }
         if (params_.fugacityCoeffOutput_) {
-            this->commitPhaseComponentBuffer_(baseWriter, "fugacityCoeff_%s^%s", fugacityCoeff_);
+            this->commitPhaseComponentBuffer_(baseWriter, "fugacityCoeff_%s^%s",
+                                              fugacityCoeff_, BufferType::Dof);
         }
     }
 

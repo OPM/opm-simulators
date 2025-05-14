@@ -67,8 +67,9 @@ class VtkBlackOilEnergyModule : public BaseOutputModule<TypeTag>
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    using ScalarBuffer = typename ParentType::ScalarBuffer;
+    using BufferType = typename ParentType::BufferType;
     using PhaseBuffer = typename ParentType::PhaseBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
     explicit VtkBlackOilEnergyModule(const Simulator& simulator)
@@ -102,16 +103,16 @@ public:
             }
 
             if (params_.rockInternalEnergyOutput_) {
-                this->resizeScalarBuffer_(rockInternalEnergy_);
+                this->resizeScalarBuffer_(rockInternalEnergy_, BufferType::Dof);
             }
             if (params_.totalThermalConductivityOutput_) {
-                this->resizeScalarBuffer_(totalThermalConductivity_);
+                this->resizeScalarBuffer_(totalThermalConductivity_, BufferType::Dof);
             }
             if (params_.fluidInternalEnergiesOutput_) {
-                this->resizePhaseBuffer_(fluidInternalEnergies_);
+                this->resizePhaseBuffer_(fluidInternalEnergies_, BufferType::Dof);
             }
             if (params_.fluidEnthalpiesOutput_) {
-                this->resizePhaseBuffer_(fluidEnthalpies_);
+                this->resizePhaseBuffer_(fluidEnthalpies_, BufferType::Dof);
             }
         }
     }
@@ -170,19 +171,23 @@ public:
             }
 
             if (params_.rockInternalEnergyOutput_) {
-                this->commitScalarBuffer_(baseWriter, "volumetric internal energy rock", rockInternalEnergy_);
+                this->commitScalarBuffer_(baseWriter, "volumetric internal energy rock",
+                                          rockInternalEnergy_, BufferType::Dof);
             }
 
             if (params_.totalThermalConductivityOutput_) {
-                this->commitScalarBuffer_(baseWriter, "total thermal conductivity", totalThermalConductivity_);
+                this->commitScalarBuffer_(baseWriter, "total thermal conductivity",
+                                          totalThermalConductivity_, BufferType::Dof);
             }
 
             if (params_.fluidInternalEnergiesOutput_) {
-                this->commitPhaseBuffer_(baseWriter, "internal energy_%s", fluidInternalEnergies_);
+                this->commitPhaseBuffer_(baseWriter, "internal energy_%s",
+                                         fluidInternalEnergies_, BufferType::Dof);
             }
 
             if (params_.fluidEnthalpiesOutput_) {
-                this->commitPhaseBuffer_(baseWriter, "enthalpy_%s", fluidEnthalpies_);
+                this->commitPhaseBuffer_(baseWriter, "enthalpy_%s",
+                                         fluidEnthalpies_, BufferType::Dof);
             }
         }
     }

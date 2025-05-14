@@ -79,6 +79,7 @@ class VtkDiscreteFractureModule : public BaseOutputModule<TypeTag>
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
     using PhaseBuffer = typename ParentType::PhaseBuffer;
     using PhaseVectorBuffer = typename ParentType::PhaseVectorBuffer;
@@ -105,23 +106,23 @@ public:
     void allocBuffers() override
     {
         if (params_.saturationOutput_) {
-            this->resizePhaseBuffer_(fractureSaturation_);
+            this->resizePhaseBuffer_(fractureSaturation_, BufferType::Dof);
         }
         if (params_.mobilityOutput_) {
-            this->resizePhaseBuffer_(fractureMobility_);
+            this->resizePhaseBuffer_(fractureMobility_, BufferType::Dof);
         }
         if (params_.relativePermeabilityOutput_) {
-            this->resizePhaseBuffer_(fractureRelativePermeability_);
+            this->resizePhaseBuffer_(fractureRelativePermeability_, BufferType::Dof);
         }
 
         if (params_.porosityOutput_) {
-            this->resizeScalarBuffer_(fracturePorosity_);
+            this->resizeScalarBuffer_(fracturePorosity_, BufferType::Dof);
         }
         if (params_.intrinsicPermeabilityOutput_) {
-            this->resizeScalarBuffer_(fractureIntrinsicPermeability_);
+            this->resizeScalarBuffer_(fractureIntrinsicPermeability_, BufferType::Dof);
         }
         if (params_.volumeFractionOutput_) {
-            this->resizeScalarBuffer_(fractureVolumeFraction_);
+            this->resizeScalarBuffer_(fractureVolumeFraction_, BufferType::Dof);
         }
 
         if (params_.velocityOutput_) {
@@ -133,7 +134,7 @@ public:
                     fractureVelocity_[phaseIdx][dofIdx] = 0.0;
                 }
             }
-            this->resizePhaseBuffer_(fractureVelocityWeight_);
+            this->resizePhaseBuffer_(fractureVelocityWeight_, BufferType::Dof);
         }
     }
 
@@ -236,27 +237,33 @@ public:
         }
 
         if (params_.saturationOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "fractureSaturation_%s", fractureSaturation_);
+            this->commitPhaseBuffer_(baseWriter, "fractureSaturation_%s",
+                                     fractureSaturation_, BufferType::Dof);
         }
         if (params_.mobilityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "fractureMobility_%s", fractureMobility_);
+            this->commitPhaseBuffer_(baseWriter, "fractureMobility_%s",
+                                     fractureMobility_, BufferType::Dof);
         }
         if (params_.relativePermeabilityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "fractureRelativePerm_%s", fractureRelativePermeability_);
+            this->commitPhaseBuffer_(baseWriter, "fractureRelativePerm_%s",
+                                     fractureRelativePermeability_, BufferType::Dof);
         }
 
         if (params_.porosityOutput_) {
-            this->commitScalarBuffer_(baseWriter, "fracturePorosity", fracturePorosity_);
+            this->commitScalarBuffer_(baseWriter, "fracturePorosity",
+                                      fracturePorosity_, BufferType::Dof);
         }
         if (params_.intrinsicPermeabilityOutput_) {
-            this->commitScalarBuffer_(baseWriter, "fractureIntrinsicPerm", fractureIntrinsicPermeability_);
+            this->commitScalarBuffer_(baseWriter, "fractureIntrinsicPerm",
+                                      fractureIntrinsicPermeability_, BufferType::Dof);
         }
         if (params_.volumeFractionOutput_) {
             // divide the fracture volume by the total volume of the finite volumes
             for (unsigned I = 0; I < fractureVolumeFraction_.size(); ++I) {
                 fractureVolumeFraction_[I] /= this->simulator_.model().dofTotalVolume(I);
             }
-            this->commitScalarBuffer_(baseWriter, "fractureVolumeFraction", fractureVolumeFraction_);
+            this->commitScalarBuffer_(baseWriter, "fractureVolumeFraction",
+                                      fractureVolumeFraction_, BufferType::Dof);
         }
 
         if (params_.velocityOutput_) {

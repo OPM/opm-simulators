@@ -64,6 +64,7 @@ class VtkBlackOilMICPModule : public BaseOutputModule<TypeTag>
 
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
@@ -98,19 +99,19 @@ public:
             }
 
             if (params_.microbialConcentrationOutput_) {
-                this->resizeScalarBuffer_(microbialConcentration_);
+                this->resizeScalarBuffer_(microbialConcentration_, BufferType::Dof);
             }
             if (params_.oxygenConcentrationOutput_) {
-                this->resizeScalarBuffer_(oxygenConcentration_);
+                this->resizeScalarBuffer_(oxygenConcentration_, BufferType::Dof);
             }
             if (params_.ureaConcentrationOutput_) {
-                this->resizeScalarBuffer_(ureaConcentration_);
+                this->resizeScalarBuffer_(ureaConcentration_, BufferType::Dof);
             }
             if (params_.biofilmConcentrationOutput_) {
-                this->resizeScalarBuffer_(biofilmConcentration_);
+                this->resizeScalarBuffer_(biofilmConcentration_, BufferType::Dof);
             }
             if (params_.calciteConcentrationOutput_) {
-                this->resizeScalarBuffer_(calciteConcentration_);
+                this->resizeScalarBuffer_(calciteConcentration_, BufferType::Dof);
             }
         }
     }
@@ -170,23 +171,28 @@ public:
             }
 
             if (params_.microbialConcentrationOutput_) {
-                this->commitScalarBuffer_(baseWriter, "microbial concentration", microbialConcentration_);
+                this->commitScalarBuffer_(baseWriter, "microbial concentration",
+                                          microbialConcentration_, BufferType::Dof);
             }
 
             if (params_.oxygenConcentrationOutput_) {
-                this->commitScalarBuffer_(baseWriter, "oxygen concentration", oxygenConcentration_);
+                this->commitScalarBuffer_(baseWriter, "oxygen concentration",
+                                          oxygenConcentration_, BufferType::Dof);
             }
 
             if (params_.ureaConcentrationOutput_) {
-                this->commitScalarBuffer_(baseWriter, "urea concentration", ureaConcentration_);
+                this->commitScalarBuffer_(baseWriter, "urea concentration",
+                                          ureaConcentration_, BufferType::Dof);
             }
 
             if (params_.biofilmConcentrationOutput_) {
-                this->commitScalarBuffer_(baseWriter, "biofilm fraction", biofilmConcentration_);
+                this->commitScalarBuffer_(baseWriter, "biofilm fraction",
+                                          biofilmConcentration_, BufferType::Dof);
             }
 
             if (params_.calciteConcentrationOutput_) {
-                this->commitScalarBuffer_(baseWriter, "calcite fraction", calciteConcentration_);
+                this->commitScalarBuffer_(baseWriter, "calcite fraction",
+                                          calciteConcentration_, BufferType::Dof);
             }
         }
     }

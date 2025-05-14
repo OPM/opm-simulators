@@ -84,7 +84,7 @@ public:
     void allocBuffers() override
     {
         if (params_.temperatureOutput_) {
-            this->resizeScalarBuffer_(temperature_);
+            this->resizeScalarBuffer_(temperature_, ParentType::BufferType::Dof);
         }
     }
 
@@ -122,7 +122,8 @@ public:
         }
 
         if (params_.temperatureOutput_) {
-            this->commitScalarBuffer_(baseWriter, "temperature", temperature_);
+            this->commitScalarBuffer_(baseWriter, "temperature", temperature_,
+                                      ParentType::BufferType::Dof);
         }
     }
 
