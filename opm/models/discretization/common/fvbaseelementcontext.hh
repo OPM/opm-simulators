@@ -28,15 +28,18 @@
 #ifndef EWOMS_FV_BASE_ELEMENT_CONTEXT_HH
 #define EWOMS_FV_BASE_ELEMENT_CONTEXT_HH
 
-#include "fvbaseproperties.hh"
-
 #include <dune/common/fvector.hh>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/discretization/common/linearizationtype.hh>
 
 #include <opm/models/utils/alignedallocator.hh>
 
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <stdexcept>
 #include <vector>
 
 namespace Opm {
@@ -61,11 +64,10 @@ class FvBaseElementContext
     enum { timeDiscHistorySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
 
     struct DofStore_ {
-        IntensiveQuantities intensiveQuantities[timeDiscHistorySize];
-        const PrimaryVariables* priVars[timeDiscHistorySize];
-        const IntensiveQuantities *thermodynamicHint[timeDiscHistorySize];
+        std::array<IntensiveQuantities, timeDiscHistorySize> intensiveQuantities;
+        std::array<const PrimaryVariables*, timeDiscHistorySize> priVars;
+        std::array<const IntensiveQuantities*, timeDiscHistorySize> thermodynamicHint;
     };
-    using DofVarsVector = std::vector<DofStore_>;
     using ExtensiveQuantitiesVector = std::vector<ExtensiveQuantities>;
 
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -79,7 +81,6 @@ class FvBaseElementContext
     using Element = typename GridView::template Codim<0>::Entity;
 
     static const unsigned dimWorld = GridView::dimensionworld;
-    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
     using CoordScalar = typename GridView::ctype;
     using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
@@ -98,11 +99,9 @@ public:
         // remember the simulator object
         simulatorPtr_ = &simulator;
         enableStorageCache_ = Parameters::Get<Parameters::EnableStorageCache>();
-        stashedDofIdx_ = -1;
-        focusDofIdx_ = -1;
     }
 
-    static void *operator new(size_t size)
+    static void *operator new(std::size_t size)
     { return aligned_alloc(alignof(FvBaseElementContext), size); }
 
     static void operator delete(void *ptr)
@@ -184,14 +183,16 @@ public:
         if (!enableStorageCache_) {
             // if the storage cache is disabled, we need to calculate the storage term
             // from scratch, i.e. we need the intensive quantities of all of the history.
-            for (unsigned timeIdx = 0; timeIdx < timeDiscHistorySize; ++ timeIdx)
+            for (unsigned timeIdx = 0; timeIdx < timeDiscHistorySize; ++timeIdx) {
                 asImp_().updateIntensiveQuantities(timeIdx);
+            }
         }
-        else
+        else {
             // if the storage cache is enabled, we only need to recalculate the storage
             // term for the most recent point of history (i.e., for the current iterative
             // solution)
             asImp_().updateIntensiveQuantities(/*timeIdx=*/0);
+        }
     }
 
     /*!
@@ -243,7 +244,7 @@ public:
     {
         gradientCalculator_.prepare(/*context=*/asImp_(), timeIdx);
 
-        for (unsigned fluxIdx = 0; fluxIdx < numInteriorFaces(timeIdx); fluxIdx++) {
+        for (unsigned fluxIdx = 0; fluxIdx < numInteriorFaces(timeIdx); ++fluxIdx) {
             extensiveQuantities_[fluxIdx].update(/*context=*/asImp_(),
                                                  /*localIndex=*/fluxIdx,
                                                  timeIdx);
@@ -309,27 +310,27 @@ public:
     /*!
      * \brief Return the number of sub-control volumes of the current element.
      */
-    size_t numDof(unsigned timeIdx) const
+    std::size_t numDof(unsigned timeIdx) const
     { return stencil(timeIdx).numDof(); }
 
     /*!
      * \brief Return the number of primary degrees of freedom of the current element.
      */
-    size_t numPrimaryDof(unsigned timeIdx) const
+    std::size_t numPrimaryDof(unsigned timeIdx) const
     { return stencil(timeIdx).numPrimaryDof(); }
 
     /*!
      * \brief Return the number of non-boundary faces which need to be
      *        considered for the flux apporixmation.
      */
-    size_t numInteriorFaces(unsigned timeIdx) const
+    std::size_t numInteriorFaces(unsigned timeIdx) const
     { return stencil(timeIdx).numInteriorFaces(); }
 
     /*!
      * \brief Return the number of boundary faces which need to be
      *        considered for the flux apporixmation.
      */
-    size_t numBoundaryFaces(unsigned timeIdx) const
+    std::size_t numBoundaryFaces(unsigned timeIdx) const
     { return stencil(timeIdx).numBoundaryFaces(); }
 
     /*!
@@ -362,7 +363,6 @@ public:
      */
     unsigned globalSpaceIndex(unsigned dofIdx, unsigned timeIdx) const
     { return stencil(timeIdx).globalSpaceIndex(dofIdx); }
-
 
     /*!
      * \brief Return the element-local volume associated with a degree of freedom
@@ -411,9 +411,10 @@ public:
 #ifndef NDEBUG
         assert(dofIdx < numDof(timeIdx));
 
-        if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage())
+        if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage()) {
             throw std::logic_error("If caching of the storage term is enabled, only the intensive quantities "
                                    "for the most-recent substep (i.e. time index 0) are available!");
+        }
 #endif
 
         return dofVars_[dofIdx].intensiveQuantities[timeIdx];
@@ -432,6 +433,7 @@ public:
         assert(dofIdx < numDof(timeIdx));
         return dofVars_[dofIdx].thermodynamicHint[timeIdx];
     }
+
     /*!
      * \copydoc intensiveQuantities()
      */
@@ -545,13 +547,13 @@ protected:
      *
      * This method considers the intensive quantities cache.
      */
-    void updateIntensiveQuantities_(unsigned timeIdx, size_t numDof)
+    void updateIntensiveQuantities_(unsigned timeIdx, std::size_t numDof)
     {
         // update the intensive quantities for the whole history
         const SolutionVector& globalSol = model().solution(timeIdx);
 
         // update the non-gradient quantities
-        for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
+        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             unsigned globalIdx = globalSpaceIndex(dofIdx, timeIdx);
             const PrimaryVariables& dofSol = globalSol[globalIdx];
             dofVars_[dofIdx].priVars[timeIdx] = &dofSol;
@@ -575,9 +577,10 @@ protected:
     void updateSingleIntQuants_(const PrimaryVariables& priVars, unsigned dofIdx, unsigned timeIdx)
     {
 #ifndef NDEBUG
-        if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage())
+        if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage()) {
             throw std::logic_error("If caching of the storage term is enabled, only the intensive quantities "
                                    "for the most-recent substep (i.e. time index 0) are available!");
+        }
 #endif
 
         dofVars_[dofIdx].priVars[timeIdx] = &priVars;
@@ -589,17 +592,19 @@ protected:
 
     GradientCalculator gradientCalculator_;
 
-    std::vector<DofStore_, aligned_allocator<DofStore_, alignof(DofStore_)> > dofVars_;
-    std::vector<ExtensiveQuantities, aligned_allocator<ExtensiveQuantities, alignof(ExtensiveQuantities)> > extensiveQuantities_;
+    template<class T> using AlignedVector = std::vector<T, aligned_allocator<T, alignof(T)>>;
 
-    const Simulator *simulatorPtr_;
-    const Element *elemPtr_;
+    AlignedVector<DofStore_> dofVars_;
+    AlignedVector<ExtensiveQuantities> extensiveQuantities_;
+
+    const Simulator* simulatorPtr_{};
+    const Element* elemPtr_{};
     const GridView gridView_;
     Stencil stencil_;
 
-    int stashedDofIdx_;
-    int focusDofIdx_;
-    bool enableStorageCache_;
+    int stashedDofIdx_{-1};
+    int focusDofIdx_{-1};
+    bool enableStorageCache_{false};
 };
 
 } // namespace Opm
