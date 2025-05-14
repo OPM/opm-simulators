@@ -192,11 +192,6 @@ setCmodeGroup(const Group& group,
               GroupState<Scalar>& group_state)
 {
 
-    for (const std::string& groupName : group.groups()) {
-        setCmodeGroup(schedule.getGroup(groupName, reportStepIdx),
-                      schedule, summaryState, reportStepIdx, group_state);
-    }
-
     // use NONE as default control
     const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
     for (Phase phase : all) {
@@ -225,6 +220,28 @@ setCmodeGroup(const Group& group,
         && events.hasEvent(group.name(), ScheduleEvents::GROUP_PRODUCTION_UPDATE)) {
         const auto controls = group.productionControls(summaryState);
         group_state.update_production_control(group.name(), controls.cmode);
+        // Override the above update if FLD, and some other conditions are met.
+        if (controls.cmode == Group::ProductionCMode::FLD && group.name() != "FIELD") {
+            // Set control mode to be the one of the most immediate parent group
+            // with an actual (not NONE or FLD) mode set.
+            auto pname = group.parent();
+            while (group_state.has_production_control(pname) &&
+                   (group_state.production_control(pname) == Group::ProductionCMode::NONE
+                    || group_state.production_control(pname) == Group::ProductionCMode::FLD)) {
+                pname = schedule.getGroup(pname, reportStepIdx).parent();
+            }
+            if (group_state.has_production_control(pname)) {
+                auto parent_ctrl = group_state.production_control(pname);
+                if ((parent_ctrl == Group::ProductionCMode::ORAT && controls.oil_target > 0.0)
+                    || (parent_ctrl == Group::ProductionCMode::GRAT && controls.gas_target > 0.0)
+                    || (parent_ctrl == Group::ProductionCMode::WRAT && controls.water_target > 0.0)
+                    || (parent_ctrl == Group::ProductionCMode::LRAT && controls.liquid_target > 0.0)) {
+                    // The higher group (pname) has a production control,
+                    // and it is of a type for which this group has a limit.
+                    group_state.update_production_control(group.name(), parent_ctrl);
+                }
+            }
+        }
     }
 
     if (group.has_gpmaint_control(Group::ProductionCMode::RESV)) {
@@ -240,6 +257,12 @@ setCmodeGroup(const Group& group,
 
     if (schedule[reportStepIdx].gconsale().has(group.name())) {
         group_state.update_injection_control(group.name(), Phase::GAS, Group::InjectionCMode::SALE);
+    }
+
+    // Visit all subgroups.
+    for (const std::string& groupName : group.groups()) {
+        setCmodeGroup(schedule.getGroup(groupName, reportStepIdx),
+                      schedule, summaryState, reportStepIdx, group_state);
     }
 }
 
