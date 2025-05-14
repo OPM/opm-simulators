@@ -44,11 +44,11 @@
 
 #include <filesystem>
 #include <fstream>
-#include <list>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace Opm {
 /*!
@@ -531,14 +531,14 @@ private:
         // discard managed objects and the current VTK writer
         delete curWriter_;
         curWriter_ = nullptr;
-        while (managedScalarBuffers_.begin() != managedScalarBuffers_.end()) {
-            delete managedScalarBuffers_.front();
-            managedScalarBuffers_.pop_front();
+        for (auto& buffer : managedScalarBuffers_) {
+            delete buffer;
         }
-        while (managedVectorBuffers_.begin() != managedVectorBuffers_.end()) {
-            delete managedVectorBuffers_.front();
-            managedVectorBuffers_.pop_front();
+        managedScalarBuffers_.clear();
+        for (auto& buffer : managedVectorBuffers_) {
+            delete buffer;
         }
+        managedVectorBuffers_.clear();
     }
 
     const GridView gridView_;
@@ -558,8 +558,8 @@ private:
     std::string curOutFileName_;
     int curWriterNum_;
 
-    std::list<ScalarBuffer *> managedScalarBuffers_;
-    std::list<VectorBuffer *> managedVectorBuffers_;
+    std::vector<ScalarBuffer *> managedScalarBuffers_;
+    std::vector<VectorBuffer *> managedVectorBuffers_;
 
     TaskletRunner taskletRunner_;
 };
