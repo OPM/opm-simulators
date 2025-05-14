@@ -36,6 +36,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace Opm {
 
@@ -52,7 +53,7 @@ class VtkTensorFunction : public Dune::VTKFunction<GridView>
     using TensorBuffer = BaseOutputWriter::TensorBuffer;
 
 public:
-    VtkTensorFunction(std::string name,
+    VtkTensorFunction(std::string_view name,
                       const GridView& gridView,
                       const Mapper& mapper,
                       const TensorBuffer& buf,
