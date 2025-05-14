@@ -31,7 +31,7 @@ namespace Opm
 class DeferredLogger;
 template<class Scalar> class GroupState;
 class Schedule;
-template<typename FluidSystem, typename Indices, int numEq> class StandardWellEquations;
+template<typename FluidSystem, typename Indices> class StandardWellEquations;
 template<class FluidSystem, class Indices> class StandardWellPrimaryVariables;
 class SummaryState;
 template<typename FluidSystem, typename Indices> class WellInterfaceFluidSystem;
@@ -60,7 +60,7 @@ public:
                            const Well::ProductionControls& prod_controls,
                            const PrimaryVariables& primary_variables,
                            const Scalar rho,
-                           StandardWellEquations<FluidSystem, Indices, Indices::numEq>& eqns,
+                           StandardWellEquations<FluidSystem, Indices>& eqns,
                            const bool stopped_or_zero_target,
                            DeferredLogger& deferred_logger) const;
 
@@ -71,26 +71,26 @@ public:
                                const int wat_vel_index,
                                const int cell_idx,
                                const int numWellEq,
-                               StandardWellEquations<FluidSystem, Indices, Indices::numEq>& eqns) const;
+                               StandardWellEquations<FluidSystem, Indices>& eqns) const;
 
     //! \brief Assemble equation for a perforation.
     void assemblePerforationEq(const EvalWell& cq_s_effective,
                                const int componentIdx,
                                const int cell_idx,
                                const int numWellEq,
-                               StandardWellEquations<FluidSystem, Indices, Indices::numEq>& eqns) const;
+                               StandardWellEquations<FluidSystem, Indices>& eqns) const;
 
     //! \brief Assemble equation for Z fraction.
     void assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
                          const int cell_idx,
                          const int numWellEq,
-                         StandardWellEquations<FluidSystem, Indices, Indices::numEq>& eqns) const;
+                         StandardWellEquations<FluidSystem, Indices>& eqns) const;
 
     //! \brief Assemble a source term.
     void assembleSourceEq(const EvalWell& resWell_loc,
                           const int componentIdx,
                           const int numWellEq,
-                          StandardWellEquations<FluidSystem, Indices, Indices::numEq>& eqns) const;
+                          StandardWellEquations<FluidSystem, Indices>& eqns) const;
 
 private:
     const WellInterfaceFluidSystem<FluidSystem, Indices>& well_; //!< Reference to well

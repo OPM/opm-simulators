@@ -42,8 +42,8 @@
 namespace Opm
 {
 
-template<typename FluidSystem, typename Indices, int numEq>
-StandardWellEquations<FluidSystem, Indices, numEq>::
+template<typename FluidSystem, typename Indices>
+StandardWellEquations<FluidSystem, Indices>::
 StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
     : parallelB_(duneB_, parallel_well_info)
 {
@@ -52,8 +52,8 @@ StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
     invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::
 init(const int numWellEq,
      const int numPerfs,
      const std::vector<int>& cells)
@@ -117,8 +117,8 @@ init(const int numWellEq,
     cells_ = cells;
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::clear()
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::clear()
 {
     duneB_ = 0.0;
     duneC_ = 0.0;
@@ -126,8 +126,9 @@ void StandardWellEquations<FluidSystem, Indices,numEq>::clear()
     resWell_ = 0.0;
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::apply(const BVector& x, BVector& Ax) const
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::
+apply(const BVector& x, BVector& Ax) const
 {
     assert(Bx_.size() == duneB_.N());
     assert(invDrw_.size() == invDuneD_.N());
@@ -145,8 +146,8 @@ void StandardWellEquations<FluidSystem, Indices,numEq>::apply(const BVector& x, 
     duneC_.mmtv(invDBx, Ax);
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::apply(BVector& r) const
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::apply(BVector& r) const
 {
     assert(invDrw_.size() == invDuneD_.N());
 
@@ -156,8 +157,8 @@ void StandardWellEquations<FluidSystem, Indices,numEq>::apply(BVector& r) const
     duneC_.mmtv(invDrw_, r);
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::invert()
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::invert()
 {
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
@@ -171,20 +172,21 @@ void StandardWellEquations<FluidSystem, Indices,numEq>::invert()
     }
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::solve(BVectorWell& dx_well) const
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::solve(BVectorWell& dx_well) const
 {
     invDuneD_.mv(resWell_, dx_well);
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::solve(const BVectorWell& rhs_well, BVectorWell& x_well) const
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::
+solve(const BVectorWell& rhs_well, BVectorWell& x_well) const
 {
     invDuneD_.mv(rhs_well, x_well);
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
     BVectorWell resWell = resWell_;
@@ -195,8 +197,8 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 }
 
 #if COMPILE_GPU_BRIDGE
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::
 extract(const int numStaticWellEq,
         WellContributions<Scalar>& wellContribs) const
 {
@@ -250,9 +252,9 @@ extract(const int numStaticWellEq,
 }
 #endif
 
-template<typename FluidSystem, typename Indices, int numEq>
+template<typename FluidSystem, typename Indices>
 template<class SparseMatrixAdapter>
-void StandardWellEquations<FluidSystem, Indices,numEq>::
+void StandardWellEquations<FluidSystem, Indices>::
 extract(SparseMatrixAdapter& jacobian) const
 {
     // We need to change matrx A as follows
@@ -280,16 +282,16 @@ extract(SparseMatrixAdapter& jacobian) const
     }
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-unsigned int StandardWellEquations<FluidSystem, Indices,numEq>::
+template<typename FluidSystem, typename Indices>
+unsigned int StandardWellEquations<FluidSystem, Indices>::
 getNumBlocks() const
 {
     return duneB_.nonzeroes();
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
+template<typename FluidSystem, typename Indices>
 template<class PressureMatrix>
-void StandardWellEquations<FluidSystem, Indices,numEq>::
+void StandardWellEquations<FluidSystem, Indices>::
 extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
@@ -416,8 +418,8 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     }
 }
 
-template<typename FluidSystem, typename Indices, int numEq>
-void StandardWellEquations<FluidSystem, Indices,numEq>::
+template<typename FluidSystem, typename Indices>
+void StandardWellEquations<FluidSystem, Indices>::
 sumDistributed(Parallel::Communication comm)
 {
   // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
