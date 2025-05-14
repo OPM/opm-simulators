@@ -155,7 +155,7 @@ public:
         const auto& fractureMapper = elemCtx.simulator().vanguard().fractureMapper();
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             if (!fractureMapper.isFractureVertex(I)) {
                 continue;
             }
@@ -198,19 +198,19 @@ public:
             for (unsigned scvfIdx = 0; scvfIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ scvfIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
 
-                unsigned i = extQuants.interiorIndex();
-                unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+                const unsigned i = extQuants.interiorIndex();
+                const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
 
-                unsigned j = extQuants.exteriorIndex();
-                unsigned J = elemCtx.globalSpaceIndex(j, /*timeIdx=*/0);
+                const unsigned j = extQuants.exteriorIndex();
+                const unsigned J = elemCtx.globalSpaceIndex(j, /*timeIdx=*/0);
 
                 if (!fractureMapper.isFractureEdge(I, J)) {
                     continue;
                 }
 
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    Scalar weight =
-                        std::max<Scalar>(1e-16, std::abs(extQuants.fractureVolumeFlux(phaseIdx)));
+                    Scalar weight = std::max(Scalar{1e-16},
+                                             std::abs(extQuants.fractureVolumeFlux(phaseIdx)));
                     Opm::Valgrind::CheckDefined(extQuants.extrusionFactor());
                     assert(extQuants.extrusionFactor() > 0);
                     weight *= extQuants.extrusionFactor();
