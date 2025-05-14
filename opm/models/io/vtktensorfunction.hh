@@ -34,6 +34,7 @@
 
 #include <opm/models/io/baseoutputwriter.hh>
 
+#include <cstddef>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -77,10 +78,10 @@ public:
                     const Element& e,
                     const Dune::FieldVector<ctype, dim>& xi) const override
     {
-        size_t idx;
+        std::size_t idx;
         if (codim_ == 0) {
             // cells. map element to the index
-            idx = static_cast<size_t>(mapper_.index(e));
+            idx = static_cast<std::size_t>(mapper_.index(e));
         }
         else if (codim_ == dim) {
             // find vertex which is closest to xi in local
@@ -101,7 +102,7 @@ public:
             }
 
             // map vertex to an index
-            idx = static_cast<size_t>(mapper_.subIndex(e, imin, codim_));
+            idx = static_cast<std::size_t>(mapper_.subIndex(e, imin, codim_));
         }
         else {
             throw std::logic_error("Only element and vertex based tensor fields are supported so far.");
