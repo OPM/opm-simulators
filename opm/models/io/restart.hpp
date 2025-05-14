@@ -123,10 +123,7 @@ public:
     template <int codim, class Serializer, class GridView>
     void serializeEntities(Serializer& serializer, const GridView& gridView)
     {
-        std::ostringstream oss;
-        oss << "Entities: Codim " << codim;
-        std::string cookie = oss.str();
-        serializeSectionBegin(cookie);
+        serializeSectionBegin("Entities: Codim " + std::to_string(codim));
 
         for (const auto& entity : entities(gridView, Dune::Codim<codim>())) {
             serializer.serializeEntity(outStream_, entity);
@@ -179,10 +176,7 @@ public:
     template <int codim, class Deserializer, class GridView>
     void deserializeEntities(Deserializer& deserializer, const GridView& gridView)
     {
-        std::ostringstream oss;
-        oss << "Entities: Codim " << codim;
-        std::string cookie = oss.str();
-        deserializeSectionBegin(cookie);
+        deserializeSectionBegin("Entities: Codim " + std::to_string(codim));
 
         std::string curLine;
 
