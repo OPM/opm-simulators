@@ -65,7 +65,7 @@ public:
                                           prm.get_child_optional("finesmoother") ?
                                           prm.get_child("finesmoother") : Opm::PropertyTree(),
                                           std::function<VectorType()>(), pressureIndex)),
-        //levelTransferPolicy_(dummy_comm_, weights_, prm, pressureIndex),
+        levelTransferPolicy_(dummy_comm_, weights_, prm, pressureIndex),
         coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree()),
         //, twolevel_method_(linearoperator,
         //                   finesmoother_,
@@ -142,7 +142,7 @@ private:
     std::function<VectorType()> weightsCalculator_;
     VectorType weights_;
     std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>> finesmoother_;
-    //LevelTransferPolicy levelTransferPolicy_;
+    LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
     //TwoLevelMethod twolevel_method_;
     Opm::PropertyTree prm_;
