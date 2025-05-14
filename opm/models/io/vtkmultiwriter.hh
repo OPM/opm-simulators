@@ -420,10 +420,9 @@ public:
 
             if (fileLen > 0) {
                 std::ifstream multiFileIn(multiFileName_.c_str());
-                char *tmp = new char[fileLen];
-                multiFileIn.read(tmp, static_cast<long>(fileLen));
-                res.serializeStream().write(tmp, fileLen);
-                delete[] tmp;
+                std::vector<char> tmp(fileLen);
+                multiFileIn.read(tmp.data(), static_cast<long>(fileLen));
+                res.serializeStream().write(tmp.data(), fileLen);
             }
         }
 
@@ -455,10 +454,9 @@ public:
             if (fileLen > 0) {
                 multiFile_.open(multiFileName_.c_str());
 
-                char *tmp = new char[fileLen];
-                res.deserializeStream().read(tmp, fileLen);
-                multiFile_.write(tmp, fileLen);
-                delete[] tmp;
+                std::vector<char> tmp(fileLen);
+                res.deserializeStream().read(tmp.data(), fileLen);
+                multiFile_.write(tmp.data(), fileLen);
             }
 
             multiFile_.seekp(filePos);
