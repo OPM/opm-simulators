@@ -81,7 +81,7 @@ class VtkMultiPhaseModule : public BaseOutputModule<TypeTag>
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using DiscBaseOutputModule = GetPropType<TypeTag, Properties::DiscBaseOutputModule>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { dimWorld = GridView::dimensionworld };
@@ -238,7 +238,7 @@ public:
 
         if (params_.potentialGradientOutput_) {
             // calculate velocities if requested
-            for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ faceIdx) {
+            for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++faceIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, /*timeIdx=*/0);
 
                 const unsigned i = extQuants.interiorIndex();
@@ -252,7 +252,7 @@ public:
                     const auto& inputPGrad = extQuants.potentialGrad(phaseIdx);
                     DimVector pGrad;
                     for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-                        pGrad[dimIdx] = getValue(inputPGrad[dimIdx])*weight;
+                        pGrad[dimIdx] = getValue(inputPGrad[dimIdx]) * weight;
                     }
                     potentialGradient_[phaseIdx][I] += pGrad;
                 } // end for all phases
@@ -261,7 +261,7 @@ public:
 
         if (params_.velocityOutput_) {
             // calculate velocities if requested
-            for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ faceIdx) {
+            for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++faceIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, /*timeIdx=*/0);
 
                 const unsigned i = extQuants.interiorIndex();
@@ -385,7 +385,7 @@ public:
      * returning true here does not do any harm from the correctness perspective, but it
      * slows down writing the output fields.
      */
-    bool needExtensiveQuantities() const final
+    bool needExtensiveQuantities() const override
     {
         return params_.velocityOutput_ || params_.potentialGradientOutput_;
     }
