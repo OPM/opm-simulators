@@ -88,7 +88,19 @@ struct StandardPreconditioners<Operator,
                 return std::make_shared<GPUDILU>(op.getmat(), cpuMatrix, split_matrix, tune_gpu_kernels, mixed_precision_scheme);
             });
         });
+
+        F::addCreator("CPR", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
+            if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
+                OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+            }
+            using Scalar = typename V::field_type;
+            using GpuVector = gpuistl::GpuVector<Scalar>;
+            using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
+            using GpuOwningTwoLevelPreconditioner = typename gpuistl::GpuOwningTwoLevelPreconditioner<O, GpuVector, LevelTransferPolicy>;
+            return std::make_shared<GpuOwningTwoLevelPreconditioner>(op, prm, weightsCalculator, pressureIndex);
+        });
     }
+
 
 private:
 
