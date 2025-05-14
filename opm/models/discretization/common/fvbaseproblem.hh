@@ -791,7 +791,7 @@ public:
         defaultVtkWriter_->beginWrite(t);
         model().prepareOutputFields();
         model().appendOutputFields(*defaultVtkWriter_);
-        defaultVtkWriter_->endWrite();
+        defaultVtkWriter_->endWrite(false);
     }
 
     /*!

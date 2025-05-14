@@ -382,7 +382,7 @@ public:
      * the onlyDiscard argument is true. In this case only all managed
      * buffers are deleted, but no output is written.
      */
-    void endWrite(bool onlyDiscard = false) override
+    void endWrite(bool onlyDiscard) override
     {
         if (!onlyDiscard) {
             auto tasklet = std::make_shared<WriteDataTasklet>(*this);

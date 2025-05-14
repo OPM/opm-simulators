@@ -97,7 +97,7 @@ public:
      * the onlyDiscard argument is true. In this case only all managed
      * buffers are deleted, but no output is written.
      */
-    virtual void endWrite(bool onlyDiscard = false) = 0;
+    virtual void endWrite(bool onlyDiscard) = 0;
 };
 
 } // namespace Opm

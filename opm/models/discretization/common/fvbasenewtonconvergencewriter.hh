@@ -135,7 +135,7 @@ public:
      *        Newton algorithm has been completed.
      */
     void endIteration()
-    { vtkMultiWriter_->endWrite(); }
+    { vtkMultiWriter_->endWrite(false); }
 
     /*!
      * \brief Called by the Newton method after Newton algorithm
