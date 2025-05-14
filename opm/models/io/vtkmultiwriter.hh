@@ -72,14 +72,16 @@ class VtkMultiWriter : public BaseOutputWriter
         {
             std::string fileName;
             // write the actual data as vtu or vtp (plus the pieces file in the parallel case)
-            if (multiWriter_.commSize_ > 1)
+            if (multiWriter_.commSize_ > 1) {
                 fileName = multiWriter_.curWriter_->pwrite(/*name=*/multiWriter_.curOutFileName_,
                                                            /*path=*/multiWriter_.outputDir_,
                                                            /*extendPath=*/"",
                                                            static_cast<Dune::VTK::OutputType>(vtkFormat));
-            else
+            }
+            else {
                 fileName = multiWriter_.curWriter_->write(/*name=*/multiWriter_.outputDir_ + "/" + multiWriter_.curOutFileName_,
                                                           static_cast<Dune::VTK::OutputType>(vtkFormat));
+            }
 
             // determine name to write into the multi-file for the
             // current time step
@@ -129,8 +131,9 @@ public:
 
         simName_ = (simName.empty()) ? "sim" : simName;
         multiFileName_ = multiFileName;
-        if (multiFileName_.empty())
+        if (multiFileName_.empty()) {
             multiFileName_ = outputDir_+"/"+simName_+".pvd";
+        }
 
         commRank_ = gridView.comm().rank();
         commSize_ = gridView.comm().size();
@@ -142,8 +145,9 @@ public:
         releaseBuffers_();
         finishMultiFile_();
 
-        if (commRank_ == 0)
+        if (commRank_ == 0) {
             multiFile_.close();
+        }
     }
 
     /*!
@@ -384,8 +388,9 @@ public:
             auto tasklet = std::make_shared<WriteDataTasklet>(*this);
             taskletRunner_.dispatch(tasklet);
         }
-        else
+        else {
             --curWriterNum_;
+        }
 
         // temporarily write the closing XML mumbo-jumbo to the mashup
         // file so that the data set can be loaded even if the
@@ -445,8 +450,9 @@ public:
             std::streamsize fileLen;
             res.deserializeStream() >> fileLen >> filePos;
             std::getline(res.deserializeStream(), dummy);
-            if (multiFile_.is_open())
+            if (multiFile_.is_open()) {
                 multiFile_.close();
+            }
 
             if (fileLen > 0) {
                 multiFile_.open(multiFileName_.c_str());
