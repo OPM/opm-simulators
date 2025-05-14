@@ -45,6 +45,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 
 namespace Opm {
@@ -150,7 +151,7 @@ public:
         }
 
         if (params_.velocityOutput_) {
-            size_t nDof = this->simulator_.model().numGridDof();
+            const std::size_t nDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 velocity_[phaseIdx].resize(nDof);
                 for (unsigned dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
@@ -162,7 +163,7 @@ public:
         }
 
         if (params_.potentialGradientOutput_) {
-            size_t nDof = this->simulator_.model().numGridDof();
+            const std::size_t nDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 potentialGradient_[phaseIdx].resize(nDof);
                 for (unsigned dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
@@ -343,8 +344,7 @@ public:
         }
 
         if (params_.velocityOutput_) {
-            size_t numDof = this->simulator_.model().numGridDof();
-
+            const std::size_t numDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 // first, divide the velocity field by the
                 // respective finite volume's surface area
@@ -360,8 +360,7 @@ public:
         }
 
         if (params_.potentialGradientOutput_) {
-            size_t numDof = this->simulator_.model().numGridDof();
-
+            const std::size_t numDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 // first, divide the velocity field by the
                 // respective finite volume's surface area
