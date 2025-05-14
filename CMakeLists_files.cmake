@@ -230,20 +230,20 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/SingleWellState.cpp
   opm/simulators/wells/StandardWellAssemble.cpp
   opm/simulators/wells/StandardWellConnections.cpp
-  opm/simulators/wells/StandardWellEquations.cpp
+#  opm/simulators/wells/StandardWellEquations.cpp
   opm/simulators/wells/StandardWellEval.cpp
   opm/simulators/wells/StandardWellPrimaryVariables.cpp
   opm/simulators/wells/TargetCalculator.cpp
   opm/simulators/wells/VFPHelpers.cpp
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/VFPProdProperties.cpp
-  opm/simulators/wells/WellAssemble.cpp
-  opm/simulators/wells/WellBhpThpCalculator.cpp
+#  opm/simulators/wells/WellAssemble.cpp
+#  opm/simulators/wells/WellBhpThpCalculator.cpp
   opm/simulators/wells/WellConstraints.cpp
   opm/simulators/wells/WellConvergence.cpp
   opm/simulators/wells/WellFilterCake.cpp
   opm/simulators/wells/WellGroupConstraints.cpp
-  opm/simulators/wells/WellGroupControls.cpp
+#  opm/simulators/wells/WellGroupControls.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
   opm/simulators/wells/WellHelpers.cpp
   opm/simulators/wells/WellInterfaceFluidSystem.cpp
