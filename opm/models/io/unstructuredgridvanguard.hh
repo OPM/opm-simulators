@@ -72,15 +72,13 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
 
         const char* c_str = gridFileName.c_str();
 
-        UnstructuredGrid* grid = read_grid(c_str);
-        if (grid == nullptr) {
-            std::string msg =
-                "RuntimeError: UnstructuredGridVanguard could not read grid file: " +
-                gridFileName + ". Are you sure the filename is correct?";
-            throw std::runtime_error(msg);
+        UnstructuredGrid* ugrid = read_grid(gridFileName.c_str());
+        if (ugrid == nullptr) {
+            throw std::runtime_error("RuntimeError: UnstructuredGridVanguard could not read grid file: " +
+                                     gridFileName + ". Are you sure the filename is correct?");
         }
-        ugPtr_.reset(std::move( grid ));
-        //GridPointer polygrid( new Grid(*ugPtr) );
+        ugPtr_.reset(std::move(ugrid));
+        //GridPointer polygrid(new Grid(*ugPtr));
         gridPtr_ = new Grid(*ugPtr_);//std::move(polygrid);
         if (numRefinments > 0) {
             gridPtr_->globalRefine(static_cast<int>(numRefinments));
