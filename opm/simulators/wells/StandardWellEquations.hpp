@@ -35,14 +35,14 @@ namespace Opm
 {
 
 template<class Scalar> class ParallelWellInfo;
-template<typename FluidSystem, typename Indices, int numEq> class StandardWellEquationAccess;
+template<typename FluidSystem, typename Indices> class StandardWellEquationAccess;
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
 #endif
 template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
 template<typename FluidSystem, typename Indices> class WellState;
 
-template<typename FluidSystem, typename Indices, int numEq>
+template<typename FluidSystem, typename Indices>
 class StandardWellEquations
 {
 public:
@@ -62,6 +62,8 @@ public:
     // the matrix type for the non-diagonal matrix B and C^T
     using OffDiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
+
+    static constexpr int numEq = Indices::numEq;
 
     // block vector type
     using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
@@ -131,7 +133,7 @@ public:
     }
 
 private:
-    friend class StandardWellEquationAccess<FluidSystem, Indices, numEq>;
+    friend class StandardWellEquationAccess<FluidSystem, Indices>;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
