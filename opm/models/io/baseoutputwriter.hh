@@ -28,12 +28,13 @@
 #ifndef EWOMS_BASE_OUTPUT_WRITER_HH
 #define EWOMS_BASE_OUTPUT_WRITER_HH
 
-#include <dune/common/dynvector.hh>
 #include <dune/common/dynmatrix.hh>
+#include <dune/common/dynvector.hh>
 
 #include <vector>
 
 namespace Opm {
+
 /*!
  * \brief The base class for all output writers.
  *
@@ -44,17 +45,13 @@ class BaseOutputWriter
 {
 public:
     using Scalar = double;
-    using Vector = Dune::DynamicVector<double>;
     using Tensor = Dune::DynamicMatrix<double>;
+    using Vector = Dune::DynamicVector<double>;
     using ScalarBuffer = std::vector<Scalar>;
-    using VectorBuffer = std::vector<Vector>;
     using TensorBuffer = std::vector<Tensor>;
+    using VectorBuffer = std::vector<Vector>;
 
-    BaseOutputWriter()
-    {}
-
-    virtual ~BaseOutputWriter()
-    {}
+    virtual ~BaseOutputWriter() = default;
 
     /*!
      * \brief Called when ever a new time step or a new grid
@@ -101,6 +98,7 @@ public:
      */
     virtual void endWrite(bool onlyDiscard = false) = 0;
 };
+
 } // namespace Opm
 
 #endif
