@@ -66,10 +66,10 @@ class VtkDiffusionModule : public BaseOutputModule<TypeTag>
     using Toolbox = MathToolbox<Evaluation>;
 
     using BufferType = typename ParentType::BufferType;
-    using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
     using PhaseBuffer = typename ParentType::PhaseBuffer;
+    using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -118,7 +118,7 @@ public:
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -144,8 +144,7 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
