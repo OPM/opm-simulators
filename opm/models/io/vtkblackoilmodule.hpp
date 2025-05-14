@@ -152,39 +152,40 @@ public:
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& fs = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState();
             using FluidState = std::remove_const_t<std::remove_reference_t<decltype(fs)>>;
-            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
             const auto& primaryVars = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0);
 
-            unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
-            Scalar SoMax = 0.0;
-            if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                SoMax = std::max(getValue(fs.saturation(oilPhaseIdx)),
-                               elemCtx.problem().maxOilSaturation(globalDofIdx));
+            const unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
+            const Scalar SoMax =
+                FluidSystem::phaseIsActive(oilPhaseIdx)
+                    ? std::max(getValue(fs.saturation(oilPhaseIdx)),
+                               elemCtx.problem().maxOilSaturation(globalDofIdx))
+                    : 0.0;
 
             if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                Scalar x_oG = getValue(fs.moleFraction(oilPhaseIdx, gasCompIdx));
-                Scalar x_gO = getValue(fs.moleFraction(gasPhaseIdx, oilCompIdx));
-                Scalar X_oG = getValue(fs.massFraction(oilPhaseIdx, gasCompIdx));
-                Scalar X_gO = getValue(fs.massFraction(gasPhaseIdx, oilCompIdx));
-                Scalar Rs = FluidSystem::convertXoGToRs(X_oG, pvtRegionIdx);
-                Scalar Rv = FluidSystem::convertXgOToRv(X_gO, pvtRegionIdx);
+                const Scalar x_oG = getValue(fs.moleFraction(oilPhaseIdx, gasCompIdx));
+                const Scalar x_gO = getValue(fs.moleFraction(gasPhaseIdx, oilCompIdx));
+                const Scalar X_oG = getValue(fs.massFraction(oilPhaseIdx, gasCompIdx));
+                const Scalar X_gO = getValue(fs.massFraction(gasPhaseIdx, oilCompIdx));
+                const Scalar Rs = FluidSystem::convertXoGToRs(X_oG, pvtRegionIdx);
+                const Scalar Rv = FluidSystem::convertXgOToRv(X_gO, pvtRegionIdx);
 
-                Scalar RsSat =
+                const Scalar RsSat =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs,
                                                                                          oilPhaseIdx,
                                                                                          pvtRegionIdx,
                                                                                          SoMax);
-                Scalar X_oG_sat = FluidSystem::convertRsToXoG(RsSat, pvtRegionIdx);
-                Scalar x_oG_sat = FluidSystem::convertXoGToxoG(X_oG_sat, pvtRegionIdx);
+                const Scalar X_oG_sat = FluidSystem::convertRsToXoG(RsSat, pvtRegionIdx);
+                const Scalar x_oG_sat = FluidSystem::convertXoGToxoG(X_oG_sat, pvtRegionIdx);
 
-                Scalar RvSat =
+                const Scalar RvSat =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs,
                                                                                          gasPhaseIdx,
                                                                                          pvtRegionIdx,
                                                                                          SoMax);
-                Scalar X_gO_sat = FluidSystem::convertRvToXgO(RvSat, pvtRegionIdx);
-                Scalar x_gO_sat = FluidSystem::convertXgOToxgO(X_gO_sat, pvtRegionIdx);
+                const Scalar X_gO_sat = FluidSystem::convertRvToXgO(RvSat, pvtRegionIdx);
+                const Scalar x_gO_sat = FluidSystem::convertXgOToxgO(X_gO_sat, pvtRegionIdx);
                 if (params_.gasDissolutionFactorOutput_) {
                     gasDissolutionFactor_[globalDofIdx] = Rs;
                 }
