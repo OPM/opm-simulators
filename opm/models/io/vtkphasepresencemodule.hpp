@@ -58,7 +58,6 @@ class VtkPhasePresenceModule : public BaseOutputModule<TypeTag>
 
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
-
 public:
     explicit VtkPhasePresenceModule(const Simulator& simulator)
         : ParentType(simulator)
@@ -97,8 +96,8 @@ public:
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
             // calculate the phase presence
-            int phasePresence = elemCtx.primaryVars(i, /*timeIdx=*/0).phasePresence();
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const int phasePresence = elemCtx.primaryVars(i, /*timeIdx=*/0).phasePresence();
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
 
             if (params_.phasePresenceOutput_) {
                 phasePresence_[I] = phasePresence;
@@ -111,8 +110,7 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
