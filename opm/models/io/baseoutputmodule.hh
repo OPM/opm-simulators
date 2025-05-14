@@ -372,7 +372,7 @@ protected:
                                      BufferType bufferType)
     {
         char name[512];
-        for (unsigned i= 0; i < numPhases; ++i) {
+        for (unsigned i = 0; i < numPhases; ++i) {
             for (unsigned j = 0; j < numComponents; ++j) {
                 snprintf(name, 512, pattern,
                          FluidSystem::phaseName(i).data(),
