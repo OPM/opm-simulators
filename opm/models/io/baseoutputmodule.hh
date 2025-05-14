@@ -166,7 +166,7 @@ protected:
     void resizeTensorBuffer_(TensorBuffer& buffer, BufferType bufferType)
     {
         buffer.resize(this->getBufferSize(bufferType));
-        Tensor nullMatrix(dimWorld, dimWorld, 0.0);
+        const Tensor nullMatrix(dimWorld, dimWorld, 0.0);
         std::fill(buffer.begin(), buffer.end(), nullMatrix);
     }
 
@@ -308,7 +308,7 @@ protected:
     {
         char name[512];
         for (unsigned i = 0; i < numEq; ++i) {
-            std::string eqName = simulator_.model().primaryVarName(i);
+            const std::string eqName = simulator_.model().primaryVarName(i);
             snprintf(name, 512, pattern, eqName.c_str());
 
             this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
