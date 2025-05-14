@@ -44,7 +44,6 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -326,9 +325,7 @@ protected:
     {
         char name[512];
         for (unsigned i = 0; i < numEq; ++i) {
-            std::ostringstream oss;
-            oss << i;
-            snprintf(name, 512, pattern, oss.str().c_str());
+            snprintf(name, 512, pattern, std::to_string(i).c_str());
 
             this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
         }
