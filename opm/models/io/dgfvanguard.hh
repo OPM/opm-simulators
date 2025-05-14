@@ -89,8 +89,9 @@ public:
             gridPtr_.reset( dgfPointer.release() );
         }
 
-        if (numRefinments > 0)
+        if (numRefinments > 0) {
             gridPtr_->globalRefine(static_cast<int>(numRefinments));
+        }
 
         this->finalizeInit_();
     }
@@ -139,8 +140,9 @@ protected:
         using LevelGridView = typename Grid::LevelGridView;
 
         // check if fractures are available (only 2d currently)
-        if (dgfPointer.nofParameters(static_cast<int>(Grid::dimension)) == 0)
+        if (dgfPointer.nofParameters(static_cast<int>(Grid::dimension)) == 0) {
             return;
+        }
 
         LevelGridView gridView = dgfPointer->levelGridView(/*level=*/0);
         const unsigned edgeCodim = Grid::dimension - 1;
@@ -166,15 +168,17 @@ protected:
                     const auto vertex = element.template subEntity<Grid::dimension>(localVx);
 
                     // if vertex has parameter 1 insert as a fracture vertex
-                    if (dgfPointer.parameters( vertex )[ 0 ] > 0)
+                    if (dgfPointer.parameters(vertex)[0] > 0) {
                         vertexIndices.push_back(
                             static_cast<unsigned>(vertexMapper.subIndex(element,
                                                                         static_cast<int>(localVx),
                                                                         Grid::dimension)));
+                    }
                 }
                 // if 2 vertices have been found with flag 1 insert a fracture edge
-                if (static_cast<int>(vertexIndices.size()) == Grid::dimension)
+                if (static_cast<int>(vertexIndices.size()) == Grid::dimension) {
                     fractureMapper_.addFractureEdge(vertexIndices[0], vertexIndices[1]);
+                }
             }
         }
     }
