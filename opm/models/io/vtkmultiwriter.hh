@@ -526,7 +526,7 @@ private:
     const int commRank_; // rank of the current process in the communicator
 
     std::unique_ptr<VtkWriter> curWriter_;
-    double curTime_;
+    double curTime_{};
     std::string curOutFileName_;
     int curWriterNum_;
 
