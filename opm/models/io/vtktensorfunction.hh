@@ -107,8 +107,8 @@ public:
             throw std::logic_error("Only element and vertex based tensor fields are supported so far.");
         }
 
-        unsigned i = static_cast<unsigned>(mycomp);
-        unsigned j = static_cast<unsigned>(matrixColumnIdx_);
+        const unsigned i = static_cast<unsigned>(mycomp);
+        const unsigned j = static_cast<unsigned>(matrixColumnIdx_);
 
         return static_cast<double>(static_cast<float>(buf_[idx][i][j]));
     }
@@ -118,8 +118,8 @@ private:
     const GridView gridView_;
     const Mapper& mapper_;
     const TensorBuffer& buf_;
-    unsigned codim_;
-    unsigned matrixColumnIdx_;
+    const unsigned codim_;
+    const unsigned matrixColumnIdx_;
 };
 
 } // namespace Opm
