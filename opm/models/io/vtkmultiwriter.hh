@@ -111,7 +111,6 @@ public:
     using TensorBuffer = BaseOutputWriter::TensorBuffer;
 
     using VtkWriter = Dune::VTKWriter<GridView>;
-    using FunctionPtr = std::shared_ptr< Dune::VTKFunction< GridView > >;
 
     VtkMultiWriter(bool asyncWriting,
                    const GridView& gridView,
@@ -238,12 +237,11 @@ public:
         sanitizeScalarBuffer_(buf);
 
         using VtkFn = VtkScalarFunction<GridView, VertexMapper>;
-        FunctionPtr fnPtr(new VtkFn(name,
-                                    gridView_,
-                                    vertexMapper_,
-                                    buf,
-                                    /*codim=*/dim));
-        curWriter_->addVertexData(fnPtr);
+        curWriter_->addVertexData(std::make_shared<VtkFn>(name,
+                                                          gridView_,
+                                                          vertexMapper_,
+                                                          buf,
+                                                          /*codim=*/dim));
     }
 
     /*!
@@ -266,12 +264,11 @@ public:
         sanitizeScalarBuffer_(buf);
 
         using VtkFn = VtkScalarFunction<GridView, ElementMapper>;
-        FunctionPtr fnPtr(new VtkFn(name,
-                                    gridView_,
-                                    elementMapper_,
-                                    buf,
-                                    /*codim=*/0));
-        curWriter_->addCellData(fnPtr);
+        curWriter_->addCellData(std::make_shared<VtkFn>(name,
+                                                        gridView_,
+                                                        elementMapper_,
+                                                        buf,
+                                                        /*codim=*/0));
     }
 
     /*!
@@ -295,12 +292,11 @@ public:
         sanitizeVectorBuffer_(buf);
 
         using VtkFn = VtkVectorFunction<GridView, VertexMapper>;
-        FunctionPtr fnPtr(new VtkFn(name,
-                                    gridView_,
-                                    vertexMapper_,
-                                    buf,
-                                    /*codim=*/dim));
-        curWriter_->addVertexData(fnPtr);
+        curWriter_->addVertexData(std::make_shared<VtkFn>(name,
+                                                          gridView_,
+                                                          vertexMapper_,
+                                                          buf,
+                                                          /*codim=*/dim));
     }
 
     /*!
@@ -313,14 +309,12 @@ public:
         for (unsigned colIdx = 0; colIdx < buf[0].N(); ++colIdx) {
             std::ostringstream oss;
             oss << name <<  "[" << colIdx << "]";
-
-            FunctionPtr fnPtr(new VtkFn(oss.str(),
-                                        gridView_,
-                                        vertexMapper_,
-                                        buf,
-                                        /*codim=*/dim,
-                                        colIdx));
-            curWriter_->addVertexData(fnPtr);
+            curWriter_->addVertexData(std::make_shared<VtkFn>(oss.str(),
+                                                              gridView_,
+                                                              vertexMapper_,
+                                                              buf,
+                                                              /*codim=*/dim,
+                                                              colIdx));
         }
     }
 
@@ -344,12 +338,11 @@ public:
         sanitizeVectorBuffer_(buf);
 
         using VtkFn = VtkVectorFunction<GridView, ElementMapper>;
-        FunctionPtr fnPtr(new VtkFn(name,
-                                    gridView_,
-                                    elementMapper_,
-                                    buf,
-                                    /*codim=*/0));
-        curWriter_->addCellData(fnPtr);
+        curWriter_->addCellData(std::make_shared<VtkFn>(name,
+                                                        gridView_,
+                                                        elementMapper_,
+                                                        buf,
+                                                        /*codim=*/0));
     }
 
     /*!
@@ -362,14 +355,12 @@ public:
         for (unsigned colIdx = 0; colIdx < buf[0].N(); ++colIdx) {
             std::ostringstream oss;
             oss << name <<  "[" << colIdx << "]";
-
-            FunctionPtr fnPtr(new VtkFn(oss.str(),
-                                        gridView_,
-                                        elementMapper_,
-                                        buf,
-                                        /*codim=*/0,
-                                        colIdx));
-            curWriter_->addCellData(fnPtr);
+            curWriter_->addCellData(std::make_shared<VtkFn>(oss.str(),
+                                                            gridView_,
+                                                            elementMapper_,
+                                                            buf,
+                                                            /*codim=*/0,
+                                                            colIdx));
         }
     }
 
