@@ -103,9 +103,9 @@ void registerAdaptiveParameters()
     Parameters::Register<Parameters::TimeStepControl>
         ("The algorithm used to determine time-step sizes. "
          "Valid options are: "
-         "'pid' (default), "
+         "'pid', "
          "'pid+iteration', "
-         "'pid+newtoniteration', "
+         "'pid+newtoniteration' (default), "
          "'iterationcount', "
         "'newtoniterationcount' "
         "and 'hardcoded'");
