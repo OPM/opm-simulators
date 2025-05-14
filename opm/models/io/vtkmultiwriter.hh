@@ -28,31 +28,27 @@
 #ifndef EWOMS_VTK_MULTI_WRITER_HH
 #define EWOMS_VTK_MULTI_WRITER_HH
 
-#include "vtkscalarfunction.hh"
-#include "vtkvectorfunction.hh"
-#include "vtktensorfunction.hh"
-
-#include <opm/models/io/baseoutputwriter.hh>
-#include <opm/models/parallel/tasklets.hpp>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/istl/bvector.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
-#include <dune/istl/bvector.hh>
-#include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <opm/models/io/baseoutputwriter.hh>
+#include <opm/models/io/vtkscalarfunction.hh>
+#include <opm/models/io/vtktensorfunction.hh>
+#include <opm/models/io/vtkvectorfunction.hh>
 
-#if HAVE_MPI
-#include <mpi.h>
-#endif
+#include <opm/models/parallel/tasklets.hpp>
 
 #include <filesystem>
+#include <fstream>
 #include <list>
+#include <memory>
+#include <sstream>
 #include <string>
 #include <string_view>
-#include <limits>
-#include <sstream>
-#include <fstream>
 
 namespace Opm {
 /*!
