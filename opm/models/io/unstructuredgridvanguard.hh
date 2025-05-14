@@ -36,20 +36,22 @@
 #endif
 
 namespace Opm {
+
 /*!
  * \brief Provides a simulator vanguard which creates a grid
  * by parsing an unstructured grid file
  */
 template <class TypeTag>
-class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
+class UnstructuredGridVanguard : public BaseVanguard<TypeTag>
+{
     using ParentType = BaseVanguard<TypeTag>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;
 
-    using GridPointer = Dune::GridPtr< Grid >;
+    using GridPointer = Dune::GridPtr<Grid>;
 
-   public:
+public:
     /*!
      * \brief Register all run-time parameters for the
      * unstructured grid simulator vanguard.
@@ -58,19 +60,19 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
         Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
-        Parameters::Register<Parameters::GridFile>,
+        Parameters::Register<Parameters::GridFile>
             ("The file name of the file to load");
     }
 
     /*!
      * \brief Load the grid from the file.
      */
-    UnstructuredGridVanguard(Simulator& simulator) : ParentType(simulator){
+    explicit UnstructuredGridVanguard(Simulator& simulator)
+        : ParentType(simulator)
+    {
 #ifdef HAVE_OPM_GRID
         const std::string gridFileName = Parameters::Get<Parameters::GridFile>();
-        unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
-
-        const char* c_str = gridFileName.c_str();
+        const int numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
 
         UnstructuredGrid* ugrid = read_grid(gridFileName.c_str());
         if (ugrid == nullptr) {
@@ -81,7 +83,7 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
         //GridPointer polygrid(new Grid(*ugPtr));
         gridPtr_ = new Grid(*ugPtr_);//std::move(polygrid);
         if (numRefinments > 0) {
-            gridPtr_->globalRefine(static_cast<int>(numRefinments));
+            gridPtr_->globalRefine(numRefinments);
         }
         this->finalizeInit_();
 #endif
@@ -90,15 +92,17 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
     /*!
      * \brief Return a reference to the grid object.
      */
-    Grid& grid() { return *gridPtr_; }
+    Grid& grid()
+    { return *gridPtr_; }
 
     /*!
      * \brief Return a constant reference to the grid
      * object.
      */
-    const Grid& grid() const { return *gridPtr_; }
+    const Grid& grid() const
+    { return *gridPtr_; }
 
-   private:
+private:
     GridPointer gridPtr_;
     typename Grid::UnstructuredGridPtr ugPtr_;
 };
