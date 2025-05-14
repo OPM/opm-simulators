@@ -121,7 +121,6 @@ public:
         : gridView_(gridView)
         , elementMapper_(gridView, Dune::mcmgElementLayout())
         , vertexMapper_(gridView, Dune::mcmgVertexLayout())
-        , curWriter_(nullptr)
         , curWriterNum_(0)
         , taskletRunner_(/*numThreads=*/asyncWriting?1:0)
     {
@@ -186,7 +185,7 @@ public:
         curTime_ = t;
         curOutFileName_ = fileName_();
 
-        curWriter_ = new VtkWriter(gridView_, Dune::VTK::conforming);
+        curWriter_ = std::make_unique<VtkWriter>(gridView_, Dune::VTK::conforming);
         ++curWriterNum_;
     }
 
@@ -196,11 +195,10 @@ public:
      * The buffer will be deleted automatically after the data has
      * been written by to disk.
      */
-    ScalarBuffer *allocateManagedScalarBuffer(size_t numEntities)
+    ScalarBuffer* allocateManagedScalarBuffer(size_t numEntities)
     {
-        ScalarBuffer *buf = new ScalarBuffer(numEntities);
-        managedScalarBuffers_.push_back(buf);
-        return buf;
+        managedScalarBuffers_.emplace_back(std::make_unique<ScalarBuffer>(numEntities));
+        return managedScalarBuffers_.back().get();
     }
 
     /*!
@@ -209,14 +207,14 @@ public:
      * The buffer will be deleted automatically after the data has
      * been written by to disk.
      */
-    VectorBuffer *allocateManagedVectorBuffer(size_t numOuter, size_t numInner)
+    VectorBuffer* allocateManagedVectorBuffer(size_t numOuter, size_t numInner)
     {
-        VectorBuffer *buf = new VectorBuffer(numOuter);
-        for (size_t i = 0; i < numOuter; ++ i)
-            (*buf)[i].resize(numInner);
+        managedVectorBuffers_.emplace_back(std::make_unique<VectorBuffer>(numOuter));
+        for (auto& buffer : *managedVectorBuffers_.back()) {
+            buffer.resize(numInner);
+        }
 
-        managedVectorBuffers_.push_back(buf);
-        return buf;
+        return managedVectorBuffers_.back().get();
     }
 
     /*!
@@ -529,15 +527,8 @@ private:
     void releaseBuffers_()
     {
         // discard managed objects and the current VTK writer
-        delete curWriter_;
-        curWriter_ = nullptr;
-        for (auto& buffer : managedScalarBuffers_) {
-            delete buffer;
-        }
+        curWriter_.reset();
         managedScalarBuffers_.clear();
-        for (auto& buffer : managedVectorBuffers_) {
-            delete buffer;
-        }
         managedVectorBuffers_.clear();
     }
 
@@ -553,13 +544,13 @@ private:
     int commSize_; // number of processes in the communicator
     int commRank_; // rank of the current process in the communicator
 
-    VtkWriter *curWriter_;
+    std::unique_ptr<VtkWriter> curWriter_;
     double curTime_;
     std::string curOutFileName_;
     int curWriterNum_;
 
-    std::vector<ScalarBuffer *> managedScalarBuffers_;
-    std::vector<VectorBuffer *> managedVectorBuffers_;
+    std::vector<std::unique_ptr<ScalarBuffer>> managedScalarBuffers_;
+    std::vector<std::unique_ptr<VectorBuffer>> managedVectorBuffers_;
 
     TaskletRunner taskletRunner_;
 };
