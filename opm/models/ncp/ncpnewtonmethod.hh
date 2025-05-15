@@ -111,7 +111,7 @@ protected:
                     continue;
                 }
                 this->error_ =
-                    std::max(std::abs(r[eqIdx]*this->model().eqWeight(dofIdx, eqIdx)),
+                    std::max(std::abs(r[eqIdx] * this->model().eqWeight(dofIdx, eqIdx)),
                              this->error_);
             }
         }
@@ -122,9 +122,9 @@ protected:
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (this->error_ > Parameters::Get<Parameters::NewtonMaxError<Scalar>>()) {
-            throw Opm::NumericalProblem("Newton: Error "+std::to_string(double(this->error_))+
-                                        + " is larger than maximum allowed error of "
-                                        + std::to_string(Parameters::Get<Parameters::NewtonMaxError<Scalar>>()));
+            throw Opm::NumericalProblem("Newton: Error " + std::to_string(double(this->error_)) +
+                                        " is larger than maximum allowed error of " +
+                                         std::to_string(Parameters::Get<Parameters::NewtonMaxError<Scalar>>()));
         }
     }
 
@@ -153,21 +153,21 @@ protected:
                                    maxSatDelta);
             sumSatDelta += update[saturation0Idx + phaseIdx];
         }
-        maxSatDelta = std::max(std::abs(- sumSatDelta), maxSatDelta);
+        maxSatDelta = std::max(std::abs(-sumSatDelta), maxSatDelta);
 
         if (maxSatDelta > 0.2) {
-            const Scalar alpha = 0.2/maxSatDelta;
+            const Scalar alpha = 0.2 / maxSatDelta;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
                 nextValue[saturation0Idx + phaseIdx] =
-                    currentValue[saturation0Idx + phaseIdx]
-                    - alpha*update[saturation0Idx + phaseIdx];
+                    currentValue[saturation0Idx + phaseIdx] -
+                    alpha * update[saturation0Idx + phaseIdx];
             }
         }
 
         // limit pressure reference change to 20% of the total value per iteration
         clampValue_(nextValue[pressure0Idx],
-                    currentValue[pressure0Idx]*0.8,
-                    currentValue[pressure0Idx]*1.2);
+                    currentValue[pressure0Idx] * 0.8,
+                    currentValue[pressure0Idx] * 1.2);
 
         // fugacities
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
@@ -198,8 +198,8 @@ protected:
                 Scalar& val = nextValue[fugacity0Idx + compIdx];
                 const Scalar oldVal = currentValue[fugacity0Idx + compIdx];
                 const Scalar minPhi = this->problem().model().minActivityCoeff(globalDofIdx, compIdx);
-                if (oldVal < 1.0*minPhi && val > 1.0*minPhi) {
-                    val = 1.0*minPhi;
+                if (oldVal < 1.0 * minPhi && val > 1.0 * minPhi) {
+                    val = 1.0 * minPhi;
                 }
                 else if (oldVal > 0.0 && val < 0.0) {
                     val = 0.0;
