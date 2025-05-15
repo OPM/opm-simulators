@@ -117,14 +117,13 @@ public:
     explicit NewtonMethod(Simulator& simulator)
         : simulator_(simulator)
         , endIterMsgStream_(std::ostringstream::out)
+        , error_(1e100)
+        , lastError_(1e100)
+        , numIterations_(0)
         , linearSolver_(simulator)
         , comm_(Dune::MPIHelper::getCommunicator())
         , convergenceWriter_(asImp_())
     {
-        lastError_ = 1e100;
-        error_ = 1e100;
-
-        numIterations_ = 0;
         params_.read();
     }
 
