@@ -223,11 +223,13 @@ public:
         Opm::VtkCompositionModule<TypeTag>::registerParameters();
         Opm::VtkPTFlashModule<TypeTag>::registerParameters();
 
-        if (enableDiffusion)
+        if constexpr (enableDiffusion) {
             Opm::VtkDiffusionModule<TypeTag>::registerParameters();
+        }
 
-        if (enableEnergy)
+        if constexpr (enableEnergy) {
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
+        }
 
         Parameters::Register<Parameters::FlashTolerance<Scalar>>
             ("The maximum tolerance for the flash solver to "
@@ -295,10 +297,12 @@ public:
         // add the VTK output modules which are meaningful for the model
         this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));
         this->addOutputModule(std::make_unique<VtkPTFlashModule<TypeTag>>(this->simulator_));
-        if (enableDiffusion)
+        if constexpr (enableDiffusion) {
             this->addOutputModule(std::make_unique<VtkDiffusionModule<TypeTag>>(this->simulator_));
-        if (enableEnergy)
+        }
+        if constexpr (enableEnergy) {
             this->addOutputModule(std::make_unique<VtkEnergyModule<TypeTag>>(this->simulator_));
+        }
     }
 };
 
