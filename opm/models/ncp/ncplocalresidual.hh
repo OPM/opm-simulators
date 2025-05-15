@@ -92,7 +92,7 @@ public:
 
         // compute storage term of all components within all phases
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            unsigned eqIdx = conti0EqIdx + compIdx;
+            const unsigned eqIdx = conti0EqIdx + compIdx;
             storage[eqIdx] +=
                 Toolbox::template decay<LhsEval>(fluidState.molarity(phaseIdx, compIdx)) *
                 Toolbox::template decay<LhsEval>(fluidState.saturation(phaseIdx)) *
@@ -149,14 +149,14 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             // data attached to upstream and the downstream DOFs
             // of the current phase
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            const unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
             // this is a bit hacky because it is specific to the element-centered
             // finite volume scheme. (N.B. that if finite differences are used to
             // linearize the system of equations, it does not matter.)
             if (upIdx == focusDofIdx) {
-                Evaluation tmp =
+                const Evaluation tmp =
                     up.fluidState().molarDensity(phaseIdx) *
                     extQuants.volumeFlux(phaseIdx);
 
@@ -166,7 +166,7 @@ public:
                 }
             }
             else {
-                Evaluation tmp =
+                const Evaluation tmp =
                     Toolbox::value(up.fluidState().molarDensity(phaseIdx)) *
                     extQuants.volumeFlux(phaseIdx);
 
