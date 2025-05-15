@@ -28,12 +28,14 @@
 #ifndef EWOMS_NCP_RATE_VECTOR_HH
 #define EWOMS_NCP_RATE_VECTOR_HH
 
-#include "ncpindices.hh"
+#include <dune/common/fvector.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-#include <dune/common/fvector.hh>
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 /*!
