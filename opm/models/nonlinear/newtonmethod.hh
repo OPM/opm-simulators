@@ -614,11 +614,9 @@ protected:
         // vector.
         const auto& comm = simulator_.gridView().comm();
         for (unsigned i = 0; i < simulator_.model().numAuxiliaryModules(); ++i) {
-            auto& auxMod = *simulator_.model().auxiliaryModule(i);
-
             bool succeeded = true;
             try {
-                auxMod.postSolve(solutionUpdate);
+                simulator_.model().auxiliaryModule(i)->postSolve(solutionUpdate);
             }
             catch (const std::exception& e) {
                 succeeded = false;
