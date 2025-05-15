@@ -185,6 +185,8 @@ static inline K invertMatrix4(const Matrix<K>& matrix, Matrix<K>& inverse)
             matrix[0][2] * inverse[2][0] + matrix[0][3] * inverse[3][0];
 
     // return identity for singular or nearly singular matrices.
+    // Note for maintainers: If updating this value, also update the value
+    // in gpuistl/detail/deviceBlockOperations.hpp
     if (std::abs(det) < 1e-40) {
         inverse = std::numeric_limits<K>::quiet_NaN();
         throw NumericalProblem("Singular matrix");
