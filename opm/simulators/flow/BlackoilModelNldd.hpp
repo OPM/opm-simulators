@@ -44,6 +44,7 @@
 #else
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #endif
+#include <opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
