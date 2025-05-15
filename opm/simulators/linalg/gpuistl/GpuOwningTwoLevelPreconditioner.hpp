@@ -33,7 +33,6 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/paamg/amg.hh>
 
-#include <fstream>
 #include <memory>
 
 namespace Opm::gpuistl
@@ -75,15 +74,6 @@ public:
         //                   prm.get<int>("post_smooth", 1))
         prm_(prm)
     {
-        //if (prm.get<int>("verbosity", 0) > 10) {
-        //    std::string filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
-        //    std::ofstream outfile(filename);
-        //    if (!outfile) {
-        //        OPM_THROW(std::ofstream::failure,
-        //                  "Could not write weights to file " + filename + ".");
-        //    }
-        //    Dune::writeMatrixMarket(weights_, outfile);
-        //}
     }
 
     virtual void pre(VectorType& x, VectorType& b) override
@@ -103,7 +93,7 @@ public:
 
     virtual void update() override
     {
-        //weights_ = weightsCalculator_();
+        weights_ = weightsCalculator_();
         updateImpl();
     }
 

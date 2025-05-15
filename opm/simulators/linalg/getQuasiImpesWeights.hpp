@@ -27,6 +27,10 @@
 #include <algorithm>
 #include <cmath>
 
+#if HAVE_CUDA
+#include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
+#endif
+
 namespace Opm
 {
 
@@ -86,6 +90,47 @@ namespace Amg
         getQuasiImpesWeights(matrix, pressureVarIndex, transpose, weights);
         return weights;
     }
+
+#if HAVE_CUDA
+    template <typename T>
+    std::vector<int> precomputeDiagonalIndices(const gpuistl::GpuSparseMatrix<T>& matrix) {
+        std::vector<int> diagonalIndices(matrix.N(), -1);
+        const auto rowIndices = matrix.getRowIndices().asStdVector();
+        const auto colIndices = matrix.getColumnIndices().asStdVector();
+
+        for (auto row = 0; row < Opm::gpuistl::detail::to_int(matrix.N()); ++row) {
+            for (auto i = rowIndices[row]; i < rowIndices[row+1]; ++i) {
+                if (colIndices[i] == row) {
+                    diagonalIndices[row] = i;
+                    break;
+                }
+            }
+        }
+        return diagonalIndices;
+    }
+
+    // GPU version that delegates to the GPU implementation
+    template <typename T>
+    void getQuasiImpesWeights(const gpuistl::GpuSparseMatrix<T>& matrix,
+                             const int pressureVarIndex,
+                             const bool transpose,
+                             gpuistl::GpuVector<T>& weights,
+                             const gpuistl::GpuVector<int>& diagonalIndices)
+    {
+        gpuistl::detail::getQuasiImpesWeights(matrix, pressureVarIndex, transpose, weights, diagonalIndices);
+    }
+
+    template <typename T>
+    gpuistl::GpuVector<T> getQuasiImpesWeights(const gpuistl::GpuSparseMatrix<T>& matrix,
+                                              const int pressureVarIndex,
+                                              const bool transpose,
+                                              const gpuistl::GpuVector<int>& diagonalIndices)
+    {
+        gpuistl::GpuVector<T> weights(matrix.N() * matrix.blockSize());
+        getQuasiImpesWeights(matrix, pressureVarIndex, transpose, weights, diagonalIndices);
+        return weights;
+    }
+#endif
 
     template<class Vector, class GridView, class ElementContext, class Model>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights, const GridView& gridView,

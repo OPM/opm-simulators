@@ -20,6 +20,7 @@
 #include <dune/istl/operators.hh>
 #include <memory>
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
+#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
 #if USE_HIP
@@ -44,11 +45,14 @@ public:
     using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Matrix = typename SparseMatrixAdapter::IstlMatrix;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     using real_type = typename Vector::field_type;
 
     using GPUMatrix = Opm::gpuistl::GpuSparseMatrix<real_type>;
     using GPUVector = Opm::gpuistl::GpuVector<real_type>;
+    using GPUVectorInt = Opm::gpuistl::GpuVector<int>;
 
     constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
@@ -71,7 +75,9 @@ public:
     ISTLSolverGPUISTL(const Simulator& simulator,
                       const FlowLinearSolverParameters& parameters,
                       bool forceSerial = false)
-        : m_parameters(parameters), m_forceSerial(forceSerial)
+        : m_parameters(parameters)
+        , m_forceSerial(forceSerial)
+        , m_simulator(simulator)
     {
         m_parameters.init(simulator.vanguard().eclState().getSimulationConfig().useCPR());
         m_propertyTree = setupPropertyTree(m_parameters,
@@ -153,7 +159,7 @@ public:
         }
     
         if (!m_x) {
-            m_x = std::make_unique<GpuVector<real_type>>(x);
+            m_x = std::make_unique<GPUVector>(x);
         } else {
             m_x->copyFromHost(x);
         }
@@ -200,11 +206,82 @@ public:
     }
 
 private:
-    void updateMatrix(const Matrix& M) {
-        if (!m_matrix) {
+    // Weights to make approximate pressure equations.
+    std::function<GPUVector()> getWeightsCalculator()
+    {
+        std::function<GPUVector()> weightsCalculator;
 
+        using namespace std::string_literals;
+
+        auto preconditionerType = m_propertyTree.get("preconditioner.type"s, "cpr"s);
+        // Make the preconditioner type lowercase for internal canonical representation
+        std::transform(preconditionerType.begin(), preconditionerType.end(), preconditionerType.begin(), ::tolower);
+        if (preconditionerType == "cpr" || preconditionerType == "cprt"
+            || preconditionerType == "cprw" || preconditionerType == "cprwt") {
+            const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
+            const auto weightsType = m_propertyTree.get("preconditioner.weight_type"s, "quasiimpes"s);
+            if (weightsType == "quasiimpes") {
+                m_weights = std::make_unique<GPUVector>(m_matrix->N() * m_matrix->blockSize());
+                // Pre-compute diagonal indices once when setting up the calculator
+                auto diagonalIndices = Opm::Amg::precomputeDiagonalIndices(*m_matrix);
+                m_diagonalIndices = std::make_unique<GPUVectorInt>(diagonalIndices);
+
+                weightsCalculator = [this, transpose]() {
+                    // GPU implementation for quasiimpes weights
+                    Amg::getQuasiImpesWeights(*m_matrix, pressureIndex, transpose, *m_weights, *m_diagonalIndices);
+                    return *m_weights;
+                };
+            } else if (weightsType == "trueimpes") {
+                // Create CPU vector for the weights and initialize GPU vector
+                m_cpuWeights.resize(m_matrix->N());
+                m_weights = std::make_unique<GPUVector>(m_cpuWeights);
+
+                // CPU implementation wrapped for GPU
+                weightsCalculator = [this]() {
+
+                    // Use the CPU implementation to calculate the weights
+                    ElementContext elemCtx(m_simulator);
+                    Amg::getTrueImpesWeights(pressureIndex, m_cpuWeights,
+                                             m_simulator.vanguard().gridView(),
+                                             elemCtx, m_simulator.model(),
+                                             ThreadManager::threadId());
+                    // Copy CPU vector to GPU vector
+                    m_weights->copyFromHost(m_cpuWeights);
+                    return *m_weights;
+                };
+            } else if (weightsType == "trueimpesanalytic") {
+                // Create CPU vector for the weights and initialize GPU vector
+                m_cpuWeights.resize(m_matrix->N());
+                m_weights = std::make_unique<GPUVector>(m_cpuWeights);
+
+                // CPU implementation wrapped for GPU
+                weightsCalculator = [this]() {
+
+                    // Use the CPU implementation to calculate the weights
+                    ElementContext elemCtx(m_simulator);
+                    Amg::getTrueImpesWeightsAnalytic(pressureIndex, m_cpuWeights,
+                                                     m_simulator.vanguard().gridView(),
+                                                     elemCtx, m_simulator.model(),
+                                                     ThreadManager::threadId());
+                    // Copy CPU vector to GPU vector
+                    m_weights->copyFromHost(m_cpuWeights);
+                    return *m_weights;
+                };
+            } else {
+                OPM_THROW(std::invalid_argument,
+                          "Weights type " + weightsType +
+                          " not implemented for cpr."
+                          " Please use quasiimpes, trueimpes or trueimpesanalytic.");
+            }
+        }
+        return weightsCalculator;
+    }
+
+    void updateMatrix(const Matrix& M)
+    {
+        if (!m_matrix) {
             m_matrix.reset(new auto(GPUMatrix::fromMatrix(M)));
-            std::function<GPUVector()> weightsCalculator = {};
+            std::function<GPUVector()> weightsCalculator = getWeightsCalculator();
             const bool parallel = false;
             m_gpuSolver = std::make_unique<SolverType>(
                 *m_matrix, parallel, m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, nullptr);
@@ -224,6 +301,8 @@ private:
     }
 
     FlowLinearSolverParameters m_parameters;
+    const bool m_forceSerial;
+    const Simulator& m_simulator;
     PropertyTree m_propertyTree;
 
     int m_lastSeenIterations = 0;
@@ -236,7 +315,10 @@ private:
     std::unique_ptr<GPUVector> m_rhs;
     std::unique_ptr<GPUVector> m_x;
 
-    const bool m_forceSerial;
+    Vector m_cpuWeights;
+    std::unique_ptr<GPUVector> m_weights;
+    std::unique_ptr<GPUVectorInt> m_diagonalIndices;
+
 };
 } // namespace Opm::gpuistl
 
