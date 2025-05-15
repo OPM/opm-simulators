@@ -78,55 +78,55 @@ struct FlashModel { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
 //! Use the FlashLocalResidual function for the flash model
 template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashLocalResidual<TypeTag>; };
+{ using type = FlashLocalResidual<TypeTag>; };
 
 //! Use the PT flash specific newton method for the flash model
 template<class TypeTag>
 struct NewtonMethod<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashNewtonMethod<TypeTag>; };
+{ using type = FlashNewtonMethod<TypeTag>; };
 
 //! Use the Pt flash solver by default
 template<class TypeTag>
 struct FlashSolver<TypeTag, TTag::FlashModel>
 {
-    using type = Opm::PTFlash<GetPropType<TypeTag, Properties::Scalar>,
-                             GetPropType<TypeTag, Properties::FluidSystem>>;
+    using type = PTFlash<GetPropType<TypeTag, Properties::Scalar>,
+                         GetPropType<TypeTag, Properties::FluidSystem>>;
 };
 
 //! the Model property
 template<class TypeTag>
 struct Model<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashModel<TypeTag>; };
+{ using type = FlashModel<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
 struct PrimaryVariables<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashPrimaryVariables<TypeTag>; };
+{ using type = FlashPrimaryVariables<TypeTag>; };
 
 //! the RateVector property
 template<class TypeTag>
 struct RateVector<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashRateVector<TypeTag>; };
+{ using type = FlashRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
 struct BoundaryRateVector<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashBoundaryRateVector<TypeTag>; };
+{ using type = FlashBoundaryRateVector<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
 struct IntensiveQuantities<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashIntensiveQuantities<TypeTag>; };
+{ using type = FlashIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
 struct ExtensiveQuantities<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashExtensiveQuantities<TypeTag>; };
+{ using type = FlashExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the flash-baseed isothermal compositional model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlashModel>
-{ using type = Opm::FlashIndices<TypeTag, /*PVIdx=*/0>; };
+{ using type = FlashIndices<TypeTag, /*PVIdx=*/0>; };
 
 // disable molecular diffusion by default
 template<class TypeTag>
@@ -205,7 +205,7 @@ class FlashModel
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     explicit FlashModel(Simulator& simulator)
@@ -220,15 +220,15 @@ public:
         ParentType::registerParameters();
 
         // register runtime parameters of the VTK output modules
-        Opm::VtkCompositionModule<TypeTag>::registerParameters();
-        Opm::VtkPTFlashModule<TypeTag>::registerParameters();
+        VtkCompositionModule<TypeTag>::registerParameters();
+        VtkPTFlashModule<TypeTag>::registerParameters();
 
         if constexpr (enableDiffusion) {
-            Opm::VtkDiffusionModule<TypeTag>::registerParameters();
+            VtkDiffusionModule<TypeTag>::registerParameters();
         }
 
         if constexpr (enableEnergy) {
-            Opm::VtkEnergyModule<TypeTag>::registerParameters();
+            VtkEnergyModule<TypeTag>::registerParameters();
         }
 
         Parameters::Register<Parameters::FlashTolerance<Scalar>>
@@ -263,7 +263,7 @@ public:
         if (Indices::z0Idx <= pvIdx && pvIdx < Indices::z0Idx + numComponents - 1) {
             oss << "z_," << FluidSystem::componentName(/*compIdx=*/pvIdx - Indices::z0Idx);
         }
-        else if (pvIdx==Indices::pressure0Idx) {
+        else if (pvIdx == Indices::pressure0Idx) {
             oss << "pressure_" << FluidSystem::phaseName(0);
         }
         else {
@@ -287,7 +287,7 @@ public:
         if (Indices::conti0EqIdx <= eqIdx &&
             eqIdx < Indices::conti0EqIdx + numComponents)
         {
-            unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+            const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
             oss << "continuity^" << FluidSystem::componentName(compIdx);
         }
         else {
