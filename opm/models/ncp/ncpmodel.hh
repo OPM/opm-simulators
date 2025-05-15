@@ -62,66 +62,82 @@
 #include <vector>
 
 namespace Opm {
+
 template <class TypeTag>
 class NcpModel;
+
 }
 
 namespace Opm::Properties {
 
 namespace TTag {
+
 /*!
  * \brief Define the type tag for the compositional NCP model.
  */
 struct NcpModel { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
+
 } // namespace TTag
 
 //! Use the Ncp local jacobian operator for the compositional NCP model
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::NcpModel> { using type = NcpLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::NcpModel>
+{ using type = NcpLocalResidual<TypeTag>; };
 
 //! Use the Ncp specific newton method for the compositional NCP model
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::NcpModel> { using type = NcpNewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::NcpModel>
+{ using type = NcpNewtonMethod<TypeTag>; };
 
 //! the Model property
 template<class TypeTag>
-struct Model<TypeTag, TTag::NcpModel> { using type = NcpModel<TypeTag>; };
+struct Model<TypeTag, TTag::NcpModel>
+{ using type = NcpModel<TypeTag>; };
 
 //! The type of the base base class for actual problems
 template<class TypeTag>
-struct BaseProblem<TypeTag, TTag::NcpModel> { using type = MultiPhaseBaseProblem<TypeTag>; };
+struct BaseProblem<TypeTag, TTag::NcpModel>
+{ using type = MultiPhaseBaseProblem<TypeTag>; };
 
 //! Disable the energy equation by default
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::NcpModel> { static constexpr bool value = false; };
+struct EnableEnergy<TypeTag, TTag::NcpModel>
+{ static constexpr bool value = false; };
 
 //! disable diffusion by default
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::NcpModel> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::NcpModel>
+{ static constexpr bool value = false; };
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::NcpModel> { using type = NcpRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::NcpModel>
+{ using type = NcpRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::NcpModel> { using type = NcpBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::NcpModel>
+{ using type = NcpBoundaryRateVector<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::NcpModel> { using type = NcpPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::NcpModel>
+{ using type = NcpPrimaryVariables<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::NcpModel> { using type = NcpIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::NcpModel>
+{ using type = NcpIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::NcpModel> { using type = NcpExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::NcpModel>
+{ using type = NcpExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the compositional NCP model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::NcpModel> { using type = NcpIndices<TypeTag, 0>; };
+struct Indices<TypeTag, TTag::NcpModel>
+{ using type = NcpIndices<TypeTag, 0>; };
 
 //! The unmodified weight for the pressure primary variable
 template<class TypeTag>
@@ -130,6 +146,7 @@ struct NcpPressureBaseWeight<TypeTag, TTag::NcpModel>
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1.0;
 };
+
 //! The weight for the saturation primary variables
 template<class TypeTag>
 struct NcpSaturationsBaseWeight<TypeTag, TTag::NcpModel>
@@ -137,6 +154,7 @@ struct NcpSaturationsBaseWeight<TypeTag, TTag::NcpModel>
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1.0;
 };
+
 //! The unmodified weight for the fugacity primary variables
 template<class TypeTag>
 struct NcpFugacitiesBaseWeight<TypeTag, TTag::NcpModel>
@@ -250,8 +268,8 @@ class NcpModel
 
     using Toolbox = MathToolbox<Evaluation>;
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
-    using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
+    using DiffusionModule = ::Opm::DiffusionModule<TypeTag, enableDiffusion>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     explicit NcpModel(Simulator& simulator)
@@ -364,7 +382,7 @@ public:
         // find the a reference pressure. The first degree of freedom
         // might correspond to non-interior entities which would lead
         // to an undefined value, so we have to iterate...
-        for (unsigned dofIdx = 0; dofIdx < this->numGridDof(); ++ dofIdx) {
+        for (unsigned dofIdx = 0; dofIdx < this->numGridDof(); ++dofIdx) {
             if (this->isLocalDof(dofIdx)) {
                 referencePressure_ =
                     this->solution(/*timeIdx=*/0)[dofIdx][/*pvIdx=*/Indices::pressure0Idx];
@@ -388,13 +406,14 @@ public:
 
                     minActivityCoeff_[globalIdx][compIdx] =
                         std::min(minActivityCoeff_[globalIdx][compIdx],
-                                 Toolbox::value(fs.fugacityCoefficient(phaseIdx, compIdx))
-                                 * Toolbox::value(fs.pressure(phaseIdx)));
+                                 Toolbox::value(fs.fugacityCoefficient(phaseIdx, compIdx)) *
+                                 Toolbox::value(fs.pressure(phaseIdx)));
                     Valgrind::CheckDefined(minActivityCoeff_[globalIdx][compIdx]);
                 }
                 if (minActivityCoeff_[globalIdx][compIdx] <= 0) {
-                    throw NumericalProblem("The minimum activity coefficient for component "+std::to_string(compIdx)
-                                           +" on DOF "+std::to_string(globalIdx)+" is negative or zero!");
+                    throw NumericalProblem("The minimum activity coefficient for component " +
+                                           std::to_string(compIdx) + " on DOF " +
+                                           std::to_string(globalIdx) + " is negative or zero!");
                 }
             }
         }
@@ -417,12 +436,13 @@ public:
             assert(compIdx <= numComponents);
 
             Valgrind::CheckDefined(minActivityCoeff_[globalDofIdx][compIdx]);
-            static const Scalar fugacityBaseWeight =
+            constexpr Scalar fugacityBaseWeight =
                 getPropValue<TypeTag, Properties::NcpFugacitiesBaseWeight>();
             result = fugacityBaseWeight / minActivityCoeff_[globalDofIdx][compIdx];
         }
         else if (Indices::pressure0Idx == pvIdx) {
-            static const Scalar pressureBaseWeight = getPropValue<TypeTag, Properties::NcpPressureBaseWeight>();
+            constexpr Scalar pressureBaseWeight =
+                getPropValue<TypeTag, Properties::NcpPressureBaseWeight>();
             result = pressureBaseWeight / referencePressure_;
         }
         else {
@@ -432,7 +452,7 @@ public:
 #endif
 
             // saturation
-            static const Scalar saturationsBaseWeight =
+            constexpr Scalar saturationsBaseWeight =
                 getPropValue<TypeTag, Properties::NcpSaturationsBaseWeight>();
             result = saturationsBaseWeight;
         }
