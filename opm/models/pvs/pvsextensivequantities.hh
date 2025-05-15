@@ -28,11 +28,11 @@
 #ifndef EWOMS_PVS_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_PVS_EXTENSIVE_QUANTITIES_HH
 
-#include "pvsproperties.hh"
-
-#include <opm/models/common/multiphasebaseextensivequantities.hh>
-#include <opm/models/common/energymodule.hh>
 #include <opm/models/common/diffusionmodule.hh>
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/common/multiphasebaseextensivequantities.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
@@ -58,10 +58,10 @@ class PvsExtensiveQuantities
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    using DiffusionExtensiveQuantities = Opm::DiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
+    using DiffusionExtensiveQuantities = ::Opm::DiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    using EnergyExtensiveQuantities = Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
+    using EnergyExtensiveQuantities = ::Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     /*!
