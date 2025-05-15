@@ -309,18 +309,23 @@ public:
     std::string primaryVarName(unsigned pvIdx) const
     {
         std::string s;
-        if (!(s = EnergyModule::primaryVarName(pvIdx)).empty())
+        if (!(s = EnergyModule::primaryVarName(pvIdx)).empty()) {
             return s;
+        }
 
         std::ostringstream oss;
-        if (pvIdx == pressure0Idx)
+        if (pvIdx == pressure0Idx) {
             oss << "pressure_" << FluidSystem::phaseName(/*phaseIdx=*/0);
-        else if (saturation0Idx <= pvIdx && pvIdx < saturation0Idx + (numPhases - 1))
+        }
+        else if (saturation0Idx <= pvIdx && pvIdx < saturation0Idx + (numPhases - 1)) {
             oss << "saturation_" << FluidSystem::phaseName(/*phaseIdx=*/pvIdx - saturation0Idx);
-        else if (fugacity0Idx <= pvIdx && pvIdx < fugacity0Idx + numComponents)
+        }
+        else if (fugacity0Idx <= pvIdx && pvIdx < fugacity0Idx + numComponents) {
             oss << "fugacity^" << FluidSystem::componentName(pvIdx - fugacity0Idx);
-        else
+        }
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -331,16 +336,20 @@ public:
     std::string eqName(unsigned eqIdx) const
     {
         std::string s;
-        if (!(s = EnergyModule::eqName(eqIdx)).empty())
+        if (!(s = EnergyModule::eqName(eqIdx)).empty()) {
             return s;
+        }
 
         std::ostringstream oss;
-        if (conti0EqIdx <= eqIdx && eqIdx < conti0EqIdx + numComponents)
+        if (conti0EqIdx <= eqIdx && eqIdx < conti0EqIdx + numComponents) {
             oss << "continuity^" << FluidSystem::componentName(eqIdx - conti0EqIdx);
-        else if (ncp0EqIdx <= eqIdx && eqIdx < ncp0EqIdx + numPhases)
+        }
+        else if (ncp0EqIdx <= eqIdx && eqIdx < ncp0EqIdx + numPhases) {
             oss << "ncp_" << FluidSystem::phaseName(/*phaseIdx=*/eqIdx - ncp0EqIdx);
-        else
+        }
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -383,9 +392,10 @@ public:
                                  * Toolbox::value(fs.pressure(phaseIdx)));
                     Valgrind::CheckDefined(minActivityCoeff_[globalIdx][compIdx]);
                 }
-                if (minActivityCoeff_[globalIdx][compIdx] <= 0)
+                if (minActivityCoeff_[globalIdx][compIdx] <= 0) {
                     throw NumericalProblem("The minimum activity coefficient for component "+std::to_string(compIdx)
                                            +" on DOF "+std::to_string(globalIdx)+" is negative or zero!");
+                }
             }
         }
     }
@@ -397,9 +407,10 @@ public:
     {
         Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
         Scalar result;
-        if (tmp > 0)
+        if (tmp > 0) {
             // energy related quantity
             result = tmp;
+        }
         else if (fugacity0Idx <= pvIdx && pvIdx < fugacity0Idx + numComponents) {
             // component fugacity
             unsigned compIdx = pvIdx - fugacity0Idx;
@@ -438,12 +449,14 @@ public:
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
         Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
-        if (tmp > 0)
+        if (tmp > 0) {
             // an energy related equation
             return tmp;
+        }
         // an NCP
-        else if (ncp0EqIdx <= eqIdx && eqIdx < Indices::ncp0EqIdx + numPhases)
+        else if (ncp0EqIdx <= eqIdx && eqIdx < Indices::ncp0EqIdx + numPhases) {
             return 1.0;
+        }
 
         // a mass conservation equation
         unsigned compIdx = eqIdx - Indices::conti0EqIdx;
