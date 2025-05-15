@@ -34,6 +34,7 @@
 #include <dune/grid/common/datahandleif.hh>
 
 #include <algorithm>
+#include <cstddef>
 
 namespace Opm {
 
@@ -67,7 +68,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType&) const
+    std::size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -81,7 +82,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
+    void scatter(MessageBufferImp& buff, const EntityType& e, std::size_t)
     {
         const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
 
@@ -127,7 +128,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType&) const
+    std::size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -141,7 +142,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
+    void scatter(MessageBufferImp& buff, const EntityType& e, std::size_t)
     {
         const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         buff.read(container_[dofIdx]);
@@ -182,7 +183,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType&) const
+    std::size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -196,7 +197,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
+    void scatter(MessageBufferImp& buff, const EntityType& e, std::size_t)
     {
         const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         FieldType tmp;
@@ -239,7 +240,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType&) const
+    std::size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -253,7 +254,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
+    void scatter(MessageBufferImp& buff, const EntityType& e, std::size_t)
     {
         const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         FieldType tmp;
