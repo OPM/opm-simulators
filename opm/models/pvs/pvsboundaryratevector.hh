@@ -60,13 +60,11 @@ class PvsBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
-    PvsBoundaryRateVector()
-        : ParentType()
-    {}
+    PvsBoundaryRateVector() = default;
 
     /*!
      * \copydoc
@@ -106,14 +104,14 @@ public:
                     density = fluidState.density(phaseIdx);
                 }
                 else {
-                    density = Opm::getValue(fluidState.density(phaseIdx));
+                    density = getValue(fluidState.density(phaseIdx));
                 }
             }
             else if (focusDofIdx == interiorDofIdx) {
                 density = insideIntQuants.fluidState().density(phaseIdx);
             }
             else {
-                density = Opm::getValue(insideIntQuants.fluidState().density(phaseIdx));
+                density = getValue(insideIntQuants.fluidState().density(phaseIdx));
             }
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
@@ -123,19 +121,19 @@ public:
                         molarity = fluidState.molarity(phaseIdx, compIdx);
                     }
                     else {
-                        molarity = Opm::getValue(fluidState.molarity(phaseIdx, compIdx));
+                        molarity = getValue(fluidState.molarity(phaseIdx, compIdx));
                     }
                 }
                 else if (focusDofIdx == interiorDofIdx) {
                     molarity = insideIntQuants.fluidState().molarity(phaseIdx, compIdx);
                 }
                 else {
-                    molarity = Opm::getValue(insideIntQuants.fluidState().molarity(phaseIdx, compIdx));
+                    molarity = getValue(insideIntQuants.fluidState().molarity(phaseIdx, compIdx));
                 }
 
                 // add advective flux of current component in current
                 // phase
-                (*this)[conti0EqIdx + compIdx] += extQuants.volumeFlux(phaseIdx)*molarity;
+                (*this)[conti0EqIdx + compIdx] += extQuants.volumeFlux(phaseIdx) * molarity;
             }
 
             if constexpr (enableEnergy) {
@@ -145,17 +143,17 @@ public:
                         specificEnthalpy = fluidState.enthalpy(phaseIdx);
                     }
                     else {
-                        specificEnthalpy = Opm::getValue(fluidState.enthalpy(phaseIdx));
+                        specificEnthalpy = getValue(fluidState.enthalpy(phaseIdx));
                     }
                 }
                 else if (focusDofIdx == interiorDofIdx) {
                     specificEnthalpy = insideIntQuants.fluidState().enthalpy(phaseIdx);
                 }
                 else {
-                    specificEnthalpy = Opm::getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
+                    specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
                 }
 
-                const Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
+                const Evaluation enthalpyRate = density * extQuants.volumeFlux(phaseIdx) * specificEnthalpy;
                 EnergyModule::addToEnthalpyRate(*this, enthalpyRate);
             }
         }
