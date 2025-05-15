@@ -271,11 +271,13 @@ public:
         // register runtime parameters of the VTK output modules
         VtkCompositionModule<TypeTag>::registerParameters();
 
-        if (enableDiffusion)
+        if constexpr (enableDiffusion) {
             VtkDiffusionModule<TypeTag>::registerParameters();
+        }
 
-        if (enableEnergy)
+        if constexpr (enableEnergy) {
             VtkEnergyModule<TypeTag>::registerParameters();
+        }
     }
 
     /*!
@@ -469,10 +471,12 @@ public:
         ParentType::registerOutputModules_();
 
         this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));
-        if (enableDiffusion)
+        if constexpr (enableDiffusion) {
             this->addOutputModule(std::make_unique<VtkDiffusionModule<TypeTag>>(this->simulator_));
-        if (enableEnergy)
+        }
+        if constexpr (enableEnergy) {
             this->addOutputModule(std::make_unique<VtkEnergyModule<TypeTag>>(this->simulator_));
+        }
     }
 
     mutable Scalar referencePressure_;
