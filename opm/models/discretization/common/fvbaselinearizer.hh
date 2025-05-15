@@ -28,31 +28,38 @@
 #ifndef EWOMS_FV_BASE_LINEARIZER_HH
 #define EWOMS_FV_BASE_LINEARIZER_HH
 
-#include "fvbaseproperties.hh"
-#include "linearizationtype.hh"
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#include <dune/grid/common/gridenums.hh>
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
+
 #include <opm/grid/utility/SparseTable.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/parallel/gridcommhandles.hh>
 #include <opm/models/parallel/threadmanager.hpp>
 #include <opm/models/parallel/threadedentityiterator.hh>
+
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
-
-#include <type_traits>
-#include <iostream>
-#include <vector>
-#include <thread>
-#include <set>
+#include <cstddef>
 #include <exception>   // current_exception, rethrow_exception
+#include <iostream>
+#include <map>
+#include <memory>
 #include <mutex>
+#include <set>
+#include <vector>
 
 namespace Opm {
+
 // forward declarations
 template<class TypeTag>
 class EcfvDiscretization;
@@ -106,32 +113,21 @@ class FvBaseLinearizer
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
 
-    static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
+    static constexpr bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
 
-    // copying the linearizer is not a good idea
-    FvBaseLinearizer(const FvBaseLinearizer&);
 //! \endcond
 
 public:
-    FvBaseLinearizer()
-        : jacobian_()
-    {
-        simulatorPtr_ = 0;
-    }
+    FvBaseLinearizer() = default;
 
-    ~FvBaseLinearizer()
-    {
-        auto it = elementCtx_.begin();
-        const auto& endIt = elementCtx_.end();
-        for (; it != endIt; ++it)
-            delete *it;
-    }
+    // copying the linearizer is not a good idea
+    FvBaseLinearizer(const FvBaseLinearizer&) = delete;
 
     /*!
      * \brief Register all run-time parameters for the Jacobian linearizer.
      */
     static void registerParameters()
-    { }
+    {}
 
     /*!
      * \brief Initialize the linearizer.
@@ -146,12 +142,7 @@ public:
     {
         simulatorPtr_ = &simulator;
         eraseMatrix();
-        auto it = elementCtx_.begin();
-        const auto& endIt = elementCtx_.end();
-        for (; it != endIt; ++it){
-            delete *it;
-        }
-        elementCtx_.resize(0);
+        elementCtx_.clear();
         fullDomain_ = std::make_unique<FullDomain>(simulator.gridView());
     }
 
@@ -204,14 +195,16 @@ public:
         // we defer the initialization of the Jacobian matrix until here because the
         // auxiliary modules usually assume the problem, model and grid to be fully
         // initialized...
-        if (!jacobian_)
+        if (!jacobian_) {
             initFirstIteration_();
+        }
 
         // Called here because it is no longer called from linearize_().
         if (static_cast<std::size_t>(domain.view.size(0)) == model_().numTotalDof()) {
             // We are on the full domain.
             resetSystem_();
-        } else {
+        }
+        else {
             resetSystem_(domain);
         }
 
@@ -236,8 +229,9 @@ public:
         }
         succeeded = simulator_().gridView().comm().min(succeeded);
 
-        if (!succeeded)
+        if (!succeeded) {
             throw NumericalProblem("A process did not succeed in linearizing the system");
+        }
     }
 
     void finalize()
@@ -270,8 +264,9 @@ public:
 
             succeeded = comm.min(succeeded);
 
-            if (!succeeded)
+            if (!succeeded) {
                 throw NumericalProblem("linearization of an auxiliary equation failed");
+            }
         }
     }
 
@@ -293,13 +288,11 @@ public:
     GlobalEqVector& residual()
     { return residual_; }
 
-    void setLinearizationType(LinearizationType linearizationType){
-        linearizationType_ = linearizationType;
-    };
+    void setLinearizationType(LinearizationType linearizationType)
+    { linearizationType_ = linearizationType; }
 
-    const LinearizationType& getLinearizationType() const{
-        return linearizationType_;
-    };
+    const LinearizationType& getLinearizationType() const
+    { return linearizationType_; }
 
     void updateDiscretizationParameters()
     {
@@ -311,7 +304,8 @@ public:
         // This linearizer stores no such data.
     }
 
-    void updateFlowsInfo() {
+    void updateFlowsInfo()
+    {
         // This linearizer stores no such data.
     }
 
@@ -329,7 +323,7 @@ public:
      * (This object has been only implemented for the tpfalinearizer.)
      */
     const auto& getFlowsInfo() const
-    {return flowsInfo_;}   
+    { return flowsInfo_; }
 
     /*!
      * \brief Return constant reference to the floresInfo.
@@ -337,7 +331,7 @@ public:
      * (This object has been only implemented for the tpfalinearizer.)
      */
     const auto& getFloresInfo() const
-    {return floresInfo_;}
+    { return floresInfo_; }
 
     template <class SubDomainType>
     void resetSystem_(const SubDomainType& domain)
@@ -353,7 +347,7 @@ public:
 #pragma omp parallel
 #endif
         {
-            unsigned threadId = ThreadManager::threadId();
+            const unsigned threadId = ThreadManager::threadId();
             auto elemIt = threadedElemIt.beginParallel();
             MatrixBlock zeroBlock;
             zeroBlock = 0.0;
@@ -366,7 +360,7 @@ public:
                      primaryDofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0);
                      ++primaryDofIdx)
                 {
-                    unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
+                    const unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
                     residual_[globI] = 0.0;
                     jacobian_->clearRow(globI, 0.0);
                 }
@@ -377,16 +371,19 @@ public:
 private:
     Simulator& simulator_()
     { return *simulatorPtr_; }
+
     const Simulator& simulator_() const
     { return *simulatorPtr_; }
 
     Problem& problem_()
     { return simulator_().problem(); }
+
     const Problem& problem_() const
     { return simulator_().problem(); }
 
     Model& model_()
     { return simulator_().model(); }
+
     const Model& model_() const
     { return simulator_().model(); }
 
@@ -409,9 +406,11 @@ private:
         resetSystem_();
 
         // create the per-thread context objects
-        elementCtx_.resize(ThreadManager::maxThreads());
-        for (unsigned threadId = 0; threadId != ThreadManager::maxThreads(); ++ threadId)
-            elementCtx_[threadId] = new ElementContext(simulator_());
+        elementCtx_.clear();
+        elementCtx_.reserve(ThreadManager::maxThreads());
+        for (unsigned threadId = 0; threadId != ThreadManager::maxThreads(); ++ threadId) {
+            elementCtx_.push_back(std::make_unique<ElementContext>(simulator_()));
+        }
     }
 
     // Construct the BCRS matrix for the Jacobian of the residual function
@@ -429,10 +428,10 @@ private:
             stencil.update(elem);
 
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
-                unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
+                const unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
-                    unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
+                    const unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     sparsityPattern_[myIdx].insert(neighborIdx);
                 }
             }
@@ -440,12 +439,13 @@ private:
 
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
-        size_t numAuxMod = model.numAuxiliaryModules();
-        for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx)
+        const std::size_t numAuxMod = model.numAuxiliaryModules();
+        for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx) {
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern_);
+        }
 
         // allocate raw matrix
-        jacobian_.reset(new SparseMatrixAdapter(simulator_()));
+        jacobian_ = std::make_unique<SparseMatrixAdapter>(simulator_());
 
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern_);
@@ -463,9 +463,10 @@ private:
     // quite involved and is thus relatively slow.
     void updateConstraintsMap_()
     {
-        if (!enableConstraints_())
+        if (!enableConstraints_()) {
             // constraints are not explictly enabled, so we don't need to consider them!
             return;
+        }
 
         constraintsMap_.clear();
 
@@ -475,7 +476,7 @@ private:
 #pragma omp parallel
 #endif
         {
-            unsigned threadId = ThreadManager::threadId();
+            const unsigned threadId = ThreadManager::threadId();
             ElementIterator elemIt = threadedElemIt.beginParallel();
             for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 // create an element context (the solution-based quantities are not
@@ -488,7 +489,7 @@ private:
                 // element's freedom. if yes, add the constraint to the map.
                 for (unsigned primaryDofIdx = 0;
                      primaryDofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0);
-                     ++ primaryDofIdx)
+                     ++primaryDofIdx)
                 {
                     Constraints constraints;
                     elemCtx.problem().constraints(constraints,
@@ -496,7 +497,7 @@ private:
                                                   primaryDofIdx,
                                                   /*timeIdx=*/0);
                     if (constraints.isActive()) {
-                        unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
+                        const unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
                         constraintsMap_[globI] = constraints;
                         continue;
                     }
@@ -518,8 +519,9 @@ private:
         // before the first iteration of each time step, we need to update the
         // constraints. (i.e., we assume that constraints can be time dependent, but they
         // can't depend on the solution.)
-        if (model_().newtonMethod().numIterations() == 0)
+        if (model_().newtonMethod().numIterations() == 0) {
             updateConstraintsMap_();
+        }
 
         applyConstraintsToSolution_();
 
@@ -548,8 +550,8 @@ private:
                     nextElemIt = threadedElemIt.increment();
                     if (!threadedElemIt.isFinished(nextElemIt)) {
                         const auto& nextElem = *nextElemIt;
-                        if (linearizeNonLocalElements
-                            || nextElem.partitionType() == Dune::InteriorEntity)
+                        if (linearizeNonLocalElements ||
+                            nextElem.partitionType() == Dune::InteriorEntity)
                         {
                             model_().prefetch(nextElem);
                             problem_().prefetch(nextElem);
@@ -557,8 +559,9 @@ private:
                     }
 
                     const auto& elem = *elemIt;
-                    if (!linearizeNonLocalElements && elem.partitionType() != Dune::InteriorEntity)
+                    if (!linearizeNonLocalElements && elem.partitionType() != Dune::InteriorEntity) {
                         continue;
+                    }
 
                     linearizeElement_(elem);
                 }
@@ -582,65 +585,65 @@ private:
         // after reduction from the parallel block, exceptionPtr will point to
         // a valid exception if one occurred in one of the threads; rethrow
         // it here to let the outer handler take care of it properly
-        if(exceptionPtr) {
+        if (exceptionPtr) {
             std::rethrow_exception(exceptionPtr);
         }
 
         applyConstraintsToLinearization_();
     }
 
-
     // linearize an element in the interior of the process' grid partition
     template <class ElementType>
     void linearizeElement_(const ElementType& elem)
     {
-        unsigned threadId = ThreadManager::threadId();
+        const unsigned threadId = ThreadManager::threadId();
 
-        ElementContext *elementCtx = elementCtx_[threadId];
+        ElementContext& elementCtx = *elementCtx_[threadId];
         auto& localLinearizer = model_().localLinearizer(threadId);
 
         // the actual work of linearization is done by the local linearizer class
-        localLinearizer.linearize(*elementCtx, elem);
+        localLinearizer.linearize(elementCtx, elem);
 
         // update the right hand side and the Jacobian matrix
-        if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
+        if (getPropValue<TypeTag, Properties::UseLinearizationLock>()) {
             globalMatrixMutex_.lock();
+        }
 
-        size_t numPrimaryDof = elementCtx->numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx) {
-            unsigned globI = elementCtx->globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elementCtx.numPrimaryDof(/*timeIdx=*/0);
+        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++primaryDofIdx) {
+            const unsigned globI = elementCtx.globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
 
             // update the right hand side
             residual_[globI] += localLinearizer.residual(primaryDofIdx);
 
             // update the global Jacobian matrix
-            for (unsigned dofIdx = 0; dofIdx < elementCtx->numDof(/*timeIdx=*/0); ++ dofIdx) {
-                unsigned globJ = elementCtx->globalSpaceIndex(/*spaceIdx=*/dofIdx, /*timeIdx=*/0);
+            for (unsigned dofIdx = 0; dofIdx < elementCtx.numDof(/*timeIdx=*/0); ++dofIdx) {
+                const unsigned globJ = elementCtx.globalSpaceIndex(/*spaceIdx=*/dofIdx, /*timeIdx=*/0);
 
                 jacobian_->addToBlock(globJ, globI, localLinearizer.jacobian(dofIdx, primaryDofIdx));
             }
         }
 
-        if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
+        if (getPropValue<TypeTag, Properties::UseLinearizationLock>()) {
             globalMatrixMutex_.unlock();
+        }
     }
 
     // apply the constraints to the solution. (i.e., the solution of constraint degrees
     // of freedom is set to the value of the constraint.)
     void applyConstraintsToSolution_()
     {
-        if (!enableConstraints_())
+        if (!enableConstraints_()) {
             return;
+        }
 
         // TODO: assuming a history size of 2 only works for Euler time discretizations!
         auto& sol = model_().solution(/*timeIdx=*/0);
         auto& oldSol = model_().solution(/*timeIdx=*/1);
 
-        auto it = constraintsMap_.begin();
-        const auto& endIt = constraintsMap_.end();
-        for (; it != endIt; ++it) {
-            sol[it->first] = it->second;
-            oldSol[it->first] = it->second;
+        for (const auto& constraint : constraintsMap_) {
+            sol[constraint.first] = constraint.second;
+            oldSol[constraint.first] = constraint.second;
         }
     }
 
@@ -648,33 +651,29 @@ private:
     // freedom the Jacobian matrix maps to identity and the residual is zero)
     void applyConstraintsToLinearization_()
     {
-        if (!enableConstraints_())
+        if (!enableConstraints_()) {
             return;
+        }
 
-        auto it = constraintsMap_.begin();
-        const auto& endIt = constraintsMap_.end();
-        for (; it != endIt; ++it) {
-            unsigned constraintDofIdx = it->first;
-
+        for (const auto& constraint : constraintsMap_) {
             // reset the column of the Jacobian matrix
             // put an identity matrix on the main diagonal of the Jacobian
-            jacobian_->clearRow(constraintDofIdx, Scalar(1.0));
+            jacobian_->clearRow(constraint.first, Scalar(1.0));
 
             // make the right-hand side of constraint DOFs zero
-            residual_[constraintDofIdx] = 0.0;
+            residual_[constraint.first] = 0.0;
         }
     }
 
     static bool enableConstraints_()
     { return getPropValue<TypeTag, Properties::EnableConstraints>(); }
 
-    Simulator *simulatorPtr_;
-    std::vector<ElementContext*> elementCtx_;
+    Simulator* simulatorPtr_{};
+    std::vector<std::unique_ptr<ElementContext>> elementCtx_;
 
     // The constraint equations (only non-empty if the
     // EnableConstraints property is true)
     std::map<unsigned, Constraints> constraintsMap_;
-
 
     struct FlowInfo
     {
