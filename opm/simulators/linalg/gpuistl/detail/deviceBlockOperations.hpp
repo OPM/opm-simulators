@@ -23,6 +23,8 @@
 #include <config.h>
 #include <cuda_runtime.h>
 
+#include <cassert>
+
 /*
     This file provides inlineable functions intended for CUDA kernels operating on block matrix elements
     The functions provides various matrix operations that are used by the preconditioners.
@@ -278,6 +280,92 @@ mmvMixedGeneral(const MatrixScalar* A, const VectorScalar* b, ResultScalar* c)
     for (int i = 0; i < blocksize; ++i) {
         for (int j = 0; j < blocksize; ++j) {
             c[i] -= ResultScalar(ComputeScalar(A[i * blocksize + j]) * ComputeScalar(b[j]));
+        }
+    }
+}
+
+// Checks if a value is close to zero based on a precision limit
+// Tolerance is 1e-40, to match matrixblock.hh
+template <typename T>
+__device__ __forceinline__ bool
+isCloseToZero(const T value, const T limit = T(1e-40))
+{
+    return abs(value) < limit;
+}
+
+// Solve a linear system Ax=b for block sizes 1-3
+template <typename T, int blockSize>
+__device__ __forceinline__ bool
+solveBlock(const T* A, const T* b, T* x)
+{
+    if constexpr (blockSize == 1) {
+        if (isCloseToZero(A[0])) {
+            return false;
+        }
+        x[0] = b[0] / A[0];
+        return true;
+    }
+    else if constexpr (blockSize == 2) {
+        // Calculate determinant
+        T det = A[0] * A[3] - A[1] * A[2];
+
+        if (isCloseToZero(det)) {
+            return false;
+        }
+
+        T invDet = T(1.0) / det;
+
+        // Compute solution using Cramer's rule
+        x[0] = (A[3] * b[0] - A[1] * b[1]) * invDet;
+        x[1] = (A[0] * b[1] - A[2] * b[0]) * invDet;
+
+        return true;
+    }
+    else if constexpr (blockSize == 3) {
+        // Calculate determinant
+        T det = A[0] * (A[4] * A[8] - A[5] * A[7]) -
+                A[1] * (A[3] * A[8] - A[5] * A[6]) +
+                A[2] * (A[3] * A[7] - A[4] * A[6]);
+
+        if (isCloseToZero(det)) {
+            return false;
+        }
+
+        T invDet = T(1.0) / det;
+
+        // Calculate cofactors for each element of b
+        x[0] = ((A[4] * A[8] - A[5] * A[7]) * b[0] +
+                (A[2] * A[7] - A[1] * A[8]) * b[1] +
+                (A[1] * A[5] - A[2] * A[4]) * b[2]) * invDet;
+
+        x[1] = ((A[5] * A[6] - A[3] * A[8]) * b[0] +
+                (A[0] * A[8] - A[2] * A[6]) * b[1] +
+                (A[2] * A[3] - A[0] * A[5]) * b[2]) * invDet;
+
+        x[2] = ((A[3] * A[7] - A[4] * A[6]) * b[0] +
+                (A[1] * A[6] - A[0] * A[7]) * b[1] +
+                (A[0] * A[4] - A[1] * A[3]) * b[2]) * invDet;
+
+        return true;
+    }
+    else {
+        // Unsupported block size
+        return false;
+    }
+}
+
+// Transpose a block matrix (row-major)
+// Note: This function does NOT support in-place transposition (srcBlock == dstBlock)
+// The source and destination blocks must be different memory locations
+template <class T, int blockSize>
+__device__ __forceinline__ void
+transposeBlock(const T* srcBlock, T* dstBlock)
+{
+    assert(srcBlock != dstBlock && "Source and destination blocks must be different");
+
+    for (int i = 0; i < blockSize; ++i) {
+        for (int j = 0; j < blockSize; ++j) {
+            dstBlock[j * blockSize + i] = srcBlock[i * blockSize + j];
         }
     }
 }

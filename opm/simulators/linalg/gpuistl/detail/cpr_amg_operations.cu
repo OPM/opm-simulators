@@ -19,6 +19,7 @@
 #include <config.h>
 
 #include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/deviceBlockOperations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpuThreadUtils.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
@@ -29,6 +30,53 @@ namespace Opm::gpuistl::detail
 
 namespace
 {
+    // Kernel for calculating quasi-IMPES weights
+    template <typename T, bool transpose, int blockSize>
+    __global__ void quasiImpesWeightsKernel(const T* matrix,
+                                            T* weights,
+                                            const int* diagonalIndices,
+                                            const int numberOfRows,
+                                            const int pressureVarIndex)
+    {
+        const auto row = blockDim.x * blockIdx.x + threadIdx.x;
+
+        if (row < numberOfRows) {
+            const int diagIdx = diagonalIndices[row];
+            const int blockOffset = diagIdx * blockSize * blockSize;
+            const T* block = matrix + blockOffset;
+
+            // Set up RHS with 1.0 at pressure index
+            T rhs[blockSize] = {0};
+            rhs[pressureVarIndex] = 1.0;
+
+            // Storage for solution
+            T bweights[blockSize] = {0};
+
+            // Solve the system
+            if constexpr (transpose) {
+                // Solve using original matrix
+                solveBlock<T, blockSize>(block, rhs, bweights);
+            } else {
+                // Create transposed block for solving
+                T transposed[blockSize * blockSize];
+                transposeBlock<T, blockSize>(block, transposed);
+                solveBlock<T, blockSize>(transposed, rhs, bweights);
+            }
+
+            // Find maximum absolute value for normalization
+            T invMaxAbs = abs(bweights[0]);
+            for (int j = 1; j < blockSize; ++j) {
+                invMaxAbs = max(invMaxAbs, abs(bweights[j]));
+            }
+            invMaxAbs = T(1.0) / invMaxAbs;
+
+            // Normalize and store weights
+            for (int j = 0; j < blockSize; ++j) {
+                weights[row * blockSize + j] = bweights[j] * invMaxAbs;
+            }
+        }
+    }
+
     // Kernel to calculate matrix entries for the coarse level - processes each row in parallel
     template <typename T, bool transpose>
     __global__ void calculateCoarseEntriesKernel(const T* fineNonZeroValues,
@@ -129,6 +177,55 @@ namespace
 
 } // anonymous namespace
 
+template <typename T, bool transpose, int blocksize>
+void
+dispatchQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
+                          std::size_t pressureVarIndex,
+                          GpuVector<T>& weights,
+                          const GpuVector<int>& diagonalIndices,
+                          int numberOfRows)
+{
+    if (matrix.blockSize() != blocksize) {
+        if constexpr (blocksize > 1) {
+            dispatchQuasiImpesWeights<T, transpose, blocksize - 1>(
+                matrix, pressureVarIndex, weights, diagonalIndices, numberOfRows);
+        } else {
+            throw std::runtime_error("Unsupported block size for getQuasiImpesWeights: " + 
+                                   std::to_string(matrix.blockSize()) + ". Only block sizes 1-3 are supported.");
+        }
+    } else {
+        // Launch kernel with the correct block size
+        int threadBlockSize = getCudaRecomendedThreadBlockSize(quasiImpesWeightsKernel<T, transpose, blocksize>);
+        int nThreadBlocks = getNumberOfBlocks(numberOfRows, threadBlockSize);
+        quasiImpesWeightsKernel<T, transpose, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+            matrix.getNonZeroValues().data(),
+            weights.data(),
+            diagonalIndices.data(),
+            numberOfRows,
+            pressureVarIndex);
+    }
+}
+
+// Implementation of getQuasiImpesWeights for GPU
+template <typename T, bool transpose>
+void
+getQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
+                     std::size_t pressureVarIndex,
+                     GpuVector<T>& weights,
+                     const GpuVector<int>& diagonalIndices)
+{
+    const int blockSize = matrix.blockSize();
+    const int numberOfRows = matrix.N();
+
+    // Ensure weights vector has the right size
+    if (weights.dim() != numberOfRows * blockSize) {
+        throw std::runtime_error("Weights vector has incorrect size");
+    }
+
+    // Dispatch based on block size, max block size is 3
+    dispatchQuasiImpesWeights<T, transpose, 3>(matrix, pressureVarIndex, weights, diagonalIndices, numberOfRows);
+}
+
 template <typename T, bool transpose>
 void
 calculateCoarseEntries(const GpuSparseMatrix<T>& fineMatrix,
@@ -187,8 +284,11 @@ prolongateVector(const GpuVector<T>& coarse,
         coarse.data(), fine.data(), weights.data(), numberOfBlocks, blockSize, pressureVarIndex);
 }
 
-// Explicit template instantiations
 #define INSTANTIATE_CPR_AMG_FUNCTIONS(ScalarType, TransposeMode)                                                       \
+    template void getQuasiImpesWeights<ScalarType, TransposeMode>(const GpuSparseMatrix<ScalarType>& matrix,           \
+                                                                  std::size_t pressureVarIndex,                        \
+                                                                  GpuVector<ScalarType>& weights,                      \
+                                                                  const GpuVector<int>& diagonalIndices);              \
     template void calculateCoarseEntries<ScalarType, TransposeMode>(const GpuSparseMatrix<ScalarType>& fineMatrix,     \
                                                                     GpuSparseMatrix<ScalarType>& coarseMatrix,         \
                                                                     const GpuVector<ScalarType>& weights,              \

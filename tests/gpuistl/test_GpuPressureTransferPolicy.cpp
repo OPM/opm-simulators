@@ -33,13 +33,16 @@
 
 #include <opm/simulators/linalg/PressureTransferPolicy.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
+#include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuPressureTransferPolicy.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
 #include <random>
 #include <vector>
+
 
 // Helper function to run tests for a specific transpose mode and pressure variable index
 template <bool transpose>
@@ -59,6 +62,7 @@ runPressureTransferPolicyTest(int pressureVarIndex)
     // Define GPU types
     using GpuMatrixType = Opm::gpuistl::GpuSparseMatrix<Scalar>;
     using GpuVectorType = Opm::gpuistl::GpuVector<Scalar>;
+    using GpuVectorIntType = Opm::gpuistl::GpuVector<int>;
 
     // Define operator types for the policies
     using CpuOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
@@ -113,23 +117,36 @@ runPressureTransferPolicyTest(int pressureVarIndex)
     CpuOperatorType cpuOperator(matrix);
     GpuOperatorType gpuOperator(gpuMatrix);
 
-    // Create weights vector (typically pressure weights)
-    VectorType weights(N);
+    // Calculate quasiimpes weights for CPU
+    VectorType cpuWeights = Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(matrix, pressureVarIndex, transpose);
+    // Calculate quasiimpes weights for GPU
+    GpuVectorType gpuWeights(N * blockSize);
+    auto diagonalIndices = Opm::Amg::precomputeDiagonalIndices(gpuMatrix);
+    GpuVectorIntType gpuDiagonalIndices(diagonalIndices);
+    Opm::gpuistl::detail::getQuasiImpesWeights<Scalar, transpose>(gpuMatrix, pressureVarIndex, gpuWeights, gpuDiagonalIndices);
+
+    // Convert weights to std::vector for comparison
+    std::vector<double> cpuWeightsData(N * blockSize);
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < blockSize; ++j) {
-            weights[i][j] = (j == pressureVarIndex) ? 1.0 : 0.0; // Only pressure component has weight 1
+            cpuWeightsData[i * blockSize + j] = cpuWeights[i][j];
         }
     }
 
-    // Create GPU weights
-    GpuVectorType gpuWeights(weights);
+    std::vector<double> gpuWeightsData = gpuWeights.asStdVector();
+
+    // Check that both implementations yield the same weights
+    BOOST_REQUIRE_EQUAL(cpuWeightsData.size(), gpuWeightsData.size());
+    for (size_t i = 0; i < cpuWeightsData.size(); ++i) {
+        BOOST_CHECK_CLOSE(cpuWeightsData[i], gpuWeightsData[i], 1e-10);
+    }
 
     // create empty property tree
     Opm::PropertyTree prm;
 
-    // Create policies
+    // Create policies using calculated weights
     auto cpuPolicy = Opm::PressureTransferPolicy<CpuOperatorType, CommInfo, Scalar, transpose>(
-        CommInfo(), weights, prm, pressureVarIndex);
+        CommInfo(), cpuWeights, prm, pressureVarIndex);
 
     auto gpuPolicy = Opm::gpuistl::GpuPressureTransferPolicy<GpuOperatorType, CommInfo, Scalar, transpose>(
         CommInfo(), gpuWeights, prm, pressureVarIndex);
@@ -161,6 +178,7 @@ runPressureTransferPolicyTest(int pressureVarIndex)
 
     // Test restriction (moveToCoarseLevel)
     VectorType fineVector(N);
+
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < blockSize; ++j) {
             fineVector[i][j] = distribution(generator);
@@ -218,7 +236,7 @@ runPressureTransferPolicyTest(int pressureVarIndex)
     std::vector<double> gpuFineResultData = gpuFineResult.asStdVector();
 
     // Check that prolongation results match
-    BOOST_CHECK_EQUAL(cpuFineResultData.size(), gpuFineResultData.size());
+    BOOST_REQUIRE_EQUAL(cpuFineResultData.size(), gpuFineResultData.size());
     for (size_t i = 0; i < cpuFineResultData.size(); ++i) {
         BOOST_CHECK_CLOSE(cpuFineResultData[i], gpuFineResultData[i], 1e-10);
     }
