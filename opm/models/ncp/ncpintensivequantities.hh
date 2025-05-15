@@ -44,6 +44,7 @@
 #include <array>
 
 namespace Opm {
+
 /*!
  * \ingroup NcpModel
  * \ingroup IntensiveQuantities
@@ -80,17 +81,16 @@ class NcpIntensiveQuantities
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { dimWorld = GridView::dimensionworld };
 
-    using CompositionFromFugacitiesSolver = Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation>;
-    using FluidState = Opm::CompositionalFluidState<Evaluation, FluidSystem, /*storeEnthalpy=*/enableEnergy>;
+    using CompositionFromFugacitiesSolver = ::Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation>;
+    using FluidState = CompositionalFluidState<Evaluation, FluidSystem, /*storeEnthalpy=*/enableEnergy>;
     using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
-    using DiffusionIntensiveQuantities = Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
-    using EnergyIntensiveQuantities = Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
+    using DiffusionIntensiveQuantities = ::Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using EnergyIntensiveQuantities = ::Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
 
 public:
-    NcpIntensiveQuantities()
-    {}
+    NcpIntensiveQuantities() = default;
 
     NcpIntensiveQuantities(const NcpIntensiveQuantities& other) = default;
 
@@ -126,9 +126,11 @@ public:
         const auto& problem = elemCtx.problem();
         const MaterialLawParams& materialParams =
             problem.materialLawParams(elemCtx, dofIdx, timeIdx);
+
         // calculate capillary pressures
         std::array<Evaluation, numPhases> capPress;
         MaterialLaw::capillaryPressures(capPress, materialParams, fluidState_);
+
         // add to the pressure of the first fluid phase
         const Evaluation& pressure0 = priVars.makeEvaluation(pressure0Idx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -142,7 +144,7 @@ public:
         }
 
         // calculate phase compositions
-        const auto *hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
+        const auto* hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             // initial guess
             if (hint) {
@@ -230,8 +232,8 @@ public:
 #if !defined NDEBUG && HAVE_VALGRIND
         ParentType::checkDefined();
 
-        Opm::Valgrind::CheckDefined(porosity_);
-        Opm::Valgrind::CheckDefined(relativePermeability_);
+        Valgrind::CheckDefined(porosity_);
+        Valgrind::CheckDefined(relativePermeability_);
 
         fluidState_.checkDefined();
 #endif
