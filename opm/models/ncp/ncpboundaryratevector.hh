@@ -61,19 +61,19 @@ class NcpBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
-    NcpBoundaryRateVector() : ParentType()
-    {}
+    NcpBoundaryRateVector() = default;
 
     /*!
      * \copydoc
      * ImmiscibleBoundaryRateVector::ImmiscibleBoundaryRateVector(Scalar)
      */
-    NcpBoundaryRateVector(const Evaluation& value) : ParentType(value)
+    NcpBoundaryRateVector(const Evaluation& value)
+        : ParentType(value)
     {}
 
     /*!
@@ -138,7 +138,7 @@ public:
 
                 // add advective flux of current component in current
                 // phase
-                (*this)[conti0EqIdx + compIdx] += extQuants.volumeFlux(phaseIdx)*molarity;
+                (*this)[conti0EqIdx + compIdx] += extQuants.volumeFlux(phaseIdx) * molarity;
             }
 
             if (enableEnergy) {
@@ -158,7 +158,7 @@ public:
                     specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
                 }
 
-                const Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
+                const Evaluation enthalpyRate = density * extQuants.volumeFlux(phaseIdx) * specificEnthalpy;
                 EnergyModule::addToEnthalpyRate(*this, enthalpyRate);
             }
         }
@@ -168,7 +168,7 @@ public:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
-            Opm::Valgrind::CheckDefined((*this)[i]);
+            Valgrind::CheckDefined((*this)[i]);
         }
 #endif
     }
