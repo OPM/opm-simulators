@@ -28,17 +28,19 @@
 #ifndef EWOMS_FV_BASE_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_FV_BASE_EXTENSIVE_QUANTITIES_HH
 
-#include "fvbaseproperties.hh"
-
-#include <opm/models/common/multiphasebaseproperties.hh>
-
 #include <opm/material/common/Valgrind.hpp>
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <cassert>
+
 namespace Opm {
+
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
- * \brief Provide the properties at a face which make sense indepentently
+ * \brief Provide the properties at a face which make sense independently
  *        of the conserved quantities.
  */
 template <class TypeTag>
@@ -53,7 +55,7 @@ public:
      * \brief Register all run-time parameters for the extensive quantities.
      */
     static void registerParameters()
-    { }
+    {}
 
     /*!
      * \brief Update the extensive quantities for a given sub-control-volume face.
@@ -70,12 +72,11 @@ public:
         exteriorScvIdx_ = scvf.exteriorIndex();
 
         extrusionFactor_ =
-            (elemCtx.intensiveQuantities(interiorScvIdx_, timeIdx).extrusionFactor()
-             + elemCtx.intensiveQuantities(exteriorScvIdx_, timeIdx).extrusionFactor()) / 2;
+            (elemCtx.intensiveQuantities(interiorScvIdx_, timeIdx).extrusionFactor() +
+             elemCtx.intensiveQuantities(exteriorScvIdx_, timeIdx).extrusionFactor()) / 2;
         Valgrind::CheckDefined(extrusionFactor_);
         assert(extrusionFactor_ > 0);
     }
-
 
     /*!
      * \brief Update the extensive quantities for a given boundary face.
@@ -93,7 +94,7 @@ public:
                         unsigned timeIdx,
                         const FluidState&)
     {
-        unsigned dofIdx = context.interiorScvIndex(bfIdx, timeIdx);
+        const unsigned dofIdx = context.interiorScvIndex(bfIdx, timeIdx);
         interiorScvIdx_ = static_cast<unsigned short>(dofIdx);
         exteriorScvIdx_ = static_cast<unsigned short>(dofIdx);
 

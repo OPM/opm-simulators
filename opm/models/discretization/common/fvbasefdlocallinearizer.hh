@@ -28,22 +28,29 @@
 #ifndef EWOMS_FV_BASE_FD_LOCAL_LINEARIZER_HH
 #define EWOMS_FV_BASE_FD_LOCAL_LINEARIZER_HH
 
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hpp>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-
-#include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
 #include <dune/istl/bvector.hh>
 #include <dune/istl/matrix.hh>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/parametersystem.hpp>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/simulators/linalg/linalgproperties.hh>
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <limits>
+#include <memory>
 
 namespace Opm {
+
 // forward declaration
 template<class TypeTag>
 class FvBaseFdLocalLinearizer;
@@ -75,7 +82,8 @@ template<class TypeTag>
 struct BaseEpsilon<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = std::max<type>(0.9123e-10, std::numeric_limits<type>::epsilon()*1.23e3);
+    static constexpr type value = std::max<type>(0.9123e-10,
+                                                 std::numeric_limits<type>::epsilon() * 1.23e3);
 };
 
 } // namespace Opm::Properties
@@ -157,26 +165,11 @@ private:
 
     using LocalEvalBlockVector = typename LocalResidual::LocalEvalBlockVector;
 
-#if __GNUC__ == 4 && __GNUC_MINOR__ <= 6
 public:
-    // make older GCCs happy by providing a public copy constructor (this is necessary
-    // for their implementation of std::vector, although the method is never called...)
-    FvBaseFdLocalLinearizer(const FvBaseFdLocalLinearizer&)
-        : internalElemContext_(0)
-    {}
+    FvBaseFdLocalLinearizer() = default;
 
-#else
-    // copying local residual objects around is a very bad idea, so we explicitly prevent
-    // it...
+    // Disable copying for efficiency reasons
     FvBaseFdLocalLinearizer(const FvBaseFdLocalLinearizer&) = delete;
-#endif
-public:
-    FvBaseFdLocalLinearizer()
-        : internalElemContext_(0)
-    { }
-
-    ~FvBaseFdLocalLinearizer()
-    { delete internalElemContext_; }
 
     /*!
      * \brief Register all run-time parameters for the local jacobian.
@@ -199,8 +192,7 @@ public:
     void init(Simulator& simulator)
     {
         simulatorPtr_ = &simulator;
-        delete internalElemContext_;
-        internalElemContext_ = new ElementContext(simulator);
+        internalElemContext_ = std::make_unique<ElementContext>(simulator);
     }
 
     /*!
@@ -247,9 +239,9 @@ public:
         localResidual_.eval(residual_, elemCtx);
 
         // calculate the local jacobian matrix
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; dofIdx++) {
-            for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        for (auto dofIdx = 0 * numPrimaryDof; dofIdx < numPrimaryDof; ++dofIdx) {
+            for (auto pvIdx = 0 * numEq; pvIdx < numEq; ++pvIdx) {
                 asImp_().evalPartialDerivative_(elemCtx, dofIdx, pvIdx);
 
                 // incorporate the partial derivatives into the local Jacobian matrix
@@ -280,12 +272,12 @@ public:
                           unsigned dofIdx,
                           unsigned pvIdx) const
     {
-        unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-        Scalar pvWeight = elemCtx.model().primaryVarWeight(globalIdx, pvIdx);
+        const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        const Scalar pvWeight = elemCtx.model().primaryVarWeight(globalIdx, pvIdx);
         assert(pvWeight > 0 && std::isfinite(pvWeight));
         Valgrind::CheckDefined(pvWeight);
 
-        return baseEpsilon()/pvWeight;
+        return baseEpsilon() / pvWeight;
     }
 
     /*!
@@ -322,13 +314,16 @@ public:
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
     const Simulator& simulator_() const
     { return *simulatorPtr_; }
+
     const Problem& problem_() const
     { return simulatorPtr_->problem(); }
+
     const Model& model_() const
     { return simulatorPtr_->model(); }
 
@@ -347,8 +342,8 @@ protected:
      */
     void resize_(const ElementContext& elemCtx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
 
         residual_.resize(numDof);
         jacobian_.setSize(numDof, numPrimaryDof);
@@ -361,14 +356,17 @@ protected:
      */
     void reset_(const ElementContext& elemCtx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx)
-            for (unsigned dof2Idx = 0; dof2Idx < numDof; ++ dof2Idx)
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++primaryDofIdx) {
+            for (unsigned dof2Idx = 0; dof2Idx < numDof; ++dof2Idx) {
                 jacobian_[dof2Idx][primaryDofIdx] = 0.0;
+            }
+        }
 
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < numDof; ++ primaryDofIdx)
+        for (unsigned primaryDofIdx = 0; primaryDofIdx < numDof; ++primaryDofIdx) {
             residual_[primaryDofIdx] = 0.0;
+        }
     }
 
     /*!
@@ -422,7 +420,7 @@ protected:
         elemCtx.stashIntensiveQuantities(dofIdx);
 
         PrimaryVariables priVars(elemCtx.primaryVars(dofIdx, /*timeIdx=*/0));
-        Scalar eps = asImp_().numericEpsilon(elemCtx, dofIdx, pvIdx);
+        const Scalar eps = asImp_().numericEpsilon(elemCtx, dofIdx, pvIdx);
         Scalar delta = 0.0;
 
         if (numericDifferenceMethod_() >= 0) {
@@ -479,8 +477,9 @@ protected:
         elemCtx.restoreIntensiveQuantities(dofIdx);
 
 #ifndef NDEBUG
-        for (unsigned i = 0; i < derivResidual_.size(); ++i)
+        for (unsigned i = 0; i < derivResidual_.size(); ++i) {
             Valgrind::CheckDefined(derivResidual_[i]);
+        }
 #endif
     }
 
@@ -493,9 +492,9 @@ protected:
                               unsigned focusDofIdx,
                               unsigned pvIdx)
     {
-        size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
-        for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
-            for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
+        const std::size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        for (unsigned dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                 // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of the
                 // residual function 'eqIdx' for the degree of freedom 'dofIdx' with
                 // regard to the primary variable 'pvIdx' of the degree of freedom
@@ -506,16 +505,15 @@ protected:
         }
     }
 
-    Simulator *simulatorPtr_;
-    Model *modelPtr_;
+    Simulator* simulatorPtr_{};
 
-    ElementContext *internalElemContext_;
+    std::unique_ptr<ElementContext> internalElemContext_{};
 
-    LocalEvalBlockVector residual_;
-    LocalEvalBlockVector derivResidual_;
-    ScalarLocalBlockMatrix jacobian_;
+    LocalEvalBlockVector residual_{};
+    LocalEvalBlockVector derivResidual_{};
+    ScalarLocalBlockMatrix jacobian_{};
 
-    LocalResidual localResidual_;
+    LocalResidual localResidual_{};
 };
 
 } // namespace Opm
