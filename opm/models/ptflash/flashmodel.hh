@@ -255,16 +255,20 @@ public:
     std::string primaryVarName(unsigned pvIdx) const
     {
         const std::string& tmp = EnergyModule::primaryVarName(pvIdx);
-        if (!tmp.empty())
+        if (!tmp.empty()) {
             return tmp;
+        }
 
         std::ostringstream oss;
-        if (Indices::z0Idx <= pvIdx && pvIdx < Indices::z0Idx + numComponents - 1)
+        if (Indices::z0Idx <= pvIdx && pvIdx < Indices::z0Idx + numComponents - 1) {
             oss << "z_," << FluidSystem::componentName(/*compIdx=*/pvIdx - Indices::z0Idx);
-        else if (pvIdx==Indices::pressure0Idx)
+        }
+        else if (pvIdx==Indices::pressure0Idx) {
             oss << "pressure_" << FluidSystem::phaseName(0);
-        else
+        }
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -275,17 +279,20 @@ public:
     std::string eqName(unsigned eqIdx) const
     {
         const std::string& tmp = EnergyModule::eqName(eqIdx);
-        if (!tmp.empty())
+        if (!tmp.empty()) {
             return tmp;
+        }
 
         std::ostringstream oss;
-        if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx
-                                                     + numComponents) {
+        if (Indices::conti0EqIdx <= eqIdx &&
+            eqIdx < Indices::conti0EqIdx + numComponents)
+        {
             unsigned compIdx = eqIdx - Indices::conti0EqIdx;
             oss << "continuity^" << FluidSystem::componentName(compIdx);
         }
-        else
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
