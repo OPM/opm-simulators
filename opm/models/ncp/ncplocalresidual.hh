@@ -41,6 +41,7 @@
 #include <type_traits>
 
 namespace Opm {
+
 /*!
  * \ingroup NcpModel
  *
@@ -66,14 +67,14 @@ class NcpLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidu
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
+    using DiffusionModule = ::Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
     using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
     using ElemEvalEqVector = Dune::BlockVector<EvalEqVector>;
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -93,9 +94,9 @@ public:
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             unsigned eqIdx = conti0EqIdx + compIdx;
             storage[eqIdx] +=
-                Toolbox::template decay<LhsEval>(fluidState.molarity(phaseIdx, compIdx))
-                * Toolbox::template decay<LhsEval>(fluidState.saturation(phaseIdx))
-                * Toolbox::template decay<LhsEval>(intQuants.porosity());
+                Toolbox::template decay<LhsEval>(fluidState.molarity(phaseIdx, compIdx)) *
+                Toolbox::template decay<LhsEval>(fluidState.saturation(phaseIdx)) *
+                Toolbox::template decay<LhsEval>(intQuants.porosity());
         }
 
         EnergyModule::addPhaseStorage(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx), phaseIdx);
@@ -128,10 +129,10 @@ public:
     {
         flux = 0.0;
         addAdvectiveFlux(flux, elemCtx, scvfIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(flux);
+        Valgrind::CheckDefined(flux);
 
         addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(flux);
+        Valgrind::CheckDefined(flux);
     }
 
     /*!
@@ -156,22 +157,22 @@ public:
             // linearize the system of equations, it does not matter.)
             if (upIdx == focusDofIdx) {
                 Evaluation tmp =
-                    up.fluidState().molarDensity(phaseIdx)
-                    * extQuants.volumeFlux(phaseIdx);
+                    up.fluidState().molarDensity(phaseIdx) *
+                    extQuants.volumeFlux(phaseIdx);
 
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     flux[conti0EqIdx + compIdx] +=
-                        tmp*up.fluidState().moleFraction(phaseIdx, compIdx);
+                        tmp * up.fluidState().moleFraction(phaseIdx, compIdx);
                 }
             }
             else {
                 Evaluation tmp =
-                    Toolbox::value(up.fluidState().molarDensity(phaseIdx))
-                    * extQuants.volumeFlux(phaseIdx);
+                    Toolbox::value(up.fluidState().molarDensity(phaseIdx)) *
+                    extQuants.volumeFlux(phaseIdx);
 
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     flux[conti0EqIdx + compIdx] +=
-                        tmp*Toolbox::value(up.fluidState().moleFraction(phaseIdx, compIdx));
+                        tmp * Toolbox::value(up.fluidState().moleFraction(phaseIdx, compIdx));
                 }
             }
         }
@@ -202,14 +203,13 @@ public:
                        unsigned dofIdx,
                        unsigned timeIdx) const
     {
-        Opm::Valgrind::SetUndefined(source);
+        Valgrind::SetUndefined(source);
         elemCtx.problem().source(source, elemCtx, dofIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(source);
+        Valgrind::CheckDefined(source);
 
         // evaluate the NCPs (i.e., the "phase presence" equations)
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            source[ncp0EqIdx + phaseIdx] =
-                phaseNcp(elemCtx, dofIdx, timeIdx, phaseIdx);
+            source[ncp0EqIdx + phaseIdx] = phaseNcp(elemCtx, dofIdx, timeIdx, phaseIdx);
         }
     }
 
@@ -225,7 +225,7 @@ public:
         const auto& fluidState = elemCtx.intensiveQuantities(dofIdx, timeIdx).fluidState();
         using FluidState = std::remove_const_t<std::remove_reference_t<decltype(fluidState)>>;
 
-        using LhsToolbox = Opm::MathToolbox<LhsEval>;
+        using LhsToolbox = MathToolbox<LhsEval>;
 
         const LhsEval& a = phaseNotPresentIneq_<FluidState, LhsEval>(fluidState, phaseIdx);
         const LhsEval& b = phasePresentIneq_<FluidState, LhsEval>(fluidState, phaseIdx);
@@ -240,8 +240,7 @@ private:
     template <class FluidState, class LhsEval>
     LhsEval phasePresentIneq_(const FluidState& fluidState, unsigned phaseIdx) const
     {
-        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
-
+        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
         return FsToolbox::template decay<LhsEval>(fluidState.saturation(phaseIdx));
     }
 
@@ -252,7 +251,7 @@ private:
     template <class FluidState, class LhsEval>
     LhsEval phaseNotPresentIneq_(const FluidState& fluidState, unsigned phaseIdx) const
     {
-        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
 
         // difference of sum of mole fractions in the phase from 100%
         LhsEval a = 1.0;
