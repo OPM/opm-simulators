@@ -209,28 +209,28 @@ public:
             std::cout << L << std::endl;
         }
 
-
         // Update phases
         typename FluidSystem::template ParameterCache<Evaluation> paramCache(eos_type);
         paramCache.updatePhase(fluidState_, FluidSystem::oilPhaseIdx);
 
         const Scalar R = Opm::Constants<Scalar>::R;
-        Evaluation Z_L = (paramCache.molarVolume(FluidSystem::oilPhaseIdx) * fluidState_.pressure(FluidSystem::oilPhaseIdx) )/
-        (R * fluidState_.temperature(FluidSystem::oilPhaseIdx));
+        const Evaluation Z_L = (paramCache.molarVolume(FluidSystem::oilPhaseIdx) *
+                                fluidState_.pressure(FluidSystem::oilPhaseIdx)) /
+                               (R * fluidState_.temperature(FluidSystem::oilPhaseIdx));
         paramCache.updatePhase(fluidState_, FluidSystem::gasPhaseIdx);
-        Evaluation Z_V = (paramCache.molarVolume(FluidSystem::gasPhaseIdx) * fluidState_.pressure(FluidSystem::gasPhaseIdx) )/
-        (R * fluidState_.temperature(FluidSystem::gasPhaseIdx));
-
+        const Evaluation Z_V = (paramCache.molarVolume(FluidSystem::gasPhaseIdx) *
+                                fluidState_.pressure(FluidSystem::gasPhaseIdx)) /
+                               (R * fluidState_.temperature(FluidSystem::gasPhaseIdx));
 
         // Update saturation
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
             Sw = priVars.makeEvaluation(water0Idx, timeIdx);
         }
-        Evaluation L = fluidState_.L();
-        Evaluation So = Opm::max((1 - Sw) * (L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
-        Evaluation Sg = Opm::max(1 - So - Sw, 0.0);
-        Scalar sumS = Opm::getValue(So) + Opm::getValue(Sg) + Opm::getValue(Sw);
+        const Evaluation L = fluidState_.L();
+        Evaluation So = max((1 - Sw) * (L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
+        Evaluation Sg = max(1 - So - Sw, 0.0);
+        const Scalar sumS = getValue(So) + getValue(Sg) + getValue(Sw);
         So /= sumS;
         Sg /= sumS;
 
