@@ -154,7 +154,7 @@ void registerAdaptiveParameters()
          "step size is larger than this parameter, the time step will be rejected.");
     Parameters::Register<Parameters::TimeStepControlParameters>
         ("(Only applicable for the general 3rd order controller.) Parameters for the general "
-         "3rd order controller. Should be given as \"beta_1;beta_2;beta_3;alpha_2;alpha_3\".");
+         "3rd order controller. Should be given as 'beta_1;beta_2;beta_3;alpha_2;alpha_3'.");
 }
 
 std::tuple<TimeStepControlType, std::unique_ptr<TimeStepControlInterface>, bool>
