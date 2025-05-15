@@ -30,13 +30,15 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/ncp/ncpproperties.hh>
 
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <cassert>
 
 namespace Opm {
 
