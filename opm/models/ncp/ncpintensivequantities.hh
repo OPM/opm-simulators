@@ -28,18 +28,18 @@
 #ifndef EWOMS_NCP_INTENSIVE_QUANTITIES_HH
 #define EWOMS_NCP_INTENSIVE_QUANTITIES_HH
 
-#include "ncpproperties.hh"
-
-#include <opm/models/common/energymodule.hh>
-#include <opm/models/common/diffusionmodule.hh>
-
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/constraintsolvers/CompositionFromFugacities.hpp>
-#include <opm/material/common/Valgrind.hpp>
-
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/constraintsolvers/CompositionFromFugacities.hpp>
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
+#include <opm/models/common/diffusionmodule.hh>
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 /*!
