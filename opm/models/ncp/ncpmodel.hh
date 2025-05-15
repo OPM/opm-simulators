@@ -308,8 +308,8 @@ public:
      */
     std::string primaryVarName(unsigned pvIdx) const
     {
-        std::string s;
-        if (!(s = EnergyModule::primaryVarName(pvIdx)).empty()) {
+        const std::string s = EnergyModule::primaryVarName(pvIdx);
+        if (!s.empty()) {
             return s;
         }
 
@@ -335,8 +335,8 @@ public:
      */
     std::string eqName(unsigned eqIdx) const
     {
-        std::string s;
-        if (!(s = EnergyModule::eqName(eqIdx)).empty()) {
+        const std::string s = EnergyModule::eqName(eqIdx);
+        if (!s.empty()) {
             return s;
         }
 
@@ -379,7 +379,7 @@ public:
     void updatePVWeights(const ElementContext& elemCtx) const
     {
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numDof(/*timeIdx=*/0); ++dofIdx) {
-            unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 minActivityCoeff_[globalIdx][compIdx] = 1e100;
@@ -405,7 +405,7 @@ public:
      */
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
-        Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
+        const Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
         Scalar result;
         if (tmp > 0) {
             // energy related quantity
@@ -413,7 +413,7 @@ public:
         }
         else if (fugacity0Idx <= pvIdx && pvIdx < fugacity0Idx + numComponents) {
             // component fugacity
-            unsigned compIdx = pvIdx - fugacity0Idx;
+            const unsigned compIdx = pvIdx - fugacity0Idx;
             assert(compIdx <= numComponents);
 
             Valgrind::CheckDefined(minActivityCoeff_[globalDofIdx][compIdx]);
@@ -427,7 +427,7 @@ public:
         }
         else {
 #ifndef NDEBUG
-            unsigned phaseIdx = pvIdx - saturation0Idx;
+            const unsigned phaseIdx = pvIdx - saturation0Idx;
             assert(phaseIdx < numPhases - 1);
 #endif
 
@@ -448,7 +448,7 @@ public:
      */
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
-        Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
+        const Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
         if (tmp > 0) {
             // an energy related equation
             return tmp;
@@ -459,7 +459,7 @@ public:
         }
 
         // a mass conservation equation
-        unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+        const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
         assert(compIdx <= numComponents);
 
         // make all kg equal
