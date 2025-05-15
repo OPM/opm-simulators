@@ -28,9 +28,9 @@
 #ifndef EWOMS_FV_BASE_INTENSIVE_QUANTITIES_HH
 #define EWOMS_FV_BASE_INTENSIVE_QUANTITIES_HH
 
-#include "fvbaseproperties.hh"
-
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
@@ -52,7 +52,7 @@ public:
      * \brief Register all run-time parameters for the intensive quantities.
      */
     static void registerParameters()
-    { }
+    {}
 
     /*!
      * \brief Update all quantities for a given control volume.
@@ -79,16 +79,17 @@ public:
      *        quantities in the intensive quantities are defined.
      */
     void checkDefined() const
-    { }
+    {}
+
 protected:
-    Scalar extrusionFactor_;
+    Scalar extrusionFactor_{};
+
 private:
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
+
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
-
-    
 };
 
 } // namespace Opm
