@@ -156,7 +156,7 @@ protected:
         maxSatDelta = std::max(std::abs(- sumSatDelta), maxSatDelta);
 
         if (maxSatDelta > 0.2) {
-            Scalar alpha = 0.2/maxSatDelta;
+            const Scalar alpha = 0.2/maxSatDelta;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
                 nextValue[saturation0Idx + phaseIdx] =
                     currentValue[saturation0Idx + phaseIdx]
@@ -172,17 +172,18 @@ protected:
         // fugacities
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             Scalar& val = nextValue[fugacity0Idx + compIdx];
-            Scalar oldVal = currentValue[fugacity0Idx + compIdx];
+            const Scalar oldVal = currentValue[fugacity0Idx + compIdx];
 
             // get the minimum activity coefficient for the component (i.e., the activity
             // coefficient of the phase for which the component has the highest affinity)
-            Scalar minPhi = this->problem().model().minActivityCoeff(globalDofIdx, compIdx);
             // Make sure that the activity coefficient does not get too small.
-            minPhi = std::max(0.001*currentValue[pressure0Idx], minPhi);
+            const Scalar minPhi =
+                std::max(this->problem().model().minActivityCoeff(globalDofIdx, compIdx),
+                          0.001 * currentValue[pressure0Idx]);
 
             // allow the mole fraction of the component to change at most 70% in any
             // phase (assuming composition independent fugacity coefficients).
-            Scalar maxDelta = 0.7 * minPhi;
+            const Scalar maxDelta = 0.7 * minPhi;
             clampValue_(val, oldVal - maxDelta, oldVal + maxDelta);
 
             // make sure that fugacities do not become negative
@@ -195,8 +196,8 @@ protected:
             // fugacities
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 Scalar& val = nextValue[fugacity0Idx + compIdx];
-                Scalar oldVal = currentValue[fugacity0Idx + compIdx];
-                Scalar minPhi = this->problem().model().minActivityCoeff(globalDofIdx, compIdx);
+                const Scalar oldVal = currentValue[fugacity0Idx + compIdx];
+                const Scalar minPhi = this->problem().model().minActivityCoeff(globalDofIdx, compIdx);
                 if (oldVal < 1.0*minPhi && val > 1.0*minPhi) {
                     val = 1.0*minPhi;
                 }
@@ -208,7 +209,7 @@ protected:
             // saturations
             for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
                 Scalar& val = nextValue[saturation0Idx + phaseIdx];
-                Scalar oldVal = currentValue[saturation0Idx + phaseIdx];
+                const Scalar oldVal = currentValue[saturation0Idx + phaseIdx];
                 if (oldVal < 1.0 && val > 1.0) {
                     val = 1.0;
                 }
