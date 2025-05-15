@@ -880,11 +880,12 @@ namespace Opm
         const int iteration_idx = simulator.model().newtonMethod().numIterations();
         if (iteration_idx < this->param_.max_niter_inner_well_iter_ || this->well_ecl_.isMultiSegment()) {
             const auto& ws = well_state.well(this->indexOfWell());
-            const bool nonzero_rate_original =
+            int nonzero_rate_original_indicator =
                 std::any_of(ws.surface_rates.begin(),
                             ws.surface_rates.begin() + well_state.numPhases(),
-                            [](Scalar rate) { return rate != Scalar(0.0); });
-
+                            [](Scalar rate) { return rate != Scalar(0.0); }) ? 1 : 0;
+            nonzero_rate_original_indicator = this->parallelWellInfo().communication().max(nonzero_rate_original_indicator);
+            const bool nonzero_rate_original = nonzero_rate_original_indicator == 1;
             this->operability_status_.solvable = true;
             bool converged = this->iterateWellEquations(simulator, dt, well_state, group_state, deferred_logger);
 

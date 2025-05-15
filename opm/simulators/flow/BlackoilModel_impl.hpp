@@ -96,7 +96,13 @@ prepareStep(const SimulatorTimerInterface& timer)
     if (grid_.comm().size() > 1 && lastStepFailed != grid_.comm().min(lastStepFailed)) {
         OPM_THROW(std::runtime_error,
                   fmt::format("Misalignment of the parallel simulation run in prepareStep "
-                              "- the previous step succeeded on rank {} but failed on the "
+                              "- the previous step succeeded on rank {} but failed on "
+                              "other ranks.", grid_.comm().rank()));
+    }
+    if (grid_.comm().size() > 1 && lastStepFailed != grid_.comm().max(lastStepFailed)) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Misalignment of the parallel simulation run in prepareStep "
+                              "- the previous step failed on rank {} but succeeded on "
                               "other ranks.", grid_.comm().rank()));
     }
     if (lastStepFailed) {
