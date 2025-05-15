@@ -40,7 +40,7 @@ struct EnableDriftCompensation { static constexpr bool value = false; };
 struct ExplicitRockCompaction { static constexpr bool value = false; };
 
 // Whether or not to check saturation function consistency requirements.
-struct CheckSatfuncConsistency { static constexpr bool value = false; };
+struct CheckSatfuncConsistency { static constexpr bool value = true; };
 
 // Maximum number of reported failures for each saturation function
 // consistency check.
