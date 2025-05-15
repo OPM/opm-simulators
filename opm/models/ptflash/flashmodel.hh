@@ -55,9 +55,11 @@
 #include <opm/models/ptflash/flashparameters.hh>
 #include <opm/models/ptflash/flashprimaryvariables.hh>
 
+#include <cassert>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <tuple>
 
 namespace Opm {
 
