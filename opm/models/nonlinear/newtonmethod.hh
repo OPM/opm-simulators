@@ -315,10 +315,10 @@ public:
                 // update of the solution
                 linearSolver_.setMatrix(jacobian);
                 solutionUpdate = 0.0;
-                bool converged = linearSolver_.solve(solutionUpdate);
+                const bool conv = linearSolver_.solve(solutionUpdate);
                 solveTimer_.stop();
 
-                if (!converged) {
+                if (!conv) {
                     solveTimer_.stop();
                     if (asImp_().verbose_())
                         std::cout << "Newton: Linear solver did not converge\n" << std::flush;
@@ -612,10 +612,9 @@ protected:
     {
         // loop over the auxiliary modules and ask them to post process the solution
         // vector.
-        auto& model = simulator_.model();
         const auto& comm = simulator_.gridView().comm();
-        for (unsigned i = 0; i < model.numAuxiliaryModules(); ++i) {
-            auto& auxMod = *model.auxiliaryModule(i);
+        for (unsigned i = 0; i < simulator_.model().numAuxiliaryModules(); ++i) {
+            auto& auxMod = *simulator_.model().auxiliaryModule(i);
 
             bool succeeded = true;
             try {
