@@ -138,7 +138,7 @@ public:
                 (*this)[conti0EqIdx + compIdx] += extQuants.volumeFlux(phaseIdx)*molarity;
             }
 
-            if (enableEnergy) {
+            if constexpr (enableEnergy) {
                 Evaluation specificEnthalpy;
                 if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
                     if (focusDofIdx == interiorDofIdx) {
@@ -160,9 +160,10 @@ public:
             }
         }
 
-        if (enableEnergy)
+        if constexpr (enableEnergy) {
             // heat conduction
             EnergyModule::addToEnthalpyRate(*this, EnergyModule::thermalConductionRate(extQuants));
+        }
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
