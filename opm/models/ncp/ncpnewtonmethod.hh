@@ -94,19 +94,22 @@ protected:
         this->error_ = 0;
         for (unsigned dofIdx = 0; dofIdx < currentResidual.size(); ++dofIdx) {
             // do not consider auxiliary DOFs for the error
-            if (dofIdx >= this->model().numGridDof() || this->model().dofTotalVolume(dofIdx) <= 0.0)
+            if (dofIdx >= this->model().numGridDof() || this->model().dofTotalVolume(dofIdx) <= 0.0) {
                 continue;
+            }
 
             // also do not consider DOFs which are constraint
             if (this->enableConstraints_()) {
-                if (constraintsMap.count(dofIdx) > 0)
+                if (constraintsMap.count(dofIdx) > 0) {
                     continue;
+                }
             }
 
             const auto& r = currentResidual[dofIdx];
             for (unsigned eqIdx = 0; eqIdx < r.size(); ++eqIdx) {
-                if (ncp0EqIdx <= eqIdx && eqIdx < Indices::ncp0EqIdx + numPhases)
+                if (ncp0EqIdx <= eqIdx && eqIdx < Indices::ncp0EqIdx + numPhases) {
                     continue;
+                }
                 this->error_ =
                     std::max(std::abs(r[eqIdx]*this->model().eqWeight(dofIdx, eqIdx)),
                              this->error_);
@@ -118,10 +121,11 @@ protected:
 
         // make sure that the error never grows beyond the maximum
         // allowed one
-        if (this->error_ > Parameters::Get<Parameters::NewtonMaxError<Scalar>>())
+        if (this->error_ > Parameters::Get<Parameters::NewtonMaxError<Scalar>>()) {
             throw Opm::NumericalProblem("Newton: Error "+std::to_string(double(this->error_))+
                                         + " is larger than maximum allowed error of "
                                         + std::to_string(Parameters::Get<Parameters::NewtonMaxError<Scalar>>()));
+        }
     }
 
     /*!
@@ -193,20 +197,24 @@ protected:
                 Scalar& val = nextValue[fugacity0Idx + compIdx];
                 Scalar oldVal = currentValue[fugacity0Idx + compIdx];
                 Scalar minPhi = this->problem().model().minActivityCoeff(globalDofIdx, compIdx);
-                if (oldVal < 1.0*minPhi && val > 1.0*minPhi)
+                if (oldVal < 1.0*minPhi && val > 1.0*minPhi) {
                     val = 1.0*minPhi;
-                else if (oldVal > 0.0 && val < 0.0)
+                }
+                else if (oldVal > 0.0 && val < 0.0) {
                     val = 0.0;
+                }
             }
 
             // saturations
             for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
                 Scalar& val = nextValue[saturation0Idx + phaseIdx];
                 Scalar oldVal = currentValue[saturation0Idx + phaseIdx];
-                if (oldVal < 1.0 && val > 1.0)
+                if (oldVal < 1.0 && val > 1.0) {
                     val = 1.0;
-                else if (oldVal > 0.0 && val < 0.0)
+                }
+                else if (oldVal > 0.0 && val < 0.0) {
                     val = 0.0;
+                }
             }
         }
     }
