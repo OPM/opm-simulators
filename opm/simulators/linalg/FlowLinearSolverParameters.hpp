@@ -37,6 +37,9 @@ class ISTLSolverGpuBridge;
 template <class TypeTag>
 class ISTLSolver;
 
+template<class TypeTag>
+class ISTLSolverRuntimeOptionProxy;
+
 }
 
 namespace Opm::Properties {
@@ -52,9 +55,9 @@ template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams>
 {
 #if COMPILE_GPU_BRIDGE
-    using type = ISTLSolverGpuBridge<TypeTag>;
+    using type = ISTLSolverRuntimeOptionProxy<TypeTag>;
 #else
-    using type = ISTLSolver<TypeTag>;
+    using type = ISTLSolverRuntimeOptionProxy<TypeTag>;
 #endif
 };
 
