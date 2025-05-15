@@ -27,6 +27,21 @@ namespace Opm::gpuistl::detail
 {
 
 /**
+ * @brief Calculates quasi-IMPES weights for CPR preconditioner on GPU
+ * @param matrix The matrix used for weight calculation
+ * @param pressureVarIndex The index of the pressure variable
+ * @param transpose Whether to use the transpose mode for calculation
+ * @param weights Output vector to store the calculated weights
+ * @param diagonalIndices The diagonal indices of the matrix
+ */
+template <typename T>
+void getQuasiImpesWeights(const GpuSparseMatrix<T>& matrix,
+                          std::size_t pressureVarIndex,
+                          bool transpose,
+                          GpuVector<T>& weights,
+                          const GpuVector<int>& diagonalIndices);
+
+/**
  * @brief Calculates the coarse level matrix entries based on the fine level matrix and weights
  * @param fineMatrix The fine level matrix
  * @param coarseMatrix The coarse level matrix to fill
