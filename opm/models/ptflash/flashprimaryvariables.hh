@@ -28,13 +28,14 @@
 #ifndef OPM_PTFLASH_PRIMARY_VARIABLES_HH
 #define OPM_PTFLASH_PRIMARY_VARIABLES_HH
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/ptflash/flashindices.hh>
 
-#include <opm/material/common/Valgrind.hpp>
-
-#include <iostream>
+#include <ostream>
 
 namespace Opm {
 
