@@ -142,6 +142,19 @@ void registerAdaptiveParameters()
     Parameters::Register<Parameters::TimeStepControlRejectCompletedStep>
         ("(Only applicable for the general 3rd order controller.) Include rejection of completed "
          "time steps if the relative change is larger than the time step control tolerance");
+    Parameters::Register<Parameters::TimeStepControlToleranceTestVersion>
+        ("(Only applicable for the general 3rd order controller.) Ways to decide if the time step "
+         "should be rejected. Options: 'standard' and 'control-error-filtering'. The standard "
+         "version compares relative change to tolerance directly to decide if the time step should "
+         "be rejected, while the control-error-filtering version compares the relative change "
+         "between the current and proposed next time steps to the max-reduction-time-step parameter.");
+    Parameters::Register<Parameters::TimeStepControlMaxReductionTimeStep>
+        ("(Only applicable for the general 3rd order controller, using "
+         "time-step-control-tolerance-test-version choice 'control-error-filtering') If the relative "
+         "change in time step size for the next time step is larger than this parameter, the time "
+         "step will be rejected.");
+    Parameters::Register<Parameters::TimeStepControlParameters>
+        ("TODO!");
 }
 
 std::tuple<TimeStepControlType, std::unique_ptr<TimeStepControlInterface>, bool>
@@ -222,11 +235,17 @@ createController(const UnitSystem& unitSystem)
          [tol]() {
              const double safetyFactor = Parameters::Get<Parameters::TimeStepControlSafetyFactor>(); // 0.8
              const bool rejectCompletedStep = Parameters::Get<Parameters::TimeStepControlRejectCompletedStep>(); // false
+             const std::string toleranceTestVersion = Parameters::Get<Parameters::TimeStepControlToleranceTestVersion>(); // "standard"
+             const double maxReductionTimeStep = Parameters::Get<Parameters::TimeStepControlMaxReductionTimeStep>(); // 0.1
+             const std::string parameters = Parameters::Get<Parameters::TimeStepControlParameters>(); // ""
              return RetVal{
                  TimeStepControlType::General3rdOrder,
                  std::make_unique<General3rdOrderController>(tol,
                                                              safetyFactor,
-                                                             rejectCompletedStep),
+                                                             rejectCompletedStep,
+                                                             toleranceTestVersion,
+                                                             maxReductionTimeStep,
+                                                             parameters),
                  false
              };
         }},
