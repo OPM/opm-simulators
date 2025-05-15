@@ -98,9 +98,9 @@ protected:
         constexpr Scalar max_percent_change = 0.2;
         constexpr Scalar upper_bound = 1. + max_percent_change;
         constexpr Scalar lower_bound = 1. - max_percent_change;
-        clampValue_(nextValue[pressure0Idx],
-                    currentValue[pressure0Idx] * lower_bound,
-                    currentValue[pressure0Idx] * upper_bound);
+        nextValue[pressure0Idx] = std::clamp(nextValue[pressure0Idx],
+                                             currentValue[pressure0Idx] * lower_bound,
+                                             currentValue[pressure0Idx] * upper_bound);
 
         ////
         // z updates
@@ -127,7 +127,7 @@ protected:
         // ensure that z-values are less than tol or more than 1-tol
         Scalar tol = 1e-8;
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-            clampValue_(nextValue[z0Idx + compIdx], tol, 1-tol);
+           nextValue[z0Idx + compIdx] = std::clamp(nextValue[z0Idx + compIdx], tol, 1-tol);
         }
 
         if constexpr (waterEnabled) {
@@ -138,12 +138,6 @@ protected:
             }
         }
     }
-private:
-    void clampValue_(Scalar& val, Scalar minVal, Scalar maxVal) const
-    {
-        val = std::clamp(val, minVal, maxVal);
-    }
-
 };  // class FlashNewtonMethod
 } // namespace Opm
 #endif
