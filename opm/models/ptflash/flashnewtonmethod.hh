@@ -28,11 +28,13 @@
 #ifndef OPM_FLASH_NEWTON_METHOD_HH
 #define OPM_FLASH_NEWTON_METHOD_HH
 
-#include <opm/models/nonlinear/newtonmethod.hh>
-
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/nonlinear/newtonmethod.hh>
+
 #include <algorithm>
+#include <cmath>
 
 namespace Opm::Properties {
 
