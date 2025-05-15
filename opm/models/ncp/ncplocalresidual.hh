@@ -111,8 +111,9 @@ public:
                         unsigned timeIdx) const
     {
         storage = 0;
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             addPhaseStorage(storage, elemCtx, dofIdx, timeIdx, phaseIdx);
+        }
 
         EnergyModule::addSolidEnergyStorage(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx));
     }
@@ -255,8 +256,9 @@ private:
 
         // difference of sum of mole fractions in the phase from 100%
         LhsEval a = 1.0;
-        for (unsigned i = 0; i < numComponents; ++i)
+        for (unsigned i = 0; i < numComponents; ++i) {
             a -= FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, i));
+        }
         return a;
     }
 };
