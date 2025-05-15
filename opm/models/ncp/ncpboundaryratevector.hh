@@ -105,28 +105,36 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Evaluation density;
             if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
-                if (focusDofIdx == interiorDofIdx)
+                if (focusDofIdx == interiorDofIdx) {
                     density = fluidState.density(phaseIdx);
-                else
-                    density = Opm::getValue(fluidState.density(phaseIdx));
+                }
+                else {
+                    density = getValue(fluidState.density(phaseIdx));
+                }
             }
-            else if (focusDofIdx == interiorDofIdx)
+            else if (focusDofIdx == interiorDofIdx) {
                 density = insideIntQuants.fluidState().density(phaseIdx);
-            else
-                density = Opm::getValue(insideIntQuants.fluidState().density(phaseIdx));
+            }
+            else {
+                density = getValue(insideIntQuants.fluidState().density(phaseIdx));
+            }
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 Evaluation molarity;
                 if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
-                    if (focusDofIdx == interiorDofIdx)
+                    if (focusDofIdx == interiorDofIdx) {
                         molarity = fluidState.molarity(phaseIdx, compIdx);
-                    else
-                        molarity = Opm::getValue(fluidState.molarity(phaseIdx, compIdx));
+                    }
+                    else {
+                        molarity = getValue(fluidState.molarity(phaseIdx, compIdx));
+                    }
                 }
-                else if (focusDofIdx == interiorDofIdx)
+                else if (focusDofIdx == interiorDofIdx) {
                     molarity = insideIntQuants.fluidState().molarity(phaseIdx, compIdx);
-                else
-                    molarity = Opm::getValue(insideIntQuants.fluidState().molarity(phaseIdx, compIdx));
+                }
+                else {
+                    molarity = getValue(insideIntQuants.fluidState().molarity(phaseIdx, compIdx));
+                }
 
                 // add advective flux of current component in current
                 // phase
@@ -136,15 +144,19 @@ public:
             if (enableEnergy) {
                 Evaluation specificEnthalpy;
                 if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
-                    if (focusDofIdx == interiorDofIdx)
+                    if (focusDofIdx == interiorDofIdx) {
                         specificEnthalpy = fluidState.enthalpy(phaseIdx);
-                    else
-                        specificEnthalpy = Opm::getValue(fluidState.enthalpy(phaseIdx));
+                    }
+                    else {
+                        specificEnthalpy = getValue(fluidState.enthalpy(phaseIdx));
+                    }
                 }
-                else if (focusDofIdx == interiorDofIdx)
+                else if (focusDofIdx == interiorDofIdx) {
                     specificEnthalpy = insideIntQuants.fluidState().enthalpy(phaseIdx);
-                else
-                    specificEnthalpy = Opm::getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
+                }
+                else {
+                    specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
+                }
 
                 Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
                 EnergyModule::addToEnthalpyRate(*this, enthalpyRate);
