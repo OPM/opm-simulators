@@ -28,10 +28,11 @@
 #define OPM_TASKLETS_HPP
 
 #include <atomic>
-#include <thread>
-#include <queue>
-#include <mutex>
 #include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 namespace Opm {
 
@@ -46,6 +47,7 @@ public:
     explicit TaskletInterface(int refCount = 1)
         : referenceCount_(refCount)
     {}
+
     virtual ~TaskletInterface() {}
     virtual void run() = 0;
     virtual bool isEndMarker () const { return false; }
@@ -73,6 +75,7 @@ public:
         : TaskletInterface(numInvocations)
         , fn_(fn)
     {}
+
     void run() override
     { fn_(); }
 
@@ -112,7 +115,7 @@ class TaskletRunner
     {
     public:
         void run() override
-        { }
+        {}
 
         bool isEndMarker() const override
         { return true; }
@@ -165,7 +168,7 @@ public:
      * \brief Convenience method to construct a new function runner tasklet and dispatch it immediately.
      */
     template <class Fn>
-    std::shared_ptr<FunctionRunnerTasklet<Fn> > dispatchFunction(Fn &fn, int numInvocations=1)
+    std::shared_ptr<FunctionRunnerTasklet<Fn> > dispatchFunction(Fn &fn, int numInvocations = 1)
     {
         using Tasklet = FunctionRunnerTasklet<Fn>;
         auto tasklet = std::make_shared<Tasklet>(numInvocations, fn);
