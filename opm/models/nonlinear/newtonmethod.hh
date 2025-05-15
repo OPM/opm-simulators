@@ -57,14 +57,12 @@
 #include <unistd.h>
 
 namespace Opm {
+
 // forward declaration of classes
 template <class TypeTag>
 class NewtonMethod;
-}
 
-namespace Opm {
-// forward declaration of property tags
-} // namespace Opm
+}
 
 namespace Opm::Properties {
 
@@ -78,13 +76,17 @@ struct NewtonMethod {};
 
 // set default values for the properties
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::NewtonMethod> { using type = ::Opm::NewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::NewtonMethod>
+{ using type = ::Opm::NewtonMethod<TypeTag>; };
+
 template<class TypeTag>
-struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullConvergenceWriter<TypeTag>; };
+struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod>
+{ using type = NullConvergenceWriter<TypeTag>; };
 
 } // namespace Opm::Properties
 
 namespace Opm {
+
 /*!
  * \ingroup Newton
  * \brief The multi-dimensional Newton method.
@@ -143,7 +145,7 @@ public:
      * been allocated. (But not that they have been fully initialized yet.)
      */
     void finishInit()
-    { }
+    {}
 
     /*!
      * \brief Returns true if the error of the solution is below the
@@ -215,13 +217,15 @@ public:
      */
     bool apply()
     {
+        const bool istty = isatty(fileno(stdout));
+
         // Clear the current line using an ansi escape
         // sequence.  For an explanation see
         // http://en.wikipedia.org/wiki/ANSI_escape_code
-        const char *clearRemainingLine = "\n";
-        if (isatty(fileno(stdout))) {
-            static const char blubb[] = { 0x1b, '[', 'K', '\r', 0 };
-            clearRemainingLine = blubb;
+        const char* clearRemainingLine = "\n";
+        if (istty) {
+            static const char ansiClear[] = { 0x1b, '[', 'K', '\r', 0 };
+            clearRemainingLine = ansiClear;
         }
 
         // make sure all timers are prestine
@@ -291,9 +295,8 @@ public:
                 updateTimer_.stop();
 
                 if (!asImp_().proceed_()) {
-                    if (asImp_().verbose_() && isatty(fileno(stdout))) {
-                        std::cout << clearRemainingLine
-                                  << std::flush;
+                    if (asImp_().verbose_() && istty) {
+                        std::cout << clearRemainingLine << std::flush;
                     }
 
                     // tell the implementation that we're done with this iteration
@@ -348,7 +351,7 @@ public:
                 asImp_().update_(nextSolution, currentSolution, solutionUpdate, residual);
                 updateTimer_.stop();
 
-                if (asImp_().verbose_() && isatty(fileno(stdout))) {
+                if (asImp_().verbose_() && istty) {
                     // make sure that the line currently holding the cursor is prestine
                     std::cout << clearRemainingLine
                               << std::flush;
@@ -388,7 +391,7 @@ public:
         }
 
         // clear current line on terminal
-        if (asImp_().verbose_() && isatty(fileno(stdout))) {
+        if (asImp_().verbose_() && istty) {
             std::cout << clearRemainingLine
                       << std::flush;
         }
@@ -401,16 +404,16 @@ public:
         // print the timing summary of the time step
         if (asImp_().verbose_()) {
             Scalar elapsedTot =
-                linearizeTimer_.realTimeElapsed()
-                + solveTimer_.realTimeElapsed()
-                + updateTimer_.realTimeElapsed();
+                linearizeTimer_.realTimeElapsed() +
+                solveTimer_.realTimeElapsed() +
+                updateTimer_.realTimeElapsed();
             std::cout << "Linearization/solve/update time: "
                       << linearizeTimer_.realTimeElapsed() << "("
-                      << 100 * linearizeTimer_.realTimeElapsed()/elapsedTot << "%)/"
+                      << 100 * linearizeTimer_.realTimeElapsed() / elapsedTot << "%)/"
                       << solveTimer_.realTimeElapsed() << "("
-                      << 100 * solveTimer_.realTimeElapsed()/elapsedTot << "%)/"
+                      << 100 * solveTimer_.realTimeElapsed() / elapsedTot << "%)/"
                       << updateTimer_.realTimeElapsed() << "("
-                      << 100 * updateTimer_.realTimeElapsed()/elapsedTot << "%)"
+                      << 100 * updateTimer_.realTimeElapsed() / elapsedTot << "%)"
                       << "\n" << std::flush;
         }
 
@@ -501,9 +504,7 @@ protected:
      * \brief Returns true if the Newton method ought to be chatty.
      */
     bool verbose_() const
-    {
-        return params_.verbose_ && (comm_.rank() == 0);
-    }
+    { return params_.verbose_ && (comm_.rank() == 0); }
 
     /*!
      * \brief Called before the Newton method is applied to an
@@ -554,9 +555,7 @@ protected:
      *        spatial domain.
      */
     void linearizeDomain_()
-    {
-        model().linearizer().linearizeDomain();
-    }
+    { model().linearizer().linearizeDomain(); }
 
     void linearizeAuxiliaryEquations_()
     {
@@ -599,9 +598,9 @@ protected:
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (error_ > newtonMaxError) {
-            throw NumericalProblem("Newton: Error "+std::to_string(double(error_))
-                                   + " is larger than maximum allowed error of "
-                                   + std::to_string(double(newtonMaxError)));
+            throw NumericalProblem("Newton: Error " + std::to_string(double(error_)) +
+                                   " is larger than maximum allowed error of " +
+                                   std::to_string(double(newtonMaxError)));
         }
     }
 
@@ -867,6 +866,7 @@ protected:
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation *>(this); }
 };
