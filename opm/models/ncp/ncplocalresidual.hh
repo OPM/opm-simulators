@@ -222,7 +222,7 @@ public:
                      unsigned phaseIdx) const
     {
         const auto& fluidState = elemCtx.intensiveQuantities(dofIdx, timeIdx).fluidState();
-        using FluidState = typename std::remove_const<typename std::remove_reference<decltype(fluidState)>::type>::type;
+        using FluidState = std::remove_const_t<std::remove_reference_t<decltype(fluidState)>>;
 
         using LhsToolbox = Opm::MathToolbox<LhsEval>;
 
