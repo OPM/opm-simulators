@@ -28,34 +28,37 @@
 #ifndef EWOMS_NCP_MODEL_HH
 #define EWOMS_NCP_MODEL_HH
 
-#include <opm/material/densead/Math.hpp>
-
-#include "ncpproperties.hh"
-#include "ncplocalresidual.hh"
-#include "ncpextensivequantities.hh"
-#include "ncpprimaryvariables.hh"
-#include "ncpboundaryratevector.hh"
-#include "ncpratevector.hh"
-#include "ncpintensivequantities.hh"
-#include "ncpnewtonmethod.hh"
-#include "ncpindices.hh"
+#include <dune/common/fvector.hh>
 
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/common/multiphasebasemodel.hh>
-#include <opm/models/common/energymodule.hh>
-#include <opm/models/common/diffusionmodule.hh>
-#include <opm/models/io/vtkcompositionmodule.hpp>
-#include <opm/models/io/vtkenergymodule.hpp>
-#include <opm/models/io/vtkdiffusionmodule.hpp>
-
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/densead/Math.hpp>
 
-#include <dune/common/fvector.hh>
+#include <opm/models/ncp/ncpproperties.hh>
+#include <opm/models/ncp/ncplocalresidual.hh>
+#include <opm/models/ncp/ncpextensivequantities.hh>
+#include <opm/models/ncp/ncpprimaryvariables.hh>
+#include <opm/models/ncp/ncpboundaryratevector.hh>
+#include <opm/models/ncp/ncpratevector.hh>
+#include <opm/models/ncp/ncpintensivequantities.hh>
+#include <opm/models/ncp/ncpnewtonmethod.hh>
+#include <opm/models/ncp/ncpindices.hh>
 
+#include <opm/models/common/diffusionmodule.hh>
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebasemodel.hh>
+#include <opm/models/io/vtkcompositionmodule.hpp>
+#include <opm/models/io/vtkdiffusionmodule.hpp>
+#include <opm/models/io/vtkenergymodule.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace Opm {
