@@ -49,6 +49,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <exception>
 #include <iostream>
 #include <sstream>
@@ -674,7 +675,7 @@ protected:
             throw NumericalProblem("Non-finite update!");
         }
 
-        size_t numGridDof = model().numGridDof();
+        std::size_t numGridDof = model().numGridDof();
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
             if (enableConstraints_()) {
                 if (constraintsMap.count(dofIdx) > 0) {
@@ -701,8 +702,8 @@ protected:
         }
 
         // update the DOFs of the auxiliary equations
-        size_t numDof = model().numTotalDof();
-        for (size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
+        std::size_t numDof = model().numTotalDof();
+        for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
             nextSolution[dofIdx] = currentSolution[dofIdx];
             nextSolution[dofIdx] -= solutionUpdate[dofIdx];
         }
