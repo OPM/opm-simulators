@@ -41,6 +41,8 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <array>
+
 namespace Opm {
 /*!
  * \ingroup NcpModel
@@ -125,7 +127,7 @@ public:
         const MaterialLawParams& materialParams =
             problem.materialLawParams(elemCtx, dofIdx, timeIdx);
         // calculate capillary pressures
-        Evaluation capPress[numPhases];
+        std::array<Evaluation, numPhases> capPress;
         MaterialLaw::capillaryPressures(capPress, materialParams, fluidState_);
         // add to the pressure of the first fluid phase
         const Evaluation& pressure0 = priVars.makeEvaluation(pressure0Idx, timeIdx);
@@ -239,8 +241,8 @@ private:
     DimMatrix intrinsicPerm_;
     FluidState fluidState_;
     Evaluation porosity_;
-    Evaluation relativePermeability_[numPhases];
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation, numPhases> relativePermeability_{};
+    std::array<Evaluation, numPhases> mobility_{};
 };
 
 } // namespace Opm
