@@ -74,8 +74,8 @@ class FlashPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    using Toolbox = typename Opm::MathToolbox<Evaluation>;
-    using EnergyModule = Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
+    using Toolbox = MathToolbox<Evaluation>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
 
 public:
     FlashPrimaryVariables() : ParentType()
@@ -138,13 +138,13 @@ public:
     void print(std::ostream& os) const
     {
         os << "(p_" << FluidSystem::phaseName(FluidSystem::oilPhaseIdx) << " = "
-           << this->operator[](pressure0Idx);
+           << (*this)[pressure0Idx];
         for (unsigned compIdx = 0; compIdx < numComponents - 2; ++compIdx) {
             os << ", z_" << FluidSystem::componentName(compIdx) << " = "
-               << this->operator[](z0Idx + compIdx);
+               << (*this)[z0Idx + compIdx];
         }
         if constexpr (waterEnabled) {
-            os << ", S_w = " << this->operator[](water0Idx);
+            os << ", S_w = " << (*this)[water0Idx];
         }
         os << ")" << std::flush;
     }
