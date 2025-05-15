@@ -28,10 +28,8 @@
 #ifndef EWOMS_NCP_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_NCP_EXTENSIVE_QUANTITIES_HH
 
-#include "ncpproperties.hh"
-
-#include <opm/models/common/energymodule.hh>
 #include <opm/models/common/diffusionmodule.hh>
+#include <opm/models/common/energymodule.hh>
 #include <opm/models/common/multiphasebaseextensivequantities.hh>
 
 namespace Opm {
@@ -55,10 +53,10 @@ class NcpExtensiveQuantities
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    using DiffusionExtensiveQuantities = Opm::DiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
+    using DiffusionExtensiveQuantities = ::Opm::DiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    using EnergyExtensiveQuantities = Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
+    using EnergyExtensiveQuantities = ::Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     /*!
