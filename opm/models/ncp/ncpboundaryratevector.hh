@@ -28,10 +28,12 @@
 #ifndef EWOMS_NCP_BOUNDARY_RATE_VECTOR_HH
 #define EWOMS_NCP_BOUNDARY_RATE_VECTOR_HH
 
-#include "ncpproperties.hh"
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/common/energymodule.hh>
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
