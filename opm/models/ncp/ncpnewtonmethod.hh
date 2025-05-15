@@ -28,13 +28,14 @@
 #ifndef EWOMS_NCP_NEWTON_METHOD_HH
 #define EWOMS_NCP_NEWTON_METHOD_HH
 
-#include "ncpproperties.hh"
-
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
 
 #include <algorithm>
+#include <cmath>
+#include <string>
 
 namespace Opm::Properties {
 
