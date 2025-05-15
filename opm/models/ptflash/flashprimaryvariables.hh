@@ -135,7 +135,7 @@ public:
      *
      * \param os The \c std::ostream which should be used for the output.
      */
-    void print(std::ostream& os = std::cout) const
+    void print(std::ostream& os) const
     {
         os << "(p_" << FluidSystem::phaseName(FluidSystem::oilPhaseIdx) << " = "
            << this->operator[](pressure0Idx);
