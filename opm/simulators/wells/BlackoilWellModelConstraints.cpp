@@ -467,46 +467,63 @@ actionOnBrokenConstraints(const Group& group,
         wellModel_.groupState().production_control(group.name());
 
     // We switch to higher groups independently of the given group limit action in GCONPROD item 7
-    if (newControl == Group::ProductionCMode::FLD && oldControl != Group::ProductionCMode::FLD) {
-        // If newControl is FLD, the group should be subject to higher order controls
-        assert(group.productionGroupControlAvailable());
-        group_state.production_control(group.name(), newControl);
-        if (wellModel_.comm().rank() == 0) {
-            const std::string message = fmt::format("Switching production control mode for group {} from {} to {}",
-            group.name(),
-            Group::ProductionCMode2String(oldControl),
-            Group::ProductionCMode2String(newControl));
-            deferred_logger.debug(message);
-        }
-        return true;
-    }
+//    if (newControl == Group::ProductionCMode::FLD && oldControl != Group::ProductionCMode::FLD) {
+//        // If newControl is FLD, the group should be subject to higher order controls
+//        assert(group.productionGroupControlAvailable());
+//        group_state.production_control(group.name(), newControl);
+//        if (wellModel_.comm().rank() == 0) {
+//            const std::string message = fmt::format("Switching production control mode for group {} from {} to {}",
+//            group.name(),
+//            Group::ProductionCMode2String(oldControl),
+//            Group::ProductionCMode2String(newControl));
+//            deferred_logger.debug(message);
+//        }
+//        return true;
+//    }
 
     bool changed = false;
     std::string ss;
-    switch (group_limit_action.allRates) {
-    case Group::ExceedAction::NONE: {
-        if (oldControl != newControl) {
-            if ((group_limit_action.water == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::WRAT) ||
-                (group_limit_action.gas == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::GRAT) ||
-                (group_limit_action.liquid == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::LRAT)) {
-                group_state.production_control(group.name(), newControl);
-                ss = fmt::format("Switching production control mode for group {} from {} to {}",
-                                 group.name(),
-                                 Group::ProductionCMode2String(oldControl),
-                                 Group::ProductionCMode2String(newControl));
+    Group::ExceedAction action = Group::ExceedAction::NONE;
 
-                changed = true;
-            }
-            else {
-                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. "
-                                 "Nothing is done.",
-                                 Group::ProductionCMode2String(oldControl),
-                                 group.name());
-            }
-        }
+    switch (newControl) {
+    case Group::ProductionCMode::ORAT:
+        action = group_limit_action.oil;
+        break;
+    case Group::ProductionCMode::WRAT:
+        action = group_limit_action.water;
+        break;
+    case Group::ProductionCMode::GRAT:
+        action = group_limit_action.gas;
+        break;
+    case Group::ProductionCMode::LRAT:
+        action = group_limit_action.liquid;
+        break;
+    case Group::ProductionCMode::FLD:
+        // do nothing for now
+        break;
+    default:
+        // TODO: double check whether this is the case
+        action = Group::ExceedAction::RATE;
+    }
+
+    switch(action) {
+    case Group::ExceedAction::NONE: {
+        // do nothing
+        ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. "
+                         "Nothing is done.",
+                         Group::ProductionCMode2String(oldControl),
+                         group.name());
+        break;
+    }
+    case Group::ExceedAction::RATE: {
+        // switching controls
+        group_state.production_control(group.name(), newControl);
+        ss = fmt::format("Switching production control mode for group {} from {} to {}",
+                         group.name(),
+                         Group::ProductionCMode2String(oldControl),
+                         Group::ProductionCMode2String(newControl));
+
+        changed = true;
         break;
     }
     case Group::ExceedAction::CON: {
@@ -537,21 +554,10 @@ actionOnBrokenConstraints(const Group& group,
                          deferred_logger);
         break;
     }
-    case Group::ExceedAction::RATE: {
-        if (oldControl != newControl) {
-            group_state.production_control(group.name(), newControl);
-            ss = fmt::format("Switching production control mode for group {} from {} to {}",
-                             group.name(),
-                             Group::ProductionCMode2String(oldControl),
-                             Group::ProductionCMode2String(newControl));
-        }
-        changed = true;
-        break;
-    }
     default:
         OPM_THROW(std::runtime_error,
                   "Invalid procedure for maximum rate limit selected for group" + group.name());
-    }
+    } // end of switch(action)
 
     if (!ss.empty() && wellModel_.comm().rank() == 0)
         deferred_logger.debug(ss);
