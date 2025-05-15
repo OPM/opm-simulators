@@ -29,6 +29,7 @@
 #define OPM_PTFLASH_INDICES_HH
 
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 
 namespace Opm {
 
@@ -49,7 +50,7 @@ class FlashIndices
     static constexpr int numComponents = getPropValue<TypeTag, Properties::NumComponents>();
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableWater = getPropValue<TypeTag, Properties::EnableWater>() };
-    using EnergyIndices = Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
+    using EnergyIndices = ::Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
 
 public:
     //! All phases active (note: immiscible/"dummy" water phase)
@@ -61,7 +62,7 @@ public:
     static constexpr int numPhases = enableWater ? 3 : 2;
 
     //! number of equations/primary variables
-    static const int numEq = numComponents + EnergyIndices::numEq_ + (enableWater ? 1 : 0);
+    static constexpr int numEq = numComponents + EnergyIndices::numEq_ + (enableWater ? 1 : 0);
 
     // Primary variable indices
 
@@ -78,7 +79,7 @@ public:
 
     //! Index of the mass conservation equation for the first
     //! component.
-    static const int conti0EqIdx = PVOffset;
+    static constexpr int conti0EqIdx = PVOffset;
 };
 
 } // namespace Opm
