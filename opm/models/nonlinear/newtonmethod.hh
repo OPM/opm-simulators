@@ -27,9 +27,10 @@
 #ifndef EWOMS_NEWTON_METHOD_HH
 #define EWOMS_NEWTON_METHOD_HH
 
-#include <dune/istl/istlexception.hh>
 #include <dune/common/classname.hh>
 #include <dune/common/parallel/mpihelper.hh>
+
+#include <dune/istl/istlexception.hh>
 
 #include <opm/common/Exceptions.hpp>
 
@@ -46,8 +47,12 @@
 
 #include <opm/simulators/linalg/linalgproperties.hh>
 
+#include <algorithm>
+#include <cmath>
+#include <exception>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 #include <unistd.h>
 
