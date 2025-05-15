@@ -38,6 +38,7 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
+
 /*!
  * \ingroup NcpModel
  *
@@ -62,13 +63,13 @@ class NcpRateVector
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
     NcpRateVector() : ParentType()
-    { Opm::Valgrind::SetUndefined(*this); }
+    { Valgrind::SetUndefined(*this); }
 
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(Scalar)
@@ -81,9 +82,7 @@ public:
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(const
      * ImmiscibleRateVector& )
      */
-    NcpRateVector(const NcpRateVector& value)
-        : ParentType(value)
-    {}
+    NcpRateVector(const NcpRateVector& value) = default;
 
     /*!
      * \copydoc ImmiscibleRateVector::setMassRate
@@ -92,8 +91,9 @@ public:
     {
         // convert to molar rates
         ParentType molarRate(value);
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             molarRate[conti0EqIdx + compIdx] /= FluidSystem::molarMass(compIdx);
+        }
 
         // set the molar rate
         setMolarRate(molarRate);
@@ -119,11 +119,12 @@ public:
     void setVolumetricRate(const FluidState& fluidState, unsigned phaseIdx, const RhsEval& volume)
     {
         *this = 0.0;
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             (*this)[conti0EqIdx + compIdx] = fluidState.molarity(phaseIdx, compIdx) * volume;
+        }
 
         EnergyModule::setEnthalpyRate(*this, fluidState, phaseIdx, volume);
-        Opm::Valgrind::CheckDefined(*this);
+        Valgrind::CheckDefined(*this);
     }
 
     /*!
@@ -132,8 +133,9 @@ public:
     template <class RhsEval>
     NcpRateVector& operator=(const RhsEval& value)
     {
-        for (unsigned i=0; i < this->size(); ++i)
+        for (unsigned i = 0; i < this->size(); ++i) {
             (*this)[i] = value;
+        }
         return *this;
     }
 
@@ -142,8 +144,9 @@ public:
      */
     NcpRateVector& operator=(const NcpRateVector& other)
     {
-        for (unsigned i=0; i < this->size(); ++i)
+        for (unsigned i = 0; i < this->size(); ++i) {
             (*this)[i] = other[i];
+        }
         return *this;
     }
 };
