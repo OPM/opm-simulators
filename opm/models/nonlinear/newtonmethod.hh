@@ -291,9 +291,10 @@ public:
                 updateTimer_.stop();
 
                 if (!asImp_().proceed_()) {
-                    if (asImp_().verbose_() && isatty(fileno(stdout)))
+                    if (asImp_().verbose_() && isatty(fileno(stdout))) {
                         std::cout << clearRemainingLine
                                   << std::flush;
+                    }
 
                     // tell the implementation that we're done with this iteration
                     prePostProcessTimer_.start();
@@ -320,8 +321,9 @@ public:
 
                 if (!conv) {
                     solveTimer_.stop();
-                    if (asImp_().verbose_())
+                    if (asImp_().verbose_()) {
                         std::cout << "Newton: Linear solver did not converge\n" << std::flush;
+                    }
 
                     prePostProcessTimer_.start();
                     asImp_().failed_();
@@ -346,10 +348,11 @@ public:
                 asImp_().update_(nextSolution, currentSolution, solutionUpdate, residual);
                 updateTimer_.stop();
 
-                if (asImp_().verbose_() && isatty(fileno(stdout)))
+                if (asImp_().verbose_() && isatty(fileno(stdout))) {
                     // make sure that the line currently holding the cursor is prestine
                     std::cout << clearRemainingLine
                               << std::flush;
+                }
 
                 // tell the implementation that we're done with this iteration
                 prePostProcessTimer_.start();
@@ -359,9 +362,10 @@ public:
         }
         catch (const Dune::Exception& e)
         {
-            if (asImp_().verbose_())
+            if (asImp_().verbose_()) {
                 std::cout << "Newton method caught exception: \""
                           << e.what() << "\"\n" << std::flush;
+            }
 
             prePostProcessTimer_.start();
             asImp_().failed_();
@@ -371,9 +375,10 @@ public:
         }
         catch (const NumericalProblem& e)
         {
-            if (asImp_().verbose_())
+            if (asImp_().verbose_()) {
                 std::cout << "Newton method caught exception: \""
                           << e.what() << "\"\n" << std::flush;
+            }
 
             prePostProcessTimer_.start();
             asImp_().failed_();
@@ -383,9 +388,10 @@ public:
         }
 
         // clear current line on terminal
-        if (asImp_().verbose_() && isatty(fileno(stdout)))
+        if (asImp_().verbose_() && isatty(fileno(stdout))) {
             std::cout << clearRemainingLine
                       << std::flush;
+        }
 
         // tell the implementation that we're done
         prePostProcessTimer_.start();
@@ -536,8 +542,9 @@ protected:
 
         succeeded = comm.min(succeeded);
 
-        if (!succeeded)
+        if (!succeeded) {
             throw NumericalProblem("pre processing of the problem failed");
+        }
 
         lastError_ = error_;
     }
@@ -569,18 +576,21 @@ protected:
         error_ = 0;
         for (unsigned dofIdx = 0; dofIdx < currentResidual.size(); ++dofIdx) {
             // do not consider auxiliary DOFs for the error
-            if (dofIdx >= model().numGridDof() || model().dofTotalVolume(dofIdx) <= 0.0)
+            if (dofIdx >= model().numGridDof() || model().dofTotalVolume(dofIdx) <= 0.0) {
                 continue;
+            }
 
             // also do not consider DOFs which are constraint
             if (enableConstraints_()) {
-                if (constraintsMap.count(dofIdx) > 0)
+                if (constraintsMap.count(dofIdx) > 0) {
                     continue;
+                }
             }
 
             const auto& r = currentResidual[dofIdx];
-            for (unsigned eqIdx = 0; eqIdx < r.size(); ++eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < r.size(); ++eqIdx) {
                 error_ = max(std::abs(r[eqIdx] * model().eqWeight(dofIdx, eqIdx)), error_);
+            }
         }
 
         // take the other processes into account
@@ -588,10 +598,11 @@ protected:
 
         // make sure that the error never grows beyond the maximum
         // allowed one
-        if (error_ > newtonMaxError)
+        if (error_ > newtonMaxError) {
             throw NumericalProblem("Newton: Error "+std::to_string(double(error_))
                                    + " is larger than maximum allowed error of "
                                    + std::to_string(double(newtonMaxError)));
+        }
     }
 
     /*!
@@ -628,8 +639,9 @@ protected:
 
             succeeded = comm.min(succeeded);
 
-            if (!succeeded)
+            if (!succeeded) {
                 throw NumericalProblem("post processing of an auxilary equation failed");
+            }
         }
     }
 
@@ -659,8 +671,9 @@ protected:
         asImp_().writeConvergence_(currentSolution, solutionUpdate);
 
         // make sure not to swallow non-finite values at this point
-        if (!std::isfinite(solutionUpdate.one_norm()))
+        if (!std::isfinite(solutionUpdate.one_norm())) {
             throw NumericalProblem("Non-finite update!");
+        }
 
         size_t numGridDof = model().numGridDof();
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
@@ -671,19 +684,21 @@ protected:
                                                   nextSolution[dofIdx],
                                                   constraints);
                 }
-                else
+                else {
                     asImp_().updatePrimaryVariables_(dofIdx,
                                                      nextSolution[dofIdx],
                                                      currentSolution[dofIdx],
                                                      solutionUpdate[dofIdx],
                                                      currentResidual[dofIdx]);
+                }
             }
-            else
+            else {
                 asImp_().updatePrimaryVariables_(dofIdx,
                                                  nextSolution[dofIdx],
                                                  currentSolution[dofIdx],
                                                  solutionUpdate[dofIdx],
                                                  currentResidual[dofIdx]);
+            }
         }
 
         // update the DOFs of the auxiliary equations
@@ -757,8 +772,9 @@ protected:
 
         succeeded = comm.min(succeeded);
 
-        if (!succeeded)
+        if (!succeeded) {
             throw NumericalProblem("post processing of the problem failed");
+        }
 
         if (asImp_().verbose_()) {
             std::cout << "Newton iteration " << numIterations_ << ""
@@ -772,8 +788,9 @@ protected:
      */
     bool proceed_() const
     {
-        if (asImp_().numIterations() < 1)
+        if (asImp_().numIterations() < 1) {
             return true; // we always do at least one full iteration
+        }
         else if (asImp_().converged()) {
             // we are below the specified tolerance, so we don't have to
             // do more iterations
