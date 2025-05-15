@@ -129,13 +129,15 @@ public:
         MaterialLaw::capillaryPressures(capPress, materialParams, fluidState_);
         // add to the pressure of the first fluid phase
         const Evaluation& pressure0 = priVars.makeEvaluation(pressure0Idx, timeIdx);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fluidState_.setPressure(phaseIdx, pressure0 + (capPress[phaseIdx] - capPress[0]));
+        }
 
         ComponentVector fug;
         // retrieve component fugacities
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             fug[compIdx] = priVars.makeEvaluation(fugacity0Idx + compIdx, timeIdx);
+        }
 
         // calculate phase compositions
         const auto *hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
@@ -148,8 +150,9 @@ public:
                     fluidState_.setMoleFraction(phaseIdx, compIdx, moleFracIJ);
                 }
             }
-            else // !hint
+            else { // !hint
                 CompositionFromFugacitiesSolver::guessInitial(fluidState_, phaseIdx, fug);
+            }
 
             // calculate the phase composition from the component
             // fugacities
