@@ -133,7 +133,7 @@ public:
         // calculate the phase densities
         paramCache.updateAll(fsFlash);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            Scalar rho = FluidSystem::density(fsFlash, paramCache, phaseIdx);
+            const Scalar rho = FluidSystem::density(fsFlash, paramCache, phaseIdx);
             fsFlash.setDensity(phaseIdx, rho);
         }
         // calculate the "global molarities"
@@ -254,7 +254,7 @@ public:
             return 0.0;
         }
 
-        unsigned varIdx = switch0Idx + phaseIdx - 1;
+        const unsigned varIdx = switch0Idx + phaseIdx - 1;
         if constexpr (std::is_same_v<Evaluation, Scalar>) {
             return (*this)[varIdx]; // finite differences
         }
@@ -292,7 +292,7 @@ public:
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 a -= FsToolbox::value(fluidState.moleFraction(phaseIdx, compIdx));
             }
-            Scalar b = FsToolbox::value(fluidState.saturation(phaseIdx));
+            const Scalar b = FsToolbox::value(fluidState.saturation(phaseIdx));
 
             if (b > a) {
                 phasePresence_ |= (1 << phaseIdx);
@@ -306,10 +306,10 @@ public:
 
         // set the primary variables which correspond to mole
         // fractions of the present phase which has the lowest index.
-        unsigned lowestPhaseIdx = lowestPresentPhaseIdx();
+        const unsigned lowestPhaseIdx = lowestPresentPhaseIdx();
         for (unsigned switchIdx = 0; switchIdx < numPhases - 1; ++switchIdx) {
             unsigned phaseIdx = switchIdx;
-            unsigned compIdx = switchIdx + 1;
+            const unsigned compIdx = switchIdx + 1;
             if (switchIdx >= lowestPhaseIdx) {
                 ++phaseIdx;
             }
@@ -341,10 +341,10 @@ public:
     {
         os << "(p_" << FluidSystem::phaseName(0) << " = "
            << (*this)[pressure0Idx];
-        unsigned lowestPhaseIdx = lowestPresentPhaseIdx();
+        const unsigned lowestPhaseIdx = lowestPresentPhaseIdx();
         for (unsigned switchIdx = 0; switchIdx < numPhases - 1; ++switchIdx) {
             unsigned phaseIdx = switchIdx;
-            unsigned compIdx = switchIdx + 1;
+            const unsigned compIdx = switchIdx + 1;
             if (phaseIdx >= lowestPhaseIdx) {
                 ++phaseIdx; // skip the saturation of the present
                             // phase with the lowest index
