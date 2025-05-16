@@ -1429,18 +1429,20 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 
     std::vector<bool> prod = {true, false, false, false};
     const Phase all[] = { Phase::OIL, Phase::WATER, Phase::OIL, Phase::GAS };
-    for (int i = 0; i<4; i++) {
+    std::vector<GuideRateModel::Target> targets = {WGHelpers::TargetCalculator<Scalar>::guideTargetMode(this->groupState().production_control("FIELD")),GuideRateModel::Target::WAT,
+        GuideRateModel::Target::OIL,GuideRateModel::Target::GAS };
 
-    WellGroupHelpers<Scalar>::updateGuideRate("FIELD",
+    for (int i = 0; i<4; i++) {
+        WellGroupHelpers<Scalar>::updateGuideRate("FIELD",
                                               schedule(),
                                               well_state,
                                               this->groupState(),
                                               reportStepIdx,
                                               guideRate_,
-                                              WGHelpers::TargetCalculator<Scalar>::guideTargetMode(this->groupState().production_control("FIELD")),
+                                              targets[i],
                                               number_of_wells_under_this_group,
                                               next_sub_group_with_guide_rate,
-                                              prod[i], 
+                                              prod[i],
                                               all[i],
                                               this->phase_usage_);
     }

@@ -447,7 +447,7 @@ template<class Scalar>
 bool GroupState<Scalar>::
 has_prod_guide_rates(const std::string& gname) const
 {
-    return (this->m_number_of_wells_under_this_control.count(gname) > 0);
+    return (this->m_prod_guide_rates.count(gname) > 0);
 }
 
 
@@ -503,6 +503,92 @@ bool GroupState<Scalar>::
 has_sub_group_with_guiderate(const std::string& gname) const
 {
     return (this->m_sub_group_with_guiderate.count(gname) > 0);
+}
+
+//-------------------------------------------------------------------------
+
+
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_inj_guide_rates(const std::string& gname, Phase phase, Scalar target)
+{
+    this->m_inj_guide_rates[{phase, gname}] = target;
+}
+
+template<class Scalar>
+Scalar GroupState<Scalar>::
+inj_guide_rates(const std::string& gname, Phase phase) const
+{
+    auto group_iter = this->m_inj_guide_rates.find({phase, gname});
+    if (group_iter == this->m_inj_guide_rates.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_inj_guide_rates(const std::string& gname, Phase phase) const
+{
+    return (this->m_inj_guide_rates.count({phase, gname}) > 0);
+}
+
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase, int number)
+{
+    this->m_number_of_wells_under_this_inj_control[{phase, gname}] = number;
+}
+
+template<class Scalar>
+int GroupState<Scalar>::
+number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const
+{
+    auto group_iter = this->m_number_of_wells_under_this_inj_control.find({phase, gname});
+    if (group_iter == this->m_number_of_wells_under_this_inj_control.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_number_of_wells_under_this_inj_control(const std::string& gname, Phase phase) const
+{
+    return (this->m_number_of_wells_under_this_inj_control.count({phase, gname}) > 0);
+}
+
+//-------------------------------------------------------------------------
+
+template<class Scalar>
+void GroupState<Scalar>::
+update_sub_group_inj_with_guiderate(const std::string& gname, Phase phase, const std::vector<std::string>& subname)
+{
+    this->m_sub_group_inj_with_guiderate[{phase, gname}] = subname;
+}
+
+template<class Scalar>
+const std::vector<std::string>& GroupState<Scalar>::
+sub_group_inj_with_guiderate(const std::string& gname, Phase phase) const
+{
+    auto group_iter = this->m_sub_group_inj_with_guiderate.find({phase, gname});
+    if (group_iter == this->m_sub_group_inj_with_guiderate.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+has_sub_group_inj_with_guiderate(const std::string& gname,Phase phase) const
+{
+    return (this->m_sub_group_inj_with_guiderate.count({phase, gname}) > 0);
 }
 
 //-------------------------------------------------------------------------

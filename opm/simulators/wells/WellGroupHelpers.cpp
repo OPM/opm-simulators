@@ -1122,7 +1122,13 @@ updateGuideRate(const std::string& name,
 
         } else {
             // we still need to update for subgroups
-            target = WGHelpers::TargetCalculator<Scalar>::guideTargetMode(currentGroupControl);
+            if (is_production_group) {     
+                const Group::ProductionCMode& currentGroupControl = group_state.production_control(groupName);
+                target = WGHelpers::TargetCalculator<Scalar>::guideTargetMode(currentGroupControl);
+            } else {
+                //const Group::InjectionCMode& currentGroupControl = group_state.injection_control(groupName, injection_phase);
+                //target = WGHelpers::TargetCalculator<Scalar>::guideTargetMode(currentGroupControl);
+            }
             int number_of_wells_under_this_group_control2 = 0;
             //std::cout << name << " dont accumualte? " << groupName << std::endl;
             std::vector<std::string> next_sub_group_with_guide_rate2;
@@ -1132,12 +1138,12 @@ updateGuideRate(const std::string& name,
     }
 
 
-    if (guideRate.has(name)) {
+    if ( (is_production_group && guideRate.has(name)) || (!is_production_group && guideRate.has(name,injection_phase)) ) {
         auto guiderate = 0.0;
-        if (is_production_group)
+        if (is_production_group && guideRate.has(name))
             guiderate = guideRate.get(name, target, getProductionGroupRateVector(group_state, pu, name));
-        else 
-            guiderate = guideRate.get(name, target, injection_phase);
+        else if (!is_production_group && guideRate.has(name,injection_phase))
+            guiderate = guideRate.get(name, injection_phase);
 
         //std::cout << "has guide rate " << name << " " << guiderate << " " << number_of_wells_under_this_group_control << std::endl;
         //std::cout << "setup " << name << " " <<totalGuideRate << " " << number_of_wells_under_this_group_control << " " << std::endl;
@@ -1148,7 +1154,7 @@ updateGuideRate(const std::string& name,
         } else {
             group_state.update_inj_guide_rates(name, injection_phase, totalGuideRate);
             group_state.update_number_of_wells_under_this_inj_control(name, injection_phase, number_of_wells_under_this_group_control);
-            group_state.update_sub_inj_group_with_guiderate(name, injection_phase, next_sub_group_with_guide_rate);
+            group_state.update_sub_group_inj_with_guiderate(name, injection_phase, next_sub_group_with_guide_rate);
         }
 
         number_of_wells_under_this_group_control = 0;
@@ -1193,7 +1199,7 @@ updateGuideRate(const std::string& name,
     } else {
         group_state.update_inj_guide_rates(name, injection_phase, totalGuideRate);
         group_state.update_number_of_wells_under_this_inj_control(name, injection_phase, number_of_wells_under_this_group_control);
-        group_state.update_sub_inj_group_with_guiderate(name, injection_phase, next_sub_group_with_guide_rate);
+        group_state.update_sub_group_inj_with_guiderate(name, injection_phase, next_sub_group_with_guide_rate);
     }
 
     return totalGuideRate;
