@@ -72,14 +72,13 @@ class RichardsIntensiveQuantities
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using ScalarPhaseVector = Dune::FieldVector<Scalar, numPhases>;
     using PhaseVector = Dune::FieldVector<Evaluation, numPhases>;
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
     //! The type returned by the fluidState() method
-    using FluidState = Opm::ImmiscibleFluidState<Evaluation, FluidSystem>;
+    using FluidState = ImmiscibleFluidState<Evaluation, FluidSystem>;
 
-    RichardsIntensiveQuantities()
-    {}
+    RichardsIntensiveQuantities() = default;
 
     RichardsIntensiveQuantities(const RichardsIntensiveQuantities& other) = default;
 
@@ -115,7 +114,7 @@ public:
         // reference pressure if the medium is fully
         // saturated by the wetting phase
         const Evaluation& pW = priVars.makeEvaluation(pressureWIdx, timeIdx);
-        Evaluation pN =
+        const Evaluation pN =
             Toolbox::max(elemCtx.problem().referencePressure(elemCtx, dofIdx, /*timeIdx=*/0),
                          pW + (pC[gasPhaseIdx] - pC[liquidPhaseIdx]));
 
@@ -147,8 +146,9 @@ public:
         MaterialLaw::relativePermeabilities(relativePermeability_, materialParams, fluidState_);
 
         // mobilities
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            mobility_[phaseIdx] = relativePermeability_[phaseIdx]/fluidState_.viscosity(phaseIdx);
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            mobility_[phaseIdx] = relativePermeability_[phaseIdx] / fluidState_.viscosity(phaseIdx);
+        }
 
         // porosity
         porosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
