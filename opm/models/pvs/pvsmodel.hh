@@ -52,10 +52,13 @@
 #include <opm/models/pvs/pvsproperties.hh>
 #include <opm/models/pvs/pvsratevector.hh>
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace Opm {
