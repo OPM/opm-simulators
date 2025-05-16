@@ -544,6 +544,10 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_library(MainDispatchDynamic OBJECT opm/simulators/flow/MainDispatchDynamic.cpp)
 set_property(TARGET MainDispatchDynamic PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+if (CONVERT_CUDA_TO_HIP)
+  add_dependencies(MainDispatchDynamic hipified_headers)
+endif()
+
 if(TARGET fmt::fmt)
   target_link_libraries(MainDispatchDynamic fmt::fmt)
 endif()
@@ -581,6 +585,9 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   endif()
   if(USE_TRACY_PROFILER AND Tracy_FOUND)
     target_link_libraries(flow_lib${OBJ} Tracy::TracyClient)
+  endif()
+  if(CONVERT_CUDA_TO_HIP)
+    add_dependencies(flow_lib${OBJ} hipified_headers)
   endif()
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE

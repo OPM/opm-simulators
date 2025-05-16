@@ -24,8 +24,18 @@
 
 #include <opm/simulators/linalg/gpuistl/detail/ISTLSolverGPUISTLImplementation.hpp>
 
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrix.hpp>
+#else
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#endif
+
 namespace Opm::gpuistl
 {
+
+
 template <class TypeTag>
 class ISTLSolverGPUISTL : public AbstractISTLSolver<TypeTag>
 {
