@@ -333,20 +333,26 @@ public:
     std::string primaryVarName(unsigned pvIdx) const
     {
         std::string s;
-        if (!(s = EnergyModule::primaryVarName(pvIdx)).empty())
+        if (!(s = EnergyModule::primaryVarName(pvIdx)).empty()) {
             return s;
+        }
 
         std::ostringstream oss;
-        if (pvIdx == Indices::pressure0Idx)
+        if (pvIdx == Indices::pressure0Idx) {
             oss << "pressure_" << FluidSystem::phaseName(/*phaseIdx=*/0);
+        }
         else if (Indices::switch0Idx <= pvIdx
                  && pvIdx < Indices::switch0Idx + numPhases - 1)
+        {
             oss << "switch_" << pvIdx - Indices::switch0Idx;
+        }
         else if (Indices::switch0Idx + numPhases - 1 <= pvIdx
                  && pvIdx < Indices::switch0Idx + numComponents - 1)
+        {
             oss << "auxMoleFrac^" << FluidSystem::componentName(pvIdx);
-        else
+        } else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -357,8 +363,9 @@ public:
     std::string eqName(unsigned eqIdx) const
     {
         std::string s;
-        if (!(s = EnergyModule::eqName(eqIdx)).empty())
+        if (!(s = EnergyModule::eqName(eqIdx)).empty()) {
             return s;
+        }
 
         std::ostringstream oss;
         if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx
@@ -366,8 +373,9 @@ public:
             unsigned compIdx = eqIdx - Indices::conti0EqIdx;
             oss << "continuity^" << FluidSystem::componentName(compIdx);
         }
-        else
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -396,8 +404,9 @@ public:
             if (this->dofTotalVolume(dofIdx) > 0.0) {
                 referencePressure_ =
                     this->solution(/*timeIdx=*/0)[dofIdx][/*pvIdx=*/Indices::pressure0Idx];
-                if (referencePressure_ > 0.0)
+                if (referencePressure_ > 0.0) {
                     break;
+                }
             }
         }
     }
@@ -408,9 +417,10 @@ public:
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
         Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
-        if (tmp > 0)
+        if (tmp > 0) {
             // energy related quantity
             return tmp;
+        }
 
         if (Indices::pressure0Idx == pvIdx) {
             return 10 / referencePressure_;
@@ -420,9 +430,10 @@ public:
                                                     + numPhases - 1) {
             unsigned phaseIdx = pvIdx - Indices::switch0Idx;
 
-            if (!this->solution(/*timeIdx=*/0)[globalDofIdx].phaseIsPresent(phaseIdx))
+            if (!this->solution(/*timeIdx=*/0)[globalDofIdx].phaseIsPresent(phaseIdx)) {
                 // for saturations, the weight is always 1
                 return 1;
+            }
 
             // for saturations, the PvsMoleSaturationsBaseWeight
             // property determines the weight
@@ -440,9 +451,10 @@ public:
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
         Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
-        if (tmp > 0)
+        if (tmp > 0) {
             // energy related equation
             return tmp;
+        }
 
         unsigned compIdx = eqIdx - Indices::conti0EqIdx;
         assert(compIdx <= numComponents);
@@ -477,8 +489,9 @@ public:
         ParentType::serializeEntity(outstream, dofEntity);
 
         unsigned dofIdx = static_cast<unsigned>(this->dofMapper().index(dofEntity));
-        if (!outstream.good())
+        if (!outstream.good()) {
             throw std::runtime_error("Could not serialize DOF "+std::to_string(dofIdx));
+        }
 
         outstream << this->solution(/*timeIdx=*/0)[dofIdx].phasePresence() << " ";
     }
@@ -494,8 +507,9 @@ public:
 
         // read phase presence
         unsigned dofIdx = static_cast<unsigned>(this->dofMapper().index(dofEntity));
-        if (!instream.good())
+        if (!instream.good()) {
             throw std::runtime_error("Could not deserialize DOF "+std::to_string(dofIdx));
+        }
 
         short tmp;
         instream >> tmp;
@@ -526,8 +540,9 @@ public:
                 for (unsigned dofIdx = 0; dofIdx < numLocalDof; ++dofIdx) {
                     unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
-                    if (visited[globalIdx])
+                    if (visited[globalIdx]) {
                         continue;
+                    }
                     visited[globalIdx] = true;
 
                     // compute the intensive quantities of the current degree of freedom
@@ -543,12 +558,13 @@ public:
                     priVars.assignNaive(intQuants.fluidState());
 
                     if (oldPhasePresence != priVars.phasePresence()) {
-                        if (verbosity_ > 1)
+                        if (verbosity_ > 1) {
                             printSwitchedPhases_(elemCtx,
                                                  dofIdx,
                                                  intQuants.fluidState(),
                                                  oldPhasePresence,
                                                  priVars);
+                        }
                         ++numSwitched_;
                     }
                 }
@@ -565,17 +581,19 @@ public:
         }
         succeeded = this->simulator_.gridView().comm().min(succeeded);
 
-        if (!succeeded)
+        if (!succeeded) {
             throw NumericalProblem("A process did not succeed in adapting the primary variables");
+        }
 
         // make sure that if there was a variable switch in an
         // other partition we will also set the switch flag
         // for our partition.
         numSwitched_ = this->gridView_.comm().sum(numSwitched_);
 
-        if (verbosity_ > 0)
+        if (verbosity_ > 0) {
             this->simulator_.model().newtonMethod().endIterMsg()
                 << ", num switched=" << numSwitched_;
+        }
     }
 
     template <class FluidState>
@@ -590,8 +608,9 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             bool oldPhasePresent = (oldPhasePresence & (1 << phaseIdx)) > 0;
             bool newPhasePresent = newPv.phaseIsPresent(phaseIdx);
-            if (oldPhasePresent == newPhasePresent)
+            if (oldPhasePresent == newPhasePresent) {
                 continue;
+            }
 
             const auto& pos = elemCtx.pos(dofIdx, /*timeIdx=*/0);
             if (oldPhasePresent) {
@@ -602,8 +621,9 @@ public:
             }
             else {
                 Scalar sumx = 0;
-                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     sumx += FsToolbox::value(fs.moleFraction(phaseIdx, compIdx));
+                }
 
                 std::cout << "'" << FluidSystem::phaseName(phaseIdx)
                           << "' phase appears at position " << pos
