@@ -43,6 +43,7 @@
 #include <limits>
 
 namespace Opm {
+
 /*!
  * \ingroup PvsModel
  * \ingroup IntensiveQuantities
@@ -78,24 +79,23 @@ class PvsIntensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { dimWorld = GridView::dimensionworld };
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
-    using MiscibleMultiPhaseComposition = Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem, Evaluation>;
-    using ComputeFromReferencePhase = Opm::ComputeFromReferencePhase<Scalar, FluidSystem, Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
+    using MiscibleMultiPhaseComposition = ::Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem, Evaluation>;
+    using ComputeFromReferencePhase = ::Opm::ComputeFromReferencePhase<Scalar, FluidSystem, Evaluation>;
 
     using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
     using EvalPhaseVector = Dune::FieldVector<Evaluation, numPhases>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
+    using DiffusionIntensiveQuantities = ::Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using EnergyIntensiveQuantities = ::Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
-    using DiffusionIntensiveQuantities = Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
-    using EnergyIntensiveQuantities = Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     //! The type of the object returned by the fluidState() method
     using FluidState = Opm::CompositionalFluidState<Evaluation, FluidSystem>;
 
-    PvsIntensiveQuantities()
-    { }
+    PvsIntensiveQuantities() = default;
 
     PvsIntensiveQuantities(const PvsIntensiveQuantities& other) = default;
 
@@ -118,11 +118,11 @@ public:
         Evaluation sumSat = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fluidState_.setSaturation(phaseIdx, priVars.explicitSaturationValue(phaseIdx, timeIdx));
-            Opm::Valgrind::CheckDefined(fluidState_.saturation(phaseIdx));
+            Valgrind::CheckDefined(fluidState_.saturation(phaseIdx));
             sumSat += fluidState_.saturation(phaseIdx);
         }
-        Opm::Valgrind::CheckDefined(priVars.implicitSaturationIdx());
-        Opm::Valgrind::CheckDefined(sumSat);
+        Valgrind::CheckDefined(priVars.implicitSaturationIdx());
+        Valgrind::CheckDefined(sumSat);
         fluidState_.setSaturation(priVars.implicitSaturationIdx(), 1.0 - sumSat);
 
         /////////////
@@ -137,8 +137,9 @@ public:
 
         // set the absolute phase pressures in the fluid state
         const Evaluation& p0 = priVars.makeEvaluation(pressure0Idx, timeIdx);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fluidState_.setPressure(phaseIdx, p0 + (pC[phaseIdx] - pC[0]));
+        }
 
         /////////////
         // calculate the phase compositions
@@ -148,8 +149,9 @@ public:
         unsigned lowestPresentPhaseIdx = priVars.lowestPresentPhaseIdx();
         unsigned numNonPresentPhases = 0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!priVars.phaseIsPresent(phaseIdx))
+            if (!priVars.phaseIsPresent(phaseIdx)) {
                 ++numNonPresentPhases;
+            }
         }
 
         // now comes the tricky part: calculate phase compositions
@@ -182,7 +184,7 @@ public:
             unsigned auxIdx = 0;
             unsigned switchIdx = 0;
             for (; switchIdx < numPhases - 1; ++switchIdx) {
-                unsigned compIdx = switchIdx + 1;
+                const unsigned compIdx = switchIdx + 1;
                 unsigned switchPhaseIdx = switchIdx;
                 if (switchIdx >= lowestPresentPhaseIdx)
                     switchPhaseIdx += 1;
@@ -195,7 +197,7 @@ public:
             }
 
             for (; auxIdx < numAuxConstraints; ++auxIdx, ++switchIdx) {
-                unsigned compIdx = numPhases - numNonPresentPhases + auxIdx;
+                const unsigned compIdx = numPhases - numNonPresentPhases + auxIdx;
                 auxConstraints[auxIdx].set(lowestPresentPhaseIdx, compIdx,
                                            priVars.makeEvaluation(switch0Idx + switchIdx, timeIdx));
             }
@@ -213,10 +215,11 @@ public:
 
 #ifndef NDEBUG
         // make valgrind happy and set the enthalpies to NaN
-        if (!enableEnergy) {
-            Scalar myNan = std::numeric_limits<Scalar>::quiet_NaN();
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        if constexpr (!enableEnergy) {
+            constexpr Scalar myNan = std::numeric_limits<Scalar>::quiet_NaN();
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 fluidState_.setEnthalpy(phaseIdx, myNan);
+            }
         }
 #endif
 
@@ -227,16 +230,17 @@ public:
         // calculate relative permeabilities
         MaterialLaw::relativePermeabilities(relativePermeability_,
                                             materialParams, fluidState_);
-        Opm::Valgrind::CheckDefined(relativePermeability_);
+        Valgrind::CheckDefined(relativePermeability_);
 
         // mobilities
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             mobility_[phaseIdx] =
                 relativePermeability_[phaseIdx] / fluidState().viscosity(phaseIdx);
+        }
 
         // porosity
         porosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(porosity_);
+        Valgrind::CheckDefined(porosity_);
 
         // intrinsic permeability
         intrinsicPerm_ = problem.intrinsicPermeability(elemCtx, dofIdx, timeIdx);
