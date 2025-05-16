@@ -29,9 +29,11 @@
 #define EWOMS_FV_BASE_NEWTON_CONVERGENCE_WRITER_HH
 
 #include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <iostream>
+#include <memory>
 
 //! \cond SKIP_THIS
 namespace Opm::Properties {
@@ -50,6 +52,7 @@ struct VtkOutputFormat;
 //! \endcond
 
 namespace Opm {
+
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
@@ -65,7 +68,7 @@ class FvBaseNewtonConvergenceWriter
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
@@ -74,11 +77,7 @@ public:
     {
         timeStepIdx_ = 0;
         iteration_ = 0;
-        vtkMultiWriter_ = 0;
     }
-
-    ~FvBaseNewtonConvergenceWriter()
-    { delete vtkMultiWriter_; }
 
     /*!
      * \brief Called by the Newton method before the actual algorithm
@@ -96,13 +95,14 @@ public:
      */
     void beginIteration()
     {
-        ++ iteration_;
-        if (!vtkMultiWriter_)
+        ++iteration_;
+        if (!vtkMultiWriter_) {
             vtkMultiWriter_ =
-                new VtkMultiWriter(/*async=*/false,
-                                   newtonMethod_.problem().gridView(),
-                                   newtonMethod_.problem().outputDir(),
-                                   "convergence");
+                std::make_unique<VtkMultiWriter>(/*async=*/false,
+                                                 newtonMethod_.problem().gridView(),
+                                                 newtonMethod_.problem().outputDir(),
+                                                 "convergence");
+        }
         vtkMultiWriter_->beginWrite(timeStepIdx_ + iteration_ / 100.0);
     }
 
@@ -150,7 +150,7 @@ public:
 private:
     int timeStepIdx_;
     int iteration_;
-    VtkMultiWriter *vtkMultiWriter_;
+    std::unique_ptr<VtkMultiWriter> vtkMultiWriter_{};
     NewtonMethod& newtonMethod_;
 };
 
