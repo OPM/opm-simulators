@@ -28,12 +28,16 @@
 #ifndef EWOMS_RICHARDS_INTENSIVE_QUANTITIES_HH
 #define EWOMS_RICHARDS_INTENSIVE_QUANTITIES_HH
 
-#include "richardsproperties.hh"
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/richards/richardsproperties.hh>
+
+#include <array>
 
 namespace Opm {
 
