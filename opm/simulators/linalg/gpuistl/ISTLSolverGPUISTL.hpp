@@ -22,8 +22,6 @@
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
-#include <opm/simulators/linalg/gpuistl/detail/ISTLSolverGPUISTLImplementation.hpp>
-
 #if USE_HIP
 #include <opm/simulators/linalg/gpuistl_hip/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrix.hpp>
@@ -31,6 +29,8 @@
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #endif
+
+#include <opm/simulators/linalg/gpuistl/detail/FlexibleSolverWrapper.hpp>
 
 namespace Opm::gpuistl
 {
@@ -44,6 +44,12 @@ public:
     using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Matrix = typename SparseMatrixAdapter::IstlMatrix;
+
+    using real_type = typename Vector::field_type;
+
+    using GPUMatrix = Opm::gpuistl::GpuSparseMatrix<real_type>;
+    using GPUVector = Opm::gpuistl::GpuVector<real_type>;
+
     constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
 
@@ -53,8 +59,7 @@ public:
     using CommunicationType = Dune::Communication<int>;
 #endif
 
-
-
+    using SolverType = Opm::gpuistl::detail::FlexibleSolverWrapper<GPUMatrix, GPUVector, CommunicationType>;
 
     /// Construct a system solver.
     /// \param[in] simulator   The opm-models simulator object
@@ -66,14 +71,12 @@ public:
     ISTLSolverGPUISTL(const Simulator& simulator,
                       const FlowLinearSolverParameters& parameters,
                       bool forceSerial = false)
-        : m_parameters(parameters)
+        : m_parameters(parameters), m_forceSerial(forceSerial)
     {
         m_parameters.init(simulator.vanguard().eclState().getSimulationConfig().useCPR());
         m_propertyTree = setupPropertyTree(m_parameters,
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
                                            Parameters::IsSet<Parameters::LinearSolverReduction>());
-        m_implementation = std::make_unique<detail::ISTLSolverGPUISTLImplementation<Matrix, Vector, CommunicationType>>(
-            m_parameters, m_propertyTree, forceSerial, pressureIndex);
     }
 
     /// Construct a system solver.
@@ -110,7 +113,8 @@ public:
     void prepare(const Matrix& M, Vector& b) override
     {
         try {
-            m_implementation->prepare(M, b);
+            updateMatrix(M);
+            updateRhs(b);
         }
         OPM_CATCH_AND_RETHROW_AS_CRITICAL_ERROR("This is likely due to a faulty linear solver JSON specification. "
                                                 "Check for errors related to missing nodes.");
@@ -123,7 +127,10 @@ public:
 
     void getResidual(Vector& b) const override
     {
-        m_implementation->getResidual(b);
+        if (!m_rhs) {
+            OPM_THROW(std::runtime_error, "m_rhs not initialized, prepare(matrix, rhs); needs to be called");
+        }
+        m_rhs->copyToHost(b);
     }
 
     void setMatrix(const SparseMatrixAdapter&) override
@@ -135,8 +142,28 @@ public:
     {
         // TODO: Write matrix to disk if needed
         Dune::InverseOperatorResult result;
-        m_implementation->apply(x, result);
+        if (!m_matrix) {
+            OPM_THROW(std::runtime_error, "m_matrix not initialized, prepare(matrix, rhs); needs to be called");
+        }
+        if (!m_rhs) {
+            OPM_THROW(std::runtime_error, "m_rhs not initialized, prepare(matrix, rhs); needs to be called");
+        }
+        if (!m_gpuSolver) {
+            OPM_THROW(std::runtime_error, "m_gpuFlexibleSolver not initialized, prepare(matrix, rhs); needs to be called");
+        }
+    
+        if (!m_x) {
+            m_x = std::make_unique<GpuVector<real_type>>(x);
+        } else {
+            m_x->copyFromHost(x);
+        }
+        m_gpuSolver->apply(*m_x, *m_rhs, result);
+    
+        m_x->copyToHost(x);
+
         ++m_solveCount;
+
+
         m_lastSeenIterations = result.iterations;
         if (!result.converged) {
             if (result.reduction < m_parameters.relaxed_linear_solver_reduction_) {
@@ -152,7 +179,6 @@ public:
             const std::string msg("Convergence failure for linear solver.");
             OPM_THROW_NOLOG(NumericalProblem, msg);
         }
-
 
         return result.converged;
     }
@@ -174,12 +200,43 @@ public:
     }
 
 private:
+    void updateMatrix(const Matrix& M) {
+        if (!m_matrix) {
+
+            m_matrix.reset(new auto(GPUMatrix::fromMatrix(M)));
+            std::function<GPUVector()> weightsCalculator = {};
+            const bool parallel = false;
+            m_gpuSolver = std::make_unique<SolverType>(
+                *m_matrix, parallel, m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, nullptr);
+        } else {
+            m_matrix->updateNonzeroValues(M);
+        }
+    
+        m_gpuSolver->update();
+    }
+
+    void updateRhs(const Vector& b) {
+        if (!m_rhs) {
+            m_rhs = std::make_unique<GPUVector>(b);
+        } else {
+            m_rhs->copyFromHost(b);
+        }
+    }
+
     FlowLinearSolverParameters m_parameters;
     PropertyTree m_propertyTree;
 
-    std::unique_ptr<detail::ISTLSolverGPUISTLImplementation<Matrix, Vector, CommunicationType>> m_implementation;
     int m_lastSeenIterations = 0;
     int m_solveCount = 0;
+
+    std::unique_ptr<GPUMatrix> m_matrix;
+
+    std::unique_ptr<SolverType> m_gpuSolver;
+
+    std::unique_ptr<GPUVector> m_rhs;
+    std::unique_ptr<GPUVector> m_x;
+
+    const bool m_forceSerial;
 };
 } // namespace Opm::gpuistl
 
