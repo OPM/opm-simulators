@@ -38,13 +38,13 @@ namespace Opm {
 struct RichardsIndices
 {
     //! Primary variable index for the wetting phase pressure
-    static const int pressureWIdx = 0;
+    static constexpr int pressureWIdx = 0;
 
     //! Equation index for the mass conservation of the wetting phase
-    static const int contiEqIdx = 0;
+    static constexpr int contiEqIdx = 0;
 
     //! The number of equations
-    static const int numEq = 1;
+    static constexpr int numEq = 1;
 };
 
 } // namespace Opm
