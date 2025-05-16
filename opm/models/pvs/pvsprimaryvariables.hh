@@ -177,10 +177,12 @@ public:
      */
     void setPhasePresent(unsigned phaseIdx, bool yesno = true)
     {
-        if (yesno)
+        if (yesno) {
             setPhasePresence(phasePresence_ | (1 << phaseIdx));
-        else
+        }
+        else {
             setPhasePresence(phasePresence_&  ~(1 << phaseIdx));
+        }
     }
 
     /*!
@@ -247,17 +249,20 @@ public:
      */
     Evaluation explicitSaturationValue(unsigned phaseIdx, unsigned timeIdx) const
     {
-        if (!phaseIsPresent(phaseIdx) || phaseIdx == lowestPresentPhaseIdx())
+        if (!phaseIsPresent(phaseIdx) || phaseIdx == lowestPresentPhaseIdx()) {
             // non-present phases have saturation 0
             return 0.0;
+        }
 
         unsigned varIdx = switch0Idx + phaseIdx - 1;
-        if constexpr (std::is_same_v<Evaluation, Scalar>)
+        if constexpr (std::is_same_v<Evaluation, Scalar>) {
             return (*this)[varIdx]; // finite differences
+        }
         else {
             // automatic differentiation
-            if (timeIdx != 0)
+            if (timeIdx != 0) {
                 Toolbox::createConstant((*this)[varIdx]);
+            }
             return Toolbox::createVariable((*this)[varIdx], varIdx);
         }
     }
@@ -289,13 +294,15 @@ public:
             }
             Scalar b = FsToolbox::value(fluidState.saturation(phaseIdx));
 
-            if (b > a)
+            if (b > a) {
                 phasePresence_ |= (1 << phaseIdx);
+            }
         }
 
         // some phase must be present
-        if (phasePresence_ == 0)
+        if (phasePresence_ == 0) {
             throw NumericalProblem("Phase state was 0, i.e., no fluid is present");
+        }
 
         // set the primary variables which correspond to mole
         // fractions of the present phase which has the lowest index.
@@ -303,8 +310,9 @@ public:
         for (unsigned switchIdx = 0; switchIdx < numPhases - 1; ++switchIdx) {
             unsigned phaseIdx = switchIdx;
             unsigned compIdx = switchIdx + 1;
-            if (switchIdx >= lowestPhaseIdx)
+            if (switchIdx >= lowestPhaseIdx) {
                 ++phaseIdx;
+            }
 
             if (phaseIsPresent(phaseIdx)) {
                 (*this)[switch0Idx + switchIdx] = FsToolbox::value(fluidState.saturation(phaseIdx));
@@ -337,9 +345,10 @@ public:
         for (unsigned switchIdx = 0; switchIdx < numPhases - 1; ++switchIdx) {
             unsigned phaseIdx = switchIdx;
             unsigned compIdx = switchIdx + 1;
-            if (phaseIdx >= lowestPhaseIdx)
+            if (phaseIdx >= lowestPhaseIdx) {
                 ++phaseIdx; // skip the saturation of the present
                             // phase with the lowest index
+            }
 
             if (phaseIsPresent(phaseIdx)) {
                 os << ", S_" << FluidSystem::phaseName(phaseIdx) << " = "
