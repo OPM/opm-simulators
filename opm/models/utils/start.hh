@@ -111,7 +111,7 @@ static inline int setupParameters_(int argc,
 
     // fill the parameter tree with the options from the command line
     const auto& positionalParamCallback = Problem::handlePositionalParameter;
-    std::string helpPreamble = ""; // print help if non-empty!
+    std::string helpPreamble; // print help if non-empty!
     if (myRank == 0 && handleHelp) {
         helpPreamble = Problem::helpPreamble(argc, argv);
     }
@@ -120,8 +120,7 @@ static inline int setupParameters_(int argc,
                                             argv,
                                             positionalParamCallback,
                                             helpPreamble);
-    if (!s.empty())
-    {
+    if (!s.empty()) {
         int status = 1;
         if (s == "Help called") { // only on master process
             status = -1; // Use negative values to indicate --help argument
@@ -212,8 +211,7 @@ static inline int start(int argc, char **argv,  bool registerParams)
     resetLocale();
 
     int myRank = 0;
-    try
-    {
+    try {
         // initialize MPI, finalize is done automatically on exit
 #if HAVE_DUNE_FEM
         Dune::Fem::MPIManager::initialize(argc, argv);
@@ -293,9 +291,7 @@ static inline int start(int argc, char **argv,  bool registerParams)
                 }
                 else {
                     // always print the list of specified but unused parameters
-                    printSeparator =
-                        printSeparator ||
-                        Parameters::printUnused(std::cout);
+                    printSeparator = printSeparator || Parameters::printUnused(std::cout);
                 }
                 if (printSeparator) {
                     std::cout << endParametersSeparator;
@@ -320,8 +316,7 @@ static inline int start(int argc, char **argv,  bool registerParams)
         }
         return 0;
     }
-    catch (std::exception& e)
-    {
+    catch (std::exception& e) {
         if (myRank == 0) {
             std::cout << e.what() << ". Abort!\n" << std::flush;
 
@@ -331,8 +326,7 @@ static inline int start(int argc, char **argv,  bool registerParams)
 
         return 1;
     }
-    catch (...)
-    {
+    catch (...) {
         if (myRank == 0) {
             std::cout << "Unknown exception thrown!\n" << std::flush;
 
