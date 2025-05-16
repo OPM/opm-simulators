@@ -335,8 +335,8 @@ public:
      */
     std::string primaryVarName(unsigned pvIdx) const
     {
-        std::string s;
-        if (!(s = EnergyModule::primaryVarName(pvIdx)).empty()) {
+        const std::string s = EnergyModule::primaryVarName(pvIdx);
+        if (!s.empty()) {
             return s;
         }
 
@@ -365,8 +365,8 @@ public:
      */
     std::string eqName(unsigned eqIdx) const
     {
-        std::string s;
-        if (!(s = EnergyModule::eqName(eqIdx)).empty()) {
+        const std::string s = EnergyModule::eqName(eqIdx);
+        if (!s.empty()) {
             return s;
         }
 
@@ -374,7 +374,7 @@ public:
         if (Indices::conti0EqIdx <= eqIdx &&
             eqIdx < Indices::conti0EqIdx + numComponents)
         {
-            unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+            const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
             oss << "continuity^" << FluidSystem::componentName(compIdx);
         }
         else {
@@ -403,7 +403,7 @@ public:
         // find the a reference pressure. The first degree of freedom
         // might correspond to non-interior entities which would lead
         // to an undefined value, so we have to iterate...
-        std::size_t nDof = this->numTotalDof();
+        const std::size_t nDof = this->numTotalDof();
         for (unsigned dofIdx = 0; dofIdx < nDof; ++dofIdx) {
             if (this->dofTotalVolume(dofIdx) > 0.0) {
                 referencePressure_ =
@@ -420,7 +420,7 @@ public:
      */
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
-        Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
+        const Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
         if (tmp > 0) {
             // energy related quantity
             return tmp;
@@ -433,7 +433,7 @@ public:
         if (Indices::switch0Idx <= pvIdx &&
             pvIdx < Indices::switch0Idx + numPhases - 1)
         {
-            unsigned phaseIdx = pvIdx - Indices::switch0Idx;
+            const unsigned phaseIdx = pvIdx - Indices::switch0Idx;
 
             if (!this->solution(/*timeIdx=*/0)[globalDofIdx].phaseIsPresent(phaseIdx)) {
                 // for saturations, the weight is always 1
@@ -455,13 +455,13 @@ public:
      */
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
-        Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
+        const Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
         if (tmp > 0) {
             // energy related equation
             return tmp;
         }
 
-        unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+        const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
         assert(compIdx <= numComponents);
 
         // make all kg equal
@@ -493,7 +493,7 @@ public:
         // write primary variables
         ParentType::serializeEntity(outstream, dofEntity);
 
-        unsigned dofIdx = static_cast<unsigned>(this->dofMapper().index(dofEntity));
+        const unsigned dofIdx = static_cast<unsigned>(this->dofMapper().index(dofEntity));
         if (!outstream.good()) {
             throw std::runtime_error("Could not serialize DOF " + std::to_string(dofIdx));
         }
@@ -511,7 +511,7 @@ public:
         ParentType::deserializeEntity(instream, dofEntity);
 
         // read phase presence
-        unsigned dofIdx = static_cast<unsigned>(this->dofMapper().index(dofEntity));
+        const unsigned dofIdx = static_cast<unsigned>(this->dofMapper().index(dofEntity));
         if (!instream.good()) {
             throw std::runtime_error("Could not deserialize DOF " + std::to_string(dofIdx));
         }
@@ -541,7 +541,7 @@ public:
             for (const auto& elem : elements(this->gridView_, Dune::Partitions::interior)) {
                 elemCtx.updateStencil(elem);
 
-                std::size_t numLocalDof = elemCtx.stencil(/*timeIdx=*/0).numPrimaryDof();
+                const std::size_t numLocalDof = elemCtx.stencil(/*timeIdx=*/0).numPrimaryDof();
                 for (unsigned dofIdx = 0; dofIdx < numLocalDof; ++dofIdx) {
                     unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
@@ -556,7 +556,7 @@ public:
                     const IntensiveQuantities& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
 
                     // evaluate primary variable switch
-                    short oldPhasePresence = priVars.phasePresence();
+                    const short oldPhasePresence = priVars.phasePresence();
 
                     // set the primary variables and the new phase state
                     // from the current fluid state
@@ -611,8 +611,8 @@ public:
         using FsToolbox = MathToolbox<typename FluidState::Scalar>;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            bool oldPhasePresent = (oldPhasePresence & (1 << phaseIdx)) > 0;
-            bool newPhasePresent = newPv.phaseIsPresent(phaseIdx);
+            const bool oldPhasePresent = (oldPhasePresence & (1 << phaseIdx)) > 0;
+            const bool newPhasePresent = newPv.phaseIsPresent(phaseIdx);
             if (oldPhasePresent == newPhasePresent) {
                 continue;
             }
@@ -656,7 +656,7 @@ public:
         }
     }
 
-    mutable Scalar referencePressure_;
+    Scalar referencePressure_{};
 
     // number of switches of the phase state in the last Newton
     // iteration
