@@ -637,7 +637,7 @@ public:
         }
 
         std::cout << ", new primary variables: ";
-        newPv.print();
+        newPv.print(std::cout);
         std::cout << "\n"  << std::flush;
     }
 

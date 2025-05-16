@@ -43,7 +43,7 @@
 
 #include <cassert>
 #include <cmath>
-#include <iostream>
+#include <ostream>
 #include <type_traits>
 
 namespace Opm {
@@ -175,7 +175,7 @@ public:
      * \param phaseIdx The index of the phase which's presence ought to be set or reset.
      * \param yesno If true, the presence of the phase is set, else it is reset
      */
-    void setPhasePresent(unsigned phaseIdx, bool yesno = true)
+    void setPhasePresent(unsigned phaseIdx, bool yesno)
     {
         if (yesno) {
             setPhasePresence(phasePresence_ | (1 << phaseIdx));
@@ -337,7 +337,7 @@ public:
     /*!
      * \copydoc FlashPrimaryVariables::print
      */
-    void print(std::ostream& os = std::cout) const
+    void print(std::ostream& os) const
     {
         os << "(p_" << FluidSystem::phaseName(0) << " = "
            << this->operator[](pressure0Idx);
