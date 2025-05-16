@@ -252,7 +252,7 @@ public:
             return 0.0;
 
         unsigned varIdx = switch0Idx + phaseIdx - 1;
-        if (std::is_same_v<Evaluation, Scalar>)
+        if constexpr (std::is_same_v<Evaluation, Scalar>)
             return (*this)[varIdx]; // finite differences
         else {
             // automatic differentiation
