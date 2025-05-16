@@ -63,6 +63,7 @@ public:
                        DeferredLogger& deferred_logger) const;
 
     GuideRateModel::Target guideTargetMode() const;
+    static GuideRateModel::Target guideTargetMode(const Group::ProductionCMode& cmode);
 
 private:
     Group::ProductionCMode cmode_;
@@ -100,6 +101,8 @@ public:
                        DeferredLogger& deferred_logger) const;
 
     GuideRateModel::Target guideTargetMode() const;
+
+    GuideRateModel::Target guideTargetMode(const Group::InjectionCMode& cmode) const;
 
 private:
     Group::InjectionCMode cmode_;

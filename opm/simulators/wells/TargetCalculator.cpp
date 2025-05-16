@@ -136,7 +136,13 @@ template<class Scalar>
 GuideRateModel::Target
 TargetCalculator<Scalar>::guideTargetMode() const
 {
-    switch (cmode_) {
+    return guideTargetMode(cmode_);
+}
+template<class Scalar>
+GuideRateModel::Target
+TargetCalculator<Scalar>::guideTargetMode(const Group::ProductionCMode& cmode)
+{
+    switch (cmode) {
     case Group::ProductionCMode::ORAT:
         return GuideRateModel::Target::OIL;
     case Group::ProductionCMode::WRAT:
@@ -149,7 +155,7 @@ TargetCalculator<Scalar>::guideTargetMode() const
         return GuideRateModel::Target::RES;
     default:
         // Should never be here.
-        assert(false);
+        //assert(false);
         return GuideRateModel::Target::NONE;
     }
 }

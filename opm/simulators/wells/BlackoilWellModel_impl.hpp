@@ -474,6 +474,11 @@ namespace Opm {
                                                    &this->guideRate_,
                                                    pot,
                                                    local_deferredLogger);
+
+                                                   this->updateAndCommunicateGroupData(reportStepIdx,
+                                                    simulator_.model().newtonMethod().numIterations(),
+                                                    param_.nupcol_group_rate_tolerance_,
+                                                    local_deferredLogger);
         std::string exc_msg;
         auto exc_type = ExceptionType::NONE;
         // update gpmaint targets
@@ -515,6 +520,7 @@ namespace Opm {
                 }
             }
         }
+
         // Catch clauses for all errors setting exc_type and exc_msg
         OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
 
@@ -1244,7 +1250,9 @@ namespace Opm {
         OPM_TIMEFUNCTION();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const int reportStepIdx = simulator_.episodeIndex();
+        std::cout << "start " << std::endl;
         this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, local_deferredLogger);
+        std::cout << "end " << std::endl;
         const auto [more_inner_network_update, network_imbalance] =
                 updateNetworks(mandatory_network_balance,
                                local_deferredLogger,
