@@ -28,9 +28,13 @@
 #ifndef EWOMS_RICHARDS_LOCAL_RESIDUAL_HH
 #define EWOMS_RICHARDS_LOCAL_RESIDUAL_HH
 
-#include "richardsintensivequantities.hh"
+#include <dune/common/fvector.hh>
 
-#include "richardsextensivequantities.hh"
+#include <opm/material/common/MathToolbox.hpp>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/richards/richardsproperties.hh>
 
 namespace Opm {
 
