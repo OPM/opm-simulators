@@ -117,7 +117,7 @@ static inline int setupParameters_(int argc,
     if (myRank == 0 && handleHelp) {
         helpPreamble = Problem::helpPreamble(argc, argv);
     }
-    std::string s =
+    const std::string s =
         Parameters::parseCommandLineOptions(argc,
                                             argv,
                                             positionalParamCallback,
@@ -216,7 +216,7 @@ static inline int start(int argc, char **argv,  bool registerParams)
     int myRank = 0;
     try
     {
-        int paramStatus = 
+        const int paramStatus =
             setupParameters_<TypeTag>(argc,
                                       const_cast<const char**>(argv),
                                       registerParams,
@@ -244,7 +244,7 @@ static inline int start(int argc, char **argv,  bool registerParams)
         }
 
         // read the initial time step and the end time
-        Scalar endTime = Parameters::Get<Parameters::EndTime<Scalar>>();
+        const Scalar endTime = Parameters::Get<Parameters::EndTime<Scalar>>();
         if (endTime < -1e50) {
             if (myRank == 0) {
                 Parameters::printUsage(argv[0], std::cerr,
@@ -253,7 +253,7 @@ static inline int start(int argc, char **argv,  bool registerParams)
             return 1;
         }
 
-        Scalar initialTimeStepSize = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
+        const Scalar initialTimeStepSize = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
         if (initialTimeStepSize < -1e50) {
             if (myRank == 0) {
                 Parameters::printUsage(argv[0], std::cerr,
@@ -265,15 +265,15 @@ static inline int start(int argc, char **argv,  bool registerParams)
 
         if (myRank == 0) {
 #ifdef EWOMS_VERSION
-            std::string versionString = EWOMS_VERSION;
+            const std::string versionString = EWOMS_VERSION;
 #else
-            std::string versionString = "";
+            const std::string versionString;
 #endif
             const std::string briefDescription = Problem::briefDescription();
             if (!briefDescription.empty()) {
-                std::string tmp = breakLines(briefDescription,
-                                             /*indentWidth=*/0,
-                                             getTtyWidth());
+                const std::string tmp = breakLines(briefDescription,
+                                                   /*indentWidth=*/0,
+                                                   getTtyWidth());
                 std::cout << tmp << std::endl << std::endl;
             }
             else {
@@ -283,9 +283,9 @@ static inline int start(int argc, char **argv,  bool registerParams)
         }
 
         // print the parameters if requested
-        int printParams = Parameters::Get<Parameters::PrintParameters>();
+        const int printParams = Parameters::Get<Parameters::PrintParameters>();
         if (myRank == 0) {
-            std::string endParametersSeparator("# [end of parameters]\n");
+            const std::string endParametersSeparator("# [end of parameters]\n");
             if (printParams) {
                 bool printSeparator = false;
                 if (printParams == 1 || !isatty(fileno(stdout))) {
