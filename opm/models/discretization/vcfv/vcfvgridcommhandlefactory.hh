@@ -28,11 +28,13 @@
 #ifndef EWOMS_VCFV_GRID_COMM_HANDLE_FACTORY_HH
 #define EWOMS_VCFV_GRID_COMM_HANDLE_FACTORY_HH
 
-#include "vcfvproperties.hh"
-
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/parallel/gridcommhandles.hh>
 
+#include <memory>
+
 namespace Opm {
+
 /*!
  * \ingroup VcfvDiscretization
  *
@@ -47,7 +49,7 @@ class VcfvGridCommHandleFactory
     using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int dim = GridView::dimension;
+    static constexpr int dim = GridView::dimension;
 
 public:
     /*!
@@ -59,7 +61,7 @@ public:
     minHandle(ArrayType& array, const DofMapper& dofMapper)
     {
         using Handle = GridCommHandleMin<ValueType, ArrayType,  DofMapper, /*commCodim=*/dim>;
-        return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
+        return std::make_shared<Handle>(array, dofMapper);
     }
 
     /*!
@@ -71,11 +73,11 @@ public:
     maxHandle(ArrayType& array, const DofMapper& dofMapper)
     {
         using Handle = GridCommHandleMax<ValueType, ArrayType,  DofMapper, /*commCodim=*/dim>;
-        return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
+        return std::make_shared<Handle>(array, dofMapper);
     }
 
     /*!
-     * \brief Return a handle which computes the sum of all values
+     * \brief Return a handle which computes the sum of all values of
      *        all overlapping degrees of freedom across all processes.
      */
     template <class ValueType, class ArrayType>
@@ -83,9 +85,10 @@ public:
     sumHandle(ArrayType& array, const DofMapper& dofMapper)
     {
         using Handle = GridCommHandleSum<ValueType, ArrayType,  DofMapper, /*commCodim=*/dim>;
-        return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
+        return std::make_shared<Handle>(array, dofMapper);
     }
 };
+
 } // namespace Opm
 
 #endif

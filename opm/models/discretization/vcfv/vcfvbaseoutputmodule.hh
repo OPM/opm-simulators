@@ -28,14 +28,12 @@
 #ifndef EWOMS_VCFV_VTK_BASE_OUTPUT_MODULE_HH
 #define EWOMS_VCFV_VTK_BASE_OUTPUT_MODULE_HH
 
-#include "vcfvproperties.hh"
-
 #include <opm/models/io/baseoutputwriter.hh>
 
 #include <string>
-#include <vector>
 
 namespace Opm {
+
 /*!
  * \ingroup VcfvDiscretization
  *
@@ -58,7 +56,7 @@ public:
     static void attachScalarDofData_(BaseOutputWriter& baseWriter,
                                      ScalarBuffer& buffer,
                                      const std::string& name)
-    { baseWriter.attachScalarVertexData(buffer, name.c_str()); }
+    { baseWriter.attachScalarVertexData(buffer, name); }
 
     /*!
      * \brief Add a buffer where the data is associated with the
@@ -67,8 +65,7 @@ public:
     static void attachVectorDofData_(BaseOutputWriter& baseWriter,
                                      VectorBuffer& buffer,
                                      const std::string& name)
-    { baseWriter.attachVectorVertexData(buffer, name.c_str()); }
-
+    { baseWriter.attachVectorVertexData(buffer, name); }
 
     /*!
      * \brief Add a buffer where the data is associated with the
@@ -77,7 +74,7 @@ public:
     static void attachTensorDofData_(BaseOutputWriter& baseWriter,
                                      TensorBuffer& buffer,
                                      const std::string& name)
-    { baseWriter.attachTensorVertexData(buffer, name.c_str()); }
+    { baseWriter.attachTensorVertexData(buffer, name); }
 };
 
 } // namespace Opm

@@ -28,29 +28,31 @@
 #ifndef EWOMS_P1FE_GRADIENT_CALCULATOR_HH
 #define EWOMS_P1FE_GRADIENT_CALCULATOR_HH
 
-#include "vcfvproperties.hh"
-
-#include <opm/models/discretization/common/fvbasegradientcalculator.hh>
-
 #include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
 
 #include <dune/geometry/type.hh>
 
+#include <dune/common/version.hh>
+#include <opm/models/discretization/common/fvbasegradientcalculator.hh>
+#include <opm/models/discretization/vcfv/vcfvproperties.hh>
+
 #if HAVE_DUNE_LOCALFUNCTIONS
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
+#include <array>
+#include <cstddef>
+#include <vector>
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 
-#include <dune/common/fvector.hh>
-
-#include <vector>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm {
+
 /*!
  * \ingroup FiniteElementDiscretizations
  *
  * \brief This class calculates gradients of arbitrary quantities at flux integration
- *        points using first order finite elemens ansatz functions.
+ *        points using first order finite elements ansatz functions.
  *
  * This approach can also be used for the vertex-centered finite volume (VCFV)
  * discretization.
@@ -93,10 +95,10 @@ public:
     void prepare([[maybe_unused]] const ElementContext& elemCtx,
                  [[maybe_unused]] unsigned timeIdx)
     {
-        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
+        if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
-            throw std::logic_error("The dune-localfunctions module is required in oder to use"
+            throw std::logic_error("The dune-localfunctions module is required in order to use"
                                    " finite element gradients");
 #else
             const auto& stencil = elemCtx.stencil(timeIdx);
@@ -110,8 +112,9 @@ public:
 
                 // Evaluate the P1 shape functions and their gradients at all
                 // flux approximation points.
-                if (prepareValues)
+                if (prepareValues) {
                     localFE.localBasis().evaluateFunction(localFacePos, p1Value_[faceIdx]);
+                }
 
                 if (prepareGradients) {
                     // first, get the shape function's gradient in local coordinates
@@ -125,7 +128,7 @@ public:
                     const auto& jacInvT =
                         geom.jacobianInverseTransposed(localFacePos);
 
-                    size_t numVertices = elemCtx.numDof(timeIdx);
+                    std::size_t numVertices = elemCtx.numDof(timeIdx);
                     for (unsigned vertIdx = 0; vertIdx < numVertices; vertIdx++) {
                         jacInvT.mv(/*xVector=*/localGradient[vertIdx][0],
                                    /*destVector=*/p1Gradient_[faceIdx][vertIdx]);
@@ -134,8 +137,9 @@ public:
             }
 #endif
         }
-        else
+        else {
             ParentType::template prepare<prepareValues, prepareGradients>(elemCtx, timeIdx);
+        }
     }
 
     /*!
@@ -153,34 +157,38 @@ public:
     auto calculateScalarValue([[maybe_unused]] const ElementContext& elemCtx,
                               [[maybe_unused]] unsigned fapIdx,
                               [[maybe_unused]] const QuantityCallback& quantityCallback) const
-        ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
+        ->  std::remove_reference_t<typename QuantityCallback::ResultType>
     {
-        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
+        if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
-            throw std::logic_error("The dune-localfunctions module is required in oder to use"
+            throw std::logic_error("The dune-localfunctions module is required in order to use"
                                    " finite element gradients");
 #else
-            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
-            using QuantityType = typename std::remove_const<QuantityConstType>::type;
+            using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
+            using QuantityType = std::remove_const_t<QuantityConstType>;
             using Toolbox = MathToolbox<QuantityType>;
 
             // If the user does not want to use two-point gradients, we
             // use P1 finite element gradients..
             QuantityType value(0.0);
             for (unsigned vertIdx = 0; vertIdx < elemCtx.numDof(/*timeIdx=*/0); ++vertIdx) {
-                if (std::is_same<QuantityType, Scalar>::value ||
+                if (std::is_same_v<QuantityType, Scalar> ||
                     elemCtx.focusDofIndex() == vertIdx)
+                {
                     value += quantityCallback(vertIdx)*p1Value_[fapIdx][vertIdx];
-                else
+                }
+                else {
                     value += Toolbox::value(quantityCallback(vertIdx))*p1Value_[fapIdx][vertIdx];
+                }
             }
 
             return value;
 #endif
         }
-        else
+        else {
             return ParentType::calculateScalarValue(elemCtx, fapIdx, quantityCallback);
+        }
     }
 
     /*!
@@ -198,19 +206,19 @@ public:
     auto calculateVectorValue([[maybe_unused]] const ElementContext& elemCtx,
                               [[maybe_unused]] unsigned fapIdx,
                               [[maybe_unused]] const QuantityCallback& quantityCallback) const
-        ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
+        ->  std::remove_reference_t<typename QuantityCallback::ResultType>
     {
-        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
+        if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
-            throw std::logic_error("The dune-localfunctions module is required in oder to use"
+            throw std::logic_error("The dune-localfunctions module is required in order to use"
                                    " finite element gradients");
 #else
-            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
-            using QuantityType = typename std::remove_const<QuantityConstType>::type;
+            using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
+            using QuantityType = std::remove_const_t<QuantityConstType>;
 
             using RawFieldType = decltype(std::declval<QuantityType>()[0]);
-            using FieldType = typename std::remove_const<typename std::remove_reference<RawFieldType>::type>::type;
+            using FieldType = std::remove_const_t<std::remove_reference_t<RawFieldType>>;
 
             using Toolbox = MathToolbox<FieldType>;
 
@@ -218,25 +226,28 @@ public:
             // use P1 finite element gradients..
             QuantityType value(0.0);
             for (unsigned vertIdx = 0; vertIdx < elemCtx.numDof(/*timeIdx=*/0); ++vertIdx) {
-                if (std::is_same<QuantityType, Scalar>::value ||
+                if (std::is_same_v<QuantityType, Scalar> ||
                     elemCtx.focusDofIndex() == vertIdx)
                 {
                     const auto& tmp = quantityCallback(vertIdx);
-                    for (unsigned k = 0; k < tmp.size(); ++k)
+                    for (unsigned k = 0; k < tmp.size(); ++k) {
                         value[k] += tmp[k]*p1Value_[fapIdx][vertIdx];
+                    }
                 }
                 else {
                     const auto& tmp = quantityCallback(vertIdx);
-                    for (unsigned k = 0; k < tmp.size(); ++k)
+                    for (unsigned k = 0; k < tmp.size(); ++k) {
                         value[k] += Toolbox::value(tmp[k])*p1Value_[fapIdx][vertIdx];
+                    }
                 }
             }
 
             return value;
 #endif
         }
-        else
+        else {
             return ParentType::calculateVectorValue(elemCtx, fapIdx, quantityCallback);
+        }
     }
 
     /*!
@@ -256,38 +267,41 @@ public:
                            [[maybe_unused]] unsigned fapIdx,
                            [[maybe_unused]] const QuantityCallback& quantityCallback) const
     {
-        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
+        if constexpr (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
-            throw std::logic_error("The dune-localfunctions module is required in oder to use"
+            throw std::logic_error("The dune-localfunctions module is required in order to use"
                                    " finite element gradients");
 #else
-            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
-            using QuantityType = typename std::remove_const<QuantityConstType>::type;
+            using QuantityConstType = std::remove_reference_t<typename QuantityCallback::ResultType>;
+            using QuantityType = std::remove_const_t<QuantityConstType>;
 
             // If the user does not want two-point gradients, we use P1 finite element
             // gradients...
             quantityGrad = 0.0;
             for (unsigned vertIdx = 0; vertIdx < elemCtx.numDof(/*timeIdx=*/0); ++vertIdx) {
-                if (std::is_same<QuantityType, Scalar>::value ||
+                if (std::is_same_v<QuantityType, Scalar> ||
                     elemCtx.focusDofIndex() == vertIdx)
                 {
                     const auto& dofVal = quantityCallback(vertIdx);
                     const auto& tmp = p1Gradient_[fapIdx][vertIdx];
-                    for (int dimIdx = 0; dimIdx < dim; ++ dimIdx)
-                        quantityGrad[dimIdx] += dofVal*tmp[dimIdx];
+                    for (int dimIdx = 0; dimIdx < dim; ++dimIdx) {
+                        quantityGrad[dimIdx] += dofVal * tmp[dimIdx];
+                    }
                 }
                 else {
                     const auto& dofVal = quantityCallback(vertIdx);
                     const auto& tmp = p1Gradient_[fapIdx][vertIdx];
-                    for (int dimIdx = 0; dimIdx < dim; ++ dimIdx)
-                        quantityGrad[dimIdx] += scalarValue(dofVal)*tmp[dimIdx];
+                    for (int dimIdx = 0; dimIdx < dim; ++dimIdx) {
+                        quantityGrad[dimIdx] += scalarValue(dofVal) * tmp[dimIdx];
+                    }
                 }
             }
 #endif
         }
-        else
+        else {
             ParentType::calculateGradient(quantityGrad, elemCtx, fapIdx, quantityCallback);
+        }
     }
 
     /*!
@@ -342,8 +356,8 @@ private:
     static LocalFiniteElementCache feCache_;
 
     const LocalFiniteElement* localFiniteElement_{nullptr};
-    std::vector<Dune::FieldVector<Scalar, 1>> p1Value_[maxFap]{};
-    DimVector p1Gradient_[maxFap][maxDof]{};
+    std::array<std::vector<Dune::FieldVector<Scalar, 1>>, maxFap> p1Value_{};
+    std::array<std::array<DimVector, maxDof>, maxFap>{};
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 };
 
@@ -352,6 +366,7 @@ template<class TypeTag>
 typename P1FeGradientCalculator<TypeTag>::LocalFiniteElementCache
 P1FeGradientCalculator<TypeTag>::feCache_;
 #endif
+
 } // namespace Opm
 
 #endif
