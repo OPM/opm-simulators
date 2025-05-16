@@ -507,9 +507,16 @@ actionOnBrokenConstraints(const Group& group,
     case Group::ProductionCMode::LRAT:
         action = group_limit_action.liquid;
         break;
-//    case Group::ProductionCMode::FLD:
-        // do nothing for now
-//        break;
+    case Group::ProductionCMode::FLD: {
+        // this line looks matters for the restart running of 6_UDA_MODEL5_STDW
+        const auto msg = fmt::format(
+                "Group {}: newControl {} and oldControl {}, what we shuld do with this FLD broken constraint?",
+                group.name(),
+                Group::ProductionCMode2String(newControl),
+                Group::ProductionCMode2String(oldControl));
+        std::cout << msg << std::endl;
+        break;
+    }
     default:
         // FLD is handled here also
         // We should NOT have come here with NONE
