@@ -103,8 +103,9 @@ static inline int setupParameters_(int argc,
     ////////////////////////////////////////////////////////////
     // Register all parameters
     ////////////////////////////////////////////////////////////
-    if (registerParams)
+    if (registerParams) {
         registerAllParameters_<TypeTag>(true);
+    }
 
     ////////////////////////////////////////////////////////////
     // set the parameter values
@@ -113,8 +114,9 @@ static inline int setupParameters_(int argc,
     // fill the parameter tree with the options from the command line
     const auto& positionalParamCallback = Problem::handlePositionalParameter;
     std::string helpPreamble = ""; // print help if non-empty!
-    if (myRank == 0 && handleHelp)
+    if (myRank == 0 && handleHelp) {
         helpPreamble = Problem::helpPreamble(argc, argv);
+    }
     std::string s =
         Parameters::parseCommandLineOptions(argc,
                                             argv,
@@ -123,8 +125,9 @@ static inline int setupParameters_(int argc,
     if (!s.empty())
     {
         int status = 1;
-        if (s == "Help called") // only on master process
+        if (s == "Help called") { // only on master process
             status = -1; // Use negative values to indicate --help argument
+        }
 #if HAVE_MPI
         // Force -1 if the master process has that.
         int globalStatus;
@@ -161,15 +164,18 @@ static inline int setupParameters_(int argc,
     Parameters::getLists(usedParams, unusedParams);
     if (!allowUnused && !unusedParams.empty()) {
         if (myRank == 0) {
-            if (unusedParams.size() == 1)
+            if (unusedParams.size() == 1) {
                 std::cerr << "The following explicitly specified parameter is unknown:\n";
-            else
+            }
+            else {
                 std::cerr << "The following " << unusedParams.size()
                           << " explicitly specified parameters are unknown:\n";
+            }
 
             std::cerr << "\n";
-            for (const auto& keyValue : unusedParams)
+            for (const auto& keyValue : unusedParams) {
                 std::cerr << "   " << keyValue << "\n";
+            }
             std::cerr << "\n";
 
             std::cerr << "Use\n"
@@ -216,10 +222,12 @@ static inline int start(int argc, char **argv,  bool registerParams)
                                       registerParams,
                                       false,
                                       true);
-        if (paramStatus == 1)
+        if (paramStatus == 1) {
             return 1;
-        if (paramStatus == 2)
+        }
+        if (paramStatus == 2) {
             return 0;
+        }
 
         TM::init();
 
@@ -268,9 +276,10 @@ static inline int start(int argc, char **argv,  bool registerParams)
                                              getTtyWidth());
                 std::cout << tmp << std::endl << std::endl;
             }
-            else
+            else {
                 std::cout << "opm models " << versionString
                           << " will now start the simulation. " << std::endl;
+            }
         }
 
         // print the parameters if requested
@@ -283,18 +292,22 @@ static inline int start(int argc, char **argv,  bool registerParams)
                     Parameters::printValues(std::cout);
                     printSeparator = true;
                 }
-                else
+                else {
                     // always print the list of specified but unused parameters
                     printSeparator =
                         printSeparator ||
                         Parameters::printUnused(std::cout);
-                if (printSeparator)
+                }
+                if (printSeparator) {
                     std::cout << endParametersSeparator;
+                }
             }
-            else
+            else {
                 // always print the list of specified but unused parameters
-                if (Parameters::printUnused(std::cout))
+                if (Parameters::printUnused(std::cout)) {
                     std::cout << endParametersSeparator;
+                }
+            }
         }
 
         // instantiate and run the concrete problem. make sure to
