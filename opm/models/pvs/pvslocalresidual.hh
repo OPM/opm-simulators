@@ -28,12 +28,13 @@
 #ifndef EWOMS_PVS_LOCAL_RESIDUAL_HH
 #define EWOMS_PVS_LOCAL_RESIDUAL_HH
 
-#include "pvsproperties.hh"
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
-
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 namespace Opm {
 
