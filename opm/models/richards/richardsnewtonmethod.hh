@@ -28,11 +28,15 @@
 #ifndef EWOMS_RICHARDS_NEWTON_METHOD_HH
 #define EWOMS_RICHARDS_NEWTON_METHOD_HH
 
-#include "richardsproperties.hh"
+#include <dune/common/fvector.hh>
 
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 
-#include <dune/common/fvector.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbasenewtonmethod.hh>
+#include <opm/models/richards/richardsproperties.hh>
+
+#include <algorithm>
 
 namespace Opm {
 
