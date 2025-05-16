@@ -467,19 +467,19 @@ actionOnBrokenConstraints(const Group& group,
         wellModel_.groupState().production_control(group.name());
 
     // We switch to higher groups independently of the given group limit action in GCONPROD item 7
-//    if (newControl == Group::ProductionCMode::FLD && oldControl != Group::ProductionCMode::FLD) {
-//        // If newControl is FLD, the group should be subject to higher order controls
-//        assert(group.productionGroupControlAvailable());
-//        group_state.production_control(group.name(), newControl);
-//        if (wellModel_.comm().rank() == 0) {
-//            const std::string message = fmt::format("Switching production control mode for group {} from {} to {}",
-//            group.name(),
-//            Group::ProductionCMode2String(oldControl),
-//            Group::ProductionCMode2String(newControl));
-//            deferred_logger.debug(message);
-//        }
-//        return true;
-//    }
+    if (newControl == Group::ProductionCMode::FLD && oldControl != Group::ProductionCMode::FLD) {
+        // If newControl is FLD, the group should be subject to higher order controls
+        assert(group.productionGroupControlAvailable());
+        group_state.production_control(group.name(), newControl);
+        if (wellModel_.comm().rank() == 0) {
+            const std::string message = fmt::format("Switching production control mode for group {} from {} to {}",
+            group.name(),
+            Group::ProductionCMode2String(oldControl),
+            Group::ProductionCMode2String(newControl));
+            deferred_logger.debug(message);
+        }
+        return true;
+    }
 
     bool changed = false;
     std::string ss;
