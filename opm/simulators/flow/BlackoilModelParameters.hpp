@@ -351,7 +351,7 @@ public:
     ConvergenceMonitorParams monitor_params_; //!< Convergence monitoring parameters
 
     /// Version of relative change used in time step control
-    std::string relative_change_version_;
+    int relative_change_version_;
 
     // Relative tolerance of group rates (VREP, REIN)
     // If violated the nupcol wellstate is updated

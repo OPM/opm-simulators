@@ -456,24 +456,23 @@ relativeChange() const
 
     gridView.comm().sum(r.data(), r.size());
 
-    if (version == "pressure") {
-        if (resultDenomPressure > 0.0)
-            return std::sqrt(resultDeltaPressure / resultDenomPressure);
-    }
-    else if (version == "saturation") {
-        if (resultDenomSaturation > 0.0)
-            return std::sqrt(resultDeltaSaturation / resultDenomSaturation);
-    }
-    else if (version == "pressure+saturation") {
-        if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0) {
-            if (simulator_.timeStepIndex() == 0) {
+    switch(version) {
+        case 1: // "pressure"
+            if (resultDenomPressure > 0.0)
                 return std::sqrt(resultDeltaPressure / resultDenomPressure);
+            break;
+        case 2: // "saturation"
+            if (resultDenomSaturation > 0.0)
+                return std::sqrt(resultDeltaSaturation / resultDenomSaturation);
+            break;
+        case 3: // "pressure+saturation"
+            if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0) {
+                if (simulator_.timeStepIndex() == 0) {
+                    return std::sqrt(resultDeltaPressure / resultDenomPressure);
+                }
+                return std::max(std::sqrt(resultDeltaPressure/resultDenomPressure), std::sqrt(resultDeltaSaturation/resultDenomSaturation));        
             }
-            return std::max(std::sqrt(resultDeltaPressure/resultDenomPressure), std::sqrt(resultDeltaSaturation/resultDenomSaturation));        
-        }
-    }
-    else {
-        OPM_THROW(std::runtime_error, "Unsupported relative change version: " + version);
+            break;
     }
     
     return 0.0;

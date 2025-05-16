@@ -109,7 +109,16 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     monitor_params_.cutoff_ = Parameters::Get<Parameters::ConvergenceMonitoringCutOff>();
     monitor_params_.decay_factor_ = Parameters::Get<Parameters::ConvergenceMonitoringDecayFactor<Scalar>>();
 
-    relative_change_version_ = Parameters::Get<Parameters::RelativeChangeVersion>();
+    const auto version = Parameters::Get<Parameters::RelativeChangeVersion>();
+    if (version == "pressure") {
+        relative_change_version_ = 1;
+    } else if (version == "saturation") {
+        relative_change_version_ = 2;
+    } else if (version == "pressure+saturation") {
+        relative_change_version_ = 3;
+    } else {
+        throw std::runtime_error("Unsupported relative change version: " + version);
+    }
 
     nupcol_group_rate_tolerance_ = Parameters::Get<Parameters::NupcolGroupRateTolerance<Scalar>>();
 }
