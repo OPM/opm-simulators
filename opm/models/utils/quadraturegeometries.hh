@@ -27,9 +27,11 @@
 #ifndef EWOMS_QUADRATURE_GEOMETRIES_HH
 #define EWOMS_QUADRATURE_GEOMETRIES_HH
 
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 #include <dune/geometry/type.hh>
+
+#include <cassert>
 
 namespace Opm {
 /*!
