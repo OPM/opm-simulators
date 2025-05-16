@@ -26,8 +26,11 @@
 #include <string>
 #include <vector>
 
-
 namespace Opm {
+
+class CompositionalConfig;
+class SummaryState;
+class Well;
 
 template <typename Scalar>
 class CompConnectionData
@@ -99,6 +102,8 @@ public:
 
 } // namespace Opm
 
+#ifndef OPM_SINGLE_COMP_WELL_STATE_IMPL_HPP
 #include "SingleCompWellState_impl.hpp"
+#endif
 
 #endif // OPM_SINGLE_COMP_WELL_STATE_HPP
