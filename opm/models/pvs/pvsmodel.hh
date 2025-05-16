@@ -41,6 +41,7 @@
 #include <opm/models/io/vtkcompositionmodule.hpp>
 #include <opm/models/io/vtkenergymodule.hpp>
 #include <opm/models/io/vtkdiffusionmodule.hpp>
+#include <opm/models/io/vtkphasepresencemodule.hpp>
 
 #include <opm/models/pvs/pvsboundaryratevector.hh>
 #include <opm/models/pvs/pvsextensivequantities.hh>
