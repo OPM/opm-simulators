@@ -112,6 +112,10 @@ public:
     void update_number_of_wells_under_this_control(const std::string& gname, int number);
     int number_of_wells_under_this_control(const std::string& gname) const;
 
+    bool has_sub_group_with_guiderate(const std::string& gname) const;
+    void update_sub_group_with_guiderate(const std::string& gname, const std::vector<std::string>& subgname);
+    const std::vector<std::string>& sub_group_with_guiderate(const std::string& gname) const;
+
     void update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state);
     const std::pair<Scalar, Scalar>& gconsump_rates(const std::string& gname) const;
 
@@ -147,6 +151,7 @@ public:
             iterateContainer(inj_resv_rates, func);
             iterateContainer(inj_rein_rates, func);
             iterateContainer(inj_surface_rates, func);
+            //iterateContainer(m_sub_group_with_guiderate, func);
         };
 
         // Compute the size of the data.
@@ -214,6 +219,7 @@ public:
         serializer(m_gconsump_rates);
         serializer(m_prod_guide_rates);
         serializer(m_number_of_wells_under_this_control);
+        serializer(m_sub_group_with_guiderate); //will this work???
     }
 
 private:
@@ -232,6 +238,8 @@ private:
     std::map<std::string, Scalar> group_thp;
     std::map<std::string, Scalar> m_prod_guide_rates;
     std::map<std::string, int> m_number_of_wells_under_this_control;
+    std::map<std::string, std::vector<std::string>> m_sub_group_with_guiderate;
+
 
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;

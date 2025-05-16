@@ -250,6 +250,9 @@ public:
                                const GuideRate& guideRate,
                                Opm::GuideRateModel::Target target,
                                int& number_of_wells_under_this_group_control,
+                               std::vector<std::string>& next_sub_group_with_guide_rate,
+                               const bool is_production_group,
+                               const Phase injection_phase,
                                const PhaseUsage& pu);
 
     static int groupControlledWells(const Schedule& schedule,

@@ -118,23 +118,46 @@ guideRateSum(const Group& group,
              const bool always_use_potentials)
 {
 
-    if (false)
+    if (true)
     {
-    double child_rate = 0.0;
-    auto group_cont_wells = this->group_state_.number_of_wells_under_this_control(group.name());
-    bool hasWell = schedule_.hasWell(always_included_child, report_step_);
-    if (hasWell && !well_state_.isProductionGrup(always_included_child)) {
-        child_rate = guideRate(always_included_child, always_included_child, always_use_potentials);
-        group_cont_wells++;
-    }
-    auto gs_rates = this->group_state_.prod_guide_rates(group.name());
-    //if (group_cont_wells == 0)
-    //    gs_rates = 0.0;
-
-    //if (is_producer_ && std::abs(total_guide_rate - gs_rates - child_rate ) > 0.1)
-    //    std::cout << group.name() << " " << group_cont_wells << " " << gs_rates << " " << child_rate << " " << total_guide_rate << " " << always_included_child << std::endl;
-
-    return {gs_rates + child_rate, group_cont_wells};
+        const auto& gs_rates = this->group_state_.prod_guide_rates(group.name());
+        const auto& group_cont_wells = this->group_state_.number_of_wells_under_this_control(group.name());
+        const auto& next_subgroup_with_guiderate = this->group_state_.sub_group_with_guiderate(group.name());
+        double child_rate = 0.0;
+        bool hasWell = schedule_.hasWell(always_included_child, report_step_);
+        //std::cout << is_producer_ << " " << always_included_child << " " << group.name() << " " << hasWell << " " << always_use_potentials << std::endl;
+        if (hasWell && !well_state_.isProductionGrup(always_included_child)) {
+            //const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(always_included_child, group.name(), schedule_, report_step_);
+            if (group_cont_wells > 0)
+                child_rate = guideRate(always_included_child, always_included_child, always_use_potentials);
+            else {
+                const auto& well = schedule_.getWell(always_included_child, report_step_);
+                bool stop = false;
+                auto gr_name = well.groupName();
+                while (!stop) {
+                    //std::cout << "iterate " <<gr_name << std::endl;
+                    auto it = std::find(next_subgroup_with_guiderate.begin(), next_subgroup_with_guiderate.end(), gr_name);
+                    if (it != next_subgroup_with_guiderate.end()) {
+                        //std::cout << "found it " << gr_name << std::endl;
+                        child_rate = guideRate(gr_name, always_included_child, always_use_potentials);
+                        break;
+                    }
+                    
+                    const auto& group2 = schedule_.getGroup(gr_name, report_step_);
+                    gr_name = group2.parent();
+                    if (gr_name == group.name())
+                        stop = true;
+                }
+            }
+            //else if (next_subgroup_with_guiderate != ""){
+                //child_rate = guideRate(next_subgroup_with_guiderate, always_included_child, always_use_potentials);
+                //std::cout << "subguiderate " << next_subgroup_with_guiderate << " " << child_rate << std::endl;
+                //guide_rate_->has(well.groupName());
+                //guide_rate_->get(name, target_, getGroupRateVector(name));
+                //child_rate = guideRate(group., always_included_child, always_use_potentials);
+            //}
+        }
+        return {gs_rates + child_rate, group_cont_wells};
     }
 
 
@@ -181,16 +204,40 @@ guideRateSum(const Group& group,
     }
     auto gs_rates = this->group_state_.prod_guide_rates(group.name());
     auto group_cont_wells = this->group_state_.number_of_wells_under_this_control(group.name());
+    auto next_subgroup_with_guiderate = this->group_state_.sub_group_with_guiderate(group.name());
+
     bool hasWell = schedule_.hasWell(always_included_child, report_step_);
-    std::cout << always_included_child << " " << group.name() << " " << hasWell << " " << always_use_potentials << std::endl;
+    std::cout << is_producer_ << " " << always_included_child << " " << group.name() << " " << hasWell << " " << always_use_potentials << std::endl;
     if (hasWell && !well_state_.isProductionGrup(always_included_child)) {
+        //const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(always_included_child, group.name(), schedule_, report_step_);
         if (group_cont_wells > 0)
             child_rate = guideRate(always_included_child, always_included_child, always_use_potentials);
         else {
+            const auto& well = schedule_.getWell(always_included_child, report_step_);
+            bool stop = false;
+            auto gr_name = well.groupName();
+            while (!stop) {
+                std::cout << "iterate " <<gr_name << std::endl;
+                auto it = std::find(next_subgroup_with_guiderate.begin(), next_subgroup_with_guiderate.end(), gr_name);
+                if (it != next_subgroup_with_guiderate.end()) {
+                    std::cout << "found it " << gr_name << std::endl;
+                    child_rate = guideRate(gr_name, always_included_child, always_use_potentials);
+                    break;
+                }
+                
+                const auto& group2 = schedule_.getGroup(gr_name, report_step_);
+                gr_name = group2.parent();
+                if (gr_name == "FIELD")
+                    stop = true;
+            }
+        }
+        //else if (next_subgroup_with_guiderate != ""){
+            //child_rate = guideRate(next_subgroup_with_guiderate, always_included_child, always_use_potentials);
+            //std::cout << "subguiderate " << next_subgroup_with_guiderate << " " << child_rate << std::endl;
             //guide_rate_->has(well.groupName());
             //guide_rate_->get(name, target_, getGroupRateVector(name));
             //child_rate = guideRate(group., always_included_child, always_use_potentials);
-        }
+        //}
     }
 
    //else if (this->group_state_.has_prod_guide_rates(always_included_child) && always_included_child != group.name()) 

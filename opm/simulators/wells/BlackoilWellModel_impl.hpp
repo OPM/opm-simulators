@@ -1250,9 +1250,7 @@ namespace Opm {
         OPM_TIMEFUNCTION();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const int reportStepIdx = simulator_.episodeIndex();
-        std::cout << "start " << std::endl;
         this->updateAndCommunicateGroupData(reportStepIdx, iterationIdx, param_.nupcol_group_rate_tolerance_, local_deferredLogger);
-        std::cout << "end " << std::endl;
         const auto [more_inner_network_update, network_imbalance] =
                 updateNetworks(mandatory_network_balance,
                                local_deferredLogger,
