@@ -28,21 +28,29 @@
 #ifndef EWOMS_ECFV_STENCIL_HH
 #define EWOMS_ECFV_STENCIL_HH
 
-#include <opm/models/utils/quadraturegeometries.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
-#include <opm/material/common/ConditionalStorage.hpp>
+#include <dune/geometry/type.hh>
 
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/intersectioniterator.hh>
-#include <dune/geometry/type.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
+
 #include <opm/common/ErrorMacros.hpp>
+
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
+#include <opm/material/common/ConditionalStorage.hpp>
+
+#include <opm/models/utils/quadraturegeometries.hh>
+
+#include <cassert>
+#include <cstddef>
+#include <stdexcept>
 #include <vector>
 
 namespace Opm {
+
 /*!
  * \ingroup EcfvDiscretization
  *
@@ -72,8 +80,8 @@ class EcfvStencil
     using WorldVector = Dune::FieldVector<Scalar, dimWorld>;
 
 public:
-    using Entity = Element       ;
-    using Mapper = ElementMapper ;
+    using Entity = Element;
+    using Mapper = ElementMapper;
 
     using LocalGeometry = typename Element::Geometry;
 
@@ -101,7 +109,7 @@ public:
         { element_ = element; }
 
         void update()
-        { }
+        {}
 
         /*!
          * \brief The global position associated with the sub-control volume
@@ -151,11 +159,13 @@ public:
         {
             exteriorIdx_ = static_cast<unsigned short>(localNeighborIdx);
 
-            if (needNormal)
+            if (needNormal) {
                 (*normal_) = intersection.centerUnitOuterNormal();
+            }
             const auto& geometry = intersection.geometry();
-            if (needIntegrationPos)
+            if (needIntegrationPos) {
                 (*integrationPos_) = geometry.center();
+            }
             area_ = geometry.volume();
             // TODO: facedir_ = intersection.boundaryId();  // This did not compile for some reason
             // using indexInInside() as in ecltransmissibility.cc instead
@@ -212,9 +222,7 @@ public:
          * and -1 for NNC faces.
          */
         int dirId() const
-        {
-            return dirId_;
-        }
+        { return dirId_; }
 
         /*!
          * \brief Returns the direction of the face
@@ -263,9 +271,6 @@ public:
 
     void updateTopology(const Element& element)
     {
-        auto isIt = gridView_.ibegin(element);
-        const auto& endIsIt = gridView_.iend(element);
-
         // add the "center" element of the stencil
         subControlVolumes_.clear();
         subControlVolumes_.emplace_back(/*SubControlVolume(*/element/*)*/);
@@ -275,13 +280,12 @@ public:
         interiorFaces_.clear();
         boundaryFaces_.clear();
 
-        for (; isIt != endIsIt; ++isIt) {
-            const auto& intersection = *isIt;
+        for (const auto& intersection : intersections(gridView_, element)) {
             // if the current intersection has a neighbor, add a
             // degree of freedom and an internal face, else add a
             // boundary face
             if (intersection.neighbor()) {
-                elements_.emplace_back( intersection.outside() );
+                elements_.emplace_back(intersection.outside());
                 subControlVolumes_.emplace_back(/*SubControlVolume(*/elements_.back()/*)*/);
                 interiorFaces_.emplace_back(/*SubControlVolumeFace(*/intersection, subControlVolumes_.size() - 1/*)*/);
             }
@@ -314,7 +318,7 @@ public:
      * \brief Return the element to which the stencil refers.
      */
     const Element& element() const
-    { return element( 0 ); }
+    { return element(0); }
 
     /*!
      * \brief Return the grid view of the element to which the stencil
@@ -327,7 +331,7 @@ public:
      * \brief Returns the number of degrees of freedom which the
      *        current element interacts with.
      */
-    size_t numDof() const
+    std::size_t numDof() const
     { return subControlVolumes_.size(); }
 
     /*!
@@ -339,7 +343,7 @@ public:
      *
      * For element centered finite elements, this is only the central DOF.
      */
-    size_t numPrimaryDof() const
+    std::size_t numPrimaryDof() const
     { return 1; }
 
     /*!
@@ -378,9 +382,7 @@ public:
      *        freedom.
      */
     const Entity& entity(unsigned dofIdx) const
-    {
-        return element( dofIdx );
-    }
+    { return element( dofIdx ); }
 
     /*!
      * \brief Returns the sub-control volume object belonging to a
@@ -392,7 +394,7 @@ public:
     /*!
      * \brief Returns the number of interior faces of the stencil.
      */
-    size_t numInteriorFaces() const
+    std::size_t numInteriorFaces() const
     { return interiorFaces_.size(); }
 
     /*!
@@ -405,7 +407,7 @@ public:
     /*!
      * \brief Returns the number of boundary faces of the stencil.
      */
-    size_t numBoundaryFaces() const
+    std::size_t numBoundaryFaces() const
     { return boundaryFaces_.size(); }
 
     /*!
@@ -427,6 +429,4 @@ protected:
 
 } // namespace Opm
 
-
 #endif
-
