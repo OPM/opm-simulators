@@ -466,6 +466,15 @@ actionOnBrokenConstraints(const Group& group,
     const Group::ProductionCMode oldControl =
         wellModel_.groupState().production_control(group.name());
 
+    if (!(newControl != oldControl || newControl == Group::ProductionCMode::FLD)) {
+        throw std::runtime_error(fmt::format(
+                "Group {}: newControl {} and oldControl {} are the same",
+                group.name(),
+                Group::ProductionCMode2String(newControl),
+                Group::ProductionCMode2String(oldControl)
+        ));
+    }
+
     // We switch to higher groups independently of the given group limit action in GCONPROD item 7
     if (newControl == Group::ProductionCMode::FLD && oldControl != Group::ProductionCMode::FLD) {
         // If newControl is FLD, the group should be subject to higher order controls
@@ -498,11 +507,12 @@ actionOnBrokenConstraints(const Group& group,
     case Group::ProductionCMode::LRAT:
         action = group_limit_action.liquid;
         break;
-    case Group::ProductionCMode::FLD:
+//    case Group::ProductionCMode::FLD:
         // do nothing for now
-        break;
+//        break;
     default:
-        // TODO: double check whether this is the case
+        // FLD is handled here also
+        // We should NOT have come here with NONE
         action = Group::ExceedAction::RATE;
     }
 
