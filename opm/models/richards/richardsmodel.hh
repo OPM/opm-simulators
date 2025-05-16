@@ -306,10 +306,12 @@ public:
     std::string primaryVarName(unsigned pvIdx) const
     {
         std::ostringstream oss;
-        if (pvIdx == Indices::pressureWIdx)
+        if (pvIdx == Indices::pressureWIdx) {
             oss << "pressure_" << FluidSystem::phaseName(liquidPhaseIdx);
-        else
+        }
+        else {
             assert(0);
+        }
 
         return oss.str();
     }
@@ -320,10 +322,12 @@ public:
     std::string eqName(unsigned eqIdx) const
     {
         std::ostringstream oss;
-        if (eqIdx == Indices::contiEqIdx)
+        if (eqIdx == Indices::contiEqIdx) {
             oss << "continuity_" << FluidSystem::phaseName(liquidPhaseIdx);
-        else
+        }
+        else {
             assert(0);
+        }
 
         return oss.str();
     }
