@@ -96,7 +96,8 @@ initSimulator(const char *filename)
                               argv,
                               /*registerParams=*/false,
                               /*allowUnused*/false,
-                              /*handleHelp*/true);
+                              /*handleHelp*/true,
+                              /*myRank*/0);
 
     FlowGenericVanguard::readDeck(filename);
     return std::make_unique<Simulator>();

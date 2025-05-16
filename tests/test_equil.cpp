@@ -126,7 +126,8 @@ initSimulator(const char *filename)
                                    argv,
                                    /*registerParams=*/false,
                                    /*allowUnused*/false,
-                                   /*handleHelp*/true);
+                                   /*handleHelp*/true,
+                                   /*myRank*/0);
 
     Opm::FlowGenericVanguard::readDeck(filename);
 

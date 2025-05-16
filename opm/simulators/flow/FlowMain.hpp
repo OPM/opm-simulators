@@ -120,7 +120,8 @@ namespace Opm {
                                                           const_cast<const char**>(argv),
                                                           /*doRegistration=*/false,
                                                           /*allowUnused=*/true,
-                                                          /*handleHelp=*/(mpiRank==0));
+                                                          /*handleHelp=*/(mpiRank==0),
+                                                          mpiRank);
             if (status == 0) {
 
                 // deal with unknown parameters.

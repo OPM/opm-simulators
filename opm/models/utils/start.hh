@@ -93,12 +93,10 @@ static inline int setupParameters_(int argc,
                                    const char **argv,
                                    bool registerParams,
                                    bool allowUnused,
-                                   bool handleHelp)
+                                   bool handleHelp,
+                                   const int myRank)
 {
     using Problem = GetPropType<TypeTag, Properties::Problem>;
-
-    // first, get the MPI rank of the current process
-    int myRank = 0;
 
     ////////////////////////////////////////////////////////////
     // Register all parameters
@@ -216,12 +214,20 @@ static inline int start(int argc, char **argv,  bool registerParams)
     int myRank = 0;
     try
     {
+        // initialize MPI, finalize is done automatically on exit
+#if HAVE_DUNE_FEM
+        Dune::Fem::MPIManager::initialize(argc, argv);
+        myRank = Dune::Fem::MPIManager::rank();
+#else
+        myRank = Dune::MPIHelper::instance(argc, argv).rank();
+#endif
         const int paramStatus =
             setupParameters_<TypeTag>(argc,
                                       const_cast<const char**>(argv),
                                       registerParams,
                                       false,
-                                      true);
+                                      true,
+                                      myRank);
         if (paramStatus == 1) {
             return 1;
         }
@@ -231,13 +237,6 @@ static inline int start(int argc, char **argv,  bool registerParams)
 
         TM::init();
 
-        // initialize MPI, finalize is done automatically on exit
-#if HAVE_DUNE_FEM
-        Dune::Fem::MPIManager::initialize(argc, argv);
-        myRank = Dune::Fem::MPIManager::rank();
-#else
-        myRank = Dune::MPIHelper::instance(argc, argv).rank();
-#endif
         // setting up backend for STDCOUT logger
         if (myRank == 0) {
             setupStreamLogging("STDOUT_LOGGER");
