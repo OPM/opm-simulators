@@ -21,14 +21,16 @@
 #ifndef EWOMS_ALIGNED_ALLOCATOR_HH
 #define EWOMS_ALIGNED_ALLOCATOR_HH
 
-#include <utility>
+#include <cassert>
+#include <cstdlib>
 #include <memory>
 #include <type_traits>
-#include <cassert>
+#include <utility>
 
 namespace Opm {
 
 namespace detail {
+
 constexpr inline bool is_alignment(std::size_t value) noexcept
 {
     return (value > 0) && ((value & (value - 1)) == 0);
