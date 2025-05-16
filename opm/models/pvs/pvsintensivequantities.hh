@@ -28,20 +28,19 @@
 #ifndef EWOMS_PVS_INTENSIVE_QUANTITIES_HH
 #define EWOMS_PVS_INTENSIVE_QUANTITIES_HH
 
-#include "pvsproperties.hh"
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
 
-#include <opm/models/common/energymodule.hh>
-#include <opm/models/common/diffusionmodule.hh>
-
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/common/Valgrind.hpp>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/common/diffusionmodule.hh>
+#include <opm/models/common/energymodule.hh>
 
-#include <iostream>
+#include <limits>
 
 namespace Opm {
 /*!
