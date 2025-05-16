@@ -27,14 +27,15 @@
 #ifndef EWOMS_PFF_GRID_VECTOR_HH
 #define EWOMS_PFF_GRID_VECTOR_HH
 
-#include <opm/models/utils/prefetch.hh>
-
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/common/version.hh>
+
+#include <opm/models/utils/prefetch.hh>
 
 #include <vector>
 
 namespace Opm {
+
 /*!
  * \brief A random-access container which stores data attached to a grid's degrees of
  *        freedom in a prefetch friendly manner.
@@ -56,30 +57,31 @@ public:
         : gridView_(gridView)
         , elementMapper_(gridView_, Dune::mcmgElementLayout())
         , dofMapper_(dofMapper)
-    { }
+    {}
 
     template <class DistFn>
     void update(const DistFn& distFn)
     {
-        unsigned numElements = gridView_.size(/*codim=*/0);
-        unsigned numLocalDofs = computeNumLocalDofs_();
+        const unsigned numElements = gridView_.size(/*codim=*/0);
+        const unsigned numLocalDofs = computeNumLocalDofs_();
 
         elemData_.resize(numElements);
         data_.resize(numLocalDofs);
 
         // update the pointers for the element data: for this, we need to loop over the
         // whole grid and update a stencil for each element
-        Data *curElemDataPtr = &data_[0];
+        Data* curElemDataPtr = &data_[0];
         Stencil stencil(gridView_, dofMapper_);
         for (const auto& elem : elements(gridView_)) {
             // set the DOF data pointer for the current element
-            unsigned elemIdx = elementMapper_.index(elem);
+            const unsigned elemIdx = elementMapper_.index(elem);
             elemData_[elemIdx] = curElemDataPtr;
 
             stencil.update(elem);
-            unsigned numDof = stencil.numDof();
-            for (unsigned localDofIdx = 0; localDofIdx < numDof; ++ localDofIdx)
+            const unsigned numDof = stencil.numDof();
+            for (unsigned localDofIdx = 0; localDofIdx < numDof; ++ localDofIdx) {
                 distFn(curElemDataPtr[localDofIdx], stencil, localDofIdx);
+            }
 
             // update the element data pointer to make it point to the beginning of the
             // data for DOFs of the next element
@@ -89,7 +91,7 @@ public:
 
     void prefetch(const Element& elem) const
     {
-        unsigned elemIdx = elementMapper_.index(elem);
+        const unsigned elemIdx = elementMapper_.index(elem);
 
         // we use 0 as the temporal locality, because it is reasonable to assume that an
         // entry will only be accessed once.
@@ -98,7 +100,7 @@ public:
 
     const Data& get(const Element& elem, unsigned localDofIdx) const
     {
-        unsigned elemIdx = elementMapper_.index(elem);
+        const unsigned elemIdx = elementMapper_.index(elem);
         return elemData_[elemIdx][localDofIdx];
     }
 
