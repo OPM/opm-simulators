@@ -28,8 +28,6 @@
 #ifndef EWOMS_RICHARDS_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_RICHARDS_EXTENSIVE_QUANTITIES_HH
 
-#include "richardsproperties.hh"
-
 #include <opm/models/common/multiphasebaseextensivequantities.hh>
 
 namespace Opm {
@@ -42,10 +40,7 @@ namespace Opm {
  *        calculate the flux of fluid over a face of a finite volume.
  */
 template <class TypeTag>
-class RichardsExtensiveQuantities
-    : public MultiPhaseBaseExtensiveQuantities<TypeTag>
-{
-};
+using RichardsExtensiveQuantities = MultiPhaseBaseExtensiveQuantities<TypeTag>;
 
 } // namespace Opm
 
