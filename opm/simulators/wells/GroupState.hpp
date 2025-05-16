@@ -97,11 +97,11 @@ public:
     bool has_gpmaint_target(const std::string& gname) const;
 
     bool has_production_control(const std::string& gname) const;
-    void production_control(const std::string& gname, Group::ProductionCMode cmode);
+    void update_production_control(const std::string& gname, Group::ProductionCMode cmode);
     Group::ProductionCMode production_control(const std::string& gname) const;
 
     bool has_injection_control(const std::string& gname, Phase phase) const;
-    void injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode);
+    void update_injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode);
     Group::InjectionCMode injection_control(const std::string& gname, Phase phase) const;
 
     void update_gconsump(const Schedule& schedule, const int report_step, const SummaryState& summary_state);
