@@ -40,8 +40,10 @@
 #include <opm/models/utils/simulatorutils.hpp>
 
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <string>
 
 namespace Opm::Properties {
@@ -69,7 +71,7 @@ private:
     using Implementation = GetPropType<TypeTag, Properties::Problem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int vtkOutputFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr int vtkOutputFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkOutputFormat>;
 
     using Model = GetPropType<TypeTag, Properties::Model>;
@@ -104,7 +106,7 @@ public:
 
 private:
     // copying a problem is not a good idea
-    FvBaseProblem(const FvBaseProblem& ) = delete;
+    FvBaseProblem(const FvBaseProblem&) = delete;
 
 public:
     /*!
@@ -122,15 +124,12 @@ public:
         , boundingBoxMin_(std::numeric_limits<double>::max())
         , boundingBoxMax_(-std::numeric_limits<double>::max())
         , simulator_(simulator)
-        , defaultVtkWriter_(0)
     {
         // calculate the bounding box of the local partition of the grid view
-        VertexIterator vIt = gridView_.template begin<dim>();
-        const VertexIterator vEndIt = gridView_.template end<dim>();
-        for (; vIt!=vEndIt; ++vIt) {
-            for (unsigned i=0; i<dim; i++) {
-                boundingBoxMin_[i] = std::min(boundingBoxMin_[i], vIt->geometry().corner(0)[i]);
-                boundingBoxMax_[i] = std::max(boundingBoxMax_[i], vIt->geometry().corner(0)[i]);
+        for (const auto& vertex : vertices(gridView_)) {
+            for (unsigned i = 0; i < dim; ++i) {
+                boundingBoxMin_[i] = std::min(boundingBoxMin_[i], vertex.geometry().corner(0)[i]);
+                boundingBoxMax_[i] = std::max(boundingBoxMax_[i], vertex.geometry().corner(0)[i]);
             }
         }
 
@@ -141,27 +140,25 @@ public:
         }
 
         if (enableVtkOutput_()) {
-            bool asyncVtkOutput =
+            const bool asyncVtkOutput =
                 simulator_.gridView().comm().size() == 1 &&
                 Parameters::Get<Parameters::EnableAsyncVtkOutput>();
 
             // asynchonous VTK output currently does not work in conjunction with grid
             // adaptivity because the async-IO code assumes that the grid stays
             // constant. complain about that case.
-            bool enableGridAdaptation = Parameters::Get<Parameters::EnableGridAdaptation>();
-            if (asyncVtkOutput && enableGridAdaptation)
+            const bool enableGridAdaptation = Parameters::Get<Parameters::EnableGridAdaptation>();
+            if (asyncVtkOutput && enableGridAdaptation) {
                 throw std::runtime_error("Asynchronous VTK output currently cannot be used "
                                          "at the same time as grid adaptivity");
+            }
 
-            std::string outputDir = asImp_().outputDir();
-
-            defaultVtkWriter_ =
-                new VtkMultiWriter(asyncVtkOutput, gridView_, outputDir, asImp_().name());
+            defaultVtkWriter_ = std::make_unique<VtkMultiWriter>(asyncVtkOutput,
+                                                                 gridView_,
+                                                                 asImp_().outputDir(),
+                                                                 asImp_().name());
         }
     }
-
-    ~FvBaseProblem()
-    { delete defaultVtkWriter_; }
 
     /*!
      * \brief Registers all available parameters for the problem and
@@ -214,16 +211,14 @@ public:
      *
      * If the returned string is empty, no help message will be generated.
      */
-    static std::string helpPreamble(int,
-                                    const char **argv)
+    static std::string helpPreamble(int, const char **argv)
     {
         std::string desc = Implementation::briefDescription();
-        if (!desc.empty())
+        if (!desc.empty()) {
             desc = desc + "\n";
+        }
 
-        return
-            "Usage: "+std::string(argv[0]) + " [OPTIONS]\n"
-            + desc;
+        return "Usage: " + std::string(argv[0]) + " [OPTIONS]\n" + desc;
     }
 
     /*!
@@ -262,7 +257,7 @@ public:
                                          int paramIdx,
                                          int)
     {
-        errorMsg = std::string("Illegal parameter \"")+argv[paramIdx]+"\".";
+        errorMsg = std::string("Illegal parameter \"") + argv[paramIdx] + "\".";
         return 0;
     }
 
@@ -272,7 +267,7 @@ public:
      * If you overload this method don't forget to call ParentType::finishInit()
      */
     void finishInit()
-    { }
+    {}
 
     /*!
      * \brief Allows to improve the performance by prefetching all data which is
@@ -288,11 +283,12 @@ public:
      */
     void gridChanged()
     {
-                elementMapper_.update(gridView_);
-                vertexMapper_.update(gridView_);
+        elementMapper_.update(gridView_);
+        vertexMapper_.update(gridView_);
 
-        if (enableVtkOutput_())
+        if (enableVtkOutput_()) {
             defaultVtkWriter_->gridChanged();
+        }
     }
 
     /*!
@@ -399,25 +395,25 @@ public:
      * \brief Called at the beginning of an simulation episode.
      */
     void beginEpisode()
-    { }
+    {}
 
     /*!
      * \brief Called by the simulator before each time integration.
      */
     void beginTimeStep()
-    { }
+    {}
 
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
     void beginIteration()
-    { }
+    {}
 
     /*!
      * \brief Called by the simulator after each Newton-Raphson update.
      */
     void endIteration()
-    { }
+    {}
 
     /*!
      * \brief Called by the simulator after each time integration.
@@ -426,7 +422,7 @@ public:
      * solution. (e.g., some additional output)
      */
     void endTimeStep()
-    { }
+    {}
 
     /*!
      * \brief Called when the end of an simulation episode is reached.
@@ -447,17 +443,17 @@ public:
     {
         const auto& executionTimer = simulator().executionTimer();
 
-        Scalar executionTime = executionTimer.realTimeElapsed();
-        Scalar setupTime = simulator().setupTimer().realTimeElapsed();
-        Scalar prePostProcessTime = simulator().prePostProcessTimer().realTimeElapsed();
-        Scalar localCpuTime = executionTimer.cpuTimeElapsed();
-        Scalar globalCpuTime = executionTimer.globalCpuTimeElapsed();
-        Scalar writeTime = simulator().writeTimer().realTimeElapsed();
-        Scalar linearizeTime = simulator().linearizeTimer().realTimeElapsed();
-        Scalar solveTime = simulator().solveTimer().realTimeElapsed();
-        Scalar updateTime = simulator().updateTimer().realTimeElapsed();
-        unsigned numProcesses = static_cast<unsigned>(this->gridView().comm().size());
-        unsigned threadsPerProcess = ThreadManager::maxThreads();
+        const Scalar executionTime = executionTimer.realTimeElapsed();
+        const Scalar setupTime = simulator().setupTimer().realTimeElapsed();
+        const Scalar prePostProcessTime = simulator().prePostProcessTimer().realTimeElapsed();
+        const Scalar localCpuTime = executionTimer.cpuTimeElapsed();
+        const Scalar globalCpuTime = executionTimer.globalCpuTimeElapsed();
+        const Scalar writeTime = simulator().writeTimer().realTimeElapsed();
+        const Scalar linearizeTime = simulator().linearizeTimer().realTimeElapsed();
+        const Scalar solveTime = simulator().solveTimer().realTimeElapsed();
+        const Scalar updateTime = simulator().updateTimer().realTimeElapsed();
+        const unsigned numProcesses = static_cast<unsigned>(this->gridView().comm().size());
+        const unsigned threadsPerProcess = ThreadManager::maxThreads();
         if (gridView().comm().rank() == 0) {
             std::cout << std::setprecision(3)
                       << "Simulation of problem '" << asImp_().name() << "' finished.\n"
@@ -465,25 +461,25 @@ public:
                       << "------------------------ Timing ------------------------\n"
                       << "Setup time: " << setupTime << " seconds"
                       << humanReadableTime(setupTime)
-                      << ", " << setupTime/(executionTime + setupTime)*100 << "%\n"
+                      << ", " << setupTime / (executionTime + setupTime) * 100 << "%\n"
                       << "Simulation time: " << executionTime << " seconds"
                       << humanReadableTime(executionTime)
-                      << ", " << executionTime/(executionTime + setupTime)*100 << "%\n"
+                      << ", " << executionTime / (executionTime + setupTime) * 100 << "%\n"
                       << "    Linearization time: " << linearizeTime << " seconds"
                       << humanReadableTime(linearizeTime)
-                      << ", " << linearizeTime/executionTime*100 << "%\n"
+                      << ", " << linearizeTime / executionTime * 100 << "%\n"
                       << "    Linear solve time: "  << solveTime << " seconds"
                       << humanReadableTime(solveTime)
-                      << ", " << solveTime/executionTime*100 << "%\n"
+                      << ", " << solveTime / executionTime * 100 << "%\n"
                       << "    Newton update time: "  << updateTime << " seconds"
                       << humanReadableTime(updateTime)
-                      << ", " << updateTime/executionTime*100 << "%\n"
+                      << ", " << updateTime / executionTime * 100 << "%\n"
                       << "    Pre/postprocess time: "  << prePostProcessTime << " seconds"
                       << humanReadableTime(prePostProcessTime)
-                      << ", " << prePostProcessTime/executionTime*100 << "%\n"
+                      << ", " << prePostProcessTime / executionTime * 100 << "%\n"
                       << "    Output write time: "  << writeTime << " seconds"
                       << humanReadableTime(writeTime)
-                      << ", " << writeTime/executionTime*100 << "%\n"
+                      << ", " << writeTime / executionTime * 100 << "%\n"
                       << "First process' simulation CPU time: "  << localCpuTime << " seconds"
                       <<  humanReadableTime(localCpuTime) << "\n"
                       << "Number of processes: " << numProcesses << "\n"
@@ -502,48 +498,51 @@ public:
      */
     void timeIntegration()
     {
-        unsigned maxFails = asImp_().maxTimeIntegrationFailures();
-        Scalar minTimeStepSize = asImp_().minTimeStepSize();
+        const unsigned maxFails = asImp_().maxTimeIntegrationFailures();
+        Scalar minTimeStep = asImp_().minTimeStepSize();
 
         std::string errorMessage;
         for (unsigned i = 0; i < maxFails; ++i) {
             bool converged = model().update();
-            if (converged)
+            if (converged) {
                 return;
+            }
 
-            Scalar dt = simulator().timeStepSize();
+            const Scalar dt = simulator().timeStepSize();
             Scalar nextDt = dt / 2.0;
-            if (dt < minTimeStepSize*(1 + 1e-9)) {
+            if (dt < minTimeStep * (1.0 + 1e-9)) {
                 if (asImp_().continueOnConvergenceError()) {
-                    if (gridView().comm().rank() == 0)
+                    if (gridView().comm().rank() == 0) {
                         std::cout << "Newton solver did not converge with minimum time step of "
                                   << dt << " seconds. Continuing with unconverged solution!\n"
                                   << std::flush;
+                    }
                     return;
                 }
                 else {
-                    errorMessage =
-                        "Time integration did not succeed with the minumum time step size of "
-                        + std::to_string(double(minTimeStepSize)) + " seconds. Giving up!";
+                    errorMessage = "Time integration did not succeed with the minumum time step size of " +
+                                   std::to_string(double(minTimeStep)) + " seconds. Giving up!";
                     break; // give up: we can't make the time step smaller anymore!
                 }
             }
-            else if (nextDt < minTimeStepSize)
-                nextDt = minTimeStepSize;
+            else if (nextDt < minTimeStep) {
+                nextDt = minTimeStep;
+            }
             simulator().setTimeStepSize(nextDt);
 
             // update failed
-            if (gridView().comm().rank() == 0)
+            if (gridView().comm().rank() == 0) {
                 std::cout << "Newton solver did not converge with "
                           << "dt=" << dt << " seconds. Retrying with time step of "
                           << nextDt << " seconds\n" << std::flush;
+            }
         }
 
-        if (errorMessage.empty())
-            errorMessage =
-                "Newton solver didn't converge after "
-                +std::to_string(maxFails)+" time-step divisions. dt="
-                +std::to_string(double(simulator().timeStepSize()));
+        if (errorMessage.empty()) {
+            errorMessage = "Newton solver didn't converge after " +
+                           std::to_string(maxFails) + " time-step divisions. dt=" +
+                           std::to_string(double(simulator().timeStepSize()));
+        }
         throw std::runtime_error(errorMessage);
     }
 
@@ -581,16 +580,17 @@ public:
      */
     Scalar nextTimeStepSize() const
     {
-        if (nextTimeStepSize_ > 0.0)
+        if (nextTimeStepSize_ > 0.0) {
             return nextTimeStepSize_;
+        }
 
         Scalar dtNext = std::min(Parameters::Get<Parameters::MaxTimeStepSize<Scalar>>(),
                                  newtonMethod().suggestTimeStepSize(simulator().timeStepSize()));
 
-        if (dtNext < simulator().maxTimeStepSize()
-            && simulator().maxTimeStepSize() < dtNext*2)
+        if (dtNext < simulator().maxTimeStepSize() &&
+            simulator().maxTimeStepSize() < dtNext * 2)
         {
-            dtNext = simulator().maxTimeStepSize()/2 * 1.01;
+            dtNext = simulator().maxTimeStepSize() / 2 * 1.01;
         }
 
         return dtNext;
@@ -607,7 +607,7 @@ public:
     bool shouldWriteRestartFile() const
     {
         return simulator().timeStepIndex() > 0 &&
-            (simulator().timeStepIndex() % 10 == 0);
+               (simulator().timeStepIndex() % 10 == 0);
     }
 
     /*!
@@ -745,8 +745,9 @@ public:
     template <class Restarter>
     void serialize(Restarter& res)
     {
-        if (enableVtkOutput_())
+        if (enableVtkOutput_()) {
             defaultVtkWriter_->serialize(res);
+        }
     }
 
     /*!
@@ -762,8 +763,9 @@ public:
     template <class Restarter>
     void deserialize(Restarter& res)
     {
-        if (enableVtkOutput_())
+        if (enableVtkOutput_()) {
             defaultVtkWriter_->deserialize(res);
+        }
     }
 
     /*!
@@ -774,21 +776,22 @@ public:
      */
     void writeOutput(bool verbose = true)
     {
-        if (!enableVtkOutput_())
+        if (!enableVtkOutput_()) {
             return;
+        }
 
-        if (verbose && gridView().comm().rank() == 0)
+        if (verbose && gridView().comm().rank() == 0) {
             std::cout << "Writing visualization results for the current time step.\n"
                       << std::flush;
+        }
 
         // calculate the time _after_ the time was updated
-        Scalar t = simulator().time() + simulator().timeStepSize();
+        const Scalar t = simulator().time() + simulator().timeStepSize();
 
         defaultVtkWriter_->beginWrite(t);
         model().prepareOutputFields();
         model().appendOutputFields(*defaultVtkWriter_);
         defaultVtkWriter_->endWrite();
-
     }
 
     /*!
@@ -796,7 +799,7 @@ public:
      *        to write the default ouput after each time step to disk.
      */
     VtkMultiWriter& defaultVtkWriter() const
-    { return defaultVtkWriter_; }
+    { return *defaultVtkWriter_; }
 
 protected:
     Scalar nextTimeStepSize_;
@@ -807,11 +810,11 @@ protected:
 private:
     //! Returns the implementation of the problem (i.e. static polymorphism)
     Implementation& asImp_()
-    { return *static_cast<Implementation *>(this); }
+    { return *static_cast<Implementation*>(this); }
 
     //! \copydoc asImp_()
     const Implementation& asImp_() const
-    { return *static_cast<const Implementation *>(this); }
+    { return *static_cast<const Implementation*>(this); }
 
     // Grid management stuff
     const GridView gridView_;
@@ -822,7 +825,7 @@ private:
 
     // Attributes required for the actual simulation
     Simulator& simulator_;
-    mutable VtkMultiWriter *defaultVtkWriter_;
+    std::unique_ptr<VtkMultiWriter> defaultVtkWriter_{};
 };
 
 } // namespace Opm
