@@ -963,7 +963,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
 
                     if (well.isInjector() || !well_state.isOpen(wellname)) continue;
                     const Scalar efficiency = well.getEfficiencyFactor(/*network*/ true) * well_state.getGlobalEfficiencyScalingFactor(wellname);
-                    node_inflows[node][BlackoilPhases::Vapour] += well_state.getALQ(wellname) * efficiency;
+                    node_inflows[node][BlackoilPhases::Vapour] += well_state.well(wellname).alq_state.get() * efficiency;
                 }
             }
         }
