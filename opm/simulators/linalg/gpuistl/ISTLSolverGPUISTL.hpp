@@ -58,10 +58,6 @@ public:
                       bool forceSerial = false)
         : m_parameters(parameters)
     {
-        // TODO: Is there a nicer way of reading the parameters?
-        // TODO: We already read them in the runtime option proxy, so we could just
-        //       pass them to the constructor here. Though, then we would lose the
-        //       common constructor signature.
         m_parameters.init(simulator.vanguard().eclState().getSimulationConfig().useCPR());
         m_propertyTree = setupPropertyTree(m_parameters,
                                            Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
