@@ -28,6 +28,7 @@
 
 #include <opm/simulators/linalg/linalgparameters.hh>
 #include <opm/simulators/linalg/linalgproperties.hh>
+#include <string>
 
 namespace Opm {
 
@@ -88,7 +89,7 @@ struct AcceleratorMode { static constexpr auto value = "none"; };
 struct GpuDeviceId { static constexpr int value = 0; };
 struct OpenclPlatformId { static constexpr int value = 0; };
 struct OpenclIluParallel { static constexpr bool value = true; }; // note: false should only be used in debug
-
+struct LinearSolverAccelerator { static constexpr auto value = "cpu"; };
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -118,6 +119,7 @@ struct FlowLinearSolverParameters
     int gpu_device_id_;
     int opencl_platform_id_;
     bool opencl_ilu_parallel_;
+    std::string linear_solver_accelerator_;
 
     FlowLinearSolverParameters() { reset(); }
 
