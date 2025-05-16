@@ -32,15 +32,19 @@
 
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/pvs/pvsproperties.hh>
 
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/common/Valgrind.hpp>
-
+#include <cassert>
+#include <cmath>
 #include <iostream>
+#include <type_traits>
 
 namespace Opm {
 
