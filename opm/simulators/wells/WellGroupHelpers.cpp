@@ -1124,7 +1124,7 @@ updateGuideRate(const std::string& name,
         const auto guiderate = guideRate.get(name, target, getProductionGroupRateVector(group_state, pu, name));
         std::cout << "has guide rate " << name << " " << guiderate << " " << number_of_wells_under_this_group_control << std::endl;
         std::cout << "setup " << name << " " <<totalGuideRate << " " << number_of_wells_under_this_group_control << std::endl;
-        group_state.update_prod_guide_rates(name, totalGuideRate);
+        group_state.update_prod_guide_rates(name, guiderate);
         group_state.update_number_of_wells_under_this_control(name, number_of_wells_under_this_group_control);
         number_of_wells_under_this_group_control = 0;
         if (totalGuideRate == 0 )
