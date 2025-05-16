@@ -97,15 +97,19 @@ public:
         unsigned phaseIdx = liquidPhaseIdx;
         Evaluation density;
         if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
-            if (focusDofIdx == interiorDofIdx)
+            if (focusDofIdx == interiorDofIdx) {
                 density = fluidState.density(phaseIdx);
-            else
+            }
+            else {
                 density = Opm::getValue(fluidState.density(phaseIdx));
+            }
         }
-        else if (focusDofIdx == interiorDofIdx)
+        else if (focusDofIdx == interiorDofIdx) {
             density = insideIntQuants.fluidState().density(phaseIdx);
-        else
+        }
+        else {
             density = Opm::getValue(insideIntQuants.fluidState().density(phaseIdx));
+        }
 
         // add advective flux of current component in current
         // phase
