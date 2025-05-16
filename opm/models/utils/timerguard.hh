@@ -31,6 +31,7 @@
 #include <opm/models/utils/timer.hpp>
 
 namespace Opm {
+
 /*!
  * \ingroup Common
  *
