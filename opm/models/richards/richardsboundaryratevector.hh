@@ -87,15 +87,15 @@ public:
         ExtensiveQuantities extQuants;
         extQuants.updateBoundary(context, bfIdx, timeIdx, fluidState);
         const auto& insideIntQuants = context.intensiveQuantities(bfIdx, timeIdx);
-        unsigned focusDofIdx = context.focusDofIndex();
-        unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
+        const unsigned focusDofIdx = context.focusDofIndex();
+        const unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
 
         ////////
         // advective fluxes of all components in all phases
         ////////
         (*this) = Evaluation(0.0);
 
-        unsigned phaseIdx = liquidPhaseIdx;
+        const unsigned phaseIdx = liquidPhaseIdx;
         Evaluation density;
         if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
             if (focusDofIdx == interiorDofIdx) {
