@@ -28,6 +28,7 @@
 #define EWOMS_PREFETCH_HH
 
 namespace Opm {
+
 /*!
  * \brief Template function which emits prefetch instructions for a range of memory
  *
