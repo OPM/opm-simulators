@@ -49,6 +49,7 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
 
     # set_source_files_properties(${relpath} PROPERTIES LANGUAGE HIP)
     list(APPEND ${LIST} ${relpath})
+    list(APPEND ${LIST}_HIPIFIED ${hip_file_path})
   endif()
 endmacro()
 
@@ -1305,4 +1306,8 @@ if(AMGX_FOUND)
   list(APPEND PUBLIC_HEADER_FILES
     opm/simulators/linalg/AmgxPreconditioner.hpp
   )
+endif()
+
+if (CONVERT_CUDA_TO_HIP)
+  add_custom_target(hipified_headers  DEPENDS ${PUBLIC_HEADER_FILES_HIPIFIED})
 endif()
