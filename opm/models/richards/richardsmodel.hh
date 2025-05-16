@@ -28,27 +28,27 @@
 #ifndef EWOMS_RICHARDS_MODEL_HH
 #define EWOMS_RICHARDS_MODEL_HH
 
-#include <opm/material/densead/Math.hpp>
-
-#include "richardsproperties.hh"
-#include "richardsindices.hh"
-#include "richardslocalresidual.hh"
-#include "richardsextensivequantities.hh"
-#include "richardsratevector.hh"
-#include "richardsboundaryratevector.hh"
-#include "richardsprimaryvariables.hh"
-#include "richardsintensivequantities.hh"
-#include "richardsnewtonmethod.hh"
-
-#include <opm/models/common/multiphasebasemodel.hh>
-
 #include <opm/material/components/NullComponent.hpp>
+#include <opm/material/densead/Math.hpp>
 #include <opm/material/fluidsystems/LiquidPhase.hpp>
 #include <opm/material/fluidsystems/GasPhase.hpp>
 #include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 
+#include <opm/models/common/multiphasebasemodel.hh>
+#include <opm/models/richards/richardsproperties.hh>
+#include <opm/models/richards/richardsindices.hh>
+#include <opm/models/richards/richardslocalresidual.hh>
+#include <opm/models/richards/richardsextensivequantities.hh>
+#include <opm/models/richards/richardsratevector.hh>
+#include <opm/models/richards/richardsboundaryratevector.hh>
+#include <opm/models/richards/richardsprimaryvariables.hh>
+#include <opm/models/richards/richardsintensivequantities.hh>
+#include <opm/models/richards/richardsnewtonmethod.hh>
+
+#include <cassert>
 #include <sstream>
 #include <string>
+#include <tuple>
 
 namespace Opm {
 template <class TypeTag>
