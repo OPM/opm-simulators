@@ -34,6 +34,7 @@
 #include <cassert>
 
 namespace Opm {
+
 /*!
  * \brief Quadrature geometry for quadrilaterals.
  */
@@ -52,16 +53,16 @@ public:
     template <class CornerContainer>
     void setCorners(const CornerContainer& corners, unsigned nCorners)
     {
-        unsigned cornerIdx;
-        for (cornerIdx = 0; cornerIdx < nCorners; ++cornerIdx) {
-            for (unsigned j = 0; j < dim; ++j)
+        for (unsigned cornerIdx = 0; cornerIdx < nCorners; ++cornerIdx) {
+            for (unsigned j = 0; j < dim; ++j) {
                 corners_[cornerIdx][j] = corners[cornerIdx][j];
+            }
         }
-        assert(cornerIdx == nCorners);
 
         center_ = 0;
-        for (cornerIdx = 0; cornerIdx < nCorners; ++cornerIdx)
+        for (unsigned cornerIdx = 0; cornerIdx < nCorners; ++cornerIdx) {
             center_ += corners_[cornerIdx];
+        }
         center_ /= nCorners;
     }
 
@@ -78,9 +79,10 @@ public:
     {
         GlobalPosition globalPos(0.0);
 
-        for (unsigned cornerIdx = 0; cornerIdx < numCorners; ++cornerIdx)
+        for (unsigned cornerIdx = 0; cornerIdx < numCorners; ++cornerIdx) {
             globalPos.axpy(cornerWeight(localPos, cornerIdx),
                            corners_[cornerIdx]);
+        }
 
         return globalPos;
     }
@@ -95,14 +97,15 @@ public:
         jac = 0.0;
         for (unsigned cornerIdx = 0; cornerIdx < numCorners; ++cornerIdx) {
             for (unsigned k = 0; k < dim; ++k) {
-                Scalar dWeight_dk = (cornerIdx&  (1 << k)) ? 1 : -1;
+                Scalar dWeight_dk = (cornerIdx & (1 << k)) ? 1 : -1;
                 for (unsigned j = 0; j < dim; ++j) {
                     if (k != j) {
-                        if (cornerIdx&  (1 << j))
+                        if (cornerIdx & (1 << j)) {
                             dWeight_dk *= localPos[j];
-                        else
+                        }
+                        else {
                             dWeight_dk *= 1 - localPos[j];
-                        ;
+                        }
                     }
                 }
 
@@ -140,8 +143,9 @@ public:
         // this code is based on the Q1 finite element code from
         // dune-localfunctions
         Scalar weight = 1.0;
-        for (unsigned j = 0; j < dim; ++j)
-            weight *= (cornerIdx&  (1 << j)) ? localPos[j] : (1 - localPos[j]);
+        for (unsigned j = 0; j < dim; ++j) {
+            weight *= (cornerIdx & (1 << j)) ? localPos[j] : (1 - localPos[j]);
+        }
 
         return weight;
     }
