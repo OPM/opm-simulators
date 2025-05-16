@@ -31,6 +31,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/geometry/type.hh>
 
+#include <array>
 #include <cassert>
 
 namespace Opm {
@@ -151,7 +152,7 @@ public:
     }
 
 private:
-    GlobalPosition corners_[numCorners];
+    std::array<GlobalPosition, numCorners> corners_{};
     GlobalPosition center_;
 };
 
