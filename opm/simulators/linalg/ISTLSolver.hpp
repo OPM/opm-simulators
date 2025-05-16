@@ -47,6 +47,7 @@
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
+#include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 
 #include <any>
 #include <cstddef>
@@ -141,7 +142,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
     /// as a block-structured matrix (one block for all cell variables) for a fixed
     /// number of cell variables np .
     template <class TypeTag>
-    class ISTLSolver
+    class ISTLSolver : public AbstractISTLSolver<TypeTag>
     {
     protected:
         using GridView = GetPropType<TypeTag, Properties::GridView>;
@@ -314,11 +315,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         }
 
         // nothing to clean here
-        void eraseMatrix()
+        void eraseMatrix() override
         {
         }
 
-        void setActiveSolver(const int num)
+        void setActiveSolver(const int num) override
         {
             if (num > static_cast<int>(prm_.size()) - 1) {
                 OPM_THROW(std::logic_error, "Solver number " + std::to_string(num) + " not available.");
@@ -330,7 +331,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
         }
 
-        int numAvailableSolvers()
+        int numAvailableSolvers() const override
         {
             return flexibleSolver_.size();
         }
@@ -363,12 +364,12 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
         }
 
-        void prepare(const SparseMatrixAdapter& M, Vector& b)
+        void prepare(const SparseMatrixAdapter& M, Vector& b) override
         {
             prepare(M.istlMatrix(), b);
         }
 
-        void prepare(const Matrix& M, Vector& b)
+        void prepare(const Matrix& M, Vector& b) override
         {
             OPM_TIMEBLOCK(istlSolverPrepare);
             try {
@@ -379,22 +380,22 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         }
 
 
-        void setResidual(Vector& /* b */)
+        void setResidual(Vector& /* b */) override
         {
             // rhs_ = &b; // Must be handled in prepare() instead.
         }
 
-        void getResidual(Vector& b) const
+        void getResidual(Vector& b) const override
         {
             b = *rhs_;
         }
 
-        void setMatrix(const SparseMatrixAdapter& /* M */)
+        void setMatrix(const SparseMatrixAdapter& /* M */) override
         {
             // matrix_ = &M.istlMatrix(); // Must be handled in prepare() instead.
         }
 
-        int getSolveCount() const {
+        int getSolveCount() const override {
             return solveCount_;
         }
 
@@ -402,7 +403,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             solveCount_ = 0;
         }
 
-        bool solve(Vector& x)
+        bool solve(Vector& x) override
         {
             OPM_TIMEBLOCK(istlSolverSolve);
             ++solveCount_;
@@ -438,7 +439,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \return               the solution x
 
         /// \copydoc NewtonIterationBlackoilInterface::iterations
-        int iterations () const { return iterations_; }
+        int iterations () const override { return iterations_; }
 
         /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
         const std::any& parallelInformation() const { return parallelInformation_; }
