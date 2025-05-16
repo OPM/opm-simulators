@@ -81,8 +81,8 @@ class PvsPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
 
     using Toolbox = MathToolbox<Evaluation>;
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
-    using NcpFlash = Opm::NcpFlash<Scalar, FluidSystem>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
+    using NcpFlash = ::Opm::NcpFlash<Scalar, FluidSystem>;
 
 public:
     PvsPrimaryVariables() : ParentType()
@@ -181,7 +181,7 @@ public:
             setPhasePresence(phasePresence_ | (1 << phaseIdx));
         }
         else {
-            setPhasePresence(phasePresence_&  ~(1 << phaseIdx));
+            setPhasePresence(phasePresence_ & ~(1 << phaseIdx));
         }
     }
 
@@ -201,7 +201,7 @@ public:
      * \param phasePresence The bit-map of present phases.
      */
     static bool phaseIsPresent(unsigned phaseIdx, short phasePresence)
-    { return phasePresence&  (1 << phaseIdx); }
+    { return phasePresence & (1 << phaseIdx); }
 
     /*!
      * \brief Returns true iff a phase is present for the current
@@ -210,7 +210,7 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      */
     bool phaseIsPresent(unsigned phaseIdx) const
-    { return phasePresence_&  (1 << phaseIdx); }
+    { return phasePresence_ & (1 << phaseIdx); }
 
     /*!
      * \brief Returns the phase with the lowest index that is present.
@@ -340,7 +340,7 @@ public:
     void print(std::ostream& os) const
     {
         os << "(p_" << FluidSystem::phaseName(0) << " = "
-           << this->operator[](pressure0Idx);
+           << (*this)[pressure0Idx];
         unsigned lowestPhaseIdx = lowestPresentPhaseIdx();
         for (unsigned switchIdx = 0; switchIdx < numPhases - 1; ++switchIdx) {
             unsigned phaseIdx = switchIdx;
@@ -360,8 +360,7 @@ public:
                    << (*this)[switch0Idx + switchIdx];
             }
         }
-        for (unsigned compIdx = numPhases - 1; compIdx < numComponents - 1;
-             ++compIdx) {
+        for (unsigned compIdx = numPhases - 1; compIdx < numComponents - 1; ++compIdx) {
             os << ", x_" << FluidSystem::phaseName(lowestPhaseIdx) << "^"
                << FluidSystem::componentName(compIdx + 1) << " = "
                << (*this)[switch0Idx + compIdx];
@@ -371,7 +370,7 @@ public:
     }
 
 private:
-    short phasePresence_;
+    short phasePresence_{};
 };
 
 } // namespace Opm
