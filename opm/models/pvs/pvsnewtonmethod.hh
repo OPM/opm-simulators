@@ -117,9 +117,9 @@ protected:
         }
 
         // limit pressure reference change to 20% of the total value per iteration
-        clampValue_(nextValue[pressure0Idx],
-                    currentValue[pressure0Idx]*0.8,
-                    currentValue[pressure0Idx]*1.2);
+        nextValue[pressure0Idx] = std::clamp(nextValue[pressure0Idx],
+                                             currentValue[pressure0Idx] * 0.8,
+                                             currentValue[pressure0Idx] * 1.2);
     }
 
     /*!
@@ -131,9 +131,6 @@ protected:
         ParentType::endIteration_(uCurrentIter, uLastIter);
         this->problem().model().switchPrimaryVars_();
     }
-
-    void clampValue_(Scalar& val, Scalar minVal, Scalar maxVal) const
-    { val = std::max(minVal, std::min(val, maxVal)); }
 };
 } // namespace Opm
 
