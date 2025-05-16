@@ -40,6 +40,7 @@
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
 
+#include <array>
 #include <limits>
 
 namespace Opm {
@@ -291,8 +292,8 @@ private:
     FluidState fluidState_;
     Evaluation porosity_;
     DimMatrix intrinsicPerm_;
-    Evaluation relativePermeability_[numPhases];
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation, numPhases> relativePermeability_{};
+    std::array<Evaluation, numPhases> mobility_{};
 };
 
 } // namespace Opm
