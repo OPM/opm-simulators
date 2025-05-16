@@ -466,6 +466,15 @@ actionOnBrokenConstraints(const Group& group,
     const Group::ProductionCMode oldControl =
         wellModel_.groupState().production_control(group.name());
 
+    if (!(newControl != oldControl || newControl == Group::ProductionCMode::FLD)) {
+        throw std::runtime_error(fmt::format(
+                "Group {}: newControl {} and oldControl {} are the same",
+                group.name(),
+                Group::ProductionCMode2String(newControl),
+                Group::ProductionCMode2String(oldControl)
+        ));
+    }
+
     // We switch to higher groups independently of the given group limit action in GCONPROD item 7
     if (newControl == Group::ProductionCMode::FLD && oldControl != Group::ProductionCMode::FLD) {
         // If newControl is FLD, the group should be subject to higher order controls
@@ -483,30 +492,55 @@ actionOnBrokenConstraints(const Group& group,
 
     bool changed = false;
     std::string ss;
-    switch (group_limit_action.allRates) {
-    case Group::ExceedAction::NONE: {
-        if (oldControl != newControl) {
-            if ((group_limit_action.water == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::WRAT) ||
-                (group_limit_action.gas == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::GRAT) ||
-                (group_limit_action.liquid == Group::ExceedAction::RATE &&
-                 newControl == Group::ProductionCMode::LRAT)) {
-                group_state.production_control(group.name(), newControl);
-                ss = fmt::format("Switching production control mode for group {} from {} to {}",
-                                 group.name(),
-                                 Group::ProductionCMode2String(oldControl),
-                                 Group::ProductionCMode2String(newControl));
+    Group::ExceedAction action = Group::ExceedAction::NONE;
 
-                changed = true;
-            }
-            else {
-                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. "
-                                 "Nothing is done.",
-                                 Group::ProductionCMode2String(oldControl),
-                                 group.name());
-            }
-        }
+    switch (newControl) {
+    case Group::ProductionCMode::ORAT:
+        action = group_limit_action.oil;
+        break;
+    case Group::ProductionCMode::WRAT:
+        action = group_limit_action.water;
+        break;
+    case Group::ProductionCMode::GRAT:
+        action = group_limit_action.gas;
+        break;
+    case Group::ProductionCMode::LRAT:
+        action = group_limit_action.liquid;
+        break;
+    case Group::ProductionCMode::FLD: {
+        // this line looks matters for the restart running of 6_UDA_MODEL5_STDW
+        const auto msg = fmt::format(
+                "Group {}: newControl {} and oldControl {}, what we shuld do with this FLD broken constraint?",
+                group.name(),
+                Group::ProductionCMode2String(newControl),
+                Group::ProductionCMode2String(oldControl));
+        std::cout << msg << std::endl;
+        break;
+    }
+    default:
+        // FLD is handled here also
+        // We should NOT have come here with NONE
+        action = Group::ExceedAction::RATE;
+    }
+
+    switch(action) {
+    case Group::ExceedAction::NONE: {
+        // do nothing
+        ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. "
+                         "Nothing is done.",
+                         Group::ProductionCMode2String(oldControl),
+                         group.name());
+        break;
+    }
+    case Group::ExceedAction::RATE: {
+        // switching controls
+        group_state.production_control(group.name(), newControl);
+        ss = fmt::format("Switching production control mode for group {} from {} to {}",
+                         group.name(),
+                         Group::ProductionCMode2String(oldControl),
+                         Group::ProductionCMode2String(newControl));
+
+        changed = true;
         break;
     }
     case Group::ExceedAction::CON: {
@@ -537,21 +571,10 @@ actionOnBrokenConstraints(const Group& group,
                          deferred_logger);
         break;
     }
-    case Group::ExceedAction::RATE: {
-        if (oldControl != newControl) {
-            group_state.production_control(group.name(), newControl);
-            ss = fmt::format("Switching production control mode for group {} from {} to {}",
-                             group.name(),
-                             Group::ProductionCMode2String(oldControl),
-                             Group::ProductionCMode2String(newControl));
-        }
-        changed = true;
-        break;
-    }
     default:
         OPM_THROW(std::runtime_error,
                   "Invalid procedure for maximum rate limit selected for group" + group.name());
-    }
+    } // end of switch(action)
 
     if (!ss.empty() && wellModel_.comm().rank() == 0)
         deferred_logger.debug(ss);
