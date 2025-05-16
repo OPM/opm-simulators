@@ -27,20 +27,21 @@
 #ifndef EWOMS_START_HH
 #define EWOMS_START_HH
 
-#include <opm/models/utils/propertysystem.hh>
+#include <dune/common/parallel/mpihelper.hh>
+
 // the following header is not required here, but it must be included before
 // dune/common/densematrix.hh because of some c++ ideosyncrasies
 #include <opm/material/densead/Evaluation.hpp>
+
+#include <opm/material/common/ResetLocale.hpp>
+
+#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/terminal.hpp>
 #include <opm/models/utils/simulator.hh>
 
 #include <opm/simulators/utils/readDeck.hpp>
-
-#include <opm/material/common/ResetLocale.hpp>
-
-#include <dune/common/parallel/mpihelper.hh>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -49,8 +50,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-
 #include <unistd.h>
+#include <vector>
 
 #if HAVE_MPI
 #include <mpi.h>
