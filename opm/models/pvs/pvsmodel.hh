@@ -53,6 +53,7 @@
 #include <opm/models/pvs/pvsratevector.hh>
 
 #include <cassert>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -390,7 +391,7 @@ public:
         // find the a reference pressure. The first degree of freedom
         // might correspond to non-interior entities which would lead
         // to an undefined value, so we have to iterate...
-        size_t nDof = this->numTotalDof();
+        std::size_t nDof = this->numTotalDof();
         for (unsigned dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
             if (this->dofTotalVolume(dofIdx) > 0.0) {
                 referencePressure_ =
@@ -521,7 +522,7 @@ public:
             for (const auto& elem : elements(this->gridView_, Dune::Partitions::interior)) {
                 elemCtx.updateStencil(elem);
 
-                size_t numLocalDof = elemCtx.stencil(/*timeIdx=*/0).numPrimaryDof();
+                std::size_t numLocalDof = elemCtx.stencil(/*timeIdx=*/0).numPrimaryDof();
                 for (unsigned dofIdx = 0; dofIdx < numLocalDof; ++dofIdx) {
                     unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
