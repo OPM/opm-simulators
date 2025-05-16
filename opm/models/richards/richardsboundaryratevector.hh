@@ -58,12 +58,10 @@ class RichardsBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     enum { contiEqIdx = Indices::contiEqIdx };
     enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
-    RichardsBoundaryRateVector() : ParentType()
-    {}
-
+    RichardsBoundaryRateVector() = default;
     /*!
      * \copydoc
      * ImmiscibleBoundaryRateVector::ImmiscibleBoundaryRateVector(Scalar)
@@ -83,7 +81,8 @@ public:
      * \copydoc ImmiscibleBoundaryRateVector::setFreeFlow
      */
     template <class Context, class FluidState>
-    void setFreeFlow(const Context& context, unsigned bfIdx, unsigned timeIdx, const FluidState& fluidState)
+    void setFreeFlow(const Context& context, unsigned bfIdx,
+                     unsigned timeIdx, const FluidState& fluidState)
     {
         ExtensiveQuantities extQuants;
         extQuants.updateBoundary(context, bfIdx, timeIdx, fluidState);
@@ -103,14 +102,14 @@ public:
                 density = fluidState.density(phaseIdx);
             }
             else {
-                density = Opm::getValue(fluidState.density(phaseIdx));
+                density = getValue(fluidState.density(phaseIdx));
             }
         }
         else if (focusDofIdx == interiorDofIdx) {
             density = insideIntQuants.fluidState().density(phaseIdx);
         }
         else {
-            density = Opm::getValue(insideIntQuants.fluidState().density(phaseIdx));
+            density = getValue(insideIntQuants.fluidState().density(phaseIdx));
         }
 
         // add advective flux of current component in current
@@ -119,9 +118,9 @@ public:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
-            Opm::Valgrind::CheckDefined((*this)[i]);
+            Valgrind::CheckDefined((*this)[i]);
         }
-        Opm::Valgrind::CheckDefined(*this);
+        Valgrind::CheckDefined(*this);
 #endif
     }
 
