@@ -28,10 +28,12 @@
 #ifndef EWOMS_RICHARDS_BOUNDARY_RATE_VECTOR_HH
 #define EWOMS_RICHARDS_BOUNDARY_RATE_VECTOR_HH
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
 
-#include "richardsintensivequantities.hh"
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/richards/richardsproperties.hh>
 
 namespace Opm {
 
