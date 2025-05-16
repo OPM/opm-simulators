@@ -63,8 +63,10 @@
 #include <vector>
 
 namespace Opm {
+
 template <class TypeTag>
 class PvsModel;
+
 }
 
 namespace Opm::Properties {
@@ -73,8 +75,8 @@ namespace TTag {
 
 //! The type tag for the isothermal single phase problems
 struct PvsModel
-{
-    using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
+{ using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
+
 } // namespace TTag
 
 //! Use the PVS local jacobian operator for the PVS model
@@ -161,7 +163,8 @@ struct PvsMoleFractionsBaseWeight<TypeTag, TTag::PvsModel>
 namespace Opm::Parameters {
 
 //! The verbosity of the model (0 -> do not print anything, 2 -> spam stdout a lot)
-struct PvsVerbosity { static constexpr int value = 1; };
+struct PvsVerbosity
+{ static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
 
@@ -287,7 +290,7 @@ class PvsModel
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     explicit PvsModel(Simulator& simulator)
@@ -305,15 +308,15 @@ public:
         ParentType::registerParameters();
 
         // register runtime parameters of the VTK output modules
-        Opm::VtkPhasePresenceModule<TypeTag>::registerParameters();
-        Opm::VtkCompositionModule<TypeTag>::registerParameters();
+        VtkPhasePresenceModule<TypeTag>::registerParameters();
+        VtkCompositionModule<TypeTag>::registerParameters();
 
         if constexpr (enableDiffusion) {
-            Opm::VtkDiffusionModule<TypeTag>::registerParameters();
+            VtkDiffusionModule<TypeTag>::registerParameters();
         }
 
         if constexpr (enableEnergy) {
-            Opm::VtkEnergyModule<TypeTag>::registerParameters();
+            VtkEnergyModule<TypeTag>::registerParameters();
         }
 
         Parameters::Register<Parameters::PvsVerbosity>
@@ -341,13 +344,13 @@ public:
         if (pvIdx == Indices::pressure0Idx) {
             oss << "pressure_" << FluidSystem::phaseName(/*phaseIdx=*/0);
         }
-        else if (Indices::switch0Idx <= pvIdx
-                 && pvIdx < Indices::switch0Idx + numPhases - 1)
+        else if (Indices::switch0Idx <= pvIdx &&
+                 pvIdx < Indices::switch0Idx + numPhases - 1)
         {
             oss << "switch_" << pvIdx - Indices::switch0Idx;
         }
-        else if (Indices::switch0Idx + numPhases - 1 <= pvIdx
-                 && pvIdx < Indices::switch0Idx + numComponents - 1)
+        else if (Indices::switch0Idx + numPhases - 1 <= pvIdx &&
+                 pvIdx < Indices::switch0Idx + numComponents - 1)
         {
             oss << "auxMoleFrac^" << FluidSystem::componentName(pvIdx);
         } else {
@@ -368,8 +371,9 @@ public:
         }
 
         std::ostringstream oss;
-        if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx
-                                                     + numComponents) {
+        if (Indices::conti0EqIdx <= eqIdx &&
+            eqIdx < Indices::conti0EqIdx + numComponents)
+        {
             unsigned compIdx = eqIdx - Indices::conti0EqIdx;
             oss << "continuity^" << FluidSystem::componentName(compIdx);
         }
@@ -400,7 +404,7 @@ public:
         // might correspond to non-interior entities which would lead
         // to an undefined value, so we have to iterate...
         std::size_t nDof = this->numTotalDof();
-        for (unsigned dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
+        for (unsigned dofIdx = 0; dofIdx < nDof; ++dofIdx) {
             if (this->dofTotalVolume(dofIdx) > 0.0) {
                 referencePressure_ =
                     this->solution(/*timeIdx=*/0)[dofIdx][/*pvIdx=*/Indices::pressure0Idx];
@@ -426,8 +430,9 @@ public:
             return 10 / referencePressure_;
         }
 
-        if (Indices::switch0Idx <= pvIdx && pvIdx < Indices::switch0Idx
-                                                    + numPhases - 1) {
+        if (Indices::switch0Idx <= pvIdx &&
+            pvIdx < Indices::switch0Idx + numPhases - 1)
+        {
             unsigned phaseIdx = pvIdx - Indices::switch0Idx;
 
             if (!this->solution(/*timeIdx=*/0)[globalDofIdx].phaseIsPresent(phaseIdx)) {
@@ -490,7 +495,7 @@ public:
 
         unsigned dofIdx = static_cast<unsigned>(this->dofMapper().index(dofEntity));
         if (!outstream.good()) {
-            throw std::runtime_error("Could not serialize DOF "+std::to_string(dofIdx));
+            throw std::runtime_error("Could not serialize DOF " + std::to_string(dofIdx));
         }
 
         outstream << this->solution(/*timeIdx=*/0)[dofIdx].phasePresence() << " ";
@@ -508,7 +513,7 @@ public:
         // read phase presence
         unsigned dofIdx = static_cast<unsigned>(this->dofMapper().index(dofEntity));
         if (!instream.good()) {
-            throw std::runtime_error("Could not deserialize DOF "+std::to_string(dofIdx));
+            throw std::runtime_error("Could not deserialize DOF " + std::to_string(dofIdx));
         }
 
         short tmp;
@@ -603,7 +608,7 @@ public:
                               short oldPhasePresence,
                               const PrimaryVariables& newPv) const
     {
-        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             bool oldPhasePresent = (oldPhasePresence & (1 << phaseIdx)) > 0;
@@ -660,6 +665,7 @@ public:
     // verbosity of the model
     int verbosity_;
 };
-}
+
+} // namespace Opm
 
 #endif
