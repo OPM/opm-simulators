@@ -28,8 +28,6 @@
 
 #include <dune/common/classname.hh>
 
-#include <cstring>
-#include <ostream>
 #include <tuple>
 #include <type_traits>
 
