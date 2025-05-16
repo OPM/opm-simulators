@@ -49,5 +49,5 @@ struct OutflowProblem
 int main(int argc, char **argv)
 {
     using ProblemTypeTag = Opm::Properties::TTag::OutflowProblem;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv, true);
 }

@@ -64,7 +64,7 @@ namespace Opm {
  * \brief Announce all runtime parameters to the registry but do not specify them yet.
  */
 template <class TypeTag>
-static inline void registerAllParameters_(bool finalizeRegistration = true)
+static inline void registerAllParameters_(bool finalizeRegistration)
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using TM = GetPropType<TypeTag, Properties::ThreadManager>;
@@ -95,9 +95,9 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
 template <class TypeTag>
 static inline int setupParameters_(int argc,
                                    const char **argv,
-                                   bool registerParams=true,
-                                   bool allowUnused=false,
-                                   bool handleHelp = true)
+                                   bool registerParams,
+                                   bool allowUnused,
+                                   bool handleHelp)
 {
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
@@ -108,7 +108,7 @@ static inline int setupParameters_(int argc,
     // Register all parameters
     ////////////////////////////////////////////////////////////
     if (registerParams)
-        registerAllParameters_<TypeTag>();
+        registerAllParameters_<TypeTag>(true);
 
     ////////////////////////////////////////////////////////////
     // set the parameter values
@@ -200,7 +200,7 @@ static inline int setupParameters_(int argc,
  * \param argv The array of the command line arguments
  */
 template <class TypeTag>
-static inline int start(int argc, char **argv,  bool registerParams=true)
+static inline int start(int argc, char **argv,  bool registerParams)
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -214,7 +214,12 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
     int myRank = 0;
     try
     {
-        int paramStatus = setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), registerParams);
+        int paramStatus = 
+            setupParameters_<TypeTag>(argc,
+                                      const_cast<const char**>(argv),
+                                      registerParams,
+                                      false,
+                                      true);
         if (paramStatus == 1)
             return 1;
         if (paramStatus == 2)

@@ -45,5 +45,5 @@ int mainCU2(int argc, char **argv);
 int mainCU2(int argc, char **argv)
 {
     using ProblemTypeTag = Opm::Properties::TTag::LensProblemEcfvAd;
-    return Opm::start<ProblemTypeTag>(argc, argv);
+    return Opm::start<ProblemTypeTag>(argc, argv, true);
 }

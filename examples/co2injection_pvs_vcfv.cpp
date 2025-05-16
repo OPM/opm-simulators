@@ -54,5 +54,5 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionPvsVcfvProblem>
 int main(int argc, char **argv)
 {
     using VcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionPvsVcfvProblem;
-    return Opm::start<VcfvProblemTypeTag>(argc, argv);
+    return Opm::start<VcfvProblemTypeTag>(argc, argv, true);
 }
