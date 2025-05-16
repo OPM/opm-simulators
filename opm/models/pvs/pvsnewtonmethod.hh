@@ -95,24 +95,26 @@ protected:
         Scalar sumSatDelta = 0.0;
         Scalar maxSatDelta = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
-            if (!currentValue.phaseIsPresent(phaseIdx))
+            if (!currentValue.phaseIsPresent(phaseIdx)) {
                 continue;
+            }
 
             maxSatDelta = std::max(std::abs(update[switch0Idx + phaseIdx]),
                                    maxSatDelta);
             sumSatDelta += update[switch0Idx + phaseIdx];
         }
-        maxSatDelta = std::max(std::abs(- sumSatDelta), maxSatDelta);
+        maxSatDelta = std::max(std::abs(-sumSatDelta), maxSatDelta);
 
         if (maxSatDelta > 0.2) {
-            Scalar alpha = 0.2/maxSatDelta;
+            const Scalar alpha = 0.2 / maxSatDelta;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
-                if (!currentValue.phaseIsPresent(phaseIdx))
+                if (!currentValue.phaseIsPresent(phaseIdx)) {
                     continue;
+                }
 
                 nextValue[switch0Idx + phaseIdx] =
-                    currentValue[switch0Idx + phaseIdx]
-                    - alpha*update[switch0Idx + phaseIdx];
+                    currentValue[switch0Idx + phaseIdx] -
+                    alpha * update[switch0Idx + phaseIdx];
             }
         }
 
@@ -132,6 +134,7 @@ protected:
         this->problem().model().switchPrimaryVars_();
     }
 };
+
 } // namespace Opm
 
 #endif
