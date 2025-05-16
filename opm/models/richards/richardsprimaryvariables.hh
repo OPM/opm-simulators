@@ -30,13 +30,13 @@
 
 #include <dune/common/fvector.hh>
 
-#include <opm/models/richards/richardsproperties.hh>
-
-#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
-
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/ImmiscibleFlash.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
+
+#include <opm/models/richards/richardsproperties.hh>
+
+#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
 namespace Opm {
 
@@ -71,11 +71,12 @@ class RichardsPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
 
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
     using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
-    using Toolbox = typename Opm::MathToolbox<Evaluation>;
-    using ImmiscibleFlash = Opm::ImmiscibleFlash<Scalar, FluidSystem>;
+    using Toolbox = MathToolbox<Evaluation>;
+    using ImmiscibleFlash = ::Opm::ImmiscibleFlash<Scalar, FluidSystem>;
 
 public:
-    RichardsPrimaryVariables() : ParentType()
+    RichardsPrimaryVariables()
+        : ParentType()
     { Opm::Valgrind::SetUndefined(*this); }
 
     /*!
@@ -99,7 +100,7 @@ public:
     void assignImmiscibleFromWetting(Scalar T, Scalar pw, Scalar Sw,
                                      const MaterialLawParams& matParams)
     {
-        Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
+        ImmiscibleFluidState<Scalar, FluidSystem> fs;
 
         fs.setTemperature(T);
         fs.setSaturation(liquidPhaseIdx, Sw);
@@ -159,7 +160,7 @@ public:
             }
         }
 
-        Opm::ImmiscibleFluidState<Scalar, FluidSystem> fsFlash;
+        ImmiscibleFluidState<Scalar, FluidSystem> fsFlash;
         fsFlash.assign(fluidState);
         typename FluidSystem::ParameterCache paramCache;
         ImmiscibleFlash::template solve<MaterialLaw>(fsFlash, paramCache,
