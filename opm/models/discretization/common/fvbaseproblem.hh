@@ -40,6 +40,7 @@
 #include <opm/models/utils/simulatorutils.hpp>
 
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <string>
