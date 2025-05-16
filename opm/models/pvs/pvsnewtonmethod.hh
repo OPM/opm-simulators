@@ -28,9 +28,11 @@
 #ifndef EWOMS_PVS_NEWTON_METHOD_HH
 #define EWOMS_PVS_NEWTON_METHOD_HH
 
-#include "pvsproperties.hh"
-
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
+
+#include <algorithm>
+#include <cmath>
 
 namespace Opm::Properties {
 
