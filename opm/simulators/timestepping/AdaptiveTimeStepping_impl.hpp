@@ -825,7 +825,12 @@ run()
             this->substep_timer_.setLastStepFailed(true);
             checkTimeStepMaxRestartLimit_(restarts);
 
-            const double new_time_step = restartFactor_() * dt;
+            double new_time_step = restartFactor_() * dt;
+            if (substep_report.time_step_rejected) {
+                const double tol = Parameters::Get<Parameters::TimeStepControlTolerance>();
+                const double safetyFactor = Parameters::Get<Parameters::TimeStepControlSafetyFactor>();
+                new_time_step = std::sqrt(safetyFactor * tol / solver_().model().relativeChange()) * dt;
+            }
             checkTimeStepMinLimit_(new_time_step);
             bool wells_shut = false;
             if (new_time_step > minTimeStepBeforeClosingWells_()) {
