@@ -29,8 +29,12 @@
 #ifndef EWOMS_GRID_COMM_HANDLES_HH
 #define EWOMS_GRID_COMM_HANDLES_HH
 
-#include <dune/grid/common/datahandleif.hh>
 #include <dune/common/version.hh>
+
+#include <dune/grid/common/datahandleif.hh>
+
+#include <algorithm>
+#include <cstddef>
 
 namespace Opm {
 
@@ -64,7 +68,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType&) const
+    std::size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -73,14 +77,14 @@ public:
     template <class MessageBufferImp, class EntityType>
     void gather(MessageBufferImp& buff, const EntityType& e) const
     {
-        unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
+        const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         buff.write(container_[dofIdx]);
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
+    void scatter(MessageBufferImp& buff, const EntityType& e, std::size_t)
     {
-        unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
+        const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
 
         FieldType tmp;
         buff.read(tmp);
@@ -124,7 +128,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType&) const
+    std::size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -133,14 +137,14 @@ public:
     template <class MessageBufferImp, class EntityType>
     void gather(MessageBufferImp& buff, const EntityType& e) const
     {
-        unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
+        const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         buff.write(container_[dofIdx]);
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
+    void scatter(MessageBufferImp& buff, const EntityType& e, std::size_t)
     {
-        unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
+        const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         buff.read(container_[dofIdx]);
     }
 
@@ -179,7 +183,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType&) const
+    std::size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -188,14 +192,14 @@ public:
     template <class MessageBufferImp, class EntityType>
     void gather(MessageBufferImp& buff, const EntityType& e) const
     {
-        unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
+        const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         buff.write(container_[dofIdx]);
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
+    void scatter(MessageBufferImp& buff, const EntityType& e, std::size_t)
     {
-        unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
+        const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         FieldType tmp;
         buff.read(tmp);
         container_[dofIdx] = std::max(container_[dofIdx], tmp);
@@ -236,7 +240,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType&) const
+    std::size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -245,14 +249,14 @@ public:
     template <class MessageBufferImp, class EntityType>
     void gather(MessageBufferImp& buff, const EntityType& e) const
     {
-        unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
+        const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         buff.write(container_[dofIdx]);
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
+    void scatter(MessageBufferImp& buff, const EntityType& e, std::size_t)
     {
-        unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
+        const unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         FieldType tmp;
         buff.read(tmp);
         container_[dofIdx] = std::min(container_[dofIdx], tmp);

@@ -108,7 +108,8 @@ void TaskletRunner::dispatch(std::shared_ptr<TaskletInterface> tasklet)
                 tasklet->run();
             }
             catch (const std::exception& e) {
-                std::cerr << "ERROR: Uncaught std::exception when running tasklet: " << e.what() << ". Trying to continue.\n";
+                std::cerr << "ERROR: Uncaught std::exception when running tasklet: " << e.what()
+                          << ". Trying to continue.\n";
                 failureFlag_.store(true, std::memory_order_relaxed);
             }
             catch (...) {

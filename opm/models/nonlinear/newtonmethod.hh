@@ -27,9 +27,10 @@
 #ifndef EWOMS_NEWTON_METHOD_HH
 #define EWOMS_NEWTON_METHOD_HH
 
-#include <dune/istl/istlexception.hh>
 #include <dune/common/classname.hh>
 #include <dune/common/parallel/mpihelper.hh>
+
+#include <dune/istl/istlexception.hh>
 
 #include <opm/common/Exceptions.hpp>
 
@@ -46,20 +47,23 @@
 
 #include <opm/simulators/linalg/linalgproperties.hh>
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <exception>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 #include <unistd.h>
 
 namespace Opm {
+
 // forward declaration of classes
 template <class TypeTag>
 class NewtonMethod;
-}
 
-namespace Opm {
-// forward declaration of property tags
-} // namespace Opm
+}
 
 namespace Opm::Properties {
 
@@ -73,13 +77,17 @@ struct NewtonMethod {};
 
 // set default values for the properties
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::NewtonMethod> { using type = ::Opm::NewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::NewtonMethod>
+{ using type = ::Opm::NewtonMethod<TypeTag>; };
+
 template<class TypeTag>
-struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullConvergenceWriter<TypeTag>; };
+struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod>
+{ using type = NullConvergenceWriter<TypeTag>; };
 
 } // namespace Opm::Properties
 
 namespace Opm {
+
 /*!
  * \ingroup Newton
  * \brief The multi-dimensional Newton method.
@@ -112,14 +120,13 @@ public:
     explicit NewtonMethod(Simulator& simulator)
         : simulator_(simulator)
         , endIterMsgStream_(std::ostringstream::out)
+        , error_(1e100)
+        , lastError_(1e100)
+        , numIterations_(0)
         , linearSolver_(simulator)
         , comm_(Dune::MPIHelper::getCommunicator())
         , convergenceWriter_(asImp_())
     {
-        lastError_ = 1e100;
-        error_ = 1e100;
-
-        numIterations_ = 0;
         params_.read();
     }
 
@@ -139,7 +146,7 @@ public:
      * been allocated. (But not that they have been fully initialized yet.)
      */
     void finishInit()
-    { }
+    {}
 
     /*!
      * \brief Returns true if the error of the solution is below the
@@ -211,13 +218,15 @@ public:
      */
     bool apply()
     {
+        const bool istty = isatty(fileno(stdout));
+
         // Clear the current line using an ansi escape
         // sequence.  For an explanation see
         // http://en.wikipedia.org/wiki/ANSI_escape_code
-        const char *clearRemainingLine = "\n";
-        if (isatty(fileno(stdout))) {
-            static const char blubb[] = { 0x1b, '[', 'K', '\r', 0 };
-            clearRemainingLine = blubb;
+        const char* clearRemainingLine = "\n";
+        if (istty) {
+            static const char ansiClear[] = { 0x1b, '[', 'K', '\r', 0 };
+            clearRemainingLine = ansiClear;
         }
 
         // make sure all timers are prestine
@@ -287,9 +296,9 @@ public:
                 updateTimer_.stop();
 
                 if (!asImp_().proceed_()) {
-                    if (asImp_().verbose_() && isatty(fileno(stdout)))
-                        std::cout << clearRemainingLine
-                                  << std::flush;
+                    if (asImp_().verbose_() && istty) {
+                        std::cout << clearRemainingLine << std::flush;
+                    }
 
                     // tell the implementation that we're done with this iteration
                     prePostProcessTimer_.start();
@@ -311,13 +320,14 @@ public:
                 // update of the solution
                 linearSolver_.setMatrix(jacobian);
                 solutionUpdate = 0.0;
-                bool converged = linearSolver_.solve(solutionUpdate);
+                const bool conv = linearSolver_.solve(solutionUpdate);
                 solveTimer_.stop();
 
-                if (!converged) {
+                if (!conv) {
                     solveTimer_.stop();
-                    if (asImp_().verbose_())
+                    if (asImp_().verbose_()) {
                         std::cout << "Newton: Linear solver did not converge\n" << std::flush;
+                    }
 
                     prePostProcessTimer_.start();
                     asImp_().failed_();
@@ -342,10 +352,11 @@ public:
                 asImp_().update_(nextSolution, currentSolution, solutionUpdate, residual);
                 updateTimer_.stop();
 
-                if (asImp_().verbose_() && isatty(fileno(stdout)))
+                if (asImp_().verbose_() && istty) {
                     // make sure that the line currently holding the cursor is prestine
                     std::cout << clearRemainingLine
                               << std::flush;
+                }
 
                 // tell the implementation that we're done with this iteration
                 prePostProcessTimer_.start();
@@ -355,9 +366,10 @@ public:
         }
         catch (const Dune::Exception& e)
         {
-            if (asImp_().verbose_())
+            if (asImp_().verbose_()) {
                 std::cout << "Newton method caught exception: \""
                           << e.what() << "\"\n" << std::flush;
+            }
 
             prePostProcessTimer_.start();
             asImp_().failed_();
@@ -367,9 +379,10 @@ public:
         }
         catch (const NumericalProblem& e)
         {
-            if (asImp_().verbose_())
+            if (asImp_().verbose_()) {
                 std::cout << "Newton method caught exception: \""
                           << e.what() << "\"\n" << std::flush;
+            }
 
             prePostProcessTimer_.start();
             asImp_().failed_();
@@ -379,9 +392,10 @@ public:
         }
 
         // clear current line on terminal
-        if (asImp_().verbose_() && isatty(fileno(stdout)))
+        if (asImp_().verbose_() && istty) {
             std::cout << clearRemainingLine
                       << std::flush;
+        }
 
         // tell the implementation that we're done
         prePostProcessTimer_.start();
@@ -391,16 +405,16 @@ public:
         // print the timing summary of the time step
         if (asImp_().verbose_()) {
             Scalar elapsedTot =
-                linearizeTimer_.realTimeElapsed()
-                + solveTimer_.realTimeElapsed()
-                + updateTimer_.realTimeElapsed();
+                linearizeTimer_.realTimeElapsed() +
+                solveTimer_.realTimeElapsed() +
+                updateTimer_.realTimeElapsed();
             std::cout << "Linearization/solve/update time: "
                       << linearizeTimer_.realTimeElapsed() << "("
-                      << 100 * linearizeTimer_.realTimeElapsed()/elapsedTot << "%)/"
+                      << 100 * linearizeTimer_.realTimeElapsed() / elapsedTot << "%)/"
                       << solveTimer_.realTimeElapsed() << "("
-                      << 100 * solveTimer_.realTimeElapsed()/elapsedTot << "%)/"
+                      << 100 * solveTimer_.realTimeElapsed() / elapsedTot << "%)/"
                       << updateTimer_.realTimeElapsed() << "("
-                      << 100 * updateTimer_.realTimeElapsed()/elapsedTot << "%)"
+                      << 100 * updateTimer_.realTimeElapsed() / elapsedTot << "%)"
                       << "\n" << std::flush;
         }
 
@@ -491,9 +505,7 @@ protected:
      * \brief Returns true if the Newton method ought to be chatty.
      */
     bool verbose_() const
-    {
-        return params_.verbose_ && (comm_.rank() == 0);
-    }
+    { return params_.verbose_ && (comm_.rank() == 0); }
 
     /*!
      * \brief Called before the Newton method is applied to an
@@ -532,8 +544,9 @@ protected:
 
         succeeded = comm.min(succeeded);
 
-        if (!succeeded)
+        if (!succeeded) {
             throw NumericalProblem("pre processing of the problem failed");
+        }
 
         lastError_ = error_;
     }
@@ -543,9 +556,7 @@ protected:
      *        spatial domain.
      */
     void linearizeDomain_()
-    {
-        model().linearizer().linearizeDomain();
-    }
+    { model().linearizer().linearizeDomain(); }
 
     void linearizeAuxiliaryEquations_()
     {
@@ -565,18 +576,21 @@ protected:
         error_ = 0;
         for (unsigned dofIdx = 0; dofIdx < currentResidual.size(); ++dofIdx) {
             // do not consider auxiliary DOFs for the error
-            if (dofIdx >= model().numGridDof() || model().dofTotalVolume(dofIdx) <= 0.0)
+            if (dofIdx >= model().numGridDof() || model().dofTotalVolume(dofIdx) <= 0.0) {
                 continue;
+            }
 
             // also do not consider DOFs which are constraint
             if (enableConstraints_()) {
-                if (constraintsMap.count(dofIdx) > 0)
+                if (constraintsMap.count(dofIdx) > 0) {
                     continue;
+                }
             }
 
             const auto& r = currentResidual[dofIdx];
-            for (unsigned eqIdx = 0; eqIdx < r.size(); ++eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < r.size(); ++eqIdx) {
                 error_ = max(std::abs(r[eqIdx] * model().eqWeight(dofIdx, eqIdx)), error_);
+            }
         }
 
         // take the other processes into account
@@ -584,10 +598,11 @@ protected:
 
         // make sure that the error never grows beyond the maximum
         // allowed one
-        if (error_ > newtonMaxError)
-            throw NumericalProblem("Newton: Error "+std::to_string(double(error_))
-                                   + " is larger than maximum allowed error of "
-                                   + std::to_string(double(newtonMaxError)));
+        if (error_ > newtonMaxError) {
+            throw NumericalProblem("Newton: Error " + std::to_string(double(error_)) +
+                                   " is larger than maximum allowed error of " +
+                                   std::to_string(double(newtonMaxError)));
+        }
     }
 
     /*!
@@ -608,14 +623,11 @@ protected:
     {
         // loop over the auxiliary modules and ask them to post process the solution
         // vector.
-        auto& model = simulator_.model();
         const auto& comm = simulator_.gridView().comm();
-        for (unsigned i = 0; i < model.numAuxiliaryModules(); ++i) {
-            auto& auxMod = *model.auxiliaryModule(i);
-
+        for (unsigned i = 0; i < simulator_.model().numAuxiliaryModules(); ++i) {
             bool succeeded = true;
             try {
-                auxMod.postSolve(solutionUpdate);
+                simulator_.model().auxiliaryModule(i)->postSolve(solutionUpdate);
             }
             catch (const std::exception& e) {
                 succeeded = false;
@@ -627,8 +639,9 @@ protected:
 
             succeeded = comm.min(succeeded);
 
-            if (!succeeded)
+            if (!succeeded) {
                 throw NumericalProblem("post processing of an auxilary equation failed");
+            }
         }
     }
 
@@ -658,10 +671,11 @@ protected:
         asImp_().writeConvergence_(currentSolution, solutionUpdate);
 
         // make sure not to swallow non-finite values at this point
-        if (!std::isfinite(solutionUpdate.one_norm()))
+        if (!std::isfinite(solutionUpdate.one_norm())) {
             throw NumericalProblem("Non-finite update!");
+        }
 
-        size_t numGridDof = model().numGridDof();
+        std::size_t numGridDof = model().numGridDof();
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
             if (enableConstraints_()) {
                 if (constraintsMap.count(dofIdx) > 0) {
@@ -670,24 +684,26 @@ protected:
                                                   nextSolution[dofIdx],
                                                   constraints);
                 }
-                else
+                else {
                     asImp_().updatePrimaryVariables_(dofIdx,
                                                      nextSolution[dofIdx],
                                                      currentSolution[dofIdx],
                                                      solutionUpdate[dofIdx],
                                                      currentResidual[dofIdx]);
+                }
             }
-            else
+            else {
                 asImp_().updatePrimaryVariables_(dofIdx,
                                                  nextSolution[dofIdx],
                                                  currentSolution[dofIdx],
                                                  solutionUpdate[dofIdx],
                                                  currentResidual[dofIdx]);
+            }
         }
 
         // update the DOFs of the auxiliary equations
-        size_t numDof = model().numTotalDof();
-        for (size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
+        std::size_t numDof = model().numTotalDof();
+        for (std::size_t dofIdx = numGridDof; dofIdx < numDof; ++dofIdx) {
             nextSolution[dofIdx] = currentSolution[dofIdx];
             nextSolution[dofIdx] -= solutionUpdate[dofIdx];
         }
@@ -756,8 +772,9 @@ protected:
 
         succeeded = comm.min(succeeded);
 
-        if (!succeeded)
+        if (!succeeded) {
             throw NumericalProblem("post processing of the problem failed");
+        }
 
         if (asImp_().verbose_()) {
             std::cout << "Newton iteration " << numIterations_ << ""
@@ -771,8 +788,9 @@ protected:
      */
     bool proceed_() const
     {
-        if (asImp_().numIterations() < 1)
+        if (asImp_().numIterations() < 1) {
             return true; // we always do at least one full iteration
+        }
         else if (asImp_().converged()) {
             // we are below the specified tolerance, so we don't have to
             // do more iterations
@@ -849,6 +867,7 @@ protected:
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
+
     const Implementation& asImp_() const
     { return *static_cast<const Implementation *>(this); }
 };

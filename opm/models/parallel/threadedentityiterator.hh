@@ -27,7 +27,6 @@
 #ifndef EWOMS_THREADED_ENTITY_ITERATOR_HH
 #define EWOMS_THREADED_ENTITY_ITERATOR_HH
 
-#include <thread>
 #include <mutex>
 
 namespace Opm {
@@ -47,7 +46,7 @@ public:
     explicit ThreadedEntityIterator(const GridView& gridView)
         : sequentialIt_(gridView.template begin<codim>())
         , sequentialEnd_(gridView.template end<codim>())
-    { }
+    {}
 
     ThreadedEntityIterator(const ThreadedEntityIterator& other) = default;
 
@@ -56,8 +55,9 @@ public:
     {
         mutex_.lock();
         auto tmp = sequentialIt_;
-        if (sequentialIt_ != sequentialEnd_)
+        if (sequentialIt_ != sequentialEnd_) {
             ++sequentialIt_; // make the next thread look at the next element
+        }
         mutex_.unlock();
 
         return tmp;
@@ -81,8 +81,9 @@ public:
     {
         mutex_.lock();
         auto tmp = sequentialIt_;
-        if (sequentialIt_ != sequentialEnd_)
+        if (sequentialIt_ != sequentialEnd_) {
             ++sequentialIt_;
+        }
         mutex_.unlock();
 
         return tmp;
@@ -94,6 +95,7 @@ private:
 
     std::mutex mutex_;
 };
+
 } // namespace Opm
 
 #endif

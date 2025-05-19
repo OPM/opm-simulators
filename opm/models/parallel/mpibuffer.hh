@@ -118,6 +118,7 @@ public:
      */
     MPI_Request& request()
     { return mpiRequest_; }
+
     /*!
      * \brief Returns the current MPI_Request object.
      *
@@ -133,6 +134,7 @@ public:
      */
     MPI_Status& status()
     { return mpiStatus_; }
+
     /*!
      * \brief Returns the current MPI_Status object.
      *
@@ -227,6 +229,7 @@ private:
     }
 
     std::vector<DataType> data_;
+
 #if HAVE_MPI
     std::size_t mpiDataSize_;
     MPI_Datatype mpiDataType_;
