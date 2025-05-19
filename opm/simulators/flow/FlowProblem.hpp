@@ -1350,6 +1350,7 @@ protected:
         OPM_END_PARALLEL_TRY_CATCH("Invalid region numbers: ", vanguard.gridView().comm());
         ////////////////////////////////
         // porosity
+         std::cout<< "hola from readMaterialParameters_" << std::endl;
         updateReferencePorosity_();
         this->referencePorosity_[1] = this->referencePorosity_[0];
         ////////////////////////////////
@@ -1387,21 +1388,57 @@ protected:
         const auto& eclState = vanguard.eclState();
 
         std::size_t numDof = this->model().numGridDof();
-        
+        std::cout<< numDof << " numDof from FlowProblem referencePorosizity " <<std::endl;
+
         this->referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
         const auto& fp = eclState.fieldProps();
-        const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV");
-        for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-            int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(dofIdx);
-            Scalar poreVolume = porvData[dofIdx];
+        bool isSerial =  (simulator.vanguard().grid().comm().size() == 1);
+        if(isSerial) {
+            const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV");
+            for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+                int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(dofIdx);
+                Scalar poreVolume = porvData[dofIdx];
 
-            // we define the porosity as the accumulated pore volume divided by the
-            // geometric volume of the element. Note that -- in pathetic cases -- it can
-            // be larger than 1.0!
-            Scalar dofVolume = simulator.model().dofTotalVolume(sfcdofIdx);
-            assert(dofVolume > 0.0);
-            this->referencePorosity_[/*timeIdx=*/0][sfcdofIdx] = poreVolume/dofVolume;
+                // we define the porosity as the accumulated pore volume divided by the
+                // geometric volume of the element. Note that -- in pathetic cases -- it can
+                // be larger than 1.0!
+                Scalar dofVolume = simulator.model().dofTotalVolume(sfcdofIdx);
+                assert(dofVolume > 0.0);
+                this->referencePorosity_[/*timeIdx=*/0][sfcdofIdx] = poreVolume/dofVolume;
+            }
+        }
+        else {
+            const auto& porv_global = eclState.fieldProps().porv(true);
+            std::cout<< porv_global.size() << " porv_globalsize FlowProblem referencePorosizity " <<std::endl;
+            for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+
+                const auto& element = Dune::cpgrid::Entity<0>(*(simulator.vanguard().grid().currentData().back()), dofIdx, true);
+                const auto& origin_element = element.getOrigin();
+                const auto& origin_element_id = simulator.vanguard().grid().globalIdSet().id(origin_element);
+                // PORV poreVolume. LGRs supported (so far) only for CpGrid.
+                // For CpGrid with LGRs, poreVolume of a cell on the leaf grid view which has a parent cell on level 0,
+                // is computed as  porv[parent] * leafCellVolume / parentCellVolume. In this way, the sum of the pore
+                // volume of a parent cell coincides with the sum of the pore volume of its children.
+                int sfcdofIdx = simulator.vanguard().gridEquilIdxToGridIdx(dofIdx);
+                Scalar poreVolume = porv_global[origin_element_id];
+
+                if (element.hasFather()) {
+                    const auto fatherVolume = element.father().geometry().volume();
+                    const auto& elemVolume = element.geometry().volume();
+                    // we define the porosity as the accumulated pore volume divided by the
+                    // geometric volume of the element. Note that -- in pathetic cases -- it can
+                    // be larger than 1.0!
+                    Scalar dofVolume = simulator.model().dofTotalVolume(/*sfcdofIdx*/origin_element_id);
+                    assert(dofVolume > 0.0);
+                    this->referencePorosity_[/*timeIdx=*/0][sfcdofIdx] = (poreVolume * elemVolume / fatherVolume)/dofVolume;
+                }
+                else {
+                    Scalar dofVolume = simulator.model().dofTotalVolume(/*sfcdofIdx*/origin_element_id);
+                    assert(dofVolume > 0.0);
+                    this->referencePorosity_[/*timeIdx=*/0][sfcdofIdx] = poreVolume/dofVolume;
+                }
+            }
         }
     }
 
@@ -1486,7 +1523,6 @@ protected:
             -> void
         {
             const auto& elementMapper = this->model().elementMapper();
-
             unsigned globalElemIdx = elementMapper.index(stencil.entity(localDofIdx));
             if (localDofIdx != 0) {
                 unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
