@@ -333,19 +333,23 @@ namespace Opm
         // Use an I controller after report time steps
         if (substepTimer.currentStepNum() < 3)
         {
-            controllerVersion_ = "I-controller";
+            controllerVersion_ = 0; // "I-controller"
             const double newDt = dt * timeStepFactor(errors_, timeSteps_);
-            if( verbose_ )
+            if (verbose_)
+            {
                 OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
+            }
             return newDt;
         }
         // Use the general third order controller for all other time steps
         else
         {
-            controllerVersion_ = "3rdOrder";
+            controllerVersion_ = 1; // "3rdOrder";
             const double newDt = dt * timeStepFactor(errors_, timeSteps_);
-            if( verbose_ )
+            if (verbose_)
+            {
                 OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
+            }
             return newDt;
         }
     }
@@ -353,7 +357,8 @@ namespace Opm
     double General3rdOrderController::
     timeStepFactor(const std::array<double, 3> errors, const std::array<double, 3> timeSteps) const
     {
-        if (controllerVersion_ == "3rdOrder")
+        // "3rdOrder"
+        if (controllerVersion_ == 1)
         {
             return std::pow(safetyFactor_ * tolerance_ / errors[2], beta_[0]) *
                    std::pow(safetyFactor_ * tolerance_ / errors[1], beta_[1]) *
@@ -361,10 +366,8 @@ namespace Opm
                    std::pow(timeSteps[2] / timeSteps[1], -alpha_[0]) *
                    std::pow(timeSteps[1] / timeSteps[0], -alpha_[1]);
         }
-        else if (controllerVersion_ == "I-controller")
-        {
-            return std::pow(safetyFactor_ * tolerance_ / errors[2], 0.35);
-        }
+        // "I-controller"
+        return std::pow(safetyFactor_ * tolerance_ / errors[2], 0.35);
     }
 
     bool General3rdOrderController::
@@ -375,14 +378,20 @@ namespace Opm
         // Reject time step if chosen tolerance test version fails
         if (toleranceTestVersion_ == "standard")
         {
-            if (rejectCompletedStep_ && error > tolerance_) { acceptTimeStep = false; }
+            if (rejectCompletedStep_ && error > tolerance_)
+            {
+                acceptTimeStep = false;
+            }
         }
         else if (toleranceTestVersion_ == "control-error-filtering")
         {
             const std::array<double, 3> tempErrors{errors_[0], errors_[1], error};
             const std::array<double, 3> tempTimeSteps{timeSteps_[0], timeSteps_[1], timeStep};
             double stepFactor = timeStepFactor(tempErrors, tempTimeSteps);
-            if (rejectCompletedStep_ && stepFactor < maxReductionTimeStep_) { acceptTimeStep = false; }
+            if (rejectCompletedStep_ && stepFactor < maxReductionTimeStep_)
+            {
+                acceptTimeStep = false;
+            }
         }
         else
         {
@@ -403,12 +412,16 @@ namespace Opm
             timeSteps_[2] = timeStep;
 
             for( int i = 0; i < 2; ++i )
+            {
                 assert(std::isfinite(errors_[i]));
+            }
             
             if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
             {
                 if ( verbose_ )
+                {
                     OpmLog::info("The solution between time steps does not change, there is no time step constraint from the controller.");
+                }
                 return std::numeric_limits<double>::max();
             }
         }

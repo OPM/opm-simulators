@@ -232,6 +232,7 @@ namespace Opm
             serializer(alpha_);
             serializer(controllerVersion_);
             serializer(toleranceTestVersion_);
+            serializer(maxReductionTimeStep_);
             serializer(verbose_);
         }
 
@@ -246,7 +247,7 @@ namespace Opm
         mutable std::array<double, 3> timeSteps_{};
         mutable std::array<double, 3> beta_{};
         mutable std::array<double, 3> alpha_{};
-        mutable std::string controllerVersion_ = "I-controller";
+        mutable int controllerVersion_ = 0;
         const std::string toleranceTestVersion_ = "";
         const double maxReductionTimeStep_ = 0.1;
         const bool verbose_ = false;
