@@ -155,7 +155,7 @@ private:
  * @tparam CSP The type of the coarse level solver policy.
  * @tparam S The type of the fine level smoother used.
  */
-template<class FO, class CSP, class S>
+template<class FO, class CSP, class S, class TP = Dune::Amg::LevelTransferPolicyCpr<FO,typename CSP::Operator>>
 class GpuTwoLevelMethodCpr :
     public Preconditioner<typename S::domain_type, typename S::range_type>
     // Note we are using the smoother type instead of fine operator type to access the GPU type
@@ -222,8 +222,7 @@ public:
    */
   GpuTwoLevelMethodCpr(const FineOperatorType& op,
                     std::shared_ptr<SmootherType> smoother,
-                    const Dune::Amg::LevelTransferPolicyCpr<FineOperatorType,
-                                                 CoarseOperatorType>& policy,
+                    const TP& policy,
                     CoarseLevelSolverPolicy& coarsePolicy,
                     std::size_t preSteps=1, std::size_t postSteps=1)
     : operator_(&op), smoother_(smoother),
@@ -357,7 +356,7 @@ private:
   /** @brief The fine level smoother. */
   std::shared_ptr<S> smoother_;
   /** @brief Policy for prolongation, restriction, and coarse level system creation. */
-  Dune::Amg::LevelTransferPolicyCpr<FO,typename CSP::Operator>* policy_;
+  TP* policy_;
   /** @brief The number of presmoothing steps to apply. */
   std::size_t preSteps_;
   /** @brief The number of postsmoothing steps to apply. */

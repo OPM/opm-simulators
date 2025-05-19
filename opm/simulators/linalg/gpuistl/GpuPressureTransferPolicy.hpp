@@ -165,6 +165,16 @@ public:
         return *lhs_;
     }
 
+    Communication& getCoarseLevelCommunication()
+    {
+        return *communication_;
+    }
+
+    const Communication& getCoarseLevelCommunication() const
+    {
+        return *communication_;
+    }
+
 private:
     Communication* communication_;
     const FineRangeType& weights_;

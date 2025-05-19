@@ -20,10 +20,10 @@
 #ifndef OPM_GPUOWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 #define OPM_GPUOWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PressureSolverPolicy.hpp>
-#include <opm/simulators/linalg/twolevelmethodcpr.hh>
 #include <opm/simulators/linalg/gpuistl/GpuTwoLevelMethodCpr.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 
@@ -37,10 +37,6 @@
 
 namespace Opm::gpuistl
 {
-
-// Must forward-declare FlexibleSolver as we want to use it as solver for the pressure system.
-template <class Operator>
-class FlexibleSolver;
 
 template <class OperatorType,
           class VectorType,
@@ -57,22 +53,22 @@ public:
     GpuOwningTwoLevelPreconditioner(const OperatorType& linearoperator, const Opm::PropertyTree& prm,
                                  const std::function<VectorType()> weightsCalculator,
                                  std::size_t pressureIndex)
-        : linear_operator_(linearoperator),
-          weightsCalculator_(weightsCalculator),
-          weights_(weightsCalculator ? weightsCalculator() : VectorType(linearoperator.getmat().N())),
-          finesmoother_(PrecFactory::create(linearoperator,
-                                          prm.get_child_optional("finesmoother") ?
-                                          prm.get_child("finesmoother") : Opm::PropertyTree(),
-                                          std::function<VectorType()>(), pressureIndex)),
-        levelTransferPolicy_(dummy_comm_, weights_, prm, pressureIndex),
-        coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree()),
-        //, twolevel_method_(linearoperator,
-        //                   finesmoother_,
-        //                   levelTransferPolicy_,
-        //                   coarseSolverPolicy_,
-        //                   prm.get<int>("pre_smooth", 0),
-        //                   prm.get<int>("post_smooth", 1))
-        prm_(prm)
+        : linear_operator_(linearoperator)
+        , weightsCalculator_(weightsCalculator)
+        , weights_(weightsCalculator ? weightsCalculator() : VectorType(linearoperator.getmat().N()))
+        , finesmoother_(PrecFactory::create(linearoperator,
+                                            prm.get_child_optional("finesmoother") ?
+                                            prm.get_child("finesmoother") : Opm::PropertyTree(),
+                                            std::function<VectorType()>(), pressureIndex))
+        , levelTransferPolicy_(dummy_comm_, weights_, prm, pressureIndex)
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
+        , twolevel_method_(linearoperator,
+                           finesmoother_,
+                           levelTransferPolicy_,
+                           coarseSolverPolicy_,
+                           prm.get<int>("pre_smooth", 0),
+                           prm.get<int>("post_smooth", 1))
+        , prm_(prm)
     {
     }
 
@@ -117,11 +113,14 @@ private:
     using CoarseOperator = typename LevelTransferPolicy::CoarseOperator;
 
     using CoarseSolverPolicy = Dune::Amg::PressureSolverPolicy<CoarseOperator,
-                                                               FlexibleSolver<CoarseOperator>,
+                                                               Dune::FlexibleSolver<CoarseOperator>,
                                                                LevelTransferPolicy>;
 
-    //using TwoLevelMethod
-    //    = Dune::Amg::GpuTwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::PreconditionerWithUpdate<VectorType, VectorType>>;
+    using TwoLevelMethod = Dune::Amg::GpuTwoLevelMethodCpr<
+        OperatorType,
+        CoarseSolverPolicy,
+        Dune::PreconditionerWithUpdate<VectorType, VectorType>,
+        LevelTransferPolicy>;
 
     void updateImpl()
     {
@@ -134,7 +133,7 @@ private:
     std::shared_ptr<Dune::PreconditionerWithUpdate<VectorType, VectorType>> finesmoother_;
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
-    //TwoLevelMethod twolevel_method_;
+    TwoLevelMethod twolevel_method_;
     Opm::PropertyTree prm_;
     Communication dummy_comm_;
 
