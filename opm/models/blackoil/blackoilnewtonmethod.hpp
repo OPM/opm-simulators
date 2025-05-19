@@ -38,6 +38,10 @@
 
 #include <opm/models/utils/signum.hh>
 
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
 namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
@@ -124,7 +128,7 @@ protected:
 #if HAVE_MPI
         // in the MPI enabled case we need to add up the number of DOF
         // for which the interpretation changed over all processes.
-        int localSwitched = numPriVarsSwitched_;
+        const int localSwitched = numPriVarsSwitched_;
         MPI_Allreduce(&localSwitched,
                       &numPriVarsSwitched_,
                       /*num=*/1,
@@ -279,19 +283,22 @@ protected:
                     delta *= satAlpha;
                 }
                 else {
-                    //Ensure Rv and Rs factor does not become negative
-                    if (delta > currentValue[Indices::compositionSwitchIdx])
+                    // Ensure Rv and Rs factor does not become negative
+                    if (delta > currentValue[Indices::compositionSwitchIdx]) {
                         delta = currentValue[Indices::compositionSwitchIdx];
+                    }
                 }
             }
             else if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
                 // solvent saturation updates are also subject to the Appleyard chop
                 if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
                     delta *= satAlpha;
-                } else {
-                    //Ensure Rssolw factor does not become negative
-                    if (delta > currentValue[Indices::solventSaturationIdx])
+                }
+                else {
+                    // Ensure Rssolw factor does not become negative
+                    if (delta > currentValue[Indices::solventSaturationIdx]) {
                         delta = currentValue[Indices::solventSaturationIdx];
+                    }
                 }
             }
             else if (enableExtbo && pvIdx == Indices::zFractionIdx) {
@@ -313,7 +320,8 @@ protected:
             }
             else if (enableBrine && pvIdx == Indices::saltConcentrationIdx &&
                      enableSaltPrecipitation &&
-                     currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
+                     currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)
+            {
                 const Scalar maxSaltSaturationChange = 0.1;
                 const Scalar sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), maxSaltSaturationChange);
@@ -354,11 +362,15 @@ protected:
 
             if (enableBrine && pvIdx == Indices::saltConcentrationIdx) {
                // keep the salt concentration above 0
-                if (!enableSaltPrecipitation || (enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Cs)) {
+                if (!enableSaltPrecipitation ||
+                    currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Cs)
+               {
                    nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                 }
                // keep the salt saturation below upperlimit
-                if ((enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)) {
+                if (enableSaltPrecipitation &&
+                    currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp)
+                {
                    nextValue[pvIdx] = std::min(nextValue[pvIdx], Scalar{1.0-1.e-8});
                 }
             }
@@ -388,12 +400,14 @@ protected:
                     nextValue[pvIdx] = std::max(nextValue[pvIdx], Scalar{0.0});
                 }
                 if (pvIdx == Indices::biofilmConcentrationIdx) {
-                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
-                                                                    this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
+                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx],
+                                                  Scalar{0.0},
+                                                  this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
                 }
                 if (pvIdx == Indices::calciteConcentrationIdx) {
-                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx], Scalar{0.0},
-                                                                    this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
+                    nextValue[pvIdx] = std::clamp(nextValue[pvIdx],
+                                                  Scalar{0.0},
+                                                  this->problem().referencePorosity(globalDofIdx, 0) - 1e-8);
                 }
             }
         }

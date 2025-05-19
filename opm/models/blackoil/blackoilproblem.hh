@@ -30,6 +30,8 @@
 
 #include <opm/models/common/multiphasebaseproblem.hh>
 
+#include <limits>
+
 namespace Opm {
 
 /*!
@@ -63,7 +65,7 @@ public:
      * This is required for the DRSDT keyword.
      */
     Scalar maxGasDissolutionFactor(unsigned, unsigned) const
-    { return std::numeric_limits<Scalar>::max()/2; }
+    { return std::numeric_limits<Scalar>::max() / 2; }
 
     /*!
      * \brief Returns the maximum value of the oil vaporization factor at the current
@@ -72,7 +74,7 @@ public:
      * This is required for the DRVDT keyword.
      */
     Scalar maxOilVaporizationFactor(unsigned, unsigned) const
-    { return std::numeric_limits<Scalar>::max()/2; }
+    { return std::numeric_limits<Scalar>::max() / 2; }
 
     /*!
      * \brief Returns the maximum value of the oil saturation seen at the current time
