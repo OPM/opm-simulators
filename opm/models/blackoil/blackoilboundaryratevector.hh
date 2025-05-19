@@ -33,6 +33,9 @@
 
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 
+#include <algorithm>
+#include <type_traits>
+
 namespace Opm {
 
 /*!
@@ -63,7 +66,8 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
 
-    static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
+    static constexpr bool blackoilConserveSurfaceVolume =
+        getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
     using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
 
@@ -97,8 +101,8 @@ public:
         ExtensiveQuantities extQuants;
         extQuants.updateBoundary(context, bfIdx, timeIdx, fluidState);
         const auto& insideIntQuants = context.intensiveQuantities(bfIdx, timeIdx);
-        unsigned focusDofIdx = context.focusDofIndex();
-        unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
+        const unsigned focusDofIdx = context.focusDofIndex();
+        const unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
 
         ////////
         // advective fluxes of all components in all phases
@@ -114,16 +118,17 @@ public:
             RateVector tmp;
 
             // mass conservation
-            if (pBoundary < pInside)
+            if (pBoundary < pInside) {
                 // outflux
                 LocalResidual::template evalPhaseFluxes_<Evaluation>(tmp,
                                                                      phaseIdx,
                                                                      insideIntQuants.pvtRegionIndex(),
                                                                      extQuants,
                                                                      insideIntQuants.fluidState());
+            }
             else if (pBoundary > pInside) {
-                using RhsEval = typename std::conditional<std::is_same<typename FluidState::Scalar, Evaluation>::value,
-                                                          Evaluation, Scalar>::type;
+                using RhsEval = std::conditional_t<std::is_same_v<typename FluidState::Scalar, Evaluation>,
+                                                   Evaluation, Scalar>;
                 // influx
                 LocalResidual::template evalPhaseFluxes_<RhsEval>(tmp,
                                                                   phaseIdx,
@@ -132,8 +137,9 @@ public:
                                                                   fluidState);
             }
 
-            for (unsigned i = 0; i < tmp.size(); ++i)
+            for (unsigned i = 0; i < tmp.size(); ++i) {
                 (*this)[i] += tmp[i];
+            }
 
             // energy conservation
             if constexpr (enableEnergy) {
@@ -158,28 +164,34 @@ public:
                     specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
                 }
 
-                Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
-                EnergyModule::addToEnthalpyRate(*this, enthalpyRate*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
+                const Evaluation enthalpyRate = density * extQuants.volumeFlux(phaseIdx) * specificEnthalpy;
+                EnergyModule::addToEnthalpyRate(*this, enthalpyRate *
+                                                       getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
             }
         }
 
         if constexpr (enableSolvent) {
             (*this)[Indices::contiSolventEqIdx] = extQuants.solventVolumeFlux();
-            if (blackoilConserveSurfaceVolume)
+            if (blackoilConserveSurfaceVolume) {
                 (*this)[Indices::contiSolventEqIdx] *= insideIntQuants.solventInverseFormationVolumeFactor();
-            else
+            }
+            else {
                 (*this)[Indices::contiSolventEqIdx] *= insideIntQuants.solventDensity();
-
+            }
         }
 
         if constexpr (enablePolymer) {
-            (*this)[Indices::contiPolymerEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.polymerConcentration();
+            (*this)[Indices::contiPolymerEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) *
+                                                  insideIntQuants.polymerConcentration();
         }
 
         if constexpr (enableMICP) {
-            (*this)[Indices::contiMicrobialEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.microbialConcentration();
-            (*this)[Indices::contiOxygenEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.oxygenConcentration();
-            (*this)[Indices::contiUreaEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.ureaConcentration();
+            (*this)[Indices::contiMicrobialEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) *
+                                                    insideIntQuants.microbialConcentration();
+            (*this)[Indices::contiOxygenEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) *
+                                                 insideIntQuants.oxygenConcentration();
+            (*this)[Indices::contiUreaEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) *
+                                               insideIntQuants.ureaConcentration();
             // since the urea concentration can be much larger than 1, then we apply a scaling factor
             (*this)[Indices::contiUreaEqIdx] *= getPropValue<TypeTag, Properties::BlackOilUreaScalingFactor>();
         }
@@ -188,8 +200,10 @@ public:
         LocalResidual::adaptMassConservationQuantities_(*this, insideIntQuants.pvtRegionIndex());
 
         // heat conduction
-        if constexpr (enableEnergy)
-            EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux()*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
+        if constexpr (enableEnergy) {
+            EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux() *
+                                                   getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
+        }
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
@@ -212,10 +226,8 @@ public:
 
         // we only allow fluxes in the direction opposite to the outer
         // unit normal
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            Scalar& val = this->operator[](eqIdx);
-            val = std::min<Scalar>(0.0, val);
-        }
+        std::for_each(this->begin(), this->end(),
+                      [](auto& val) { val = std::min(Scalar(0), val); });
     }
 
     /*!
@@ -231,10 +243,8 @@ public:
 
         // we only allow fluxes in the same direction as the outer
         // unit normal
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            Scalar& val = this->operator[](eqIdx);
-            val = std::max( Scalar(0), val);
-        }
+        std::for_each(this->begin(), this->end(),
+                      [](auto& val) { val = std::max(Scalar(0), val); });
     }
 
     /*!
@@ -267,8 +277,9 @@ public:
             (*this)[contiEnergyEqIdx] += extQuants.energyFlux();
 
 #ifndef NDEBUG
-            for (unsigned i = 0; i < numEq; ++i)
+            for (unsigned i = 0; i < numEq; ++i) {
                 Valgrind::CheckDefined((*this)[i]);
+            }
             Valgrind::CheckDefined(*this);
 #endif
         }

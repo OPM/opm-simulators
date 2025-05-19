@@ -38,10 +38,16 @@
 #include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/models/io/vtkblackoilenergymodule.hpp>
 
+#include <cassert>
+#include <cmath>
+#include <istream>
 #include <memory>
+#include <ostream>
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
@@ -71,13 +77,15 @@ class BlackOilEnergyModule
 
 public:
     using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+
     /*!
      * \brief Register all run-time parameters for the black-oil energy module.
      */
     static void registerParameters()
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             VtkBlackOilEnergyModule<TypeTag>::registerParameters();
+        }
     }
 
     /*!
@@ -86,17 +94,19 @@ public:
     static void registerOutputModules(Model& model,
                                       Simulator& simulator)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             model.addOutputModule(std::make_unique<VtkBlackOilEnergyModule<TypeTag>>(simulator));
+        }
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             return pvIdx == temperatureIdx;
-        else
+        }
+        else {
             return false;
-
+        }
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -116,10 +126,12 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             return eqIdx == contiEnergyEqIdx;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -147,8 +159,9 @@ public:
             // accumulate the internal energy of the fluids
             const auto& fs = intQuants.fluidState();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
+                }
 
                 const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
                 const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
@@ -158,9 +171,9 @@ public:
             }
 
             // add the internal energy of the rock
-            Scalar rockFraction = intQuants.rockFraction();
+            const Scalar rockFraction = intQuants.rockFraction();
             const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
-            storage[contiEnergyEqIdx] += rockFraction*uRock;
+            storage[contiEnergyEqIdx] += rockFraction * uRock;
             storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }
@@ -174,16 +187,19 @@ public:
             flux[contiEnergyEqIdx] = 0.0;
 
             const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-            unsigned focusIdx = elemCtx.focusDofIndex();
+            const unsigned focusIdx = elemCtx.focusDofIndex();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
+                }
 
-                unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
-                if (upIdx == focusIdx)
+                const unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+                if (upIdx == focusIdx) {
                     addPhaseEnthalpyFlux_<Evaluation>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
-                else
+                }
+                else {
                     addPhaseEnthalpyFlux_<Scalar>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
+                }
             }
 
             // diffusive energy flux
@@ -202,8 +218,6 @@ public:
         }
     }
 
-
-
     template <class UpEval, class Eval, class FluidState>
     static void addPhaseEnthalpyFluxes_(RateVector& flux,
                                         unsigned phaseIdx,
@@ -211,9 +225,9 @@ public:
                                         const FluidState& upFs)
     {
         flux[contiEnergyEqIdx] +=
-            decay<UpEval>(upFs.enthalpy(phaseIdx))
-            * decay<UpEval>(upFs.density(phaseIdx))
-            * volumeFlux;
+            decay<UpEval>(upFs.enthalpy(phaseIdx)) *
+            decay<UpEval>(upFs.density(phaseIdx)) *
+            volumeFlux;
     }
 
     template <class UpstreamEval>
@@ -224,7 +238,7 @@ public:
                                       unsigned timeIdx)
     {
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+        const unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
         const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
         const auto& fs = up.fluidState();
         const auto& volFlux = extQuants.volumeFlux(phaseIdx);
@@ -237,8 +251,9 @@ public:
     static void addToEnthalpyRate(RateVector& flux,
                                   const Evaluation& hRate)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             flux[contiEnergyEqIdx] += hRate;
+        }
     }
 
     /*!
@@ -247,8 +262,9 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   Scalar)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             priVars[temperatureIdx] = temperatureIdx;
+        }
     }
 
     /*!
@@ -258,8 +274,9 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   const FluidState& fluidState)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             priVars[temperatureIdx] = fluidState.temperature(/*phaseIdx=*/0);
+        }
     }
 
     /*!
@@ -269,9 +286,10 @@ public:
                                   const PrimaryVariables& oldPv,
                                   const EqVector& delta)
     {
-        if constexpr (enableEnergy)
+        if constexpr (enableEnergy) {
             // do a plain unchopped Newton update
             newPv[temperatureIdx] = oldPv[temperatureIdx] - delta[temperatureIdx];
+        }
     }
 
     /*!
@@ -299,7 +317,7 @@ public:
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
         if constexpr (enableEnergy) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
             const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
             outstream << priVars[temperatureIdx];
         }
@@ -309,7 +327,7 @@ public:
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
         if constexpr (enableEnergy) {
-            unsigned dofIdx = model.dofMapper().index(dof);
+            const unsigned dofIdx = model.dofMapper().index(dof);
             PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
             PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
@@ -348,7 +366,6 @@ class BlackOilEnergyIntensiveQuantities
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int temperatureIdx = Indices::temperatureIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
-
 
 public:
     /*!
@@ -423,7 +440,7 @@ public:
     const Evaluation& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
-    const Scalar& rockFraction() const
+    Scalar rockFraction() const
     { return rockFraction_; }
 
 protected:
@@ -483,21 +500,24 @@ public:
                                  unsigned,
                                  unsigned,
                                  const typename FluidSystem::template ParameterCache<Evaluation>&)
-    { }
+    {}
 
     const Evaluation& rockInternalEnergy() const
-    { throw std::logic_error("Requested the rock internal energy, which is "
-                             "unavailable because energy is not conserved"); }
+    {
+        throw std::logic_error("Requested the rock internal energy, which is "
+                             "unavailable because energy is not conserved");
+    }
 
     const Evaluation& totalThermalConductivity() const
-    { throw std::logic_error("Requested the total thermal conductivity, which is "
-                             "unavailable because energy is not conserved"); }
+    {
+        throw std::logic_error("Requested the total thermal conductivity, which is "
+                             "unavailable because energy is not conserved");
+    }
 
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 };
-
 
 /*!
  * \ingroup BlackOil
@@ -523,9 +543,10 @@ class BlackOilEnergyExtensiveQuantities
 
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
 
-    static const int dimWorld = GridView::dimensionworld;
+    static constexpr int dimWorld = GridView::dimensionworld;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
+
 public:
     template<class FluidState>
     static void updateEnergy(Evaluation& energyFlux,
@@ -541,30 +562,34 @@ public:
                              const Scalar& faceArea)
     {
         Evaluation deltaT;
-        if (focusDofIndex == inIdx)
-            deltaT =
-                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
-                - inFs.temperature(/*phaseIdx=*/0);
-        else if (focusDofIndex == exIdx)
-            deltaT =
-                exFs.temperature(/*phaseIdx=*/0)
-                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
-        else
-            deltaT =
-                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
-                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        if (focusDofIndex == inIdx) {
+            deltaT = decay<Scalar>(exFs.temperature(/*phaseIdx=*/0)) -
+                     inFs.temperature(/*phaseIdx=*/0);
+        }
+        else if (focusDofIndex == exIdx) {
+            deltaT = exFs.temperature(/*phaseIdx=*/0) -
+                     decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        }
+        else {
+            deltaT = decay<Scalar>(exFs.temperature(/*phaseIdx=*/0)) -
+                     decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        }
 
         Evaluation inLambda;
-        if (focusDofIndex == inIdx)
+        if (focusDofIndex == inIdx) {
             inLambda = inIq.totalThermalConductivity();
-        else
+        }
+        else {
             inLambda = decay<Scalar>(inIq.totalThermalConductivity());
+        }
 
         Evaluation exLambda;
-        if (focusDofIndex == exIdx)
+        if (focusDofIndex == exIdx) {
             exLambda = exIq.totalThermalConductivity();
-        else
+        }
+        else {
             exLambda = decay<Scalar>(exIq.totalThermalConductivity());
+        }
 
         Evaluation H;
         const Evaluation& inH = inLambda*inAlpha;
@@ -574,12 +599,13 @@ public:
             // transmissibility this cannot be done as a preprocessing step because the
             // average thermal conductivity is analogous to the permeability but
             // depends on the solution.
-            H = 1.0/(1.0/inH + 1.0/exH);
+            H = 1.0 / (1.0 / inH + 1.0 / exH);
         }
-        else
+        else {
             H = 0.0;
+        }
 
-        energyFlux = deltaT * (-H/faceArea);
+        energyFlux = deltaT * (-H / faceArea);
     }
 
     void updateEnergy(const ElementContext& elemCtx,
@@ -620,7 +646,7 @@ public:
         const auto& stencil = ctx.stencil(timeIdx);
         const auto& scvf = stencil.boundaryFace(scvfIdx);
 
-        unsigned inIdx = scvf.interiorIndex();
+        const unsigned inIdx = scvf.interiorIndex();
         const auto& inIq = ctx.intensiveQuantities(inIdx, timeIdx);
         const auto& focusDofIdx = ctx.focusDofIndex();
         const Scalar alpha = ctx.problem().thermalHalfTransmissibilityBoundary(ctx, scvfIdx);
@@ -637,31 +663,33 @@ public:
     {
         const auto& inFs = inIq.fluidState();
         Evaluation deltaT;
-        if (focusDofIndex == inIdx)
-            deltaT =
-                boundaryFs.temperature(/*phaseIdx=*/0)
-                - inFs.temperature(/*phaseIdx=*/0);
-        else
-            deltaT =
-                decay<Scalar>(boundaryFs.temperature(/*phaseIdx=*/0))
-                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        if (focusDofIndex == inIdx) {
+            deltaT = boundaryFs.temperature(/*phaseIdx=*/0) -
+                     inFs.temperature(/*phaseIdx=*/0);
+        }
+        else {
+            deltaT = decay<Scalar>(boundaryFs.temperature(/*phaseIdx=*/0)) -
+                     decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+        }
 
         Evaluation lambda;
-        if (focusDofIndex == inIdx)
+        if (focusDofIndex == inIdx) {
             lambda = inIq.totalThermalConductivity();
-        else
+        }
+        else {
             lambda = decay<Scalar>(inIq.totalThermalConductivity());
-
+        }
 
         if (lambda > 0.0) {
             // compute the "thermal transmissibility". In contrast to the normal
             // transmissibility this cannot be done as a preprocessing step because the
             // average thermal conductivity is analogous to the permeability but depends
             // on the solution.
-            energyFlux = deltaT*lambda*(-alpha);
+            energyFlux = deltaT * lambda * -alpha;
         }
-        else
+        else {
             energyFlux = 0.0;
+        }
     }
 
     const Evaluation& energyFlux()  const
@@ -681,6 +709,7 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, false>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
 public:
     template<class FluidState>
     static void updateEnergy(Evaluation& /*energyFlux*/,
@@ -717,10 +746,10 @@ public:
                                      Scalar /*alpha*/,
                                      const BoundaryFluidState& /*boundaryFs*/)
     {}
+
     const Evaluation& energyFlux()  const
     { throw std::logic_error("Requested the energy flux, but energy is not conserved"); }
 };
-
 
 } // namespace Opm
 
