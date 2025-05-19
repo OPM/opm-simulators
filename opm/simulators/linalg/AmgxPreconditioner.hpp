@@ -25,15 +25,17 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/gpuistl/AmgxInterface.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 
 #include <amgx_c.h>
 
-#include <vector>
+namespace Amgx
+{
 
-namespace Amgx {
+using AmgxInterface = Opm::gpuistl::AmgxInterface;
 
 /**
  * @brief Configuration structure for AMGX parameters.
@@ -54,7 +56,8 @@ struct AmgxConfig {
     double strength_threshold = 0.5;
     int max_iters = 1;
 
-    explicit AmgxConfig(const Opm::PropertyTree& prm) {
+    explicit AmgxConfig(const Opm::PropertyTree& prm)
+    {
         determinism_flag = prm.get<int>("determinism_flag", determinism_flag);
         print_grid_stats = prm.get<int>("print_grid_stats", print_grid_stats);
         print_solve_stats = prm.get<int>("print_solve_stats", print_solve_stats);
@@ -91,14 +94,16 @@ struct AmgxConfig {
  *
  * This class provides an interface to the AMG preconditioner from the AMGX library.
  * It is designed to work with matrices, update vectors, and defect vectors specified
- * by the template parameters.
+ * by the template parameters. The AmgxInterface class provides a unified interface
+ * to AMGX's functionality, allowing for easy switching between CPU and GPU input
+ * data types.
  *
- * @tparam M The matrix type the preconditioner is for.
- * @tparam X The type of the update vector.
- * @tparam Y The type of the defect vector.
+ * @tparam M The matrix type
+ * @tparam X The vector type for the solution
+ * @tparam Y The vector type for the right-hand side
  */
-template<class M, class X, class Y>
-class AmgxPreconditioner : public Dune::PreconditionerWithUpdate<X,Y>
+template <class M, class X, class Y>
+class AmgxPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for
@@ -115,88 +120,59 @@ public:
     static constexpr int block_size = 1;
 
     /**
-     * @brief Constructor for the AmgxPreconditioner class.
+     * @brief Constructor for AmgxPreconditioner
      *
-     * Initializes the preconditioner with the given matrix and property tree.
+     * Initializes the AMGX preconditioner with the given matrix and property tree.
      *
-     * @param A The matrix for which the preconditioner is constructed.
-     * @param prm The property tree containing configuration parameters.
+     * @param A The matrix for which to construct the preconditioner
+     * @param prm The property tree containing configuration parameters
      */
     AmgxPreconditioner(const M& A, const Opm::PropertyTree prm)
         : A_(A)
-        , N_(A.N())
-        , nnz_(A.nonzeroes())
+        , setup_frequency_(prm.get<int>("setup_frequency", 30))
+        , update_counter_(0)
     {
         OPM_TIMEBLOCK(prec_construct);
 
         // Create configuration
         AmgxConfig config(prm);
-        AMGX_SAFE_CALL(AMGX_config_create(&cfg_, config.toString().c_str()));
-        AMGX_SAFE_CALL(AMGX_resources_create_simple(&rsrc_, cfg_));
+        cfg_ = AmgxInterface::createConfig(config.toString());
+        rsrc_ = AmgxInterface::createResources(cfg_);
 
-        // Setup frequency is set in the property tree
-        setup_frequency_ = prm.get<int>("setup_frequency", 30);
+        // Determine appropriate AMGX mode based on matrix and vector types
+        amgx_mode_ = AmgxInterface::determineAmgxMode<matrix_field_type, vector_field_type>();
 
-        // Select appropriate AMGX mode based on matrix and vector scalar types
-        AMGX_Mode amgx_mode;
-        if constexpr (std::is_same_v<matrix_field_type, double> && std::is_same_v<vector_field_type, double>) {
-            amgx_mode = AMGX_mode_dDDI;
-        } else if constexpr (std::is_same_v<matrix_field_type, float> && std::is_same_v<vector_field_type, double>) {
-            amgx_mode = AMGX_mode_dDFI;
-        } else if constexpr (std::is_same_v<matrix_field_type, float> && std::is_same_v<vector_field_type, float>) {
-            amgx_mode = AMGX_mode_dFFI;
-        } else {
-            OPM_THROW(std::runtime_error, "Unsupported combination of matrix and vector types in AmgxPreconditioner");
-        }
+        // Create solver, matrix, and vector handles, given the mode
+        solver_ = AmgxInterface::createSolver(rsrc_, amgx_mode_, cfg_);
+        A_amgx_ = AmgxInterface::createMatrix(rsrc_, amgx_mode_);
+        x_amgx_ = AmgxInterface::createVector(rsrc_, amgx_mode_);
+        b_amgx_ = AmgxInterface::createVector(rsrc_, amgx_mode_);
 
-        // Create solver and matrix/vector handles with selected mode
-        AMGX_SAFE_CALL(AMGX_solver_create(&solver_, rsrc_, amgx_mode, cfg_));
-        AMGX_SAFE_CALL(AMGX_matrix_create(&A_amgx_, rsrc_, amgx_mode));
-        AMGX_SAFE_CALL(AMGX_vector_create(&x_amgx_, rsrc_, amgx_mode));
-        AMGX_SAFE_CALL(AMGX_vector_create(&b_amgx_, rsrc_, amgx_mode));
+        // Initialize matrix structure and values
+        AmgxInterface::initializeMatrix(A_, A_amgx_);
 
-        // Setup matrix structure
-        std::vector<int> row_ptrs(N_ + 1);
-        std::vector<int> col_indices(nnz_);
-        setupSparsityPattern(row_ptrs, col_indices);
+        // Initialize vectors with proper dimensions
+        const int N = A_.N();
+        AmgxInterface::initializeVector(N, block_size, x_amgx_);
+        AmgxInterface::initializeVector(N, block_size, b_amgx_);
 
-        // initialize matrix with values
-        const matrix_field_type* values = &(A_[0][0][0][0]);
-        AMGX_SAFE_CALL(AMGX_pin_memory(const_cast<matrix_field_type*>(values), sizeof(matrix_field_type) * nnz_ * block_size * block_size));
-        AMGX_SAFE_CALL(AMGX_matrix_upload_all(A_amgx_, N_, nnz_, block_size, block_size,
-                                             row_ptrs.data(), col_indices.data(),
-                                             values, nullptr));
+        // Perform initial update
         update();
     }
 
     /**
-     * @brief Destructor for the AmgxPreconditioner class.
+     * @brief Destructor for AmgxPreconditioner
      *
      * Cleans up resources allocated by the preconditioner.
      */
     ~AmgxPreconditioner()
     {
-        const matrix_field_type* values = &(A_[0][0][0][0]);
-        AMGX_SAFE_CALL(AMGX_unpin_memory(const_cast<matrix_field_type*>(values)));
-        if (solver_) {
-            AMGX_SAFE_CALL(AMGX_solver_destroy(solver_));
-        }
-        if (x_amgx_) {
-            AMGX_SAFE_CALL(AMGX_vector_destroy(x_amgx_));
-        }
-        if (b_amgx_) {
-            AMGX_SAFE_CALL(AMGX_vector_destroy(b_amgx_));
-        }
-        if (A_amgx_) {
-            AMGX_SAFE_CALL(AMGX_matrix_destroy(A_amgx_));
-        }
-        // Destroying resources and config crashes when reinitializing
-        //if (rsrc_) {
-        //    AMGX_SAFE_CALL(AMGX_resources_destroy(rsrc_));
-        //}
-        //if (cfg_) {
-        //    AMGX_SAFE_CALL(AMGX_config_destroy(cfg_));
-        //}
+        AmgxInterface::destroySolver(solver_);
+        AmgxInterface::destroyVector(x_amgx_);
+        AmgxInterface::destroyVector(b_amgx_);
+        AmgxInterface::destroyMatrix(A_amgx_, A_);
+        AmgxInterface::destroyResources(rsrc_);
+        AmgxInterface::destroyConfig(cfg_);
     }
 
     /**
@@ -207,14 +183,16 @@ public:
      * @param v The update vector.
      * @param d The defect vector.
      */
-    void pre(X& /*v*/, Y& /*d*/) override {
+    void pre(X& /*v*/, Y& /*d*/) override
+    {
     }
 
     /**
      * @brief Applies the preconditioner to a vector.
      *
      * Performs one AMG cycle to solve the system.
-     * Involves uploading vectors to AMGX, applying the preconditioner, and downloading the result.
+     * Involves uploading vectors to AMGX, applying the preconditioner,
+     * and transferring the result back to the vector.
      *
      * @param v The update vector.
      * @param d The defect vector.
@@ -223,15 +201,15 @@ public:
     {
         OPM_TIMEBLOCK(prec_apply);
 
-        // Upload vectors to AMGX
-        AMGX_SAFE_CALL(AMGX_vector_upload(x_amgx_, N_, block_size, &v[0][0]));
-        AMGX_SAFE_CALL(AMGX_vector_upload(b_amgx_, N_, block_size, &d[0][0]));
+        // Transfer vectors to AMGX
+        AmgxInterface::transferVectorToAmgx(v, x_amgx_);
+        AmgxInterface::transferVectorToAmgx(d, b_amgx_);
 
         // Apply preconditioner
         AMGX_SAFE_CALL(AMGX_solver_solve(solver_, b_amgx_, x_amgx_));
 
-        // Download result
-        AMGX_SAFE_CALL(AMGX_vector_download(x_amgx_, &v[0][0]));
+        // Transfer result back
+        AmgxInterface::transferVectorFromAmgx(x_amgx_, v);
     }
 
     /**
@@ -241,7 +219,8 @@ public:
      *
      * @param v The update vector.
      */
-    void post(X& /*v*/) override {
+    void post(X& /*v*/) override
+    {
     }
 
     /**
@@ -252,7 +231,10 @@ public:
     void update() override
     {
         OPM_TIMEBLOCK(prec_update);
-        copyMatrixToAmgx();
+
+        AmgxInterface::updateMatrixValues(A_, A_amgx_);
+
+        // Setup or resetup the solver based on update counter
         if (update_counter_ == 0) {
             AMGX_SAFE_CALL(AMGX_solver_setup(solver_, A_amgx_));
         } else {
@@ -268,7 +250,7 @@ public:
     /**
      * @brief Returns the solver category.
      *
-     * @return The solver category, which is sequential.
+     * @return The solver category (sequential).
      */
     Dune::SolverCategory::Category category() const override
     {
@@ -278,69 +260,32 @@ public:
     /**
      * @brief Checks if the preconditioner has a perfect update.
      *
-     * @return True, indicating that the preconditioner can be perfectly updated.
+     * @return True, as the preconditioner can be perfectly updated.
      */
     bool hasPerfectUpdate() const override
     {
         // The AMG hierarchy of the Amgx preconditioner can depend on the values of the matrix, so it must be recreated
-        // when the matrix values change, at given frequency. Since this is handled internally, we return true.
+        // when the matrix values change, at a given frequency. Since this is handled internally, we return true.
         return true;
     }
 
 private:
-    /**
-     * @brief Sets up the sparsity pattern for the AMGX matrix.
-     *
-     * This method initializes the row pointers and column indices for the AMGX matrix.
-     *
-     * @param row_ptrs The row pointers for the AMGX matrix.
-     * @param col_indices The column indices for the AMGX matrix.
-     */
-    void setupSparsityPattern(std::vector<int>& row_ptrs, std::vector<int>& col_indices)
-    {
-        int pos = 0;
-        row_ptrs[0] = 0;
-        for (auto row = A_.begin(); row != A_.end(); ++row) {
-            for (auto col = row->begin(); col != row->end(); ++col) {
-                col_indices[pos++] = col.index();
-            }
-            row_ptrs[row.index() + 1] = pos;
-        }
-    }
+    // Reference to the input matrix
+    const M& A_;
 
-    /**
-     * @brief Copies the matrix values to the AMGX matrix.
-     *
-     * This method updates the AMGX matrix with the current matrix values.
-     * The method assumes that the sparsity structure is the same and that 
-     * the values are stored in a contiguous array.
-     */
-    void copyMatrixToAmgx()
-    {
-        // Get direct pointer to matrix values
-        const matrix_field_type* values = &(A_[0][0][0][0]);
-        // Indexing explanation:
-        // A_[0]             - First row of the matrix
-        //     [0]           - First block in that row
-        //        [0]        - First row within the 1x1 block
-        //           [0]     - First column within the 1x1 block
-        // update matrix with new values, assuming the sparsity structure is the same
-        AMGX_SAFE_CALL(AMGX_matrix_replace_coefficients(A_amgx_, N_, nnz_, values, nullptr));
-    }
+    // AMGX handles
+    AMGX_config_handle cfg_ = nullptr;
+    AMGX_resources_handle rsrc_ = nullptr;
+    AMGX_solver_handle solver_ = nullptr;
+    AMGX_matrix_handle A_amgx_ = nullptr;
+    AMGX_vector_handle x_amgx_ = nullptr;
+    AMGX_vector_handle b_amgx_ = nullptr;
+    AMGX_Mode amgx_mode_;
 
-    const M& A_; //!< The matrix for which the preconditioner is constructed.
-    const int N_; //!< Number of rows in the matrix.
-    const int nnz_; //!< Number of non-zero elements in the matrix.
-    // Internal variables to control AMGX setup and reuse frequency
-    int setup_frequency_ = -1; //!< Frequency of updating the AMG hierarchy
-    int update_counter_ = 0; //!< Counter for setup updates.
-
-    AMGX_config_handle cfg_ = nullptr; //!< The AMGX configuration handle.
-    AMGX_resources_handle rsrc_ = nullptr; //!< The AMGX resources handle.
-    AMGX_solver_handle solver_ = nullptr; //!< The AMGX solver handle.
-    AMGX_matrix_handle A_amgx_ = nullptr; //!< The AMGX matrix handle.
-    AMGX_vector_handle x_amgx_ = nullptr; //!< The AMGX solution vector handle.
-    AMGX_vector_handle b_amgx_ = nullptr; //!< The AMGX right-hand side vector handle.
+    // Frequency of updating the AMG hierarchy
+    int setup_frequency_;
+    // Counter for setup updates
+    int update_counter_;
 };
 
 } // namespace Amgx
