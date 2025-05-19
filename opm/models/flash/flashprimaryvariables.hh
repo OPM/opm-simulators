@@ -28,10 +28,11 @@
 #ifndef EWOMS_FLASH_PRIMARY_VARIABLES_HH
 #define EWOMS_FLASH_PRIMARY_VARIABLES_HH
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <iostream>
 
