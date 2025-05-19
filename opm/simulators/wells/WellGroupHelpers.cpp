@@ -1126,8 +1126,7 @@ updateGuideRate(const std::string& name,
                 const Group::ProductionCMode& currentGroupControl = group_state.production_control(groupName);
                 target = WGHelpers::TargetCalculator<Scalar>::guideTargetMode(currentGroupControl);
             } else {
-                //const Group::InjectionCMode& currentGroupControl = group_state.injection_control(groupName, injection_phase);
-                //target = WGHelpers::TargetCalculator<Scalar>::guideTargetMode(currentGroupControl);
+                target = WGHelpers::InjectionTargetCalculator<Scalar>::guideTargetMode(injection_phase);
             }
             int number_of_wells_under_this_group_control2 = 0;
             //std::cout << name << " dont accumualte? " << groupName << std::endl;
@@ -1167,6 +1166,12 @@ updateGuideRate(const std::string& name,
 
     for (const std::string& wellName : group.wells()) {
         const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
+
+        if (is_production_group && wellTmp.isInjector())
+            continue;
+
+        if (!is_production_group && !wellTmp.isInjector())
+            continue;
 
         if (wellTmp.getStatus() == Well::Status::SHUT)
             continue;

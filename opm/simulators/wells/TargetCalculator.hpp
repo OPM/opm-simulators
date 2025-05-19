@@ -102,7 +102,7 @@ public:
 
     GuideRateModel::Target guideTargetMode() const;
 
-    GuideRateModel::Target guideTargetMode(const Group::InjectionCMode& cmode) const;
+    static GuideRateModel::Target guideTargetMode(const Phase& phase);
 
 private:
     Group::InjectionCMode cmode_;

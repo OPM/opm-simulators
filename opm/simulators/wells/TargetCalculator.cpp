@@ -269,6 +269,19 @@ InjectionTargetCalculator<Scalar>::guideTargetMode() const
     return target_;
 }
 
+template<class Scalar>
+GuideRateModel::Target
+InjectionTargetCalculator<Scalar>::guideTargetMode(const Phase& phase)
+{
+    switch (phase) {
+    case(Phase::OIL): return GuideRateModel::Target::OIL;
+    case(Phase::WATER): return GuideRateModel::Target::WAT;
+    case(Phase::GAS): return GuideRateModel::Target::GAS;
+    default: throw std::logic_error("Invalid injection phase in InjectionTargetCalculator");
+    }
+    return GuideRateModel::Target::GAS;
+}
+
 #define INSTANTIATE_TARGET_CALCULATOR(T,...) \
     template __VA_ARGS__                     \
     TargetCalculator<T>::calcModeRateFromRates(const __VA_ARGS__* rates) const;
