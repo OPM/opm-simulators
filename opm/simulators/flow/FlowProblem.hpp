@@ -976,13 +976,19 @@ public:
         OPM_TIMEBLOCK_LOCAL(eclProblemSource);
         rate = 0.0;
 
+        /* 
+
+        const auto& element = Dune::cpgrid::Entity<0>(*(this->simulator().vanguard().grid().currentData().back()), globalDofIdx, true);
+         const auto& origin_element = element.getOrigin();
+         const auto& origin_element_id = this->simulator().vanguard().grid().globalIdSet().id(origin_element);*/
+
         // Add well contribution to source here.
-        wellModel_.computeTotalRatesForDof(rate, globalDofIdx);
+         wellModel_.computeTotalRatesForDof(rate, globalDofIdx); // origin_element_id);
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
         for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
-            rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
+            rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);// origin_element_id);
 
             Valgrind::CheckDefined(rate[eqIdx]);
             assert(isfinite(rate[eqIdx]));
@@ -1350,7 +1356,6 @@ protected:
         OPM_END_PARALLEL_TRY_CATCH("Invalid region numbers: ", vanguard.gridView().comm());
         ////////////////////////////////
         // porosity
-         std::cout<< "hola from readMaterialParameters_" << std::endl;
         updateReferencePorosity_();
         this->referencePorosity_[1] = this->referencePorosity_[0];
         ////////////////////////////////

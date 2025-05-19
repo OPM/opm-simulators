@@ -243,9 +243,9 @@ public:
         this->updateCellThickness_();
 
 #if HAVE_MPI
-        if(this->eclState().getLgrs().size()==0) {
+        ///    if(this->eclState().getLgrs().size()==0) {
         this->distributeFieldProps_(this->eclState());
-        }
+        //   }
 #endif
     }
 
@@ -306,9 +306,9 @@ public:
             // Synchronize cell ids, if LGRs were added before/after loadBalance.
             this->grid_->syncDistributedGlobalCellIds();
             this->updateGridView_();
-            #if HAVE_MPI
-        this->distributeFieldProps_(this->eclState());
-#endif
+            //  #if HAVE_MPI
+            // this->distributeFieldProps_(this->eclState());
+            //#endif
         }
     }
 
