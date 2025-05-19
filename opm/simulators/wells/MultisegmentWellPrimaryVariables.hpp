@@ -71,7 +71,7 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     using EvalWell = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq + numWellEq>;
 
-    using Equations = MultisegmentWellEquations<FluidSystem, Indices, numWellEq, Indices::numEq>;
+    using Equations = MultisegmentWellEquations<FluidSystem, Indices>;
     using BVectorWell = typename Equations::BVectorWell;
 
     explicit MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)

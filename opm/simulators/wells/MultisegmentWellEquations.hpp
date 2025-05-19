@@ -39,7 +39,7 @@ template<class M> class UMFPack;
 namespace Opm
 {
 
-template<typename FluidSystem, typename Indices, int numWellEq, int numEq> class MultisegmentWellEquationAccess;
+template<typename FluidSystem, typename Indices> class MultisegmentWellEquationAccess;
 template<typename FluidSystem, typename Indices> class MultisegmentWellGeneric;
 #if COMPILE_GPU_BRIDGE
 template<class Scalar> class WellContributions;
@@ -48,7 +48,7 @@ template<typename FluidSystem, typename Indices> class WellInterfaceGeneric;
 template<typename FluidSystem, typename Indices> class WellState;
 
 // TODO: numWelEq and numEq should be able to related to the Indices
-template<typename FluidSystem, typename Indices, int numWellEq, int numEq>
+template<typename FluidSystem, typename Indices>
 class MultisegmentWellEquations
 {
 public:
@@ -56,6 +56,8 @@ public:
     // sparsity pattern for the matrices
     // [A C^T    [x       =  [ res
     //  B  D ]   x_well]      res_well]
+    static constexpr int numWellEq = Indices::numPhases+1;
+    static constexpr int numEq = Indices::numEq;
 
     // the vector type for the res_well and x_well
     using VectorBlockWellType = Dune::FieldVector<Scalar,numWellEq>;
@@ -135,7 +137,7 @@ public:
     }
 
   private:
-    friend class MultisegmentWellEquationAccess<FluidSystem, Indices, numWellEq, numEq>;
+    friend class MultisegmentWellEquationAccess<FluidSystem, Indices>;
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;
@@ -162,7 +164,5 @@ public:
 };
 
 }
-
-#include "MultisegmentWellEquations.cpp"
 
 #endif // OPM_MULTISEGMENTWELLWELL_EQUATIONS_HEADER_INCLUDED
