@@ -28,11 +28,11 @@
 #ifndef EWOMS_FLASH_LOCAL_RESIDUAL_HH
 #define EWOMS_FLASH_LOCAL_RESIDUAL_HH
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
-
-#include <opm/material/common/Valgrind.hpp>
 
 namespace Opm {
 /*!
