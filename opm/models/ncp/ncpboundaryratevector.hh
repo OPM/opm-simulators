@@ -28,10 +28,14 @@
 #ifndef EWOMS_NCP_BOUNDARY_RATE_VECTOR_HH
 #define EWOMS_NCP_BOUNDARY_RATE_VECTOR_HH
 
-#include "ncpproperties.hh"
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/models/common/energymodule.hh>
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <algorithm>
 
 namespace Opm {
 
@@ -57,19 +61,19 @@ class NcpBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
-    NcpBoundaryRateVector() : ParentType()
-    {}
+    NcpBoundaryRateVector() = default;
 
     /*!
      * \copydoc
      * ImmiscibleBoundaryRateVector::ImmiscibleBoundaryRateVector(Scalar)
      */
-    NcpBoundaryRateVector(const Evaluation& value) : ParentType(value)
+    NcpBoundaryRateVector(const Evaluation& value)
+        : ParentType(value)
     {}
 
     /*!
@@ -91,8 +95,8 @@ public:
         ExtensiveQuantities extQuants;
         extQuants.updateBoundary(context, bfIdx, timeIdx, fluidState);
         const auto& insideIntQuants = context.intensiveQuantities(bfIdx, timeIdx);
-        unsigned focusDofIdx = context.focusDofIndex();
-        unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
+        const unsigned focusDofIdx = context.focusDofIndex();
+        const unsigned interiorDofIdx = context.interiorScvIndex(bfIdx, timeIdx);
 
         ////////
         // advective fluxes of all components in all phases
@@ -101,48 +105,60 @@ public:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Evaluation density;
             if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
-                if (focusDofIdx == interiorDofIdx)
+                if (focusDofIdx == interiorDofIdx) {
                     density = fluidState.density(phaseIdx);
-                else
-                    density = Opm::getValue(fluidState.density(phaseIdx));
+                }
+                else {
+                    density = getValue(fluidState.density(phaseIdx));
+                }
             }
-            else if (focusDofIdx == interiorDofIdx)
+            else if (focusDofIdx == interiorDofIdx) {
                 density = insideIntQuants.fluidState().density(phaseIdx);
-            else
-                density = Opm::getValue(insideIntQuants.fluidState().density(phaseIdx));
+            }
+            else {
+                density = getValue(insideIntQuants.fluidState().density(phaseIdx));
+            }
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 Evaluation molarity;
                 if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
-                    if (focusDofIdx == interiorDofIdx)
+                    if (focusDofIdx == interiorDofIdx) {
                         molarity = fluidState.molarity(phaseIdx, compIdx);
-                    else
-                        molarity = Opm::getValue(fluidState.molarity(phaseIdx, compIdx));
+                    }
+                    else {
+                        molarity = getValue(fluidState.molarity(phaseIdx, compIdx));
+                    }
                 }
-                else if (focusDofIdx == interiorDofIdx)
+                else if (focusDofIdx == interiorDofIdx) {
                     molarity = insideIntQuants.fluidState().molarity(phaseIdx, compIdx);
-                else
-                    molarity = Opm::getValue(insideIntQuants.fluidState().molarity(phaseIdx, compIdx));
+                }
+                else {
+                    molarity = getValue(insideIntQuants.fluidState().molarity(phaseIdx, compIdx));
+                }
 
                 // add advective flux of current component in current
                 // phase
-                (*this)[conti0EqIdx + compIdx] += extQuants.volumeFlux(phaseIdx)*molarity;
+                (*this)[conti0EqIdx + compIdx] += extQuants.volumeFlux(phaseIdx) * molarity;
             }
 
             if (enableEnergy) {
                 Evaluation specificEnthalpy;
                 if (fluidState.pressure(phaseIdx) > insideIntQuants.fluidState().pressure(phaseIdx)) {
-                    if (focusDofIdx == interiorDofIdx)
+                    if (focusDofIdx == interiorDofIdx) {
                         specificEnthalpy = fluidState.enthalpy(phaseIdx);
-                    else
-                        specificEnthalpy = Opm::getValue(fluidState.enthalpy(phaseIdx));
+                    }
+                    else {
+                        specificEnthalpy = getValue(fluidState.enthalpy(phaseIdx));
+                    }
                 }
-                else if (focusDofIdx == interiorDofIdx)
+                else if (focusDofIdx == interiorDofIdx) {
                     specificEnthalpy = insideIntQuants.fluidState().enthalpy(phaseIdx);
-                else
-                    specificEnthalpy = Opm::getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
+                }
+                else {
+                    specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
+                }
 
-                Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
+                const Evaluation enthalpyRate = density * extQuants.volumeFlux(phaseIdx) * specificEnthalpy;
                 EnergyModule::addToEnthalpyRate(*this, enthalpyRate);
             }
         }
@@ -152,7 +168,7 @@ public:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
-            Opm::Valgrind::CheckDefined((*this)[i]);
+            Valgrind::CheckDefined((*this)[i]);
         }
 #endif
     }
@@ -169,9 +185,8 @@ public:
         this->setFreeFlow(context, bfIdx, timeIdx, fluidState);
 
         // we only allow fluxes in the direction opposite to the outer unit normal
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            this->operator[](eqIdx) = Toolbox::min(0.0, this->operator[](eqIdx));
-        }
+        std::for_each(this->begin(), this->end(),
+                      [](auto& val) { val = Toolbox::min(Scalar{0.0}, val); });
     }
 
     /*!
@@ -186,9 +201,8 @@ public:
         this->setFreeFlow(context, bfIdx, timeIdx, fluidState);
 
         // we only allow fluxes in the same direction as the outer unit normal
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            this->operator[](eqIdx) = Toolbox::max(0.0, this->operator[](eqIdx));
-        }
+        std::for_each(this->begin(), this->end(),
+                      [](auto& val) { val = Toolbox::max(Scalar{0.0}, val); });
     }
 
     /*!

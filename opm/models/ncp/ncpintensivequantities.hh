@@ -28,20 +28,23 @@
 #ifndef EWOMS_NCP_INTENSIVE_QUANTITIES_HH
 #define EWOMS_NCP_INTENSIVE_QUANTITIES_HH
 
-#include "ncpproperties.hh"
-
-#include <opm/models/common/energymodule.hh>
-#include <opm/models/common/diffusionmodule.hh>
-
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/constraintsolvers/CompositionFromFugacities.hpp>
-#include <opm/material/common/Valgrind.hpp>
-
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/constraintsolvers/CompositionFromFugacities.hpp>
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
+#include <opm/models/common/diffusionmodule.hh>
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <array>
+
 namespace Opm {
+
 /*!
  * \ingroup NcpModel
  * \ingroup IntensiveQuantities
@@ -78,17 +81,16 @@ class NcpIntensiveQuantities
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { dimWorld = GridView::dimensionworld };
 
-    using CompositionFromFugacitiesSolver = Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation>;
-    using FluidState = Opm::CompositionalFluidState<Evaluation, FluidSystem, /*storeEnthalpy=*/enableEnergy>;
+    using CompositionFromFugacitiesSolver = ::Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation>;
+    using FluidState = CompositionalFluidState<Evaluation, FluidSystem, /*storeEnthalpy=*/enableEnergy>;
     using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
-    using DiffusionIntensiveQuantities = Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
-    using EnergyIntensiveQuantities = Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
+    using DiffusionIntensiveQuantities = ::Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using EnergyIntensiveQuantities = ::Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
 
 public:
-    NcpIntensiveQuantities()
-    {}
+    NcpIntensiveQuantities() = default;
 
     NcpIntensiveQuantities(const NcpIntensiveQuantities& other) = default;
 
@@ -124,21 +126,25 @@ public:
         const auto& problem = elemCtx.problem();
         const MaterialLawParams& materialParams =
             problem.materialLawParams(elemCtx, dofIdx, timeIdx);
+
         // calculate capillary pressures
-        Evaluation capPress[numPhases];
+        std::array<Evaluation, numPhases> capPress;
         MaterialLaw::capillaryPressures(capPress, materialParams, fluidState_);
+
         // add to the pressure of the first fluid phase
         const Evaluation& pressure0 = priVars.makeEvaluation(pressure0Idx, timeIdx);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fluidState_.setPressure(phaseIdx, pressure0 + (capPress[phaseIdx] - capPress[0]));
+        }
 
         ComponentVector fug;
         // retrieve component fugacities
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             fug[compIdx] = priVars.makeEvaluation(fugacity0Idx + compIdx, timeIdx);
+        }
 
         // calculate phase compositions
-        const auto *hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
+        const auto* hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             // initial guess
             if (hint) {
@@ -148,8 +154,9 @@ public:
                     fluidState_.setMoleFraction(phaseIdx, compIdx, moleFracIJ);
                 }
             }
-            else // !hint
+            else { // !hint
                 CompositionFromFugacitiesSolver::guessInitial(fluidState_, phaseIdx, fug);
+            }
 
             // calculate the phase composition from the component
             // fugacities
@@ -225,8 +232,8 @@ public:
 #if !defined NDEBUG && HAVE_VALGRIND
         ParentType::checkDefined();
 
-        Opm::Valgrind::CheckDefined(porosity_);
-        Opm::Valgrind::CheckDefined(relativePermeability_);
+        Valgrind::CheckDefined(porosity_);
+        Valgrind::CheckDefined(relativePermeability_);
 
         fluidState_.checkDefined();
 #endif
@@ -236,8 +243,8 @@ private:
     DimMatrix intrinsicPerm_;
     FluidState fluidState_;
     Evaluation porosity_;
-    Evaluation relativePermeability_[numPhases];
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation, numPhases> relativePermeability_{};
+    std::array<Evaluation, numPhases> mobility_{};
 };
 
 } // namespace Opm

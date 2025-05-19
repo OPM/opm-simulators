@@ -30,19 +30,18 @@
 #ifndef EWOMS_NCP_PROPERTIES_HH
 #define EWOMS_NCP_PROPERTIES_HH
 
-#include <opm/models/common/multiphasebaseproperties.hh>
-#include <opm/models/io/vtkcompositionmodule.hpp>
-#include <opm/models/io/vtkenergymodule.hpp>
-#include <opm/models/io/vtkdiffusionmodule.hpp>
+#include <opm/models/utils/propertysystem.hh>
 
 namespace Opm::Properties {
 
 //! The unmodified weight for the pressure primary variable
 template<class TypeTag, class MyTypeTag>
 struct NcpPressureBaseWeight { using type = UndefinedProperty; };
+
 //! The weight for the saturation primary variables
 template<class TypeTag, class MyTypeTag>
 struct NcpSaturationsBaseWeight { using type = UndefinedProperty; };
+
 //! The unmodified weight for the fugacity primary variables
 template<class TypeTag, class MyTypeTag>
 struct NcpFugacitiesBaseWeight { using type = UndefinedProperty; };

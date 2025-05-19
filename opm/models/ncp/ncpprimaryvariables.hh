@@ -30,13 +30,15 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/ncp/ncpproperties.hh>
 
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <cassert>
 
 namespace Opm {
 
@@ -70,14 +72,13 @@ class NcpPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
-    using NcpFlash = Opm::NcpFlash<Scalar, FluidSystem>;
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using NcpFlash = ::Opm::NcpFlash<Scalar, FluidSystem>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
-    NcpPrimaryVariables() : ParentType()
-    {}
+    NcpPrimaryVariables() = default;
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(const
@@ -96,7 +97,7 @@ public:
                                 const MaterialLawParams& matParams,
                                 bool isInEquilibrium = false)
     {
-        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
 
 #ifndef NDEBUG
         // make sure the temperature is the same in all fluid phases
@@ -115,7 +116,7 @@ public:
         // use a flash calculation to calculate a fluid state in
         // thermodynamic equilibrium
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
-        Opm::CompositionalFluidState<Scalar, FluidSystem> fsFlash;
+        CompositionalFluidState<Scalar, FluidSystem> fsFlash;
 
         // use the externally given fluid state as initial value for
         // the flash calculation
@@ -124,7 +125,7 @@ public:
         // calculate the phase densities
         paramCache.updateAll(fsFlash);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            Scalar rho = FluidSystem::density(fsFlash, paramCache, phaseIdx);
+            const Scalar rho = FluidSystem::density(fsFlash, paramCache, phaseIdx);
             fsFlash.setDensity(phaseIdx, rho);
         }
 
@@ -133,8 +134,8 @@ public:
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 globalMolarities[compIdx] +=
-                    FsToolbox::value(fsFlash.saturation(phaseIdx))
-                    * FsToolbox::value(fsFlash.molarity(phaseIdx, compIdx));
+                    FsToolbox::value(fsFlash.saturation(phaseIdx)) *
+                    FsToolbox::value(fsFlash.molarity(phaseIdx, compIdx));
             }
         }
 
@@ -151,7 +152,7 @@ public:
     template <class FluidState>
     void assignNaive(const FluidState& fluidState, unsigned refPhaseIdx = 0)
     {
-        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
 
         // assign the phase temperatures. this is out-sourced to
         // the energy module
@@ -160,25 +161,26 @@ public:
         // assign fugacities.
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         paramCache.updatePhase(fluidState, refPhaseIdx);
-        Scalar pRef = FsToolbox::value(fluidState.pressure(refPhaseIdx));
+        const Scalar pRef = FsToolbox::value(fluidState.pressure(refPhaseIdx));
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             // we always compute the fugacities because they are quite exotic quantities
             // and this easily forgotten to be specified
-            Scalar fugCoeff =
+            const Scalar fugCoeff =
                 FluidSystem::template fugacityCoefficient<FluidState, Scalar>(fluidState,
                                                                               paramCache,
                                                                               refPhaseIdx,
                                                                               compIdx);
             (*this)[fugacity0Idx + compIdx] =
-                fugCoeff*fluidState.moleFraction(refPhaseIdx, compIdx)*pRef;
+                fugCoeff * fluidState.moleFraction(refPhaseIdx, compIdx) * pRef;
         }
 
         // assign pressure of first phase
         (*this)[pressure0Idx] = FsToolbox::value(fluidState.pressure(/*phaseIdx=*/0));
 
         // assign first M - 1 saturations
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
             (*this)[saturation0Idx + phaseIdx] = FsToolbox::value(fluidState.saturation(phaseIdx));
+        }
     }
 };
 

@@ -28,97 +28,116 @@
 #ifndef EWOMS_NCP_MODEL_HH
 #define EWOMS_NCP_MODEL_HH
 
-#include <opm/material/densead/Math.hpp>
-
-#include "ncpproperties.hh"
-#include "ncplocalresidual.hh"
-#include "ncpextensivequantities.hh"
-#include "ncpprimaryvariables.hh"
-#include "ncpboundaryratevector.hh"
-#include "ncpratevector.hh"
-#include "ncpintensivequantities.hh"
-#include "ncpnewtonmethod.hh"
-#include "ncpindices.hh"
+#include <dune/common/fvector.hh>
 
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/common/multiphasebasemodel.hh>
-#include <opm/models/common/energymodule.hh>
-#include <opm/models/common/diffusionmodule.hh>
-#include <opm/models/io/vtkcompositionmodule.hpp>
-#include <opm/models/io/vtkenergymodule.hpp>
-#include <opm/models/io/vtkdiffusionmodule.hpp>
-
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/densead/Math.hpp>
 
-#include <dune/common/fvector.hh>
+#include <opm/models/ncp/ncpproperties.hh>
+#include <opm/models/ncp/ncplocalresidual.hh>
+#include <opm/models/ncp/ncpextensivequantities.hh>
+#include <opm/models/ncp/ncpprimaryvariables.hh>
+#include <opm/models/ncp/ncpboundaryratevector.hh>
+#include <opm/models/ncp/ncpratevector.hh>
+#include <opm/models/ncp/ncpintensivequantities.hh>
+#include <opm/models/ncp/ncpnewtonmethod.hh>
+#include <opm/models/ncp/ncpindices.hh>
 
+#include <opm/models/common/diffusionmodule.hh>
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebasemodel.hh>
+#include <opm/models/io/vtkcompositionmodule.hpp>
+#include <opm/models/io/vtkdiffusionmodule.hpp>
+#include <opm/models/io/vtkenergymodule.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace Opm {
+
 template <class TypeTag>
 class NcpModel;
+
 }
 
 namespace Opm::Properties {
 
 namespace TTag {
+
 /*!
  * \brief Define the type tag for the compositional NCP model.
  */
 struct NcpModel { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
+
 } // namespace TTag
 
 //! Use the Ncp local jacobian operator for the compositional NCP model
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::NcpModel> { using type = NcpLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::NcpModel>
+{ using type = NcpLocalResidual<TypeTag>; };
 
 //! Use the Ncp specific newton method for the compositional NCP model
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::NcpModel> { using type = NcpNewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::NcpModel>
+{ using type = NcpNewtonMethod<TypeTag>; };
 
 //! the Model property
 template<class TypeTag>
-struct Model<TypeTag, TTag::NcpModel> { using type = NcpModel<TypeTag>; };
+struct Model<TypeTag, TTag::NcpModel>
+{ using type = NcpModel<TypeTag>; };
 
 //! The type of the base base class for actual problems
 template<class TypeTag>
-struct BaseProblem<TypeTag, TTag::NcpModel> { using type = MultiPhaseBaseProblem<TypeTag>; };
+struct BaseProblem<TypeTag, TTag::NcpModel>
+{ using type = MultiPhaseBaseProblem<TypeTag>; };
 
 //! Disable the energy equation by default
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::NcpModel> { static constexpr bool value = false; };
+struct EnableEnergy<TypeTag, TTag::NcpModel>
+{ static constexpr bool value = false; };
 
 //! disable diffusion by default
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::NcpModel> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::NcpModel>
+{ static constexpr bool value = false; };
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::NcpModel> { using type = NcpRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::NcpModel>
+{ using type = NcpRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::NcpModel> { using type = NcpBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::NcpModel>
+{ using type = NcpBoundaryRateVector<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::NcpModel> { using type = NcpPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::NcpModel>
+{ using type = NcpPrimaryVariables<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::NcpModel> { using type = NcpIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::NcpModel>
+{ using type = NcpIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::NcpModel> { using type = NcpExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::NcpModel>
+{ using type = NcpExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the compositional NCP model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::NcpModel> { using type = NcpIndices<TypeTag, 0>; };
+struct Indices<TypeTag, TTag::NcpModel>
+{ using type = NcpIndices<TypeTag, 0>; };
 
 //! The unmodified weight for the pressure primary variable
 template<class TypeTag>
@@ -127,6 +146,7 @@ struct NcpPressureBaseWeight<TypeTag, TTag::NcpModel>
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1.0;
 };
+
 //! The weight for the saturation primary variables
 template<class TypeTag>
 struct NcpSaturationsBaseWeight<TypeTag, TTag::NcpModel>
@@ -134,6 +154,7 @@ struct NcpSaturationsBaseWeight<TypeTag, TTag::NcpModel>
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1.0;
 };
+
 //! The unmodified weight for the fugacity primary variables
 template<class TypeTag>
 struct NcpFugacitiesBaseWeight<TypeTag, TTag::NcpModel>
@@ -247,8 +268,8 @@ class NcpModel
 
     using Toolbox = MathToolbox<Evaluation>;
 
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
-    using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
+    using DiffusionModule = ::Opm::DiffusionModule<TypeTag, enableDiffusion>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     explicit NcpModel(Simulator& simulator)
@@ -268,11 +289,13 @@ public:
         // register runtime parameters of the VTK output modules
         VtkCompositionModule<TypeTag>::registerParameters();
 
-        if (enableDiffusion)
+        if constexpr (enableDiffusion) {
             VtkDiffusionModule<TypeTag>::registerParameters();
+        }
 
-        if (enableEnergy)
+        if constexpr (enableEnergy) {
             VtkEnergyModule<TypeTag>::registerParameters();
+        }
     }
 
     /*!
@@ -303,19 +326,24 @@ public:
      */
     std::string primaryVarName(unsigned pvIdx) const
     {
-        std::string s;
-        if (!(s = EnergyModule::primaryVarName(pvIdx)).empty())
+        const std::string s = EnergyModule::primaryVarName(pvIdx);
+        if (!s.empty()) {
             return s;
+        }
 
         std::ostringstream oss;
-        if (pvIdx == pressure0Idx)
+        if (pvIdx == pressure0Idx) {
             oss << "pressure_" << FluidSystem::phaseName(/*phaseIdx=*/0);
-        else if (saturation0Idx <= pvIdx && pvIdx < saturation0Idx + (numPhases - 1))
+        }
+        else if (saturation0Idx <= pvIdx && pvIdx < saturation0Idx + (numPhases - 1)) {
             oss << "saturation_" << FluidSystem::phaseName(/*phaseIdx=*/pvIdx - saturation0Idx);
-        else if (fugacity0Idx <= pvIdx && pvIdx < fugacity0Idx + numComponents)
+        }
+        else if (fugacity0Idx <= pvIdx && pvIdx < fugacity0Idx + numComponents) {
             oss << "fugacity^" << FluidSystem::componentName(pvIdx - fugacity0Idx);
-        else
+        }
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -325,17 +353,21 @@ public:
      */
     std::string eqName(unsigned eqIdx) const
     {
-        std::string s;
-        if (!(s = EnergyModule::eqName(eqIdx)).empty())
+        const std::string s = EnergyModule::eqName(eqIdx);
+        if (!s.empty()) {
             return s;
+        }
 
         std::ostringstream oss;
-        if (conti0EqIdx <= eqIdx && eqIdx < conti0EqIdx + numComponents)
+        if (conti0EqIdx <= eqIdx && eqIdx < conti0EqIdx + numComponents) {
             oss << "continuity^" << FluidSystem::componentName(eqIdx - conti0EqIdx);
-        else if (ncp0EqIdx <= eqIdx && eqIdx < ncp0EqIdx + numPhases)
+        }
+        else if (ncp0EqIdx <= eqIdx && eqIdx < ncp0EqIdx + numPhases) {
             oss << "ncp_" << FluidSystem::phaseName(/*phaseIdx=*/eqIdx - ncp0EqIdx);
-        else
+        }
+        else {
             assert(false);
+        }
 
         return oss.str();
     }
@@ -350,7 +382,7 @@ public:
         // find the a reference pressure. The first degree of freedom
         // might correspond to non-interior entities which would lead
         // to an undefined value, so we have to iterate...
-        for (unsigned dofIdx = 0; dofIdx < this->numGridDof(); ++ dofIdx) {
+        for (unsigned dofIdx = 0; dofIdx < this->numGridDof(); ++dofIdx) {
             if (this->isLocalDof(dofIdx)) {
                 referencePressure_ =
                     this->solution(/*timeIdx=*/0)[dofIdx][/*pvIdx=*/Indices::pressure0Idx];
@@ -365,7 +397,7 @@ public:
     void updatePVWeights(const ElementContext& elemCtx) const
     {
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numDof(/*timeIdx=*/0); ++dofIdx) {
-            unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 minActivityCoeff_[globalIdx][compIdx] = 1e100;
@@ -374,13 +406,15 @@ public:
 
                     minActivityCoeff_[globalIdx][compIdx] =
                         std::min(minActivityCoeff_[globalIdx][compIdx],
-                                 Toolbox::value(fs.fugacityCoefficient(phaseIdx, compIdx))
-                                 * Toolbox::value(fs.pressure(phaseIdx)));
+                                 Toolbox::value(fs.fugacityCoefficient(phaseIdx, compIdx)) *
+                                 Toolbox::value(fs.pressure(phaseIdx)));
                     Valgrind::CheckDefined(minActivityCoeff_[globalIdx][compIdx]);
                 }
-                if (minActivityCoeff_[globalIdx][compIdx] <= 0)
-                    throw NumericalProblem("The minimum activity coefficient for component "+std::to_string(compIdx)
-                                           +" on DOF "+std::to_string(globalIdx)+" is negative or zero!");
+                if (minActivityCoeff_[globalIdx][compIdx] <= 0) {
+                    throw NumericalProblem("The minimum activity coefficient for component " +
+                                           std::to_string(compIdx) + " on DOF " +
+                                           std::to_string(globalIdx) + " is negative or zero!");
+                }
             }
         }
     }
@@ -390,33 +424,35 @@ public:
      */
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
-        Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
+        const Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
         Scalar result;
-        if (tmp > 0)
+        if (tmp > 0) {
             // energy related quantity
             result = tmp;
+        }
         else if (fugacity0Idx <= pvIdx && pvIdx < fugacity0Idx + numComponents) {
             // component fugacity
-            unsigned compIdx = pvIdx - fugacity0Idx;
+            const unsigned compIdx = pvIdx - fugacity0Idx;
             assert(compIdx <= numComponents);
 
             Valgrind::CheckDefined(minActivityCoeff_[globalDofIdx][compIdx]);
-            static const Scalar fugacityBaseWeight =
+            constexpr Scalar fugacityBaseWeight =
                 getPropValue<TypeTag, Properties::NcpFugacitiesBaseWeight>();
             result = fugacityBaseWeight / minActivityCoeff_[globalDofIdx][compIdx];
         }
         else if (Indices::pressure0Idx == pvIdx) {
-            static const Scalar pressureBaseWeight = getPropValue<TypeTag, Properties::NcpPressureBaseWeight>();
+            constexpr Scalar pressureBaseWeight =
+                getPropValue<TypeTag, Properties::NcpPressureBaseWeight>();
             result = pressureBaseWeight / referencePressure_;
         }
         else {
 #ifndef NDEBUG
-            unsigned phaseIdx = pvIdx - saturation0Idx;
+            const unsigned phaseIdx = pvIdx - saturation0Idx;
             assert(phaseIdx < numPhases - 1);
 #endif
 
             // saturation
-            static const Scalar saturationsBaseWeight =
+            constexpr Scalar saturationsBaseWeight =
                 getPropValue<TypeTag, Properties::NcpSaturationsBaseWeight>();
             result = saturationsBaseWeight;
         }
@@ -432,16 +468,18 @@ public:
      */
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
-        Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
-        if (tmp > 0)
+        const Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
+        if (tmp > 0) {
             // an energy related equation
             return tmp;
+        }
         // an NCP
-        else if (ncp0EqIdx <= eqIdx && eqIdx < Indices::ncp0EqIdx + numPhases)
+        else if (ncp0EqIdx <= eqIdx && eqIdx < Indices::ncp0EqIdx + numPhases) {
             return 1.0;
+        }
 
         // a mass conservation equation
-        unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+        const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
         assert(compIdx <= numComponents);
 
         // make all kg equal
@@ -466,10 +504,12 @@ public:
         ParentType::registerOutputModules_();
 
         this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));
-        if (enableDiffusion)
+        if constexpr (enableDiffusion) {
             this->addOutputModule(std::make_unique<VtkDiffusionModule<TypeTag>>(this->simulator_));
-        if (enableEnergy)
+        }
+        if constexpr (enableEnergy) {
             this->addOutputModule(std::make_unique<VtkEnergyModule<TypeTag>>(this->simulator_));
+        }
     }
 
     mutable Scalar referencePressure_;
