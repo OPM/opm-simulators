@@ -230,7 +230,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/SingleWellState.cpp
   opm/simulators/wells/StandardWellAssemble.cpp
   opm/simulators/wells/StandardWellConnections.cpp
-#  opm/simulators/wells/StandardWellEquations.cpp
+  opm/simulators/wells/StandardWellEquations.cpp
   opm/simulators/wells/StandardWellEval.cpp
   opm/simulators/wells/StandardWellPrimaryVariables.cpp
   opm/simulators/wells/TargetCalculator.cpp

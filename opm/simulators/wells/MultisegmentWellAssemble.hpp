@@ -31,7 +31,7 @@ namespace Opm
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
-template<typename FluidSystem, typename Indices, int numWellEq, int numEq> class MultisegmentWellEquations;
+template<typename FluidSystem, typename Indices> class MultisegmentWellEquations;
 template<class FluidSystem, class Indices> class MultisegmentWellPrimaryVariables;
 class Schedule;
 class SummaryState;
@@ -53,7 +53,7 @@ class MultisegmentWellAssemble
 public:
     static constexpr int numWellEq = Indices::numPhases+1;
     using Scalar = typename FluidSystem::Scalar;
-    using Equations = MultisegmentWellEquations<FluidSystem,Indices, numWellEq, Indices::numEq>;
+    using Equations = MultisegmentWellEquations<FluidSystem, Indices>;
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
 
     //! \brief Constructor initializes reference to well.
