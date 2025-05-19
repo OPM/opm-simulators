@@ -28,8 +28,10 @@
 #ifndef EWOMS_FLASH_BOUNDARY_RATE_VECTOR_HH
 #define EWOMS_FLASH_BOUNDARY_RATE_VECTOR_HH
 
-#include <opm/models/common/energymodule.hh>
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/common/energymodule.hh>
 
 namespace Opm {
 
