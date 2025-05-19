@@ -53,6 +53,7 @@
 #include <opm/utility/CopyablePtr.hpp>
 
 #include <array>
+#include <cassert>
 #include <cstring>
 #include <stdexcept>
 #include <utility>
