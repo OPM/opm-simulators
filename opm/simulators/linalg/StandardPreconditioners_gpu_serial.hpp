@@ -110,6 +110,25 @@ struct StandardPreconditioners<Operator,
             using GpuOwningTwoLevelPreconditioner = typename gpuistl::GpuOwningTwoLevelPreconditioner<O, GpuVector, LevelTransferPolicy>;
             return std::make_shared<GpuOwningTwoLevelPreconditioner>(op, prm, weightsCalculator, pressureIndex);
         });
+
+        // Only add AMG preconditioners to the factory if the operator
+        // is an actual matrix operator.
+        if constexpr (std::is_same_v<O, Dune::MatrixAdapter<M, V, V>>) {
+#if HAVE_AMGX
+            // Only add AMGX for scalar matrices
+            F::addCreator("AMGX", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+                // Only create AMGX preconditioner for scalar matrices
+                if (op.getmat().blockSize() == 1) {
+                    auto prm_copy = prm;
+                    prm_copy.put("setup_frequency", Opm::Parameters::Get<Opm::Parameters::CprReuseInterval>());
+                    return std::make_shared<Amgx::AmgxPreconditioner<M, V, V>>(op.getmat(), prm_copy);
+                } else {
+                    OPM_THROW(std::logic_error, "AMGX preconditioner only works with scalar matrices (block size 1)");
+                }
+            });
+#endif
+
+        }
     }
 
 
