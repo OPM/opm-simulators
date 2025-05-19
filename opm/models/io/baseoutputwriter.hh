@@ -28,12 +28,14 @@
 #ifndef EWOMS_BASE_OUTPUT_WRITER_HH
 #define EWOMS_BASE_OUTPUT_WRITER_HH
 
-#include <dune/common/dynvector.hh>
 #include <dune/common/dynmatrix.hh>
+#include <dune/common/dynvector.hh>
 
+#include <string_view>
 #include <vector>
 
 namespace Opm {
+
 /*!
  * \brief The base class for all output writers.
  *
@@ -44,17 +46,13 @@ class BaseOutputWriter
 {
 public:
     using Scalar = double;
-    using Vector = Dune::DynamicVector<double>;
     using Tensor = Dune::DynamicMatrix<double>;
+    using Vector = Dune::DynamicVector<double>;
     using ScalarBuffer = std::vector<Scalar>;
-    using VectorBuffer = std::vector<Vector>;
     using TensorBuffer = std::vector<Tensor>;
+    using VectorBuffer = std::vector<Vector>;
 
-    BaseOutputWriter()
-    {}
-
-    virtual ~BaseOutputWriter()
-    {}
+    virtual ~BaseOutputWriter() = default;
 
     /*!
      * \brief Called when ever a new time step or a new grid
@@ -65,32 +63,32 @@ public:
     /*!
      * \brief Add a scalar vertex centered vector field to the output.
      */
-    virtual void attachScalarVertexData(ScalarBuffer& buf, std::string name) = 0;
+    virtual void attachScalarVertexData(ScalarBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a scalar element centered quantity to the output.
      */
-    virtual void attachScalarElementData(ScalarBuffer& buf, std::string name) = 0;
+    virtual void attachScalarElementData(ScalarBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a vectorial vertex centered vector field to the output.
      */
-    virtual void attachVectorVertexData(VectorBuffer& buf, std::string name) = 0;
+    virtual void attachVectorVertexData(VectorBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a vectorial element centered quantity to the output.
      */
-    virtual void attachVectorElementData(VectorBuffer& buf, std::string name) = 0;
+    virtual void attachVectorElementData(VectorBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a tensorial vertex centered tensor field to the output.
      */
-    virtual void attachTensorVertexData(TensorBuffer& buf, std::string name) = 0;
+    virtual void attachTensorVertexData(TensorBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Add a tensorial element centered quantity to the output.
      */
-    virtual void attachTensorElementData(TensorBuffer& buf, std::string name) = 0;
+    virtual void attachTensorElementData(TensorBuffer& buf, std::string_view name) = 0;
 
     /*!
      * \brief Finalizes the current writer.
@@ -99,8 +97,9 @@ public:
      * the onlyDiscard argument is true. In this case only all managed
      * buffers are deleted, but no output is written.
      */
-    virtual void endWrite(bool onlyDiscard = false) = 0;
+    virtual void endWrite(bool onlyDiscard) = 0;
 };
+
 } // namespace Opm
 
 #endif

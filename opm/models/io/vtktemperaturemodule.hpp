@@ -59,7 +59,7 @@ class VtkTemperatureModule : public BaseOutputModule<TypeTag>
 
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
@@ -84,7 +84,7 @@ public:
     void allocBuffers() override
     {
         if (params_.temperatureOutput_) {
-            this->resizeScalarBuffer_(temperature_);
+            this->resizeScalarBuffer_(temperature_, ParentType::BufferType::Dof);
         }
     }
 
@@ -101,7 +101,7 @@ public:
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
@@ -116,13 +116,13 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
         if (params_.temperatureOutput_) {
-            this->commitScalarBuffer_(baseWriter, "temperature", temperature_);
+            this->commitScalarBuffer_(baseWriter, "temperature", temperature_,
+                                      ParentType::BufferType::Dof);
         }
     }
 

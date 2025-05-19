@@ -67,9 +67,10 @@ class VtkCompositionModule : public BaseOutputModule<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
+    using BufferType = typename ParentType::BufferType;
     using ComponentBuffer = typename ParentType::ComponentBuffer;
     using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
 
@@ -95,26 +96,26 @@ public:
     void allocBuffers() override
     {
         if (params_.moleFracOutput_) {
-            this->resizePhaseComponentBuffer_(moleFrac_);
+            this->resizePhaseComponentBuffer_(moleFrac_, BufferType::Dof);
         }
         if (params_.massFracOutput_) {
-            this->resizePhaseComponentBuffer_(massFrac_);
+            this->resizePhaseComponentBuffer_(massFrac_, BufferType::Dof);
         }
         if (params_.totalMassFracOutput_) {
-            this->resizeComponentBuffer_(totalMassFrac_);
+            this->resizeComponentBuffer_(totalMassFrac_, BufferType::Dof);
         }
         if (params_.totalMoleFracOutput_) {
-            this->resizeComponentBuffer_(totalMoleFrac_);
+            this->resizeComponentBuffer_(totalMoleFrac_, BufferType::Dof);
         }
         if (params_.molarityOutput_) {
-            this->resizePhaseComponentBuffer_(molarity_);
+            this->resizePhaseComponentBuffer_(molarity_, BufferType::Dof);
         }
 
         if (params_.fugacityOutput_) {
-            this->resizeComponentBuffer_(fugacity_);
+            this->resizeComponentBuffer_(fugacity_, BufferType::Dof);
         }
         if (params_.fugacityCoeffOutput_) {
-            this->resizePhaseComponentBuffer_(fugacityCoeff_);
+            this->resizePhaseComponentBuffer_(fugacityCoeff_, BufferType::Dof);
         }
     }
 
@@ -131,7 +132,7 @@ public:
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
@@ -161,9 +162,9 @@ public:
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                         totalMass += Toolbox::value(fs.density(phaseIdx)) * Toolbox::value(fs.saturation(phaseIdx));
                         compMass +=
-                            Toolbox::value(fs.density(phaseIdx))
-                            *Toolbox::value(fs.saturation(phaseIdx))
-                            *Toolbox::value(fs.massFraction(phaseIdx, compIdx));
+                            Toolbox::value(fs.density(phaseIdx)) *
+                            Toolbox::value(fs.saturation(phaseIdx)) *
+                            Toolbox::value(fs.massFraction(phaseIdx, compIdx));
                     }
                     totalMassFrac_[compIdx][I] = compMass / totalMass;
                 }
@@ -172,12 +173,12 @@ public:
                     Scalar totalMoles = 0;
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                         totalMoles +=
-                            Toolbox::value(fs.molarDensity(phaseIdx))
-                            *Toolbox::value(fs.saturation(phaseIdx));
+                            Toolbox::value(fs.molarDensity(phaseIdx)) *
+                            Toolbox::value(fs.saturation(phaseIdx));
                         compMoles +=
-                            Toolbox::value(fs.molarDensity(phaseIdx))
-                            *Toolbox::value(fs.saturation(phaseIdx))
-                            *Toolbox::value(fs.moleFraction(phaseIdx, compIdx));
+                            Toolbox::value(fs.molarDensity(phaseIdx)) *
+                            Toolbox::value(fs.saturation(phaseIdx)) *
+                            Toolbox::value(fs.moleFraction(phaseIdx, compIdx));
                     }
                     totalMoleFrac_[compIdx][I] = compMoles / totalMoles;
                 }
@@ -193,32 +194,38 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
         if (params_.moleFracOutput_) {
-            this->commitPhaseComponentBuffer_(baseWriter, "moleFrac_%s^%s", moleFrac_);
+            this->commitPhaseComponentBuffer_(baseWriter, "moleFrac_%s^%s",
+                                              moleFrac_, BufferType::Dof);
         }
         if (params_.massFracOutput_) {
-            this->commitPhaseComponentBuffer_(baseWriter, "massFrac_%s^%s", massFrac_);
+            this->commitPhaseComponentBuffer_(baseWriter, "massFrac_%s^%s",
+                                              massFrac_, BufferType::Dof);
         }
         if (params_.molarityOutput_) {
-            this->commitPhaseComponentBuffer_(baseWriter, "molarity_%s^%s", molarity_);
+            this->commitPhaseComponentBuffer_(baseWriter, "molarity_%s^%s",
+                                              molarity_, BufferType::Dof);
         }
         if (params_.totalMassFracOutput_) {
-            this->commitComponentBuffer_(baseWriter, "totalMassFrac^%s", totalMassFrac_);
+            this->commitComponentBuffer_(baseWriter, "totalMassFrac^%s",
+                                         totalMassFrac_, BufferType::Dof);
         }
         if (params_.totalMoleFracOutput_) {
-            this->commitComponentBuffer_(baseWriter, "totalMoleFrac^%s", totalMoleFrac_);
+            this->commitComponentBuffer_(baseWriter, "totalMoleFrac^%s",
+                                         totalMoleFrac_, BufferType::Dof);
         }
 
         if (params_.fugacityOutput_) {
-            this->commitComponentBuffer_(baseWriter, "fugacity^%s", fugacity_);
+            this->commitComponentBuffer_(baseWriter, "fugacity^%s",
+                                         fugacity_, BufferType::Dof);
         }
         if (params_.fugacityCoeffOutput_) {
-            this->commitPhaseComponentBuffer_(baseWriter, "fugacityCoeff_%s^%s", fugacityCoeff_);
+            this->commitPhaseComponentBuffer_(baseWriter, "fugacityCoeff_%s^%s",
+                                              fugacityCoeff_, BufferType::Dof);
         }
     }
 

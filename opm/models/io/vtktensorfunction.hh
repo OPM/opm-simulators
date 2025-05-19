@@ -27,15 +27,17 @@
 #ifndef VTK_TENSOR_FUNCTION_HH
 #define VTK_TENSOR_FUNCTION_HH
 
-#include <opm/models/io/baseoutputwriter.hh>
-
-#include <dune/grid/io/file/vtk/function.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
+#include <dune/grid/io/file/vtk/function.hh>
+
+#include <opm/models/io/baseoutputwriter.hh>
+
+#include <cstddef>
+#include <stdexcept>
 #include <string>
-#include <limits>
-#include <vector>
+#include <string_view>
 
 namespace Opm {
 
@@ -52,7 +54,7 @@ class VtkTensorFunction : public Dune::VTKFunction<GridView>
     using TensorBuffer = BaseOutputWriter::TensorBuffer;
 
 public:
-    VtkTensorFunction(std::string name,
+    VtkTensorFunction(std::string_view name,
                       const GridView& gridView,
                       const Mapper& mapper,
                       const TensorBuffer& buf,
@@ -66,20 +68,20 @@ public:
         , matrixColumnIdx_(matrixColumnIdx)
     { assert(int(buf_.size()) == int(mapper_.size())); }
 
-    virtual std::string name() const
+    std::string name() const override
     { return name_; }
 
-    virtual int ncomps() const
+    int ncomps() const override
     { return static_cast<int>(buf_[0].M()); }
 
-    virtual double evaluate(int mycomp,
-                            const Element& e,
-                            const Dune::FieldVector<ctype, dim>& xi) const
+    double evaluate(int mycomp,
+                    const Element& e,
+                    const Dune::FieldVector<ctype, dim>& xi) const override
     {
-        size_t idx;
+        std::size_t idx;
         if (codim_ == 0) {
             // cells. map element to the index
-            idx = static_cast<size_t>(mapper_.index(e));
+            idx = static_cast<std::size_t>(mapper_.index(e));
         }
         else if (codim_ == dim) {
             // find vertex which is closest to xi in local
@@ -100,13 +102,14 @@ public:
             }
 
             // map vertex to an index
-            idx = static_cast<size_t>(mapper_.subIndex(e, imin, codim_));
+            idx = static_cast<std::size_t>(mapper_.subIndex(e, imin, codim_));
         }
-        else
+        else {
             throw std::logic_error("Only element and vertex based tensor fields are supported so far.");
+        }
 
-        unsigned i = static_cast<unsigned>(mycomp);
-        unsigned j = static_cast<unsigned>(matrixColumnIdx_);
+        const unsigned i = static_cast<unsigned>(mycomp);
+        const unsigned j = static_cast<unsigned>(matrixColumnIdx_);
 
         return static_cast<double>(static_cast<float>(buf_[idx][i][j]));
     }
@@ -116,8 +119,8 @@ private:
     const GridView gridView_;
     const Mapper& mapper_;
     const TensorBuffer& buf_;
-    unsigned codim_;
-    unsigned matrixColumnIdx_;
+    const unsigned codim_;
+    const unsigned matrixColumnIdx_;
 };
 
 } // namespace Opm

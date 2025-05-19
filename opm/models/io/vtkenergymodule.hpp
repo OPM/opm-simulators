@@ -64,10 +64,11 @@ class VtkEnergyModule : public BaseOutputModule<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
     using PhaseBuffer = typename ParentType::PhaseBuffer;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
     using Toolbox = typename Opm::MathToolbox<Evaluation>;
@@ -95,17 +96,17 @@ public:
     void allocBuffers() override
     {
         if (params_.enthalpyOutput_) {
-            this->resizePhaseBuffer_(enthalpy_);
+            this->resizePhaseBuffer_(enthalpy_, BufferType::Dof);
         }
         if (params_.internalEnergyOutput_) {
-            this->resizePhaseBuffer_(internalEnergy_);
+            this->resizePhaseBuffer_(internalEnergy_, BufferType::Dof);
         }
 
         if (params_.solidInternalEnergyOutput_) {
-            this->resizeScalarBuffer_(solidInternalEnergy_);
+            this->resizeScalarBuffer_(solidInternalEnergy_, BufferType::Dof);
         }
         if (params_.thermalConductivityOutput_) {
-            this->resizeScalarBuffer_(thermalConductivity_);
+            this->resizeScalarBuffer_(thermalConductivity_, BufferType::Dof);
         }
     }
 
@@ -120,7 +121,7 @@ public:
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
@@ -147,23 +148,26 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
         if (params_.solidInternalEnergyOutput_) {
-            this->commitScalarBuffer_(baseWriter, "internalEnergySolid", solidInternalEnergy_);
+            this->commitScalarBuffer_(baseWriter, "internalEnergySolid",
+                                      solidInternalEnergy_, BufferType::Dof);
         }
         if (params_.thermalConductivityOutput_) {
-            this->commitScalarBuffer_(baseWriter, "thermalConductivity", thermalConductivity_);
+            this->commitScalarBuffer_(baseWriter, "thermalConductivity",
+                                      thermalConductivity_, BufferType::Dof);
         }
 
         if (params_.enthalpyOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "enthalpy_%s", enthalpy_);
+            this->commitPhaseBuffer_(baseWriter, "enthalpy_%s",
+                                     enthalpy_, BufferType::Dof);
         }
         if (params_.internalEnergyOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "internalEnergy_%s", internalEnergy_);
+            this->commitPhaseBuffer_(baseWriter, "internalEnergy_%s",
+                                     internalEnergy_, BufferType::Dof);
         }
     }
 

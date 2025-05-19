@@ -28,32 +28,31 @@
 #ifndef EWOMS_VTK_MULTI_WRITER_HH
 #define EWOMS_VTK_MULTI_WRITER_HH
 
-#include "vtkscalarfunction.hh"
-#include "vtkvectorfunction.hh"
-#include "vtktensorfunction.hh"
-
-#include <opm/models/io/baseoutputwriter.hh>
-#include <opm/models/parallel/tasklets.hpp>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/istl/bvector.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
-#include <dune/istl/bvector.hh>
-#include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <opm/models/io/baseoutputwriter.hh>
+#include <opm/models/io/vtkscalarfunction.hh>
+#include <opm/models/io/vtktensorfunction.hh>
+#include <opm/models/io/vtkvectorfunction.hh>
 
-#if HAVE_MPI
-#include <mpi.h>
-#endif
+#include <opm/models/parallel/tasklets.hpp>
 
+#include <cstddef>
 #include <filesystem>
-#include <list>
-#include <string>
-#include <limits>
-#include <sstream>
 #include <fstream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace Opm {
+
 /*!
  * \brief Simplifies writing multi-file VTK datasets.
  *
@@ -61,7 +60,7 @@ namespace Opm {
  * simplifies writing datasets consisting of multiple files. (i.e.
  * multiple time steps or grid refinements within a time step.)
  */
-template <class GridView, int vtkFormat>
+template <class GridView, Dune::VTK::OutputType vtkFormat>
 class VtkMultiWriter : public BaseOutputWriter
 {
     class WriteDataTasklet : public TaskletInterface
@@ -69,20 +68,23 @@ class VtkMultiWriter : public BaseOutputWriter
     public:
         explicit WriteDataTasklet(VtkMultiWriter& multiWriter)
             : multiWriter_(multiWriter)
-        { }
+        {}
 
-        void run() final
+        void run() override final
         {
             std::string fileName;
             // write the actual data as vtu or vtp (plus the pieces file in the parallel case)
-            if (multiWriter_.commSize_ > 1)
+            if (multiWriter_.commSize_ > 1) {
                 fileName = multiWriter_.curWriter_->pwrite(/*name=*/multiWriter_.curOutFileName_,
                                                            /*path=*/multiWriter_.outputDir_,
                                                            /*extendPath=*/"",
-                                                           static_cast<Dune::VTK::OutputType>(vtkFormat));
-            else
-                fileName = multiWriter_.curWriter_->write(/*name=*/multiWriter_.outputDir_ + "/" + multiWriter_.curOutFileName_,
-                                                          static_cast<Dune::VTK::OutputType>(vtkFormat));
+                                                           vtkFormat);
+            }
+            else {
+                fileName = multiWriter_.curWriter_->write(/*name=*/multiWriter_.outputDir_ + "/" +
+                                                          multiWriter_.curOutFileName_,
+                                                          vtkFormat);
+            }
 
             // determine name to write into the multi-file for the
             // current time step
@@ -105,39 +107,30 @@ class VtkMultiWriter : public BaseOutputWriter
 
 public:
     using Scalar = BaseOutputWriter::Scalar;
-    using Vector = BaseOutputWriter::Vector;
     using Tensor = BaseOutputWriter::Tensor;
+    using Vector = BaseOutputWriter::Vector;
     using ScalarBuffer = BaseOutputWriter::ScalarBuffer;
-    using VectorBuffer = BaseOutputWriter::VectorBuffer;
     using TensorBuffer = BaseOutputWriter::TensorBuffer;
+    using VectorBuffer = BaseOutputWriter::VectorBuffer;
 
     using VtkWriter = Dune::VTKWriter<GridView>;
-    using FunctionPtr = std::shared_ptr< Dune::VTKFunction< GridView > >;
 
     VtkMultiWriter(bool asyncWriting,
                    const GridView& gridView,
                    const std::string& outputDir,
                    const std::string& simName = "",
-                   std::string multiFileName = "")
+                   const std::string& multiFileName = "")
         : gridView_(gridView)
         , elementMapper_(gridView, Dune::mcmgElementLayout())
         , vertexMapper_(gridView, Dune::mcmgVertexLayout())
-        , curWriter_(nullptr)
+        , outputDir_(outputDir.empty() ? "." : outputDir)
+        , simName_(simName.empty() ? "sim" : simName)
+        , multiFileName_(multiFileName.empty() ? outputDir_ + "/" + simName_ + ".pvd" : multiFileName)
+        , commSize_(gridView.comm().size())
+        , commRank_(gridView.comm().rank())
         , curWriterNum_(0)
-        , taskletRunner_(/*numThreads=*/asyncWriting?1:0)
-    {
-        outputDir_ = outputDir;
-        if (outputDir == "")
-            outputDir_ = ".";
-
-        simName_ = (simName.empty()) ? "sim" : simName;
-        multiFileName_ = multiFileName;
-        if (multiFileName_.empty())
-            multiFileName_ = outputDir_+"/"+simName_+".pvd";
-
-        commRank_ = gridView.comm().rank();
-        commSize_ = gridView.comm().size();
-    }
+        , taskletRunner_(/*numThreads=*/asyncWriting ? 1 : 0)
+    {}
 
     ~VtkMultiWriter() override
     {
@@ -145,8 +138,9 @@ public:
         releaseBuffers_();
         finishMultiFile_();
 
-        if (commRank_ == 0)
+        if (commRank_ == 0) {
             multiFile_.close();
+        }
     }
 
     /*!
@@ -185,7 +179,7 @@ public:
         curTime_ = t;
         curOutFileName_ = fileName_();
 
-        curWriter_ = new VtkWriter(gridView_, Dune::VTK::conforming);
+        curWriter_ = std::make_unique<VtkWriter>(gridView_, Dune::VTK::conforming);
         ++curWriterNum_;
     }
 
@@ -195,11 +189,10 @@ public:
      * The buffer will be deleted automatically after the data has
      * been written by to disk.
      */
-    ScalarBuffer *allocateManagedScalarBuffer(size_t numEntities)
+    ScalarBuffer* allocateManagedScalarBuffer(std::size_t numEntities)
     {
-        ScalarBuffer *buf = new ScalarBuffer(numEntities);
-        managedScalarBuffers_.push_back(buf);
-        return buf;
+        managedScalarBuffers_.emplace_back(std::make_unique<ScalarBuffer>(numEntities));
+        return managedScalarBuffers_.back().get();
     }
 
     /*!
@@ -208,14 +201,14 @@ public:
      * The buffer will be deleted automatically after the data has
      * been written by to disk.
      */
-    VectorBuffer *allocateManagedVectorBuffer(size_t numOuter, size_t numInner)
+    VectorBuffer* allocateManagedVectorBuffer(std::size_t numOuter, std::size_t numInner)
     {
-        VectorBuffer *buf = new VectorBuffer(numOuter);
-        for (size_t i = 0; i < numOuter; ++ i)
-            (*buf)[i].resize(numInner);
+        managedVectorBuffers_.emplace_back(std::make_unique<VectorBuffer>(numOuter));
+        for (auto& buffer : *managedVectorBuffers_.back()) {
+            buffer.resize(numInner);
+        }
 
-        managedVectorBuffers_.push_back(buf);
-        return buf;
+        return managedVectorBuffers_.back().get();
     }
 
     /*!
@@ -234,17 +227,16 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behavior_.
      */
-    void attachScalarVertexData(ScalarBuffer& buf, std::string name) override
+    void attachScalarVertexData(ScalarBuffer& buf, std::string_view name) override
     {
         sanitizeScalarBuffer_(buf);
 
         using VtkFn = VtkScalarFunction<GridView, VertexMapper>;
-        FunctionPtr fnPtr(new VtkFn(name,
-                                    gridView_,
-                                    vertexMapper_,
-                                    buf,
-                                    /*codim=*/dim));
-        curWriter_->addVertexData(fnPtr);
+        curWriter_->addVertexData(std::make_shared<VtkFn>(name,
+                                                          gridView_,
+                                                          vertexMapper_,
+                                                          buf,
+                                                          /*codim=*/dim));
     }
 
     /*!
@@ -262,17 +254,16 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behaviour_.
      */
-    void attachScalarElementData(ScalarBuffer& buf, std::string name) override
+    void attachScalarElementData(ScalarBuffer& buf, std::string_view name) override
     {
         sanitizeScalarBuffer_(buf);
 
         using VtkFn = VtkScalarFunction<GridView, ElementMapper>;
-        FunctionPtr fnPtr(new VtkFn(name,
-                                    gridView_,
-                                    elementMapper_,
-                                    buf,
-                                    /*codim=*/0));
-        curWriter_->addCellData(fnPtr);
+        curWriter_->addCellData(std::make_shared<VtkFn>(name,
+                                                        gridView_,
+                                                        elementMapper_,
+                                                        buf,
+                                                        /*codim=*/0));
     }
 
     /*!
@@ -291,37 +282,34 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behavior_.
      */
-    void attachVectorVertexData(VectorBuffer& buf, std::string name) override
+    void attachVectorVertexData(VectorBuffer& buf, std::string_view name) override
     {
         sanitizeVectorBuffer_(buf);
 
         using VtkFn = VtkVectorFunction<GridView, VertexMapper>;
-        FunctionPtr fnPtr(new VtkFn(name,
-                                    gridView_,
-                                    vertexMapper_,
-                                    buf,
-                                    /*codim=*/dim));
-        curWriter_->addVertexData(fnPtr);
+        curWriter_->addVertexData(std::make_shared<VtkFn>(name,
+                                                          gridView_,
+                                                          vertexMapper_,
+                                                          buf,
+                                                          /*codim=*/dim));
     }
 
     /*!
      * \brief Add a finished vertex-centered tensor field to the output.
      */
-    void attachTensorVertexData(TensorBuffer& buf, std::string name) override
+    void attachTensorVertexData(TensorBuffer& buf, std::string_view name) override
     {
         using VtkFn = VtkTensorFunction<GridView, VertexMapper>;
 
         for (unsigned colIdx = 0; colIdx < buf[0].N(); ++colIdx) {
             std::ostringstream oss;
             oss << name <<  "[" << colIdx << "]";
-
-            FunctionPtr fnPtr(new VtkFn(oss.str(),
-                                        gridView_,
-                                        vertexMapper_,
-                                        buf,
-                                        /*codim=*/dim,
-                                        colIdx));
-            curWriter_->addVertexData(fnPtr);
+            curWriter_->addVertexData(std::make_shared<VtkFn>(oss.str(),
+                                                              gridView_,
+                                                              vertexMapper_,
+                                                              buf,
+                                                              /*codim=*/dim,
+                                                              colIdx));
         }
     }
 
@@ -340,37 +328,34 @@ public:
      * In both cases, modifying the buffer between the call to this
      * method and endWrite() results in _undefined behaviour_.
      */
-    void attachVectorElementData(VectorBuffer& buf, std::string name) override
+    void attachVectorElementData(VectorBuffer& buf, std::string_view name) override
     {
         sanitizeVectorBuffer_(buf);
 
         using VtkFn = VtkVectorFunction<GridView, ElementMapper>;
-        FunctionPtr fnPtr(new VtkFn(name,
-                                    gridView_,
-                                    elementMapper_,
-                                    buf,
-                                    /*codim=*/0));
-        curWriter_->addCellData(fnPtr);
+        curWriter_->addCellData(std::make_shared<VtkFn>(name,
+                                                        gridView_,
+                                                        elementMapper_,
+                                                        buf,
+                                                        /*codim=*/0));
     }
 
     /*!
      * \brief Add a finished element-centered tensor field to the output.
      */
-    void attachTensorElementData(TensorBuffer& buf, std::string name) override
+    void attachTensorElementData(TensorBuffer& buf, std::string_view name) override
     {
         using VtkFn = VtkTensorFunction<GridView, ElementMapper>;
 
         for (unsigned colIdx = 0; colIdx < buf[0].N(); ++colIdx) {
             std::ostringstream oss;
             oss << name <<  "[" << colIdx << "]";
-
-            FunctionPtr fnPtr(new VtkFn(oss.str(),
-                                        gridView_,
-                                        elementMapper_,
-                                        buf,
-                                        /*codim=*/0,
-                                        colIdx));
-            curWriter_->addCellData(fnPtr);
+            curWriter_->addCellData(std::make_shared<VtkFn>(oss.str(),
+                                                            gridView_,
+                                                            elementMapper_,
+                                                            buf,
+                                                            /*codim=*/0,
+                                                            colIdx));
         }
     }
 
@@ -381,14 +366,15 @@ public:
      * the onlyDiscard argument is true. In this case only all managed
      * buffers are deleted, but no output is written.
      */
-    void endWrite(bool onlyDiscard = false) override
+    void endWrite(bool onlyDiscard) override
     {
         if (!onlyDiscard) {
             auto tasklet = std::make_shared<WriteDataTasklet>(*this);
             taskletRunner_.dispatch(tasklet);
         }
-        else
+        else {
             --curWriterNum_;
+        }
 
         // temporarily write the closing XML mumbo-jumbo to the mashup
         // file so that the data set can be loaded even if the
@@ -420,10 +406,9 @@ public:
 
             if (fileLen > 0) {
                 std::ifstream multiFileIn(multiFileName_.c_str());
-                char *tmp = new char[fileLen];
-                multiFileIn.read(tmp, static_cast<long>(fileLen));
-                res.serializeStream().write(tmp, fileLen);
-                delete[] tmp;
+                std::vector<char> tmp(fileLen);
+                multiFileIn.read(tmp.data(), static_cast<long>(fileLen));
+                res.serializeStream().write(tmp.data(), fileLen);
             }
         }
 
@@ -448,16 +433,16 @@ public:
             std::streamsize fileLen;
             res.deserializeStream() >> fileLen >> filePos;
             std::getline(res.deserializeStream(), dummy);
-            if (multiFile_.is_open())
+            if (multiFile_.is_open()) {
                 multiFile_.close();
+            }
 
             if (fileLen > 0) {
-                multiFile_.open(multiFileName_.c_str());
+                multiFile_.open(multiFileName_);
 
-                char *tmp = new char[fileLen];
-                res.deserializeStream().read(tmp, fileLen);
-                multiFile_.write(tmp, fileLen);
-                delete[] tmp;
+                std::vector<char> tmp(fileLen);
+                res.deserializeStream().read(tmp.data(), fileLen);
+                multiFile_.write(tmp.data(), fileLen);
             }
 
             multiFile_.seekp(filePos);
@@ -470,7 +455,7 @@ public:
     }
 
 private:
-    std::string fileName_()
+    std::string fileName_() const
     {
         // use a new file name for each time step
         std::ostringstream oss;
@@ -479,7 +464,7 @@ private:
         return oss.str();
     }
 
-    std::string fileSuffix_()
+    static std::string fileSuffix_()
     { return (GridView::dimension == 1) ? "vtp" : "vtu"; }
 
     void startMultiFile_(const std::string& multiFileName)
@@ -487,7 +472,7 @@ private:
         // only the first process writes to the multi-file
         if (commRank_ == 0) {
             // generate one meta vtk-file holding the individual time steps
-            multiFile_.open(multiFileName.c_str());
+            multiFile_.open(multiFileName);
             multiFile_ << "<?xml version=\"1.0\"?>\n"
                           "<VTKFile type=\"Collection\"\n"
                           "         version=\"0.1\"\n"
@@ -526,40 +511,34 @@ private:
     void releaseBuffers_()
     {
         // discard managed objects and the current VTK writer
-        delete curWriter_;
-        curWriter_ = nullptr;
-        while (managedScalarBuffers_.begin() != managedScalarBuffers_.end()) {
-            delete managedScalarBuffers_.front();
-            managedScalarBuffers_.pop_front();
-        }
-        while (managedVectorBuffers_.begin() != managedVectorBuffers_.end()) {
-            delete managedVectorBuffers_.front();
-            managedVectorBuffers_.pop_front();
-        }
+        curWriter_.reset();
+        managedScalarBuffers_.clear();
+        managedVectorBuffers_.clear();
     }
 
     const GridView gridView_;
     ElementMapper elementMapper_;
     VertexMapper vertexMapper_;
 
-    std::string outputDir_;
-    std::string simName_;
+    const std::string outputDir_;
+    const std::string simName_;
     std::ofstream multiFile_;
-    std::string multiFileName_;
+    const std::string multiFileName_;
 
-    int commSize_; // number of processes in the communicator
-    int commRank_; // rank of the current process in the communicator
+    const int commSize_; // number of processes in the communicator
+    const int commRank_; // rank of the current process in the communicator
 
-    VtkWriter *curWriter_;
-    double curTime_;
+    std::unique_ptr<VtkWriter> curWriter_;
+    double curTime_{};
     std::string curOutFileName_;
     int curWriterNum_;
 
-    std::list<ScalarBuffer *> managedScalarBuffers_;
-    std::list<VectorBuffer *> managedVectorBuffers_;
+    std::vector<std::unique_ptr<ScalarBuffer>> managedScalarBuffers_;
+    std::vector<std::unique_ptr<VectorBuffer>> managedVectorBuffers_;
 
     TaskletRunner taskletRunner_;
 };
+
 } // namespace Opm
 
 #endif

@@ -27,16 +27,16 @@
 #ifndef EWOMS_CUBE_GRID_VANGUARD_HH
 #define EWOMS_CUBE_GRID_VANGUARD_HH
 
+#include <dune/common/fvector.hh>
+#include <dune/grid/utility/structuredgridfactory.hh>
+
 #include <opm/models/io/basevanguard.hh>
 #include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
-#include <dune/grid/utility/structuredgridfactory.hh>
-
-#include <dune/common/fvector.hh>
-
+#include <array>
 #include <memory>
 
 namespace Opm {
@@ -98,12 +98,9 @@ public:
     explicit CubeGridVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        std::array<unsigned int, dim> cellRes;
+        std::array<unsigned int, dim> cellRes{};
         GlobalPosition upperRight(0.0);
         GlobalPosition lowerLeft(0.0);
-
-        for (unsigned i = 0; i < dim; ++i)
-            cellRes[i] = 0;
 
         upperRight[0] = Parameters::Get<Parameters::DomainSizeX<Scalar>>();
         cellRes[0] = Parameters::Get<Parameters::CellsX>();
@@ -117,7 +114,7 @@ public:
             cellRes[2] = Parameters::Get<Parameters::CellsZ>();
         }
 
-        unsigned numRefinements = Parameters::Get<Parameters::GridGlobalRefinements>();
+        const unsigned numRefinements = Parameters::Get<Parameters::GridGlobalRefinements>();
         cubeGrid_ = Dune::StructuredGridFactory<Grid>::createCubeGrid(lowerLeft, upperRight, cellRes);
         cubeGrid_->globalRefine(static_cast<int>(numRefinements));
 

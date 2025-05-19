@@ -27,17 +27,15 @@
 #ifndef VTK_VECTOR_FUNCTION_HH
 #define VTK_VECTOR_FUNCTION_HH
 
-#include <opm/models/io/baseoutputwriter.hh>
+#include <dune/common/fvector.hh>
 
 #include <dune/grid/io/file/vtk/function.hh>
-#include <dune/istl/bvector.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
 
-#include <limits>
+#include <opm/models/io/baseoutputwriter.hh>
+
 #include <stdexcept>
 #include <string>
-#include <vector>
+#include <string_view>
 
 namespace Opm {
 
@@ -55,7 +53,7 @@ class VtkVectorFunction : public Dune::VTKFunction<GridView>
     using VectorBuffer = BaseOutputWriter::VectorBuffer;
 
 public:
-    VtkVectorFunction(std::string name,
+    VtkVectorFunction(std::string_view name,
                       const GridView& gridView,
                       const Mapper& mapper,
                       const VectorBuffer& buf,
@@ -67,15 +65,15 @@ public:
         , codim_(codim)
     { assert(int(buf_.size()) == int(mapper_.size())); }
 
-    virtual std::string name() const
+    std::string name() const override
     { return name_; }
 
-    virtual int ncomps() const
+    int ncomps() const override
     { return static_cast<int>(buf_[0].size()); }
 
-    virtual double evaluate(int mycomp,
-                            const Element& e,
-                            const Dune::FieldVector<ctype, dim>& xi) const
+    double evaluate(int mycomp,
+                    const Element& e,
+                    const Dune::FieldVector<ctype, dim>& xi) const override
     {
         unsigned idx;
         if (codim_ == 0) {
@@ -103,9 +101,10 @@ public:
             // map vertex to an index
             idx = static_cast<unsigned>(mapper_.subIndex(e, imin, codim_));
         }
-        else
+        else {
             throw std::logic_error("Only element and vertex based vector fields are "
                                    "supported so far.");
+        }
 
         return static_cast<double>(static_cast<float>(buf_[idx][static_cast<unsigned>(mycomp)]));
     }
@@ -115,7 +114,7 @@ private:
     const GridView gridView_;
     const Mapper& mapper_;
     const VectorBuffer& buf_;
-    unsigned codim_;
+    const unsigned codim_;
 };
 
 } // namespace Opm

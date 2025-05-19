@@ -27,6 +27,12 @@
 #ifndef EWOMS_STRUCTURED_GRID_VANGUARD_HH
 #define EWOMS_STRUCTURED_GRID_VANGUARD_HH
 
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+
 #include <opm/models/io/basevanguard.hh>
 
 #include <opm/models/utils/basicparameters.hh>
@@ -34,18 +40,13 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
-#include <dune/grid/yaspgrid.hh>
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
-
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/dgf.hh>
 #endif
 
-#include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
-
 #include <memory>
+#include <sstream>
 
 namespace Opm {
 
@@ -64,22 +65,25 @@ struct StructuredGridVanguard {};
 
 // GRIDDIM is only set by the finger problem
 #ifndef GRIDDIM
-static const int dim = 2;
+static constexpr int dim = 2;
 #else
-static const int dim = GRIDDIM;
+static constexpr int dim = GRIDDIM;
 #endif
 
 // set the Grid and Vanguard properties
 #if HAVE_DUNE_ALUGRID
 template<class TypeTag>
-struct Grid<TypeTag, TTag::StructuredGridVanguard> { using type = Dune::ALUGrid< dim, dim, Dune::cube, Dune::nonconforming >; };
+struct Grid<TypeTag, TTag::StructuredGridVanguard>
+{ using type = Dune::ALUGrid< dim, dim, Dune::cube, Dune::nonconforming >; };
 #else
 template<class TypeTag>
-struct Grid<TypeTag, TTag::StructuredGridVanguard> { using type = Dune::YaspGrid< dim >; };
+struct Grid<TypeTag, TTag::StructuredGridVanguard>
+{ using type = Dune::YaspGrid< dim >; };
 #endif
 
 template<class TypeTag>
-struct Vanguard<TypeTag, TTag::StructuredGridVanguard> { using type = Opm::StructuredGridVanguard<TypeTag>; };
+struct Vanguard<TypeTag, TTag::StructuredGridVanguard>
+{ using type = Opm::StructuredGridVanguard<TypeTag>; };
 
 } // namespace Opm::Properties
 
@@ -115,7 +119,7 @@ public:
             ("The size of the domain in x direction");
         Parameters::Register<Parameters::CellsX>
             ("The number of intervalls in x direction");
-        if (dim > 1) {
+        if constexpr (dim > 1) {
             Parameters::Register<Parameters::DomainSizeY<Scalar>>
                 ("The size of the domain in y direction");
             Parameters::Register<Parameters::CellsY>
@@ -152,23 +156,23 @@ public:
         }
 
         std::stringstream dgffile;
-        dgffile << "DGF" << std::endl;
-        dgffile << "INTERVAL" << std::endl;
-        dgffile << lowerLeft  << std::endl;
-        dgffile << upperRight << std::endl;
-        dgffile << cellRes    << std::endl;
-        dgffile << "#" << std::endl;
-        dgffile << "GridParameter" << std::endl;
-        dgffile << "overlap 1" << std::endl;
-        dgffile << "#" << std::endl;
-        dgffile << "Simplex" << std::endl;
-        dgffile << "#" << std::endl;
+        dgffile << "DGF" << '\n'
+                << "INTERVAL" << '\n'
+                << lowerLeft  << '\n'
+                << upperRight << '\n'
+                << cellRes    <<  '\n'
+                << "#" << '\n'
+                << "GridParameter" << '\n'
+                << "overlap 1" << '\n'
+                << "#" << '\n'
+                << "Simplex" << '\n'
+                << "#" << '\n';
 
         // use DGF parser to create a grid from interval block
-        gridPtr_.reset( Dune::GridPtr< Grid >( dgffile ).release() );
+        gridPtr_.reset(Dune::GridPtr<Grid>(dgffile).release());
 
-        unsigned numRefinements = Parameters::Get<Parameters::GridGlobalRefinements>();
-        gridPtr_->globalRefine(static_cast<int>(numRefinements));
+        const int numRefinements = Parameters::Get<Parameters::GridGlobalRefinements>();
+        gridPtr_->globalRefine(numRefinements);
 
         this->finalizeInit_();
     }

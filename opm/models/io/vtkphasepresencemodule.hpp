@@ -53,11 +53,10 @@ class VtkPhasePresenceModule : public BaseOutputModule<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     using ScalarBuffer = typename ParentType::ScalarBuffer;
-
 
 public:
     explicit VtkPhasePresenceModule(const Simulator& simulator)
@@ -81,7 +80,7 @@ public:
     void allocBuffers() override
     {
         if (params_.phasePresenceOutput_) {
-            this->resizeScalarBuffer_(phasePresence_);
+            this->resizeScalarBuffer_(phasePresence_, ParentType::BufferType::Dof);
         }
     }
 
@@ -97,8 +96,8 @@ public:
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
             // calculate the phase presence
-            int phasePresence = elemCtx.primaryVars(i, /*timeIdx=*/0).phasePresence();
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const int phasePresence = elemCtx.primaryVars(i, /*timeIdx=*/0).phasePresence();
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
 
             if (params_.phasePresenceOutput_) {
                 phasePresence_[I] = phasePresence;
@@ -111,13 +110,13 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
         if (params_.phasePresenceOutput_) {
-            this->commitScalarBuffer_(baseWriter, "phase presence", phasePresence_);
+            this->commitScalarBuffer_(baseWriter, "phase presence", phasePresence_,
+                                      ParentType::BufferType::Dof);
         }
     }
 

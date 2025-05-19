@@ -65,10 +65,11 @@ class VtkDiffusionModule : public BaseOutputModule<TypeTag>
 
     using Toolbox = MathToolbox<Evaluation>;
 
-    using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
+    using BufferType = typename ParentType::BufferType;
     using PhaseBuffer = typename ParentType::PhaseBuffer;
+    using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -96,13 +97,13 @@ public:
     void allocBuffers() override
     {
         if (params_.tortuosityOutput_) {
-            this->resizePhaseBuffer_(tortuosity_);
+            this->resizePhaseBuffer_(tortuosity_, BufferType::Dof);
         }
         if (params_.diffusionCoefficientOutput_) {
-            this->resizePhaseComponentBuffer_(diffusionCoefficient_);
+            this->resizePhaseComponentBuffer_(diffusionCoefficient_, BufferType::Dof);
         }
         if (params_.effectiveDiffusionCoefficientOutput_) {
-            this->resizePhaseComponentBuffer_(effectiveDiffusionCoefficient_);
+            this->resizePhaseComponentBuffer_(effectiveDiffusionCoefficient_, BufferType::Dof);
         }
     }
 
@@ -117,7 +118,7 @@ public:
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -143,22 +144,22 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
         if (params_.tortuosityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "tortuosity", tortuosity_);
+            this->commitPhaseBuffer_(baseWriter, "tortuosity", tortuosity_, BufferType::Dof);
         }
         if (params_.diffusionCoefficientOutput_) {
             this->commitPhaseComponentBuffer_(baseWriter, "diffusionCoefficient",
-                                              diffusionCoefficient_);
+                                              diffusionCoefficient_, BufferType::Dof);
         }
         if (params_.effectiveDiffusionCoefficientOutput_) {
             this->commitPhaseComponentBuffer_(baseWriter,
                                               "effectiveDiffusionCoefficient",
-                                              effectiveDiffusionCoefficient_);
+                                              effectiveDiffusionCoefficient_,
+                                              BufferType::Dof);
         }
     }
 

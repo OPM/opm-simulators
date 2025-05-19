@@ -28,8 +28,8 @@
 #ifndef EWOMS_IMMISCIBLE_INDICES_HH
 #define EWOMS_IMMISCIBLE_INDICES_HH
 
-#include "immiscibleproperties.hh"
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 
 namespace Opm {
 
@@ -45,25 +45,26 @@ struct ImmiscibleIndices
 {
     static constexpr int numPhases = getPropValue<TypeTag, Properties::NumPhases>();
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    using EnergyIndices = Opm::EnergyIndices<PVOffset + numPhases, enableEnergy>;
+    using EnergyIndices = ::Opm::EnergyIndices<PVOffset + numPhases, enableEnergy>;
 
 public:
     // number of equations/primary variables
-    static const int numEq = numPhases + EnergyIndices::numEq_;
+    static constexpr int numEq = numPhases + EnergyIndices::numEq_;
 
     // Primary variable indices
 
     //! Index for wetting/non-wetting phase pressure
     //! (depending on formulation) in a solution vector
-    static const int pressure0Idx = PVOffset + 0;
+    static constexpr int pressure0Idx = PVOffset + 0;
     //! Index of the saturation of the non-wetting/wetting phase
-    static const int saturation0Idx = PVOffset + 1;
+    static constexpr int saturation0Idx = PVOffset + 1;
 
     // indices of the equations
 
     //! Index of the continuity equation of the first phase
-    static const int conti0EqIdx = PVOffset + 0;
+    static constexpr int conti0EqIdx = PVOffset + 0;
 };
+
 } // namespace Opm
 
 #endif

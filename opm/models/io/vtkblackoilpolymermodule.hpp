@@ -67,11 +67,12 @@ class VtkBlackOilPolymerModule : public BaseOutputModule<TypeTag>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
@@ -106,22 +107,22 @@ public:
             }
 
             if (params_.polymerConcentrationOutput_) {
-                this->resizeScalarBuffer_(polymerConcentration_);
+                this->resizeScalarBuffer_(polymerConcentration_, BufferType::Dof);
             }
             if (params_.polymerDeadPoreVolumeOutput_) {
-                this->resizeScalarBuffer_(polymerDeadPoreVolume_);
+                this->resizeScalarBuffer_(polymerDeadPoreVolume_, BufferType::Dof);
             }
             if (params_.polymerRockDensityOutput_) {
-                this->resizeScalarBuffer_(polymerRockDensity_);
+                this->resizeScalarBuffer_(polymerRockDensity_, BufferType::Dof);
             }
             if (params_.polymerAdsorptionOutput_) {
-                this->resizeScalarBuffer_(polymerAdsorption_);
+                this->resizeScalarBuffer_(polymerAdsorption_, BufferType::Dof);
             }
             if (params_.polymerViscosityCorrectionOutput_) {
-                this->resizeScalarBuffer_(polymerViscosityCorrection_);
+                this->resizeScalarBuffer_(polymerViscosityCorrection_, BufferType::Dof);
             }
             if (params_.waterViscosityCorrectionOutput_) {
-                this->resizeScalarBuffer_(waterViscosityCorrection_);
+                this->resizeScalarBuffer_(waterViscosityCorrection_, BufferType::Dof);
             }
         }
     }
@@ -139,7 +140,7 @@ public:
 
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
                 const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
                 if (params_.polymerConcentrationOutput_) {
                     polymerConcentration_[globalDofIdx] =
@@ -180,33 +181,38 @@ public:
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
         if constexpr (enablePolymer) {
-            VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-            if (!vtkWriter) {
+            if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
                 return;
             }
 
             if (params_.polymerConcentrationOutput_) {
-                this->commitScalarBuffer_(baseWriter, "polymer concentration", polymerConcentration_);
+                this->commitScalarBuffer_(baseWriter, "polymer concentration",
+                                          polymerConcentration_, BufferType::Dof);
             }
 
             if (params_.polymerDeadPoreVolumeOutput_) {
-                this->commitScalarBuffer_(baseWriter, "dead pore volume fraction", polymerDeadPoreVolume_);
+                this->commitScalarBuffer_(baseWriter, "dead pore volume fraction",
+                                          polymerDeadPoreVolume_, BufferType::Dof);
             }
 
             if (params_.polymerRockDensityOutput_) {
-                this->commitScalarBuffer_(baseWriter, "polymer rock density", polymerRockDensity_);
+                this->commitScalarBuffer_(baseWriter, "polymer rock density",
+                                          polymerRockDensity_, BufferType::Dof);
             }
 
             if (params_.polymerAdsorptionOutput_) {
-                this->commitScalarBuffer_(baseWriter, "polymer adsorption", polymerAdsorption_);
+                this->commitScalarBuffer_(baseWriter, "polymer adsorption",
+                                          polymerAdsorption_, BufferType::Dof);
             }
 
             if (params_.polymerViscosityCorrectionOutput_) {
-                this->commitScalarBuffer_(baseWriter, "polymer viscosity correction", polymerViscosityCorrection_);
+                this->commitScalarBuffer_(baseWriter, "polymer viscosity correction",
+                                          polymerViscosityCorrection_, BufferType::Dof);
             }
 
             if (params_.waterViscosityCorrectionOutput_) {
-                this->commitScalarBuffer_(baseWriter, "water viscosity correction", waterViscosityCorrection_);
+                this->commitScalarBuffer_(baseWriter, "water viscosity correction",
+                                          waterViscosityCorrection_, BufferType::Dof);
             }
         }
     }

@@ -41,6 +41,11 @@
 #include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
 #include <cstdio>
 
 namespace Opm {
@@ -76,12 +81,13 @@ class VtkMultiPhaseModule : public BaseOutputModule<TypeTag>
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using DiscBaseOutputModule = GetPropType<TypeTag, Properties::DiscBaseOutputModule>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
     using VectorBuffer = typename ParentType::VectorBuffer;
     using TensorBuffer = typename ParentType::TensorBuffer;
@@ -113,39 +119,39 @@ public:
     void allocBuffers() override
     {
         if (params_.extrusionFactorOutput_) {
-            this->resizeScalarBuffer_(extrusionFactor_);
+            this->resizeScalarBuffer_(extrusionFactor_, BufferType::Dof);
         }
         if (params_.pressureOutput_) {
-            this->resizePhaseBuffer_(pressure_);
+            this->resizePhaseBuffer_(pressure_, BufferType::Dof);
         }
         if (params_.densityOutput_) {
-            this->resizePhaseBuffer_(density_);
+            this->resizePhaseBuffer_(density_, BufferType::Dof);
         }
         if (params_.saturationOutput_) {
-            this->resizePhaseBuffer_(saturation_);
+            this->resizePhaseBuffer_(saturation_, BufferType::Dof);
         }
         if (params_.mobilityOutput_) {
-            this->resizePhaseBuffer_(mobility_);
+            this->resizePhaseBuffer_(mobility_, BufferType::Dof);
         }
         if (params_.relativePermeabilityOutput_) {
-            this->resizePhaseBuffer_(relativePermeability_);
+            this->resizePhaseBuffer_(relativePermeability_, BufferType::Dof);
         }
         if (params_.viscosityOutput_) {
-            this->resizePhaseBuffer_(viscosity_);
+            this->resizePhaseBuffer_(viscosity_, BufferType::Dof);
         }
         if (params_.averageMolarMassOutput_) {
-            this->resizePhaseBuffer_(averageMolarMass_);
+            this->resizePhaseBuffer_(averageMolarMass_, BufferType::Dof);
         }
 
         if (params_.porosityOutput_) {
-            this->resizeScalarBuffer_(porosity_);
+            this->resizeScalarBuffer_(porosity_, BufferType::Dof);
         }
         if (params_.intrinsicPermeabilityOutput_) {
-            this->resizeTensorBuffer_(intrinsicPermeability_);
+            this->resizeTensorBuffer_(intrinsicPermeability_, BufferType::Dof);
         }
 
         if (params_.velocityOutput_) {
-            size_t nDof = this->simulator_.model().numGridDof();
+            const std::size_t nDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 velocity_[phaseIdx].resize(nDof);
                 for (unsigned dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
@@ -153,11 +159,11 @@ public:
                     velocity_[phaseIdx][dofIdx] = 0.0;
                 }
             }
-            this->resizePhaseBuffer_(velocityWeight_);
+            this->resizePhaseBuffer_(velocityWeight_, BufferType::Dof);
         }
 
         if (params_.potentialGradientOutput_) {
-            size_t nDof = this->simulator_.model().numGridDof();
+            const std::size_t nDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 potentialGradient_[phaseIdx].resize(nDof);
                 for (unsigned dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
@@ -166,7 +172,7 @@ public:
                 }
             }
 
-            this->resizePhaseBuffer_(potentialWeight_);
+            this->resizePhaseBuffer_(potentialWeight_, BufferType::Dof);
         }
     }
 
@@ -182,7 +188,7 @@ public:
 
         const auto& problem = elemCtx.problem();
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
@@ -232,21 +238,21 @@ public:
 
         if (params_.potentialGradientOutput_) {
             // calculate velocities if requested
-            for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ faceIdx) {
+            for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++faceIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, /*timeIdx=*/0);
 
-                unsigned i = extQuants.interiorIndex();
-                unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+                const unsigned i = extQuants.interiorIndex();
+                const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
 
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    Scalar weight = extQuants.extrusionFactor();
+                    const Scalar weight = extQuants.extrusionFactor();
 
                     potentialWeight_[phaseIdx][I] += weight;
 
                     const auto& inputPGrad = extQuants.potentialGrad(phaseIdx);
                     DimVector pGrad;
                     for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-                        pGrad[dimIdx] = getValue(inputPGrad[dimIdx])*weight;
+                        pGrad[dimIdx] = getValue(inputPGrad[dimIdx]) * weight;
                     }
                     potentialGradient_[phaseIdx][I] += pGrad;
                 } // end for all phases
@@ -255,18 +261,18 @@ public:
 
         if (params_.velocityOutput_) {
             // calculate velocities if requested
-            for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++ faceIdx) {
+            for (unsigned faceIdx = 0; faceIdx < elemCtx.numInteriorFaces(/*timeIdx=*/0); ++faceIdx) {
                 const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, /*timeIdx=*/0);
 
-                unsigned i = extQuants.interiorIndex();
-                unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+                const unsigned i = extQuants.interiorIndex();
+                const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
 
-                unsigned j = extQuants.exteriorIndex();
-                unsigned J = elemCtx.globalSpaceIndex(j, /*timeIdx=*/0);
+                const unsigned j = extQuants.exteriorIndex();
+                const unsigned J = elemCtx.globalSpaceIndex(j, /*timeIdx=*/0);
 
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    Scalar weight = std::max<Scalar>(1e-16,
-                                                     std::abs(getValue(extQuants.volumeFlux(phaseIdx))));
+                    Scalar weight = std::max(Scalar{1e-16},
+                                             std::abs(getValue(extQuants.volumeFlux(phaseIdx))));
                     Valgrind::CheckDefined(extQuants.extrusionFactor());
                     assert(extQuants.extrusionFactor() > 0);
                     weight *= extQuants.extrusionFactor();
@@ -296,46 +302,48 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
         if (params_.extrusionFactorOutput_) {
-            this->commitScalarBuffer_(baseWriter, "extrusionFactor", extrusionFactor_);
+            this->commitScalarBuffer_(baseWriter, "extrusionFactor",
+                                      extrusionFactor_, BufferType::Dof);
         }
         if (params_.pressureOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "pressure_%s", pressure_);
+            this->commitPhaseBuffer_(baseWriter, "pressure_%s", pressure_, BufferType::Dof);
         }
         if (params_.densityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "density_%s", density_);
+            this->commitPhaseBuffer_(baseWriter, "density_%s", density_, BufferType::Dof);
         }
         if (params_.saturationOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "saturation_%s", saturation_);
+            this->commitPhaseBuffer_(baseWriter, "saturation_%s", saturation_, BufferType::Dof);
         }
         if (params_.mobilityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "mobility_%s", mobility_);
+            this->commitPhaseBuffer_(baseWriter, "mobility_%s", mobility_, BufferType::Dof);
         }
         if (params_.relativePermeabilityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "relativePerm_%s", relativePermeability_);
+            this->commitPhaseBuffer_(baseWriter, "relativePerm_%s",
+                                     relativePermeability_, BufferType::Dof);
         }
         if (params_.viscosityOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "viscosity_%s", viscosity_);
+            this->commitPhaseBuffer_(baseWriter, "viscosity_%s", viscosity_, BufferType::Dof);
         }
         if (params_.averageMolarMassOutput_) {
-            this->commitPhaseBuffer_(baseWriter, "averageMolarMass_%s", averageMolarMass_);
+            this->commitPhaseBuffer_(baseWriter, "averageMolarMass_%s",
+                                     averageMolarMass_, BufferType::Dof);
         }
 
         if (params_.porosityOutput_) {
-            this->commitScalarBuffer_(baseWriter, "porosity", porosity_);
+            this->commitScalarBuffer_(baseWriter, "porosity", porosity_, BufferType::Dof);
         }
         if (params_.intrinsicPermeabilityOutput_) {
-            this->commitTensorBuffer_(baseWriter, "intrinsicPerm", intrinsicPermeability_);
+            this->commitTensorBuffer_(baseWriter, "intrinsicPerm",
+                                      intrinsicPermeability_, BufferType::Dof);
         }
 
         if (params_.velocityOutput_) {
-            size_t numDof = this->simulator_.model().numGridDof();
-
+            const std::size_t numDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 // first, divide the velocity field by the
                 // respective finite volume's surface area
@@ -351,8 +359,7 @@ public:
         }
 
         if (params_.potentialGradientOutput_) {
-            size_t numDof = this->simulator_.model().numGridDof();
-
+            const std::size_t numDof = this->simulator_.model().numGridDof();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 // first, divide the velocity field by the
                 // respective finite volume's surface area
@@ -378,7 +385,7 @@ public:
      * returning true here does not do any harm from the correctness perspective, but it
      * slows down writing the output fields.
      */
-    bool needExtensiveQuantities() const final
+    bool needExtensiveQuantities() const override
     {
         return params_.velocityOutput_ || params_.potentialGradientOutput_;
     }

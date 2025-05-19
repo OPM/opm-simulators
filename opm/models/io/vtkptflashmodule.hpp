@@ -63,9 +63,10 @@ class VtkPTFlashModule: public BaseOutputModule<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
+    using BufferType = typename ParentType::BufferType;
     using ComponentBuffer = typename ParentType::ComponentBuffer;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
@@ -91,10 +92,10 @@ public:
     void allocBuffers() override
     {
         if (params_.LOutput_) {
-            this->resizeScalarBuffer_(L_);
+            this->resizeScalarBuffer_(L_, BufferType::Dof);
         }
         if (params_.equilConstOutput_) {
-            this->resizeComponentBuffer_(K_);
+            this->resizeComponentBuffer_(K_, BufferType::Dof);
         }
     }
 
@@ -111,7 +112,7 @@ public:
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
@@ -132,16 +133,15 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        auto* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
         if (params_.equilConstOutput_) {
-            this->commitComponentBuffer_(baseWriter, "K^%s", K_);
+            this->commitComponentBuffer_(baseWriter, "K^%s", K_, BufferType::Dof);
         }
         if (params_.LOutput_) {
-            this->commitScalarBuffer_(baseWriter, "L", L_);
+            this->commitScalarBuffer_(baseWriter, "L", L_,  BufferType::Dof);
         }
     }
 

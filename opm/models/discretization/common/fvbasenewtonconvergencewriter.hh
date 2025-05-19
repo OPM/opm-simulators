@@ -68,7 +68,7 @@ class FvBaseNewtonConvergenceWriter
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
 
-    static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
@@ -135,7 +135,7 @@ public:
      *        Newton algorithm has been completed.
      */
     void endIteration()
-    { vtkMultiWriter_->endWrite(); }
+    { vtkMultiWriter_->endWrite(false); }
 
     /*!
      * \brief Called by the Newton method after Newton algorithm

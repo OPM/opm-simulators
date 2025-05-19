@@ -27,17 +27,17 @@
 #ifndef VTK_SCALAR_FUNCTION_HH
 #define VTK_SCALAR_FUNCTION_HH
 
-#include <opm/models/io/baseoutputwriter.hh>
-
-#include <dune/grid/io/file/vtk/function.hh>
-#include <dune/istl/bvector.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
+#include <dune/grid/io/file/vtk/function.hh>
 
-#include <limits>
+#include <dune/istl/bvector.hh>
+
+#include <opm/models/io/baseoutputwriter.hh>
+
 #include <stdexcept>
 #include <string>
-#include <vector>
+#include <string_view>
 
 namespace Opm {
 
@@ -55,7 +55,7 @@ class VtkScalarFunction : public Dune::VTKFunction<GridView>
     using ScalarBuffer = BaseOutputWriter::ScalarBuffer;
 
 public:
-    VtkScalarFunction(std::string name,
+    VtkScalarFunction(std::string_view name,
                       const GridView& gridView,
                       const Mapper& mapper,
                       const ScalarBuffer& buf,
@@ -67,15 +67,15 @@ public:
         , codim_(codim)
     { assert(int(buf_.size()) == int(mapper_.size())); }
 
-    virtual std::string name() const
+    std::string name() const override
     { return name_; }
 
-    virtual int ncomps() const
+    int ncomps() const override
     { return 1; }
 
-    virtual double evaluate(int,
-                            const Element& e,
-                            const Dune::FieldVector<ctype, dim>& xi) const
+    double evaluate(int,
+                    const Element& e,
+                    const Dune::FieldVector<ctype, dim>& xi) const override
     {
         unsigned idx;
         if (codim_ == 0) {
@@ -103,9 +103,10 @@ public:
             // map vertex to an index
             idx = static_cast<unsigned>(mapper_.subIndex(e, imin, codim_));
         }
-        else
+        else {
             throw std::logic_error("Only element and vertex based vector fields are"
                                    " supported so far.");
+        }
 
         return static_cast<double>(static_cast<float>(buf_[idx]));
     }

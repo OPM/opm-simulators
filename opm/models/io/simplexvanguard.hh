@@ -34,12 +34,14 @@
 #include <opm/models/io/basevanguard.hh>
 
 #include <opm/models/utils/basicproperties.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <array>
 #include <memory>
 
 namespace Opm {
+
 /*!
  * \brief Provides a simulator vanguard which a creates regular grid made of simplices.
  */
@@ -68,18 +70,18 @@ public:
         Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
-        Parameters::Register<Parameters::DomainSizeX>
+        Parameters::Register<Parameters::DomainSizeX<Scalar>>
             ("The size of the domain in x direction");
         Parameters::Register<Parameters::CellsX>
             ("The number of intervalls in x direction");
         if (dimWorld > 1) {
-            Parameters::Register<Parameters::DomainSizeY>
+            Parameters::Register<Parameters::DomainSizeY<Scalar>>
                 ("The size of the domain in y direction");
             Parameters::Register<Parameters::CellsY>
                 ("The number of intervalls in y direction");
         }
         if constexpr (dim > 2) {
-            Parameters::Register<Parameters::DomainSizeZ>
+            Parameters::Register<Parameters::DomainSizeZ<Scalar>>
                 ("The size of the domain in z direction");
             Parameters::Register<Parameters::CellsZ>
                 ("The number of intervalls in z direction");
@@ -89,24 +91,24 @@ public:
     /*!
      * \brief Create the Grid
      */
-    SimplexGridVanguard(Simulator& simulator)
+    explicit SimplexGridVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        Dune::array<unsigned, dim> cellRes;
+        std::array<unsigned, dim> cellRes{};
         GlobalPosition upperRight;
         GlobalPosition lowerLeft;
 
         lowerLeft[0] = 0.0;
-        upperRight[0] = Parameters::Get<Parameters::DomainSizeX>();
+        upperRight[0] = Parameters::Get<Parameters::DomainSizeX<Scalar>>();
         cellRes[0] = Parameters::Get<Parameters::CellsX>();
         if constexpr (dim > 1) {
             lowerLeft[1] = 0.0;
-            upperRight[1] = Parameters::Get<Parameters::DomainSizeY>();
+            upperRight[1] = Parameters::Get<Parameters::DomainSizeY<Scalar>>();
             cellRes[1] = Parameters::Get<Parameters::CellsY>();
         }
         if constexpr (dim > 2) {
             lowerLeft[2] = 0.0;
-            upperRight[2] = Parameters::Get<Parameters::DomainSizeZ>();
+            upperRight[2] = Parameters::Get<Parameters::DomainSizeZ<Scalar>>();
             cellRes[2] = Parameters::Get<Parameters::CellsZ>();
         }
 
@@ -114,7 +116,7 @@ public:
                                                                             upperRight,
                                                                             cellRes);
 
-        unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
+        const unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
         simplexGrid_->globalRefine(numRefinments);
 
         this->finalizeInit_();
@@ -135,6 +137,7 @@ public:
 private:
     GridPointer simplexGrid_;
 };
+
 } // namespace Opm
 
 #endif

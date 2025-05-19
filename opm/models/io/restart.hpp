@@ -27,10 +27,14 @@
 #ifndef OPM_RESTART_HPP
 #define OPM_RESTART_HPP
 
-#include <string>
+#include <dune/geometry/dimension.hh>
+#include <dune/grid/common/rangegenerators.hh>
+
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
+#include <string>
 
 namespace Opm {
 
@@ -49,11 +53,11 @@ class Restart
         static const std::string gridName = "blubb"; // gridView.grid().name();
         static const int dim = GridView::dimension;
 
-        int numVertices = gridView.size(dim);
-        int numElements = gridView.size(0);
-        int numEdges = gridView.size(dim - 1);
-        int numCPUs = gridView.comm().size();
-        int rank = gridView.comm().rank();
+        const int numVertices = gridView.size(dim);
+        const int numElements = gridView.size(0);
+        const int numEdges = gridView.size(dim - 1);
+        const int numCPUs = gridView.comm().size();
+        const int rank = gridView.comm().rank();
 
         std::ostringstream oss;
         oss << "eWoms restart file: "
@@ -120,18 +124,10 @@ public:
     template <int codim, class Serializer, class GridView>
     void serializeEntities(Serializer& serializer, const GridView& gridView)
     {
-        std::ostringstream oss;
-        oss << "Entities: Codim " << codim;
-        std::string cookie = oss.str();
-        serializeSectionBegin(cookie);
+        serializeSectionBegin("Entities: Codim " + std::to_string(codim));
 
-        // write element data
-        using Iterator = typename GridView::template Codim<codim>::Iterator;
-
-        Iterator it = gridView.template begin<codim>();
-        const Iterator& endIt = gridView.template end<codim>();
-        for (; it != endIt; ++it) {
-            serializer.serializeEntity(outStream_, *it);
+        for (const auto& entity : entities(gridView, Dune::Codim<codim>())) {
+            serializer.serializeEntity(outStream_, entity);
             outStream_ << "\n";
         }
 
@@ -181,25 +177,19 @@ public:
     template <int codim, class Deserializer, class GridView>
     void deserializeEntities(Deserializer& deserializer, const GridView& gridView)
     {
-        std::ostringstream oss;
-        oss << "Entities: Codim " << codim;
-        std::string cookie = oss.str();
-        deserializeSectionBegin(cookie);
+        deserializeSectionBegin("Entities: Codim " + std::to_string(codim));
 
         std::string curLine;
 
         // read entity data
-        using Iterator = typename GridView::template Codim<codim>::Iterator;
-        Iterator it = gridView.template begin<codim>();
-        const Iterator& endIt = gridView.template end<codim>();
-        for (; it != endIt; ++it) {
+        for (const auto& entity : entities(gridView, Dune::Codim<codim>())) {
             if (!inStream_.good()) {
                 throw std::runtime_error("Restart file is corrupted");
             }
 
             std::getline(inStream_, curLine);
             std::istringstream curLineStream(curLine);
-            deserializer.deserializeEntity(curLineStream, *it);
+            deserializer.deserializeEntity(curLineStream, entity);
         }
 
         deserializeSectionEnd();

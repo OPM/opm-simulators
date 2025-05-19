@@ -29,15 +29,15 @@
 
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 #include <dune/grid/common/mcmgmapper.hh>
-#include <opm/models/discretefracture/fracturemapper.hh>
 
+#include <opm/models/discretefracture/fracturemapper.hh>
 #include <opm/models/io/basevanguard.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hpp>
 
-
-#include <type_traits>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -54,7 +54,7 @@ class DgfVanguard : public BaseVanguard<TypeTag>
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using FractureMapper = Opm::FractureMapper<TypeTag>;
 
-    using GridPointer = std::unique_ptr< Grid >;
+    using GridPointer = std::unique_ptr<Grid>;
 
 public:
     /*!
@@ -76,21 +76,22 @@ public:
         : ParentType(simulator)
     {
         const std::string dgfFileName = Parameters::Get<Parameters::GridFile>();
-        unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
+        const unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
 
         {
             // create DGF GridPtr from a dgf file
-            Dune::GridPtr< Grid > dgfPointer( dgfFileName );
+            Dune::GridPtr<Grid> dgfPointer(dgfFileName);
 
             // this is only implemented for 2d currently
-            addFractures_( dgfPointer );
+            addFractures_(dgfPointer);
 
             // store pointer to dune grid
-            gridPtr_.reset( dgfPointer.release() );
+            gridPtr_.reset(dgfPointer.release());
         }
 
-        if (numRefinments > 0)
+        if (numRefinments > 0) {
             gridPtr_->globalRefine(static_cast<int>(numRefinments));
+        }
 
         this->finalizeInit_();
     }
@@ -139,8 +140,9 @@ protected:
         using LevelGridView = typename Grid::LevelGridView;
 
         // check if fractures are available (only 2d currently)
-        if (dgfPointer.nofParameters(static_cast<int>(Grid::dimension)) == 0)
+        if (dgfPointer.nofParameters(static_cast<int>(Grid::dimension)) == 0) {
             return;
+        }
 
         LevelGridView gridView = dgfPointer->levelGridView(/*level=*/0);
         const unsigned edgeCodim = Grid::dimension - 1;
@@ -149,14 +151,11 @@ protected:
         VertexMapper vertexMapper(gridView, Dune::mcmgVertexLayout());
 
         // first create a map of the dune to ART vertex indices
-        auto eIt = gridView.template begin</*codim=*/0>();
-        const auto eEndIt = gridView.template end</*codim=*/0>();
-        for (; eIt != eEndIt; ++eIt) {
-            const auto& element = *eIt;
+        for (const auto& element: elements(gridView)) {
             const auto& refElem =
                 Dune::ReferenceElements<Scalar, Grid::dimension>::general(element.type());
 
-            const int edges = refElem.size( edgeCodim );
+            const int edges = refElem.size(edgeCodim);
             for (int edge = 0; edge < edges; ++edge) {
                 const int vertices = refElem.size(edge, edgeCodim, Grid::dimension);
                 std::vector<unsigned> vertexIndices;
@@ -169,15 +168,17 @@ protected:
                     const auto vertex = element.template subEntity<Grid::dimension>(localVx);
 
                     // if vertex has parameter 1 insert as a fracture vertex
-                    if (dgfPointer.parameters( vertex )[ 0 ] > 0)
+                    if (dgfPointer.parameters(vertex)[0] > 0) {
                         vertexIndices.push_back(
                             static_cast<unsigned>(vertexMapper.subIndex(element,
                                                                         static_cast<int>(localVx),
                                                                         Grid::dimension)));
+                    }
                 }
                 // if 2 vertices have been found with flag 1 insert a fracture edge
-                if (static_cast<int>(vertexIndices.size()) == Grid::dimension)
+                if (static_cast<int>(vertexIndices.size()) == Grid::dimension) {
                     fractureMapper_.addFractureEdge(vertexIndices[0], vertexIndices[1]);
+                }
             }
         }
     }

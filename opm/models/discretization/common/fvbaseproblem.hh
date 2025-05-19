@@ -71,7 +71,7 @@ private:
     using Implementation = GetPropType<TypeTag, Properties::Problem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static constexpr int vtkOutputFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkOutputFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkOutputFormat>;
 
     using Model = GetPropType<TypeTag, Properties::Model>;
@@ -791,7 +791,7 @@ public:
         defaultVtkWriter_->beginWrite(t);
         model().prepareOutputFields();
         model().appendOutputFields(*defaultVtkWriter_);
-        defaultVtkWriter_->endWrite();
+        defaultVtkWriter_->endWrite(false);
     }
 
     /*!

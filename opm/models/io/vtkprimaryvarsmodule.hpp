@@ -52,9 +52,10 @@ class VtkPrimaryVarsModule : public BaseOutputModule<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    static constexpr auto vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
+    using BufferType = typename ParentType::BufferType;
     using ScalarBuffer = typename ParentType::ScalarBuffer;
     using EqBuffer = typename ParentType::EqBuffer;
 
@@ -82,14 +83,14 @@ public:
     void allocBuffers() override
     {
         if (params_.primaryVarsOutput_) {
-            this->resizeEqBuffer_(primaryVars_);
+            this->resizeEqBuffer_(primaryVars_, BufferType::Dof);
         }
         if (params_.processRankOutput_) {
             this->resizeScalarBuffer_(processRank_,
-                                      /*bufferType=*/ParentType::ElementBuffer);
+                                      /*bufferType=*/BufferType::Element);
         }
         if (params_.dofIndexOutput_) {
-            this->resizeScalarBuffer_(dofIndex_);
+            this->resizeScalarBuffer_(dofIndex_, BufferType::Dof);
         }
     }
 
@@ -104,13 +105,13 @@ public:
         }
 
         const auto& elementMapper = elemCtx.model().elementMapper();
-        unsigned elemIdx = static_cast<unsigned>(elementMapper.index(elemCtx.element()));
+        const unsigned elemIdx = static_cast<unsigned>(elementMapper.index(elemCtx.element()));
         if (params_.processRankOutput_ && !processRank_.empty()) {
             processRank_[elemIdx] = static_cast<unsigned>(this->simulator_.gridView().comm().rank());
         }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
-            unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
+            const unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& priVars = elemCtx.primaryVars(i, /*timeIdx=*/0);
 
             if (params_.dofIndexOutput_) {
@@ -130,22 +131,21 @@ public:
      */
     void commitBuffers(BaseOutputWriter& baseWriter) override
     {
-        VtkMultiWriter* vtkWriter = dynamic_cast<VtkMultiWriter*>(&baseWriter);
-        if (!vtkWriter) {
+        if (!dynamic_cast<VtkMultiWriter*>(&baseWriter)) {
             return;
         }
 
         if (params_.primaryVarsOutput_) {
-            this->commitPriVarsBuffer_(baseWriter, "PV_%s", primaryVars_);
+            this->commitPriVarsBuffer_(baseWriter, "PV_%s", primaryVars_, BufferType::Dof);
         }
         if (params_.processRankOutput_) {
             this->commitScalarBuffer_(baseWriter,
                                       "process rank",
                                       processRank_,
-                                      /*bufferType=*/ParentType::ElementBuffer);
+                                      /*bufferType=*/BufferType::Element);
         }
         if (params_.dofIndexOutput_) {
-            this->commitScalarBuffer_(baseWriter, "DOF index", dofIndex_);
+            this->commitScalarBuffer_(baseWriter, "DOF index", dofIndex_, BufferType::Dof);
         }
     }
 
