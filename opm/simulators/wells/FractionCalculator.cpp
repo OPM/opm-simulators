@@ -85,16 +85,18 @@ localFraction(const std::string& name,
 
     // the group/well "name" is the only active group/well we therefore return 1 as the fraction
     // even though my_guide_rate may be zero
-    if (num_active_groups == 1)
+    if (num_active_groups <= 1)
         return 1.0;
 
     if (total_guide_rate == 0 ) {
-        std::cout << name << "total_guide_rate is zero " << my_guide_rate << std::endl;
+        std::cout << name << "total_guide_rate is zero " << my_guide_rate << " " << num_active_groups << " " << always_included_child <<  std::endl;
         // if the total guide rate is zero (for instance due to netv = 0) we use the potentials
         // to distribute the group rate
         always_use_potentials = true;
+
         const Scalar my_pot = guideRate(name, always_included_child, always_use_potentials);
         const Scalar my_total_pot = guideRateSum(parent_group, always_included_child, always_use_potentials).first;
+        std::cout << my_pot << " " << my_total_pot << std::endl;
         return my_pot / my_total_pot;
     }
     return my_guide_rate / total_guide_rate;
@@ -121,14 +123,14 @@ guideRateSum(const Group& group,
     if (true)
     {
         const auto& gs_rates = is_producer_? this->group_state_.prod_guide_rates(group.name()) : this->group_state_.inj_guide_rates(group.name(), injection_phase_);
-        const auto& group_cont_wells = is_producer_? this->group_state_.number_of_wells_under_this_control(group.name()) : this->group_state_.number_of_wells_under_this_inj_control(group.name(), injection_phase_) ;
+        auto group_cont_wells = is_producer_? this->group_state_.number_of_wells_under_this_control(group.name()) : this->group_state_.number_of_wells_under_this_inj_control(group.name(), injection_phase_) ;
         const auto& next_subgroup_with_guiderate = is_producer_? this->group_state_.sub_group_with_guiderate(group.name()) : this->group_state_.sub_group_inj_with_guiderate(group.name(), injection_phase_);
         double child_rate = 0.0;
         bool isWell = schedule_.hasWell(always_included_child, report_step_);
         //std::cout << is_producer_ << " " << always_included_child << " " << group.name() << " " << hasWell << " " << always_use_potentials << std::endl;
         if (isWell) {
-            bool already_included = is_producer_? !well_state_.isProductionGrup(always_included_child) : !well_state_.isInjectionGrup(always_included_child);
-            if (already_included) {
+            bool already_included = is_producer_? well_state_.isProductionGrup(always_included_child) : well_state_.isInjectionGrup(always_included_child);
+            if (!already_included) {
                 //const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(always_included_child, group.name(), schedule_, report_step_);
                 if (group_cont_wells > 0)
                     child_rate = guideRate(always_included_child, always_included_child, always_use_potentials);
@@ -137,28 +139,21 @@ guideRateSum(const Group& group,
                     bool stop = false;
                     auto gr_name = well.groupName();
                     while (!stop) {
-                        //std::cout << "iterate " <<gr_name << std::endl;
                         auto it = std::find(next_subgroup_with_guiderate.begin(), next_subgroup_with_guiderate.end(), gr_name);
                         if (it != next_subgroup_with_guiderate.end()) {
-                            //std::cout << "found it " << gr_name << std::endl;
                             child_rate = guideRate(gr_name, always_included_child, always_use_potentials);
                             break;
                         }
-                        
                         const auto& group2 = schedule_.getGroup(gr_name, report_step_);
-                        gr_name = group2.parent();
                         if (gr_name == group.name())
                             stop = true;
+                        
+                        gr_name = group2.parent();
                     }
                 }
+            } else {
+                group_cont_wells++;    
             }
-            //else if (next_subgroup_with_guiderate != ""){
-                //child_rate = guideRate(next_subgroup_with_guiderate, always_included_child, always_use_potentials);
-                //std::cout << "subguiderate " << next_subgroup_with_guiderate << " " << child_rate << std::endl;
-                //guide_rate_->has(well.groupName());
-                //guide_rate_->get(name, target_, getGroupRateVector(name));
-                //child_rate = guideRate(group., always_included_child, always_use_potentials);
-            //}
         }
         return {gs_rates + child_rate, group_cont_wells};
     }
