@@ -357,7 +357,7 @@ public:
         if (Opm::abs(pressure_difference_convective_mixing) > 1e-12) {
             // find new upstream direction
             short interiorDofIdx = 0;
-            short exteriorDofIdx = 1;
+            constexpr short exteriorDofIdx = 1;
             short upIdx = 0;
 
             if (pressure_difference_convective_mixing > 0) {
