@@ -41,6 +41,8 @@
 #include <opm/models/flash/flashparameters.hh>
 #include <opm/models/flash/flashproperties.hh>
 
+#include <array>
+
 namespace Opm {
 
 /*!
@@ -83,15 +85,14 @@ class FlashIntensiveQuantities
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
-    using DiffusionIntensiveQuantities = Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
-    using EnergyIntensiveQuantities = Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
+    using DiffusionIntensiveQuantities = ::Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using EnergyIntensiveQuantities = ::Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     //! The type of the object returned by the fluidState() method
-    using FluidState = Opm::CompositionalFluidState<Evaluation, FluidSystem, enableEnergy>;
+    using FluidState = CompositionalFluidState<Evaluation, FluidSystem, enableEnergy>;
 
-    FlashIntensiveQuantities()
-    { }
+    FlashIntensiveQuantities() = default;
 
     FlashIntensiveQuantities(const FlashIntensiveQuantities& other) = default;
 
@@ -107,24 +108,26 @@ public:
 
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
-        Scalar flashTolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
+        const Scalar flashTolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
 
         // extract the total molar densities of the components
         ComponentVector cTotal;
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             cTotal[compIdx] = priVars.makeEvaluation(cTot0Idx + compIdx, timeIdx);
+        }
 
-        const auto *hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
+        const auto* hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
         if (hint) {
             // use the same fluid state as the one of the hint, but
             // make sure that we don't overwrite the temperature
             // specified by the primary variables
-            Evaluation T = fluidState_.temperature(/*phaseIdx=*/0);
+            const Evaluation T = fluidState_.temperature(/*phaseIdx=*/0);
             fluidState_.assign(hint->fluidState());
             fluidState_.setTemperature(T);
         }
-        else
+        else {
             FlashSolver::guessInitial(fluidState_, cTotal);
+        }
 
         // compute the phase compositions, densities and pressures
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
@@ -139,7 +142,7 @@ public:
         // calculate relative permeabilities
         MaterialLaw::relativePermeabilities(relativePermeability_,
                                             materialParams, fluidState_);
-        Opm::Valgrind::CheckDefined(relativePermeability_);
+        Valgrind::CheckDefined(relativePermeability_);
 
         // set the phase viscosities
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -149,7 +152,7 @@ public:
             fluidState_.setViscosity(phaseIdx, mu);
 
             mobility_[phaseIdx] = relativePermeability_[phaseIdx] / mu;
-            Opm::Valgrind::CheckDefined(mobility_[phaseIdx]);
+            Valgrind::CheckDefined(mobility_[phaseIdx]);
         }
 
         /////////////
@@ -158,7 +161,7 @@ public:
 
         // porosity
         porosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(porosity_);
+        Valgrind::CheckDefined(porosity_);
 
         // intrinsic permeability
         intrinsicPerm_ = problem.intrinsicPermeability(elemCtx, dofIdx, timeIdx);
@@ -195,9 +198,7 @@ public:
      * \copydoc ImmiscibleIntensiveQuantities::mobility
      */
     const Evaluation& mobility(unsigned phaseIdx) const
-    {
-        return mobility_[phaseIdx];
-    }
+    { return mobility_[phaseIdx]; }
 
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::porosity

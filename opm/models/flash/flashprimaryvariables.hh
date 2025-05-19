@@ -28,10 +28,11 @@
 #ifndef EWOMS_FLASH_PRIMARY_VARIABLES_HH
 #define EWOMS_FLASH_PRIMARY_VARIABLES_HH
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <iostream>
 
@@ -63,12 +64,13 @@ class FlashPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    using Toolbox = typename Opm::MathToolbox<Evaluation>;
-    using EnergyModule = Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
+    using Toolbox = MathToolbox<Evaluation>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
 
 public:
-    FlashPrimaryVariables() : ParentType()
-    { Opm::Valgrind::SetDefined(*this); }
+    FlashPrimaryVariables()
+        : ParentType()
+    { Valgrind::SetDefined(*this); }
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
@@ -113,7 +115,7 @@ public:
         // determine the phase presence.
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                this->operator[](cTot0Idx + compIdx) +=
+                (*this)[cTot0Idx + compIdx] +=
                     fluidState.molarity(phaseIdx, compIdx) * fluidState.saturation(phaseIdx);
             }
         }
@@ -128,7 +130,7 @@ public:
     {
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             os << "(c_tot," << FluidSystem::componentName(compIdx) << " = "
-               << this->operator[](cTot0Idx + compIdx);
+               << (*this)[cTot0Idx + compIdx];
         }
         os << ")" << std::flush;
     }

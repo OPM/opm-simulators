@@ -52,67 +52,86 @@
 #include <opm/models/io/vtkdiffusionmodule.hpp>
 #include <opm/models/io/vtkenergymodule.hpp>
 
+#include <cassert>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <tuple>
 
 namespace Opm {
+
 template <class TypeTag>
 class FlashModel;
+
 }
 
 namespace Opm::Properties {
 
 namespace TTag {
+
 //! The type tag for the isothermal single phase problems
-struct FlashModel { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
+struct FlashModel
+{ using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
+
 } // namespace TTag
 
 //! Use the FlashLocalResidual function for the flash model
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlashModel> { using type = Opm::FlashLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlashModel>
+{ using type = FlashLocalResidual<TypeTag>; };
 
 //! Use the NCP flash solver by default
 template<class TypeTag>
 struct FlashSolver<TypeTag, TTag::FlashModel>
-{ using type = Opm::NcpFlash<GetPropType<TypeTag, Properties::Scalar>,
-                             GetPropType<TypeTag, Properties::FluidSystem>>; };
+{
+    using type = NcpFlash<GetPropType<TypeTag, Properties::Scalar>,
+                          GetPropType<TypeTag, Properties::FluidSystem>>;
+};
 
 //! the Model property
 template<class TypeTag>
-struct Model<TypeTag, TTag::FlashModel> { using type = Opm::FlashModel<TypeTag>; };
+struct Model<TypeTag, TTag::FlashModel>
+{ using type = FlashModel<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::FlashModel> { using type = Opm::FlashPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::FlashModel>
+{ using type = FlashPrimaryVariables<TypeTag>; };
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::FlashModel> { using type = Opm::FlashRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::FlashModel>
+{ using type = FlashRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::FlashModel> { using type = Opm::FlashBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::FlashModel>
+{ using type = FlashBoundaryRateVector<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::FlashModel> { using type = Opm::FlashIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::FlashModel>
+{ using type = FlashIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::FlashModel> { using type = Opm::FlashExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::FlashModel>
+{ using type = FlashExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the flash-baseed isothermal compositional model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::FlashModel> { using type = Opm::FlashIndices<TypeTag, /*PVIdx=*/0>; };
+struct Indices<TypeTag, TTag::FlashModel>
+{ using type = FlashIndices<TypeTag, /*PVIdx=*/0>; };
 
 // disable molecular diffusion by default
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlashModel> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::FlashModel>
+{ static constexpr bool value = false; };
 
 //! Disable the energy equation by default
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlashModel> { static constexpr bool value = false; };
+struct EnableEnergy<TypeTag, TTag::FlashModel>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
@@ -193,8 +212,7 @@ class FlashModel
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-
-    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = ::Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     explicit FlashModel(Simulator& simulator)
@@ -209,13 +227,15 @@ public:
         ParentType::registerParameters();
 
         // register runtime parameters of the VTK output modules
-        Opm::VtkCompositionModule<TypeTag>::registerParameters();
+        VtkCompositionModule<TypeTag>::registerParameters();
 
-        if (enableDiffusion)
-            Opm::VtkDiffusionModule<TypeTag>::registerParameters();
+        if constexpr (enableDiffusion) {
+            VtkDiffusionModule<TypeTag>::registerParameters();
+        }
 
-        if (enableEnergy)
-            Opm::VtkEnergyModule<TypeTag>::registerParameters();
+        if constexpr (enableEnergy) {
+            VtkEnergyModule<TypeTag>::registerParameters();
+        }
 
         Parameters::Register<Parameters::FlashTolerance<Scalar>>
             ("The maximum tolerance for the flash solver to "
@@ -243,18 +263,19 @@ public:
     std::string primaryVarName(unsigned pvIdx) const
     {
         const std::string& tmp = EnergyModule::primaryVarName(pvIdx);
-        if (tmp != "")
+        if (!tmp.empty()) {
             return tmp;
+        }
 
-        std::ostringstream oss;
-        if (Indices::cTot0Idx <= pvIdx && pvIdx < Indices::cTot0Idx
-                                                  + numComponents)
-            oss << "c_tot," << FluidSystem::componentName(/*compIdx=*/pvIdx
-                                                          - Indices::cTot0Idx);
-        else
+        if (Indices::cTot0Idx <= pvIdx && pvIdx < Indices::cTot0Idx + numComponents) {
+            std::ostringstream oss;
+            oss << "c_tot," << FluidSystem::componentName(/*compIdx=*/pvIdx - Indices::cTot0Idx);
+            return oss.str();
+        }
+        else {
             assert(false);
-
-        return oss.str();
+            return "";
+        }
     }
 
     /*!
@@ -263,19 +284,20 @@ public:
     std::string eqName(unsigned eqIdx) const
     {
         const std::string& tmp = EnergyModule::eqName(eqIdx);
-        if (tmp != "")
+        if (!tmp.empty()) {
             return tmp;
-
-        std::ostringstream oss;
-        if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx
-                                                     + numComponents) {
-            unsigned compIdx = eqIdx - Indices::conti0EqIdx;
-            oss << "continuity^" << FluidSystem::componentName(compIdx);
         }
-        else
-            assert(false);
 
-        return oss.str();
+        if (Indices::conti0EqIdx <= eqIdx && eqIdx < Indices::conti0EqIdx + numComponents) {
+            const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+            std::ostringstream oss;
+            oss << "continuity^" << FluidSystem::componentName(compIdx);
+            return oss.str();
+        }
+        else {
+            assert(false);
+            return "";
+        }
     }
 
     /*!
@@ -283,11 +305,12 @@ public:
      */
     Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
     {
-        Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
-        if (tmp > 0)
+        const Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
+        if (tmp > 0) {
             return tmp;
+        }
 
-        unsigned compIdx = pvIdx - Indices::cTot0Idx;
+        const unsigned compIdx = pvIdx - Indices::cTot0Idx;
 
         // make all kg equal. also, divide the weight of all total
         // compositions by 100 to make the relative errors more
@@ -302,11 +325,12 @@ public:
      */
     Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
     {
-        Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
-        if (tmp > 0)
+        const Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
+        if (tmp > 0) {
             return tmp;
+        }
 
-        unsigned compIdx = eqIdx - Indices::conti0EqIdx;
+        const unsigned compIdx = eqIdx - Indices::conti0EqIdx;
 
         // make all kg equal
         return FluidSystem::molarMass(compIdx);
@@ -318,10 +342,12 @@ public:
 
         // add the VTK output modules which are meaningful for the model
         this->addOutputModule(std::make_unique<VtkCompositionModule<TypeTag>>(this->simulator_));
-        if (enableDiffusion)
+        if constexpr (enableDiffusion) {
             this->addOutputModule(std::make_unique<VtkDiffusionModule<TypeTag>>(this->simulator_));
-        if (enableEnergy)
+        }
+        if constexpr (enableEnergy) {
             this->addOutputModule(std::make_unique<VtkEnergyModule<TypeTag>>(this->simulator_));
+        }
     }
 };
 
