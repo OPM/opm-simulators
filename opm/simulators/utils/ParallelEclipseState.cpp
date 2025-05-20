@@ -91,6 +91,8 @@ std::vector<double> ParallelFieldPropsManager::porv(bool global) const
     for (int i = 0; i < m_activeSize(); ++i)
     {
         local_porv[i] = global_porv[this->m_local2Global(i)];
+         std::cout<< "local_porc[i] " <<  local_porv[i] <<  " global_porc[this->m_local2Global(i)]: " <<
+                    global_porv[this->m_local2Global(i)] << " i: " << i << std::endl;
     }
     return local_porv;
 }
