@@ -1847,7 +1847,7 @@ getCellsForConnections(const Well& well) const
     for (const auto& connection : connectionSet)
     {
         int compressed_idx = well.is_lgr_well()
-            ? this->compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)    
+            ? compressedIndexForInteriorLGR(well.get_lgr_well_tag().value(), connection)    
             : this->compressedIndexForInterior(connection.global_index());     
         
         if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.

@@ -341,13 +341,9 @@ template<class Scalar> class WellContributions;
                 return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
             }
 
-            int compressedIndexForInteriorLGR(std::string lgr_tag, const Connection& conn) const override
+            int compressedIndexForInteriorLGR(const std::string& lgr_tag, const Connection& conn) const override
             {
-                const std::array<int,3> lgr_ijk = {conn.getI(), conn.getJ(), conn.getK()};
-                const auto& lgr_level = grid().getLgrNameToLevel().at(lgr_tag);
-                const auto& lgr_dim = grid().currentData()[lgr_level]->logicalCartesianSize();
-                const auto lgr_cartesian_index = (lgr_ijk[2]*lgr_dim[0]*lgr_dim[1]) + (lgr_ijk[1]*lgr_dim[0]) + (lgr_ijk[0]);
-                return grid().mapLocalCartesianIndexSetsToLeafIndexSet()[lgr_level][lgr_cartesian_index];
+                return simulator_.vanguard().compressedIndexForInteriorLGR(lgr_tag, conn);
             }            
 
             // using the solution x to recover the solution xw for wells and applying

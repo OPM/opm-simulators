@@ -117,6 +117,14 @@ public:
         this->callImplementationInit();
     }
 
+    int compressedIndexForInteriorLGR(std::string lgr_tag, const Connection& conn) const override
+    {
+        const std::array<int,3> lgr_ijk = {conn.getI(), conn.getJ(), conn.getK()};
+        const auto& lgr_level = this->grid().getLgrNameToLevel().at(lgr_tag);
+        const auto& lgr_dim = this->grid().currentData()[lgr_level]->logicalCartesianSize();
+        const auto lgr_cartesian_index = (lgr_ijk[2]*lgr_dim[0]*lgr_dim[1]) + (lgr_ijk[1]*lgr_dim[0]) + (lgr_ijk[0]);
+        return this->grid().mapLocalCartesianIndexSetsToLeafIndexSet()[lgr_level][lgr_cartesian_index];
+    }   
     /*!
      * Checking consistency of simulator
      */

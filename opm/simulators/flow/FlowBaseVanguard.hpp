@@ -204,6 +204,13 @@ public:
             return index_pair->second;
         }
     }
+
+
+    virtual int compressedIndexForInteriorLGR([[maybe_unused]] std::string lgr_tag, [[maybe_unused]] const Connection& conn) const
+    {
+        throw std::invalid_argument("compressedIndexForInteriorLGR is not implemented");
+    }
+
     /*!
      * \brief Extract Cartesian index triplet (i,j,k) of an active cell.
      *
