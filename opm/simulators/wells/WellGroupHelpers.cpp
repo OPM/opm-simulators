@@ -1148,6 +1148,8 @@ updateGuideRate(const std::string& name,
         if (wellTmp.getStatus() == Well::Status::SHUT)
             continue;
 
+        number_of_wells_under_this_group_control++;
+
         //std::cout << "hello " << wellName << " " << updateGuideRate(wellName, schedule, wellState, group_state,
         //    reportStepIdx, guideRate, target, number_of_wells_under_this_group_control, next_sub_group_with_guide_rate, pu) << std::endl;
         // Only count wells under group control or the ru
@@ -1156,7 +1158,6 @@ updateGuideRate(const std::string& name,
         if (!is_production_group && !wellState.isInjectionGrup(wellName))
             continue;
 
-        number_of_wells_under_this_group_control++;
 
         //if (wellState.well(wellName).production_cmode != Well::ProducerCMode::GRUP)
         //    continue;
@@ -1187,7 +1188,7 @@ updateGuideRate(const std::string& name,
         else if (!is_production_group && guideRate.has(name,injection_phase))
             guiderate = guideRate.get(name, injection_phase);
 
-        //std::cout << "has guide rate " << name << " " << totalGuideRate << " " << number_of_wells_under_this_group_control << std::endl;
+        std::cout << "has guide rate " << name << " " << totalGuideRate << " " << number_of_wells_under_this_group_control << std::endl;
         //std::cout << "setup " << name << " " <<totalGuideRate << " " << number_of_wells_under_this_group_control << " " << std::endl;
 
         number_of_wells_under_this_group_control = 0;
