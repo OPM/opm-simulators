@@ -1088,8 +1088,9 @@ updateGuideRate(const std::string& name,
                 const Phase injection_phase,
                 const PhaseUsage& pu)
 {
-    if (schedule.hasWell(name, reportStepIdx)) {
-        if (guideRate.has(name) || guideRate.hasPotentials(name)) {
+    if (schedule.hasWell(name, reportStepIdx)) { 
+        // if NONE there is no group controls
+        if (target != GuideRateModel::Target::NONE && (guideRate.has(name) || guideRate.hasPotentials(name))) {
             return guideRate.get(name, target, getWellRateVector(wellState, pu, name));
         } else {
             //std::cout << name << "what " << std::endl;
@@ -1132,7 +1133,7 @@ updateGuideRate(const std::string& name,
             //std::cout << name << " dont accumualte? " << groupName << std::endl;
             std::vector<std::string> next_sub_group_with_guide_rate2;
             updateGuideRate(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, 
-                number_of_wells_under_this_group_control, next_sub_group_with_guide_rate2, is_production_group, injection_phase, pu);
+                number_of_wells_under_this_group_control2, next_sub_group_with_guide_rate2, is_production_group, injection_phase, pu);
         }
     }
 
@@ -1148,8 +1149,6 @@ updateGuideRate(const std::string& name,
         if (wellTmp.getStatus() == Well::Status::SHUT)
             continue;
 
-        number_of_wells_under_this_group_control++;
-
         //std::cout << "hello " << wellName << " " << updateGuideRate(wellName, schedule, wellState, group_state,
         //    reportStepIdx, guideRate, target, number_of_wells_under_this_group_control, next_sub_group_with_guide_rate, pu) << std::endl;
         // Only count wells under group control or the ru
@@ -1158,7 +1157,7 @@ updateGuideRate(const std::string& name,
         if (!is_production_group && !wellState.isInjectionGrup(wellName))
             continue;
 
-
+        number_of_wells_under_this_group_control++;
         //if (wellState.well(wellName).production_cmode != Well::ProducerCMode::GRUP)
         //    continue;
         //if ((ws.production_cmode != Well::ProducerCMode::GRUP)){
