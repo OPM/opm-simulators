@@ -159,5 +159,3 @@ private:
 }
 
 #endif // OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED
-
-#include "StandardWellEquations.cpp" // TODO: will do instantiation after removing the numEq template parameter
