@@ -427,7 +427,7 @@ public:
             return EnergyModule::primaryVarName(pvIdx);
         }
         else {
-            assert(false);
+            throw std::logic_error("Invalid primary variable index");
         }
     }
 
@@ -454,7 +454,7 @@ public:
             return EnergyModule::eqName(eqIdx);
         }
         else {
-            assert(false);
+            throw std::logic_error("Invalid equation index");
         }
     }
 
@@ -507,7 +507,7 @@ public:
         case PrimaryVariables::GasMeaning::Sg: return 1.0; // gas saturation
         case PrimaryVariables::GasMeaning::Rs: return 1.0 / 250.; // gas dissolution factor
         case PrimaryVariables::GasMeaning::Rv: return 1.0 / 0.025; // oil vaporization factor
-        default: assert(false);
+        default: throw std::logic_error("Invalid primary variable meaning flag for gas");
         }
     }
 

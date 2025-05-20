@@ -87,7 +87,9 @@ private:
     void checkSerializedCmdLine(const std::string& current,
                                 const std::string& stored);
 
+#if HAVE_HDF5
     SerializableSim& simulator_; //!< Reference to simulator to be use
+#endif // HAVE_HDF5
     Parallel::Communication& comm_; //!< Communication to use
     int saveStride_ = 0; //!< Stride to save serialized state at, negative to only keep last
     int saveStep_ = -1; //!< Specific step to save serialized state at
