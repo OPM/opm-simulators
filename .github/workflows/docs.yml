@@ -1,0 +1,44 @@
+name: Build opm-simulators Doxygen Docs and push to gh-pages
+
+on:
+  push:
+    branches:
+      - '**'
+    pull_request_target:
+        types: closed
+        branches: master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Python packages
+        run: pip install sphinx breathe furo
+
+      - name: Build Doxygen documentation
+        run: doxygen Doxyfile
+
+      - name: Build Sphinx documentation
+        run: |
+          cd docs/sphinx
+          make html
+
+      - name: Deploy documentation
+        uses: OPM/github-pages-deploy-action@releases/v4
+        with:
+	  branch: gh-pages-${{ github.ref_name }}
+          publish_dir: docs/sphinx/build/html
