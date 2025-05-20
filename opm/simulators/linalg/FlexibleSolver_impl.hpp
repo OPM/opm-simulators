@@ -175,7 +175,17 @@ namespace Dune
                                                                                 tol, // desired residual reduction factor
                                                                                 maxiter, // maximum number of iterations
                                                                                 verbosity);
-                }
+                } else if (solver_type == "loopsolver") {
+                    linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
+                                                                                *scalarproduct_,
+                                                                                *preconditioner_,
+                                                                                tol, // desired residual reduction factor
+                                                                                maxiter, // maximum number of iterations
+                                                                                verbosity);
+            } else {
+                OPM_THROW(std::invalid_argument,
+                        "Properties: Solver " + solver_type + " not known.");
+            }
         } else {
             if (solver_type == "bicgstab") {
                 linsolver_ = std::make_shared<Dune::BiCGSTABSolver<VectorType>>(*linearoperator_for_solver_,
