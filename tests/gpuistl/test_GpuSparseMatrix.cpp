@@ -20,12 +20,18 @@
 
 #define BOOST_TEST_MODULE TestGpuSparseMatrix
 
-#include <boost/test/unit_test.hpp>
-#include <dune/istl/bcrsmatrix.hh>
-#include <memory>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
+#include <dune/istl/bcrsmatrix.hh>
+
+#include <boost/mpl/range_c.hpp>
+#include <boost/test/data/monomorphic.hpp>
+#include <boost/test/data/test_case.hpp>
+#include <boost/test/unit_test.hpp>
+
+#include <cstddef>
 #include <random>
 
 BOOST_AUTO_TEST_CASE(TestConstruction1D)
@@ -102,25 +108,29 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
     // TODO: Check rest
 }
 
-
-BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
+// Template function to run the random sparsity matrix test with a given block size
+template<std::size_t dim>
+void runRandomSparsityMatrixTest()
 {
     std::srand(0);
     double nonzeroPercent = 0.2;
     std::mt19937 generator;
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
-    constexpr size_t dim = 3;
-    const int N = 300;
+    const std::size_t N = 300;
     using M = Dune::FieldMatrix<double, dim, dim>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, dim>>;
 
-
-    std::vector<std::vector<size_t>> nonzerocols(N);
+    std::vector<std::vector<std::size_t>> nonzerocols(N);
     int nonZeroes = 0;
-    for (auto row = 0; row < N; ++row) {
-        for (size_t col = 0; col < N; ++col) {
-            if (distribution(generator) < nonzeroPercent) {
+    for (std::size_t row = 0; row < N; ++row) {
+        // Always include the diagonal element to ensure each row has at least one entry
+        nonzerocols.at(row).push_back(row);
+        nonZeroes++;
+
+        // Add other elements based on random sparsity
+        for (std::size_t col = 0; col < N; ++col) {
+            if (col != row && distribution(generator) < nonzeroPercent) {
                 nonzerocols.at(row).push_back(col);
                 nonZeroes++;
             }
@@ -128,15 +138,15 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
     }
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
-        for (size_t j = 0; j < nonzerocols[row.index()].size(); ++j) {
+        for (std::size_t j = 0; j < nonzerocols[row.index()].size(); ++j) {
             row.insert(nonzerocols[row.index()][j]);
         }
     }
     // This might not be the most elegant way of filling in a Dune sparse matrix, but it works.
-    for (int i = 0; i < N; ++i) {
-        for (size_t j = 0; j < nonzerocols[i].size(); ++j) {
-            for (size_t c1 = 0; c1 < dim; ++c1) {
-                for (size_t c2 = 0; c2 < dim; ++c2) {
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < nonzerocols[i].size(); ++j) {
+            for (std::size_t c1 = 0; c1 < dim; ++c1) {
+                for (std::size_t c2 = 0; c2 < dim; ++c2) {
                     B[i][nonzerocols[i][j]][c1][c2] = distribution(generator);
                 }
             }
@@ -145,7 +155,7 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
 
     auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrix<double>::fromMatrix(B);
     // check each column
-    for (size_t component = 0; component < N; ++component) {
+    for (std::size_t component = 0; component < N * dim; component += N) {
         std::vector<double> inputDataX(N * dim, 0.0);
         inputDataX[component] = 1.0;
         std::vector<double> inputDataY(N * dim, .25);
@@ -160,8 +170,8 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
         inputVectorY.copyToHost(inputDataY);
 
         B.usmv(alpha, xHost, yHost);
-        for (size_t i = 0; i < N; ++i) {
-            for (size_t c = 0; c < dim; ++c) {
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t c = 0; c < dim; ++c) {
                 BOOST_CHECK_CLOSE(inputDataY[i * dim + c], yHost[i][c], 1e-7);
             }
         }
@@ -172,10 +182,18 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
         inputVectorY.copyToHost(inputDataY);
 
         B.mv(xHost, yHost);
-        for (size_t i = 0; i < N; ++i) {
-            for (size_t c = 0; c < dim; ++c) {
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t c = 0; c < dim; ++c) {
                 BOOST_CHECK_CLOSE(inputDataY[i * dim + c], yHost[i][c], 1e-7);
             }
         }
     }
+}
+
+// Define test cases for block sizes 1-6 using boost::mpl::range_c
+typedef boost::mpl::range_c<int, 1, 7> block_sizes;
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSparsityMatrix, T, block_sizes)
+{
+    runRandomSparsityMatrixTest<T::value>();
 }
