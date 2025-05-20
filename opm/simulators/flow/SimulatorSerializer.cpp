@@ -41,15 +41,19 @@
 
 namespace Opm {
 
-SimulatorSerializer::SimulatorSerializer(SerializableSim& simulator,
+SimulatorSerializer::SimulatorSerializer([[maybe_unused]] SerializableSim& simulator,
                                          Parallel::Communication& comm,
                                          const IOConfig& ioconfig,
                                          const std::string& saveSpec,
                                          int loadStep,
                                          const std::string& saveFile,
                                          const std::string& loadFile)
+#if HAVE_HDF5
     : simulator_(simulator)
     , comm_(comm)
+#else
+    : comm_(comm)
+#endif // HAVE_HDF5
     , loadStep_(loadStep)
     , saveFile_(saveFile)
     , loadFile_(loadFile)
