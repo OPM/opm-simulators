@@ -493,10 +493,10 @@ sumDistributed(Parallel::Communication comm)
     INSTANTIATE(T,BlackOilVariableAndEquationIndices<0u,0u,0u,1u,false,true,0u,0u>)             \
     INSTANTIATE(T,BlackOilVariableAndEquationIndices<1u,0u,0u,0u,true,false,0u,0u>)
 
-    INSTANTIATE_TYPE(double)
+INSTANTIATE_TYPE(double)
 
 #if FLOW_INSTANTIATE_FLOAT
-    INSTANTIATE_TYPE(float)
+INSTANTIATE_TYPE(float)
 #endif
 }
 // #endif

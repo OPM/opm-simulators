@@ -416,7 +416,7 @@ throwNotImplementedError(const std::string& error) const
 INSTANTIATE_TYPE_INDICES(GroupEconomicLimitsChecker, double)
 
 #if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_TYPE_INDICES(GroupEconProductionLimits, float)
+INSTANTIATE_TYPE_INDICES(GroupEconomicLimitsChecker, float)
 #endif
 
 } // namespace Opm
