@@ -85,18 +85,20 @@ localFraction(const std::string& name,
 
     // the group/well "name" is the only active group/well we therefore return 1 as the fraction
     // even though my_guide_rate may be zero
-    if (num_active_groups <= 1)
+
+    //std::cout << name << " " << always_included_child << " " << parent_group.name() << " " << my_guide_rate << " " << total_guide_rate << " " << num_active_groups << std::endl;
+    if (num_active_groups == 1)
         return 1.0;
 
     if (total_guide_rate == 0 ) {
-        std::cout << name << "total_guide_rate is zero " << my_guide_rate << " " << num_active_groups << " " << always_included_child <<  std::endl;
+        //std::cout << name << " total_guide_rate is zero " << my_guide_rate << " " << num_active_groups << " " << always_included_child <<  std::endl;
         // if the total guide rate is zero (for instance due to netv = 0) we use the potentials
         // to distribute the group rate
         always_use_potentials = true;
 
         const Scalar my_pot = guideRate(name, always_included_child, always_use_potentials);
         const Scalar my_total_pot = guideRateSum(parent_group, always_included_child, always_use_potentials).first;
-        std::cout << my_pot << " " << my_total_pot << std::endl;
+        //std::cout << my_pot << " " << my_total_pot << std::endl;
         return my_pot / my_total_pot;
     }
     return my_guide_rate / total_guide_rate;
@@ -125,9 +127,9 @@ guideRateSum(const Group& group,
         const auto& gs_rates = is_producer_? this->group_state_.prod_guide_rates(group.name()) : this->group_state_.inj_guide_rates(group.name(), injection_phase_);
         auto group_cont_wells = is_producer_? this->group_state_.number_of_wells_under_this_control(group.name()) : this->group_state_.number_of_wells_under_this_inj_control(group.name(), injection_phase_) ;
         const auto& next_subgroup_with_guiderate = is_producer_? this->group_state_.sub_group_with_guiderate(group.name()) : this->group_state_.sub_group_inj_with_guiderate(group.name(), injection_phase_);
-        double child_rate = 0.0;
+        double child_rate = 0.0;        
         bool isWell = schedule_.hasWell(always_included_child, report_step_);
-        //std::cout << is_producer_ << " " << always_included_child << " " << group.name() << " " << hasWell << " " << always_use_potentials << std::endl;
+        //std::cout << is_producer_ << " " << gs_rates << " " << group_cont_wells << " " << always_included_child << " " << group.name() << " " << isWell << " " << always_use_potentials << std::endl;
         if (isWell) {
             bool already_included = is_producer_? well_state_.isProductionGrup(always_included_child) : well_state_.isInjectionGrup(always_included_child);
             if (!already_included) {
@@ -151,8 +153,6 @@ guideRateSum(const Group& group,
                         gr_name = group2.parent();
                     }
                 }
-            } else {
-                group_cont_wells++;    
             }
         }
         return {gs_rates + child_rate, group_cont_wells};
@@ -266,6 +266,7 @@ guideRate(const std::string& name,
             return 0.0;
         }
     } else {
+        auto group_cont_wells = is_producer_? this->group_state_.number_of_wells_under_this_control(name) : this->group_state_.number_of_wells_under_this_inj_control(name, injection_phase_) ;
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name) && !always_use_potentials) {
                 return guide_rate_->get(name, target_, getGroupRateVector(name));
