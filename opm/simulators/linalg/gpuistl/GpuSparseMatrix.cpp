@@ -24,6 +24,7 @@
 #include <dune/istl/bvector.hh>
 #include <fmt/core.h>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_wrapper.hpp>
@@ -76,9 +77,16 @@ GpuSparseMatrix<T>::GpuSparseMatrix(const T* nonZeroElements,
     , m_blockSize(detail::to_int(blockSize))
     , m_matrixDescription(detail::createMatrixDescription())
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
+    , m_genericMatrixForBlockSize1(nullptr)
 {
     if (detail::to_size_t(rowIndices[numberOfRows]) != numberOfNonzeroBlocks) {
         OPM_THROW(std::invalid_argument, "Wrong sparsity format. Needs to be CSR compliant. ");
+    }
+
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (blockSize == 1) {
+        m_genericMatrixForBlockSize1 = std::make_unique<GpuSparseMatrixGeneric<T>>(
+            nonZeroElements, rowIndices, columnIndices, numberOfNonzeroBlocks, blockSize, numberOfRows);
     }
 }
 
@@ -94,7 +102,13 @@ GpuSparseMatrix<T>::GpuSparseMatrix(const GpuVector<int>& rowIndices,
     , m_blockSize(detail::to_int(blockSize))
     , m_matrixDescription(detail::createMatrixDescription())
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
+    , m_genericMatrixForBlockSize1(nullptr)
 {
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (blockSize == 1) {
+        m_genericMatrixForBlockSize1 = std::make_unique<GpuSparseMatrixGeneric<T>>(
+            rowIndices, columnIndices, blockSize);
+    }
 }
 
 template<class T>
@@ -107,8 +121,12 @@ GpuSparseMatrix<T>::GpuSparseMatrix(const GpuSparseMatrix<T>& other)
     , m_blockSize(other.m_blockSize)
     , m_matrixDescription(other.m_matrixDescription)
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
+    , m_genericMatrixForBlockSize1(nullptr)
 {
-    
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (other.blockSize() == 1 && other.m_genericMatrixForBlockSize1 != nullptr) {
+        m_genericMatrixForBlockSize1 = std::make_unique<GpuSparseMatrixGeneric<T>>(*other.m_genericMatrixForBlockSize1);
+    }
 }
 
 
@@ -189,6 +207,12 @@ GpuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZe
     OPM_ERROR_IF(matrix[0][0].N() != blockSize(), "Matrix does not have the same blocksize.");
     OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
 
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (m_genericMatrixForBlockSize1 != nullptr) {
+        m_genericMatrixForBlockSize1->updateNonzeroValues(matrix, copyNonZeroElementsDirectly);
+        return;
+    }
+
     if (!copyNonZeroElementsDirectly) {
         auto nonZeroElementsData = extractNonzeroValues<T>(matrix);
         m_nonZeroElements.copyFromHost(nonZeroElementsData.data(), nonzeroes() * blockSize() * blockSize());
@@ -205,6 +229,12 @@ GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrix<T>& matrix)
 {
     OPM_ERROR_IF(nonzeroes() != matrix.nonzeroes(), "Matrix does not have the same number of non-zero elements.");
     OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
+
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (m_genericMatrixForBlockSize1 != nullptr && matrix.m_genericMatrixForBlockSize1 != nullptr) {
+        m_genericMatrixForBlockSize1->updateNonzeroValues(*matrix.m_genericMatrixForBlockSize1);
+        return;
+    }
 
     m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
 }
@@ -243,10 +273,11 @@ GpuSparseMatrix<T>::mv(const GpuVector<T>& x, GpuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);
-    if (blockSize() < 2u) {
-        OPM_THROW(
-            std::invalid_argument,
-            "GpuSparseMatrix<T>::usmv and GpuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
+
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (m_genericMatrixForBlockSize1 != nullptr) {
+        m_genericMatrixForBlockSize1->mv(x, y);
+        return;
     }
     const auto nonzeroValues = getNonZeroValues().data();
 
@@ -277,10 +308,11 @@ GpuSparseMatrix<T>::umv(const GpuVector<T>& x, GpuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);
-    if (blockSize() < 2u) {
-        OPM_THROW(
-            std::invalid_argument,
-            "GpuSparseMatrix<T>::usmv and GpuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
+
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (m_genericMatrixForBlockSize1 != nullptr) {
+        m_genericMatrixForBlockSize1->umv(x, y);
+        return;
     }
 
     const auto nonzeroValues = getNonZeroValues().data();
@@ -312,10 +344,11 @@ GpuSparseMatrix<T>::usmv(T alpha, const GpuVector<T>& x, GpuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);
-    if (blockSize() < 2) {
-        OPM_THROW(
-            std::invalid_argument,
-            "GpuSparseMatrix<T>::usmv and GpuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
+
+    // For blockSize == 1, use GpuSparseMatrixGeneric
+    if (m_genericMatrixForBlockSize1 != nullptr) {
+        m_genericMatrixForBlockSize1->usmv(alpha, x, y);
+        return;
     }
     const auto numberOfRows = N();
     const auto numberOfNonzeroBlocks = nonzeroes();
