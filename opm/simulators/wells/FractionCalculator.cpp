@@ -91,14 +91,14 @@ localFraction(const std::string& name,
         return 1.0;
 
     if (total_guide_rate == 0 ) {
-        std::cout << name << " total_guide_rate is zero " << my_guide_rate << " " << num_active_groups << " " << always_included_child <<  std::endl;
+        //std::cout << name << " total_guide_rate is zero " << my_guide_rate << " " << num_active_groups << " " << always_included_child <<  std::endl;
         // if the total guide rate is zero (for instance due to netv = 0) we use the potentials
         // to distribute the group rate
         always_use_potentials = true;
 
         const Scalar my_pot = guideRate(name, always_included_child, always_use_potentials);
         const Scalar my_total_pot = guideRateSum(parent_group, always_included_child, always_use_potentials).first;
-        std::cout << my_pot << " " << my_total_pot << std::endl;
+        //std::cout << my_pot << " " << my_total_pot << std::endl;
         return my_pot / my_total_pot;
     }
     return my_guide_rate / total_guide_rate;

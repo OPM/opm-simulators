@@ -1187,7 +1187,7 @@ updateGuideRate(const std::string& name,
         else if (!is_production_group && guideRate.has(name,injection_phase))
             guiderate = guideRate.get(name, injection_phase);
 
-        std::cout << "has guide rate " << name << " " << totalGuideRate << " " << number_of_wells_under_this_group_control << std::endl;
+        //std::cout << "has guide rate " << name << " " << totalGuideRate << " " << number_of_wells_under_this_group_control << std::endl;
         //std::cout << "setup " << name << " " <<totalGuideRate << " " << number_of_wells_under_this_group_control << " " << std::endl;
 
         number_of_wells_under_this_group_control = 0;
@@ -1488,17 +1488,23 @@ checkGroupConstraintsProd(const std::string& name,
     // we need to find out the level where the current well is applied to the local reduction
     std::size_t local_reduction_level = 0;
     for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        const int num_gr_ctrl = groupControlledWells(schedule,
-                                                     wellState,
-                                                     group_state,
-                                                     summaryState,
-                                                     guideRate,
-                                                     reportStepIdx,
-                                                     chain[ii],
-                                                     "",
-                                                     /*is_producer*/ true,
-                                                     /*injectionPhaseNotUsed*/ Phase::OIL);
-        if (guideRate->has(chain[ii]) && num_gr_ctrl > 0) {
+        //const int num_gr_ctrl = groupControlledWells(schedule,
+        //                                             wellState,
+        //                                             group_state,
+        //                                             summaryState,
+        //                                             guideRate,
+        //                                             reportStepIdx,
+        //                                             chain[ii],
+        //                                             "",
+        //                                             /*is_producer*/ true,
+        //                                             /*injectionPhaseNotUsed*/ Phase::OIL);
+        
+        const auto& group_cont_wells = group_state.number_of_wells_under_this_control(chain[ii]);
+        //if (guideRate->has(chain[ii]) && group_cont_wells != num_gr_ctrl )
+        //    std::cout << "group_cont_wells "<< chain[ii]<< " " << group_cont_wells <<  " " << num_gr_ctrl << " " << guideRate->has(chain[ii]) << std::endl;
+
+
+        if (guideRate->has(chain[ii]) && group_cont_wells > 0) {
             local_reduction_level = ii;
         }
     }
@@ -1668,16 +1674,17 @@ checkGroupConstraintsInj(const std::string& name,
     // we need to find out the level where the current well is applied to the local reduction
     std::size_t local_reduction_level = 0;
     for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
-        const int num_gr_ctrl = groupControlledWells(schedule,
-                                                     wellState,
-                                                     group_state,
-                                                     summaryState,
-                                                     guideRate,
-                                                     reportStepIdx,
-                                                     chain[ii],
-                                                     "",
-                                                     /*is_producer*/ false,
-                                                     injectionPhase);
+        //const int num_gr_ctrl = groupControlledWells(schedule,
+        //                                             wellState,
+        //                                             group_state,
+        //                                             summaryState,
+        //                                             guideRate,
+        //                                             reportStepIdx,
+        //                                             chain[ii],
+        //                                             "",
+        //                                             /*is_producer*/ false,
+        //                                             injectionPhase);
+        const auto& num_gr_ctrl = group_state.number_of_wells_under_this_inj_control(chain[ii], injectionPhase);
         if (guideRate->has(chain[ii], injectionPhase) && num_gr_ctrl > 0) {
             local_reduction_level = ii;
         }
