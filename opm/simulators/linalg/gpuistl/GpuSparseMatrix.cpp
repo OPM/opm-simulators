@@ -16,48 +16,26 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp"
-#include <cuda.h>
-#include <dune/common/fmatrix.hh>
-#include <dune/common/fvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/bvector.hh>
-#include <fmt/core.h>
+#include <config.h>
+
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_constants.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_wrapper.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_utilities.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
-#include <type_traits>
 
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/istl/bcrsmatrix.hh>
+#include <dune/istl/bvector.hh>
+
+#include <cuda.h>
+#include <fmt/core.h>
 namespace Opm::gpuistl
 {
 
-namespace
-{
-    template <class T, class M>
-    std::vector<T> extractNonzeroValues(const M& matrix)
-    {
-        const size_t blockSize = matrix[0][0].N();
-        const size_t numberOfNonzeroBlocks = matrix.nonzeroes();
-        const size_t numberOfNonzeroElements = blockSize * blockSize * numberOfNonzeroBlocks;
 
-        std::vector<T> nonZeroElementsData;
-        // TODO: [perf] Can we avoid building nonZeroElementsData?
-        nonZeroElementsData.reserve(numberOfNonzeroElements);
-        for (auto& row : matrix) {
-            for (auto columnIterator = row.begin(); columnIterator != row.end(); ++columnIterator) {
-                for (size_t c = 0; c < blockSize; ++c) {
-                    for (size_t d = 0; d < blockSize; ++d) {
-                        nonZeroElementsData.push_back((*columnIterator)[c][d]);
-                    }
-                }
-            }
-        }
-
-        return nonZeroElementsData;
-    }
-} // namespace
 
 
 
@@ -108,7 +86,7 @@ GpuSparseMatrix<T>::GpuSparseMatrix(const GpuSparseMatrix<T>& other)
     , m_matrixDescription(other.m_matrixDescription)
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
 {
-    
+
 }
 
 
@@ -127,50 +105,24 @@ GpuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElement
     std::vector<int> columnIndices;
     std::vector<int> rowIndices;
 
-    rowIndices.push_back(0);
+    detail::extractSparsityPattern(matrix, columnIndices, rowIndices);
 
-    // We must find the pointer to the first element in the matrix
-    // Iterate until we find an element, we can get the blocksize from the element
-    // TODO: Can this be done more cleanly in the DUNE api to access the raw data more directly?
-    constexpr size_t blockSizeTmp = MatrixType::block_type::rows;
-    T* nonZeroElementsTmp = nullptr;
-    for (auto rowIt = matrix.begin(); rowIt != matrix.end(); ++rowIt){
-        auto colIt = rowIt->begin();
-        if (colIt != rowIt->end()){
-            nonZeroElementsTmp = const_cast<T*>(&((*colIt)[0][0]));
-            break;
-        }
-    }
-
-    OPM_ERROR_IF(nonZeroElementsTmp == nullptr, "error converting DUNE matrix to CuSparse matrix");
-
-    const size_t blockSize = blockSizeTmp;
+    constexpr size_t blockSize = MatrixType::block_type::rows;
     const size_t numberOfRows = matrix.N();
     const size_t numberOfNonzeroBlocks = matrix.nonzeroes();
 
-    columnIndices.reserve(numberOfNonzeroBlocks);
-    rowIndices.reserve(numberOfRows + 1);
-    for (auto& row : matrix) {
-        for (auto columnIterator = row.begin(); columnIterator != row.end(); ++columnIterator) {
-            columnIndices.push_back(columnIterator.index());
-        }
-        rowIndices.push_back(detail::to_int(columnIndices.size()));
-    }
-
-    // Sanity check
-    // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
-    OPM_ERROR_IF(rowIndices[matrix.N()] != detail::to_int(matrix.nonzeroes()),
-                 "Error size of rows do not sum to number of nonzeroes in GpuSparseMatrix.");
-    OPM_ERROR_IF(rowIndices.size() != numberOfRows + 1, "Row indices do not match for GpuSparseMatrix.");
-    OPM_ERROR_IF(columnIndices.size() != numberOfNonzeroBlocks, "Column indices do not match for GpuSparseMatrix.");
-
+    detail::validateMatrixConversion(matrix, columnIndices, rowIndices, "GpuSparseMatrix");
 
     if (copyNonZeroElementsDirectly) {
+        // Find pointer to first element for direct copying
+        T* nonZeroElementsTmp = detail::findFirstElementPointer<T>(matrix);
+        OPM_ERROR_IF(nonZeroElementsTmp == nullptr, "error converting DUNE matrix to CuSparse matrix");
+
         const T* nonZeroElements = nonZeroElementsTmp;
         return GpuSparseMatrix<T>(
             nonZeroElements, rowIndices.data(), columnIndices.data(), numberOfNonzeroBlocks, blockSize, numberOfRows);
     } else {
-        auto nonZeroElementData = extractNonzeroValues<T>(matrix);
+        auto nonZeroElementData = detail::extractNonzeroValues<T>(matrix);
         return GpuSparseMatrix<T>(nonZeroElementData.data(),
                                  rowIndices.data(),
                                  columnIndices.data(),
@@ -185,12 +137,11 @@ template <class MatrixType>
 void
 GpuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZeroElementsDirectly)
 {
-    OPM_ERROR_IF(nonzeroes() != matrix.nonzeroes(), "Matrix does not have the same number of non-zero elements.");
-    OPM_ERROR_IF(matrix[0][0].N() != blockSize(), "Matrix does not have the same blocksize.");
-    OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
+    detail::validateMatrixCompatibility(nonzeroes(), blockSize(), N(),
+                                       matrix.nonzeroes(), matrix[0][0].N(), matrix.N());
 
     if (!copyNonZeroElementsDirectly) {
-        auto nonZeroElementsData = extractNonzeroValues<T>(matrix);
+        auto nonZeroElementsData = detail::extractNonzeroValues<T>(matrix);
         m_nonZeroElements.copyFromHost(nonZeroElementsData.data(), nonzeroes() * blockSize() * blockSize());
 
     } else {
@@ -203,8 +154,8 @@ template <class T>
 void
 GpuSparseMatrix<T>::updateNonzeroValues(const GpuSparseMatrix<T>& matrix)
 {
-    OPM_ERROR_IF(nonzeroes() != matrix.nonzeroes(), "Matrix does not have the same number of non-zero elements.");
-    OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
+    detail::validateMatrixCompatibility(nonzeroes(), blockSize(), N(),
+                                       matrix.nonzeroes(), matrix.blockSize(), matrix.N());
 
     m_nonZeroElements.copyFromDeviceToDevice(matrix.getNonZeroValues());
 }
@@ -347,41 +298,16 @@ template <class VectorType>
 void
 GpuSparseMatrix<T>::assertSameSize(const VectorType& x) const
 {
-    if (x.dim() != blockSize() * N()) {
-        OPM_THROW(std::invalid_argument,
-                  fmt::format("Size mismatch. Input vector has {} elements, while we have {} rows.",
-                              x.dim(),
-                              blockSize() * N()));
-    }
+    // Assume square matrices: numberOfColumns == numberOfRows
+    detail::validateVectorMatrixSizes(x.dim(), blockSize(), N());
 }
 
 
 
-#define INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(realtype, blockdim)                                     \
-    template GpuSparseMatrix<realtype> GpuSparseMatrix<realtype>::fromMatrix(                                            \
-        const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
-    template GpuSparseMatrix<realtype> GpuSparseMatrix<realtype>::fromMatrix(                                            \
-        const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool);                                \
-    template void GpuSparseMatrix<realtype>::updateNonzeroValues(                                                       \
-        const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
-    template void GpuSparseMatrix<realtype>::updateNonzeroValues(                                                       \
-        const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool)
-
 template class GpuSparseMatrix<float>;
 template class GpuSparseMatrix<double>;
 
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(double, 1);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(double, 2);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(double, 3);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(double, 4);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(double, 5);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(double, 6);
-
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 1);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 2);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 3);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 4);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 5);
-INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 6);
+INSTANTIATE_FOR_TYPE_AND_CLASS(GpuSparseMatrix, float);
+INSTANTIATE_FOR_TYPE_AND_CLASS(GpuSparseMatrix, double);
 
 } // namespace Opm::gpuistl
